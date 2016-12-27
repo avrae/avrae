@@ -127,6 +127,8 @@ class Core:
         embed.add_field(name="Servers", value=len(self.bot.servers))
         memory_usage = psutil.Process().memory_full_info().uss / 1024**2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
+        embed.add_field(name='Credits', value='Bot coded by @zhu.exe#4211\nDice foundation contributed by @Iridian#7625\ndiscord.py created by @Danny#0007\nHelp support me [here](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=HUDJTWSTPF7ML&lc=US&item_name=Avrae%20Developer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)!', inline=False)
         
         await self.bot.say(embed=embed)
+        
         

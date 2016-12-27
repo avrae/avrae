@@ -3,6 +3,6 @@
 # launch discord bots
 
 while true; do
-    /usr/local/bin/python3 dbot.py > stdout.txt
+    /usr/local/bin/python3 dbot.py
     sleep 10
 done

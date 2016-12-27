@@ -6,6 +6,7 @@ Created on Sep 23, 2016
 import asyncio
 from asyncio.tasks import async
 import os
+import sys
 import traceback
 
 import discord
@@ -33,7 +34,7 @@ class AdminUtils:
         Requires: Owner"""
         await self.bot.say("Byeeeeeee!")
         await self.bot.logout()
-        os.system('sudo reboot')
+        sys.exit()
         
     @commands.command(pass_context=True, no_pm=True, hidden=True)
     @checks.is_owner()
@@ -54,11 +55,6 @@ class AdminUtils:
         except Exception as e:
             await self.bot.say('Failed to send message: ' + e)
             
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def fixTaine(self):
-        """Fixes Taine if she's offline."""
-        os.system("sudo python3 ../SimpleBot/taine.py &")
         
     @commands.command(hidden=True)
     @checks.is_owner()

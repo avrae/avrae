@@ -2,12 +2,14 @@ import asyncio
 from datetime import timedelta, datetime, tzinfo
 import json
 import logging
+from math import floor
 import os
 import random
 import time
 
 import discord
 from discord.ext import commands
+import psutil
 
 import adminUtils
 import checks
@@ -15,10 +17,9 @@ from cogs5e import charGen
 from cogs5e import diceAlgorithm
 from cogs5e import initiativeTracker
 from cogs5e import lookup
-from cogs5e import monsterParse
 from cogs5e import spellParse
 import credentials
-from math import floor
+from functions import make_sure_path_exists
 
 
 TESTING = False
@@ -59,15 +60,11 @@ monitor_mask = 0x08
 #-----COGS-----
 diceCog = diceAlgorithm.Dice(bot)
 charGenCog = charGen.CharGenerator(bot)
-monsterParseCog = monsterParse.MonsterParser(bot)
-spellParseCog = spellParse.SpellParser(bot)
 initiativeTrackerCog = initiativeTracker.InitTracker(bot)
 adminUtilsCog = adminUtils.AdminUtils(bot)
 lookupCog = lookup.Lookup(bot)
 cogs = [diceCog,
         charGenCog,
-        monsterParseCog,
-        spellParseCog,
         initiativeTrackerCog,
         adminUtilsCog,
         lookupCog]
@@ -87,11 +84,21 @@ async def enter():
     await bot.wait_until_ready()
     appInfo = await bot.application_info()
     owner = appInfo.owner
-    if os.path.isfile("./userStats.json"):
-        with open('./userStats.json', mode='r', encoding='utf-8') as f:
-            userStats = json.load(f)
+    make_sure_path_exists("./saves/stats/")
+    if os.path.isfile("./saves/stats/botStats.avrae"):
+        with open('./saves/stats/botStats.avrae', mode='r', encoding='utf-8') as f:
+            bot.botStats = json.load(f)
+        bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
+
     else:
-        userStats = {}
+        bot.botStats = {"dice_rolled_session":0,
+                        "spells_looked_up_session":0,
+                        "monsters_looked_up_session":0,
+                        "commands_used_session":0,
+                        "dice_rolled_life":0,
+                        "spells_looked_up_life":0,
+                        "monsters_looked_up_life":0,
+                        "commands_used_life":0}
     await bot.change_status(game=discord.Game(name='D&D 5e'))
     
 @bot.event
@@ -124,6 +131,11 @@ async def on_message(message):
         random.seed()
     
     await bot.process_commands(message)
+    
+@bot.event
+async def on_command(command, ctx):
+    bot.botStats['commands_used_session'] += 1
+    bot.botStats['commands_used_life'] += 1
         
 @bot.command(pass_context=True)
 @checks.admin_or_permissions(manage_messages=True)
@@ -219,6 +231,45 @@ async def ping(ctx):
 async def invite():
     """Prints a link to invite Avrae to your server."""
     await bot.say("https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot")
+    
+@bot.command(aliases=['stats'])
+async def about():
+    """Information about the bot."""
+    embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
+    embed.title = "Invite Avrae to your server!"
+    embed.url = "https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot"
+    embed.colour = 0xec3333
+    embed.set_author(name=str(owner), icon_url=owner.avatar_url)
+    total_members = sum(len(s.members) for s in bot.servers)
+    total_online  = sum(1 for m in bot.get_all_members() if m.status != discord.Status.offline)
+    unique_members = set(bot.get_all_members())
+    unique_online = sum(1 for m in unique_members if m.status != discord.Status.offline)
+    text = len([c for c in bot.get_all_channels() if c.type is discord.ChannelType.text])
+    voice = len([c for c in bot.get_all_channels() if c.type is discord.ChannelType.voice])
+    members = '%s total\n%s online\n%s unique\n%s unique online' % (total_members, total_online, len(unique_members), unique_online)
+    embed.add_field(name='Members', value=members)
+    embed.add_field(name='Channels', value='{} total\n{} text\n{} voice'.format(text + voice, text, voice))
+    embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - start_time))))
+    embed.set_footer(text='May the RNG be with you', icon_url='http://www.clipartkid.com/images/25/six-sided-dice-clip-art-at-clker-com-vector-clip-art-online-royalty-tUAGdd-clipart.png')
+    commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up".format(**bot.botStats)
+    embed.add_field(name="Commands Run", value=commands_run)
+    embed.add_field(name="Servers", value=len(bot.servers))
+    memory_usage = psutil.Process().memory_full_info().uss / 1024**2
+    embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
+    
+    await bot.say(embed=embed)
+    
+async def save_stats():
+    await bot.wait_until_ready()
+    while not bot.is_closed:
+        await asyncio.sleep(3600) #every hour
+        make_sure_path_exists('./saves/stats/')
+        path = './saves/stats/botStats.avrae'
+        with open(path, mode='w', encoding='utf-8') as f:
+            json.dump(bot.botStats, f, sort_keys=True, indent=4)
+        
+        
+bot.loop.create_task(save_stats())
             
 for cog in cogs:
     bot.add_cog(cog)

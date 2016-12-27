@@ -27,10 +27,10 @@ class AdminUtils:
         self.muted = []
     
     
-    @commands.command()
+    @commands.command(hidden=True)
     @checks.is_owner()
     async def restart(self):
-        """Restarts Ragnarok. May fail sometimes due to bad programming on <@187421759484592128>'s end.
+        """Restarts Avrae. May fail sometimes due to bad programming on zhu.exe's end.
         Requires: Owner"""
         await self.bot.say("Byeeeeeee!")
         await self.bot.logout()

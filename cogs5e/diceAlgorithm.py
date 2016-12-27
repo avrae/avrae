@@ -22,10 +22,10 @@ class Dice:
             self.pbp_channels = {}  # dict with struct: {server: {setting: bool}}
         
     async def on_message(self, message):
-        if message.content.startswith('.d20'):
+        if message.content.startswith('!d20'):
             self.bot.botStats["dice_rolled_session"] += 1
             self.bot.botStats["dice_rolled_life"] += 1
-            rollStr = message.content.replace('.', '1').split(' ')[0]
+            rollStr = message.content.replace('!', '1').split(' ')[0]
             try:
                 rollFor = ' '.join(message.content.split(' ')[1:])
             except:

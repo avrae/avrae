@@ -15,11 +15,6 @@ class Dice:
     """Dice and math related commands."""
     def __init__(self, bot):
         self.bot = bot
-        if os.path.isfile("./res/pbp_channels.json"):
-            with open('./res/pbp_channels.json', mode='r', encoding='utf-8') as f:
-                self.pbp_channels = json.load(f)
-        else:
-            self.pbp_channels = {}  # dict with struct: {server: {setting: bool}}
         
     async def on_message(self, message):
         if message.content.startswith('!d20'):
@@ -42,28 +37,8 @@ class Dice:
                 pass
             await self.bot.send_message(message.channel, message.author.mention + '  ' + out)
                         
-    @commands.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_channels=True)
-    async def pbp(self, ctx):
-        """Toggles the play-by-post state of a channel.
-        Usage: .pbp
-        Requires: Bot Mod or Manage Channels"""
-        try:
-            if ctx.message.channel.id in self.pbp_channels[ctx.message.server.id]:
-                self.pbp_channels[ctx.message.server.id].remove(ctx.message.channel.id)
-                await self.bot.say("Channel PBP mode turned off.")
-            else:
-                self.pbp_channels[ctx.message.server.id].append(ctx.message.channel.id)
-                await self.bot.say("Channel PBP mode turned on.")
-        except:
-            self.pbp_channels[ctx.message.server.id] = []
-            self.pbp_channels[ctx.message.server.id].append(ctx.message.channel.id)
-            await self.bot.say("Channel PBP mode turned on.")
-            
-        with open('./ext/pbp_channels.json', mode='w', encoding='utf-8') as f:
-            json.dump(self.pbp_channels, f, sort_keys=True, indent=4)
         
-    @commands.command(pass_context=True, name='r')
+    @commands.command(pass_context=True, name='r', aliases=['roll'])
     async def rollCmd(self, ctx, rollStr, *, rollFor:str=''):
         """Rolls dice in xdy format.
         Usage: .r xdy Attack!
@@ -89,7 +64,7 @@ class Dice:
         else:
             await self.bot.say(outStr)
         
-    @commands.command(pass_context=True, name='rrr')
+    @commands.command(pass_context=True, name='rrr', aliases=['iterroll'])
     async def rrr(self, ctx, iterations:int, rollStr, dc:int, *, args=''):
         """Rolls dice in xdy format, given a set dc.
         Usage: .rrr <ITER> <xdy> <DC> [args]"""
@@ -125,20 +100,7 @@ class Dice:
         """Solves a math problem.
         Usage: .math <MATH>"""
         await self.e_math(ctx.message)
-        
-    @commands.command(pass_context=True)
-    @checks.mod_or_permissions(manage_messages=True)
-    async def purge_ooc(self, ctx):
-        """Purges ooc chatter from a pbp channel.
-        Usage: .purge_ooc"""
-        def ooc_check(m):
-            return m.content.startswith("((") and m.content.endswith("))")
-        try:
-            deleted = await self.bot.purge_from(ctx.message.channel, limit=100, check=ooc_check)
-            await self.bot.delete_message(ctx.message)
-        except:
-            pass
-        await self.bot.say("Purged {} OOC messages.".format(len(deleted)), delete_after=10)        
+               
             
     async def e_math(self, message):
         try:

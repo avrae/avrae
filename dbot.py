@@ -83,7 +83,7 @@ async def enter():
                         "spells_looked_up_life":0,
                         "monsters_looked_up_life":0,
                         "commands_used_life":0}
-    await bot.change_status(game=discord.Game(name='D&D 5e'))
+    await bot.change_status(game=discord.Game(name='D&D 5e | !help'))
     
 @bot.event
 async def on_command_error(error, ctx):

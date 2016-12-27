@@ -1,1 +1,1 @@
-bot: while true; do; python3 dbot.py > stdout.txt; sleep 10; end;
+bot: sh launch.sh

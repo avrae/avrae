@@ -72,7 +72,7 @@ class Lookup:
     async def spell(self, ctx, *, args : str):
         """Looks up a spell."""
         valid_args = {'--class', '--level', '--school'}
-        result = self.searchSpell(args, serv_id=ctx.message.server.id)
+        result = self.searchSpell(args)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.botStats["spells_looked_up_life"] += 1
 

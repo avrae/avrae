@@ -250,7 +250,7 @@ class Lookup:
     
     def searchSpell(self, spellname, serv_id=''):
         spellDesc = []
-        contextualSpells = self.spells + self.custSpells.get(serv_id, [])
+        contextualSpells = self.spells
         try:
             spell = next(item for item in contextualSpells if item["name"].upper() == spellname.upper())
         except Exception:

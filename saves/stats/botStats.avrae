@@ -1,0 +1,10 @@
+{
+    "commands_used_life": 0,
+    "commands_used_session": 0,
+    "dice_rolled_life": 0,
+    "dice_rolled_session": 0,
+    "monsters_looked_up_life": 0,
+    "monsters_looked_up_session": 0,
+    "spells_looked_up_life": 0,
+    "spells_looked_up_session": 0
+}

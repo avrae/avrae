@@ -107,13 +107,13 @@ class Core:
     @commands.command(aliases=['stats'])
     async def about(self):
         """Information about the bot."""
-        cmd = r'git show -s HEAD~3..HEAD --format="[{}](https://github.com/Rapptz/RoboDanny/commit/%H) %s (%cr)"'
+        cmd = r'git show -s HEAD~3..HEAD --format="{} %s (%cr)"'
         if os.name == 'posix':
             cmd = cmd.format(r'\`%h\`')
         else:
             cmd = cmd.format(r'`%h`')
         revision = os.popen(cmd).read().strip()
-        embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.\nLatest Changes:\n' + revision)
+        embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.\n**Latest Changes:**\n' + revision)
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808"
         embed.colour = 0xec3333

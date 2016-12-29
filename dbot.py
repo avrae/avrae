@@ -15,14 +15,14 @@ from cogs5e import charGen
 from cogs5e import diceAlgorithm
 from cogs5e import initiativeTracker
 from cogs5e import lookup
-from cogsmisc import adminUtils, core
+from cogsmisc import adminUtils, core, permissions
 import credentials
 from utils import checks
 from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists
 
 
-TESTING = False
+TESTING = True
 prefix = '!' if not TESTING else '#'
 
 # TODO: 
@@ -53,12 +53,14 @@ initiativeTrackerCog = initiativeTracker.InitTracker(bot)
 adminUtilsCog = adminUtils.AdminUtils(bot)
 lookupCog = lookup.Lookup(bot)
 coreCog = core.Core(bot)
+permissionsCog = permissions.Permissions(bot)
 cogs = [diceCog,
         charGenCog,
         initiativeTrackerCog,
         adminUtilsCog,
         lookupCog,
-        coreCog]
+        coreCog,
+        permissionsCog]
 
 @bot.event
 async def on_ready():

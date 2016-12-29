@@ -19,7 +19,6 @@ class Permissions:
     def __init__(self, bot):
         self.bot = bot
     
-    @commands.check
     def __check(self, ctx):
         msg = ctx.message
         if checks.is_owner_check(msg):

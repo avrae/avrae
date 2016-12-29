@@ -19,7 +19,9 @@ from cogsmisc import adminUtils, core, permissions
 import credentials
 from utils import checks
 from utils.dataIO import DataIO
-from utils.functions import make_sure_path_exists
+from utils.functions import make_sure_path_exists, discord_trim
+import sys
+import traceback
 
 
 TESTING = False
@@ -104,16 +106,20 @@ async def enter():
     
 @bot.event
 async def on_command_error(error, ctx):
+    print('In {0.command.qualified_name}:'.format(ctx), file=sys.stderr)
+    traceback.print_tb(error.original.__traceback__)
+    print('{0.__class__.__name__}: {0}'.format(error.original), file=sys.stderr)
+    tb = 'In {0.command.qualified_name}:'.format(ctx) + traceback.format_tb(error.original.__traceback__) + '{0.__class__.__name__}: {0}'.format(error.original)
     if bot.mask & coreCog.verbose_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error))
     elif bot.mask & coreCog.quiet_mask:
-        print("Error: " + repr(error))
+        return
     else:
         if isinstance(error, commands.CommandNotFound):
-            print("Error: " + repr(error))
             return
         elif isinstance(error, commands.CheckFailure):
-            await bot.send_message(ctx.message.channel, "Error: Missing permissions. Use !help <COMMAND> to check permission requirements.")
+            await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command or the command is disabled.")
+            return
         else:
             await bot.send_message(ctx.message.channel, "Error: " + str(error))
         if bot.mask & coreCog.debug_mask:
@@ -121,7 +127,9 @@ async def on_command_error(error, ctx):
                 await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, repr(error), ctx.message.content))
             except AttributeError:
                 await bot.send_message(bot.owner, "Error in PM with {}: {}\nCaused by message: `{}`".format(ctx.message.author.mention, repr(error), ctx.message.content))
-
+            for o in discord_trim(tb):
+                await bot.send_message(bot.owner, o)
+                
 @bot.event
 async def on_message(message):
     if message.author in adminUtilsCog.muted:

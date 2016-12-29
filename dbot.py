@@ -111,7 +111,7 @@ async def on_command_error(error, ctx):
             print("Error: " + repr(error))
             return
         elif isinstance(error, commands.CheckFailure):
-            await bot.send_message(ctx.message.channel, "Error: Missing permissions. Use .help <COMMAND> to check permission requirements.")
+            await bot.send_message(ctx.message.channel, "Error: Missing permissions. Use !help <COMMAND> to check permission requirements.")
         else:
             await bot.send_message(ctx.message.channel, "Error: " + str(error))
         if bot.mask & coreCog.debug_mask:

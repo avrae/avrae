@@ -13,7 +13,7 @@ from string import capwords
 import discord
 from discord.ext import commands
 
-from functions import make_sure_path_exists, discord_trim
+from utils.functions import make_sure_path_exists, discord_trim
 
 
 class Combat(object):

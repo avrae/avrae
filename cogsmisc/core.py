@@ -11,7 +11,7 @@ import discord
 from discord.ext import commands
 import psutil
 
-import checks
+from utils import checks
 import os
 
 

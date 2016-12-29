@@ -13,7 +13,7 @@ import discord
 from discord.enums import ChannelType
 from discord.ext import commands
 
-import checks
+from utils import checks
 
 
 class AdminUtils:

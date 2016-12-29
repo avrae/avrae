@@ -12,7 +12,7 @@ import traceback
 import numexpr
 
 from cogs5e import tables
-from functions import list_get
+from utils.functions import list_get
 
 
 # Rolls Dice

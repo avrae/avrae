@@ -3,7 +3,7 @@ import json
 import discord
 from discord.ext import commands
 
-import checks
+from utils import checks
 from cogs5e import tables
 from functions import discord_trim
 

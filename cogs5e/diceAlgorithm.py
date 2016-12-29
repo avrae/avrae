@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 import numexpr
 
-import checks
+from utils import checks
 from cogs5e.dice import roll
 
 

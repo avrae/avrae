@@ -5,11 +5,14 @@ Created on Nov 29, 2016
 '''
 
 import asyncio
-import discord
 import json
-from discord.ext import commands
-from functions import discord_trim, print_table
 import math
+
+import discord
+from discord.ext import commands
+
+from utils.functions import discord_trim, print_table
+
 
 class Lookup:
     """Commands to help look up items (WIP), status effects, rules, etc."""

@@ -16,7 +16,7 @@ class DataIO:
         self.db = redis.from_url(os.environ.get("REDIS_URL"))
         
     def get(self, key):
-        return self.db.get(key)
+        return self.db.get(key).decode()
     
     def set(self, key, value):
         return self.db.set(key, value)
@@ -25,7 +25,11 @@ class DataIO:
         return self.db.hmset(key, dictionary)
     
     def get_dict(self, key, dict_key):
-        return self.db.hget(key, dict_key)
+        return self.db.hget(key, dict_key).decode()
     
     def get_whole_dict(self, key):
-        return self.db.hgetall(key)
+        encoded_dict = self.db.hgetall(key)
+        out = {}
+        for k, v in encoded_dict:
+            out[k.decode()] = v.decode()
+        return out

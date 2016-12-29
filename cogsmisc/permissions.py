@@ -21,7 +21,7 @@ class Permissions:
     
     def __check(self, ctx):
         msg = ctx.message
-        if checks.is_owner_check(msg):
+        if checks.is_owner_check(ctx):
             return True
 
         entry = self.bot.db.get_whole_dict(msg.server.id + "_perms", {})

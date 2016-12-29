@@ -22,7 +22,7 @@ from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists
 
 
-TESTING = True
+TESTING = False
 prefix = '!' if not TESTING else '#'
 
 # TODO: 

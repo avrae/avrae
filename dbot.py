@@ -108,8 +108,7 @@ async def enter():
 async def on_command_error(error, ctx):
     print('In {0.command.qualified_name}:'.format(ctx), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-    print('{0.__class__.__name__}: {0}'.format(error.original), file=sys.stderr)
-    tb = 'In {0.command.qualified_name}:'.format(ctx) + ''.join(traceback.format_exception(type(error), error, error.__traceback__)) + '{0.__class__.__name__}: {0}'.format(error.original)
+    tb = 'In {0.command.qualified_name}:'.format(ctx) + ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if bot.mask & coreCog.verbose_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error))
     elif bot.mask & coreCog.quiet_mask:

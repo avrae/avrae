@@ -30,6 +30,6 @@ class DataIO:
     def get_whole_dict(self, key):
         encoded_dict = self.db.hgetall(key)
         out = {}
-        for k, v in encoded_dict:
-            out[k.decode()] = v.decode()
+        for k in encoded_dict.keys():
+            out[k.decode()] = encoded_dict[k].decode()
         return out

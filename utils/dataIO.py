@@ -23,7 +23,7 @@ class DataIO:
         return self._db.set(key, value)
     
     def set_dict(self, key, dictionary):
-        if dictionary is {}:
+        if len(dictionary) == 0:
             return self._db.delete(key)
         return self._db.hmset(key, dictionary)
     

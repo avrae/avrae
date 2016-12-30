@@ -37,11 +37,13 @@ class Permissions:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
-    async def prefix(self, ctx, *, prefix: str):
+    async def prefix(self, ctx, prefix: str):
         """Sets the bot's prefix for this server.
 
         You must have Manage Server permissions or the
         Bot Admin role to use this command.
+        
+        Forgot the prefix? Reset it with "@Avrae#6944 prefix !".
         """
         guild_id = ctx.message.server.id
         self.bot.global_prefixes[guild_id] = prefix

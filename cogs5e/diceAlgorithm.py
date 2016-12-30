@@ -45,7 +45,13 @@ class Dice:
                .r xdy+z adv Attack with Advantage!
                .r xdy-z dis Hide with Heavy Armor!
                .r xdy+xdy*z
-               .r XdYkhZ"""
+               .r XdYkhZ
+        Supported Operators: k (keep)
+                             ro (reroll once)
+                             rr (reroll infinitely)
+                             >/< (test if result is greater than/less than)
+        Supported Selectors: lX (lowest X)
+                             hX (highest X)"""
         adv = 0
         self.bot.botStats["dice_rolled_session"] += 1
         self.bot.botStats["dice_rolled_life"] += 1

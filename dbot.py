@@ -143,9 +143,12 @@ async def on_message(message):
         if coreCog.verbose_mask & bot.mask:
             await bot.send_message(message.channel, "`Reseeding RNG...`")
         random.seed()
+    if bot.global_prefixes is None: # bot's still starting up!
+        return
     guild_prefix = bot.global_prefixes.get(message.server.id, bot.prefix)
     if message.content.startswith(guild_prefix):
         message.content = message.content.replace(guild_prefix, bot.prefix, 1)
+    elif message.content.startswith(bot.prefix): return
     await bot.process_commands(message)
     
 @bot.event

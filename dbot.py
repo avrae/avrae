@@ -35,6 +35,7 @@ prefix = '!' if not TESTING else '#'
 # More Breath Weapons
 description = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.'''
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True)
+bot.prefix = prefix
 
 if os.path.isfile('./resources.txt'):
     with open('./resources.txt', 'r') as f:  # this is really inefficient
@@ -111,9 +112,8 @@ async def enter():
     
 @bot.event
 async def on_command_error(error, ctx):
-    print('In {0.command.qualified_name}:'.format(ctx), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-    tb = 'In {0.command.qualified_name}:\n'.format(ctx) + ''.join(traceback.format_exception(type(error), error, error.__traceback__))
+    tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if bot.mask & coreCog.verbose_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error))
     elif bot.mask & coreCog.quiet_mask:
@@ -143,7 +143,9 @@ async def on_message(message):
         if coreCog.verbose_mask & bot.mask:
             await bot.send_message(message.channel, "`Reseeding RNG...`")
         random.seed()
-    
+    guild_prefix = bot.global_prefixes.get(message.server.id, bot.prefix)
+    if message.content.startswith(guild_prefix):
+        message.content = message.content.replace(guild_prefix, bot.prefix, 1)
     await bot.process_commands(message)
     
 @bot.event

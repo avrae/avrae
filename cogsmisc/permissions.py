@@ -18,6 +18,9 @@ class Permissions:
 
     def __init__(self, bot):
         self.bot = bot
+        
+    async def on_ready(self):
+        self.bot.global_prefixes = self.bot.db.not_json_get("prefixes", {})
     
     def __check(self, ctx):
         msg = ctx.message
@@ -32,6 +35,19 @@ class Permissions:
             name = ctx.command.qualified_name.split(' ')[0]
             return name not in entry
 
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
+    async def prefix(self, ctx, *, prefix: str):
+        """Sets the bot's prefix for this server.
+
+        You must have Manage Server permissions or the
+        Bot Admin role to use this command.
+        """
+        guild_id = ctx.message.server.id
+        self.bot.global_prefixes[guild_id] = prefix
+        self.bot.db.not_json_set("prefixes", self.bot.global_prefixes)
+        await self.bot.say("Prefix set to `{}` for this server.".format(prefix))
+        
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
     async def disable(self, ctx, *, command: str):

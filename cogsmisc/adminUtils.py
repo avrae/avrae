@@ -4,7 +4,6 @@ Created on Sep 23, 2016
 @author: andrew
 '''
 import asyncio
-from asyncio.tasks import async
 import os
 import sys
 import traceback

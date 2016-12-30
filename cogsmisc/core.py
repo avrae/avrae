@@ -5,6 +5,7 @@ Created on Dec 26, 2016
 '''
 from datetime import timedelta, datetime
 from math import floor
+import os
 import time
 
 import discord
@@ -12,7 +13,6 @@ from discord.ext import commands
 import psutil
 
 from utils import checks
-import os
 
 
 class Core:
@@ -34,7 +34,7 @@ class Core:
         """Purges messages from the channel.
         Usage: .purge <Number of messages to purge>
         Requires: Bot Admin or Manage Messages"""
-        if mask & self.monitor_mask:
+        if self.bot.mask & self.monitor_mask:
             await self.bot.send_message(self.bot.owner, "Purging {} messages from {}.".format(str(int(num) + 1), ctx.message.server))
         try:
             await self.bot.purge_from(ctx.message.channel, limit=(int(num) + 1))
@@ -60,24 +60,23 @@ class Core:
     async def toggle_flag(self, ctx, flag : str):
         """Toggles a bitmask flag.
         Requires: Owner"""
-        global mask
         if flag.lower() == 'verbose':
-            mask = mask ^ self.verbose_mask
+            self.bot.mask = self.bot.mask ^ self.verbose_mask
         elif flag.lower() == 'quiet':
-            mask = mask ^ self.quiet_mask
+            self.bot.mask = self.bot.mask ^ self.quiet_mask
         elif flag.lower() == 'debug':
-            mask = mask ^ self.debug_mask
+            self.bot.mask = self.bot.mask ^ self.debug_mask
         elif flag.lower() == 'monitor':
-            mask = mask ^ self.monitor_mask
+            self.bot.mask = self.bot.mask ^ self.monitor_mask
         with open('./resources.txt', 'w') as f:
-            f.write("{0:0>8b}".format(mask))
-        await self.bot.say('Toggled flag ' + flag + "```Bitmask: {0:0>8b}```".format(mask))
+            f.write("{0:0>8b}".format(self.bot.mask))
+        await self.bot.say('Toggled flag ' + flag + "```Bitmask: {0:0>8b}```".format(self.bot.mask))
         
     @commands.command(pass_context=True)
     async def bug(self, ctx, *, report:str):
         """Reports a bug to the developer."""
         await self.bot.send_message(self.bot.owner, "Bug reported by {} from {}:\n{}".format(ctx.message.author.mention, ctx.message.server, report))
-        await self.bot.say("Bug report sent to developer! You can ping him here: " + self.bot.owner.mention)
+        await self.bot.say("Bug report sent to developer! He'll get to it eventually.")
         
     @commands.command(hidden=True)
     @checks.mod_or_permissions(manage_nicknames=True)

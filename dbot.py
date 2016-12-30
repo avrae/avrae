@@ -5,7 +5,9 @@ import logging
 from math import floor
 import os
 import random
+import sys
 import time
+import traceback
 
 import discord
 from discord.ext import commands
@@ -20,8 +22,6 @@ import credentials
 from utils import checks
 from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim
-import sys
-import traceback
 
 
 TESTING = False
@@ -108,7 +108,7 @@ async def enter():
 async def on_command_error(error, ctx):
     print('In {0.command.qualified_name}:'.format(ctx), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-    tb = 'In {0.command.qualified_name}:'.format(ctx) + ''.join(traceback.format_exception(type(error), error, error.__traceback__))
+    tb = 'In {0.command.qualified_name}:\n'.format(ctx) + ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if bot.mask & coreCog.verbose_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error))
     elif bot.mask & coreCog.quiet_mask:
@@ -122,6 +122,7 @@ async def on_command_error(error, ctx):
         else:
             await bot.send_message(ctx.message.channel, "Error: " + str(error))
         if bot.mask & coreCog.debug_mask:
+            if isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument)): return
             try:
                 await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, repr(error), ctx.message.content))
             except AttributeError:

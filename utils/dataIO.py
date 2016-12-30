@@ -6,6 +6,7 @@ Created on Dec 28, 2016
 
 import os
 import redis
+import json
 
 class DataIO:
     '''
@@ -37,3 +38,13 @@ class DataIO:
         for k in encoded_dict.keys():
             out[k.decode()] = encoded_dict[k].decode()
         return out
+    
+    def not_json_set(self, key, data):
+        data = json.dumps(data)
+        return self._db.set(key, data)
+        
+    def not_json_get(self, key, default=None):
+        data = self.get(key, default)
+        return json.loads(data)
+        
+        

@@ -24,9 +24,13 @@ class Permissions:
         if checks.is_owner_check(ctx):
             return True
 
-        entry = self.bot.db.get_whole_dict(msg.server.id + "_perms", {})
-        name = ctx.command.qualified_name.split(' ')[0]
-        return name not in entry
+        try: 
+            entry = self.bot.db.not_json_get("permissions", {})[msg.server.id]
+        except (KeyError, AttributeError):
+            return True
+        else:
+            name = ctx.command.qualified_name.split(' ')[0]
+            return name not in entry
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
@@ -45,9 +49,11 @@ class Permissions:
             return await self.bot.say('I do not have this command registered.')
 
         guild_id = ctx.message.server.id
-        entries = self.bot.db.get_whole_dict(guild_id + "_perms", {})
-        entries[command] = True
-        self.bot.db.set_dict(guild_id + "_perms", entries)
+        global_entries = self.bot.db.not_json_get("permissions", {})
+        guild_entries = global_entries.get(guild_id, {})
+        guild_entries[command] = True
+        global_entries[guild_id] = guild_entries
+        self.bot.db.not_json_set("permissions", global_entries)
         await self.bot.say('"%s" command disabled in this server.' % command)
 
     @commands.command(pass_context=True, no_pm=True)
@@ -60,12 +66,14 @@ class Permissions:
         """
         command = command.lower()
         guild_id = ctx.message.server.id
-        entries = self.bot.db.get_whole_dict(guild_id + "_perms", {})
+        global_entries = self.bot.db.not_json_get("permissions", {})
+        guild_entries = global_entries.get(guild_id, {})
 
         try:
-            entries.pop(command)
+            guild_entries.pop(command)
+            global_entries[guild_id] = guild_entries
         except KeyError:
             await self.bot.say('The command does not exist or is not disabled.')
         else:
-            self.bot.db.set_dict(guild_id + "_perms", entries)
+            self.bot.db.not_json_set("permissions", global_entries)
             await self.bot.say('"%s" command enabled in this server.' % command)

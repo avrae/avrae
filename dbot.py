@@ -13,11 +13,14 @@ import discord
 from discord.ext import commands
 import psutil
 
-from cogs5e import charGen
-from cogs5e import diceAlgorithm
-from cogs5e import initiativeTracker
-from cogs5e import lookup
-from cogsmisc import adminUtils, core, permissions
+from cogs5e.charGen import CharGenerator
+from cogs5e.diceAlgorithm import Dice
+from cogs5e.initiativeTracker import InitTracker
+from cogs5e.lookup import Lookup
+from cogsmisc.adminUtils import AdminUtils
+from cogsmisc.core import Core
+from cogsmisc.permissions import Permissions
+from cogsmisc.publicity import Publicity
 import credentials
 from utils import checks
 from utils.dataIO import DataIO
@@ -49,20 +52,22 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 
 #-----COGS-----
-diceCog = diceAlgorithm.Dice(bot)
-charGenCog = charGen.CharGenerator(bot)
-initiativeTrackerCog = initiativeTracker.InitTracker(bot)
-adminUtilsCog = adminUtils.AdminUtils(bot)
-lookupCog = lookup.Lookup(bot)
-coreCog = core.Core(bot)
-permissionsCog = permissions.Permissions(bot)
+diceCog = Dice(bot)
+charGenCog = CharGenerator(bot)
+initiativeTrackerCog = InitTracker(bot)
+adminUtilsCog = AdminUtils(bot)
+lookupCog = Lookup(bot)
+coreCog = Core(bot)
+permissionsCog = Permissions(bot)
+publicityCog = Publicity(bot)
 cogs = [diceCog,
         charGenCog,
         initiativeTrackerCog,
         adminUtilsCog,
         lookupCog,
         coreCog,
-        permissionsCog]
+        permissionsCog,
+        publicityCog]
 
 @bot.event
 async def on_ready():

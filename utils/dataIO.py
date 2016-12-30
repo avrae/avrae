@@ -41,10 +41,10 @@ class DataIO:
     
     def not_json_set(self, key, data):
         data = json.dumps(data)
-        return self._db.set(key, data)
+        return self.set(key, data)
         
     def not_json_get(self, key, default=None):
-        data = self.get(key, default)
-        return json.loads(data)
+        data = self.get(key)
+        return json.loads(data) if data is not None else default
         
         

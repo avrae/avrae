@@ -11,7 +11,8 @@ import math
 import discord
 from discord.ext import commands
 
-from utils.functions import discord_trim, print_table
+from utils.functions import discord_trim, print_table, list_get
+import shlex
 
 
 class Lookup:
@@ -19,6 +20,7 @@ class Lookup:
     
     def __init__(self, bot):
         self.bot = bot
+        self.settings = self.bot.db.not_json_get("lookup_settings", {})
         with open('./res/conditions.json', 'r') as f:
             self.conditions = json.load(f)
         self.teachers = []
@@ -43,13 +45,39 @@ class Lookup:
         condition = next(c for c in self.conditions if c['name'].lower() == condition.lower())
         return condition
     
+    @commands.command(pass_context=True, no_pm=True)
+    async def lookup_settings(self, ctx, *, args:str):
+        """Changes settings for the lookup module.
+        Usage: !lookup_settings -req_dm_monster True
+        Current settings are: req_dm_monster - Requires a Game Master role to show a full monster stat block."""
+        args = shlex.split(args)
+        guild_id = ctx.message.server.id
+        guild_settings = self.settings.get(guild_id, {})
+        if '-req_dm_monster' in args:
+            setting = list_get(args.index('-req_dm_monster') + 1, True, args)
+            guild_settings['req_dm_monster'] = setting
+        
+        self.settings[guild_id] = guild_settings
+        self.bot.db.not_json_set("lookup_settings", self.settings)
+    
     @commands.command(pass_context=True)
     async def monster(self, ctx, *, monstername : str):
         """Looks up a monster.
-        Requires role 'DM' or 'Game Master' to show full stat block.
-        Shows Beasts if you have the role 'Druid'."""
+        Generally requires role 'DM' or 'Game Master' to show full stat block."""
         
-        result = self.searchMonster(monstername, ctx, False)
+        try:
+            guild_id = ctx.message.server.id     
+        except:
+            visible = True
+        else:
+            visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
+            if self.settings.get(guild_id, {}).get("req_dm_monster", True):
+                for ro in visible_roles:
+                    visible = True if ro in [str(r).lower() for r in ctx.message.author.roles] else False
+            else:
+                visible = True
+        
+        result = self.searchMonster(monstername, visible=visible, verbose=False)
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.botStats["monsters_looked_up_life"] += 1
     
@@ -60,10 +88,21 @@ class Lookup:
     @commands.command(pass_context=True)
     async def vmonster(self, ctx, *, monstername : str):
         """Looks up a monster, including all of its skills.
-        Requires role 'DM' or 'Game Master' to show full stat block.
-        Shows Beasts if you have the role 'Druid'."""
+        Generally requires role 'DM' or 'Game Master' to show full stat block."""
         
-        result = self.searchMonster(monstername, ctx, True)
+        try:
+            guild_id = ctx.message.server.id     
+        except:
+            visible = True
+        else:
+            visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
+            if self.settings.get(guild_id, {}).get("req_dm_monster", True):
+                for ro in visible_roles:
+                    visible = True if ro in [str(r).lower() for r in ctx.message.author.roles] else False
+            else:
+                visible = True
+        
+        result = self.searchMonster(monstername, visible=True, verbose=True)
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.botStats["monsters_looked_up_life"] += 1
     
@@ -83,12 +122,11 @@ class Lookup:
         for r in result:
             await self.bot.say(r)
     
-    def searchMonster(self, monstername, ctx, verbose):
+    def searchMonster(self, monstername, visible=True, verbose=False):
         with open('./res/monsters.json', 'r') as f:
             monsters = json.load(f)
         
         monsterDesc = []
-        visible = False
     
         try:
             monster = next(item for item in monsters if item["name"].upper() == monstername.upper())
@@ -96,13 +134,6 @@ class Lookup:
             monsterDesc.append("Monster does not exist or is misspelled.")
             return monsterDesc
         
-        visible_roles = ['dm', 'game master', 'dungeon master', 'gm']
-        
-        for ro in visible_roles:
-            if ro in (str(r).lower() for r in ctx.message.author.roles):
-                visible = True
-        if 'druid' in (str(r).lower() for r in ctx.message.author.roles) and monster['type'] == 'beast':
-            visible = True
         
         if visible:
                 

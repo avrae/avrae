@@ -13,6 +13,7 @@ from discord.ext import commands
 
 from utils.functions import discord_trim, print_table, list_get
 import shlex
+from utils import checks
 
 
 class Lookup:
@@ -46,6 +47,7 @@ class Lookup:
         return condition
     
     @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def lookup_settings(self, ctx, *, args:str):
         """Changes settings for the lookup module.
         Usage: !lookup_settings -req_dm_monster True

@@ -17,10 +17,14 @@ class Dice:
         self.bot = bot
         
     async def on_message(self, message):
-        if message.content.startswith('!d20'):
+        try:
+            guild_prefix = self.bot.global_prefixes.get(message.server.id, self.bot.prefix)
+        except:
+            guild_prefix = self.bot.prefix
+        if message.content.startswith(guild_prefix + 'd20'):
             self.bot.botStats["dice_rolled_session"] += 1
             self.bot.botStats["dice_rolled_life"] += 1
-            rollStr = message.content.replace('!', '1').split(' ')[0]
+            rollStr = message.content.replace(guild_prefix, '1').split(' ')[0]
             try:
                 rollFor = ' '.join(message.content.split(' ')[1:])
             except:

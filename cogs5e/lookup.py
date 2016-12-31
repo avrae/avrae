@@ -54,11 +54,12 @@ class Lookup:
         guild_id = ctx.message.server.id
         guild_settings = self.settings.get(guild_id, {})
         if '-req_dm_monster' in args:
-            setting = list_get(args.index('-req_dm_monster') + 1, True, args)
+            setting = bool(list_get(args.index('-req_dm_monster') + 1, True, args))
             guild_settings['req_dm_monster'] = setting
         
         self.settings[guild_id] = guild_settings
         self.bot.db.not_json_set("lookup_settings", self.settings)
+        await self.bot.say("Lookup settings set.")
     
     @commands.command(pass_context=True)
     async def monster(self, ctx, *, monstername : str):

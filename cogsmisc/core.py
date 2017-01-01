@@ -32,7 +32,7 @@ class Core:
     @checks.admin_or_permissions(manage_messages=True)
     async def purge(self, ctx, num):
         """Purges messages from the channel.
-        Usage: .purge <Number of messages to purge>
+        Usage: !purge <Number of messages to purge>
         Requires: Bot Admin or Manage Messages"""
         if self.bot.mask & self.monitor_mask:
             await self.bot.send_message(self.bot.owner, "Purging {} messages from {}.".format(str(int(num) + 1), ctx.message.server))
@@ -82,7 +82,7 @@ class Core:
     @checks.mod_or_permissions(manage_nicknames=True)
     async def avatar(self, user : discord.User):
         """Gets a user's avatar.
-        Usage: .avatar <USER>
+        Usage: !avatar <USER>
         Requires: Bot Mod or Manage Nicknames"""
         if user.avatar_url is not "":
             await self.bot.say(user.avatar_url)
@@ -131,4 +131,27 @@ class Core:
         
         await self.bot.say(embed=embed)
         
+    @commands.command(pass_context=True)
+    async def multiline(self, ctx, *, commands:str):
+        """Runs each line as a separate command.
+        Usage:
+        "!multiline
+        !roll 1d20
+        !spell Fly
+        !monster Rat"
+        """
+        commands = commands.splitlines()
+        for c in commands:
+            ctx.message.content = c
+            if not hasattr(self.bot, 'global_prefixes'): # bot's still starting up!
+                return
+            try:
+                guild_prefix = self.bot.global_prefixes.get(ctx.message.server.id, self.bot.prefix)
+            except:
+                guild_prefix = self.bot.prefix
+            if ctx.message.content.startswith(guild_prefix):
+                ctx.message.content = ctx.message.content.replace(guild_prefix, self.bot.prefix, 1)
+            elif ctx.message.content.startswith(self.bot.prefix): return
+            await self.bot.process_commands(ctx.message)
+                
         

@@ -583,7 +583,7 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         combat.combatantGenerator = None
-        path = './saves/init/{}.ragnarok'.format(ctx.message.channel.id)
+        path = './saves/init/{}.avrae'.format(ctx.message.channel.id)
         with open(path, 'wb') as output:
             pickle.dump(combat, output, pickle.HIGHEST_PROTOCOL)
         await self.bot.say("Combat saved.")
@@ -596,7 +596,7 @@ class InitTracker:
         if [c for c in self.combats if c.channel is ctx.message.channel]:
             await self.bot.say("You are already in combat. To end combat, use \".init end\".")
             return
-        path = '!/saves/init/{}.ragnarok'.format(ctx.message.channel.id)
+        path = '!/saves/init/{}.avrae'.format(ctx.message.channel.id)
         if not isfile(path):
             await self.bot.say("No combat saved.")
             return

@@ -73,7 +73,7 @@ class Dice:
     @commands.command(pass_context=True, name='rrr', aliases=['iterroll'])
     async def rrr(self, ctx, iterations:int, rollStr, dc:int, *, args=''):
         """Rolls dice in xdy format, given a set dc.
-        Usage: .rrr <ITER> <xdy> <DC> [args]"""
+        Usage: !rrr <iterations> <xdy> <DC> [args]"""
         if iterations < 1 or iterations > 500:
             await self.bot.say("Too many or too few iterations.")
         self.bot.botStats["dice_rolled_session"] += iterations
@@ -104,7 +104,7 @@ class Dice:
     @commands.command(pass_context=True)
     async def math(self, ctx):
         """Solves a math problem.
-        Usage: .math <MATH>"""
+        Usage: !math <MATH>"""
         await self.e_math(ctx.message)
                
             

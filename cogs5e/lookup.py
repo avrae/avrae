@@ -11,7 +11,7 @@ import math
 import discord
 from discord.ext import commands
 
-from utils.functions import discord_trim, print_table, list_get
+from utils.functions import discord_trim, print_table, list_get, get_positivity
 import shlex
 from utils import checks
 
@@ -59,8 +59,10 @@ class Lookup:
             try:
                 setting = args[args.index('-req_dm_monster') + 1]
             except IndexError:
-                setting = True
-            guild_settings['req_dm_monster'] = bool(setting)
+                setting = 'True'
+            setting = get_positivity(setting)
+            guild_settings['req_dm_monster'] = setting if setting is not None else True
+            
         
         self.settings[guild_id] = guild_settings
         self.bot.db.not_json_set("lookup_settings", self.settings)

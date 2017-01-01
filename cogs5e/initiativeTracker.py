@@ -290,7 +290,7 @@ class InitTracker:
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
-            await self.bot.say("You are not in combat. Please start combat with \".init begin\".")
+            await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
             return
         
         if combat.get_combatant(name) is not None:
@@ -333,7 +333,7 @@ class InitTracker:
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
-            await self.bot.say("You are not in combat. Please start combat with \".init begin\".")
+            await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
             return
         
         if len(combat.combatants) == 0:
@@ -413,6 +413,44 @@ class InitTracker:
         
         combatant.notes = note
         await self.bot.say("Added note.", delete_after=10)
+        await combat.update_summary(self.bot)
+        
+    @init.command(pass_context=True)
+    async def opt(self, ctx, combatant : str, *, args : str):
+        """Edits the options of a combatant.
+        Usage: !init opt <NAME> <ARGS>
+        Valid Arguments:    -h (hides HP)
+                            --controller <CONTROLLER> (pings a different person on turn)"""
+        try:
+            combat = next(c for c in self.combats if c.channel is ctx.message.channel)
+        except StopIteration:
+            await self.bot.say("You are not in combat.")
+            return
+        
+        combatant = combat.get_combatant(combatant)
+        if combatant is None:
+            await self.bot.say("Combatant not found.")
+            return
+        
+        private = combatant.private
+        controller = combatant.author
+        args = shlex.split(args)
+        
+        if '-h' in args:
+            private = not private
+            combatant.private = private
+        if '--controller' in args:
+            try:
+                controllerStr = args[args.index('--controller') + 1]
+                controllerEscaped = controllerStr.replace('<', '').replace('>', '').replace('@', '').replace('!', '')
+                a = ctx.message.server.get_member(controllerEscaped)
+                b = ctx.message.server.get_member_named(controllerStr)
+                combatant.author = a if a is not None else b if b is not None else controller
+            except IndexError:
+                await self.bot.say("You must pass in a controller with the --controller tag.")
+                return
+        
+        await self.bot.say("Combatant options updated.", delete_after=10)
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True)
@@ -594,7 +632,7 @@ class InitTracker:
         Usage: !init load"""
         make_sure_path_exists('./saves/init/')
         if [c for c in self.combats if c.channel is ctx.message.channel]:
-            await self.bot.say("You are already in combat. To end combat, use \".init end\".")
+            await self.bot.say("You are already in combat. To end combat, use \"!init end\".")
             return
         path = '!/saves/init/{}.avrae'.format(ctx.message.channel.id)
         if not isfile(path):

@@ -17,14 +17,10 @@ class Dice:
         self.bot = bot
         
     async def on_message(self, message):
-        try:
-            guild_prefix = self.bot.global_prefixes.get(message.server.id, self.bot.prefix)
-        except:
-            guild_prefix = self.bot.prefix
-        if message.content.startswith(guild_prefix + 'd20'):
+        if message.content.startswith('!d20'):
             self.bot.botStats["dice_rolled_session"] += 1
             self.bot.botStats["dice_rolled_life"] += 1
-            rollStr = message.content.replace(guild_prefix, '1').split(' ')[0]
+            rollStr = message.content.replace('!', '1').split(' ')[0]
             try:
                 rollFor = ' '.join(message.content.split(' ')[1:])
             except:
@@ -45,11 +41,11 @@ class Dice:
     @commands.command(pass_context=True, name='r', aliases=['roll'])
     async def rollCmd(self, ctx, rollStr, *, rollFor:str=''):
         """Rolls dice in xdy format.
-        Usage: .r xdy Attack!
-               .r xdy+z adv Attack with Advantage!
-               .r xdy-z dis Hide with Heavy Armor!
-               .r xdy+xdy*z
-               .r XdYkhZ
+        Usage: !r xdy Attack!
+               !r xdy+z adv Attack with Advantage!
+               !r xdy-z dis Hide with Heavy Armor!
+               !r xdy+xdy*z
+               !r XdYkhZ
         Supported Operators: k (keep)
                              ro (reroll once)
                              rr (reroll infinitely)

@@ -188,12 +188,12 @@ class Effect(object):
 class InitTracker:
     '''
     Initiative tracking commands.
-    To use, first start combat in a channel by saying ".init begin".
-    Then, each combatant should add themselves to the combat with ".init add <MOD> <NAME>".
-    To hide a combatant's HP, add them with ".init add <MOD> <NAME> -h".
-    Once every combatant is added, each combatant should set their max hp with ".init hp <NAME> max <MAXHP>".
-    Then, you can proceed through combat with ".init next".
-    Once combat ends, end combat with ".init end".
+    To use, first start combat in a channel by saying "!init begin".
+    Then, each combatant should add themselves to the combat with "!init add <MOD> <NAME>".
+    To hide a combatant's HP, add them with "!init add <MOD> <NAME> -h".
+    Once every combatant is added, each combatant should set their max hp with "!init hp <NAME> max <MAXHP>".
+    Then, you can proceed through combat with "!init next".
+    Once combat ends, end combat with "!init end".
     For more help, the .help command shows applicable arguments for each command.
     '''
 
@@ -205,7 +205,7 @@ class InitTracker:
     async def init(self, ctx):
         """Commands to help track initiative."""
         if ctx.invoked_subcommand is None:
-            await self.bot.say("Incorrect usage. Use .help init for help.")
+            await self.bot.say("Incorrect usage. Use !help init for help.")
         try:
             await self.bot.delete_message(ctx.message)
         except:
@@ -214,11 +214,11 @@ class InitTracker:
     @init.command(pass_context=True)
     async def begin(self, ctx, *, args:str=''):
         """Begins combat in the channel the command is invoked.
-        Usage: .init begin <ARGS (opt)>
+        Usage: !init begin <ARGS (opt)>
         Valid Arguments:    -1 (modifies initiative rolls)
                             --name <NAME> (names the combat)"""
         if [c for c in self.combats if c.channel is ctx.message.channel]:
-            await self.bot.say("You are already in combat. To end combat, use \".init end\".")
+            await self.bot.say("You are already in combat. To end combat, use \"!init end\".")
             return
         options = {}
         name = ''
@@ -240,12 +240,12 @@ class InitTracker:
             await self.bot.pin_message(summaryMsg)
         except:
             pass
-        await self.bot.say("Everyone roll for initiative! (\".init add <MODIFIER> <NAME>\")")
+        await self.bot.say("Everyone roll for initiative! (\"!init add <MODIFIER> <NAME>\")")
             
     @init.command(pass_context=True)
     async def add(self, ctx, modifier : int, name : str, *, args:str=''):
         """Adds a combatant to the initiative order.
-        Usage: .init add <MODIFIER> <NAME> <ARGS (opt)>
+        Usage: !init add <MODIFIER> <NAME> <ARGS (opt)>
         Valid Arguments:    -h (hides HP)
                             -p (places at given number instead of rolling)
                             --controller <CONTROLLER> (pings a different person on turn)
@@ -329,7 +329,7 @@ class InitTracker:
     @init.command(pass_context=True, name="next")
     async def nextInit(self, ctx):
         """Moves to the next turn in initiative order.
-        Usage: .init next"""
+        Usage: !init next"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -385,7 +385,7 @@ class InitTracker:
     @init.command(pass_context=True, name="list")
     async def listInits(self, ctx):
         """Lists the combatants.
-        Usage: .init list"""
+        Usage: !init list"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -399,7 +399,7 @@ class InitTracker:
     @init.command(pass_context=True)
     async def note(self, ctx, combatant : str, *, note : str=''):
         """Attaches a note to a combatant.
-        Usage: .init note <NAME> <NOTE>"""
+        Usage: !init note <NAME> <NOTE>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -418,7 +418,7 @@ class InitTracker:
     @init.command(pass_context=True)
     async def status(self, ctx, combatant : str, *, args:str=''):
         """Gets the status of a combatant.
-        Usage: .init status <NAME> <ARGS (opt)>"""
+        Usage: !init status <NAME> <ARGS (opt)>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -438,7 +438,7 @@ class InitTracker:
     @init.command(pass_context=True)
     async def hp(self, ctx, combatant : str, operator : str, hp : int):
         """Modifies the HP of a combatant.
-        Usage: .init hp <NAME> <mod/set/max> <HP>"""
+        Usage: !init hp <NAME> <mod/set/max> <HP>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -477,7 +477,7 @@ class InitTracker:
     @init.command(pass_context=True)
     async def effect(self, ctx, combatant : str, duration : int, effect : str, *, desc : str=''):
         """Attaches a status effect to a combatant.
-        Usage: .init effect <NAME> <DURATION (rounds)> <EFFECT> <DESC (opt)>"""
+        Usage: !init effect <NAME> <DURATION (rounds)> <EFFECT> <DESC (opt)>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -497,7 +497,7 @@ class InitTracker:
     @init.command(pass_context=True, name='re')
     async def remove_effect(self, ctx, combatant:str, effect:str=''):
         """Removes a status effect from a combatant. Removes all if effect is not passed.
-        Usage: .init re <NAME> <EFFECT (opt)>"""
+        Usage: !init re <NAME> <EFFECT (opt)>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -525,7 +525,7 @@ class InitTracker:
     @init.command(pass_context=True, name='remove')
     async def remove_combatant(self, ctx, *, name : str):
         """Removes a combatant from the combat.
-        Usage: .init remove <NAME>"""
+        Usage: !init remove <NAME>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -549,7 +549,7 @@ class InitTracker:
     @init.command(pass_context=True)
     async def end(self, ctx):
         """Ends combat in the channel.
-        Usage: .init end"""
+        Usage: !init end"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -575,7 +575,7 @@ class InitTracker:
     @init.command(pass_context=True)
     async def save(self, ctx):
         """Saves combat to a file for long-term storage.
-        Usage: .init save"""
+        Usage: !init save"""
         make_sure_path_exists('./saves/init/')
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
@@ -591,12 +591,12 @@ class InitTracker:
     @init.command(pass_context=True)
     async def load(self, ctx):
         """Loads combat from a file.
-        Usage: .init load"""
+        Usage: !init load"""
         make_sure_path_exists('./saves/init/')
         if [c for c in self.combats if c.channel is ctx.message.channel]:
             await self.bot.say("You are already in combat. To end combat, use \".init end\".")
             return
-        path = './saves/init/{}.ragnarok'.format(ctx.message.channel.id)
+        path = '!/saves/init/{}.ragnarok'.format(ctx.message.channel.id)
         if not isfile(path):
             await self.bot.say("No combat saved.")
             return

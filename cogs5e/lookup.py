@@ -52,12 +52,15 @@ class Lookup:
         """Changes settings for the lookup module.
         Usage: !lookup_settings -req_dm_monster True
         Current settings are: req_dm_monster - Requires a Game Master role to show a full monster stat block."""
-        args = shlex.split(args)
+        args = shlex.split(args.lower())
         guild_id = ctx.message.server.id
         guild_settings = self.settings.get(guild_id, {})
         if '-req_dm_monster' in args:
-            setting = bool(list_get(args.index('-req_dm_monster') + 1, True, args))
-            guild_settings['req_dm_monster'] = setting
+            try:
+                setting = args[args.index('-req_dm_monster') + 1]
+            except IndexError:
+                setting = True
+            guild_settings['req_dm_monster'] = bool(setting)
         
         self.settings[guild_id] = guild_settings
         self.bot.db.not_json_set("lookup_settings", self.settings)
@@ -66,7 +69,8 @@ class Lookup:
     @commands.command(pass_context=True)
     async def monster(self, ctx, *, monstername : str):
         """Looks up a monster.
-        Generally requires role 'DM' or 'Game Master' to show full stat block."""
+        Generally requires a Game Master role to show full stat block.
+        Game Master Roles: GM, DM, Game Master, Dungeon Master"""
         
         try:
             guild_id = ctx.message.server.id     
@@ -105,7 +109,7 @@ class Lookup:
             else:
                 visible = True
         
-        result = self.searchMonster(monstername, visible=True, verbose=True)
+        result = self.searchMonster(monstername, visible=visible, verbose=True)
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.botStats["monsters_looked_up_life"] += 1
     

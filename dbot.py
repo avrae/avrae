@@ -124,18 +124,18 @@ async def on_command_error(error, ctx):
         elif isinstance(error, commands.CheckFailure):
             await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command or the command is disabled.")
             return
-        elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument)):
+        elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage)):
             await bot.send_message(ctx.message.channel, "Error: " + str(error))
-        else:
+        elif bot.mask & coreCog.debug_mask:
             await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
-        if bot.mask & coreCog.debug_mask:
-            if isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument)): return
             try:
                 await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, repr(error), ctx.message.content))
             except AttributeError:
-                await bot.send_message(bot.owner, "Error in PM with {}: {}\nCaused by message: `{}`".format(ctx.message.author.mention, repr(error), ctx.message.content))
+                await bot.send_message(bot.owner, "Error in PM with {} ({}): {}\nCaused by message: `{}`".format(ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
             for o in discord_trim(tb):
                 await bot.send_message(bot.owner, o)
+        else:
+            await bot.send_message(ctx.message.channel, "Error: " + str(error))
                 
 @bot.event
 async def on_message(message):

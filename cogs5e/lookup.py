@@ -31,6 +31,12 @@ class Lookup:
     @commands.command(pass_context=True)
     async def condition(self, ctx, *, name : str):
         """Looks up a condition."""
+        try:
+            guild_id = ctx.message.server.id 
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)    
+        except:
+            pm = False
+        
         result = self.searchCondition(name)
         
         conName = result['name']
@@ -40,7 +46,10 @@ class Lookup:
 
         # do stuff here
         for r in discord_trim(out):
-            await self.bot.say(r)
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r)
             
     def searchCondition(self, condition):
         condition = next(c for c in self.conditions if c['name'].lower() == condition.lower())
@@ -51,7 +60,8 @@ class Lookup:
     async def lookup_settings(self, ctx, *, args:str):
         """Changes settings for the lookup module.
         Usage: !lookup_settings -req_dm_monster True
-        Current settings are: req_dm_monster - Requires a Game Master role to show a full monster stat block."""
+        Current settings are: req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
+                              pm_result [True/False] - PMs the result of the lookup to reduce spam."""
         args = shlex.split(args.lower())
         guild_id = ctx.message.server.id
         guild_settings = self.settings.get(guild_id, {})
@@ -62,8 +72,14 @@ class Lookup:
                 setting = 'True'
             setting = get_positivity(setting)
             guild_settings['req_dm_monster'] = setting if setting is not None else True
+        if '-pm_result' in args:
+            try:
+                setting = args[args.index('-pm_result') + 1]
+            except IndexError:
+                setting = 'False'
+            setting = get_positivity(setting)
+            guild_settings['pm_result'] = setting if setting is not None else False
             
-        
         self.settings[guild_id] = guild_settings
         self.bot.db.not_json_set("lookup_settings", self.settings)
         await self.bot.say("Lookup settings set.")
@@ -75,9 +91,11 @@ class Lookup:
         Game Master Roles: GM, DM, Game Master, Dungeon Master"""
         
         try:
-            guild_id = ctx.message.server.id     
+            guild_id = ctx.message.server.id   
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)
         except:
             visible = True
+            pm = False
         else:
             visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
             if self.settings.get(guild_id, {}).get("req_dm_monster", True):
@@ -92,7 +110,10 @@ class Lookup:
     
         # do stuff here
         for r in result:
-            await self.bot.say(r)
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r)
             
     @commands.command(pass_context=True)
     async def vmonster(self, ctx, *, monstername : str):
@@ -100,9 +121,11 @@ class Lookup:
         Generally requires role 'DM' or 'Game Master' to show full stat block."""
         
         try:
-            guild_id = ctx.message.server.id     
+            guild_id = ctx.message.server.id 
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)    
         except:
             visible = True
+            pm = False
         else:
             visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
             if self.settings.get(guild_id, {}).get("req_dm_monster", True):
@@ -115,21 +138,32 @@ class Lookup:
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.botStats["monsters_looked_up_life"] += 1
     
-        # do stuff here
         for r in result:
-            await self.bot.say(r)
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r)
             
     @commands.command(pass_context=True)
     async def spell(self, ctx, *, args : str):
         """Looks up a spell."""
         valid_args = {'--class', '--level', '--school'}
+        
+        try:
+            guild_id = ctx.message.server.id 
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)    
+        except:
+            pm = False
+        
         result = self.searchSpell(args)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.botStats["spells_looked_up_life"] += 1
 
-        # do stuff here
         for r in result:
-            await self.bot.say(r)
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r)
     
     def searchMonster(self, monstername, visible=True, verbose=False):
         with open('./res/monsters.json', 'r') as f:

@@ -53,12 +53,11 @@ class Permissions:
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
     async def disable(self, ctx, *, command: str):
-        """Disables a command for this server.
+        """Disables a command for this server. Case-sensitive.
 
         You must have Manage Server permissions or the
         Bot Admin role to use this command.
         """
-        command = command.lower()
 
         if command in ('enable', 'disable'):
             return await self.bot.say('Cannot disable that command.')

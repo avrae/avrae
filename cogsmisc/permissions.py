@@ -81,7 +81,6 @@ class Permissions:
         You must have Manage Server permissions or the
         Bot Admin role to use this command.
         """
-        command = command.lower()
         guild_id = ctx.message.server.id
         global_entries = self.bot.db.not_json_get("permissions", {})
         guild_entries = global_entries.get(guild_id, {})

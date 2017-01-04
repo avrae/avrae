@@ -13,8 +13,11 @@ class DataIO:
     A simple class to interface with the redis database.
     '''
 
-    def __init__(self):
-        self._db = redis.from_url(os.environ.get("REDIS_URL"))
+    def __init__(self, testing=False):
+        if not testing:
+            self._db = redis.from_url(os.environ.get("REDIS_URL"))
+        else:
+            self._db = redis.from_url(os.environ.get("***REMOVED***"))
         
     def get(self, key, default=None):
         encoded_data = self._db.get(key)

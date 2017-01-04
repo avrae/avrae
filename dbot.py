@@ -44,7 +44,7 @@ if os.path.isfile('./resources.txt'):
 else:
     bot.mask = 0x00
     
-bot.db = DataIO() if not TESTING else None
+bot.db = DataIO() if not TESTING else DataIO(testing=True)
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
@@ -82,32 +82,15 @@ async def enter():
     await bot.wait_until_ready()
     appInfo = await bot.application_info()
     bot.owner = appInfo.owner
-    if TESTING:
-        make_sure_path_exists("./saves/stats/")
-        if os.path.isfile("./saves/stats/botStats.avrae"):
-            with open('./saves/stats/botStats.avrae', mode='r', encoding='utf-8') as f:
-                bot.botStats = json.load(f)
-            bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
-    
-        else:
-            bot.botStats = {"dice_rolled_session":0,
-                            "spells_looked_up_session":0,
-                            "monsters_looked_up_session":0,
-                            "commands_used_session":0,
-                            "dice_rolled_life":0,
-                            "spells_looked_up_life":0,
-                            "monsters_looked_up_life":0,
-                            "commands_used_life":0}
-    else:
-        bot.botStats = bot.db.get_whole_dict('botStats')
-        statKeys = ["dice_rolled_session", "spells_looked_up_session", "monsters_looked_up_session", "commands_used_session", "dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life"]
-        for k in statKeys:
-            if k not in bot.botStats.keys():
-                bot.botStats[k] = 0
-        bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
-        for stat in bot.botStats.keys():
-            bot.botStats[stat] = int(bot.botStats[stat])
-        bot.db.set_dict('botStats', bot.botStats)
+    bot.botStats = bot.db.get_whole_dict('botStats')
+    statKeys = ["dice_rolled_session", "spells_looked_up_session", "monsters_looked_up_session", "commands_used_session", "dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life"]
+    for k in statKeys:
+        if k not in bot.botStats.keys():
+            bot.botStats[k] = 0
+    bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
+    for stat in bot.botStats.keys():
+        bot.botStats[stat] = int(bot.botStats[stat])
+    bot.db.set_dict('botStats', bot.botStats)
     await bot.change_status(game=discord.Game(name='D&D 5e | !help'))
     
 @bot.event
@@ -165,13 +148,7 @@ async def save_stats():
     await bot.wait_until_ready()
     while not bot.is_closed:
         await asyncio.sleep(3600) #every hour
-        if TESTING:
-            make_sure_path_exists('./saves/stats/')
-            path = './saves/stats/botStats.avrae'
-            with open(path, mode='w', encoding='utf-8') as f:
-                json.dump(bot.botStats, f, sort_keys=True, indent=4)
-        else:
-            bot.db.set_dict('botStats', bot.botStats)
+        bot.db.set_dict('botStats', bot.botStats)
         
         
 bot.loop.create_task(save_stats())

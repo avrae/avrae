@@ -17,7 +17,7 @@ class DataIO:
         if not testing:
             self._db = redis.from_url(os.environ.get("REDIS_URL"))
         else:
-            self._db = redis.from_url(os.environ.get("***REMOVED***"))
+            self._db = redis.from_url("***REMOVED***")
         
     def get(self, key, default=None):
         encoded_data = self._db.get(key)

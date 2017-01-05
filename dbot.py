@@ -108,7 +108,7 @@ async def on_command_error(error, ctx):
             await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command or the command is disabled.")
             return
         elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage)):
-            await bot.send_message(ctx.message.channel, "Error: " + str(error))
+            await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nUse !help " + ctx.command.qualified_name + " for help.")
         elif bot.mask & coreCog.debug_mask:
             await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
             try:

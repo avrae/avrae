@@ -28,6 +28,8 @@ from utils.functions import make_sure_path_exists, discord_trim
 
 
 TESTING = False
+if 'test' in sys.argv:
+    TESTING = True
 prefix = '!' if not TESTING else '#'
 
 # TODO: 

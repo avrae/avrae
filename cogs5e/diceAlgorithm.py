@@ -69,6 +69,34 @@ class Dice:
             await self.bot.say(ctx.message.author.mention + '  :game_die:\n**Result:** ' + str(res.plain))
         else:
             await self.bot.say(outStr)
+    
+    @commands.command(pass_context=True, name='rr', aliases=['multiroll'])
+    async def rr(self, ctx, iterations:int, rollStr, *, args=''):
+        """Rolls dice in xdy format a given number of times.
+        Usage: !rrr <iterations> <xdy> [args]"""
+        if iterations < 1 or iterations > 500:
+            await self.bot.say("Too many or too few iterations.")
+        self.bot.botStats["dice_rolled_session"] += iterations
+        self.bot.botStats["dice_rolled_life"] += iterations
+        adv = 0
+        out = []
+        if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
+            adv = 1 if re.search('(^|\s+)adv(\s+|$)', args) is not None else -1
+            args = re.sub('(adv|dis)(\s+|$)', '', args)
+        for r in range(iterations):
+            res = roll(rollStr, adv=adv, rollFor=args, inline=True)
+            out.append(res)
+        outStr = "Rolling {} iterations...\n".format(iterations)
+        outStr += '\n'.join([o.skeleton for o in out])
+        if len(outStr) < 1500:
+            outStr += '\n{} total.'.format(sum(o.total for o in out))
+        else:
+            outStr = "Rolling {} iterations...\n".format(iterations) + '{} total.'.format(sum(o.total for o in out))
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+        await self.bot.say(ctx.message.author.mention + '\n' + outStr)
         
     @commands.command(pass_context=True, name='rrr', aliases=['iterroll'])
     async def rrr(self, ctx, iterations:int, rollStr, dc:int, *, args=''):

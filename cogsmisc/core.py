@@ -72,7 +72,7 @@ class Core:
             f.write("{0:0>8b}".format(self.bot.mask))
         await self.bot.say('Toggled flag ' + flag + "```Bitmask: {0:0>8b}```".format(self.bot.mask))
         
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, aliases=['feedback'])
     async def bug(self, ctx, *, report:str):
         """Reports a bug to the developer."""
         await self.bot.send_message(self.bot.owner, "Bug reported by {} from {}:\n{}".format(ctx.message.author.mention, ctx.message.server, report))

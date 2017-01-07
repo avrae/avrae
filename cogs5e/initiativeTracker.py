@@ -14,6 +14,7 @@ import discord
 from discord.ext import commands
 
 from utils.functions import make_sure_path_exists, discord_trim
+import signal
 
 
 class Combat(object):
@@ -201,7 +202,7 @@ class InitTracker:
         self.bot = bot
         self.combats = []  # structure: array of dicts with structure {channel (Channel/Member), combatants (list of dict, [{init, name, author, mod, notes, effects}]), current (int), round (int)}
         
-    @commands.group(pass_context=True)
+    @commands.group(pass_context=True, aliases=['i'])
     async def init(self, ctx):
         """Commands to help track initiative."""
         if ctx.invoked_subcommand is None:
@@ -326,7 +327,7 @@ class InitTracker:
         await combat.update_summary(self.bot)
         combat.sortCombatants()
         
-    @init.command(pass_context=True, name="next")
+    @init.command(pass_context=True, name="next", aliases=['n'])
     async def nextInit(self, ctx):
         """Moves to the next turn in initiative order.
         Usage: !init next"""
@@ -394,7 +395,7 @@ class InitTracker:
         
         outStr = combat.getSummary()
         
-        await self.bot.say(outStr)
+        await self.bot.say(outStr, delete_after=60)
         
     @init.command(pass_context=True)
     async def note(self, ctx, combatant : str, *, note : str=''):
@@ -609,7 +610,16 @@ class InitTracker:
             await self.bot.say("Failed to end combat.")
         else:
             await self.bot.say("Combat ended.")
-        
+            
+    def panic_before_exit(self):
+        make_sure_path_exists('./saves/init/')
+        for combat in self.combats:
+            combat.combatantGenerator = None
+            path = './saves/init/{}.avrae'.format(combat.channel.id)
+            with open(path, 'wb') as output:
+                pickle.dump(combat, output, pickle.HIGHEST_PROTOCOL)
+            print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
+            
     @init.command(pass_context=True)
     async def save(self, ctx):
         """Saves combat to a file for long-term storage.

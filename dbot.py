@@ -5,6 +5,7 @@ import logging
 from math import floor
 import os
 import random
+import signal
 import sys
 import time
 import traceback
@@ -97,31 +98,26 @@ async def enter():
     
 @bot.event
 async def on_command_error(error, ctx):
+    if isinstance(error, commands.CommandNotFound):
+        return
     print("Error caused by message: `{}`".format(ctx.message.content))
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
-    if bot.mask & coreCog.verbose_mask:
-        await bot.send_message(ctx.message.channel, "Error: " + str(error))
-    elif bot.mask & coreCog.quiet_mask:
+    if isinstance(error, commands.CheckFailure):
+        await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command or the command is disabled.")
         return
+    elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage)):
+        await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nUse `!help " + ctx.command.qualified_name + "` for help.")
+    elif bot.mask & coreCog.debug_mask:
+        await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
+        try:
+            await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, repr(error), ctx.message.content))
+        except AttributeError:
+            await bot.send_message(bot.owner, "Error in PM with {} ({}): {}\nCaused by message: `{}`".format(ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
+        for o in discord_trim(tb):
+            await bot.send_message(bot.owner, o)
     else:
-        if isinstance(error, commands.CommandNotFound):
-            return
-        elif isinstance(error, commands.CheckFailure):
-            await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command or the command is disabled.")
-            return
-        elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage)):
-            await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nUse `!help " + ctx.command.qualified_name + "` for help.")
-        elif bot.mask & coreCog.debug_mask:
-            await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
-            try:
-                await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, repr(error), ctx.message.content))
-            except AttributeError:
-                await bot.send_message(bot.owner, "Error in PM with {} ({}): {}\nCaused by message: `{}`".format(ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
-            for o in discord_trim(tb):
-                await bot.send_message(bot.owner, o)
-        else:
-            await bot.send_message(ctx.message.channel, "Error: " + str(error))
+        await bot.send_message(ctx.message.channel, "Error: " + str(error))
                 
 @bot.event
 async def on_message(message):
@@ -146,21 +142,33 @@ async def on_message(message):
 async def on_command(command, ctx):
     bot.botStats['commands_used_session'] += 1
     bot.botStats['commands_used_life'] += 1
-        
+
+#BACKGROUND
 async def save_stats():
     await bot.wait_until_ready()
     while not bot.is_closed:
         await asyncio.sleep(3600) #every hour
         bot.db.set_dict('botStats', bot.botStats)
-        
-        
+
 bot.loop.create_task(save_stats())
+
+#SIGNAL HANDLING
+def sigterm_handler(_signum, _frame):
+    for c in bot.cogs:
+        try:
+            c.panic_before_exit()
+        except:
+            pass
+    bot.loop.run_until_complete(bot.logout())
+    bot.loop.close()
+    
+signal.signal(signal.SIGTERM, sigterm_handler)
             
 for cog in cogs:
     bot.add_cog(cog)
 
 
 if not TESTING:        
-    bot.run(credentials.officialToken)  # official token
+    bot.start(credentials.officialToken)  # official token
 else:
-    bot.run(credentials.testToken) #test token
+    bot.start(credentials.testToken) #test token

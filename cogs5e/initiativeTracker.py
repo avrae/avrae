@@ -611,45 +611,39 @@ class InitTracker:
         else:
             await self.bot.say("Combat ended.")
             
-    def panic_before_exit(self):
+    def __unload(self):
         make_sure_path_exists('./saves/init/')
         for combat in self.combats:
             combat.combatantGenerator = None
-            path = './saves/init/{}.avrae'.format(combat.channel.id)
-            with open(path, 'wb') as output:
-                pickle.dump(combat, output, pickle.HIGHEST_PROTOCOL)
+            path = '{}.avrae'.format(combat.channel.id)
+            self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
             print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
             
     @init.command(pass_context=True)
     async def save(self, ctx):
         """Saves combat to a file for long-term storage.
         Usage: !init save"""
-        make_sure_path_exists('./saves/init/')
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
             await self.bot.say("You are not in combat.")
             return
         combat.combatantGenerator = None
-        path = './saves/init/{}.avrae'.format(ctx.message.channel.id)
-        with open(path, 'wb') as output:
-            pickle.dump(combat, output, pickle.HIGHEST_PROTOCOL)
+        path = '{}.avrae'.format(ctx.message.channel.id)
+        self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
         await self.bot.say("Combat saved.")
         
     @init.command(pass_context=True)
     async def load(self, ctx):
         """Loads combat from a file.
         Usage: !init load"""
-        make_sure_path_exists('./saves/init/')
         if [c for c in self.combats if c.channel is ctx.message.channel]:
             await self.bot.say("You are already in combat. To end combat, use \"!init end\".")
             return
-        path = '!/saves/init/{}.avrae'.format(ctx.message.channel.id)
-        if not isfile(path):
-            await self.bot.say("No combat saved.")
-            return
-        with open(path, 'rb') as input:
-            combat = pickle.load(input)
+        path = '{}.avrae'.format(ctx.message.channel.id)
+        combat = pickle.loads(self.bot.db.get(path, None))
+        if combat is None:
+            return await self.bot.say("No combat saved.")
         combat.channel = ctx.message.channel
         self.combats.append(combat)
         summaryMsg = await self.bot.say(combat.getSummary())

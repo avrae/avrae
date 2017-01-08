@@ -6,3 +6,5 @@
 *.ragnarok
 
 /venv/*
+
+*.avrae

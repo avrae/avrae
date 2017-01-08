@@ -144,23 +144,27 @@ async def on_command(command, ctx):
     bot.botStats['commands_used_life'] += 1
 
 #BACKGROUND
-async def save_stats():
-    await bot.wait_until_ready()
-    while not bot.is_closed:
-        await asyncio.sleep(3600) #every hour
-        bot.db.set_dict('botStats', bot.botStats)
+background_tasks = []
 
-bot.loop.create_task(save_stats())
+async def save_stats():
+    try:
+        await bot.wait_until_ready()
+        while not bot.is_closed:
+            await asyncio.sleep(3600) #every hour
+            bot.db.set_dict('botStats', bot.botStats)
+    except asyncio.CancelledError:
+        pass
+
+background_tasks.append(bot.loop.create_task(save_stats()))
 
 #SIGNAL HANDLING
 def sigterm_handler(_signum, _frame):
-    for c in bot.cogs:
+    for task in background_tasks:
         try:
-            c.panic_before_exit()
+            task.cancel()
         except:
             pass
-    bot.loop.run_until_complete(bot.logout())
-    bot.loop.close()
+    asyncio.ensure_future(bot.logout())
     
 signal.signal(signal.SIGTERM, sigterm_handler)
             
@@ -169,6 +173,6 @@ for cog in cogs:
 
 
 if not TESTING:        
-    bot.start(credentials.officialToken)  # official token
+    bot.run(credentials.officialToken)  # official token
 else:
-    bot.start(credentials.testToken) #test token
+    bot.run(credentials.testToken) #test token

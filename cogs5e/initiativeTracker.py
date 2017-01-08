@@ -641,9 +641,10 @@ class InitTracker:
             await self.bot.say("You are already in combat. To end combat, use \"!init end\".")
             return
         path = '{}.avrae'.format(ctx.message.channel.id)
-        combat = pickle.loads(self.bot.db.get(path, None))
+        combat = self.bot.db.get(path, None)
         if combat is None:
             return await self.bot.say("No combat saved.")
+        combat = pickle.loads(combat.encode('cp437'))
         combat.channel = ctx.message.channel
         self.combats.append(combat)
         summaryMsg = await self.bot.say(combat.getSummary())

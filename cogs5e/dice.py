@@ -129,7 +129,7 @@ def d_roller(obj, adv=0):
             rawRes[r] = '_' + rawRes[r] + '_'
     
     # build the output list
-    out = DiceResult(total, '[' + ', '.join(rawRes) + ']', crit)
+    out = DiceResult(total, '(' + ', '.join(rawRes) + ')', crit)
     return out
 
 # # Dice Roller
@@ -149,9 +149,14 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         
         # Replaces dice sets with rolled results
         for i, t in enumerate(dice_set):
+            try:
+                annotation = re.search('\[.*\]', t)[0]
+                t = t.replace(annotation, '')
+            except TypeError:
+                annotation = ''
             if 'd' in t:
                 result = d_roller(t, adv)
-                out_set[i] = t + " " + result.result
+                out_set[i] = t + " " + result.result + annotation
                 dice_set[i] = result.result
                 eval_set[i] = str(result.plain)
                 if not result.crit == 0:

@@ -103,7 +103,7 @@ class Core:
         """Prints a link to invite Avrae to your server."""
         await self.bot.say("https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808")
         
-    @commands.command(aliases=['stats'])
+    @commands.command(aliases=['stats', 'info'])
     async def about(self):
         """Information about the bot."""
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')

@@ -152,11 +152,11 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
             try:
                 annotation = re.findall(r'\[.*\]', t)[0]
                 t = t.replace(annotation, '')
-            except TypeError:
+            except:
                 annotation = ''
             if 'd' in t:
                 result = d_roller(t, adv)
-                out_set[i] = t + " " + result.result + annotation
+                out_set[i] = t + " " + result.result + " " + annotation
                 dice_set[i] = result.result
                 eval_set[i] = str(result.plain)
                 if not result.crit == 0:

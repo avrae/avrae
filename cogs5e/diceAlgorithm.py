@@ -38,7 +38,7 @@ class Dice:
             await self.bot.send_message(message.channel, message.author.mention + '  ' + out)
             
     @commands.command(name='2', hidden=True, pass_context=True)
-    async def quick_roll(self, ctx, mod:str='', *, rollFor:str=''):
+    async def quick_roll(self, ctx, mod:str='0', *, rollFor:str=''):
         """Quickly rolls a d20."""
         self.bot.botStats["dice_rolled_session"] += 1
         self.bot.botStats["dice_rolled_life"] += 1

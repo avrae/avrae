@@ -161,6 +161,10 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
                 eval_set[i] = str(result.plain)
                 if not result.crit == 0:
                     crit = result.crit
+            else:
+                out_set[i] = t + " " + annotation
+                dice_set[i] = t
+                eval_set[i] = t
                     
                     
         total = ''.join(eval_set)

@@ -150,7 +150,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         # Replaces dice sets with rolled results
         for i, t in enumerate(dice_set):
             try:
-                annotation = re.search('\[.*\]', t)[0]
+                annotation = re.findall(r'\[.*\]', t)[0]
                 t = t.replace(annotation, '')
             except TypeError:
                 annotation = ''

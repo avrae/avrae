@@ -7,13 +7,13 @@ Created on Nov 29, 2016
 import asyncio
 import json
 import math
+import shlex
 
 import discord
 from discord.ext import commands
 
-from utils.functions import discord_trim, print_table, list_get, get_positivity
-import shlex
 from utils import checks
+from utils.functions import discord_trim, print_table, list_get, get_positivity
 
 
 class Lookup:
@@ -65,8 +65,8 @@ class Lookup:
     async def lookup_settings(self, ctx, *, args:str):
         """Changes settings for the lookup module.
         Usage: !lookup_settings -req_dm_monster True
-        Current settings are: req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
-                              pm_result [True/False] - PMs the result of the lookup to reduce spam."""
+        Current settings are: -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
+                              -pm_result [True/False] - PMs the result of the lookup to reduce spam."""
         args = shlex.split(args.lower())
         guild_id = ctx.message.server.id
         guild_settings = self.settings.get(guild_id, {})

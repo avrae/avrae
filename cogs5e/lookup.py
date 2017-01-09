@@ -28,7 +28,7 @@ class Lookup:
         with open('./res/spells.json', 'r') as f:
             self.spells = json.load(f)
             
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, aliases=['status'])
     async def condition(self, ctx, *, name : str):
         """Looks up a condition."""
         try:
@@ -98,16 +98,17 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id   
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
+            if self.settings.get(guild_id, {}).get("req_dm_monster", True):
+                visible = 0
+                for ro in visible_roles:
+                    visible = visible + 1 if ro in [str(r).lower() for r in ctx.message.author.roles] else visible
+                visible = True if visible > 0 else False
+            else:
+                visible = True
         except:
             visible = True
             pm = False
-        else:
-            visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
-            if self.settings.get(guild_id, {}).get("req_dm_monster", True):
-                for ro in visible_roles:
-                    visible = True if ro in [str(r).lower() for r in ctx.message.author.roles] else False
-            else:
-                visible = True
         
         result = self.searchMonster(monstername, visible=visible, verbose=False)
         self.bot.botStats["monsters_looked_up_session"] += 1
@@ -126,18 +127,19 @@ class Lookup:
         Generally requires role 'DM' or 'Game Master' to show full stat block."""
         
         try:
-            guild_id = ctx.message.server.id 
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)    
+            guild_id = ctx.message.server.id   
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
+            if self.settings.get(guild_id, {}).get("req_dm_monster", True):
+                visible = 0
+                for ro in visible_roles:
+                    visible = visible + 1 if ro in [str(r).lower() for r in ctx.message.author.roles] else visible
+                visible = True if visible > 0 else False
+            else:
+                visible = True
         except:
             visible = True
             pm = False
-        else:
-            visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
-            if self.settings.get(guild_id, {}).get("req_dm_monster", True):
-                for ro in visible_roles:
-                    visible = True if ro in [str(r).lower() for r in ctx.message.author.roles] else False
-            else:
-                visible = True
         
         result = self.searchMonster(monstername, visible=visible, verbose=True)
         self.bot.botStats["monsters_looked_up_session"] += 1

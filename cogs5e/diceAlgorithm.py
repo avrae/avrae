@@ -36,6 +36,24 @@ class Dice:
             except:
                 pass
             await self.bot.send_message(message.channel, message.author.mention + '  ' + out)
+            
+    @commands.command(name='2', hidden=True, pass_context=True)
+    async def quick_roll(self, ctx, mod:str='', *, rollFor:str=''):
+        """Quickly rolls a d20."""
+        self.bot.botStats["dice_rolled_session"] += 1
+        self.bot.botStats["dice_rolled_life"] += 1
+        rollStr = '1d20+' + mod
+        adv = 0
+        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollFor) is not None:
+            adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollFor) is not None else -1
+            rollFor = re.sub('(adv|dis)(\s+|$)', '', rollFor)
+        out = roll(rollStr, adv=adv, rollFor=rollFor, inline=True)
+        out = out.result
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+        await self.bot.say(ctx.message.author.mention + '  ' + out)
                         
         
     @commands.command(pass_context=True, name='r', aliases=['roll'])

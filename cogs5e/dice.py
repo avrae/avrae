@@ -156,13 +156,13 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
                 annotation = ''
             if 'd' in t:
                 result = d_roller(t, adv)
-                out_set[i] = t + " " + result.result + " " + annotation
+                out_set[i] = t + " " + result.result + " " + annotation if annotation is not '' else t + " " + result.result
                 dice_set[i] = result.result
                 eval_set[i] = str(result.plain)
                 if not result.crit == 0:
                     crit = result.crit
             else:
-                out_set[i] = t + " " + annotation
+                out_set[i] = t + " " + annotation if annotation is not '' else t
                 dice_set[i] = t
                 eval_set[i] = t
                     

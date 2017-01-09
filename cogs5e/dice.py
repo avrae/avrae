@@ -225,6 +225,7 @@ class DiceResult:
     """Class to hold the output of a dice roll."""
     def __init__(self, result:int=0, verbose_result:str='', crit:int=0, rolled:str='', skeleton:str=''):
         self.plain = result
+        self.total = result
         self.result = verbose_result
         self.crit = crit
         self.rolled = rolled

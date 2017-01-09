@@ -38,6 +38,8 @@ class Lookup:
             pm = False
         
         result = self.searchCondition(name)
+        if result is None:
+            return await self.bot.say('Condition not found.')
         
         conName = result['name']
         conHeader = '-' * len(conName)
@@ -52,7 +54,10 @@ class Lookup:
                 await self.bot.say(r)
             
     def searchCondition(self, condition):
-        condition = next(c for c in self.conditions if c['name'].lower() == condition.lower())
+        try:
+            condition = next(c for c in self.conditions if c['name'].lower() == condition.lower())
+        except:
+            return None
         return condition
     
     @commands.command(pass_context=True, no_pm=True)

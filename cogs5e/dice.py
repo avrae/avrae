@@ -157,9 +157,9 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
                 annotation = ''
             try:
                 t = re.sub('^\s+', '', t)
-                rollFor = ' '.join(t.split(' ')[1:])
-                rollFor = re.sub('(^\s+|\s+$)', '', rollFor)
-                t = t.replace(rollFor, '')
+                rollForTemp = ' '.join(t.split(' ')[1:])
+                rollForTemp = re.sub('(^\s+|\s+$)', '', rollForTemp)
+                t = t.replace(rollForTemp, '')
             except:
                 pass
             if 'd' in t:
@@ -185,6 +185,9 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         
         rolled = ' '.join(out_set).replace('**', '^').replace('_', '**')
         totalStr = str(floor(total))
+        
+        if rollFor is '':
+            rollFor = rollForTemp
         
         if not inline:
             # Builds end result while showing rolls

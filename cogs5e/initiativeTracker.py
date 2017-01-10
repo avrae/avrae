@@ -552,7 +552,7 @@ class InitTracker:
         if effect is '':
             for e in combatant.effects:
                 combatant.effects.remove(e)
-            await self.bot.say("All effects removed from {}.".fomat(combatant.name), delete_after=10)
+            await self.bot.say("All effects removed from {}.".format(combatant.name), delete_after=10)
         elif to_remove is None:
             await self.bot.say("Effect not found.")
             return

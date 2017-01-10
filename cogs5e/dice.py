@@ -142,54 +142,83 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         # Parses math/dice terms
         dice_temp = rollStr.replace('^', '**')
         # Splits into sections of ['dice', 'operator', 'dice'...] like ['1d20', '+', '4d6', '+', '5']
-        dice_set = re.split('([-+*/^().<>=])', dice_temp)
-        out_set = re.split('([-+*/^().<>=])', dice_temp)
-        eval_set = re.split('([-+*/^().<>=])', dice_temp)
-        
+        dice_set = re.split('([-+*/^().<>= ])', dice_temp)
+        out_set = re.split('([-+*/^().<>= ])', dice_temp)
+        eval_set = re.split('([-+*/^().<>= ])', dice_temp)
+#         print("Dice Set is: " + str(dice_set))
         
         # Replaces dice sets with rolled results
+        stack = []
+        nextAnno = ''
         for i, t in enumerate(dice_set):
-            #print("Processing a t: " + t)
+#             print("Processing a t: " + t)
+#             print("Stack: " + str(stack))
+#             print("NextAnno: " + nextAnno)
             breakCheck = False
-            try: # t looks like: " 1d20[annotation] words"
-                annotation = re.findall(r'\[.*\]', t)[0] # finds any annotation encosed by brackets
-                t = t.replace(annotation, '') # and removes it from the string
-            except:
-                annotation = '' # no annotation
-            try: # t looks something like: " 1d20 words" 
-                t = re.sub('(^\s+|\s+$)', '', t) # find and remove any starting/trailing whitespace
-                rollForTempTemp = ' '.join(t.split(' ')[1:]) # and get anything after the 1st space
-                if rollForTempTemp is '': pass
-                else:
-                    rollForTemp = rollForTempTemp
-                    rollForTemp += ' '.join(dice_set[i+1:]) # that means the rest of the string isn't part of the roll
-                    rollForTemp = re.sub('(^\s+|\s+$)', '', rollForTemp) # get rid of starting/trailing whitespace
-                    t = t.replace(rollForTemp, '') # remove it from the roll
-                    breakCheck = True
-            except: # t looks like: "1d20"
-                pass # eh
+            if t is '':
+                continue
             
-            if re.search('^\s*(\d*(d|k|rr|ro)(h\d|l\d|\d)+(\[.*\])*)\s*$', t):
+            if not 'annotation' in stack:
+                try: # t looks like: " 1d20[annotation] words"
+                    nextAnno = re.findall(r'\[.*\]', t)[0] # finds any annotation encosed by brackets
+                    t = t.replace(nextAnno, '') # and removes it from the string
+                except:
+                    nextAnno = '' # no annotation
+                if '[' in t:
+                    stack.append('annotation')
+                    nextAnno += t 
+                    out_set[i] = ''
+                    eval_set[i] = ''
+                    continue
+            if ']' in t:
+                if 'annotation' in stack:
+                    t = nextAnno + t
+                    print(t)
+                    nextAnno = re.findall(r'\[.*\]', t)[0] # finds any annotation encosed by brackets
+                    t = t.replace(nextAnno, '') # and removes it from the string
+                    stack.remove('annotation')
+            if 'annotation' in stack:
+                nextAnno += t 
+                out_set[i] = ''
+                eval_set[i] = ''
+                continue
+            
+            
+#             try: # t looks something like: " 1d20 words" 
+#                 t = re.sub('(^\s+|\s+$)', '', t) # find and remove any starting/trailing whitespace
+#                 rollForTemp = ' '.join(t.split(' ')[1:]) # and get anything after the 1st space
+#                 if rollForTemp is '': pass
+#                 else:
+#                     rollForTemp += ' '.join(dice_set[i+1:]) # that means the rest of the string isn't part of the roll
+#                     rollForTemp = re.sub('(^\s+|\s+$)', '', rollForTemp) # get rid of starting/trailing whitespace
+#                     t = t.replace(rollForTemp, '') # remove it from the roll
+#                     breakCheck = True
+#             except: # t looks like: "1d20"
+#                 pass # eh
+            
+            if re.search('^\s*((\d*(d|k|rr|ro)?(h\d|l\d|\d)+(\[.*\])*)|([-+*/^().<>= ]))\s*$', t):
                 if 'd' in t:
                     try:
                         result = d_roller(t, adv)
-                        out_set[i] = t + " " + result.result + " " + annotation if annotation is not '' else t + " " + result.result
+                        out_set[i] = t + " " + result.result + " " + nextAnno if nextAnno is not '' else t + " " + result.result
                         eval_set[i] = str(result.plain)
                         if not result.crit == 0:
                             crit = result.crit
                     except Exception as e:
-                        out_set[i] = t + " (ERROR: {}) ".format(str(e)) + annotation if annotation is not '' else t + " (ERROR: {})".format(str(e))
+                        out_set[i] = t + " (ERROR: {}) ".format(str(e)) + nextAnno if nextAnno is not '' else t + " (ERROR: {})".format(str(e))
                         eval_set[i] = "0"
                 else:
-                    out_set[i] = t + " " + annotation if annotation is not '' else t
+                    out_set[i] = t + " " + nextAnno if nextAnno is not '' else t
                     eval_set[i] = t
+                nextAnno = ''
             else:
-                out_set[i] = t + " (ERROR: Not a valid roll.)"
-                eval_set[i] = "0"
+                rollForTemp = ''.join(dice_set[i:]) # that means the rest of the string isn't part of the roll
+                rollForTemp = re.sub('(^\s+|\s+$)', '', rollForTemp) # get rid of starting/trailing whitespace
+                breakCheck = True
                 
             if breakCheck:
-                out_set = out_set[:i+1]
-                eval_set = eval_set[:i+1]
+                out_set = out_set[:i]
+                eval_set = eval_set[:i]
                 break
  
 #         print("Out Set is: " + str(out_set))
@@ -205,7 +234,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         
         if not inline:
             # Builds end result while showing rolls
-            reply.append(' '.join(out_set) + '\n_Total:_ ' + str(floor(total)))
+            reply.append(''.join(out_set) + '\n_Total:_ ' + str(floor(total)))
             skeletonReply = reply
             # Replies to user with message
             reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')
@@ -223,7 +252,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
                 reply += critStr
         else:
             # Builds end result while showing rolls
-            reply.append('' + ' '.join(out_set) + ' = `' + str(floor(total)) + '`')
+            reply.append('' + ''.join(out_set) + ' = `' + str(floor(total)) + '`')
                 
             # Replies to user with message
             reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')

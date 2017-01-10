@@ -57,7 +57,7 @@ class Dice:
                         
         
     @commands.command(pass_context=True, name='r', aliases=['roll'])
-    async def rollCmd(self, ctx, rollStr, *, rollFor:str=''):
+    async def rollCmd(self, ctx, *, rollStr:str):
         """Rolls dice in xdy format.
         Usage: !r xdy Attack!
                !r xdy+z adv Attack with Advantage!
@@ -70,13 +70,14 @@ class Dice:
                              >/< (test if result is greater than/less than)
         Supported Selectors: lX (lowest X)
                              hX (highest X)"""
+        
         adv = 0
         self.bot.botStats["dice_rolled_session"] += 1
         self.bot.botStats["dice_rolled_life"] += 1
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollFor) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollFor) is not None else -1
-            rollFor = re.sub('(adv|dis)(\s+|$)', '', rollFor)
-        res = roll(rollStr, adv=adv, rollFor=rollFor)
+        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
+            adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
+            rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
+        res = roll(rollStr, adv=adv)
         out = res.result
         try:
             await self.bot.delete_message(ctx.message)

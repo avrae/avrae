@@ -149,24 +149,37 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         
         # Replaces dice sets with rolled results
         for i, t in enumerate(dice_set):
+#             print("Processing a t: " + t)
             try:
                 annotation = re.findall(r'\[.*\]', t)[0]
                 t = t.replace(annotation, '')
             except:
                 annotation = ''
+            try:
+                t = re.sub('^\s+', '', t)
+                rollFor = ' '.join(t.split(' ')[1:])
+                rollFor = re.sub('(^\s+|\s+$)', '', rollFor)
+                t = t.replace(rollFor, '')
+            except:
+                pass
             if 'd' in t:
-                result = d_roller(t, adv)
-                out_set[i] = t + " " + result.result + " " + annotation if annotation is not '' else t + " " + result.result
-                dice_set[i] = result.result
-                eval_set[i] = str(result.plain)
-                if not result.crit == 0:
-                    crit = result.crit
+                try:
+                    result = d_roller(t, adv)
+                    out_set[i] = t + " " + result.result + " " + annotation if annotation is not '' else t + " " + result.result
+                    dice_set[i] = result.result
+                    eval_set[i] = str(result.plain)
+                    if not result.crit == 0:
+                        crit = result.crit
+                except Exception as e:
+                    out_set[i] = t + " (ERROR: {}) ".format(str(e)) + annotation if annotation is not '' else t + " (ERROR: {})".format(str(e))
+                    eval_set[i] = "0"
             else:
                 out_set[i] = t + " " + annotation if annotation is not '' else t
                 dice_set[i] = t
                 eval_set[i] = t
                     
-                    
+#         print("Out Set is: " + str(out_set))
+#         print("Eval Set is: " + str(eval_set))
         total = ''.join(eval_set)
         total = numexpr.evaluate(total)
         
@@ -210,6 +223,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
             elif crit == 2:
                 critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
                 reply += critStr
+        reply = re.sub(' +', ' ', reply)
         return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply)
         
     except Exception as ex:

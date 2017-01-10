@@ -173,7 +173,6 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
             if ']' in t:
                 if 'annotation' in stack:
                     t = nextAnno + t
-                    print(t)
                     nextAnno = re.findall(r'\[.*\]', t)[0] # finds any annotation encosed by brackets
                     t = t.replace(nextAnno, '') # and removes it from the string
                     stack.remove('annotation')
@@ -196,7 +195,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
 #             except: # t looks like: "1d20"
 #                 pass # eh
             
-            if re.search('^\s*((\d*(d|k|rr|ro)?(h\d|l\d|\d)+(\[.*\])*)|([-+*/^().<>= ]))\s*$', t):
+            if re.search('^\s*((\d*(d|k|rr|ro)?(h\d|l\d|\d)+)|([-+*/^().<>= ]))?(\[.*\])?\s*$', t):
                 if 'd' in t:
                     try:
                         result = d_roller(t, adv)

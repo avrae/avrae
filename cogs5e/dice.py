@@ -149,35 +149,49 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         
         # Replaces dice sets with rolled results
         for i, t in enumerate(dice_set):
-#             print("Processing a t: " + t)
-            try:
-                annotation = re.findall(r'\[.*\]', t)[0]
-                t = t.replace(annotation, '')
+            #print("Processing a t: " + t)
+            breakCheck = False
+            try: # t looks like: " 1d20[annotation] words"
+                annotation = re.findall(r'\[.*\]', t)[0] # finds any annotation encosed by brackets
+                t = t.replace(annotation, '') # and removes it from the string
             except:
-                annotation = ''
-            try:
-                t = re.sub('^\s+', '', t)
-                rollForTemp = ' '.join(t.split(' ')[1:])
-                rollForTemp = re.sub('(^\s+|\s+$)', '', rollForTemp)
-                t = t.replace(rollForTemp, '')
-            except:
-                pass
-            if 'd' in t:
-                try:
-                    result = d_roller(t, adv)
-                    out_set[i] = t + " " + result.result + " " + annotation if annotation is not '' else t + " " + result.result
-                    dice_set[i] = result.result
-                    eval_set[i] = str(result.plain)
-                    if not result.crit == 0:
-                        crit = result.crit
-                except Exception as e:
-                    out_set[i] = t + " (ERROR: {}) ".format(str(e)) + annotation if annotation is not '' else t + " (ERROR: {})".format(str(e))
-                    eval_set[i] = "0"
+                annotation = '' # no annotation
+            try: # t looks something like: " 1d20 words" 
+                t = re.sub('(^\s+|\s+$)', '', t) # find and remove any starting/trailing whitespace
+                rollForTempTemp = ' '.join(t.split(' ')[1:]) # and get anything after the 1st space
+                if rollForTempTemp is '': pass
+                else:
+                    rollForTemp = rollForTempTemp
+                    rollForTemp += ' '.join(dice_set[i+1:]) # that means the rest of the string isn't part of the roll
+                    rollForTemp = re.sub('(^\s+|\s+$)', '', rollForTemp) # get rid of starting/trailing whitespace
+                    t = t.replace(rollForTemp, '') # remove it from the roll
+                    breakCheck = True
+            except: # t looks like: "1d20"
+                pass # eh
+            
+            if re.search('^\s*(\d*(d|k|rr|ro)(h\d|l\d|\d)+(\[.*\])*)\s*$', t):
+                if 'd' in t:
+                    try:
+                        result = d_roller(t, adv)
+                        out_set[i] = t + " " + result.result + " " + annotation if annotation is not '' else t + " " + result.result
+                        eval_set[i] = str(result.plain)
+                        if not result.crit == 0:
+                            crit = result.crit
+                    except Exception as e:
+                        out_set[i] = t + " (ERROR: {}) ".format(str(e)) + annotation if annotation is not '' else t + " (ERROR: {})".format(str(e))
+                        eval_set[i] = "0"
+                else:
+                    out_set[i] = t + " " + annotation if annotation is not '' else t
+                    eval_set[i] = t
             else:
-                out_set[i] = t + " " + annotation if annotation is not '' else t
-                dice_set[i] = t
-                eval_set[i] = t
-                    
+                out_set[i] = t + " (ERROR: Not a valid roll.)"
+                eval_set[i] = "0"
+                
+            if breakCheck:
+                out_set = out_set[:i+1]
+                eval_set = eval_set[:i+1]
+                break
+ 
 #         print("Out Set is: " + str(out_set))
 #         print("Eval Set is: " + str(eval_set))
         total = ''.join(eval_set)

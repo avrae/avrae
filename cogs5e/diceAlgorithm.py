@@ -93,7 +93,7 @@ class Dice:
         """Rolls dice in xdy format a given number of times.
         Usage: !rrr <iterations> <xdy> [args]"""
         if iterations < 1 or iterations > 500:
-            await self.bot.say("Too many or too few iterations.")
+            return await self.bot.say("Too many or too few iterations.")
         self.bot.botStats["dice_rolled_session"] += iterations
         self.bot.botStats["dice_rolled_life"] += iterations
         adv = 0
@@ -121,7 +121,7 @@ class Dice:
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
         if iterations < 1 or iterations > 500:
-            await self.bot.say("Too many or too few iterations.")
+            return await self.bot.say("Too many or too few iterations.")
         self.bot.botStats["dice_rolled_session"] += iterations
         self.bot.botStats["dice_rolled_life"] += iterations
         adv = 0

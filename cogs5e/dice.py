@@ -150,6 +150,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         # Replaces dice sets with rolled results
         stack = []
         nextAnno = ''
+        rollForTemp = ''
         for i, t in enumerate(dice_set):
 #             print("Processing a t: " + t)
 #             print("Stack: " + str(stack))
@@ -233,7 +234,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         totalStr = str(floor(total))
         
         if rollFor is '':
-            rollFor = rollForTemp
+            rollFor = rollForTemp if rollForTemp is not '' else rollFor
         
         if not inline:
             # Builds end result while showing rolls

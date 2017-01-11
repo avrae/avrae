@@ -230,7 +230,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
             total = 0
             return DiceResult(verbose_result="Invalid input: Nothing rolled or missing argument after operator.")
         
-        rolled = ' '.join(out_set).replace('**', '^').replace('_', '**')
+        rolled = ''.join(out_set).replace('**', '^').replace('_', '**')
         totalStr = str(floor(total))
         
         if rollFor is '':
@@ -238,7 +238,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         
         if not inline:
             # Builds end result while showing rolls
-            reply.append(''.join(out_set) + '\n_Total:_ ' + str(floor(total)))
+            reply.append(' '.join(out_set) + '\n_Total:_ ' + str(floor(total)))
             skeletonReply = reply
             # Replies to user with message
             reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')
@@ -256,7 +256,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
                 reply += critStr
         else:
             # Builds end result while showing rolls
-            reply.append('' + ''.join(out_set) + ' = `' + str(floor(total)) + '`')
+            reply.append('' + ' '.join(out_set) + ' = `' + str(floor(total)) + '`')
                 
             # Replies to user with message
             reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')

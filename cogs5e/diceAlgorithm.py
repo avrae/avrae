@@ -44,9 +44,9 @@ class Dice:
         self.bot.botStats["dice_rolled_life"] += 1
         rollStr = '1d20+' + mod
         adv = 0
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', mod) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', mod) is not None else -1
-            mod = re.sub('(adv|dis)(\s+|$)', '', mod)
+        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
+            adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
+            rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
         out = roll(rollStr, adv=adv, inline=True)
         out = out.result
         try:

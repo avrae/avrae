@@ -14,6 +14,7 @@ from discord.ext import commands
 
 from utils import checks
 from utils.functions import discord_trim, print_table, list_get, get_positivity
+from math import isnan
 
 
 class Lookup:
@@ -21,12 +22,10 @@ class Lookup:
     
     def __init__(self, bot):
         self.bot = bot
-        self.settings = self.bot.db.not_json_get("lookup_settings", {})
+        self.settings = self.bot.db.not_json_get("lookup_settings", {}) if bot is not None else {}
         with open('./res/conditions.json', 'r') as f:
             self.conditions = json.load(f)
         self.teachers = []
-        with open('./res/spells.json', 'r') as f:
-            self.spells = json.load(f)
             
     @commands.command(pass_context=True, aliases=['status'])
     async def condition(self, ctx, *, name : str):
@@ -334,31 +333,44 @@ class Lookup:
     
     def searchSpell(self, spellname, serv_id=''):
         spellDesc = []
-        contextualSpells = self.spells
+        with open('./res/spells.json', 'r') as f:
+            contextualSpells = json.load(f)
         try:
-            spell = next(item for item in contextualSpells if item["name"].upper() == spellname.upper())
+            spell = next(item for item in contextualSpells if spellname.upper() in item["name"].upper())
         except Exception:
             spellDesc.append("Spell does not exist or is misspelled (ha).")
             return spellDesc
         
-        if "ritual" not in spell:
-            spell["ritual"] = "?"
-    
-        if "material" in spell:
-            spellDesc.append("{name}, {level} {school}. ({class})\n**Casting Time:** {casting_time}\n**Range:** {range}\n**Components:** {components}\n**Material Requirement:** {material}\n**Duration:** {duration}\n**Concentration:** {concentration}\n**Ritual:** {ritual}".format(**spell))
-        else:
-            spellDesc.append("{name}, {level} {school}. ({class})\n**Casting Time:** {casting_time}\n**Range:** {range}\n**Components:** {components}\n**Duration:** {duration}\n**Concentration:** {concentration}\n**Ritual:** {ritual}".format(**spell))
-    
-        for a in spell["desc"].split("<p>"):
-            if a:
-                spellDesc.append(a.replace("</p>", "").replace("<b>", "**").replace("</b>", "**"))
-    
-        if "higher_level" in spell:
-            spellDesc.append("**At Higher Levels:** " + spell["higher_level"].replace("<p>", "").replace("</p>", ""))
-            
-        tempStr = ""
-        for m in spellDesc:
-            tempStr += m
-            tempStr += "\n"
-            
+        def parseschool(school):
+            if (school == "A"): return "abjuration"
+            if (school == "EV"): return "evocation"
+            if (school == "EN"): return "enchantment"
+            if (school == "I"): return "illusion"
+            if (school == "D"): return "divination"
+            if (school == "N"): return "necromancy"
+            if (school == "T"): return "transmutation"
+            if (school == "C"): return "conjuration"
+            return school
+        
+        
+        def parsespelllevel(level):
+            if (level == "0"): return "cantrip"
+            if (level == "2"): return level+"nd level"
+            if (level == "3"): return level+"rd level"
+            if (level == "1"): return level+"st level"
+            return level+"th level"
+        
+        spell['level'] = parsespelllevel(spell['level'])
+        spell['school'] = parseschool(spell['school'])
+        spell['ritual'] = spell.get('ritual', 'NO')
+        
+        spellDesc.append("{name}, {level} {school}. ({classes})\n**Casting Time:** {time}\n**Range:** {range}\n**Components:** {components}\n**Duration:** {duration}\n**Ritual:** {ritual}".format(**spell))    
+        
+        for a in spell["text"]:
+            if a is '': continue
+            spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion",""))
+      
+        tempStr = '\n'.join(spellDesc)
+        del spell
+              
         return discord_trim(tempStr)

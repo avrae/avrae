@@ -223,7 +223,11 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
 #         print("Out Set is: " + str(out_set))
 #         print("Eval Set is: " + str(eval_set))
         total = ''.join(eval_set)
-        total = numexpr.evaluate(total)
+        try:
+            total = numexpr.evaluate(total)
+        except SyntaxError:
+            total = 0
+            return DiceResult(verbose_result="Invalid input: Nothing rolled or missing argument after operator.")
         
         rolled = ' '.join(out_set).replace('**', '^').replace('_', '**')
         totalStr = str(floor(total))

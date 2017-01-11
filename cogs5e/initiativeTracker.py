@@ -202,7 +202,7 @@ class InitTracker:
         self.bot = bot
         self.combats = []  # structure: array of dicts with structure {channel (Channel/Member), combatants (list of dict, [{init, name, author, mod, notes, effects}]), current (int), round (int)}
         
-    @commands.group(pass_context=True, aliases=['i'])
+    @commands.group(pass_context=True, aliases=['i'], no_pm=True)
     async def init(self, ctx):
         """Commands to help track initiative."""
         if ctx.invoked_subcommand is None:

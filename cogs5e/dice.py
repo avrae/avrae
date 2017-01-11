@@ -196,7 +196,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
 #             except: # t looks like: "1d20"
 #                 pass # eh
             
-            if re.search('^\s*((\d*(d|k|rr|ro)?(h\d|l\d|\d)+)|([-+*/^().<>= ]))?(\[.*\])?\s*$', t):
+            if re.search('^\s*((\d*(d|k|rr|ro)?(h\d|l\d|\d)+)+|([-+*/^().<>= ]))?(\[.*\])?\s*$', t):
                 if 'd' in t:
                     try:
                         result = d_roller(t, adv)

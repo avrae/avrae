@@ -4,20 +4,23 @@ Created on Dec 28, 2016
 @author: andrew
 '''
 
-import os
-import redis
 import json
+import os
+
+import redis
+
+
 
 class DataIO:
     '''
     A simple class to interface with the redis database.
     '''
 
-    def __init__(self, testing=False):
+    def __init__(self, testing=False, test_database_url=''):
         if not testing:
             self._db = redis.from_url(os.environ.get("REDIS_URL"))
         else:
-            self._db = redis.from_url("***REMOVED***")
+            self._db = redis.from_url(test_database_url)
         
     def get(self, key, default=None):
         encoded_data = self._db.get(key)

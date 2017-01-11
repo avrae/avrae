@@ -5,7 +5,6 @@ Created on Dec 29, 2016
 '''
 import aiohttp
 import json
-import credentials
 
 
 DISCORD_BOTS_API = 'https://bots.discord.pw/api'
@@ -30,7 +29,7 @@ class Publicity:
         })
 
         headers = {
-            'authorization': credentials.discord_bots_key,
+            'authorization': self.bot.credentials.discord_bots_key,
             'content-type': 'application/json'
         }
 

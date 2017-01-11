@@ -22,7 +22,6 @@ from cogsmisc.adminUtils import AdminUtils
 from cogsmisc.core import Core
 from cogsmisc.permissions import Permissions
 from cogsmisc.publicity import Publicity
-import credentials
 from utils import checks
 from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim
@@ -46,8 +45,25 @@ if os.path.isfile('./resources.txt'):
         bot.mask = int(resource[0], base=2)
 else:
     bot.mask = 0x00
+
+class Credentials():
+    pass
+
+#CREDENTIALS
+try:
+    import credentials
+    bot.credentials = Credentials()
+    bot.credentials.testToken = credentials.testToken
+    bot.credentials.officialToken = credentials.officialToken
+    bot.credentials.discord_bots_key = credentials.discord_bots_key
+    bot.credentials.test_database_url = credentials.test_database_url
+except ImportError:
+    bot.credentials.testToken = os.environ.get('TEST_TOKEN')
+    bot.credentials.officialToken = os.environ.get('OFFICIAL_TOKEN')
+    bot.credentials.discord_bots_key = os.environ.get('DISCORD_BOTS_KEY')
+    bot.credentials.test_database_url = os.environ.get('TEST_DATABASE_URL')
     
-bot.db = DataIO() if not TESTING else DataIO(testing=True)
+bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot.credentials.test_database_url)
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
@@ -171,8 +187,7 @@ signal.signal(signal.SIGTERM, sigterm_handler)
 for cog in cogs:
     bot.add_cog(cog)
 
-
 if not TESTING:        
-    bot.run(credentials.officialToken)  # official token
+    bot.run(bot.credentials.officialToken)  # official token
 else:
-    bot.run(credentials.testToken) #test token
+    bot.run(bot.credentials.testToken) #test token

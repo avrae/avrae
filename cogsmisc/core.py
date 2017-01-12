@@ -75,7 +75,7 @@ class Core:
     @commands.command(pass_context=True, aliases=['feedback'])
     async def bug(self, ctx, *, report:str):
         """Reports a bug to the developer."""
-        await self.bot.send_message(self.bot.owner, "Bug reported by {} from {}:\n{}".format(ctx.message.author.mention, ctx.message.server, report))
+        await self.bot.send_message(self.bot.owner, "Bug reported by {} ({}) from {}:\n{}".format(ctx.message.author.mention, str(ctx.message.author), ctx.message.server, report))
         await self.bot.say("Bug report sent to developer! He'll get to it eventually.")
         
     @commands.command(hidden=True)
@@ -101,7 +101,7 @@ class Core:
     @commands.command()
     async def invite(self):
         """Prints a link to invite Avrae to your server."""
-        await self.bot.say("https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808")
+        await self.bot.say("You can invite Avrae to your server here:\nhttps://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808")
         
     @commands.command(aliases=['stats', 'info'])
     async def about(self):
@@ -127,7 +127,7 @@ class Core:
         embed.add_field(name="Servers", value=len(self.bot.servers))
         memory_usage = psutil.Process().memory_full_info().uss / 1024**2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
-        embed.add_field(name='Credits', value='Bot coded by @zhu.exe#4211\nDice foundation contributed by @Iridian#7625\ndiscord.py created by @Danny#0007\nHelp me buy a cup of coffee [here](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=HUDJTWSTPF7ML&lc=US&item_name=Avrae%20Developer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)!', inline=False)
+        embed.add_field(name='About', value='Bot coded by @zhu.exe#4211\nFound a bug? Report it with `!bug`!\nHelp me buy a cup of coffee [here](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=HUDJTWSTPF7ML&lc=US&item_name=Avrae%20Developer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)!\nAvrae is currently running discord.py 0.16.0.', inline=False)
         
         await self.bot.say(embed=embed)
         

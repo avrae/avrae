@@ -195,7 +195,7 @@ class InitTracker:
     Once every combatant is added, each combatant should set their max hp with "!init hp <NAME> max <MAXHP>".
     Then, you can proceed through combat with "!init next".
     Once combat ends, end combat with "!init end".
-    For more help, the .help command shows applicable arguments for each command.
+    For more help, the !help command shows applicable arguments for each command.
     '''
 
     def __init__(self, bot):

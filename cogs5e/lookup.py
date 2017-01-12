@@ -336,10 +336,13 @@ class Lookup:
         with open('./res/spells.json', 'r') as f:
             contextualSpells = json.load(f)
         try:
-            spell = next(item for item in contextualSpells if spellname.upper() in item["name"].upper())
+            spell = next(item for item in contextualSpells if spellname.upper() == item["name"].upper())
         except Exception:
-            spellDesc.append("Spell does not exist or is misspelled (ha).")
-            return spellDesc
+            try:
+                spell = next(item for item in contextualSpells if spellname.upper() in item["name"].upper())
+            except Exception:
+                spellDesc.append("Spell does not exist or is misspelled (ha).")
+                return spellDesc
         
         def parseschool(school):
             if (school == "A"): return "abjuration"

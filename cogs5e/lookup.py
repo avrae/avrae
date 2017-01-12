@@ -369,8 +369,11 @@ class Lookup:
         
         spellDesc.append("{name}, {level} {school}. ({classes})\n**Casting Time:** {time}\n**Range:** {range}\n**Components:** {components}\n**Duration:** {duration}\n**Ritual:** {ritual}".format(**spell))    
         
-        for a in spell["text"]:
-            if a is '': continue
+        if isinstance(spell['text'], list):
+            for a in spell["text"]:
+                if a is '': continue
+                spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion",""))
+        else:
             spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion",""))
       
         tempStr = '\n'.join(spellDesc)

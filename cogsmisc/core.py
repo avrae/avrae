@@ -127,7 +127,7 @@ class Core:
         embed.add_field(name="Servers", value=len(self.bot.servers))
         memory_usage = psutil.Process().memory_full_info().uss / 1024**2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
-        embed.add_field(name='About', value='Bot coded by @zhu.exe#4211\nFound a bug? Report it with `!bug`!\nHelp me buy a cup of coffee [here](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=HUDJTWSTPF7ML&lc=US&item_name=Avrae%20Developer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)!\nAvrae is currently running discord.py 0.16.0.', inline=False)
+        embed.add_field(name='About', value='Bot coded by @zhu.exe#4211\nFound a bug? Report it with `!bug`!\nHelp me buy a cup of coffee [here](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=HUDJTWSTPF7ML&lc=US&item_name=Avrae%20Developer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)!\nJoin the official testing server [here](https://discord.gg/pQbd4s6)!', inline=False)
         
         await self.bot.say(embed=embed)
         

@@ -7,8 +7,9 @@ import discord
 from discord.ext import commands
 import numexpr
 
-from utils import checks
 from cogs5e.dice import roll
+from cogs5e.lookupFuncs import searchSpell
+from utils import checks
 
 
 class Dice:
@@ -153,7 +154,59 @@ class Dice:
         """Solves a math problem.
         Usage: !math <MATH>"""
         await self.e_math(ctx.message)
-               
+        
+    @commands.command(pass_context=True, aliases=['c'])
+    async def cast(self, ctx, *, args : str):
+        """Casts a spell (i.e. rolls all the dice and displays a summary [auto-deleted after 15 sec]).
+        Valid Arguments: -r <Some Dice> - Instead of rolling the default dice, rolls this instead."""
+        
+        try:
+            guild_id = ctx.message.server.id 
+            pm = self.bot.db.not_json_get("lookup_settings", {}).get(guild_id, {}).get("pm_result", False)    
+        except:
+            pm = False
+        
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+        
+        args = args.split('-r')
+        args = [re.sub('^\s+|\s+$', '', a) for a in args]
+        spellName = args[0]
+        
+        spell = searchSpell(spellName, return_spell=True)
+        self.bot.botStats["spells_looked_up_session"] += 1
+        self.bot.botStats["spells_looked_up_life"] += 1
+        if spell['spell'] is None:
+            return await self.bot.say(spell['string'][0], delete_after=15)
+        result = spell['string']
+        spell = spell['spell']
+        
+        if len(args) == 1:
+            rolls = spell.get('roll', '')
+            if isinstance(rolls, list):
+                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls)
+            else:
+                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls, inline=True).skeleton
+
+        else:
+            rolls = args[1:]
+            roll_results = ""
+            for r in rolls:
+                res = roll(r, inline=True)
+                if res.total is not None:
+                    roll_results += res.result + '\n'
+                else:
+                    roll_results += "**Effect:** " + r
+            out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
+            
+        await self.bot.say(out)
+        for r in result:
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r, delete_after=15)
             
     async def e_math(self, message):
         try:

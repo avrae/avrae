@@ -53,7 +53,7 @@ class Dice:
             await self.bot.delete_message(ctx.message)
         except:
             pass
-        await self.bot.say(ctx.message.author.mention + '  ' + out)
+        await self.bot.say(ctx.message.author.mention + '  :game_die:\n' + out)
                         
         
     @commands.command(pass_context=True, name='r', aliases=['roll'])
@@ -83,7 +83,7 @@ class Dice:
             await self.bot.delete_message(ctx.message)
         except:
             pass
-        outStr = ctx.message.author.mention + '  ' + out
+        outStr = ctx.message.author.mention + '  :game_die:\n' + out
         if len(outStr) > 1999:
             await self.bot.say(ctx.message.author.mention + '  :game_die:\n**Result:** ' + str(res.plain))
         else:

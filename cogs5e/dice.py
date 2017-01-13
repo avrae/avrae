@@ -228,7 +228,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
             total = numexpr.evaluate(total)
         except SyntaxError:
             total = 0
-            return DiceResult(verbose_result="Invalid input: Nothing rolled or missing argument after operator.")
+            return DiceResult(verbose_result="Invalid input: Nothing rolled or missing argument after operator.", result=None)
         
         rolled = ''.join(out_set).replace('**', '^').replace('_', '**')
         totalStr = str(floor(total))
@@ -243,7 +243,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
             # Replies to user with message
             reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')
             rollFor = rollFor if rollFor is not '' else 'Result'
-            reply = ':game_die:\n**{}:** '.format(rollFor) + reply
+            reply = '**{}:** '.format(rollFor) + reply
             if adv == 1:
                 reply += '\n**Rolled with Advantage**'
             elif adv == -1:
@@ -262,7 +262,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
             reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')
             skeletonReply = reply
             rollFor = rollFor if rollFor is not '' else 'Result'
-            reply = ':game_die:\n**{}:** '.format(rollFor) + reply
+            reply = '**{}:** '.format(rollFor) + reply
             if adv == 1:
                 reply += '\n**Rolled with Advantage**'
             elif adv == -1:
@@ -278,7 +278,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
         
     except Exception as ex:
         traceback.print_exc()
-        return DiceResult(verbose_result="Invalid input: {}".format(ex))
+        return DiceResult(verbose_result="Invalid input: {}".format(ex), result=None)
     
 def parse_selectors(opts, res):
     for o in range(len(opts)):

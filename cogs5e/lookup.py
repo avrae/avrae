@@ -15,6 +15,7 @@ from discord.ext import commands
 from utils import checks
 from utils.functions import discord_trim, print_table, list_get, get_positivity
 from cogs5e.dice import roll
+import re
 
 
 class Lookup:
@@ -173,7 +174,8 @@ class Lookup:
                 
     @commands.command(pass_context=True, aliases=['c'])
     async def cast(self, ctx, *, args : str):
-        """Casts a spell (i.e. rolls all the dice and displays a summary [auto-deleted after 15 sec])."""
+        """Casts a spell (i.e. rolls all the dice and displays a summary [auto-deleted after 15 sec]).
+        Valid Arguments: -r <Some Dice> - Instead of rolling the default dice, rolls this instead."""
         
         try:
             guild_id = ctx.message.server.id 
@@ -186,19 +188,36 @@ class Lookup:
         except:
             pass
         
-        spell = self.searchSpell(args, return_spell=True)
+        args = args.split('-r')
+        args = [re.sub('^\s+|\s+$', '', a) for a in args]
+        spellName = args[0]
+        
+        spell = self.searchSpell(spellName, return_spell=True)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.botStats["spells_looked_up_life"] += 1
         if spell['spell'] is None:
-            return await self.bot.say(spell['string'])
+            return await self.bot.say(spell['string'][0], delete_after=15)
         result = spell['string']
         spell = spell['spell']
-        rolls = spell.get('roll', '')
-        if isinstance(rolls, list):
-            out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls)
-        else:
-            out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls, inline=True).skeleton
         
+        if len(args) == 1:
+            rolls = spell.get('roll', '')
+            if isinstance(rolls, list):
+                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls)
+            else:
+                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls, inline=True).skeleton
+
+        else:
+            rolls = args[1:]
+            roll_results = ""
+            for r in rolls:
+                res = roll(r, inline=True)
+                if res.total is not None:
+                    roll_results += res.result + '\n'
+                else:
+                    roll_results += "**Effect:** " + r
+            out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
+            
         await self.bot.say(out)
         for r in result:
             if pm:
@@ -401,7 +420,7 @@ class Lookup:
         
         spell['level'] = parsespelllevel(spell['level'])
         spell['school'] = parseschool(spell['school'])
-        spell['ritual'] = spell.get('ritual', 'NO')
+        spell['ritual'] = spell.get('ritual', 'no').lower()
         
         spellDesc.append("{name}, {level} {school}. ({classes})\n**Casting Time:** {time}\n**Range:** {range}\n**Components:** {components}\n**Duration:** {duration}\n**Ritual:** {ritual}".format(**spell))    
         

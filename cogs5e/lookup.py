@@ -14,7 +14,7 @@ from discord.ext import commands
 
 from utils import checks
 from utils.functions import discord_trim, print_table, list_get, get_positivity
-from math import isnan
+from cogs5e.dice import roll
 
 
 class Lookup:
@@ -170,6 +170,41 @@ class Lookup:
                 await self.bot.send_message(ctx.message.author, r)
             else:
                 await self.bot.say(r)
+                
+    @commands.command(pass_context=True, aliases=['c'])
+    async def cast(self, ctx, *, args : str):
+        """Casts a spell (i.e. rolls all the dice and displays a summary [auto-deleted after 15 sec])."""
+        
+        try:
+            guild_id = ctx.message.server.id 
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)    
+        except:
+            pm = False
+        
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+        
+        spell = self.searchSpell(args, return_spell=True)
+        self.bot.botStats["spells_looked_up_session"] += 1
+        self.bot.botStats["spells_looked_up_life"] += 1
+        if spell['spell'] is None:
+            return await self.bot.say(spell['string'])
+        result = spell['string']
+        spell = spell['spell']
+        rolls = spell.get('roll', '')
+        if isinstance(rolls, list):
+            out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls)
+        else:
+            out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls, inline=True).skeleton
+        
+        await self.bot.say(out)
+        for r in result:
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r, delete_after=15)
     
     def searchMonster(self, monstername, visible=True, verbose=False):
         with open('./res/monsters.json', 'r') as f:
@@ -331,7 +366,7 @@ class Lookup:
         
         return discord_trim(tempStr)
     
-    def searchSpell(self, spellname, serv_id=''):
+    def searchSpell(self, spellname, serv_id='', return_spell=False):
         spellDesc = []
         with open('./res/spells.json', 'r') as f:
             contextualSpells = json.load(f)
@@ -342,6 +377,7 @@ class Lookup:
                 spell = next(item for item in contextualSpells if spellname.upper() in item["name"].upper())
             except Exception:
                 spellDesc.append("Spell does not exist or is misspelled (ha).")
+                if return_spell: return {'spell': None, 'string': spellDesc}
                 return spellDesc
         
         def parseschool(school):
@@ -377,6 +413,8 @@ class Lookup:
             spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion",""))
       
         tempStr = '\n'.join(spellDesc)
-        del spell
-              
-        return discord_trim(tempStr)
+        
+        if return_spell:
+            return {'spell': spell, 'string': discord_trim(tempStr)}
+        else:
+            return discord_trim(tempStr)

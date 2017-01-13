@@ -25,6 +25,7 @@ from cogsmisc.publicity import Publicity
 from utils import checks
 from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim
+from cogs5e.pbpUtils import PBPUtils
 
 
 TESTING = False
@@ -80,6 +81,7 @@ lookupCog = Lookup(bot)
 coreCog = Core(bot)
 permissionsCog = Permissions(bot)
 publicityCog = Publicity(bot)
+pbpCog = PBPUtils(bot)
 cogs = [diceCog,
         charGenCog,
         initiativeTrackerCog,
@@ -87,7 +89,8 @@ cogs = [diceCog,
         lookupCog,
         coreCog,
         permissionsCog,
-        publicityCog]
+        publicityCog,
+        pbpCog]
 
 @bot.event
 async def on_ready():

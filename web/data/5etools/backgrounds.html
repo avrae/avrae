@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!--
+	XML data was compiled by a reddit community for use with the "Fight Club 5" app.
+	Google "5e xml files" for more info.
+
+	Feel free to use, edit, and redistribute this as you wish.
+	I don't own any of the XML data anyway.
+-->
+
+<title>Backgrounds - 5etools</title>
+
+<link rel="stylesheet" href="css/bootstrap.css">
+<link rel="icon" href="favicon.png">
+
+<style type="text/css">
+header {
+	margin-bottom: 3px;
+	padding: 25px 15px;
+	color: white;
+	background-color: rgb(0, 107, 196);
+}
+
+header p.lead {
+	color: lightgrey;
+}
+
+
+main {
+	padding: 10px 15px;
+}
+
+footer {
+	padding: 20px 15px;
+	font-size: 90%;
+}
+
+
+input.search {
+	width: 62%;
+}
+
+.sortlabel {
+	display: inline-block;
+	width: 37%;
+	float: right;
+	text-align: right;
+}
+
+.sortlabel span {
+	background: lightgrey;
+	border-radius: 3px;
+	padding: 2px;
+	text-align: right;
+	font-size: 0.5em;
+}
+
+.sortlabel:hover span:hover {
+	background: grey;
+	color: white;
+	cursor: pointer;
+}
+ul.list {
+	list-style-type: none;
+	padding-left: 0px;
+	font-size: 1.1em;
+	height: 100%;
+	max-height: 250px;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-top: 1em;
+}
+
+ul.list li {
+	padding: 1px;
+	cursor: pointer;
+}
+
+ul.list li:hover {
+	background: lightgrey;
+}
+
+ul.list li:active {
+	color: white;
+}
+
+ul.list li span.source {
+	font-size: 0.8em;
+}
+
+ul.list li span.source, ul.list li span.type {
+	font-size: 0.8em;
+	margin-left: 1em;
+	display: none;
+}
+
+ul.list li:hover span {
+	display: block;
+}
+
+th#name span.source {
+	display: inline-block;
+	float: right;
+	font-weight: 500;
+	margin-left: 0.5em;
+}
+
+span.sourceDMG {
+	color: purple;
+}
+
+span.sourceMM {
+	color: green;
+}
+
+span.sourceVGM {
+	color: grey;
+}
+
+span.sourceToD {
+	color: orangered;
+}
+
+span.sourceCoS {
+	color: purple;
+}
+
+span.sourceOotA {
+	color: black;
+}
+
+span.sourceSKT {
+	color: darkcyan;
+}
+
+span.sourcePotA {
+	color: blue;
+}
+
+pan.sourceLMoP {
+	color: lightgreen;
+}
+
+table#stats {
+	width: 100%;
+	min-width: 200px;
+	max-width: 400px;
+	background: #fdf1dc;
+	font-size: .9em;
+	table-layout: fixed;
+}
+
+table#stats td, table#stats th {
+	padding: 1px 0.3em;
+}
+
+table#stats th {
+	color: #922610;
+}
+
+table#stats span {
+	vertical-align: top!important;
+}
+
+th.border {
+	height: 10px;
+	background: #e69a28;
+	border: 1px solid black;
+}
+
+td.divider div {
+	background: #922610;
+	height: 4px;
+	margin: 4px 0;
+}
+
+th#name {
+	font-size: 1.5em;
+	font-family: serif;
+	font-weight: 500;
+}
+
+table#stats td#typerarityattunement {
+	font-style: italic;
+	color: black;
+}
+
+table#stats span.name {
+	font-weight: bold;
+}
+
+tr.trait td {
+	padding-bottom: 0.7em!important;
+	color: black!important;
+}
+
+table#stats #ability, table#stats #size, table#stats #speed {
+	font-weight: bold;
+}
+
+table#stats #ability span, table#stats #size span, table#stats #speed span {
+	font-weight: normal!important;
+}
+
+</style>
+</head>
+<body>
+	<header class="hidden-xs hidden-sm">
+		<div class="container">
+
+			<h1>Backgrounds List</h1>
+			<p>Search by name on the left, click background name to display on the right.</p>
+		</div>
+	</header>
+	<nav class="container">
+		<ul class="nav nav-pills">
+			<li role="presentation"><a href="5etools.html">5eTools</a></li>
+			<li role="presentation"><a href="classes.html">Classes</a></li>
+			<li role="presentation"><a href="bestiary.html">Bestiary</a></li>
+			<li role="presentation"><a href="items.html">Items</a></li>
+			<li role="presentation" class="active"><a href="backgrounds.html">Backgrounds</a></li>
+			<li role="presentation"><a href="feats.html">Feats</a></li>
+			<li role="presentation"><a href="races.html">Races</a></li>
+			<li role="presentation"><a href="spells.html">Spells</a></li>
+			<li role="presentation"><a href="crcalculator.html">CR Calc</a></li>
+			<li role="presentation"><a href="http://kobold.club" target="_blank" title="I could literally never build something better than Kobold Fight Club">Encounter Builder</a></li>
+		</ul>
+	</nav>
+	<main class="container bodyContent">
+
+		<div class="row">
+			<div class="col-sm-6" id="listcontainer">
+				<h3>
+					<input type="search" id="search" class="search" placeholder="Find background...">
+					<span class="sortlabel">
+						<span class="sort" data-sort="name">Name</span>
+					</span>
+				</h3>
+
+				<ul class="list backgrounds" style="height: 100%; max-height: 600px; overflow-y: auto; overflow-x: visible; padding-top: 1em;">
+
+				</ul>
+			</div>
+			<div class="col-sm-6">
+				<div style="height: 100%; max-height: 660px; overflow-y: auto; overflow-x: visible; padding-top: 1em;">
+					<table id="stats">
+						<tr><th class="border" colspan="6"></th></tr>
+						<tr>
+							<th id="name" colspan="6">Name</th>
+						</tr>
+						<tr id="traits"><td class="divider" colspan="6"><div></div></td></tr>
+						<tr><th class="border" colspan="6"></th></tr>
+					</table>
+				</div>
+			</div>
+		</div>
+	</main>
+	<footer class="container">
+
+	</footer>
+
+<script type="text/javascript" src="js/page-backgrounds.js"></script>
+<script type="text/javascript" src="data/backgrounds.json"></script>
+<script type="text/javascript" src="js/list.js"></script>
+<script type="text/javascript" src="js/jquery.js"></script>
+<script type="text/javascript" src="js/bootstrap.js"></script>
+
+
+</body>
+</html>

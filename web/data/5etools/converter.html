@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!--
+	XML data was compiled by a reddit community for use with the "Fight Club 5" app.
+	Google "5e xml files" for more info.
+
+	Feel free to use, edit, and redistribute this as you wish.
+	I don't own any of the XML data anyway.
+-->
+
+<title>Converter - 5etools</title>
+
+<link rel="stylesheet" href="css/bootstrap.css">
+<link rel="icon" href="favicon.png">
+
+<style type="text/css">
+header {
+	margin-bottom: 3px;
+	padding: 25px 15px;
+	color: white;
+	background-color: rgb(0, 107, 196);
+}
+
+header p.lead {
+	color: lightgrey;
+}
+
+
+main {
+	padding: 10px 15px;
+}
+
+footer {
+	padding: 20px 15px;
+	font-size: 90%;
+}
+
+input.search {
+	width: 62%;
+}
+
+.sortlabel {
+	display: inline-block;
+	width: 37%;
+	float: right;
+	text-align: right;
+}
+
+.sortlabel span {
+	background: lightgrey;
+	border-radius: 3px;
+	padding: 2px;
+	text-align: right;7
+	font-size: 0.5em;
+}
+
+.sortlabel:hover span:hover {
+	background: grey;
+	color: white;
+	cursor: pointer;
+}
+
+ul.list {
+	list-style-type: none;
+	padding-left: 0px;
+	font-size: 1.1em;
+	height: 100%;
+	max-height: 250px;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-top: 1em;
+}
+
+ul.list li {
+	padding: 1px;
+	cursor: pointer;
+}
+
+ul.list li:hover {
+	background: lightgrey;
+}
+
+ul.list li:active {
+	color: white;
+}
+
+ul.list li span.source {
+	font-size: 0.8em;
+}
+
+ul.list li span.source, ul.list li span.type {
+	font-size: 0.8em;
+	margin-left: 1em;
+	display: none;
+}
+
+ul.list li:hover span {
+	display: block;
+}
+
+th#name span.source {
+	display: inline-block;
+	float: right;
+	font-weight: 500;
+	margin-left: 0.5em;
+}
+
+span.sourceDMG {
+	color: purple;
+}
+
+span.sourceMM {
+	color: green;
+}
+
+span.sourceVGM {
+	color: grey;
+}
+
+span.sourceToD {
+	color: orangered;
+}
+
+span.sourceCoS {
+	color: purple;
+}
+
+span.sourceOotA {
+	color: black;
+}
+
+span.sourceSKT {
+	color: darkcyan;
+}
+
+span.sourcePotA {
+	color: blue;
+}
+
+pan.sourceLMoP {
+	color: lightgreen;
+}
+
+table#stats {
+	width: 100%;
+	min-width: 200px;
+	max-width: 400px;
+	background: #fdf1dc;
+	font-size: .9em;
+	table-layout: fixed;
+}
+
+table#stats td, table#stats th {
+	padding: 1px 0.3em;
+}
+
+table#stats th {
+	color: #922610;
+}
+
+table#stats span {
+	vertical-align: top!important;
+}
+
+th.border {
+	height: 10px;
+	background: #e69a28;
+	border: 1px solid black;
+}
+
+td.divider div {
+	background: #922610;
+	height: 4px;
+	margin: 4px 0;
+}
+
+textarea {
+	width: 100%;
+	height: 600px;
+	vertical-align: top;
+	text-align: left;
+	padding: 0;
+}
+</style>
+
+</head>
+<body>
+	<main class="container bodyContent">
+
+		<div class="row">
+			<div class="col-sm-6" id="listcontainer">
+				<h3>Statblock <input id="parsestatblock" type="button" value="Parse"></h3>
+<textarea id="statblock">Mammon
+Huge fiend (devil), lawful evil
+Armor Class 20 (natural armor)
+Hit Points 378 (28d12 + 196)
+Speed 50 ft.
+STR DEX CON INT WIS CHA
+22 (+6) 13 (+1) 24 (+7) 23 (+6) 21 (+5) 26 (+8)
+Saving Throws Dex +9, Int +14, Wis +13, Cha +16
+Skills Deception +16, Insight +13, Perception +13, Persuasion +16
+Damage Resistances cold
+Damage Immunities fire, poison; bludgeoning, piercing, and slashing from weapons that aren’t silvered
+Condition Immunities charmed, exhaustion, frightened, poisoned
+Senses truesight 120 ft., passive Perception 23
+Languages all, telepathy 120 ft.
+Challenge 25 (75,000 XP)
+Innate Spellcasting. Mammon’s innate spellcasting ability is Charisma (spell save DC 24, +16 to hit with spell attacks). He can innately cast the following spells, requiring no material components:
+At will: charm person, detect magic, dispel magic, fabricate (Mammon can create valuable objects), heat metal, magic aura
+3/day each: animate objects, counterspell, creation, instant summons, legend lore, teleport
+1/day each: imprisonment (minimus containment only, inside gems), sunburst
+Legendary Resistance (3/day). If Mammon fails a saving throw, he can choose to succeed instead.
+Magic Resistance. Mammon has advantage on saving throws against spells and other magical effects.
+Magic Weapons. Mammon’s weapon attacks are magical.
+ACTIONS
+Multiattack. Mammon makes three attacks.
+Purse. Melee Weapon Attack: +14 to hit, reach 10 ft., one target. Hit: 19 (3d8 + 6) bludgeoning damage plus 18 (4d8) radiant damage.
+Molten Coins. Ranged Weapon Attack: +14 to hit, range 40/120 ft., one target. Hit: 16 (3d6 + 6) bludgeoning damage plus 18 (4d8) fire damage.
+Your Weight In Gold (Recharge 5-6). Mammon can use this ability as a bonus action immediately after hitting a creature with his purse attack. The creature must make a DC 24 Constitution saving throw. If the saving throw fails by 5 or more, the creature is instantly petrified by being turned to solid gold. Otherwise, a creature that fails the saving throw is restrained. A restrained creature repeats the saving throw at the end of its next turn, becoming petrified on a failure or ending the effect on a success. The petrification lasts until the creature receives a greater restoration spell or comparable magic.
+LEGENDARY ACTIONS
+Mammon can take 3 legendary actions, choosing from the options below. Only one legendary action option can be used at a time and only at the end of another creature’s turn. Mammon regains spent legendary actions at the start of his turn.
+Attack. Mammon makes one purse or molten coins attack.
+Make It Rain! Mammon casts gold and jewels into a 5-foot radius within 60 feet. One creature within 60 feet of the treasure that can see it must make a DC 24 Wisdom saving throw. On a failure, the creature must use its reaction to move its speed toward the trinkets, which vanish at the end of the turn.
+Deep Pockets (3 actions). Mammon recharges his Your Weight In Gold ability.</textarea>
+					<input type="text" placeholder="Source" id="source" value="">
+				</div>
+				<div class="col-sm-6">
+					<h3>Output</h3>
+					<textarea id="output" readonly></textarea>
+				</div>
+			</div>
+		</main>
+		<footer class="container">
+
+		</footer>
+
+		<script type="text/javascript" src="js/page-converter.js"></script>
+		<script type="text/javascript" src="js/list.js"></script>
+		<script type="text/javascript" src="js/jquery.js"></script>
+		<script type="text/javascript" src="js/bootstrap.js"></script>
+
+	</body>
+	</html>

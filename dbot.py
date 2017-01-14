@@ -18,6 +18,7 @@ from cogs5e.charGen import CharGenerator
 from cogs5e.diceAlgorithm import Dice
 from cogs5e.initiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
+from cogs5e.pbpUtils import PBPUtils
 from cogsmisc.adminUtils import AdminUtils
 from cogsmisc.core import Core
 from cogsmisc.permissions import Permissions
@@ -25,7 +26,7 @@ from cogsmisc.publicity import Publicity
 from utils import checks
 from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim
-from cogs5e.pbpUtils import PBPUtils
+from web.web import Web
 
 
 TESTING = False
@@ -82,6 +83,7 @@ coreCog = Core(bot)
 permissionsCog = Permissions(bot)
 publicityCog = Publicity(bot)
 pbpCog = PBPUtils(bot)
+webCog = Web(bot)
 cogs = [diceCog,
         charGenCog,
         initiativeTrackerCog,
@@ -90,7 +92,8 @@ cogs = [diceCog,
         coreCog,
         permissionsCog,
         publicityCog,
-        pbpCog]
+        pbpCog,
+        webCog]
 
 @bot.event
 async def on_ready():

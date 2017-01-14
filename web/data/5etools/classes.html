@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!--
+	XML data was compiled by a reddit community for use with the "Fight Club 5" app.
+	Google "5e xml files" for more info.
+
+	Feel free to use, edit, and redistribute this as you wish.
+	I don't own any of the XML data anyway.
+-->
+
+<title>Classes - 5etools</title>
+
+<link rel="stylesheet" href="css/bootstrap.css">
+<link rel="icon" href="favicon.png">
+<link rel="icon" href="favicon.png">
+
+<style type="text/css">
+header {
+	margin-bottom: 3px;
+	padding: 25px 15px;
+	color: white;
+	background-color: rgb(0, 107, 196);
+}
+
+header p.lead {
+	color: lightgrey;
+}
+
+
+main {
+	padding: 10px 15px;
+}
+
+footer {
+	padding: 20px 15px;
+	font-size: 90%;
+}
+
+input.search {
+	width: 100%;
+}
+
+form#filtertools {
+	font-size: 0.8em;
+}
+
+
+.sortlabel {
+	display: inline-block;
+	width: 49%;
+	float: right;
+	text-align: right;
+}
+
+.sortlabel span {
+	background: lightgrey;
+	border-radius: 3px;
+	padding: 2px;
+	text-align: right;
+}
+
+.sortlabel:hover span:hover {
+	background: grey;
+	color: white;
+	cursor: pointer;
+}
+
+
+ul.list {
+	list-style-type: none;
+	padding-left: 0px;
+	font-size: 1.1em;
+	height: 100%;
+	max-height: 250px;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-top: 1em;
+}
+
+ul.list li {
+	padding: 1px;
+	cursor: pointer;
+}
+
+ul.list li:hover {
+	background: lightgrey;
+}
+
+ul.list li:active {
+	color: white;
+}
+
+ul.list li span.source {
+	font-size: 0.8em;
+}
+
+ul.list li span.level, ul.list li span.classes, ul.list li span.school {
+	font-size: 0.8em;
+	margin-left: 1em;
+	display: none;
+	text-transform: capitalize;
+}
+
+ul.list li:hover span {
+	display: block;
+}
+
+th#name span.source {
+	display: inline-block;
+	float: right;
+	font-weight: 500;
+	margin-left: 0.5em;
+}
+
+span.sourceDMG {
+	color: purple;
+}
+
+span.sourceMM {
+	color: green;
+}
+
+span.sourceVGM {
+	color: grey;
+}
+
+span.sourceToD {
+	color: orangered;
+}
+
+span.sourceCoS {
+	color: purple;
+}
+
+span.sourceOotA {
+	color: black;
+}
+
+span.sourceSKT {
+	color: darkcyan;
+}
+
+span.sourcePotA {
+	color: blue;
+}
+
+span.sourceLMoP {
+	color: lightgreen;
+}
+
+table.stats {
+	table-layout: fixed;
+}
+
+table.stats, #classtable table {
+	width: 100%;
+	min-width: 200px;
+	background: #fdf1dc;
+	font-size: .9em;
+	position: relative;
+}
+
+table th {
+	color: #922610;
+	padding: 1px 0.5em;
+	vertical-align: bottom;
+}
+
+table td {
+	vertical-align: top;
+	padding: 1px 0.5em;
+}
+
+table span {
+	vertical-align: top!important;
+}
+
+th.border {
+	height: 10px;
+	background: #e69a28;
+	border: 1px solid black;
+}
+
+td.divider div {
+	background: #922610;
+	height: 4px;
+	margin: 4px 0;
+}
+
+th#name {
+	font-size: 2em;
+	font-family: serif;
+	font-weight: 500;
+	color: #922610!important;
+}
+
+table.stats span.name {
+	font-weight: bold;
+}
+
+tr.text td {
+	padding-bottom: 0.7em!important;
+	color: black!important;
+}
+
+td#hp, td#prof, td#equipment {
+	font-size: 0.8em;
+}
+
+td#hp h5, td#prof h5, td#equipment h5 {
+	color: #922610;
+	font-family: serif;
+	font-weight: 500;
+	font-size: 1.5em;
+	margin-bottom: 0px;
+}
+
+td.feature p {
+	padding: 0 1em;
+}
+
+.feature strong {
+	margin: 0.2em;
+	display: block;
+	border-bottom: 1px solid #922610;
+	color: #922610;
+	font-family: serif;
+	font-weight: 500;
+	font-size: 1.5em;
+}
+
+#classtable table {
+	font-size: 0.8em;
+	width: 100%;
+}
+
+#classtable table th {
+	color: black;
+}
+
+#classtable table tr:nth-child(even) td {
+	background: lightgrey;
+}
+
+#classtable table .level {
+	text-align: center;
+	width: 1em;
+}
+
+#classtable table .pb {
+	text-align: center;
+	width: 1em;
+}
+
+#classtable .slots {
+	display: none;
+	text-align: center;
+	max-width: 4em;
+}
+
+#classtable .spellslots0 {
+
+}
+
+td.features {
+	max-width: 100%;
+	white-space: pre-wrap;
+}
+
+#classtable .newfeature {
+	text-align: center;
+	width: 1em;
+
+}
+
+div#subclasses {
+		padding: 0 1em 0.5em 1em ;
+		text-align: center;
+}
+
+div#subclasses > span {
+	display: inline-block;
+	font-size: 0.8em;
+	margin: 0.2em;
+	padding: 0.5em;
+	background: lightgrey;
+	border-radius: 0.5em;
+	cursor: pointer;
+}
+
+div#subclasses span.active {
+	background: #337ab7;
+	color: white;
+}
+
+.subclass strong {
+	color: #337ab7;
+	border-bottom-color: #337ab7;
+}
+
+.feature.subfeature {
+	font-size: 0.9em;
+	padding-left: 2em;
+}
+
+.feature.subfeature strong {
+	display: inline!important;
+	border-bottom: none!important;
+}
+
+.slotlabel {
+	text-align: center;
+	border-bottom: 1px solid black;
+}
+
+.featurebuffer {
+	width: auto;
+}
+
+</style>
+</head>
+<body>
+	<header class="hidden-xs hidden-sm">
+		<div class="container">
+
+			<h1>Class List</h1>
+			<p>Search by name on the left, click class name to display on the right.</p>
+		</div>
+	</header>
+	<nav class="container">
+		<ul class="nav nav-pills">
+			<li role="presentation"><a href="5etools.html">5eTools</a></li>
+			<li role="presentation" class="active"><a href="classes.html">Classes</a></li>
+			<li role="presentation"><a href="bestiary.html">Bestiary</a></li>
+			<li role="presentation"><a href="items.html">Items</a></li>
+			<li role="presentation"><a href="backgrounds.html">Backgrounds</a></li>
+			<li role="presentation"><a href="feats.html">Feats</a></li>
+			<li role="presentation"><a href="races.html">Races</a></li>
+			<li role="presentation"><a href="spells.html">Spells</a></li>
+			<li role="presentation"><a href="crcalculator.html">CR Calc</a></li><li role="presentation"><a href="http://kobold.club" target="_blank" title="I could literally never build something better than Kobold Fight Club">Encounter Builder</a></li>
+		</ul>
+	</nav>
+	<main class="container bodyContent">
+
+		<div class="row">
+			<div class="col-sm-3" id="listcontainer">
+				<h3><input type="search" id="search" class="search" placeholder="Find class..."></h3>
+				<form id="filtertools">
+					<span class="sortlabel">
+						<span class="sort" data-sort="name">Name</span>
+					</span>
+				</form>
+
+				<ul class="list classes" style="width: 100%; height: 100%; max-height: 600px; overflow-y: auto; overflow-x: visible; padding-top: 1em; margin-right: 0.5em;">
+
+				</ul>
+			</div>
+			<div class="col-sm-9" id="classtable">
+				<table>
+					<tr><th class="border" colspan="15"></th></tr>
+					<tr>
+						<th id="name" colspan="15">Name</th>
+					</tr>
+					<tr>
+						<th class="slotbuffer" colspan="3"></th>
+						<th class="slotlabel" colspan="0">
+							Spell Slots per Spell Level
+						</th>
+					</tr>
+					<tr>
+						<th class="level">Level</th>
+						<th class="pb">Proficiency Bonus</th>
+						<th class="features">Features</th>
+						<th class="slots spellslots0">Cantrips Known</th>
+						<th class="slots spellslots1">1st</th>
+						<th class="slots spellslots2">2nd</th>
+						<th class="slots spellslots3">3rd</th>
+						<th class="slots spellslots4">4th</th>
+						<th class="slots spellslots5">5th</th>
+						<th class="slots spellslots6">6th</th>
+						<th class="slots spellslots7">7th</th>
+						<th class="slots spellslots8">8th</th>
+						<th class="slots spellslots9">9th</th>
+					</tr>
+					<tr id="level1"><td class="level">1st</td>  <td class="pb">+2</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level2"><td class="level">2nd</td>  <td class="pb">+2</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level3"><td class="level">3rd</td>  <td class="pb">+2</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level4"><td class="level">4th</td>  <td class="pb">+2</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level5"><td class="level">5th</td>  <td class="pb">+3</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level6"><td class="level">6th</td>  <td class="pb">+3</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level7"><td class="level">7th</td>  <td class="pb">+3</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level8"><td class="level">8th</td>  <td class="pb">+3</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level9"><td class="level">9th</td>  <td class="pb">+4</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level10"><td class="level">10th</td><td class="pb">+4</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level11"><td class="level">11th</td><td class="pb">+4</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level12"><td class="level">12th</td><td class="pb">+4</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level13"><td class="level">13th</td><td class="pb">+5</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level14"><td class="level">14th</td><td class="pb">+5</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level15"><td class="level">15th</td><td class="pb">+5</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level16"><td class="level">16th</td><td class="pb">+5</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level17"><td class="level">17th</td><td class="pb">+6</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level18"><td class="level">18th</td><td class="pb">+6</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level19"><td class="level">19th</td><td class="pb">+6</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr id="level20"><td class="level">20th</td><td class="pb">+6</td><td class="features"></td> <td class="slots spellslots0"></td> <td class="slots spellslots1"></td> <td class="slots spellslots2"></td> <td class="slots spellslots3"></td> <td class="slots spellslots4"></td> <td class="slots spellslots5"></td> <td class="slots spellslots6"></td> <td class="slots spellslots7"></td> <td class="slots spellslots8"></td> <td class="slots spellslots9"></td></tr>
+					<tr><th class="border" colspan="15"></th></tr>
+				</table>
+			</div>
+		</div>
+		<hr>
+		<div class="row">
+			<div class="col-md-3">
+				<table id="statsprof" class="stats">
+					<tr><th class="border" colspan="6"></th></tr>
+					<tr>
+						<th id="name" colspan="6">Name</th>
+					</tr>
+					<tr><td class="divider" colspan="6"><div></div></td></tr>
+					<tr>
+						<td id="hp" colspan="6">
+							<h5>Hit Points</h3>
+								<div id="hitdice">
+									<strong>Hit Dice:</strong>
+									<span> </span>
+								</div>
+								<div id="hp1stlevel">
+									<strong>Hit Points at 1st Level:</strong>
+									<span> </span>
+								</div>
+								<div id="hphigherlevels">
+									<strong>Hit Points at Higher Levels:</strong>
+									<span> </span>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="prof" colspan="6">
+								<h5>Proficiencies</h5>
+								<span>You are proficient with the following items, in addition to any proficiencies provided by your race or background.</span>
+								<div id="armor">
+									<strong>Armor:</strong>
+									<span> </span>
+								</div>
+								<div id="weapons">
+									<strong>Weapons:</strong>
+									<span> </span>
+								</div>
+								<div id="tools">
+									<strong>Tools:</strong>
+									<span> </span>
+								</div>
+								<div id="saves">
+									<strong>Saving Throws:</strong>
+									<span> </span>
+								</div>
+								<div id="skills">
+									<strong>Skills:</strong>
+									<span> </span>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="equipment" colspan="6">
+								<h5>Starting Equipment</h5>
+								<div></div>
+							</td>
+						</tr>
+
+						<tr><th class="border" colspan="6"></th></tr>
+					</table>
+			</div>
+			<div class="col-md-9">
+				<div id="subclasses"></div>
+				<div style="height: 100%; max-height: 660px; overflow-y: auto; overflow-x: visible; padding-top: 1em;">
+					<table id="stats" class="stats">
+						<tr><th class="border" colspan="6"></th></tr>
+							<tr id="features"><td colspan="6"><div></div></td></tr>
+
+							<tr><th class="border" colspan="6"></th></tr>
+						</table>
+
+					</div>
+				</div>
+			</div>
+		</main>
+		<footer class="container">
+
+		</footer>
+		<script type="text/javascript" src="js/page-classes.js"></script>
+		<script type="text/javascript" src="data/classes.json"></script>
+		<script type="text/javascript" src="js/list.js"></script>
+		<script type="text/javascript" src="js/jquery.js"></script>
+		<script type="text/javascript" src="js/bootstrap.js"></script>
+
+	</body>
+
+
+	</html>

@@ -22,6 +22,7 @@ class Web:
         self.app = web.Application(loop=self.loop)
         aiohttp_jinja2.setup(self.app,
                              loader=jinja2.FileSystemLoader('./web/templates'))
+        self.setup_middlewares(self.app)
         self.app.router.add_static('/5etools/', './web/data/5etools/')
         self.run_app(self.app, host=os.environ.get('HOST'), port=os.environ.get('PORT'))
         

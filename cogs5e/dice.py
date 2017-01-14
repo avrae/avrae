@@ -13,6 +13,7 @@ import numexpr
 
 from cogs5e import tables
 from utils.functions import list_get
+from re import IGNORECASE
 
 
 # Rolls Dice
@@ -196,7 +197,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
 #             except: # t looks like: "1d20"
 #                 pass # eh
             
-            if re.search('^\s*((\d*(d|k|rr|ro)?(h\d|l\d|\d)+)+|([-+*/^().<>= ]))?(\[.*\])?\s*$', t):
+            if re.search('^\s*((\d*(d|k|rr|ro|padellis)?(h\d|l\d|\d)+)+|([-+*/^().<>= ]))?(\[.*\])?\s*$', t, flags=IGNORECASE):
                 if 'd' in t:
                     try:
                         result = d_roller(t, adv)

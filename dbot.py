@@ -25,11 +25,11 @@ from cogsmisc.permissions import Permissions
 from cogsmisc.publicity import Publicity
 from utils import checks
 from utils.dataIO import DataIO
-from utils.functions import make_sure_path_exists, discord_trim
+from utils.functions import make_sure_path_exists, discord_trim, get_positivity
 from web.web import Web
 
 
-TESTING = False
+TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
 prefix = '!' if not TESTING else '#'

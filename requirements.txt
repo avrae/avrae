@@ -1,8 +1,11 @@
 aiohttp==1.0.5
+aiohttp-jinja2==0.13.0
 async-timeout==1.1.0
 cffi==1.9.1
 chardet==2.3.0
 discord.py==0.16.0
+Jinja2==2.9.4
+MarkupSafe==0.23
 multidict==2.1.4
 numexpr==2.6.1
 numpy==1.11.3

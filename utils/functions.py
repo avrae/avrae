@@ -41,6 +41,8 @@ def make_sure_path_exists(path):
             raise
         
 def get_positivity(string):
+    if isinstance(string, bool): # oi!
+        return string
     lowered = string.lower()
     if lowered in ('yes', 'y', 'true', 't', '1', 'enable', 'on'):
         return True

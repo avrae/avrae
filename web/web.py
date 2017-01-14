@@ -8,9 +8,8 @@ import asyncio
 import os
 
 from aiohttp import web
-
-import aiohttp_jinja2  # @UnresolvedImport
-import jinja2  # @UnresolvedImport
+import aiohttp_jinja2
+import jinja2
 
 
 class Web:
@@ -22,7 +21,7 @@ class Web:
         self.loop = self.bot.loop
         self.app = web.Application(loop=self.loop)
         aiohttp_jinja2.setup(self.app,
-                             loader=jinja2.FileSystemLoader('./web/templates/'))
+                             loader=jinja2.FileSystemLoader('./web/templates'))
         self.app.router.add_static('/5etools/', './web/data/5etools/')
         self.run_app(self.app, host=os.environ.get('HOST'), port=os.environ.get('PORT'))
         

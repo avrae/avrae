@@ -145,5 +145,5 @@ class CustomHelpFormatter(HelpFormatter):
             self.embed.add_field(name=title, value=value)
 
         ending_note = self.get_ending_note()
-        self.embed.add_field(value=ending_note)
+        self.embed.add_field(name='', value=ending_note)
         return self.embed

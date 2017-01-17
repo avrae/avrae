@@ -12,6 +12,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.core import Command
 from discord.ext.commands.formatter import HelpFormatter
+from discord.errors import Forbidden
 
 
 class Help:
@@ -71,10 +72,14 @@ class Help:
                     return
     
             embed = self.formatter.format_help_for(ctx, command)
-    
-        await bot.send_message(destination, embed=embed)
-        if bot.pm_help:
-            await bot.send_message(ctx.message.channel, 'I have sent help to your PMs.')
+        
+        try:
+            await bot.send_message(destination, embed=embed)
+        except Forbidden:
+            await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
+        else:
+            if bot.pm_help:
+                await bot.send_message(ctx.message.channel, 'I have sent help to your PMs.')
         
 class CustomHelpFormatter(HelpFormatter):
     
@@ -137,12 +142,12 @@ class CustomHelpFormatter(HelpFormatter):
                 if len(commands) > 0:
                     title = category
                     value = self._get_subcommands(commands)
-                    self.embed.add_field(name=title, value=value)
+                    self.embed.add_field(name=title, value=value, inline=False)
 
         else:
             title = 'Commands'
             value = self._get_subcommands(self.filter_command_list())
-            self.embed.add_field(name=title, value=value)
+            self.embed.add_field(name=title, value=value, inline=False)
 
         ending_note = self.get_ending_note()
         self.embed.add_field(name='More Help', value=ending_note, inline=False)

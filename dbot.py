@@ -26,6 +26,7 @@ from cogsmisc.publicity import Publicity
 from utils import checks
 from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim, get_positivity
+from utils.help import Help
 from web.web import Web
 
 
@@ -40,6 +41,7 @@ prefix = '!' if not TESTING else '#'
 description = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.'''
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True)
 bot.prefix = prefix
+bot.remove_command('help')
 
 if os.path.isfile('./resources.txt'):
     with open('./resources.txt', 'r') as f:  # this is really inefficient
@@ -84,6 +86,7 @@ permissionsCog = Permissions(bot)
 publicityCog = Publicity(bot)
 pbpCog = PBPUtils(bot)
 webCog = Web(bot)
+helpCog = Help(bot)
 cogs = [diceCog,
         charGenCog,
         initiativeTrackerCog,
@@ -93,7 +96,8 @@ cogs = [diceCog,
         permissionsCog,
         publicityCog,
         pbpCog,
-        webCog]
+        webCog,
+        helpCog]
 
 @bot.event
 async def on_ready():

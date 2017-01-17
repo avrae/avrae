@@ -85,7 +85,7 @@ class CustomHelpFormatter(HelpFormatter):
                 # skip aliases
                 continue
 
-            entry = '**{0}** {1}'.format(name, command.short_doc)
+            entry = '**{0}** - {1}\n'.format(name, command.short_doc)
             shortened = self.shorten(entry)
             out += shortened
         return out

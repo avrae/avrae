@@ -36,7 +36,7 @@ class Dice:
                 await self.bot.delete_message(message)
             except:
                 pass
-            await self.bot.send_message(message.channel, message.author.mention + '  ' + out)
+            await self.bot.send_message(message.channel, message.author.mention + '  :game_die:\n' + out)
             
     @commands.command(name='2', hidden=True, pass_context=True)
     async def quick_roll(self, ctx, *, mod:str='0'):

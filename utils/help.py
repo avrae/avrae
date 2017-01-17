@@ -137,12 +137,12 @@ class CustomHelpFormatter(HelpFormatter):
                 if len(commands) > 0:
                     title = category
                     value = self._get_subcommands(commands)
-                    self.embed.add_field(title=title, value=value)
+                    self.embed.add_field(name=title, value=value)
 
         else:
             title = 'Commands'
             value = self._get_subcommands(self.filter_command_list())
-            self.embed.add_field(title=title, value=value)
+            self.embed.add_field(name=title, value=value)
 
         ending_note = self.get_ending_note()
         self.embed.add_field(value=ending_note)

@@ -48,7 +48,7 @@ class Help:
             else:
                 command = bot.commands.get(name)
                 if command is None:
-                    yield from bot.send_message(destination, bot.command_not_found.format(name))
+                    await bot.send_message(destination, bot.command_not_found.format(name))
                     return
     
             embed = self.formatter.format_help_for(ctx, command)
@@ -56,7 +56,7 @@ class Help:
             name = self._mention_pattern.sub(repl, commands[0])
             command = bot.commands.get(name)
             if command is None:
-                yield from bot.send_message(destination, bot.command_not_found.format(name))
+                await bot.send_message(destination, bot.command_not_found.format(name))
                 return
     
             for key in commands[1:]:
@@ -64,17 +64,17 @@ class Help:
                     key = self._mention_pattern.sub(repl, key)
                     command = command.commands.get(key)
                     if command is None:
-                        yield from bot.send_message(destination, bot.command_not_found.format(key))
+                        await bot.send_message(destination, bot.command_not_found.format(key))
                         return
                 except AttributeError:
-                    yield from bot.send_message(destination, bot.command_has_no_subcommands.format(command, key))
+                    await bot.send_message(destination, bot.command_has_no_subcommands.format(command, key))
                     return
     
             embed = self.formatter.format_help_for(ctx, command)
     
-        yield from bot.send_message(destination, embed=embed)
+        await bot.send_message(destination, embed=embed)
         if bot.pm_help:
-            yield from bot.send_message(ctx.message.channel, 'I have sent help to your PMs.')
+            await bot.send_message(ctx.message.channel, 'I have sent help to your PMs.')
         
 class CustomHelpFormatter(HelpFormatter):
     

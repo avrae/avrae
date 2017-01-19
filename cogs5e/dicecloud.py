@@ -33,5 +33,5 @@ class Dicecloud:
         client.on('added', update_character)
         loading = await self.bot.say('Loading character data from Dicecloud...')
         await asyncio.sleep(10)
-        await self.bot.edit_message(loading, 'Loaded data for {}!'.format(character.get('characters').get('name')))
+        await self.bot.edit_message(loading, 'Loaded data for {}!'.format(character.get('characters')[0].get('name')))
         client.close()

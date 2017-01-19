@@ -4,6 +4,7 @@ Created on Jan 13, 2017
 @author: andrew
 '''
 import json
+from math import floor
 import math
 
 from utils.functions import print_table, discord_trim
@@ -18,129 +19,145 @@ def searchCondition(condition):
         return None
     return condition
 
-def searchMonster(monstername, visible=True, verbose=False):
-    with open('./res/monsters.json', 'r') as f:
+def searchMonster(monstername, visible=True, return_monster=False):
+    with open('./res/bestiary.json', 'r') as f:
         monsters = json.load(f)
     
     monsterDesc = []
 
     try:
-        monster = next(item for item in monsters if item["name"].upper() == monstername.upper())
+        monster = next(item for item in monsters if monstername.upper() == item["name"].upper())
     except Exception:
-        monsterDesc.append("Monster does not exist or is misspelled.")
-        return monsterDesc
+        try:
+            monster = next(item for item in monsters if monstername.upper() in item["name"].upper())
+        except Exception:
+            monsterDesc.append("Spell does not exist or is misspelled (ha).")
+            if return_monster: return {'spell': None, 'string': monsterDesc}
+            return monsterDesc
+        
+    def parsesource (src):
+        source = src
+        if (source == " monster manual"): source = "MM";
+        if (source == " Volo's Guide"): source = "VGM";
+        if (source == " elemental evil"): source = "PotA";
+        if (source == " storm kings thunder"): source = "SKT";
+        if (source == " tyranny of dragons"): source = "ToD";
+        if (source == " out of the abyss"): source = "OotA";
+        if (source == " curse of strahd"): source = "CoS";
+        if (source == " lost mine of phandelver"): source = "LMoP";
+        if (source == " tome of beasts"): source = "ToB 3pp";
+        return source;
     
+    def parsesourcename (src):
+        source = src;
+        if (source == " monster manual"): source = "Monster Manual";
+        if (source == " Volo's Guide"): source = "Volo's Guide to Monsters";
+        if (source == " elemental evil"): source = "Princes of the Apocalypse";
+        if (source == " storm kings thunder"): source = "Storm King's Thunder";
+        if (source == " tyranny of dragons"): source = "Tyranny of Dragons";
+        if (source == " out of the abyss"): source = "Out of the Abyss";
+        if (source == " curse of strahd"): source = "Curse of Strahd";
+        if (source == " lost mine of phandelver"): source = "Lost Mine of Phandelver";
+        if (source == " tome of beasts"): source = "Tome of Beasts (3pp)";
+        return source;
+    
+    def parsesize (size):
+        if (size == "T"): size = "Tiny";
+        if (size == "S"): size = "Small";
+        if (size == "M"): size = "Medium";
+        if (size == "L"): size = "Large";
+        if (size == "H"): size = "Huge";
+        if (size == "G"): size = "Gargantuan";
+        return size;
     
     if visible:
             
-        monster['hit_dice_and_con'] = monster['hit_dice'] + ' + {}'.format(str(math.floor((int(monster['constitution'])-10)/2) * int(monster['hit_dice'].split('d')[0])))
+        monster['size'] = parsesize(monster['size'])
+        monster['type'] = ','.join(monster['type'].split(',')[:-1])
+        for stat in ['str', 'dex', 'con', 'wis', 'int', 'cha']:
+            monster[stat] = monster[stat] + " ({:+})".format(floor((int(monster[stat])-10)/2))
+        monster['skill'] = monster['skill'][0]
+        monster['senses'] = monster['senses'] + ", passive Perception {}".format(monster['passive'])
         
-        for stat in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
-            monster["{}_mod".format(stat)] = math.floor((monster[stat]-10)/2)
-            monster[stat] = "{0} ({1:+})".format(monster[stat], math.floor((monster[stat]-10)/2))
-            
-        for save in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
-            if "{}_save".format(save) not in monster:
-                monster["{}_save".format(save)] = monster["{}_mod".format(save)]
-                
-        for str_skill in ["athletics"]:
-            if str_skill not in monster:
-                monster[str_skill] = monster["strength_mod"]
-                
-        for dex_skill in ["acrobatics", "sleight_of_hand", "stealth"]:
-            if dex_skill not in monster:
-                monster[dex_skill] = monster["dexterity_mod"]
-                
-        for con_skill in []:
-            if con_skill not in monster:
-                monster[con_skill] = monster["constitution_mod"]
-                
-        for int_skill in ["arcana", "history", "investigation", "nature", "religion"]:
-            if int_skill not in monster:
-                monster[int_skill] = monster["intelligence_mod"]
-                
-        for wis_skill in ["animal_handling", "insight", "medicine", "perception", "survival"]:
-            if wis_skill not in monster:
-                monster[wis_skill] = monster["wisdom_mod"]
-                
-        for cha_skill in ["deception", "intimidation", "performance", "persuasion"]:
-            if cha_skill not in monster:
-                monster[cha_skill] = monster["charisma_mod"]
-                
+        monsterDesc.append("{name}, {size} {type}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n".format(**monster))
+        monsterDesc.append("**STR:** {str} **DEX:** {dex} **CON:** {con} **WIS:** {wis} **INT:** {int} **CHA:** {cha}\n".format(**monster))
+        if monster.get('save') is not None:
+            monsterDesc.append("**Saving Throws:** {save}\n".format(**monster))
+        if monster.get('skill') is not None:
+            monsterDesc.append("**Skills:** {skill}\n".format(**monster))
+        monsterDesc.append("**Senses:** {senses}.\n".format(**monster))
+        if monster.get('vulnerable', '') is not '':
+            monsterDesc.append("**Vulnerabilities:** {vulnerable}\n".format(**monster))
+        if monster.get('resist', '') is not '':
+            monsterDesc.append("**Resistances:** {resist}\n".format(**monster))
+        if monster.get('immune', '') is not '':
+            monsterDesc.append("**Damage Immunities:** {immune}\n".format(**monster))
+        if monster.get('conditionImmune', '') is not '':
+            monsterDesc.append("**Condition Immunities:** {conditionImmune}\n".format(**monster))
+        monsterDesc.append("**Languages:** {languages}\n**CR:** {cr}\n".format(**monster))
         
-        monsterDesc.append("{name}, {size} {type}. {alignment}.\n**AC:** {armor_class}.\n**HP:** {hit_points} ({hit_dice_and_con}).\n**Speed:** {speed}\n".format(**monster))
-        if not verbose:
-            monsterDesc.append("**STR:** {strength} **DEX:** {dexterity} **CON:** {constitution} **WIS:** {wisdom} **INT:** {intelligence} **CHA:** {charisma}\n".format(**monster))
-        else:
-            monsterDesc.append('```markdown\n')
-            monsterDesc.append(print_table([("**STR:** {strength}".format(**monster), "**DEX:** {dexterity}".format(**monster), "**CON:** {constitution}".format(**monster)),
-                                            ("- Save: {strength_save:+}".format(**monster), "- Save: {dexterity_save:+}".format(**monster), "- Save: {constitution_save:+}".format(**monster)),
-                                            ("- Athletics: {athletics:+}".format(**monster), "- Acrobatics: {acrobatics:+}".format(**monster), ""),
-                                            ("", "- SoH: {sleight_of_hand:+}".format(**monster), ""),
-                                            ("", "- Stealth: {stealth:+}".format(**monster), "")]))
-            monsterDesc.append('\n')
-            monsterDesc.append(print_table([("**INT:** {intelligence}".format(**monster), "**WIS:** {wisdom}".format(**monster), "**CHA:** {charisma}".format(**monster)),
-                                            ("- Save: {intelligence_save:+}".format(**monster), "- Save: {wisdom_save:+}".format(**monster), "- Save: {charisma_save:+}".format(**monster)),
-                                            ("- Arcana: {arcana:+}".format(**monster), "- A. Handling: {animal_handling:+}".format(**monster), "- Deception: {deception:+}".format(**monster)),
-                                            ("- History: {history:+}".format(**monster), "- Insight: {insight:+}".format(**monster), "- Intimid.: {intimidation:+}".format(**monster)),
-                                            ("- Invest.: {investigation:+}".format(**monster), "- Medicine: {medicine:+}".format(**monster), "- Perf.: {performance:+}".format(**monster)),
-                                            ("- Nature: {nature:+}".format(**monster), "- Perception: {perception:+}".format(**monster), "- Persuasion: {persuasion:+}".format(**monster)),
-                                            ("- Religion: {religion:+}".format(**monster), "- Survival: {survival:+}".format(**monster), "")]))
-            monsterDesc.append('\n```')
-#                 monsterDesc.append("**STR:** {strength}\n|- Athletics: {athletics:+}\n".format(**monster))
-#                 monsterDesc.append("**DEX:** {dexterity}\n|- Acrobatics: {acrobatics:+}\n|- Sleight of Hand: {sleight_of_hand:+}\n|- Stealth: {stealth:+}\n".format(**monster))
-#                 monsterDesc.append("**CON:** {constitution}\n".format(**monster))
-#                 monsterDesc.append("**INT:** {intelligence}\n|- Arcana: {arcana:+}\n|- History: {history:+}\n|- Investigation: {investigation:+}\n|- Nature: {nature:+}\n|- Religion: {religion:+}\n".format(**monster))
-#                 monsterDesc.append("**WIS:** {wisdom}\n|- Animal Handling: {animal_handling:+}\n|- Insight: {insight:+}\n|- Medicine: {medicine:+}\n|- Perception: {perception:+}\n|- Survival: {survival:+}\n".format(**monster))
-#                 monsterDesc.append("**CHA:** {charisma}\n|- Deception: {deception:+}\n|- Intimidation: {intimidation:+}\n|- Performance: {performance:+}\n|- Persuasion: {persuasion:+}\n".format(**monster))
-        monsterDesc.append("**Senses:** {senses}.\n**Vulnerabilities:** {damage_vulnerabilities}\n**Resistances:** {damage_resistances}\n**Damage Immunities:** {damage_immunities}\n**Condition Immunities:** {condition_immunities}\n**Languages:** {languages}\n**CR:** {challenge_rating}\n".format(**monster))
-        
-        if "special_abilities" in monster:
+        if "trait" in monster:
             monsterDesc.append("\n**__Special Abilities:__**\n")
-            for a in monster["special_abilities"]:
-                monsterDesc.append("**{name}:** {desc}\n".format(**a))
+            for a in monster["trait"]:
+                if isinstance(a['text'], list):
+                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+                monsterDesc.append("**{name}:** {text}\n".format(**a))
         
         monsterDesc.append("\n**__Actions:__**\n")
-        for a in monster["actions"]:      
-            monsterDesc.append("**{name}:** {desc}\n".format(**a))
+        for a in monster["action"]:      
+            if isinstance(a['text'], list):
+                a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+            monsterDesc.append("**{name}:** {text}\n".format(**a))
             
-        if "reactions" in monster:
+        if "reaction" in monster:
             monsterDesc.append("\n**__Reactions:__**\n")
-            for a in monster["reactions"]:
-                monsterDesc.append("**{name}:** {desc}\n".format(**a))
+            for a in monster["reaction"]:
+                if isinstance(a['text'], list):
+                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+                monsterDesc.append("**{name}:** {text}\n".format(**a))
             
-        if "legendary_actions" in monster:
+        if "legendary" in monster:
             monsterDesc.append("\n**__Legendary Actions:__**\n")
-            for a in monster["legendary_actions"]:
-                monsterDesc.append("**{name}:** {desc}\n".format(**a))
+            for a in monster["legendary"]:
+                if isinstance(a['text'], list):
+                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+                if a['name'] is not '':
+                    monsterDesc.append("**{name}:** {text}\n".format(**a))
+                else:
+                    monsterDesc.append("{text}\n".format(**a))
     else:
-        if monster["hit_points"] < 10:
-            monster["hit_points"] = "Very Low"
-        elif 10 <= monster["hit_points"] < 50:
-            monster["hit_points"] = "Low"
-        elif 50 <= monster["hit_points"] < 100:
-            monster["hit_points"] = "Medium"
-        elif 100 <= monster["hit_points"] < 200:
-            monster["hit_points"] = "High"
-        elif 200 <= monster["hit_points"] < 400:
-            monster["hit_points"] = "Very High"
-        elif 400 <= monster["hit_points"]:
-            monster["hit_points"] = "Godly"
+        monster['hp'] = int(monster['hp'].split(' (')[0])
+        monster['ac'] = int(monster['ac'].split(' (')[0])
+        monster['size'] = parsesize(monster['size'])
+        monster['type'] = ','.join(monster['type'].split(',')[:-1])
+        if monster["hp"] < 10:
+            monster["hp"] = "Very Low"
+        elif 10 <= monster["hp"] < 50:
+            monster["hp"] = "Low"
+        elif 50 <= monster["hp"] < 100:
+            monster["hp"] = "Medium"
+        elif 100 <= monster["hp"] < 200:
+            monster["hp"] = "High"
+        elif 200 <= monster["hp"] < 400:
+            monster["hp"] = "Very High"
+        elif 400 <= monster["hp"]:
+            monster["hp"] = "Godly"
             
-        if monster["armor_class"] < 6:
-            monster["armor_class"] = "Very Low"
-        elif 6 <= monster["armor_class"] < 9:
-            monster["armor_class"] = "Low"
-        elif 9 <= monster["armor_class"] < 15:
-            monster["armor_class"] = "Medium"
-        elif 15 <= monster["armor_class"] < 17:
-            monster["armor_class"] = "High"
-        elif 17 <= monster["armor_class"] < 22:
-            monster["armor_class"] = "Very High"
-        elif 22 <= monster["armor_class"]:
-            monster["armor_class"] = "Godly"
+        if monster["ac"] < 6:
+            monster["ac"] = "Very Low"
+        elif 6 <= monster["ac"] < 9:
+            monster["ac"] = "Low"
+        elif 9 <= monster["ac"] < 15:
+            monster["ac"] = "Medium"
+        elif 15 <= monster["ac"] < 17:
+            monster["ac"] = "High"
+        elif 17 <= monster["ac"] < 22:
+            monster["ac"] = "Very High"
+        elif 22 <= monster["ac"]:
+            monster["ac"] = "Godly"
             
-        for stat in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
+        for stat in ["str", "dex", "con", "wis", "int", "cha"]:
+            monster[stat] = int(monster[stat])
             if monster[stat] <= 3:
                 monster[stat] = "Very Low"
             elif 3 < monster[stat] <= 7:
@@ -149,9 +166,9 @@ def searchMonster(monstername, visible=True, verbose=False):
                 monster[stat] = "Medium"
             elif 15 < monster[stat] <= 21:
                 monster[stat] = "High"
-            elif 21 < monster[stat] <= 26:
+            elif 21 < monster[stat] <= 25:
                 monster[stat] = "Very High"
-            elif 26 < monster[stat]:
+            elif 25 < monster[stat]:
                 monster[stat] = "Godly"
                 
         if monster["languages"]:
@@ -159,24 +176,26 @@ def searchMonster(monstername, visible=True, verbose=False):
         else:
             monster["languages"] = 0
         
-        monsterDesc.append("{name}, {size} {type}.\n**AC:** {armor_class}.\n**HP:** {hit_points}.\n**Speed:** {speed}\n**STR:** {strength} **DEX:** {dexterity} **CON:** {constitution} **WIS:** {wisdom} **INT:** {intelligence} **CHA:** {charisma}\n**Languages:** {languages}\n".format(**monster))
+        monsterDesc.append("{name}, {size} {type}.\n" \
+        "**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n" \
+        "**STR:** {str} **DEX:** {dex} **CON:** {con} **WIS:** {wis} **INT:** {int} **CHA:** {cha}\n" \
+        "**Languages:** {languages}\n".format(**monster))
         
-        if "special_abilities" in monster:
-            monsterDesc.append("**__Special Abilities:__** " + str(len(monster["special_abilities"])) + "\n")
+        if "trait" in monster:
+            monsterDesc.append("**__Special Abilities:__** " + str(len(monster["trait"])) + "\n")
         
-        monsterDesc.append("**__Actions:__** " + str(len(monster["actions"])) + "\n")
+        monsterDesc.append("**__Actions:__** " + str(len(monster["action"])) + "\n")
         
-        if "reactions" in monster:
-            monsterDesc.append("**__Reactions:__** " + str(len(monster["reactions"])) + "\n")
+        if "reaction" in monster:
+            monsterDesc.append("**__Reactions:__** " + str(len(monster["reaction"])) + "\n")
             
-        if "legendary_actions" in monster:
-            monsterDesc.append("**__Legendary Actions:__** " + str(len(monster["legendary_actions"])) + "\n")
-                
-    tempStr = ""
-    for m in monsterDesc:
-        tempStr += m
+        if "legendary" in monster:
+            monsterDesc.append("**__Legendary Actions:__** " + str(len(monster["legendary"])) + "\n")
     
-    return discord_trim(tempStr)
+    if return_monster:
+        return {'monster': monster, 'string': discord_trim(''.join(monsterDesc))}
+    else:
+        return discord_trim(''.join(monsterDesc))
 
 def searchSpell(spellname, serv_id='', return_spell=False):
     spellDesc = []

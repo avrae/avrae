@@ -101,41 +101,11 @@ class Lookup:
             visible = True
             pm = False
         
-        result = searchMonster(monstername, visible=visible, verbose=False)
+        result = searchMonster(monstername, visible=visible)
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.botStats["monsters_looked_up_life"] += 1
     
         # do stuff here
-        for r in result:
-            if pm:
-                await self.bot.send_message(ctx.message.author, r)
-            else:
-                await self.bot.say(r)
-            
-    @commands.command(pass_context=True)
-    async def vmonster(self, ctx, *, monstername : str):
-        """Looks up a monster, including all of its skills.
-        Generally requires role 'DM' or 'Game Master' to show full stat block."""
-        
-        try:
-            guild_id = ctx.message.server.id   
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
-            if self.settings.get(guild_id, {}).get("req_dm_monster", True):
-                visible = 0
-                for ro in visible_roles:
-                    visible = visible + 1 if ro in [str(r).lower() for r in ctx.message.author.roles] else visible
-                visible = True if visible > 0 else False
-            else:
-                visible = True
-        except:
-            visible = True
-            pm = False
-        
-        result = searchMonster(monstername, visible=visible, verbose=True)
-        self.bot.botStats["monsters_looked_up_session"] += 1
-        self.bot.botStats["monsters_looked_up_life"] += 1
-    
         for r in result:
             if pm:
                 await self.bot.send_message(ctx.message.author, r)

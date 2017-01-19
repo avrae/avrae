@@ -100,6 +100,8 @@ def searchMonster(monstername, visible=True, return_monster=False):
             monsterDesc.append("**Condition Immunities:** {conditionImmune}\n".format(**monster))
         if monster.get('languages', '') is not '':
             monsterDesc.append("**Languages:** {languages}\n".format(**monster))
+        else:
+            monsterDesc.append("**Languages:** --\n".format(**monster))
         monsterDesc.append("**CR:** {cr}\n".format(**monster))
         
         if "trait" in monster:

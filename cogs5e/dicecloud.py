@@ -20,7 +20,7 @@ class Dicecloud:
         character = {}
         client = DDPClient('ws://dicecloud.com/websocket')
         client.connect()
-        def connected(self):
+        def connected():
             connection = True
         client.on('connected', connected)
         while not connection:

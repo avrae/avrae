@@ -76,8 +76,12 @@ def searchMonster(monstername, visible=True, return_monster=False):
         monster['type'] = ','.join(monster['type'].split(',')[:-1])
         for stat in ['str', 'dex', 'con', 'wis', 'int', 'cha']:
             monster[stat] = monster[stat] + " ({:+})".format(floor((int(monster[stat])-10)/2))
-        monster['skill'] = monster['skill'][0]
-        monster['senses'] = monster['senses'] + ", passive Perception {}".format(monster['passive'])
+        if monster.get('skill') is not None:
+            monster['skill'] = monster['skill'][0]
+        if monster.get('senses') is None:
+            monster['senses'] = "passive Perception {}".format(monster['passive'])
+        else:
+            monster['senses'] = monster.get('senses') + ", passive Perception {}".format(monster['passive'])
         
         monsterDesc.append("{name}, {size} {type}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n".format(**monster))
         monsterDesc.append("**STR:** {str} **DEX:** {dex} **CON:** {con} **WIS:** {wis} **INT:** {int} **CHA:** {cha}\n".format(**monster))

@@ -16,14 +16,14 @@ class Dicecloud:
     
     @commands.command(pass_context=True)
     async def import_sheet(self, ctx, url:str):
-        connection = False
         character = {}
         client = DDPClient('ws://dicecloud.com/websocket')
+        client.is_connected = False
         client.connect()
         def connected():
-            connection = True
+            client.is_connected = True
         client.on('connected', connected)
-        while not connection:
+        while not client.is_connected:
             asyncio.sleep(1)
         sub_id = client.subscribe('singleCharacter', [url])
         def update_character(collection, _id, fields):
@@ -34,3 +34,4 @@ class Dicecloud:
         loading = await self.bot.say('Loading character data from Dicecloud...')
         await asyncio.sleep(10)
         await self.bot.edit_message(loading, 'Loaded data for {}!'.format(character.get('characters').get('name')))
+        client.close()

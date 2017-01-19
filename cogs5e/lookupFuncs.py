@@ -98,7 +98,9 @@ def searchMonster(monstername, visible=True, return_monster=False):
             monsterDesc.append("**Damage Immunities:** {immune}\n".format(**monster))
         if monster.get('conditionImmune', '') is not '':
             monsterDesc.append("**Condition Immunities:** {conditionImmune}\n".format(**monster))
-        monsterDesc.append("**Languages:** {languages}\n**CR:** {cr}\n".format(**monster))
+        if monster.get('languages', '') is not '':
+            monsterDesc.append("**Languages:** {languages}\n".format(**monster))
+        monsterDesc.append("**CR:** {cr}\n".format(**monster))
         
         if "trait" in monster:
             monsterDesc.append("\n**__Special Abilities:__**\n")
@@ -115,10 +117,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
             
         if "reaction" in monster:
             monsterDesc.append("\n**__Reactions:__**\n")
-            for a in monster["reaction"]:
-                if isinstance(a['text'], list):
-                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-                monsterDesc.append("**{name}:** {text}\n".format(**a))
+            monsterDesc.append("**{name}:** {text}\n".format(**monster['reaction']))
             
         if "legendary" in monster:
             monsterDesc.append("\n**__Legendary Actions:__**\n")
@@ -175,7 +174,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
             elif 25 < monster[stat]:
                 monster[stat] = "Godly"
                 
-        if monster["languages"]:
+        if monster.get("languages"):
             monster["languages"] = len(monster["languages"].split(", "))
         else:
             monster["languages"] = 0

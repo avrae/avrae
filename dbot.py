@@ -16,6 +16,7 @@ import psutil
 
 from cogs5e.charGen import CharGenerator
 from cogs5e.diceAlgorithm import Dice
+from cogs5e.dicecloud import Dicecloud
 from cogs5e.initiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
 from cogs5e.pbpUtils import PBPUtils
@@ -87,6 +88,7 @@ publicityCog = Publicity(bot)
 pbpCog = PBPUtils(bot)
 webCog = Web(bot)
 helpCog = Help(bot)
+dicecloudCog = Dicecloud(bot)
 cogs = [diceCog,
         charGenCog,
         initiativeTrackerCog,
@@ -97,7 +99,8 @@ cogs = [diceCog,
         publicityCog,
         pbpCog,
         webCog,
-        helpCog]
+        helpCog,
+        dicecloudCog]
 
 @bot.event
 async def on_ready():

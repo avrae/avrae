@@ -31,8 +31,8 @@ def searchMonster(monstername, visible=True, return_monster=False):
         try:
             monster = next(item for item in monsters if monstername.upper() in item["name"].upper())
         except Exception:
-            monsterDesc.append("Spell does not exist or is misspelled (ha).")
-            if return_monster: return {'spell': None, 'string': monsterDesc}
+            monsterDesc.append("Monster does not exist or is misspelled (ha).")
+            if return_monster: return {'monster': None, 'string': monsterDesc}
             return monsterDesc
         
     def parsesource (src):

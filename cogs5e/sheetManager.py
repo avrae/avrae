@@ -62,6 +62,7 @@ class SheetManager:
         self.bot.db.not_json_set('active_characters', self.active_characters)
         
         sheet = get_sheet(character)
+        print(sheet)
         embed = sheet['embed']
         await self.bot.say(embed=embed)
         

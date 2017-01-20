@@ -17,7 +17,7 @@ from re import IGNORECASE
 
 
 # Rolls Dice
-def d_roller(obj, adv=0):
+def d_roller(obj, adv=0, double=False):
     res = []
     splargs = None
     crit = 0
@@ -47,6 +47,9 @@ def d_roller(obj, adv=0):
         args = re.split('(\d+d\d+)', args)[-1]
         splargs = re.split('(k)|(rr)|(ro)', args)
         splargs = [a for a in splargs if a is not None]
+        
+    if double:
+        numDice = numDice * 2
             
     # dice repair/modification
     if numDice > 300 or diceVal < 1 or numDice == 0:
@@ -134,7 +137,7 @@ def d_roller(obj, adv=0):
     return out
 
 # # Dice Roller
-def roll(rollStr, adv:int=0, rollFor='', inline=False):
+def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False):
     try:
         reply = []
         out_set = []
@@ -200,7 +203,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False):
             if re.search('^\s*((\d*(d|k|rr|ro|padellis)?(h\d|l\d|\d)+)+|([-+*/^().<>= ]))?(\[.*\])?\s*$', t, flags=IGNORECASE):
                 if 'd' in t:
                     try:
-                        result = d_roller(t, adv)
+                        result = d_roller(t, adv, double=double)
                         out_set[i] = t + " " + result.result + " " + nextAnno if nextAnno is not '' else t + " " + result.result
                         eval_set[i] = str(result.plain)
                         if not result.crit == 0:

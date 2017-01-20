@@ -162,10 +162,10 @@ def get_attack(character, atkIn):
     attack = {'attackBonus': '0', 'damage':'0', 'name': atkIn.get('name'), 'details': atkIn.get('details')}
     
     attackBonus = re.split('([-+*/^().<>=])', atkIn.get('attackBonus', '').replace('{', '').replace('}', ''))
-    attack['attackBonus'] = ''.join(str(replacements.get(word, word) for word in attackBonus))
+    attack['attackBonus'] = ''.join(str(replacements.get(word, word)) for word in attackBonus)
     
     damage = re.split('([-+*/^().<>=])', atkIn.get('damage', '').replace('{', '').replace('}', ''))
-    attack['damage'] = ''.join(str(replacements.get(word, word) for word in damage)) + '[{}]'.format(atkIn.get('damageType'))
+    attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage) + '[{}]'.format(atkIn.get('damageType'))
     
     return attack
     

@@ -7,10 +7,9 @@ import asyncio
 from datetime import datetime
 import json
 
-from DDPClient import DDPClient
 from discord.ext import commands
 
-from cogs5e.dicecloud import get_character
+from cogs5e.dicecloud import get_character, get_sheet
 
 
 class SheetManager:
@@ -37,5 +36,5 @@ class SheetManager:
         jsonData = json.dumps(user_characters, default=fix_json) #bah
         self.bot.db.set(ctx.message.author.id + '.characters', jsonData)
         
-        embed = self.get_sheet(character)
+        embed = get_sheet(character)
         await self.bot.say(embed=embed)

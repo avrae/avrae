@@ -45,21 +45,21 @@ def get_sheet(character):
     
     sheet = {'stats': stats,
              'levels': levels,
-             'hp': hp,
+             'hp': int(hp),
              'attacks': attacks}
     
     embed.title = stats['name']
     embed.set_thumbnail(url=stats['image'])
-    embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']))
+    embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']), inline=False)
     embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+}) " \
                                         "**DEX:** {dexterity} ({dexterityMod:+}) " \
                                         "**CON:** {constitution} ({constitutionMod:+}) " \
                                         "**INT:** {intelligence} ({intelligenceMod:+}) " \
                                         "**WIS:** {wisdom} ({wisdomMod:+}) " \
-                                        "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
+                                        "**CHA:** {charisma} ({charismaMod:+})".format(**stats), inline=False)
     embed.add_field(name="Attacks", value='\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
                                                                                                numexpr.evaluate(a['attackBonus']),
-                                                                                               a['damage'])
+                                                                                               a['damage'], inline=False)
                                                     for a in attacks))
     
     return {'embed': embed, 'sheet': sheet}

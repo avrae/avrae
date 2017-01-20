@@ -65,14 +65,14 @@ def get_stat(character, stat):
                 add = value
             elif operation is 'mul' and value > mult:
                 mult = value
-            elif operation is 'min' and value < min:
-                minV = value
-            elif operation is 'max' and value > max:
-                maxV = value
+            elif operation is 'min':
+                minV = value if minV is None else value if value < minV else minV
+            elif operation is 'max':
+                maxV = value if maxV is None else value if value > maxV else maxV
     out = (base * mult) + add
-    if min is not None:
+    if minV is not None:
         out = max(out, minV)
-    if max is not None:
+    if maxV is not None:
         out = min(out, maxV)
     return out
     

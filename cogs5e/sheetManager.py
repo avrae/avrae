@@ -4,6 +4,7 @@ Created on Jan 19, 2017
 @author: andrew
 '''
 import asyncio
+from datetime import datetime
 import json
 
 from DDPClient import DDPClient
@@ -29,7 +30,11 @@ class SheetManager:
         
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[url] = character
-        jsonData = json.dumps(user_characters, skipkeys=True) #bah
+        def fix_json(o):
+            if isinstance(o, datetime):
+                return o.timestamp()
+            return json.JSONEncoder.default(o)
+        jsonData = json.dumps(user_characters, default=fix_json) #bah
         self.bot.db.set(ctx.message.author.id + '.characters', jsonData)
         
         embed = self.get_sheet(character)

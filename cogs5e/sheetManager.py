@@ -6,9 +6,11 @@ Created on Jan 19, 2017
 import asyncio
 from datetime import datetime
 import json
+import re
 
 from discord.ext import commands
 
+from cogs5e.dice import roll
 from cogs5e.dicecloud import get_character, get_sheet
 
 
@@ -19,23 +21,51 @@ class SheetManager:
         self.bot = bot
         self.active_characters = bot.db.not_json_get('active_characters', {})
         
+    @commands.command(pass_context=True, aliases=['a'])
+    async def attack(self, ctx, atk_name:str, *, args:str=None):
+        """Rolls an attack for the current active character."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        character = user_characters[self.active_characters[ctx.message.author.id]]
+        attacks = character.get('attacks')
+        try:
+            attack = next(a for a in attacks if atk_name == a.get('name').lower())
+        except StopIteration:
+            try:
+                attack = next(a for a in attacks if atk_name in a.get('name').lower())
+            except StopIteration:
+                return await self.bot.say('No attack with that name found.')
+        
+        adv = 0
+        if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
+            adv = 1 if re.search('(^|\s+)adv(\s+|$)', args) is not None else -1
+            args = re.sub('(adv|dis)(\s+|$)', '', args)
+        
+        out = '***{} attacks with a {}!***\n'.format(character.get('stats').get('name'), attack.get('name'))
+        out += roll('1d20+' + attack.get('attackBonus'), adv=adv, rollFor='To Hit').result + '\n'
+        out += roll(attack.get('damage'), rollFor='Damage').result + '\n'
+        out += '**Effect:** ' + attack.get('details') if not attack.get('details', '') == '' else ''
+        
+        await self.bot.say(out)
+        
+        
     @commands.command(pass_context=True)
     async def character(self, ctx, name:str):
-        """Switches the active character."""
+        """Switches the active character.
+        Breaks for characters created before Jan. 20, 2017."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
         if user_characters is None:
             return await self.bot.say('You have no characters.')
         
         char_url = None
         for url, character in user_characters.items():
-            if character.get('characters')[0].get('name').lower() == name.lower():
+            if character.get('stats').get('name').lower() == name.lower():
                 char_url = url
-                name = character.get('characters')[0].get('name')
+                name = character.get('stats').get('name')
                 break
             
-            if name.lower() in character.get('characters')[0].get('name').lower():
+            if name.lower() in character.get('stats').get('name').lower():
                 char_url = url
-                name = character.get('characters')[0].get('name')
+                name = character.get('stats').get('name')
         
         if char_url is None:
             return await self.bot.say('Character not found.')

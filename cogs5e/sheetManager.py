@@ -68,10 +68,5 @@ class SheetManager:
         
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[url] = sheet['sheet']
-        def fix_json(o):
-            if isinstance(o, datetime):
-                return o.timestamp()
-            return json.JSONEncoder.default(None, o)
-        jsonData = json.dumps(user_characters, default=fix_json) #bah
-        self.bot.db.set(ctx.message.author.id + '.characters', jsonData)
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         

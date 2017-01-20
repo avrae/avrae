@@ -57,7 +57,9 @@ def get_sheet(character):
                                         "**INT:** {intelligence} ({intelligenceMod:+}) " \
                                         "**WIS:** {wisdom} ({wisdomMod:+}) " \
                                         "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
-    embed.add_field(name="Attacks", value='\n'.join("**{name}:** +{attackBonus} To Hit, {damage} damage.".format(**a)
+    embed.add_field(name="Attacks", value='\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
+                                                                                               numexpr.evaluate(a['attackBonus']),
+                                                                                               a['damage'])
                                                     for a in attacks))
     
     return {'embed': embed, 'sheet': sheet}

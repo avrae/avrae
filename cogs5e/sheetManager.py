@@ -25,7 +25,10 @@ class SheetManager:
         
         loading = await self.bot.say('Loading character data from Dicecloud...')
         character = await get_character(url)
-        await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.get('characters')[0].get('name')))
+        try:
+            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.get('characters')[0].get('name')))
+        except TypeError:
+            return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[url] = character

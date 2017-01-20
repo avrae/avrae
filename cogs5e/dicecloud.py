@@ -40,7 +40,7 @@ def get_sheet(character):
     embed.set_thumbnail(url=stats['image'])
     embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+}) " \
                                         "**DEX:** {dexterity} ({dexterityMod:+}) " \
-                                        "**CON:** {consitution} ({constitutionMod:+}) " \
+                                        "**CON:** {constitution} ({constitutionMod:+}) " \
                                         "**INT:** {intelligence} ({intelligenceMod:+}) " \
                                         "**WIS:** {wisdom} ({wisdomMod:+}) " \
                                         "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
@@ -56,18 +56,18 @@ def get_stat(character, stat):
     maxV = None
     minV = None
     for effect in effects:
-        if effect.get('stat') is stat:
+        if effect.get('stat') == stat and effect.get('enabled', True) and not effect.get('removed', False):
             operation = effect.get('operation', 'base')
             value = int(effect.get('value', 0))
-            if operation is 'base' and value > base:
+            if operation == 'base' and value > base:
                 base = value
-            elif operation is 'add' and value > add:
-                add = value
-            elif operation is 'mul' and value > mult:
+            elif operation == 'add':
+                add += value
+            elif operation == 'mul' and value > mult:
                 mult = value
-            elif operation is 'min':
+            elif operation == 'min':
                 minV = value if minV is None else value if value < minV else minV
-            elif operation is 'max':
+            elif operation == 'max':
                 maxV = value if maxV is None else value if value > maxV else maxV
     out = (base * mult) + add
     if minV is not None:

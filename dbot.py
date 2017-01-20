@@ -16,10 +16,10 @@ import psutil
 
 from cogs5e.charGen import CharGenerator
 from cogs5e.diceAlgorithm import Dice
-from cogs5e.dicecloud import Dicecloud
 from cogs5e.initiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
 from cogs5e.pbpUtils import PBPUtils
+from cogs5e.sheetManager import SheetManager
 from cogsmisc.adminUtils import AdminUtils
 from cogsmisc.core import Core
 from cogsmisc.permissions import Permissions
@@ -88,7 +88,7 @@ publicityCog = Publicity(bot)
 pbpCog = PBPUtils(bot)
 webCog = Web(bot)
 helpCog = Help(bot)
-dicecloudCog = Dicecloud(bot)
+sheetCog = SheetManager(bot)
 cogs = [diceCog,
         charGenCog,
         initiativeTrackerCog,
@@ -100,7 +100,7 @@ cogs = [diceCog,
         pbpCog,
         webCog,
         helpCog,
-        dicecloudCog]
+        sheetCog]
 
 @bot.event
 async def on_ready():

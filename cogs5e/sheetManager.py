@@ -32,10 +32,10 @@ class SheetManager:
         character = user_characters[self.active_characters[ctx.message.author.id]]
         attacks = character.get('attacks')
         try:
-            attack = next(a for a in attacks if atk_name == a.get('name').lower())
+            attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
         except StopIteration:
             try:
-                attack = next(a for a in attacks if atk_name in a.get('name').lower())
+                attack = next(a for a in attacks if atk_name.lower() in a.get('name').lower())
             except StopIteration:
                 return await self.bot.say('No attack with that name found.')
         
@@ -56,13 +56,16 @@ class SheetManager:
         else:
             out = '***{} attacks with a {}!***\n'.format(character.get('stats').get('name'), attack.get('name'))
         out += toHit.result + '\n'
+        
         if toHit.crit == 1:
             out += roll(attack.get('damage'), rollFor='Damage', inline=True, double=True).result + '\n'
         elif toHit.crit == 2:
             out += '**Miss!**\n'
         else:
             out += roll(attack.get('damage'), rollFor='Damage', inline=True).result + '\n'
-        out += '**Effect:** ' + attack.get('details') if not attack.get('details', '') == '' else ''
+        
+        if not attack.get('details') is not None:
+            out += '**Effect:** ' + attack.get('details', '')
         
         await self.bot.say(out)
         try:

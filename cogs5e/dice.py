@@ -62,6 +62,9 @@ def d_roller(obj, adv=0, double=False):
         except:
             res.append(1)
             
+    if adv is not 0:
+        numDice = floor(numDice / 2) # for crit detection
+            
     rawRes = list(map(str, res))
     
     if splargs is not None:

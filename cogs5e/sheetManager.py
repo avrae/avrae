@@ -4,6 +4,7 @@ Created on Jan 19, 2017
 @author: andrew
 '''
 import asyncio
+import json
 
 from DDPClient import DDPClient
 from discord.ext import commands
@@ -28,6 +29,8 @@ class SheetManager:
         
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[url] = character
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters, skipkeys=True)
+        jsonData = json.dumps(user_characters, skipkeys=True) #bah
+        self.bot.db.set(ctx.message.author.id + '.characters', jsonData)
         
         embed = self.get_sheet(character)
+        await self.bot.say(embed=embed)

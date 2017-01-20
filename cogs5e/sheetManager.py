@@ -22,7 +22,7 @@ class SheetManager:
         self.active_characters = bot.db.not_json_get('active_characters', {})
         
     @commands.command(pass_context=True, aliases=['a'])
-    async def attack(self, ctx, atk_name:str, *, args:str=None):
+    async def attack(self, ctx, atk_name:str, *, args:str=''):
         """Rolls an attack for the current active character."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         character = user_characters[self.active_characters[ctx.message.author.id]]

@@ -71,7 +71,7 @@ class SheetManager:
         def fix_json(o):
             if isinstance(o, datetime):
                 return o.timestamp()
-            return json.JSONEncoder.default(o)
+            return json.JSONEncoder.default(None, o)
         jsonData = json.dumps(user_characters, default=fix_json) #bah
         self.bot.db.set(ctx.message.author.id + '.characters', jsonData)
         

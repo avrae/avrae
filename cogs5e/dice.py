@@ -140,7 +140,7 @@ def d_roller(obj, adv=0, double=False):
     return out
 
 # # Dice Roller
-def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False):
+def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs=True):
     try:
         reply = []
         out_set = []
@@ -251,16 +251,17 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False):
             reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')
             rollFor = rollFor if rollFor is not '' else 'Result'
             reply = '**{}:** '.format(rollFor) + reply
-            if adv == 1:
-                reply += '\n**Rolled with Advantage**'
-            elif adv == -1:
-                reply += '\n**Rolled with Disadvantage**'
-            if crit == 1:
-                critStr = "\n_**Critical Hit!**_  " + tables.getCritMessage()
-                reply += critStr
-            elif crit == 2:
-                critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
-                reply += critStr
+            if show_blurbs:
+                if adv == 1:
+                    reply += '\n**Rolled with Advantage**'
+                elif adv == -1:
+                    reply += '\n**Rolled with Disadvantage**'
+                if crit == 1:
+                    critStr = "\n_**Critical Hit!**_  " + tables.getCritMessage()
+                    reply += critStr
+                elif crit == 2:
+                    critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
+                    reply += critStr
         else:
             # Builds end result while showing rolls
             reply.append('' + ' '.join(out_set) + ' = `' + str(floor(total)) + '`')
@@ -270,16 +271,17 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False):
             skeletonReply = reply
             rollFor = rollFor if rollFor is not '' else 'Result'
             reply = '**{}:** '.format(rollFor) + reply
-            if adv == 1:
-                reply += '\n**Rolled with Advantage**'
-            elif adv == -1:
-                reply += '\n**Rolled with Disadvantage**'
-            if crit == 1:
-                critStr = "\n_**Critical Hit!**_  " + tables.getCritMessage()
-                reply += critStr
-            elif crit == 2:
-                critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
-                reply += critStr
+            if show_blurbs:
+                if adv == 1:
+                    reply += '\n**Rolled with Advantage**'
+                elif adv == -1:
+                    reply += '\n**Rolled with Disadvantage**'
+                if crit == 1:
+                    critStr = "\n_**Critical Hit!**_  " + tables.getCritMessage()
+                    reply += critStr
+                elif crit == 2:
+                    critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
+                    reply += critStr
         reply = re.sub(' +', ' ', reply)
         return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply)
         

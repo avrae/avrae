@@ -6,9 +6,11 @@ Created on Jan 19, 2017
 import asyncio
 from datetime import datetime
 import json
+import random
 import re
 import shlex
 
+import discord
 from discord.ext import commands
 
 from cogs5e.dice import roll
@@ -26,10 +28,18 @@ class SheetManager:
     @commands.command(pass_context=True, aliases=['a'])
     async def attack(self, ctx, atk_name:str, *, args:str=''):
         """Rolls an attack for the current active character.
-        Valid Arguments: -t [target]
-                         adv/dis"""
+        Valid Arguments: adv/dis
+                         -ac [target ac]
+                         -b [to hit bonus]
+                         -d [damage bonus]
+                         -rr [times to reroll]
+                         -t [target]
+                         crit (automatically crit)"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        character = user_characters[self.active_characters[ctx.message.author.id]]
+        active_character = self.active_characters.get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no characters loaded.')
+        character = user_characters[active_character]
         attacks = character.get('attacks')
         try:
             attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
@@ -39,35 +49,85 @@ class SheetManager:
             except StopIteration:
                 return await self.bot.say('No attack with that name found.')
         
-        adv = 0
+        embed = discord.Embed()
+        embed.colour = random.randint(0, 0xffffff)
         
         args = shlex.split(args)
+        adv = 0
         target = None
+        ac = None
+        b = None
+        d = None
+        rr = 1
+        crit = 0
+        total_damage = 0
         if '-t' in args:
             target = list_get(args.index('-t') + 1, None, args)
-        
+        if '-ac' in args:
+            try:
+                ac = int(list_get(args.index('-ac') + 1, None, args))
+            except ValueError:
+                pass
+        if '-b' in args:
+            b = list_get(args.index('-b') + 1, None, args)
+        if '-d' in args:
+            d = list_get(args.index('-d') + 1, None, args)
+        if '-rr' in args:
+            try:
+                rr = int(list_get(args.index('-rr') + 1, 1, args))
+            except ValueError:
+                pass
+        if 'crit' in args:
+            crit = 1
         if 'adv' in args or 'dis' in args:
             adv = 1 if 'adv' in args else -1
             
-        toHit = roll('1d20+' + attack.get('attackBonus'), adv=adv, rollFor='To Hit', inline=True)
-        
         if target is not None:
-            out = '***{} attacks with a {} at {}!***\n'.format(character.get('stats').get('name'), attack.get('name'), target)
+            embed.title = '{} attacks with a {} at {}!'.format(character.get('stats').get('name'), attack.get('name'), target)
         else:
-            out = '***{} attacks with a {}!***\n'.format(character.get('stats').get('name'), attack.get('name'))
-        out += toHit.result + '\n'
+            embed.title = '{} attacks with a {}!'.format(character.get('stats').get('name'), attack.get('name'))
         
-        if toHit.crit == 1:
-            out += roll(attack.get('damage'), rollFor='Damage', inline=True, double=True).result + '\n'
-        elif toHit.crit == 2:
-            out += '**Miss!**\n'
-        else:
-            out += roll(attack.get('damage'), rollFor='Damage', inline=True).result + '\n'
+        for r in range(rr):
+            if b is not None:
+                toHit = roll('1d20+' + attack.get('attackBonus') + '+' + b, adv=adv, rollFor='To Hit', inline=True, show_blurbs=False)
+            else:
+                toHit = roll('1d20+' + attack.get('attackBonus'), adv=adv, rollFor='To Hit', inline=True, show_blurbs=False)
+    
+            out = ''
+            out += toHit.result + '\n'
+            itercrit = toHit.crit if crit == 0 else crit
+            if ac is not None:
+                if toHit.total < ac and itercrit == 0:
+                    itercrit = 2 # miss!
+            
+            if d is not None:
+                damage = attack.get('damage') + '+' + d
+            else:
+                damage = attack.get('damage')
+            
+            if itercrit == 1:
+                dmgroll = roll(damage, rollFor='Damage (CRIT!)', inline=True, double=True, show_blurbs=False)
+                out += dmgroll.result + '\n'
+                total_damage += dmgroll.total
+            elif itercrit == 2:
+                out += '**Miss!**\n'
+            else:
+                dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
+                out += dmgroll.result + '\n'
+                total_damage += dmgroll.total
+            
+            if rr > 1:
+                embed.add_field(name='Attack {}'.format(r+1), value=out, inline=False)
+            else:
+                embed.add_field(name='Attack', value=out, inline=False)
+            
+        if rr > 1:
+            embed.add_field(name='Total Damage', value=str(total_damage))
         
         if attack.get('details') is not None:
-            out += '**Effect:** ' + attack.get('details', '')
+            embed.add_field(name='Effect', value=(attack.get('details', '')))
         
-        await self.bot.say(out)
+        await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)
         except:

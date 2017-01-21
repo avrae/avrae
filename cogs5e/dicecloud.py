@@ -63,9 +63,9 @@ def get_sheet(character):
             bonus = numexpr.evaluate(a['attackBonus'])
         except:
             bonus = a['attackBonus']
-        tempAttacks.append(["**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
-                                                                       bonus,
-                                                                       a['damage'])])
+        tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
+                                                                      bonus,
+                                                                      a['damage']))
     embed.add_field(name="Attacks", value='\n'.join(tempAttacks), inline=False)
     
     return {'embed': embed, 'sheet': sheet}

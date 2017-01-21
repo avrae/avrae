@@ -64,7 +64,7 @@ class SheetManager:
         else:
             out += roll(attack.get('damage'), rollFor='Damage', inline=True).result + '\n'
         
-        if not attack.get('details') is not None:
+        if attack.get('details') is not None:
             out += '**Effect:** ' + attack.get('details', '')
         
         await self.bot.say(out)

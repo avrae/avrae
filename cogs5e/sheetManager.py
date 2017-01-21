@@ -51,6 +51,7 @@ class SheetManager:
         
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
+        embed.description = '~~' + ' '*500 + '~~'
         
         args = shlex.split(args)
         adv = 0

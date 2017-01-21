@@ -84,12 +84,12 @@ class SheetManager:
         
         char_url = None
         for url, character in user_characters.items():
-            if character.get('stats').get('name').lower() == name.lower():
+            if character.get('stats', {}).get('name').lower() == name.lower():
                 char_url = url
                 name = character.get('stats').get('name')
                 break
             
-            if name.lower() in character.get('stats').get('name').lower():
+            if name.lower() in character.get('stats', {}).get('name').lower():
                 char_url = url
                 name = character.get('stats').get('name')
         

@@ -253,6 +253,8 @@ class SheetManager:
         stats = character.get('stats')
         image = stats.get('image', '')
         desc = stats.get('description', 'No description available.')
+        if len(desc) > 1024:
+            desc = desc[:1021] + '...'
         
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)

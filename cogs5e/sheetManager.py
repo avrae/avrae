@@ -89,40 +89,54 @@ class SheetManager:
             embed.title = '{} attacks with a {}!'.format(character.get('stats').get('name'), attack.get('name'))
         
         for r in range(rr):
-            if b is not None:
-                toHit = roll('1d20+' + attack.get('attackBonus') + '+' + b, adv=adv, rollFor='To Hit', inline=True, show_blurbs=False)
-            else:
-                toHit = roll('1d20+' + attack.get('attackBonus'), adv=adv, rollFor='To Hit', inline=True, show_blurbs=False)
+            if attack.get('attackBonus') is not None:
+                if b is not None:
+                    toHit = roll('1d20+' + attack.get('attackBonus') + '+' + b, adv=adv, rollFor='To Hit', inline=True, show_blurbs=False)
+                else:
+                    toHit = roll('1d20+' + attack.get('attackBonus'), adv=adv, rollFor='To Hit', inline=True, show_blurbs=False)
     
-            out = ''
-            out += toHit.result + '\n'
-            itercrit = toHit.crit if crit == 0 else crit
-            if ac is not None:
-                if toHit.total < ac and itercrit == 0:
-                    itercrit = 2 # miss!
-            
-            if d is not None:
-                damage = attack.get('damage') + '+' + d
+                out = ''
+                out += toHit.result + '\n'
+                itercrit = toHit.crit if crit == 0 else crit
+                if ac is not None:
+                    if toHit.total < ac and itercrit == 0:
+                        itercrit = 2 # miss!
+                
+                if attack.get('damage') is not None:
+                    if d is not None:
+                        damage = attack.get('damage') + '+' + d
+                    else:
+                        damage = attack.get('damage')
+                    
+                    if itercrit == 1:
+                        dmgroll = roll(damage, rollFor='Damage (CRIT!)', inline=True, double=True, show_blurbs=False)
+                        out += dmgroll.result + '\n'
+                        total_damage += dmgroll.total
+                    elif itercrit == 2:
+                        out += '**Miss!**\n'
+                    else:
+                        dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
+                        out += dmgroll.result + '\n'
+                        total_damage += dmgroll.total
             else:
-                damage = attack.get('damage')
+                out = ''
+                if attack.get('damage') is not None:
+                    if d is not None:
+                        damage = attack.get('damage') + '+' + d
+                    else:
+                        damage = attack.get('damage')
+                    
+                    dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
+                    out += dmgroll.result + '\n'
+                    total_damage += dmgroll.total
             
-            if itercrit == 1:
-                dmgroll = roll(damage, rollFor='Damage (CRIT!)', inline=True, double=True, show_blurbs=False)
-                out += dmgroll.result + '\n'
-                total_damage += dmgroll.total
-            elif itercrit == 2:
-                out += '**Miss!**\n'
-            else:
-                dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
-                out += dmgroll.result + '\n'
-                total_damage += dmgroll.total
+            if out is not '':
+                if rr > 1:
+                    embed.add_field(name='Attack {}'.format(r+1), value=out, inline=False)
+                else:
+                    embed.add_field(name='Attack', value=out, inline=False)
             
-            if rr > 1:
-                embed.add_field(name='Attack {}'.format(r+1), value=out, inline=False)
-            else:
-                embed.add_field(name='Attack', value=out, inline=False)
-            
-        if rr > 1:
+        if rr > 1 and attack.get('damage') is not None:
             embed.add_field(name='Total Damage', value=str(total_damage))
         
         if attack.get('details') is not None:
@@ -133,8 +147,97 @@ class SheetManager:
             await self.bot.delete_message(ctx.message)
         except:
             pass
+    
+    @commands.command(pass_context=True, aliases=['s'])
+    async def save(self, ctx, skill, *, args:str=''):
+        """Rolls a save for your current active character.
+        Args: adv/dis
+              -b [conditional bonus]"""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.active_characters.get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no characters loaded.')
+        character = user_characters[active_character]
+        saves = character.get('saves')
+        try:
+            save = next(a for a in saves.keys() if skill.lower() == a.lower())
+        except StopIteration:
+            try:
+                save = next(a for a in saves.keys() if skill.lower() in a.lower())
+            except StopIteration:
+                return await self.bot.say('That\'s not a valid save.')
         
+        embed = discord.Embed()
+        embed.colour = random.randint(0, 0xffffff)
         
+        args = shlex.split(args)
+        adv = 0
+        b = None
+        if '-b' in args:
+            b = list_get(args.index('-b') + 1, None, args)
+        if 'adv' in args or 'dis' in args:
+            adv = 1 if 'adv' in args else -1
+        
+        if b is not None:
+            save_roll = roll('1d20' + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
+        else:
+            save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
+            
+        embed.add_field(name='{} makes a {}!'.format(character.get('stats', {}).get('name'),
+                                                     re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()),
+                        value=save_roll.skeleton)
+        
+        await self.bot.say(embed=embed)
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+    
+    @commands.command(pass_context=True, aliases=['c'])
+    async def check(self, ctx, check, *, args:str=''):
+        """Rolls a check for your current active character.
+        Args: adv/dis
+              -b [conditional bonus]"""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.active_characters.get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no characters loaded.')
+        character = user_characters[active_character]
+        skills = character.get('skills')
+        try:
+            skill = next(a for a in skills.keys() if check.lower() == a.lower())
+        except StopIteration:
+            try:
+                skill = next(a for a in skills.keys() if check.lower() in a.lower())
+            except StopIteration:
+                return await self.bot.say('That\'s not a valid check.')
+        
+        embed = discord.Embed()
+        embed.colour = random.randint(0, 0xffffff)
+        
+        args = shlex.split(args)
+        adv = 0
+        b = None
+        if '-b' in args:
+            b = list_get(args.index('-b') + 1, None, args)
+        if 'adv' in args or 'dis' in args:
+            adv = 1 if 'adv' in args else -1
+        
+        if b is not None:
+            check_roll = roll('1d20' + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
+        else:
+            check_roll = roll('1d20' + '{:+}'.format(skills[skill]), adv=adv, inline=True)
+            
+        embed.add_field(name='{} makes a {} check!'.format(character.get('stats', {}).get('name'),
+                                                     re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()),
+                        value=check_roll.skeleton)
+        
+        await self.bot.say(embed=embed)
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+            
     @commands.command(pass_context=True)
     async def character(self, ctx, name:str):
         """Switches the active character.
@@ -145,12 +248,12 @@ class SheetManager:
         
         char_url = None
         for url, character in user_characters.items():
-            if character.get('stats', {}).get('name').lower() == name.lower():
+            if character.get('stats', {}).get('name', '').lower() == name.lower():
                 char_url = url
                 name = character.get('stats').get('name')
                 break
             
-            if name.lower() in character.get('stats', {}).get('name').lower():
+            if name.lower() in character.get('stats', {}).get('name', '').lower():
                 char_url = url
                 name = character.get('stats').get('name')
         

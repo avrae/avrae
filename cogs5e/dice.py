@@ -243,6 +243,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
         if rollFor is '':
             rollFor = rollForTemp if rollForTemp is not '' else rollFor
         
+        skeletonReply = ''
         if not inline:
             # Builds end result while showing rolls
             reply.append(' '.join(out_set) + '\n_Total:_ ' + str(floor(total)))
@@ -283,6 +284,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
                     critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
                     reply += critStr
         reply = re.sub(' +', ' ', reply)
+        skeletonReply = re.sub(' +', ' ', str(skeletonReply))
         return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply)
         
     except Exception as ex:

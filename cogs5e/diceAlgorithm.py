@@ -155,7 +155,7 @@ class Dice:
         Usage: !math <MATH>"""
         await self.e_math(ctx.message)
         
-    @commands.command(pass_context=True, aliases=['c'])
+    @commands.command(pass_context=True)
     async def cast(self, ctx, *, args : str):
         """Casts a spell (i.e. rolls all the dice and displays a summary [auto-deleted after 15 sec]).
         Valid Arguments: -r <Some Dice> - Instead of rolling the default dice, rolls this instead."""

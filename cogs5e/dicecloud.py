@@ -11,6 +11,7 @@ import re
 from DDPClient import DDPClient
 import discord
 import numexpr
+from string import capwords
 
 
 async def get_character(url):
@@ -42,38 +43,67 @@ def get_sheet(character):
     levels = get_levels(character)
     hp = calculate_stat(character, 'hitPoints')
     attacks = get_attacks(character)
+    skills = get_skills(character)
     
     sheet = {'stats': stats,
              'levels': levels,
              'hp': int(hp),
-             'attacks': attacks}
+             'attacks': attacks,
+             'skills': skills,
+             'saves': {}}
+    
+    for key, skill in skills.items():
+        if 'Save' in key:
+            sheet['saves'][key] = skills[key]
     
     embed.title = stats['name']
     embed.set_thumbnail(url=stats['image'])
     embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']), inline=False)
-    embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+}) " \
-                                        "**DEX:** {dexterity} ({dexterityMod:+}) " \
-                                        "**CON:** {constitution} ({constitutionMod:+}) " \
-                                        "**INT:** {intelligence} ({intelligenceMod:+}) " \
-                                        "**WIS:** {wisdom} ({wisdomMod:+}) " \
-                                        "**CHA:** {charisma} ({charismaMod:+})".format(**stats), inline=False)
+    embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+})\n" \
+                                        "**DEX:** {dexterity} ({dexterityMod:+})\n" \
+                                        "**CON:** {constitution} ({constitutionMod:+})\n" \
+                                        "**INT:** {intelligence} ({intelligenceMod:+})\n" \
+                                        "**WIS:** {wisdom} ({wisdomMod:+})\n" \
+                                        "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
+    embed.add_field(name="Saves", value="**STR:** {strengthSave:+}\n" \
+                                        "**DEX:** {dexteritySave:+}\n" \
+                                        "**CON:** {constitutionSave:+}\n" \
+                                        "**INT:** {intelligenceSave:+}\n" \
+                                        "**WIS:** {wisdomSave:+}\n" \
+                                        "**CHA:** {charismaSave:+}".format(**skills))
+    
+    skillsStr = ''
+    tempSkills = {}
+    for skill, mod in sorted(skills.items()):
+        if 'Save' not in skill:
+            skillsStr += '**{}**: {:+}\n'.format(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill), mod)
+            tempSkills[skill] = mod
+    sheet['skills'] = tempSkills
+            
+    embed.add_field(name="Skills", value=skillsStr.title())
+    
     tempAttacks = []
     for a in attacks:
-        try:
-            bonus = numexpr.evaluate(a['attackBonus'])
-        except:
-            bonus = a['attackBonus']
-        tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
-                                                                      bonus,
-                                                                      a['damage']))
-    embed.add_field(name="Attacks", value='\n'.join(tempAttacks), inline=False)
+        if a['attackBonus'] is not None:
+            try:
+                bonus = numexpr.evaluate(a['attackBonus'])
+            except:
+                bonus = a['attackBonus']
+            tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
+                                                                          bonus,
+                                                                          a['damage'] if a['damage'] is not None else 'no'))
+        else:
+            tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
+                                                             a['damage'] if a['damage'] is not None else 'no'))
+    if tempAttacks == []:
+        tempAttacks = ['No attacks.']
+    embed.add_field(name="Attacks", value='\n'.join(tempAttacks))
     
     return {'embed': embed, 'sheet': sheet}
     
-def get_stat(character, stat):
+def get_stat(character, stat, base=0):
     """Returns the stat value."""
     effects = character.get('effects')
-    base = 0
     add = 0
     mult = 1
     maxV = None
@@ -127,12 +157,11 @@ def get_levels(character):
             levels[level.get('name')+'Level'] += level.get('level')
     return levels
         
-def calculate_stat(character, stat):
+def calculate_stat(character, stat, base=0):
     """Calculates and returns the stat value."""
     replacements = get_stats(character)
     replacements.update(get_levels(character))
     effects = character.get('effects')
-    base = 0
     add = 0
     mult = 1
     maxV = None
@@ -145,7 +174,10 @@ def calculate_stat(character, stat):
             else:
                 calculation = effect.get('calculation', '').replace('{', '').replace('}', '')
                 if calculation == '': continue
-                value = numexpr.evaluate(calculation, local_dict=replacements)
+                try:
+                    value = numexpr.evaluate(calculation, local_dict=replacements)
+                except SyntaxError:
+                    continue
             if operation == 'base' and value > base:
                 base = value
             elif operation == 'add':
@@ -171,19 +203,58 @@ def get_attack(character, atkIn):
     
     attackBonus = re.split('([-+*/^().<>= ])', atkIn.get('attackBonus', '').replace('{', '').replace('}', ''))
     attack['attackBonus'] = ''.join(str(replacements.get(word, word)) for word in attackBonus)
+    if attack['attackBonus'] == '':
+        attack['attackBonus'] = None
     
     damage = re.split('([-+*/^().<>= ])', atkIn.get('damage', '').replace('{', '').replace('}', ''))
     attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage) + ' [{}]'.format(atkIn.get('damageType'))
+    if ''.join(str(replacements.get(word, word)) for word in damage) == '':
+        attack['damage'] = None
     
     return attack
     
 def get_attacks(character):
     """Returns a list of dicts of all of the character's attacks."""
     attacks = []
-    for attack in character.get('attacks'):
+    for attack in character.get('attacks', []):
         if attack.get('enabled') and not attack.get('removed'):
             attacks.append(get_attack(character, attack))
     return attacks
         
+def get_skills(character):
+    """Returns a dict of all the character's skills."""
+    stats = get_stats(character)
+    skillslist = ['acrobatics', 'animalHandling',
+                  'arcana', 'athletics',
+                  'charismaSave', 'constitutionSave',
+                  'deception', 'dexteritySave',
+                  'history', 'initiative', 
+                  'insight', 'intelligenceSave',
+                  'intimidation', 'investigation',
+                  'medicine', 'nature',
+                  'perception', 'performance',
+                  'persuasion', 'religion',
+                  'sleightOfHand', 'stealth',
+                  'strengthSave', 'survival',
+                  'wisdomSave']
+    skills = {}
+    profs = {}
+    for skill in skillslist:
+        skills[skill] = stats.get(character.get('characters', [])[0].get(skill, {}).get('ability') + 'Mod', 0)
+    for prof in character.get('proficiencies'):
+        if prof.get('enabled', False) and not prof.get('removed', False):
+            profs[prof.get('name')] = prof.get('value') \
+                                      if prof.get('value') > profs.get(prof.get('name', 'None'), 0) \
+                                      else profs[prof.get('name')]
+        
+    for skill in skills:
+        skills[skill] = floor(skills[skill] + stats.get('proficiencyBonus') * profs.get(skill, 0))
+        skills[skill] = int(calculate_stat(character, skill, base=skills[skill]))
+        
+    for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
+        skills[stat] = stats.get(stat + 'Mod')
+    
+    return skills
+    
         
         

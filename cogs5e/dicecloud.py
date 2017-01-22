@@ -131,11 +131,12 @@ def get_stat(character, stat, base=0):
     
 def get_stats(character):
     """Returns a dict of stats."""
-    stats = {"name":"", "image":"",
+    stats = {"name":"", "image":"", "description":"",
              "strength":0, "dexterity":0, "constitution":0, "wisdom":0, "intelligence":0, "charisma":0,
              "strengthMod":0, "dexterityMod":0, "constitutionMod":0, "wisdomMod":0, "intelligenceMod":0, "charismaMod":0,
              "proficiencyBonus":0}
     stats['name'] = character.get('characters')[0].get('name')
+    stats['description'] = character.get('characters')[0].get('description')
     stats['image'] = character.get('characters')[0].get('picture')
     stats['proficiencyBonus'] = floor(get_levels(character)['level'] / 4 + 1.75)
     

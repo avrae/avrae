@@ -159,6 +159,8 @@ class SheetManager:
             return await self.bot.say('You have no characters loaded.')
         character = user_characters[active_character]
         saves = character.get('saves')
+        if saves is None:
+            return await self.bot.say('You must update your character sheet first.')
         try:
             save = next(a for a in saves.keys() if skill.lower() == a.lower())
         except StopIteration:
@@ -204,6 +206,8 @@ class SheetManager:
             return await self.bot.say('You have no characters loaded.')
         character = user_characters[active_character]
         skills = character.get('skills')
+        if skills is None:
+            return await self.bot.say('You must update your character sheet first.')
         try:
             skill = next(a for a in skills.keys() if check.lower() == a.lower())
         except StopIteration:
@@ -231,6 +235,29 @@ class SheetManager:
         embed.add_field(name='{} makes a {} check!'.format(character.get('stats', {}).get('name'),
                                                      re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()),
                         value=check_roll.skeleton)
+        
+        await self.bot.say(embed=embed)
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+            
+    @commands.command(pass_context=True)
+    async def desc(self, ctx):
+        """Prints a description of your currently active character."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.active_characters.get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no characters loaded.')
+        character = user_characters[active_character]
+        stats = character.get('stats')
+        image = stats.get('image', '')
+        desc = stats.get('description', 'No description available.')
+        
+        embed = discord.Embed()
+        embed.colour = random.randint(0, 0xffffff)
+        embed.add_field(name=stats.get('name'), value=desc)
+        embed.set_thumbnail(url=image)
         
         await self.bot.say(embed=embed)
         try:

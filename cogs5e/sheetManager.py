@@ -295,6 +295,29 @@ class SheetManager:
         await self.bot.say("Active character changed to {}.".format(name))
         
     @commands.command(pass_context=True)
+    async def update(self, ctx):
+        """Updates the current character sheet."""
+        active_character = self.active_characters.get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no characters loaded.')
+        url = active_character
+        loading = await self.bot.say('Updating character data from Dicecloud...')
+        character = await get_character(url)
+        try:
+            await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(character.get('characters')[0].get('name')))
+        except TypeError:
+            return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
+        
+        sheet = get_sheet(character)
+        print(sheet)
+        embed = sheet['embed']
+        await self.bot.say(embed=embed)
+        
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        user_characters[url] = sheet['sheet']
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        
+    @commands.command(pass_context=True)
     async def dicecloud(self, ctx, url:str):
         """Loads a character sheet from Dicecloud."""
         if 'dicecloud.com' in url:

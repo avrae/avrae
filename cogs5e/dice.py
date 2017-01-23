@@ -32,13 +32,13 @@ def d_roller(obj, adv=0, double=False):
             raise Exception('Please pass in the value of the dice.')
         numDice = 1
         diceVal = obj[0]
-        if adv is not 0:
+        if adv is not 0 and diceVal == 20:
             numDice = 2
             splargs = ['k', 'h1'] if adv is 1 else ['k', 'l1']
     elif numArgs == 2:
         numDice = obj[0]
         diceVal = obj[-1]
-        if adv is not 0:
+        if adv is not 0 and diceVal == 20:
             splargs = ['k', 'h' + str(numDice)] if adv is 1 else ['k', 'l' + str(numDice)]
             numDice = numDice * 2
     else: # split into xdy and operators
@@ -62,7 +62,7 @@ def d_roller(obj, adv=0, double=False):
         except:
             res.append(1)
             
-    if adv is not 0:
+    if adv is not 0 and diceVal == 20:
         numDice = floor(numDice / 2) # for crit detection
             
     rawRes = list(map(str, res))
@@ -117,9 +117,9 @@ def d_roller(obj, adv=0, double=False):
         total += r
         
     # check for crits/crails        
-    if numDice == 1 and diceVal == 20 and int(rawRes[0]) == 20:
+    if numDice == 1 and diceVal == 20 and total == 20:
         crit = 1
-    elif numDice == 1 and diceVal == 20 and int(rawRes[0]) == 1:
+    elif numDice == 1 and diceVal == 20 and total == 1:
         crit = 2
     
     res = list(map(str, res))
@@ -189,19 +189,6 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
                 out_set[i] = ''
                 eval_set[i] = ''
                 continue
-            
-            
-#             try: # t looks something like: " 1d20 words" 
-#                 t = re.sub('(^\s+|\s+$)', '', t) # find and remove any starting/trailing whitespace
-#                 rollForTemp = ' '.join(t.split(' ')[1:]) # and get anything after the 1st space
-#                 if rollForTemp is '': pass
-#                 else:
-#                     rollForTemp += ' '.join(dice_set[i+1:]) # that means the rest of the string isn't part of the roll
-#                     rollForTemp = re.sub('(^\s+|\s+$)', '', rollForTemp) # get rid of starting/trailing whitespace
-#                     t = t.replace(rollForTemp, '') # remove it from the roll
-#                     breakCheck = True
-#             except: # t looks like: "1d20"
-#                 pass # eh
             
             if re.search('^\s*((\d*(d|k|rr|ro|padellis)?(h\d|l\d|\d)+)+|([-+*/^().<>= ]))?(\[.*\])?\s*$', t, flags=IGNORECASE):
                 if 'd' in t:

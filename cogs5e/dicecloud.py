@@ -142,7 +142,7 @@ def get_stats(character):
     
     for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
         stats[stat] = get_stat(character, stat)
-        stats[stat+'Mod'] = floor((int(stats[stat])-10)/2)
+        stats[stat + 'Mod'] = floor((int(stats[stat]) - 10) / 2)
     
     return stats
         
@@ -152,10 +152,10 @@ def get_levels(character):
     for level in character.get('classes'):
         if level.get('removed', False): continue
         levels['level'] += level.get('level')
-        if levels.get(level.get('name')+'Level') is None:
-            levels[level.get('name')+'Level'] = level.get('level')
+        if levels.get(level.get('name') + 'Level') is None:
+            levels[level.get('name') + 'Level'] = level.get('level')
         else:
-            levels[level.get('name')+'Level'] += level.get('level')
+            levels[level.get('name') + 'Level'] += level.get('level')
     return levels
         
 def calculate_stat(character, stat, base=0):
@@ -229,7 +229,7 @@ def get_skills(character):
                   'arcana', 'athletics',
                   'charismaSave', 'constitutionSave',
                   'deception', 'dexteritySave',
-                  'history', 'initiative', 
+                  'history', 'initiative',
                   'insight', 'intelligenceSave',
                   'intimidation', 'investigation',
                   'medicine', 'nature',

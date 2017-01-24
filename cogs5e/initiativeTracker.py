@@ -8,13 +8,13 @@ from os.path import isfile
 import pickle
 import random
 import shlex
+import signal
 from string import capwords
 
 import discord
 from discord.ext import commands
 
 from utils.functions import make_sure_path_exists, discord_trim
-import signal
 
 
 class Combat(object):
@@ -40,16 +40,23 @@ class Combat(object):
                     allCombatants.append(c2)
         try:
             combatant = next(c for c in allCombatants if c.name.lower() == name.lower() and isinstance(c, Combatant))
-        except:
-            pass
+        except StopIteration:
+            try:
+                combatant = next(c for c in allCombatants if name.lower() in c.name.lower() and isinstance(c, Combatant))
+            except StopIteration:
+                pass
+            
         return combatant
     
     def get_combatant_group(self, name):
         group = None
         try:
             group = next(c for c in self.combatants if c.name.lower() == name.lower() and isinstance(c, CombatantGroup))
-        except:
-            pass
+        except StopIteration:
+            try:
+                group = next(c for c in self.combatants if name.lower() in c.name.lower() and isinstance(c, CombatantGroup))
+            except StopIteration:
+                pass
         return group
     
     def checkGroups(self):
@@ -106,7 +113,7 @@ class CombatantGroup(object):
         return status
         
 class Combatant(object):
-    def __init__(self, init:int=0, name:str='', author:discord.User=None, mod:int=0, notes:str='', effects=[], hp:int=None, max_hp:int=None, private:bool=False):
+    def __init__(self, init:int=0, name:str='', author:discord.User=None, mod:int=0, notes:str='', effects=[], hp:int=None, max_hp:int=None, private:bool=False, group:str=None):
         self.init = init
         self.name = name
         self.author = author
@@ -116,6 +123,7 @@ class Combatant(object):
         self.hp = hp
         self.max_hp = max_hp
         self.private = private
+        self.group = group
         
     def __str__(self):
         return self.name
@@ -307,7 +315,7 @@ class InitTracker:
             else:
                 init = modifier
                 modifier = 0
-            me = Combatant(name=name, init=init, author=controller, mod=modifier, effects=[], notes='', private=private, hp=hp, max_hp=hp)
+            me = Combatant(name=name, init=init, author=controller, mod=modifier, effects=[], notes='', private=private, hp=hp, max_hp=hp, group=group)
             if group is None:
                 combat.combatants.append(me)
                 await self.bot.say("{}\n{} was added to combat with initiative {}.".format(controller.mention, name, init), delete_after=10)
@@ -579,7 +587,11 @@ class InitTracker:
         for e in combatant.effects:
             combatant.effects.remove(e)
         
-        combat.combatants.remove(combatant)
+        if combatant.group is None:
+            combat.combatants.remove(combatant)
+        else:
+            group = combat.get_combatant_group(combatant.group)
+            group.combatants.remove(combatant)
         await self.bot.say("{} removed from combat.".format(name), delete_after=10)
         await combat.update_summary(self.bot)
         combat.sortCombatants()

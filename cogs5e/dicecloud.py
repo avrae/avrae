@@ -11,7 +11,6 @@ import re
 from DDPClient import DDPClient
 import discord
 import numexpr
-from string import capwords
 
 
 async def get_character(url):
@@ -138,7 +137,8 @@ def get_stats(character):
     stats['name'] = character.get('characters')[0].get('name')
     stats['description'] = character.get('characters')[0].get('description')
     stats['image'] = character.get('characters')[0].get('picture')
-    stats['proficiencyBonus'] = floor(get_levels(character)['level'] / 4 + 1.75)
+    profByLevel = floor(get_levels(character)['level'] / 4 + 1.75)
+    stats['proficiencyBonus'] = profByLevel + get_stat(character, 'proficiencyBonus', base=0)
     
     for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
         stats[stat] = get_stat(character, stat)

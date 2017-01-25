@@ -34,6 +34,7 @@ class SheetManager:
                          -d [damage bonus]
                          -rr [times to reroll]
                          -t [target]
+                         -phrase [flavor text]
                          crit (automatically crit)"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
@@ -51,7 +52,6 @@ class SheetManager:
         
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
-        embed.description = '~~' + ' '*500 + '~~'
         
         args = shlex.split(args)
         adv = 0
@@ -60,6 +60,7 @@ class SheetManager:
         b = None
         d = None
         rr = 1
+        phrase = None
         crit = 0
         total_damage = 0
         if '-t' in args:
@@ -73,6 +74,8 @@ class SheetManager:
             b = list_get(args.index('-b') + 1, None, args)
         if '-d' in args:
             d = list_get(args.index('-d') + 1, None, args)
+        if '-phrase' in args:
+            phrase = list_get(args.index('-phrase') + 1, None, args)
         if '-rr' in args:
             try:
                 rr = int(list_get(args.index('-rr') + 1, 1, args))
@@ -82,6 +85,11 @@ class SheetManager:
             crit = 1
         if 'adv' in args or 'dis' in args:
             adv = 1 if 'adv' in args else -1
+            
+        if phrase is not None:
+            embed.description = '*' + phrase + '*'
+        else:
+            embed.description = '~~' + ' '*500 + '~~'
             
         if target is not None:
             embed.title = '{} attacks with a {} at {}!'.format(character.get('stats').get('name'), attack.get('name'), target)
@@ -152,7 +160,8 @@ class SheetManager:
     async def save(self, ctx, skill, *, args:str=''):
         """Rolls a save for your current active character.
         Args: adv/dis
-              -b [conditional bonus]"""
+              -b [conditional bonus]
+              -phrase [flavor text]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
@@ -175,6 +184,9 @@ class SheetManager:
         args = shlex.split(args)
         adv = 0
         b = None
+        phrase = None
+        if '-phrase' in args:
+            phrase = list_get(args.index('-phrase') + 1, None, args)
         if '-b' in args:
             b = list_get(args.index('-b') + 1, None, args)
         if 'adv' in args or 'dis' in args:
@@ -185,9 +197,10 @@ class SheetManager:
         else:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
             
-        embed.add_field(name='{} makes a {}!'.format(character.get('stats', {}).get('name'),
-                                                     re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()),
-                        value=save_roll.skeleton)
+        embed.title = '{} makes a {}!'.format(character.get('stats', {}).get('name'),
+                                              re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title())
+            
+        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         
         await self.bot.say(embed=embed)
         try:
@@ -199,7 +212,8 @@ class SheetManager:
     async def check(self, ctx, check, *, args:str=''):
         """Rolls a check for your current active character.
         Args: adv/dis
-              -b [conditional bonus]"""
+              -b [conditional bonus]
+              -phrase [flavor text]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
@@ -222,6 +236,9 @@ class SheetManager:
         args = shlex.split(args)
         adv = 0
         b = None
+        phrase = None
+        if '-phrase' in args:
+            phrase = list_get(args.index('-phrase') + 1, None, args)
         if '-b' in args:
             b = list_get(args.index('-b') + 1, None, args)
         if 'adv' in args or 'dis' in args:
@@ -231,10 +248,10 @@ class SheetManager:
             check_roll = roll('1d20' + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
         else:
             check_roll = roll('1d20' + '{:+}'.format(skills[skill]), adv=adv, inline=True)
-            
-        embed.add_field(name='{} makes a {} check!'.format(character.get('stats', {}).get('name'),
-                                                     re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()),
-                        value=check_roll.skeleton)
+        
+        embed.title = '{} makes a {} check!'.format(character.get('stats', {}).get('name'),
+                                                    re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title())
+        embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         
         await self.bot.say(embed=embed)
         try:
@@ -294,6 +311,7 @@ class SheetManager:
         
         await self.bot.say("Active character changed to {}.".format(name))
         
+        
     @commands.command(pass_context=True)
     async def update(self, ctx):
         """Updates the current character sheet."""
@@ -309,7 +327,6 @@ class SheetManager:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
         sheet = get_sheet(character)
-        print(sheet)
         embed = sheet['embed']
         await self.bot.say(embed=embed)
         
@@ -334,7 +351,6 @@ class SheetManager:
         self.bot.db.not_json_set('active_characters', self.active_characters)
         
         sheet = get_sheet(character)
-        print(sheet)
         embed = sheet['embed']
         await self.bot.say(embed=embed)
         

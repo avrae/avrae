@@ -254,7 +254,6 @@ class InitTracker:
     @init.command(pass_context=True)
     async def add(self, ctx, modifier : int, name : str, *, args:str=''):
         """Adds a combatant to the initiative order.
-        Usage: !init add <MODIFIER> <NAME> <ARGS (opt)>
         Valid Arguments:    -h (hides HP)
                             -p (places at given number instead of rolling)
                             --controller <CONTROLLER> (pings a different person on turn)

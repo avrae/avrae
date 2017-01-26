@@ -69,12 +69,7 @@ class AdminUtils:
     async def servInfo(self):
         out = ''
         for s in self.bot.servers:
-            try:
-                out += "\n\n**{} ({}, {})**".format(s, s.id, (await self.bot.create_invite(s)).url)
-            except:
-                out += "\n\n**{} ({})**".format(s, s.id)
-            for c in [ch for ch in s.channels if ch.type is not ChannelType.voice]:
-                out += '\n|- {} ({})'.format(c, c.id)
+            out += "\n{} ({}, {} members)".format(s, s.id, len(s.members))
         out = self.discord_trim(out)
         for m in out:
             await self.bot.say(m)

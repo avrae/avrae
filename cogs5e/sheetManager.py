@@ -79,7 +79,7 @@ class SheetManager:
         for arg in ('rr', 'ac'):
             try:
                 args[arg] = int(args.get(arg, None))
-            except ValueError:
+            except (ValueError, TypeError):
                 args[arg] = None
         args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         args['crit'] = 1 if args.get('crit', False) else None
@@ -349,7 +349,7 @@ class SheetManager:
             else:
                 try:
                     color = int(color, base=16)
-                except ValueError:
+                except (ValueError, TypeError):
                     out += '\u274c Unknown color. Use "!csettings color reset" to reset it to random.\n'
                 else:
                     if not 0 <= color <= 0xffffff:

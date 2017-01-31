@@ -38,11 +38,14 @@ def get_sheet(character):
     embed = discord.Embed()
     embed.colour = random.randint(0, 0xffffff)
     
-    stats = get_stats(character)
-    levels = get_levels(character)
-    hp = calculate_stat(character, 'hitPoints')
-    attacks = get_attacks(character)
-    skills = get_skills(character)
+    try:
+        stats = get_stats(character)
+        levels = get_levels(character)
+        hp = calculate_stat(character, 'hitPoints')
+        attacks = get_attacks(character)
+        skills = get_skills(character)
+    except:
+        return None
     
     sheet = {'stats': stats,
              'levels': levels,
@@ -179,6 +182,8 @@ def calculate_stat(character, stat, base=0):
                     value = numexpr.evaluate(calculation, local_dict=replacements)
                 except SyntaxError:
                     continue
+                except KeyError:
+                    raise
             if operation == 'base' and value > base:
                 base = value
             elif operation == 'add':

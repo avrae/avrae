@@ -15,7 +15,7 @@ from discord.ext import commands
 
 from cogs5e.dice import roll
 from cogs5e.dicecloud import get_character, get_sheet
-from utils.functions import list_get
+from utils.functions import list_get, embed_trim
 
 
 class SheetManager:
@@ -51,7 +51,7 @@ class SheetManager:
                 return await self.bot.say('No attack with that name found.')
         
         embed = discord.Embed()
-        embed.colour = random.randint(0, 0xffffff)
+        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
         adv = 0
@@ -179,7 +179,7 @@ class SheetManager:
                 return await self.bot.say('That\'s not a valid save.')
         
         embed = discord.Embed()
-        embed.colour = random.randint(0, 0xffffff)
+        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
         adv = 0
@@ -231,7 +231,7 @@ class SheetManager:
                 return await self.bot.say('That\'s not a valid check.')
         
         embed = discord.Embed()
-        embed.colour = random.randint(0, 0xffffff)
+        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
         adv = 0
@@ -271,11 +271,20 @@ class SheetManager:
         image = stats.get('image', '')
         desc = stats.get('description', 'No description available.')
         if len(desc) > 1024:
-            desc = desc[:1021] + '...'
+            desc = embed_trim(desc)
+        else:
+            desc = [desc]
         
         embed = discord.Embed()
-        embed.colour = random.randint(0, 0xffffff)
-        embed.add_field(name=stats.get('name'), value=desc)
+        
+        if len(desc) == 1:
+            embed.add_field(name=stats.get('name'), value=desc[0])
+        else:
+            embed.title = stats.get('name')
+            for d in desc[:5]:
+                embed.add_field(name='Description', value=d)
+        
+        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         embed.set_thumbnail(url=image)
         
         await self.bot.say(embed=embed)
@@ -285,12 +294,15 @@ class SheetManager:
             pass
             
     @commands.command(pass_context=True)
-    async def character(self, ctx, name:str):
+    async def character(self, ctx, name:str=None):
         """Switches the active character.
         Breaks for characters created before Jan. 20, 2017."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
         if user_characters is None:
             return await self.bot.say('You have no characters.')
+        
+        if name is None:
+            return await self.bot.say('Currently active: {}'.format(user_characters.get('stats').get('name')))
         
         char_url = None
         for url, character in user_characters.items():
@@ -311,10 +323,9 @@ class SheetManager:
         
         await self.bot.say("Active character changed to {}.".format(name))
         
-        
     @commands.command(pass_context=True)
     async def update(self, ctx):
-        """Updates the current character sheet."""
+        """Updates the current character sheet, preserving all settings."""
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no characters loaded.')
@@ -326,17 +337,61 @@ class SheetManager:
         except TypeError:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
-        sheet = get_sheet(character)
+        try:
+            sheet = get_sheet(character)
+        except Exception as e:
+            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+
         embed = sheet['embed']
         await self.bot.say(embed=embed)
         
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        user_characters[url] = sheet['sheet']
+        sheet = sheet['sheet']
+        sheet['settings'] = user_characters[url].get('settings')
+        user_characters[url] = sheet
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+    
+    @commands.command(pass_context=True)
+    async def csettings(self, ctx, *, args):
+        """Updates personalization settings for the currently active character.
+        Valid Arguments:
+        `color <hex color>` - Colors all embeds this color."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.active_characters.get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no characters loaded.')
+        character = user_characters[active_character]
+        args = shlex.split(args)
         
+        if character.get('settings') is None:
+            character['settings'] = {}
+        
+        out = 'Operations complete!\n'
+        
+        if 'color' in args:
+            color = list_get(args.index('color') + 1, None, args)
+            if color is None:
+                out += '\u2139 Your character\'s current color is {}. Use "!csettings color reset" to reset it to random.\n' \
+                       .format(hex(character['settings'].get('color')) if character['settings'].get('color') is not None else "random")
+            elif color.lower() == 'reset':
+                character['settings']['color'] = None
+                out += "\u2705 Color reset to random.\n"
+            else:
+                try:
+                    color = int(color, base=16)
+                except ValueError:
+                    out += '\u274c Unknown color.\n'
+                else:
+                    character['settings']['color'] = color
+                    out += "\u2705 Color set to {}.\n".format(hex(color))
+                    
+        user_characters[active_character] = character
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        await self.bot.say(out)
+    
     @commands.command(pass_context=True)
     async def dicecloud(self, ctx, url:str):
-        """Loads a character sheet from Dicecloud."""
+        """Loads a character sheet from Dicecloud, resetting all settings."""
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
         
@@ -347,10 +402,14 @@ class SheetManager:
         except TypeError:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
+        try:
+            sheet = get_sheet(character)
+        except Exception as e:
+            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+        
         self.active_characters[ctx.message.author.id] = url
         self.bot.db.not_json_set('active_characters', self.active_characters)
         
-        sheet = get_sheet(character)
         embed = sheet['embed']
         await self.bot.say(embed=embed)
         

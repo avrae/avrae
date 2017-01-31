@@ -26,6 +26,16 @@ def discord_trim(str):
         lastLen += 1999
     return result
 
+def embed_trim(str):
+    result = []
+    trimLen = 0
+    lastLen = 0
+    while trimLen <= len(str):
+        trimLen += 1023
+        result.append(str[lastLen:trimLen])
+        lastLen += 1023
+    return result
+
 def list_get(index, default, l):
     try:
         a = l[index]
@@ -50,3 +60,16 @@ def get_positivity(string):
         return False
     else:
         return None
+    
+def fuzzy_search(list_to_search:list, key, value):
+    """Fuzzy searches a list for a dict with a key "key" of value "value" """
+    try:
+        result = next(a for a in list_to_search if value.lower() == a.get(key, '').lower())
+    except StopIteration:
+        try:
+            result = next(a for a in list_to_search if value.lower() in a.get(key, '').lower())
+        except StopIteration:
+            return None
+    return result    
+    
+    

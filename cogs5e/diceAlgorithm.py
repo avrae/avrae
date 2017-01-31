@@ -252,12 +252,12 @@ class Dice:
         
         for arg in ('rr', 'ac'):
             try:
-                args[arg] = int(args.get(arg, None))
+                args[arg] = int(args.get(arg, 1))
             except (ValueError, TypeError):
                 args[arg] = None
         args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         args['crit'] = 1 if args.get('crit', False) else None
-        for r in range(args.get('rr', 1)):
+        for r in range(args.get('rr', 1) or 1):
             if attack.get('attackBonus') is not None:
                 if args.get('b') is not None:
                     toHit = roll('1d20+' + attack.get('attackBonus') + '+' + args.get('b'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)

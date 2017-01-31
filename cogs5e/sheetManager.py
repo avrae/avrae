@@ -83,7 +83,7 @@ class SheetManager:
                 args[arg] = None
         args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         args['crit'] = 1 if args.get('crit', False) else None
-        for r in range(args.get('rr', 1)):
+        for r in range(args.get('rr', 1) or 1):
             if attack.get('attackBonus') is not None:
                 if args.get('b') is not None:
                     toHit = roll('1d20+' + attack.get('attackBonus') + '+' + args.get('b'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
@@ -126,12 +126,12 @@ class SheetManager:
                     total_damage += dmgroll.total
             
             if out is not '':
-                if args.get('rr', 1) > 1:
+                if (args.get('rr', 1) or 1) > 1:
                     embed.add_field(name='Attack {}'.format(r+1), value=out, inline=False)
                 else:
                     embed.add_field(name='Attack', value=out, inline=False)
             
-        if args.get('rr', 1) > 1 and attack.get('damage') is not None:
+        if (args.get('rr', 1) or 1) > 1 and attack.get('damage') is not None:
             embed.add_field(name='Total Damage', value=str(total_damage))
         
         if attack.get('details') is not None:

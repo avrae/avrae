@@ -1,7 +1,9 @@
 import asyncio
 import json
 import os
+import random
 import re
+import shlex
 
 import discord
 from discord.ext import commands
@@ -10,9 +12,7 @@ import numexpr
 from cogs5e.dice import roll
 from cogs5e.lookupFuncs import searchSpell, searchMonster
 from utils import checks
-from utils.functions import fuzzy_search
-import random
-import shlex
+from utils.functions import fuzzy_search, parse_args
 
 
 class Dice:
@@ -238,7 +238,7 @@ class Dice:
         
         args = shlex.split(args)
         total_damage = 0
-        args = self.parse_args(args)
+        args = parse_args(args)
             
         if args.get('phrase') is not None:
             embed.description = '*' + args.get('phrase') + '*'

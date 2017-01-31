@@ -71,5 +71,14 @@ def fuzzy_search(list_to_search:list, key, value):
         except StopIteration:
             return None
     return result    
-    
+
+def parse_args(args):
+    out = {}
+    for a in args:
+        if a.startswith('-'):
+            out[a.replace('-', '')] = list_get(args.index(a) + 1, None, args)
+        else:
+            out[a] = True
+    return out
+
     

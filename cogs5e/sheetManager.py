@@ -16,6 +16,7 @@ from discord.ext import commands
 from cogs5e.dice import roll
 from cogs5e.dicecloud import get_character, get_sheet
 from utils.functions import list_get, embed_trim
+import argparse
 
 
 class SheetManager:
@@ -24,6 +25,15 @@ class SheetManager:
     def __init__(self, bot):
         self.bot = bot
         self.active_characters = bot.db.not_json_get('active_characters', {})
+        
+    def parse_args(self, args):
+        out = {}
+        for a in args:
+            if a.startswith('-'):
+                out[a.replace('-', '')] = list_get(args.index(a) + 1, None, args)
+            else:
+                out[a] = True
+        return out
         
     @commands.command(pass_context=True, aliases=['a'])
     async def attack(self, ctx, atk_name:str, *, args:str=''):
@@ -54,65 +64,43 @@ class SheetManager:
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
-        adv = 0
-        target = None
-        ac = None
-        b = None
-        d = None
-        rr = 1
-        phrase = None
-        crit = 0
         total_damage = 0
-        if '-t' in args:
-            target = list_get(args.index('-t') + 1, None, args)
-        if '-ac' in args:
-            try:
-                ac = int(list_get(args.index('-ac') + 1, None, args))
-            except ValueError:
-                pass
-        if '-b' in args:
-            b = list_get(args.index('-b') + 1, None, args)
-        if '-d' in args:
-            d = list_get(args.index('-d') + 1, None, args)
-        if '-phrase' in args:
-            phrase = list_get(args.index('-phrase') + 1, None, args)
-        if '-rr' in args:
-            try:
-                rr = int(list_get(args.index('-rr') + 1, 1, args))
-            except ValueError:
-                pass
-        if 'crit' in args:
-            crit = 1
-        if 'adv' in args or 'dis' in args:
-            adv = 1 if 'adv' in args else -1
+        args = self.parse_args(args)
             
-        if phrase is not None:
-            embed.description = '*' + phrase + '*'
+        if args.get('phrase') is not None:
+            embed.description = '*' + args.get('phrase') + '*'
         else:
             embed.description = '~~' + ' '*500 + '~~'
             
-        if target is not None:
-            embed.title = '{} attacks with a {} at {}!'.format(character.get('stats').get('name'), attack.get('name'), target)
+        if args.get('target') is not None:
+            embed.title = '{} attacks with a {} at {}!'.format(character.get('stats').get('name'), attack.get('name'), args.get('target'))
         else:
             embed.title = '{} attacks with a {}!'.format(character.get('stats').get('name'), attack.get('name'))
         
-        for r in range(rr):
+        for arg in ('rr', 'ac'):
+            try:
+                args[arg] = int(args.get(arg, None))
+            except ValueError:
+                args[arg] = None
+        args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
+        args['crit'] = 1 if args.get('crit', False) else None
+        for r in range(args.get('rr', 1)):
             if attack.get('attackBonus') is not None:
-                if b is not None:
-                    toHit = roll('1d20+' + attack.get('attackBonus') + '+' + b, adv=adv, rollFor='To Hit', inline=True, show_blurbs=False)
+                if args.get('b') is not None:
+                    toHit = roll('1d20+' + attack.get('attackBonus') + '+' + args.get('b'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
                 else:
-                    toHit = roll('1d20+' + attack.get('attackBonus'), adv=adv, rollFor='To Hit', inline=True, show_blurbs=False)
+                    toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
     
                 out = ''
                 out += toHit.result + '\n'
-                itercrit = toHit.crit if crit == 0 else crit
-                if ac is not None:
-                    if toHit.total < ac and itercrit == 0:
+                itercrit = toHit.crit if not args.get('crit') else args.get('crit', 0)
+                if args.get('ac') is not None:
+                    if toHit.total < args.get('ac') and itercrit == 0:
                         itercrit = 2 # miss!
                 
                 if attack.get('damage') is not None:
-                    if d is not None:
-                        damage = attack.get('damage') + '+' + d
+                    if args.get('d') is not None:
+                        damage = attack.get('damage') + '+' + args.get('d')
                     else:
                         damage = attack.get('damage')
                     
@@ -129,8 +117,8 @@ class SheetManager:
             else:
                 out = ''
                 if attack.get('damage') is not None:
-                    if d is not None:
-                        damage = attack.get('damage') + '+' + d
+                    if args.get('d') is not None:
+                        damage = attack.get('damage') + '+' + args.get('d')
                     else:
                         damage = attack.get('damage')
                     
@@ -139,12 +127,12 @@ class SheetManager:
                     total_damage += dmgroll.total
             
             if out is not '':
-                if rr > 1:
+                if args.get('rr', 1) > 1:
                     embed.add_field(name='Attack {}'.format(r+1), value=out, inline=False)
                 else:
                     embed.add_field(name='Attack', value=out, inline=False)
             
-        if rr > 1 and attack.get('damage') is not None:
+        if args.get('rr', 1) > 1 and attack.get('damage') is not None:
             embed.add_field(name='Total Damage', value=str(total_damage))
         
         if attack.get('details') is not None:
@@ -182,15 +170,10 @@ class SheetManager:
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
-        adv = 0
-        b = None
-        phrase = None
-        if '-phrase' in args:
-            phrase = list_get(args.index('-phrase') + 1, None, args)
-        if '-b' in args:
-            b = list_get(args.index('-b') + 1, None, args)
-        if 'adv' in args or 'dis' in args:
-            adv = 1 if 'adv' in args else -1
+        args = self.parse_args(args)
+        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
+        b = args.get('b', None)
+        phrase = args.get('phrase', None)
         
         if b is not None:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
@@ -234,15 +217,10 @@ class SheetManager:
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
-        adv = 0
-        b = None
-        phrase = None
-        if '-phrase' in args:
-            phrase = list_get(args.index('-phrase') + 1, None, args)
-        if '-b' in args:
-            b = list_get(args.index('-b') + 1, None, args)
-        if 'adv' in args or 'dis' in args:
-            adv = 1 if 'adv' in args else -1
+        args = self.parse_args(args)
+        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
+        b = args.get('b', None)
+        phrase = args.get('phrase', None)
         
         if b is not None:
             check_roll = roll('1d20' + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)

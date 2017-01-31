@@ -245,8 +245,8 @@ class Dice:
         else:
             embed.description = '~~' + ' '*500 + '~~'
             
-        if args.get('target') is not None:
-            embed.title = 'A {} attacks with a {} at {}!'.format(monster.get('name'), attack.get('name'), args.get('target'))
+        if args.get('t') is not None:
+            embed.title = 'A {} attacks with a {} at {}!'.format(monster.get('name'), attack.get('name'), args.get('t'))
         else:
             embed.title = 'A {} attacks with a {}!'.format(monster.get('name'), attack.get('name'))
         

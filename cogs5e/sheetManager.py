@@ -375,8 +375,11 @@ class SheetManager:
                 except ValueError:
                     out += '\u274c Unknown color.\n'
                 else:
-                    character['settings']['color'] = color
-                    out += "\u2705 Color set to {}.\n".format(hex(color))
+                    if not 0 <= color <= 0xffffff:
+                        out += '\u274c Invalid color.\n'
+                    else:
+                        character['settings']['color'] = color
+                        out += "\u2705 Color set to {}.\n".format(hex(color))
                     
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)

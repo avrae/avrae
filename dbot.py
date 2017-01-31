@@ -22,6 +22,7 @@ from cogs5e.pbpUtils import PBPUtils
 from cogs5e.sheetManager import SheetManager
 from cogsmisc.adminUtils import AdminUtils
 from cogsmisc.core import Core
+from cogsmisc.customization import Customization
 from cogsmisc.permissions import Permissions
 from cogsmisc.publicity import Publicity
 from utils import checks
@@ -54,7 +55,7 @@ else:
 class Credentials():
     pass
 
-#CREDENTIALS
+# CREDENTIALS
 try:
     import credentials
     bot.credentials = Credentials()
@@ -89,6 +90,7 @@ pbpCog = PBPUtils(bot)
 webCog = Web(bot)
 helpCog = Help(bot)
 sheetCog = SheetManager(bot)
+customizationCog = Customization(bot)
 cogs = [diceCog,
         charGenCog,
         initiativeTrackerCog,
@@ -100,7 +102,8 @@ cogs = [diceCog,
         pbpCog,
         webCog,
         helpCog,
-        sheetCog]
+        sheetCog,
+        customizationCog]
 
 @bot.event
 async def on_ready():
@@ -156,7 +159,7 @@ async def on_message(message):
         if coreCog.verbose_mask & bot.mask:
             await bot.send_message(message.channel, "`Reseeding RNG...`")
         random.seed()
-    if not hasattr(bot, 'global_prefixes'): # bot's still starting up!
+    if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
         return
     try:
         guild_prefix = bot.global_prefixes.get(message.server.id, bot.prefix)
@@ -172,21 +175,21 @@ async def on_command(command, ctx):
     bot.botStats['commands_used_session'] += 1
     bot.botStats['commands_used_life'] += 1
 
-#BACKGROUND
+# BACKGROUND
 background_tasks = []
 
 async def save_stats():
     try:
         await bot.wait_until_ready()
         while not bot.is_closed:
-            await asyncio.sleep(3600) #every hour
+            await asyncio.sleep(3600)  # every hour
             bot.db.set_dict('botStats', bot.botStats)
     except asyncio.CancelledError:
         pass
 
 background_tasks.append(bot.loop.create_task(save_stats()))
 
-#SIGNAL HANDLING
+# SIGNAL HANDLING
 def sigterm_handler(_signum, _frame):
     for task in background_tasks:
         try:
@@ -203,4 +206,4 @@ for cog in cogs:
 if not TESTING:        
     bot.run(bot.credentials.officialToken)  # official token
 else:
-    bot.run(bot.credentials.testToken) #test token
+    bot.run(bot.credentials.testToken)  # test token

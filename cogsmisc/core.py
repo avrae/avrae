@@ -130,28 +130,5 @@ class Core:
         embed.add_field(name='About', value='Bot coded by @zhu.exe#4211\nFound a bug? Report it with `!bug`!\nHelp me buy a cup of coffee [here](https://www.paypal.me/avrae)!\nJoin the official testing server [here](https://discord.gg/pQbd4s6)!', inline=False)
         
         await self.bot.say(embed=embed)
-        
-    @commands.command(pass_context=True)
-    async def multiline(self, ctx, *, commands:str):
-        """Runs each line as a separate command.
-        Usage:
-        "!multiline
-        !roll 1d20
-        !spell Fly
-        !monster Rat"
-        """
-        commands = commands.splitlines()
-        for c in commands:
-            ctx.message.content = c
-            if not hasattr(self.bot, 'global_prefixes'): # bot's still starting up!
-                return
-            try:
-                guild_prefix = self.bot.global_prefixes.get(ctx.message.server.id, self.bot.prefix)
-            except:
-                guild_prefix = self.bot.prefix
-            if ctx.message.content.startswith(guild_prefix):
-                ctx.message.content = ctx.message.content.replace(guild_prefix, self.bot.prefix, 1)
-            elif ctx.message.content.startswith(self.bot.prefix): return
-            await self.bot.process_commands(ctx.message)
                 
         

@@ -57,7 +57,7 @@ class Dice:
         await self.bot.say(ctx.message.author.mention + '  :game_die:\n' + out)
                         
         
-    @commands.command(pass_context=True, name='r', aliases=['roll'])
+    @commands.command(pass_context=True, name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr:str):
         """Rolls dice in xdy format.
         Usage: !r xdy Attack!
@@ -90,7 +90,7 @@ class Dice:
         else:
             await self.bot.say(outStr)
     
-    @commands.command(pass_context=True, name='rr', aliases=['multiroll'])
+    @commands.command(pass_context=True, name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations:int, rollStr, *, args=''):
         """Rolls dice in xdy format a given number of times.
         Usage: !rrr <iterations> <xdy> [args]"""
@@ -118,7 +118,7 @@ class Dice:
             pass
         await self.bot.say(ctx.message.author.mention + '\n' + outStr)
         
-    @commands.command(pass_context=True, name='rrr', aliases=['iterroll'])
+    @commands.command(pass_context=True, name='iterroll', aliases=['rrr'])
     async def rrr(self, ctx, iterations:int, rollStr, dc:int, *, args=''):
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
@@ -148,12 +148,6 @@ class Dice:
         except:
             pass
         await self.bot.say(ctx.message.author.mention + '\n' + outStr)
-    
-    @commands.command(pass_context=True)
-    async def math(self, ctx):
-        """Solves a math problem.
-        Usage: !math <MATH>"""
-        await self.e_math(ctx.message)
         
     @commands.command(pass_context=True)
     async def cast(self, ctx, *, args : str):
@@ -207,24 +201,6 @@ class Dice:
                 await self.bot.send_message(ctx.message.author, r)
             else:
                 await self.bot.say(r, delete_after=15)
-            
-    async def e_math(self, message):
-        try:
-            texpr = message.content.replace('^', '**')
-            texpr = texpr.split(' ')
-            texpr = texpr[1:]
-            texpr = ''.join(texpr)
-            texpr = re.split('(\d+d\d+)', texpr)
-            for x, y in enumerate(texpr):
-                if re.search('\d+d\d+', y):
-                    texpr[x] = self.d_roller(y)[0]
-            texpr = ''.join(texpr)
-            texpr = texpr.replace('_', '').replace('[', '(').replace(']', ')')
-            tans = numexpr.evaluate(texpr)
-            texpr = texpr.replace('**', '^')
-            await self.bot.send_message(message.channel, 'Calculated: `{0}` = `{1}`'.format(texpr, tans))
-        except:
-            await self.bot.send_message(message.channel, 'Invalid Expression.')
             
 #     def roll(self, dice, author=None, rolling_for='', inline=False):  # unused old command
 #         resultTotal = 0 

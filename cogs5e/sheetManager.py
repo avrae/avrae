@@ -298,11 +298,12 @@ class SheetManager:
         """Switches the active character.
         Breaks for characters created before Jan. 20, 2017."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if user_characters is None:
             return await self.bot.say('You have no characters.')
         
         if name is None:
-            return await self.bot.say('Currently active: {}'.format(user_characters.get('stats').get('name')))
+            return await self.bot.say('Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')))
         
         char_url = None
         for url, character in user_characters.items():

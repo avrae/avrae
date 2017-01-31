@@ -146,7 +146,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
             desc = a['text']
             parentName = a['name']
             for atk in a['attack']:
-                data = '|'.split(atk)
+                data = atk.split('|')
                 name = data[0] if not data[0] == '' else parentName
                 toHit = data[1] if not data[1] == '' else None
                 damage = data[2] if not data[2] == '' else None

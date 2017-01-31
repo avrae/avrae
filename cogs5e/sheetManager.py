@@ -16,7 +16,6 @@ from discord.ext import commands
 from cogs5e.dice import roll
 from cogs5e.dicecloud import get_character, get_sheet
 from utils.functions import list_get, embed_trim
-import argparse
 
 
 class SheetManager:

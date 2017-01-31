@@ -8,8 +8,11 @@ from discord.ext import commands
 import numexpr
 
 from cogs5e.dice import roll
-from cogs5e.lookupFuncs import searchSpell
+from cogs5e.lookupFuncs import searchSpell, searchMonster
 from utils import checks
+from utils.functions import fuzzy_search
+import random
+import shlex
 
 
 class Dice:
@@ -201,6 +204,114 @@ class Dice:
                 await self.bot.send_message(ctx.message.author, r)
             else:
                 await self.bot.say(r, delete_after=15)
+                
+    @commands.command(pass_context=True, aliases=['ma'])
+    async def monster_atk(self, ctx, monster_name, atk_name, *, args=''):
+        """Rolls a monster's attack.
+        Valid Arguments: adv/dis
+                         -ac [target ac]
+                         -b [to hit bonus]
+                         -d [damage bonus]
+                         -rr [times to reroll]
+                         -t [target]
+                         -phrase [flavor text]
+                         crit (automatically crit)"""
+        
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+        
+        monster = searchMonster(monster_name, return_monster=True, visible=True)
+        self.bot.botStats["monsters_looked_up_session"] += 1
+        self.bot.botStats["monsters_looked_up_life"] += 1
+        if monster['monster'] is None:
+            return await self.bot.say(monster['string'][0], delete_after=15)
+        monster = monster['monster']
+        attacks = monster.get('attacks')
+        attack = fuzzy_search(attacks, 'name', atk_name)
+        if attack is None:
+            return await self.bot.say("No attack with that name found.", delete_after=15)
+        
+        embed = discord.Embed()
+        embed.colour = random.randint(0, 0xffffff)
+        
+        args = shlex.split(args)
+        total_damage = 0
+        args = self.parse_args(args)
+            
+        if args.get('phrase') is not None:
+            embed.description = '*' + args.get('phrase') + '*'
+        else:
+            embed.description = '~~' + ' '*500 + '~~'
+            
+        if args.get('target') is not None:
+            embed.title = 'A {} attacks with a {} at {}!'.format(monster.get('name'), attack.get('name'), args.get('target'))
+        else:
+            embed.title = 'A {} attacks with a {}!'.format(monster.get('name'), attack.get('name'))
+        
+        for arg in ('rr', 'ac'):
+            try:
+                args[arg] = int(args.get(arg, None))
+            except ValueError:
+                args[arg] = None
+        args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
+        args['crit'] = 1 if args.get('crit', False) else None
+        for r in range(args.get('rr', 1)):
+            if attack.get('attackBonus') is not None:
+                if args.get('b') is not None:
+                    toHit = roll('1d20+' + attack.get('attackBonus') + '+' + args.get('b'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
+                else:
+                    toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
+    
+                out = ''
+                out += toHit.result + '\n'
+                itercrit = toHit.crit if not args.get('crit') else args.get('crit', 0)
+                if args.get('ac') is not None:
+                    if toHit.total < args.get('ac') and itercrit == 0:
+                        itercrit = 2 # miss!
+                
+                if attack.get('damage') is not None:
+                    if args.get('d') is not None:
+                        damage = attack.get('damage') + '+' + args.get('d')
+                    else:
+                        damage = attack.get('damage')
+                    
+                    if itercrit == 1:
+                        dmgroll = roll(damage, rollFor='Damage (CRIT!)', inline=True, double=True, show_blurbs=False)
+                        out += dmgroll.result + '\n'
+                        total_damage += dmgroll.total
+                    elif itercrit == 2:
+                        out += '**Miss!**\n'
+                    else:
+                        dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
+                        out += dmgroll.result + '\n'
+                        total_damage += dmgroll.total
+            else:
+                out = ''
+                if attack.get('damage') is not None:
+                    if args.get('d') is not None:
+                        damage = attack.get('damage') + '+' + args.get('d')
+                    else:
+                        damage = attack.get('damage')
+                    
+                    dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
+                    out += dmgroll.result + '\n'
+                    total_damage += dmgroll.total
+            
+            if out is not '':
+                if args.get('rr', 1) > 1:
+                    embed.add_field(name='Attack {}'.format(r+1), value=out, inline=False)
+                else:
+                    embed.add_field(name='Attack', value=out, inline=False)
+            
+        if args.get('rr', 1) > 1 and attack.get('damage') is not None:
+            embed.add_field(name='Total Damage', value=str(total_damage))
+        
+        if attack.get('desc') is not None:
+            embed.add_field(name='Details', value=(attack.get('desc', '')))
+        
+        await self.bot.say(embed=embed)
             
 #     def roll(self, dice, author=None, rolling_for='', inline=False):  # unused old command
 #         resultTotal = 0 

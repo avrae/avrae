@@ -31,7 +31,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
         try:
             monster = next(item for item in monsters if monstername.upper() in item["name"].upper())
         except Exception:
-            monsterDesc.append("Monster does not exist or is misspelled (ha).")
+            monsterDesc.append("Monster does not exist or is misspelled.")
             if return_monster: return {'monster': None, 'string': monsterDesc}
             return monsterDesc
         
@@ -104,22 +104,29 @@ def searchMonster(monstername, visible=True, return_monster=False):
             monsterDesc.append("**Languages:** --\n".format(**monster))
         monsterDesc.append("**CR:** {cr}\n".format(**monster))
         
+        attacks = [] # setup things
         if "trait" in monster:
             monsterDesc.append("\n**__Special Abilities:__**\n")
             for a in monster["trait"]:
                 if isinstance(a['text'], list):
                     a['text'] = '\n'.join(t for t in a['text'] if t is not None)
                 monsterDesc.append("**{name}:** {text}\n".format(**a))
+                if 'attack' in a:
+                    attacks += a
         
         monsterDesc.append("\n**__Actions:__**\n")
         for a in monster["action"]:      
             if isinstance(a['text'], list):
                 a['text'] = '\n'.join(t for t in a['text'] if t is not None)
             monsterDesc.append("**{name}:** {text}\n".format(**a))
+            if 'attack' in a:
+                attacks += a
             
         if "reaction" in monster:
             monsterDesc.append("\n**__Reactions:__**\n")
             monsterDesc.append("**{name}:** {text}\n".format(**monster['reaction']))
+            if 'attack' in a:
+                attacks += a
             
         if "legendary" in monster:
             monsterDesc.append("\n**__Legendary Actions:__**\n")
@@ -130,6 +137,25 @@ def searchMonster(monstername, visible=True, return_monster=False):
                     monsterDesc.append("**{name}:** {text}\n".format(**a))
                 else:
                     monsterDesc.append("{text}\n".format(**a))
+                if 'attack' in a:
+                    attacks += a
+                    
+        # fix list of attack dicts
+        tempAttacks = []
+        for a in attacks:
+            desc = a['text']
+            parentName = a['name']
+            for atk in a['attack']:
+                data = '|'.split(atk)
+                name = data[0] if not data[0] == '' else parentName
+                toHit = data[1] if not data[1] == '' else None
+                damage = data[2] if not data[2] == '' else None
+                atkObj = {'name': name,
+                          'desc': desc,
+                          'attackBonus': toHit,
+                          'damage': damage}
+                tempAttacks.append(atkObj)
+        monster['attacks'] = tempAttacks
     else:
         monster['hp'] = int(monster['hp'].split(' (')[0])
         monster['ac'] = int(monster['ac'].split(' (')[0])

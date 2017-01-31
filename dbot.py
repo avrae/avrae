@@ -68,6 +68,7 @@ try:
     bot.credentials.discord_bots_key = credentials.discord_bots_key
     bot.credentials.test_database_url = credentials.test_database_url
 except ImportError:
+    bot.credentials = Credentials()
     bot.credentials.testToken = os.environ.get('TEST_TOKEN')
     bot.credentials.officialToken = os.environ.get('OFFICIAL_TOKEN')
     bot.credentials.discord_bots_key = os.environ.get('DISCORD_BOTS_KEY')

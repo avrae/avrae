@@ -271,19 +271,10 @@ class SheetManager:
         image = stats.get('image', '')
         desc = stats.get('description', 'No description available.')
         if len(desc) > 1024:
-            desc = embed_trim(desc)
-        else:
-            desc = [desc]
+            desc = desc[:1020] + '...'
         
         embed = discord.Embed()
-        
-        if len(desc) == 1:
-            embed.add_field(name=stats.get('name'), value=desc[0])
-        else:
-            embed.title = stats.get('name')
-            for d in desc[:5]:
-                embed.add_field(name='Description', value=d)
-        
+        embed.add_field(name=stats.get('name'), value=desc)
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         embed.set_thumbnail(url=image)
         
@@ -344,13 +335,14 @@ class SheetManager:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         embed = sheet['embed']
-        await self.bot.say(embed=embed)
         
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         sheet = sheet['sheet']
         sheet['settings'] = user_characters[url].get('settings')
         user_characters[url] = sheet
+        embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        await self.bot.say(embed=embed)
     
     @commands.command(pass_context=True)
     async def csettings(self, ctx, *, args):

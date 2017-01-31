@@ -351,7 +351,7 @@ class SheetManager:
                 try:
                     color = int(color, base=16)
                 except ValueError:
-                    out += '\u274c Unknown color.\n'
+                    out += '\u274c Unknown color. Use "!csettings color reset" to reset it to random.\n'
                 else:
                     if not 0 <= color <= 0xffffff:
                         out += '\u274c Invalid color.\n'

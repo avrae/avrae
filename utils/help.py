@@ -94,6 +94,11 @@ class CustomHelpFormatter(HelpFormatter):
             shortened = self.shorten(entry)
             out += shortened
         return out
+    
+    def get_ending_note(self):
+        command_name = self.context.invoked_with
+        return "Type {0}{1} command for more info on a command.\n" \
+               "You can also type {0}{1} category for more info on a category.".format(self.clean_prefix, command_name)
 
     def format(self):
         """Handles the actual behaviour involved with formatting.

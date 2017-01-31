@@ -40,7 +40,11 @@ prefix = '!' if not TESTING else '#'
 # TODO: 
 # more flavor text
 # More Breath Weapons
-description = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.'''
+description = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.
+Invite Avrae to your server [here](https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808)!
+Join the official testing server [here](https://discord.gg/pQbd4s6)!
+Love the bot? Donate to me [here](https://www.paypal.me/avrae)! \u2764
+'''
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True)
 bot.prefix = prefix
 bot.remove_command('help')

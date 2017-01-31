@@ -112,7 +112,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
                     a['text'] = '\n'.join(t for t in a['text'] if t is not None)
                 monsterDesc.append("**{name}:** {text}\n".format(**a))
                 if 'attack' in a:
-                    attacks += a
+                    attacks.append(a)
         
         monsterDesc.append("\n**__Actions:__**\n")
         for a in monster["action"]:      
@@ -120,13 +120,13 @@ def searchMonster(monstername, visible=True, return_monster=False):
                 a['text'] = '\n'.join(t for t in a['text'] if t is not None)
             monsterDesc.append("**{name}:** {text}\n".format(**a))
             if 'attack' in a:
-                attacks += a
+                attacks.append(a)
             
         if "reaction" in monster:
             monsterDesc.append("\n**__Reactions:__**\n")
             monsterDesc.append("**{name}:** {text}\n".format(**monster['reaction']))
             if 'attack' in a:
-                attacks += a
+                attacks.append(a)
             
         if "legendary" in monster:
             monsterDesc.append("\n**__Legendary Actions:__**\n")
@@ -138,7 +138,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
                 else:
                     monsterDesc.append("{text}\n".format(**a))
                 if 'attack' in a:
-                    attacks += a
+                    attacks.append(a)
                     
         # fix list of attack dicts
         tempAttacks = []

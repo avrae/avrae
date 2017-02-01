@@ -315,7 +315,7 @@ class SheetManager:
         
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         sheet = sheet['sheet']
-        sheet['settings'] = user_characters[url].get('settings')
+        sheet['settings'] = user_characters[url].get('settings', {})
         user_characters[url] = sheet
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)

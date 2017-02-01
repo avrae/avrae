@@ -41,7 +41,7 @@ class Customization:
     async def handle_aliases(self, message):
         if message.content.startswith(self.bot.prefix):
             for alias, command in self.aliases.get(message.author.id, {}).items():
-                if '!'.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0] == alias:
+                if self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0] == alias:
                     message.content = message.content.replace(alias, command, 1)
                     await self.bot.process_commands(message)
                     break

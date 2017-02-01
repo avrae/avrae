@@ -27,11 +27,16 @@ class SheetManager:
         
     def parse_args(self, args):
         out = {}
+        index = 0
         for a in args:
-            if a.startswith('-'):
-                out[a.replace('-', '')] = list_get(args.index(a) + 1, None, args)
+            if a == '-b' or a == '-d':
+                if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, None, args)
+                else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, None, args)
+            elif a.startswith('-'):
+                out[a.replace('-', '')] = list_get(index + 1, None, args)
             else:
                 out[a] = True
+            index += 1
         return out
         
     @commands.command(pass_context=True, aliases=['a'])

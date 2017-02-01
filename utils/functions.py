@@ -74,11 +74,13 @@ def fuzzy_search(list_to_search:list, key, value):
 
 def parse_args(args):
     out = {}
+    index = 0
     for a in args:
         if a.startswith('-'):
-            out[a.replace('-', '')] = list_get(args.index(a) + 1, None, args)
+            out[a.replace('-', '')] = list_get(index + 1, None, args)
         else:
             out[a] = True
+        index += 1
     return out
 
     

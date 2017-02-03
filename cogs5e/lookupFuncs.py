@@ -7,17 +7,13 @@ import json
 from math import floor
 import math
 
-from utils.functions import print_table, discord_trim
+from utils.functions import print_table, discord_trim, fuzzy_search
 
 
 def searchCondition(condition):
     with open('./res/conditions.json', 'r') as f:
         conditions = json.load(f)
-    try:
-        condition = next(c for c in conditions if c['name'].lower() == condition.lower())
-    except:
-        return None
-    return condition
+    return fuzzy_search(conditions, 'name', condition)
 
 def searchMonster(monstername, visible=True, return_monster=False):
     with open('./res/bestiary.json', 'r') as f:

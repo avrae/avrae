@@ -22,11 +22,12 @@ async def get_character(url):
         client.is_connected = True
     client.on('connected', connected)
     while not client.is_connected:
-        asyncio.sleep(1)
+        await asyncio.sleep(1)
     client.subscribe('singleCharacter', [url])
     def update_character(collection, _id, fields):
         if character.get(collection) is None:
             character[collection] = []
+        fields['id'] = _id
         character.get(collection).append(fields)
     client.on('added', update_character)
     await asyncio.sleep(10)
@@ -45,7 +46,7 @@ def get_sheet(character):
         attacks = get_attacks(character)
         skills = get_skills(character)
     except:
-        return None
+        raise
     
     sheet = {'stats': stats,
              'levels': levels,

@@ -147,7 +147,8 @@ class Combatant(object):
         out = []
         for e in self.effects:
             out.append('{} [{} rds]'.format(e.name, e.remaining if not e.remaining < 0 else '∞'))
-        out.append(self.notes)
+        if not self.notes == '':
+            out.append(self.notes)
         out = ', '.join(out)
         return out
     
@@ -496,6 +497,9 @@ class InitTracker:
             await self.bot.say("Combatant not found.")
             return
         
+        if combatant.hp is None:
+            return await self.bot.say("Combatant HP not set.")
+        
         if 'mod' in operator.lower():
             combatant.hp += hp
         elif 'set' in operator.lower():
@@ -609,7 +613,7 @@ class InitTracker:
         for c in combat.combatants:
             del c
         
-        await self.bot.edit_message(combat.summary_message, "```-----COMBAT ENDED-----```")
+        await self.bot.edit_message(combat.summary_message, combat.summary_message.content + "\n```-----COMBAT ENDED-----```")
         try:
             await self.bot.unpin_message(combat.summary_message)
         except:

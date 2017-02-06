@@ -147,11 +147,12 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
         crit = 0
         total = 0
         # Parses math/dice terms
-        dice_temp = rollStr.replace('^', '**')
+        #dice_temp = rollStr.replace('^', '**')
+        dice_temp = rollStr
         # Splits into sections of ['dice', 'operator', 'dice'...] like ['1d20', '+', '4d6', '+', '5']
-        dice_set = re.split('([-+*/^().<>= ])', dice_temp)
-        out_set = re.split('([-+*/^().<>= ])', dice_temp)
-        eval_set = re.split('([-+*/^().<>= ])', dice_temp)
+        dice_set = re.split('([-+*/()<>= ])', dice_temp)
+        out_set = re.split('([-+*/()<>= ])', dice_temp)
+        eval_set = re.split('([-+*/()<>= ])', dice_temp)
 #         print("Dice Set is: " + str(dice_set))
         
         # Replaces dice sets with rolled results

@@ -9,6 +9,8 @@ import json
 import random
 import re
 import shlex
+import sys
+import traceback
 
 import discord
 from discord.ext import commands
@@ -383,6 +385,7 @@ class SheetManager:
         try:
             sheet = get_sheet(character)
         except Exception as e:
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         
         self.active_characters[ctx.message.author.id] = url

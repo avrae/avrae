@@ -497,10 +497,9 @@ class InitTracker:
             await self.bot.say("Combatant not found.")
             return
         
-        if combatant.hp is None:
-            return await self.bot.say("Combatant HP not set.")
-        
         if 'mod' in operator.lower():
+            if combatant.hp is None:
+                combatant.hp = 0
             combatant.hp += hp
         elif 'set' in operator.lower():
             combatant.hp = hp

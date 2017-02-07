@@ -278,7 +278,7 @@ class SheetManager:
             return await self.bot.say('You have no characters.')
         
         if name is None:
-            return await self.bot.say('Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')))
+            return await self.bot.say('Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')), delete_after=20)
         
         char_url = None
         for url, character in user_characters.items():
@@ -297,7 +297,12 @@ class SheetManager:
         self.active_characters[ctx.message.author.id] = char_url
         self.bot.db.not_json_set('active_characters', self.active_characters)
         
-        await self.bot.say("Active character changed to {}.".format(name))
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+        
+        await self.bot.say("Active character changed to {}.".format(name), delete_after=20)
         
     @commands.command(pass_context=True)
     async def update(self, ctx):

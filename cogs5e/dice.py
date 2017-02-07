@@ -235,9 +235,9 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
         if not inline:
             # Builds end result while showing rolls
             reply.append(' '.join(out_set) + '\n_Total:_ ' + str(floor(total)))
-            skeletonReply = reply
             # Replies to user with message
             reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')
+            skeletonReply = reply
             rollFor = rollFor if rollFor is not '' else 'Result'
             reply = '**{}:** '.format(rollFor) + reply
             if show_blurbs:
@@ -254,7 +254,6 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
         else:
             # Builds end result while showing rolls
             reply.append('' + ' '.join(out_set) + ' = `' + str(floor(total)) + '`')
-                
             # Replies to user with message
             reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')
             skeletonReply = reply

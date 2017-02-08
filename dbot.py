@@ -131,7 +131,7 @@ async def enter():
     for stat in bot.botStats.keys():
         bot.botStats[stat] = int(bot.botStats[stat])
     bot.db.set_dict('botStats', bot.botStats)
-    await bot.change_status(game=discord.Game(name='D&D 5e | !help'))
+    await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
     
 @bot.event
 async def on_command_error(error, ctx):

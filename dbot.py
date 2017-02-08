@@ -25,6 +25,7 @@ from cogsmisc.core import Core
 from cogsmisc.customization import Customization
 from cogsmisc.permissions import Permissions
 from cogsmisc.publicity import Publicity
+from cogsmisc.repl import REPL
 from utils import checks
 from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim, get_positivity
@@ -108,7 +109,8 @@ cogs = [diceCog,
         webCog,
         helpCog,
         sheetCog,
-        customizationCog]
+        customizationCog,
+        REPL(bot)]
 
 @bot.event
 async def on_ready():

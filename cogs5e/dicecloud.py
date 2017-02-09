@@ -35,10 +35,7 @@ async def get_character(url):
     return character
         
 def get_sheet(character):
-    """Returns an Embed object with character sheet data."""
-    embed = discord.Embed()
-    embed.colour = random.randint(0, 0xffffff)
-    
+    """Returns a dict with character sheet data."""
     try:
         stats = get_stats(character)
         levels = get_levels(character)
@@ -58,7 +55,20 @@ def get_sheet(character):
     for key, skill in skills.items():
         if 'Save' in key:
             sheet['saves'][key] = skills[key]
+            
+    embed=get_embed(sheet)
     
+    return {'embed': embed, 'sheet': sheet}
+
+def get_embed(sheet):
+    stats = sheet['stats']
+    hp = sheet['hp']
+    levels = sheet['levels']
+    skills = sheet['skills']
+    attacks = sheet['attacks']
+    saves = sheet['saves']
+    embed = discord.Embed()
+    embed.colour = random.randint(0, 0xffffff)
     embed.title = stats['name']
     embed.set_thumbnail(url=stats['image'])
     embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']), inline=False)
@@ -73,7 +83,7 @@ def get_sheet(character):
                                         "**CON:** {constitutionSave:+}\n" \
                                         "**INT:** {intelligenceSave:+}\n" \
                                         "**WIS:** {wisdomSave:+}\n" \
-                                        "**CHA:** {charismaSave:+}".format(**skills))
+                                        "**CHA:** {charismaSave:+}".format(**saves))
     
     skillsStr = ''
     tempSkills = {}
@@ -102,7 +112,7 @@ def get_sheet(character):
         tempAttacks = ['No attacks.']
     embed.add_field(name="Attacks", value='\n'.join(tempAttacks))
     
-    return {'embed': embed, 'sheet': sheet}
+    return embed
     
 def get_stat(character, stat, base=0):
     """Returns the stat value."""

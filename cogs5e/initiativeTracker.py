@@ -185,6 +185,22 @@ class Combatant(object):
                                           self.get_effects_and_notes())
         return status
     
+class DicecloudCombatant(Combatant):
+    def __init__(self, init:int=0, author:discord.User=None, notes:str='', effects=[], private:bool=False, group:str=None, sheet=None):
+        self.init = init
+        self.name = sheet.get('stats', {}).get('name', 'Unknown')
+        self.author = author
+        self.mod = sheet.get('skills', {}).get('initiative', 0)
+        self.notes = notes
+        self.effects = effects
+        self.hp = sheet.get('hp')
+        self.max_hp = sheet.get('hp')
+        self.private = private
+        self.group = group
+        
+    def __str__(self):
+        return self.name
+    
 class Effect(object):
     def __init__(self, duration:int=-1, name:str='', desc:str='', remaining:int=-1):
         self.name = name

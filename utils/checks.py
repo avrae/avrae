@@ -41,8 +41,11 @@ def role_or_permissions(ctx, check, **perms):
     author = ctx.message.author
     if ch.is_private:
         return False # can't have roles in PMs
-
-    role = discord.utils.find(check, author.roles)
+    
+    try:
+        role = discord.utils.find(check, author.roles)
+    except:
+        return False
     return role is not None
 
 def mod_or_permissions(**perms):

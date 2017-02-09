@@ -612,8 +612,8 @@ class InitTracker:
         for c in combat.combatants:
             del c
         
-        await self.bot.edit_message(combat.summary_message, combat.summary_message.content + "\n```-----COMBAT ENDED-----```")
         try:
+            await self.bot.edit_message(combat.summary_message, combat.summary_message.content + "\n```-----COMBAT ENDED-----```")
             await self.bot.unpin_message(combat.summary_message)
         except:
             pass

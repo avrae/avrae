@@ -76,7 +76,10 @@ def parse_args(args):
     out = {}
     index = 0
     for a in args:
-        if a.startswith('-'):
+        if a == '-b' or a == '-d':
+            if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, None, args)
+            else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, None, args)
+        elif a.startswith('-'):
             out[a.replace('-', '')] = list_get(index + 1, None, args)
         else:
             out[a] = True

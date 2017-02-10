@@ -7,6 +7,7 @@ import asyncio
 from os.path import isfile
 import pickle
 import random
+import re
 import shlex
 import signal
 from string import capwords
@@ -14,7 +15,8 @@ from string import capwords
 import discord
 from discord.ext import commands
 
-from utils.functions import make_sure_path_exists, discord_trim
+from cogs5e.dice import roll
+from utils.functions import make_sure_path_exists, discord_trim, parse_args
 
 
 class Combat(object):
@@ -271,6 +273,7 @@ class InitTracker:
     @init.command(pass_context=True)
     async def add(self, ctx, modifier : int, name : str, *, args:str=''):
         """Adds a combatant to the initiative order.
+        If a character is set up with the SheetManager module, you can use !init dcadd instead.
         Valid Arguments:    -h (hides HP)
                             -p (places at given number instead of rolling)
                             --controller <CONTROLLER> (pings a different person on turn)
@@ -350,6 +353,75 @@ class InitTracker:
         
         await combat.update_summary(self.bot)
         combat.sortCombatants()
+        
+    @init.command(pass_context=True, hidden=True)
+    async def dcadd(self, ctx, *, args:str=''):
+        """Adds the current active character to combat. A character must be loaded through the dicecloud module first.
+        Args: adv/dis
+              -b [conditional bonus]
+              -phrase [flavor text]
+              -h (same as !init add)
+              --group (same as !init add)"""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no characters loaded.')
+        character = user_characters[active_character]
+        skills = character.get('skills')
+        if skills is None:
+            return await self.bot.say('You must update your character sheet first.')
+        skill = 'initiative'
+        try:
+            combat = next(c for c in self.combats if c.channel is ctx.message.channel)
+        except StopIteration:
+            await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
+            return
+        
+        if combat.get_combatant(character.get('stats', {}).get('name')) is not None:
+            await self.bot.say("Combatant already exists.")
+            return
+        
+        embed = discord.Embed()
+        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
+        
+        args = shlex.split(args)
+        args = parse_args(args)
+        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
+        b = args.get('b', None)
+        phrase = args.get('phrase', None)
+        
+        if b is not None:
+            check_roll = roll('1d20' + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
+        else:
+            check_roll = roll('1d20' + '{:+}'.format(skills[skill]), adv=adv, inline=True)
+        
+        embed.title = '{} makes an {} check!'.format(character.get('stats', {}).get('name'),
+                                                    re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title())
+        embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+        
+        group = args.get('group')
+        name = character.get('stats', {}).get('name')
+        controller = ctx.message.author
+        init = check_roll.total
+        
+        await self.bot.say(embed=embed)
+        me = DicecloudCombatant(init=check_roll.total, author=ctx.message.author, effects=[], notes='', private=args.get('p', False), group=args.get('group', None), sheet=character)
+        if group is None:
+            combat.combatants.append(me)
+            await self.bot.say("{}\n{} was added to combat with initiative {}.".format(controller.mention, name, init), delete_after=10)
+        elif combat.get_combatant_group(group) is None:
+            newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
+            newGroup.combatants.append(me)
+            combat.combatants.append(newGroup)
+            await self.bot.say("{}\n{} was added to combat as part of group {}, with initiative {}.".format(controller.mention, name, group, init), delete_after=10)
+        else:
+            group = combat.get_combatant_group(group)
+            group.combatants.append(me)
+            await self.bot.say("{}\n{} was added to combat as part of group {}.".format(controller.mention, name, group.name), delete_after=10)
+        
+        await combat.update_summary(self.bot)
+        combat.sortCombatants()
+        
         
     @init.command(pass_context=True, name="next", aliases=['n'])
     async def nextInit(self, ctx):

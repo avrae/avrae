@@ -152,9 +152,10 @@ class AdminUtils:
                 await self.bot.delete_message(message)
             except:
                 pass
-        if message.channel.id == self.assume_dir_control_chan.id:
-            await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
-    
+        if self.assume_dir_control_chan is not None:
+            if message.channel.id == self.assume_dir_control_chan.id:
+                await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
+        
     def msg(self, dest, out):
         coro = self.bot.send_message(dest, out)
         asyncio.ensure_future(coro)

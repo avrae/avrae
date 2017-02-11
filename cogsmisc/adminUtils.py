@@ -24,6 +24,7 @@ class AdminUtils:
     def __init__(self, bot):
         self.bot = bot
         self.muted = []
+        self.assume_dir_control_chan = None
     
     
     @commands.command(hidden=True)
@@ -121,12 +122,38 @@ class AdminUtils:
             self.muted.append(target)
             await self.bot.say("{} muted.".format(target))
             
+    @commands.command(hidden=True, pass_context=True)
+    @checks.is_owner()
+    async def assume_direct_control(self, ctx, chan:str):
+        """Assumes direct control of Avrae."""
+        def cleanup_code(content):
+            """Automatically removes code blocks from the code."""
+            # remove ```py\n```
+            if content.startswith('```') and content.endswith('```'):
+                return '\n'.join(content.split('\n')[1:-1])
+    
+            # remove `foo`
+            return content.strip('` \n')
+        self.assume_dir_control_chan = self.bot.get_channel(chan)
+        while True:
+            response = await self.bot.wait_for_message(author=ctx.message.author, channel=ctx.message.channel,
+                                                       check=lambda m: m.content.startswith('`'))
+            cleaned = cleanup_code(response.content)
+            if cleaned in ('quit', 'exit', 'exit()'):
+                await self.bot.say('Exiting.')
+                self.assume_dir_control_chan = None
+                return
+            else:
+                await self.bot.send_message(self.assume_dir_control_chan, cleaned)
+            
     async def on_message(self, message):
         if message.author in self.muted:
             try:
                 await self.bot.delete_message(message)
             except:
                 pass
+        if message.channel.id == self.assume_dir_control_chan.id:
+            await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
     
     def msg(self, dest, out):
         coro = self.bot.send_message(dest, out)

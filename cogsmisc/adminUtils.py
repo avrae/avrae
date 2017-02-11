@@ -69,7 +69,7 @@ class AdminUtils:
     @checks.is_owner()
     async def servInfo(self):
         out = ''
-        for s in self.bot.servers:
+        for s in sorted(self.bot.servers, key=lambda k: len(k.members), reverse=True):
             out += "\n{} ({}, {} members)".format(s, s.id, len(s.members))
         out = self.discord_trim(out)
         for m in out:

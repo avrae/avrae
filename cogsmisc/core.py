@@ -106,7 +106,7 @@ class Core:
     @commands.command()
     async def donate(self):
         """Prints a link to donate to the bot developer."""
-        await self.bot.say("You can donate to me here:\nhttps://www.paypal.me/avrae\n\u2764 It costs about $12/mo to keep Avrae running!")
+        await self.bot.say("You can donate to me here:\n<https://www.paypal.me/avrae>\n\u2764")
         
     @commands.command(aliases=['stats', 'info'])
     async def about(self):

@@ -103,6 +103,11 @@ class Core:
         """Prints a link to invite Avrae to your server."""
         await self.bot.say("You can invite Avrae to your server here:\nhttps://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808")
         
+    @commands.command()
+    async def donate(self):
+        """Prints a link to donate to the bot developer."""
+        await self.bot.say("You can donate to me here:\nhttps://www.paypal.me/avrae\n\u2764 It costs about $12/mo to keep Avrae running!")
+        
     @commands.command(aliases=['stats', 'info'])
     async def about(self):
         """Information about the bot."""

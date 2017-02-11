@@ -4,6 +4,7 @@ Created on Sep 18, 2016
 @author: andrew
 '''
 import asyncio
+from math import floor
 from os.path import isfile
 import pickle
 import random
@@ -16,7 +17,10 @@ import discord
 from discord.ext import commands
 
 from cogs5e.dice import roll
-from utils.functions import make_sure_path_exists, discord_trim, parse_args
+from cogs5e.lookupFuncs import searchMonster
+from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
+    fuzzy_search
+import traceback
 
 
 class Combat(object):
@@ -94,7 +98,7 @@ class CombatantGroup(object):
         self.name = name
         self.author = author
         self.notes = notes
-        self.mod = 0 #only needed for sorting in Combat, should always be 0
+        self.mod = 0  # only needed for sorting in Combat, should always be 0
         self.combatants = []
         
     def __str__(self):
@@ -199,6 +203,24 @@ class DicecloudCombatant(Combatant):
         self.max_hp = sheet.get('hp')
         self.private = private
         self.group = group
+        self.sheet = sheet
+        
+    def __str__(self):
+        return self.name
+    
+class MonsterCombatant(Combatant):
+    def __init__(self, name:str='', init:int=0, author:discord.User=None, notes:str='', effects=[], private:bool=True, group:str=None, modifier:int=0, monster=None):
+        self.init = init
+        self.name = name
+        self.author = author
+        self.mod = modifier
+        self.notes = notes
+        self.effects = effects
+        self.hp = int(monster['hp'].split(' (')[0])
+        self.max_hp = int(monster['hp'].split(' (')[0])
+        self.private = private
+        self.group = group
+        self.monster = monster
         
     def __str__(self):
         return self.name
@@ -356,7 +378,7 @@ class InitTracker:
         
     @init.command(pass_context=True, hidden=True)
     async def dcadd(self, ctx, *, args:str=''):
-        """Adds the current active character to combat. A character must be loaded through the dicecloud module first.
+        """Adds the current active character to combat. A character must be loaded through the SheetManager module first.
         Args: adv/dis
               -b [conditional bonus]
               -phrase [flavor text]
@@ -400,27 +422,95 @@ class InitTracker:
         embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         
         group = args.get('group')
-        name = character.get('stats', {}).get('name')
         controller = ctx.message.author
         init = check_roll.total
         
-        await self.bot.say(embed=embed)
-        me = DicecloudCombatant(init=check_roll.total, author=ctx.message.author, effects=[], notes='', private=args.get('p', False), group=args.get('group', None), sheet=character)
+        
+        me = DicecloudCombatant(init=check_roll.total, author=ctx.message.author, effects=[], notes='', private=args.get('h', False), group=args.get('group', None), sheet=character)
         if group is None:
             combat.combatants.append(me)
-            await self.bot.say("{}\n{} was added to combat with initiative {}.".format(controller.mention, name, init), delete_after=10)
+            embed.set_footer(text="Added to combat!")
         elif combat.get_combatant_group(group) is None:
             newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
             newGroup.combatants.append(me)
             combat.combatants.append(newGroup)
-            await self.bot.say("{}\n{} was added to combat as part of group {}, with initiative {}.".format(controller.mention, name, group, init), delete_after=10)
+            embed.set_footer(text="Added to combat in group {}!".format('group'))
         else:
             group = combat.get_combatant_group(group)
             group.combatants.append(me)
-            await self.bot.say("{}\n{} was added to combat as part of group {}.".format(controller.mention, name, group.name), delete_after=10)
-        
+            embed.set_footer(text="Added to combat in group {}!".format('group'))        
+        await self.bot.say(embed=embed)
         await combat.update_summary(self.bot)
         combat.sortCombatants()
+        
+    @init.command(pass_context=True, hidden=True)
+    async def madd(self, ctx, monster_name:str, *, args:str=''):
+        """Adds a monster to combat.
+        Args: adv/dis
+              -b [conditional bonus]
+              -n [number of monsters]
+              --name [name scheme, use "A#" for auto-numbering]
+              -h (same as !init add, default true)
+              --group (same as !init add)"""
+        
+        monster = searchMonster(monster_name, return_monster=True, visible=True)
+        self.bot.botStats["monsters_looked_up_session"] += 1
+        self.bot.botStats["monsters_looked_up_life"] += 1
+        if monster['monster'] is None:
+            return await self.bot.say(monster['string'][0], delete_after=15)
+        monster = monster['monster']
+        dexMod = floor((int(monster['dex']) - 10) / 2)
+
+        args = shlex.split(args)
+        args = parse_args(args)
+        private = args.get('h', True)
+        group = args.get('group')
+        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
+        b = args.get('b', None)
+        
+        try:
+            combat = next(c for c in self.combats if c.channel is ctx.message.channel)
+        except StopIteration:
+            await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
+            return
+        
+        out = ''
+        recursion = int(args.get('n', 1))
+        recursion = 25 if recursion > 25 else 1 if recursion < 1 else recursion
+        
+        for i in range(recursion):
+            name = args.get('name', monster['name'][:2].upper() + '#').replace('#', str(i + 1))
+            if combat.get_combatant(name) is not None:
+                out += "{} already exists.\n".format(name)
+            
+            try:
+                if b is not None:
+                    check_roll = roll('1d20' + '{:+}'.format(dexMod) + '+' + b, adv=adv, inline=True)
+                else:
+                    check_roll = roll('1d20' + '{:+}'.format(dexMod), adv=adv, inline=True)
+                init = check_roll.total
+                controller = ctx.message.author
+                me = MonsterCombatant(name=name, init=init, author=controller, private=private, group=group, monster=monster, modifier=dexMod)
+                if group is None:
+                    combat.combatants.append(me)
+                    out += "{} was added to combat with initiative {}.\n".format(name, check_roll.skeleton)
+                elif combat.get_combatant_group(group) is None:
+                    newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
+                    newGroup.combatants.append(me)
+                    combat.combatants.append(newGroup)
+                    out += "{} was added to combat as part of group {}, with initiative {}.\n".format(name, group, check_roll.skeleton)
+                else:
+                    temp_group = combat.get_combatant_group(group)
+                    temp_group.combatants.append(me)
+                    out += "{} was added to combat as part of group {}.\n".format(name, temp_group.name)
+            except Exception as e:
+                traceback.print_exc()
+                out += "Error adding combatant: {}\n".format(e)
+        
+        await self.bot.say(out, delete_after=15)
+        await combat.update_summary(self.bot)
+        combat.sortCombatants()
+        
         
         
     @init.command(pass_context=True, name="next", aliases=['n'])

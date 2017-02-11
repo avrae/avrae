@@ -71,7 +71,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
         monster['size'] = parsesize(monster['size'])
         monster['type'] = ','.join(monster['type'].split(',')[:-1])
         for stat in ['str', 'dex', 'con', 'wis', 'int', 'cha']:
-            monster[stat] = monster[stat] + " ({:+})".format(floor((int(monster[stat])-10)/2))
+            monster[stat + 'Str'] = monster[stat] + " ({:+})".format(floor((int(monster[stat])-10)/2))
         if monster.get('skill') is not None:
             monster['skill'] = monster['skill'][0]
         if monster.get('senses') is None:
@@ -80,7 +80,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
             monster['senses'] = monster.get('senses') + ", passive Perception {}".format(monster['passive'])
         
         monsterDesc.append("{name}, {size} {type}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n".format(**monster))
-        monsterDesc.append("**STR:** {str} **DEX:** {dex} **CON:** {con} **WIS:** {wis} **INT:** {int} **CHA:** {cha}\n".format(**monster))
+        monsterDesc.append("**STR:** {strStr} **DEX:** {dexStr} **CON:** {conStr} **WIS:** {wisStr} **INT:** {intStr} **CHA:** {chaStr}\n".format(**monster))
         if monster.get('save') is not None:
             monsterDesc.append("**Saving Throws:** {save}\n".format(**monster))
         if monster.get('skill') is not None:

@@ -49,7 +49,7 @@ class AdminUtils:
     @checks.is_owner()
     async def chanSay(self, ctx, channel : str, * , message : str):
         """Like .say, but works across servers. Requires channel id."""
-        channel = discord.Object(id=channel)
+        channel = self.bot.get_channel(channel)
         try:
             await self.bot.send_message(channel, message)
         except Exception as e:

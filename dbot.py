@@ -198,6 +198,11 @@ background_tasks.append(bot.loop.create_task(save_stats()))
 
 # SIGNAL HANDLING
 def sigterm_handler(_signum, _frame):
+    for cog in cogs:
+        try:
+            cog.__unload()
+        except:
+            pass
     for task in background_tasks:
         try:
             task.cancel()

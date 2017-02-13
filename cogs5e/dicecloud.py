@@ -56,7 +56,7 @@ def get_sheet(character):
         if 'Save' in key:
             sheet['saves'][key] = skills[key]
             
-    embed=get_embed(sheet)
+    embed = get_embed(sheet)
     
     return {'embed': embed, 'sheet': sheet}
 
@@ -145,7 +145,7 @@ def get_stat(character, stat, base=0):
 def get_stats(character):
     """Returns a dict of stats."""
     stats = {"name":"", "image":"", "description":"",
-             "strength":0, "dexterity":0, "constitution":0, "wisdom":0, "intelligence":0, "charisma":0,
+             "strength":10, "dexterity":10, "constitution":10, "wisdom":10, "intelligence":10, "charisma":10,
              "strengthMod":0, "dexterityMod":0, "constitutionMod":0, "wisdomMod":0, "intelligenceMod":0, "charismaMod":0,
              "proficiencyBonus":0}
     stats['name'] = character.get('characters')[0].get('name')

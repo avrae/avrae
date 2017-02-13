@@ -28,7 +28,7 @@ class Core:
         self.monitor_mask = 0x08
         self.start_time = time.monotonic()
         
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, hidden=True)
     @checks.admin_or_permissions(manage_messages=True)
     async def purge(self, ctx, num):
         """Purges messages from the channel.
@@ -47,13 +47,13 @@ class Core:
         """Edits/shows the bitmask.
         Requires: Owner"""
         if args:
-            mask = int(args[0], base=2)
+            self.bot.mask = int(args[0], base=2)
             if not len(args[0]) == 8:
                 await self.bot.say("Invalid bitmask!")
             else:
                 with open('./resources.txt', 'w') as f:
-                    f.write("{0:0>8b}".format(mask))
-        await self.bot.say("```Bitmask: {0:0>8b}```".format(mask))
+                    f.write("{0:0>8b}".format(self.bot.mask))
+        await self.bot.say("```Bitmask: {0:0>8b}```".format(self.bot.mask))
         
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
@@ -94,7 +94,7 @@ class Core:
         """Checks the ping time to the bot."""
         now = datetime.utcnow()
         pong = await self.bot.say("Pong.")
-        delta = pong.timestamp - now
+        delta = datetime.utcnow() - now
         msec = floor(delta.total_seconds() * 1000)
         await self.bot.edit_message(pong, "Pong.\nPing = {} ms.".format(msec))
         

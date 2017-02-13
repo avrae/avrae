@@ -116,7 +116,7 @@ def get_embed(sheet):
     
 def get_stat(character, stat, base=0):
     """Returns the stat value."""
-    effects = character.get('effects')
+    effects = character.get('effects', [])
     add = 0
     mult = 1
     maxV = None
@@ -163,7 +163,7 @@ def get_stats(character):
 def get_levels(character):
     """Returns a dict with the character's level and class levels."""
     levels = {"level":0}
-    for level in character.get('classes'):
+    for level in character.get('classes', []):
         if level.get('removed', False): continue
         levels['level'] += level.get('level')
         if levels.get(level.get('name') + 'Level') is None:
@@ -176,7 +176,7 @@ def calculate_stat(character, stat, base=0):
     """Calculates and returns the stat value."""
     replacements = get_stats(character)
     replacements.update(get_levels(character))
-    effects = character.get('effects')
+    effects = character.get('effects', [])
     add = 0
     mult = 1
     maxV = None
@@ -258,7 +258,7 @@ def get_skills(character):
     profs = {}
     for skill in skillslist:
         skills[skill] = stats.get(character.get('characters', [])[0].get(skill, {}).get('ability') + 'Mod', 0)
-    for prof in character.get('proficiencies'):
+    for prof in character.get('proficiencies', []):
         if prof.get('enabled', False) and not prof.get('removed', False):
             profs[prof.get('name')] = prof.get('value') \
                                       if prof.get('value') > profs.get(prof.get('name', 'None'), 0) \

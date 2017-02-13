@@ -81,7 +81,7 @@ def parse_args(args):
             else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, None, args)
         elif a.startswith('-'):
             nextArg = list_get(index + 1, None, args)
-            if nextArg.startswith('-'): nextArg = True
+            if nextArg is None or nextArg.startswith('-'): nextArg = True
             out[a.replace('-', '')] = nextArg
         else:
             out[a] = True

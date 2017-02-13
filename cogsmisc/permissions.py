@@ -37,7 +37,7 @@ class Permissions:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
-    async def prefix(self, ctx, prefix: str):
+    async def prefix(self, ctx, prefix: str=None):
         """Sets the bot's prefix for this server.
 
         You must have Manage Server permissions or the
@@ -46,6 +46,8 @@ class Permissions:
         Forgot the prefix? Reset it with "@Avrae#6944 prefix !".
         """
         guild_id = ctx.message.server.id
+        if prefix is None:
+            return await self.bot.say("My current prefix is: `" + self.bot.global_prefixes[guild_id] + '`')
         self.bot.global_prefixes[guild_id] = prefix
         self.bot.db.not_json_set("prefixes", self.bot.global_prefixes)
         await self.bot.say("Prefix set to `{}` for this server.".format(prefix))

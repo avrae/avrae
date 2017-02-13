@@ -296,6 +296,8 @@ class InitTracker:
     async def add(self, ctx, modifier : int, name : str, *, args:str=''):
         """Adds a combatant to the initiative order.
         If a character is set up with the SheetManager module, you can use !init dcadd instead.
+        If you are adding monsters to combat, you can use !init madd instead.
+        Use !help init [dcadd|madd] for more help.
         Valid Arguments:    -h (hides HP)
                             -p (places at given number instead of rolling)
                             --controller <CONTROLLER> (pings a different person on turn)
@@ -531,10 +533,12 @@ class InitTracker:
         try:
             nextCombatant = next(combat.combatantGenerator)
             combat.current = nextCombatant.init
+            combat.currentCombatant = nextCombatant
         except StopIteration:
             combat.combatantGenerator.close()
             combat.combatantGenerator = combat.getNextCombatant()
             combat.current = combat.sorted_combatants[0].init
+            combat.currentCombatant = nextCombatant
             combat.round += 1
             nextCombatant = next(combat.combatantGenerator)
         if isinstance(nextCombatant, CombatantGroup):

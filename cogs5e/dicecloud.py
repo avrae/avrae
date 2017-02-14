@@ -40,6 +40,8 @@ def get_sheet(character):
         stats = get_stats(character)
         levels = get_levels(character)
         hp = calculate_stat(character, 'hitPoints')
+        dexArmor = calculate_stat(character, 'dexterityArmor', base=stats['dexterityMod'])
+        armor = calculate_stat(character, 'armor', replacements={'dexterityArmor':dexArmor})
         attacks = get_attacks(character)
         skills = get_skills(character)
     except:
@@ -48,6 +50,7 @@ def get_sheet(character):
     sheet = {'stats': stats,
              'levels': levels,
              'hp': int(hp),
+             'armor': int(armor),
              'attacks': attacks,
              'skills': skills,
              'saves': {}}
@@ -67,11 +70,13 @@ def get_embed(sheet):
     skills = sheet['skills']
     attacks = sheet['attacks']
     saves = sheet['saves']
+    armor = sheet['armor']
     embed = discord.Embed()
     embed.colour = random.randint(0, 0xffffff)
     embed.title = stats['name']
     embed.set_thumbnail(url=stats['image'])
-    embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']), inline=False)
+    embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']))
+    embed.add_field(name="AC", value=str(armor))
     embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+})\n" \
                                         "**DEX:** {dexterity} ({dexterityMod:+})\n" \
                                         "**CON:** {constitution} ({constitutionMod:+})\n" \
@@ -172,9 +177,9 @@ def get_levels(character):
             levels[level.get('name') + 'Level'] += level.get('level')
     return levels
         
-def calculate_stat(character, stat, base=0):
+def calculate_stat(character, stat, base=0, replacements:dict={}):
     """Calculates and returns the stat value."""
-    replacements = get_stats(character)
+    replacements.update(get_stats(character))
     replacements.update(get_levels(character))
     effects = character.get('effects', [])
     add = 0

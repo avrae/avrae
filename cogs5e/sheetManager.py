@@ -256,6 +256,8 @@ class SheetManager:
         desc = stats.get('description', 'No description available.')
         if len(desc) > 1024:
             desc = desc[:1020] + '...'
+        elif len(desc) < 2:
+            desc = 'No description available.'
         
         embed = discord.Embed()
         embed.add_field(name=stats.get('name'), value=desc)

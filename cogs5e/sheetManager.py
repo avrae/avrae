@@ -16,12 +16,12 @@ import discord
 from discord.ext import commands
 
 from cogs5e.dice import roll
-from cogs5e.dicecloud import get_character, get_sheet
-from utils.functions import list_get, embed_trim
+from cogs5e.sheets.dicecloud import DicecloudParser
+from utils.functions import list_get, embed_trim, get_positivity
 
 
 class SheetManager:
-    """Commands to import a character sheet from Dicecloud (https://dicecloud.com). Currently in Beta."""
+    """Commands to import a character sheet from Dicecloud (https://dicecloud.com) or the fillable Wizards character PDF. Currently in Beta."""
     
     def __init__(self, bot):
         self.bot = bot
@@ -55,7 +55,7 @@ class SheetManager:
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
-            return await self.bot.say('You have no characters loaded.')
+            return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
         attacks = character.get('attacks')
         try:
@@ -159,7 +159,7 @@ class SheetManager:
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
-            return await self.bot.say('You have no characters loaded.')
+            return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
         saves = character.get('saves')
         if saves is None:
@@ -206,7 +206,7 @@ class SheetManager:
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
-            return await self.bot.say('You have no characters loaded.')
+            return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
         skills = character.get('skills')
         if skills is None:
@@ -249,7 +249,7 @@ class SheetManager:
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
-            return await self.bot.say('You have no characters loaded.')
+            return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
         stats = character.get('stats')
         image = stats.get('image', '')
@@ -271,9 +271,11 @@ class SheetManager:
             pass
             
     @commands.command(pass_context=True)
-    async def character(self, ctx, name:str=None):
+    async def character(self, ctx, name:str=None, *, args:str=''):
         """Switches the active character.
-        Breaks for characters created before Jan. 20, 2017."""
+        Breaks for characters created before Jan. 20, 2017.
+        Valid arguments:
+        `delete` - deletes a character."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if user_characters is None:
@@ -281,6 +283,10 @@ class SheetManager:
         
         if name is None:
             return await self.bot.say('Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')), delete_after=20)
+        
+        if name == 'list':
+            return await self.bot.say('Your characters:\n{}'.format(', '.join(c.get('stats', {}).get('name', '') for c in user_characters)))
+        args = shlex.split(args)
         
         char_url = None
         for url, character in user_characters.items():
@@ -295,6 +301,19 @@ class SheetManager:
         
         if char_url is None:
             return await self.bot.say('Character not found.')
+        
+        if 'delete' in args:
+            await self.bot.say('Are you sure you want to delete {}? (Reply with yes/no)'.format(name))
+            reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
+            reply = get_positivity(reply.content) if reply is not None else None
+            if reply is None:
+                return await self.bot.say('Timed out waiting for a response or invalid response.')
+            elif reply:
+                self.active_characters[ctx.message.author.id] = None
+                del user_characters[char_url]
+                return await self.bot.say('{} has been deleted.'.format(name))
+            else:
+                return await self.bot.say("OK, cancelling.")
         
         self.active_characters[ctx.message.author.id] = char_url
         self.bot.db.not_json_set('active_characters', self.active_characters)
@@ -311,17 +330,18 @@ class SheetManager:
         """Updates the current character sheet, preserving all settings."""
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
-            return await self.bot.say('You have no characters loaded.')
+            return await self.bot.say('You have no character active.')
         url = active_character
+        parser = DicecloudParser()
         loading = await self.bot.say('Updating character data from Dicecloud...')
-        character = await get_character(url)
+        character = await parser.get_character(url)
         try:
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(character.get('characters')[0].get('name')))
         except TypeError:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
         try:
-            sheet = get_sheet(character)
+            sheet = parser.get_sheet(character)
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
@@ -343,7 +363,7 @@ class SheetManager:
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
-            return await self.bot.say('You have no characters loaded.')
+            return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
         args = shlex.split(args)
         
@@ -351,26 +371,28 @@ class SheetManager:
             character['settings'] = {}
         
         out = 'Operations complete!\n'
-        
-        if 'color' in args:
-            color = list_get(args.index('color') + 1, None, args)
-            if color is None:
-                out += '\u2139 Your character\'s current color is {}. Use "!csettings color reset" to reset it to random.\n' \
-                       .format(hex(character['settings'].get('color')) if character['settings'].get('color') is not None else "random")
-            elif color.lower() == 'reset':
-                character['settings']['color'] = None
-                out += "\u2705 Color reset to random.\n"
-            else:
-                try:
-                    color = int(color, base=16)
-                except (ValueError, TypeError):
-                    out += '\u274c Unknown color. Use "!csettings color reset" to reset it to random.\n'
+        index = 0
+        for arg in args:
+            if arg == 'color':
+                color = list_get(index + 1, None, args)
+                if color is None:
+                    out += '\u2139 Your character\'s current color is {}. Use "!csettings color reset" to reset it to random.\n' \
+                           .format(hex(character['settings'].get('color')) if character['settings'].get('color') is not None else "random")
+                elif color.lower() == 'reset':
+                    character['settings']['color'] = None
+                    out += "\u2705 Color reset to random.\n"
                 else:
-                    if not 0 <= color <= 0xffffff:
-                        out += '\u274c Invalid color.\n'
+                    try:
+                        color = int(color, base=16)
+                    except (ValueError, TypeError):
+                        out += '\u274c Unknown color. Use "!csettings color reset" to reset it to random.\n'
                     else:
-                        character['settings']['color'] = color
-                        out += "\u2705 Color set to {}.\n".format(hex(color))
+                        if not 0 <= color <= 0xffffff:
+                            out += '\u274c Invalid color.\n'
+                        else:
+                            character['settings']['color'] = color
+                            out += "\u2705 Color set to {}.\n".format(hex(color))
+            index += 1
                     
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
@@ -383,14 +405,15 @@ class SheetManager:
             url = url.split('/character/')[-1].split('/')[0]
         
         loading = await self.bot.say('Loading character data from Dicecloud...')
-        character = await get_character(url)
+        parser = DicecloudParser()
+        character = await parser.get_character(url)
         try:
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.get('characters')[0].get('name')))
         except TypeError:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
         try:
-            sheet = get_sheet(character)
+            sheet = parser.get_sheet(character)
         except Exception as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))

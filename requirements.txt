@@ -10,6 +10,7 @@ meteor-ejson==1.1.0
 multidict==2.1.4
 numexpr==2.6.1
 numpy==1.11.3
+pdfminer.six==20160614
 psutil==5.0.1
 pycparser==2.17
 pyee==3.0.1

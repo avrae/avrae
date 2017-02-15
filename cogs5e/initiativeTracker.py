@@ -538,9 +538,9 @@ class InitTracker:
             combat.combatantGenerator.close()
             combat.combatantGenerator = combat.getNextCombatant()
             combat.current = combat.sorted_combatants[0].init
-            combat.currentCombatant = nextCombatant
             combat.round += 1
             nextCombatant = next(combat.combatantGenerator)
+            combat.currentCombatant = nextCombatant
         if isinstance(nextCombatant, CombatantGroup):
             thisTurn = [c for c in nextCombatant.combatants]
             for c in thisTurn:

@@ -18,6 +18,7 @@ from discord.ext import commands
 from cogs5e.dice import roll
 from cogs5e.sheets.dicecloud import DicecloudParser
 from utils.functions import list_get, embed_trim, get_positivity
+from cogs5e.sheets.pdfsheet import PDFSheetParser
 
 
 class SheetManager:
@@ -285,7 +286,7 @@ class SheetManager:
             return await self.bot.say('Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')), delete_after=20)
         
         if name == 'list':
-            return await self.bot.say('Your characters:\n{}'.format(', '.join(c.get('stats', {}).get('name', '') for c in user_characters)))
+            return await self.bot.say('Your characters:\n{}'.format(', '.join([user_characters[c].get('stats', {}).get('name', '') for c in user_characters])))
         args = shlex.split(args)
         
         char_url = None
@@ -311,6 +312,7 @@ class SheetManager:
             elif reply:
                 self.active_characters[ctx.message.author.id] = None
                 del user_characters[char_url]
+                self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
                 return await self.bot.say('{} has been deleted.'.format(name))
             else:
                 return await self.bot.say("OK, cancelling.")
@@ -426,5 +428,36 @@ class SheetManager:
         
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[url] = sheet['sheet']
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        
+    @commands.command(pass_context=True, hidden=True)
+    async def pdfsheet(self, ctx):
+        """Loads a character sheet from a Wizards PDF, resetting all settings."""
+        
+        if not 0 < len(ctx.message.attachments) < 2:
+            return await self.bot.say('You must call this command in the same message you upload the sheet.')
+        
+        file = ctx.message.attachments[0]
+        
+        loading = await self.bot.say('Loading character data from PDF...')
+        parser = PDFSheetParser()
+        character = await parser.get_character(file)
+        
+        try:
+            sheet = parser.get_sheet(character)
+            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(sheet['sheet'].get('stats', {}).get('name')))
+        except Exception as e:
+            print("Error loading PDFChar sheet:")
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+        
+        self.active_characters[ctx.message.author.id] = file['filename']
+        self.bot.db.not_json_set('active_characters', self.active_characters)
+        
+        embed = sheet['embed']
+        await self.bot.say(embed=embed)
+        
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        user_characters[file['filename']] = sheet['sheet']
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         

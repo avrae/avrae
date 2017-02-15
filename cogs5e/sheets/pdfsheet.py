@@ -5,9 +5,11 @@ Created on Feb 14, 2017
 '''
 
 
+import io
 import random
 import re
 
+import aiohttp
 import discord
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfparser import PDFParser
@@ -17,11 +19,12 @@ from pdfminer.psparser import PSLiteral
 from cogs5e.sheets.sheetParser import SheetParser
 
 
-class PDFParser(SheetParser):
+class PDFSheetParser(SheetParser):
 
-    def get_character(self, attachment):
+    async def get_character(self, file):
         character = {}
-        fp = open(attachment, 'rb')
+        async with aiohttp.get(file['url']) as f:
+            fp = io.BytesIO(await f.read())
         
         parser = PDFParser(fp)
         doc = PDFDocument(parser)
@@ -38,7 +41,6 @@ class PDFParser(SheetParser):
                     pass
                 
             character[name.decode('iso-8859-1')] = value
-        fp.close()
         return character
     
     def get_sheet(self, character):
@@ -146,13 +148,19 @@ class PDFParser(SheetParser):
         attack['attackBonus'] = character.get('AtkBonus' + str(atkIn))
         attack['damage'] = character.get('Damage' + str(atkIn))
         
+        if attack['name'] is None:
+            return None
+        
+        attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
+        
         return attack
         
     def get_attacks(self, character):
         """Returns a list of dicts of all of the character's attacks."""
         attacks = []
         for attack in range(3):
-            attacks.append(self.get_attack(character, attack))
+            a = self.get_attack(character, attack)
+            if a is not None: attacks.append(a)
         return attacks
             
     def get_skills(self, character):
@@ -171,7 +179,7 @@ class PDFParser(SheetParser):
                      'sleightOfHand', 'stealth', 'strengthSave', 'survival', 'wisdomSave']
         skills = {}
         for skill in skillslist:
-            skills[skillsMap[skills.index(skill)]] = int(character.get(skill))
+            skills[skillsMap[skillslist.index(skill)]] = int(character.get(skill))
              
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             skills[stat] = int(character.get(stat[:3].upper() + 'bonus'))

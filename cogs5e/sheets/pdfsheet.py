@@ -5,6 +5,7 @@ Created on Feb 14, 2017
 '''
 
 
+import asyncio
 import io
 import random
 import re
@@ -22,25 +23,29 @@ from cogs5e.sheets.sheetParser import SheetParser
 class PDFSheetParser(SheetParser):
 
     async def get_character(self, file):
-        character = {}
         async with aiohttp.get(file['url']) as f:
             fp = io.BytesIO(await f.read())
         
-        parser = PDFParser(fp)
-        doc = PDFDocument(parser)
-        fields = resolve1(doc.catalog['AcroForm'])['Fields']
-        for i in fields:
-            field = resolve1(i)
-            name, value = field.get('T'), field.get('V')
-            if isinstance(value, PSLiteral):
-                value = value.name
-            elif value is not None:
-                try:
-                    value = value.decode('iso-8859-1')
-                except:
-                    pass
-                
-            character[name.decode('iso-8859-1')] = value
+        def parsePDF():
+            character = {}
+            parser = PDFParser(fp)
+            doc = PDFDocument(parser)
+            fields = resolve1(doc.catalog['AcroForm'])['Fields']
+            for i in fields:
+                field = resolve1(i)
+                name, value = field.get('T'), field.get('V')
+                if isinstance(value, PSLiteral):
+                    value = value.name
+                elif value is not None:
+                    try:
+                        value = value.decode('iso-8859-1')
+                    except:
+                        pass
+                    
+                character[name.decode('iso-8859-1')] = value
+            return character
+        loop = asyncio.get_event_loop()
+        character = await loop.run_in_executor(None, parsePDF)
         return character
     
     def get_sheet(self, character):

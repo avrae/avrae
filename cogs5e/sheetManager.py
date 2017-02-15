@@ -331,25 +331,28 @@ class SheetManager:
     async def update(self, ctx):
         """Updates the current character sheet, preserving all settings."""
         active_character = self.active_characters.get(ctx.message.author.id)
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         if active_character is None:
             return await self.bot.say('You have no character active.')
         url = active_character
-        parser = DicecloudParser()
-        loading = await self.bot.say('Updating character data from Dicecloud...')
-        character = await parser.get_character(url)
+        type = user_characters[url].get('type', 'dicecloud')
+        if type == 'dicecloud':
+            parser = DicecloudParser(url)
+            loading = await self.bot.say('Updating character data from Dicecloud...')
+        else:
+            return await self.bot.say("Updating PDF sheets is not supported yet.")
+        character = await parser.get_character()
         try:
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(character.get('characters')[0].get('name')))
         except TypeError:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
         try:
-            sheet = parser.get_sheet(character)
+            sheet = parser.get_sheet()
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         embed = sheet['embed']
-        
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         sheet = sheet['sheet']
         sheet['settings'] = user_characters[url].get('settings', {})
         user_characters[url] = sheet
@@ -407,15 +410,15 @@ class SheetManager:
             url = url.split('/character/')[-1].split('/')[0]
         
         loading = await self.bot.say('Loading character data from Dicecloud...')
-        parser = DicecloudParser()
-        character = await parser.get_character(url)
+        parser = DicecloudParser(url)
+        character = await parser.get_character()
         try:
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.get('characters')[0].get('name')))
         except TypeError:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
         try:
-            sheet = parser.get_sheet(character)
+            sheet = parser.get_sheet()
         except Exception as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
@@ -430,7 +433,7 @@ class SheetManager:
         user_characters[url] = sheet['sheet']
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         
-    @commands.command(pass_context=True, hidden=True)
+    @commands.command(pass_context=True)
     async def pdfsheet(self, ctx):
         """Loads a character sheet from a Wizards PDF, resetting all settings."""
         
@@ -440,11 +443,11 @@ class SheetManager:
         file = ctx.message.attachments[0]
         
         loading = await self.bot.say('Loading character data from PDF...')
-        parser = PDFSheetParser()
-        character = await parser.get_character(file)
+        parser = PDFSheetParser(file)
+        await parser.get_character()
         
         try:
-            sheet = parser.get_sheet(character)
+            sheet = parser.get_sheet()
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(sheet['sheet'].get('stats', {}).get('name')))
         except Exception as e:
             print("Error loading PDFChar sheet:")

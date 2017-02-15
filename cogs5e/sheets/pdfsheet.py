@@ -21,8 +21,13 @@ from cogs5e.sheets.sheetParser import SheetParser
 
 
 class PDFSheetParser(SheetParser):
+    
+    def __init__(self, file):
+        self.file = file
+        self.character = None
 
-    async def get_character(self, file):
+    async def get_character(self):
+        file = self.file
         async with aiohttp.get(file['url']) as f:
             fp = io.BytesIO(await f.read())
         
@@ -45,17 +50,20 @@ class PDFSheetParser(SheetParser):
                 character[name.decode('iso-8859-1')] = value
             return character
         loop = asyncio.get_event_loop()
-        character = await loop.run_in_executor(None, parsePDF)
-        return character
+        async with await loop.run_in_executor(None, parsePDF) as character:
+            self.character = character
+            return character
     
-    def get_sheet(self, character):
+    def get_sheet(self):
         """Returns a dict with character sheet data."""
+        if self.character is None: raise Exception('You must call get_character() first.')
+        character = self.character
         try:
-            stats = self.get_stats(character)
+            stats = self.get_stats()
             hp = character.get('HPMax')
             armor = character.get('AC')
-            attacks = self.get_attacks(character)
-            skills = self.get_skills(character)
+            attacks = self.get_attacks()
+            skills = self.get_skills()
         except:
             raise
         
@@ -129,8 +137,10 @@ class PDFSheetParser(SheetParser):
         
         return embed
         
-    def get_stats(self, character):
+    def get_stats(self):
         """Returns a dict of stats."""
+        if self.character is None: raise Exception('You must call get_character() first.')
+        character = self.character
         stats = {"name":"", "image":"", "description":"",
                  "strength":10, "dexterity":10, "constitution":10, "wisdom":10, "intelligence":10, "charisma":10,
                  "strengthMod":0, "dexterityMod":0, "constitutionMod":0, "wisdomMod":0, "intelligenceMod":0, "charismaMod":0,
@@ -145,8 +155,10 @@ class PDFSheetParser(SheetParser):
         
         return stats
             
-    def get_attack(self, character, atkIn):
+    def get_attack(self, atkIn):
         """Calculates and returns a dict."""
+        if self.character is None: raise Exception('You must call get_character() first.')
+        character = self.character
         attack = {'attackBonus': '0', 'damage':'0', 'name': ''}
         
         attack['name'] = character.get('Attack' + str(atkIn))
@@ -160,16 +172,19 @@ class PDFSheetParser(SheetParser):
         
         return attack
         
-    def get_attacks(self, character):
+    def get_attacks(self):
         """Returns a list of dicts of all of the character's attacks."""
+        if self.character is None: raise Exception('You must call get_character() first.')
         attacks = []
         for attack in range(3):
-            a = self.get_attack(character, attack)
+            a = self.get_attack(attack)
             if a is not None: attacks.append(a)
         return attacks
             
-    def get_skills(self, character):
+    def get_skills(self):
         """Returns a dict of all the character's skills."""
+        if self.character is None: raise Exception('You must call get_character() first.')
+        character = self.character
         skillslist = ['Acrobatics', 'AnHan', 'Arcana', 'Athletics',
                       'CHAsave', 'CONsave', 'Deception', 'DEXsave',
                       'History', 'Init', 'Insight', 'INTsave',

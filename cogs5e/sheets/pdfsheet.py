@@ -36,7 +36,10 @@ class PDFSheetParser(SheetParser):
             character = {}
             parser = PDFParser(fp)
             doc = PDFDocument(parser)
-            fields = resolve1(doc.catalog['AcroForm'])['Fields']
+            try:
+                fields = resolve1(doc.catalog['AcroForm'])['Fields']
+            except:
+                raise Exception('This is not a form-fillable character sheet!')
             for i in fields:
                 field = resolve1(i)
                 name, value = field.get('T'), field.get('V')

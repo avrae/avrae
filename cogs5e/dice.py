@@ -6,6 +6,7 @@ Created on Dec 25, 2016
 from heapq import nlargest, nsmallest
 from math import floor
 import random
+from re import IGNORECASE
 import re
 import traceback
 
@@ -13,7 +14,6 @@ import numexpr
 
 from cogs5e import tables
 from utils.functions import list_get
-from re import IGNORECASE
 
 
 # Rolls Dice
@@ -223,7 +223,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
             total = numexpr.evaluate(total)
         except SyntaxError:
             total = 0
-            return DiceResult(verbose_result="Invalid input: Nothing rolled or missing argument after operator.", result=None)
+            return DiceResult(verbose_result="Invalid input: Nothing rolled or missing argument after operator.")
         
         rolled = ''.join(out_set).replace('**', '^').replace('_', '**')
         totalStr = str(floor(total))
@@ -275,8 +275,9 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
         return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply)
         
     except Exception as ex:
+        print('Error in roll():')
         traceback.print_exc()
-        return DiceResult(verbose_result="Invalid input: {}".format(ex), result=None)
+        return DiceResult(verbose_result="Invalid input: {}".format(ex))
     
 def parse_selectors(opts, res):
     for o in range(len(opts)):
@@ -300,7 +301,10 @@ class DiceResult:
         self.result = verbose_result
         self.crit = crit
         self.rolled = rolled
-        self.skeleton = skeleton
+        self.skeleton = skeleton if skeleton is not '' else verbose_result
         
     def __str__(self):
         return self.result
+    
+    def __repr__(self):
+        return '<DiceResult object: total={}>'.format(self.total)

@@ -27,6 +27,7 @@ class SheetManager:
     def __init__(self, bot):
         self.bot = bot
         self.active_characters = bot.db.not_json_get('active_characters', {})
+        self.snippets = self.bot.db.not_json_get('damage_snippets', {})
         
     def parse_args(self, args):
         out = {}
@@ -49,10 +50,12 @@ class SheetManager:
                          -ac [target ac]
                          -b [to hit bonus]
                          -d [damage bonus]
+                         -d# [applies damage to the first # hits]
                          -rr [times to reroll]
                          -t [target]
                          -phrase [flavor text]
-                         crit (automatically crit)"""
+                         crit (automatically crit)
+                         [user snippet]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
@@ -70,14 +73,22 @@ class SheetManager:
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
+        for snippet, arguments in self.snippets.get(ctx.message.author.id, {}).items():
+            args = args.replace(snippet, arguments)
         args = shlex.split(args)
         total_damage = 0
         args = self.parse_args(args)
+        
+        dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)]
+        dnum = {}
+        for k in dnum_keys:
+            dnum[args[k]] = int(k.split('d')[-1])
             
         if args.get('phrase') is not None:
             embed.description = '*' + args.get('phrase') + '*'
         else:
             embed.description = '~~' + ' '*500 + '~~'
+            
             
         if args.get('t') is not None:
             embed.title = '{} attacks with {} at {}!'.format(character.get('stats').get('name'), a_or_an(attack.get('name')), args.get('t'))
@@ -92,43 +103,38 @@ class SheetManager:
         args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         args['crit'] = 1 if args.get('crit', False) else None
         for r in range(args.get('rr', 1) or 1):
+            out = ''
+            itercrit = 0
             if attack.get('attackBonus') is not None:
                 if args.get('b') is not None:
                     toHit = roll('1d20+' + attack.get('attackBonus') + '+' + args.get('b'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
                 else:
                     toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
     
-                out = ''
                 out += toHit.result + '\n'
                 itercrit = toHit.crit if not args.get('crit') else args.get('crit', 0)
                 if args.get('ac') is not None:
                     if toHit.total < args.get('ac') and itercrit == 0:
                         itercrit = 2 # miss!
                 
-                if attack.get('damage') is not None:
-                    if args.get('d') is not None:
-                        damage = attack.get('damage') + '+' + args.get('d')
-                    else:
-                        damage = attack.get('damage')
+            if attack.get('damage') is not None:
+                if args.get('d') is not None:
+                    damage = attack.get('damage') + '+' + args.get('d')
+                else:
+                    damage = attack.get('damage')
                     
-                    if itercrit == 1:
-                        dmgroll = roll(damage, rollFor='Damage (CRIT!)', inline=True, double=True, show_blurbs=False)
-                        out += dmgroll.result + '\n'
-                        total_damage += dmgroll.total
-                    elif itercrit == 2:
-                        out += '**Miss!**\n'
-                    else:
-                        dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
-                        out += dmgroll.result + '\n'
-                        total_damage += dmgroll.total
-            else:
-                out = ''
-                if attack.get('damage') is not None:
-                    if args.get('d') is not None:
-                        damage = attack.get('damage') + '+' + args.get('d')
-                    else:
-                        damage = attack.get('damage')
-                    
+                for dice, numHits in dnum.items():
+                    if not itercrit == 2 and numHits > 0:
+                        damage += '+' + dice
+                        dnum[dice] -= 1
+                
+                if itercrit == 1:
+                    dmgroll = roll(damage, rollFor='Damage (CRIT!)', inline=True, double=True, show_blurbs=False)
+                    out += dmgroll.result + '\n'
+                    total_damage += dmgroll.total
+                elif itercrit == 2:
+                    out += '**Miss!**\n'
+                else:
                     dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
                     out += dmgroll.result + '\n'
                     total_damage += dmgroll.total
@@ -406,6 +412,25 @@ class SheetManager:
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         await self.bot.say(out)
+        
+    @commands.command(pass_context=True)
+    async def snippet(self, ctx, snipname, *, snippet=None):
+        """Creates a snippet to use in attack macros.
+        Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
+        user_id = ctx.message.author.id
+        user_snippets = self.snippets.get(user_id, {})
+        
+        if snipname == 'list':
+            return await self.bot.say('Your snippets:\n{}'.format(', '.join([name for name in user_snippets.keys()])))
+        
+        if snippet is None:
+            return await self.bot.say('**' + snipname + '**:\n' + user_snippets[snipname])
+        
+        user_snippets[snipname] = snippet
+        
+        self.snippets[user_id] = user_snippets
+        self.bot.db.not_json_set('damage_snippets', self.snippets)
+        await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
     
     @commands.command(pass_context=True)
     async def dicecloud(self, ctx, url:str):

@@ -12,7 +12,7 @@ import numexpr
 from cogs5e.dice import roll
 from cogs5e.lookupFuncs import searchSpell, searchMonster
 from utils import checks
-from utils.functions import fuzzy_search, parse_args
+from utils.functions import fuzzy_search, parse_args, a_or_an
 
 
 class Dice:
@@ -246,9 +246,9 @@ class Dice:
             embed.description = '~~' + ' '*500 + '~~'
             
         if args.get('t') is not None:
-            embed.title = 'A {} attacks with a {} at {}!'.format(monster.get('name'), attack.get('name'), args.get('t'))
+            embed.title = '{} attacks with {} at {}!'.format(a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:], a_or_an(attack.get('name')), args.get('t'))
         else:
-            embed.title = 'A {} attacks with a {}!'.format(monster.get('name'), attack.get('name'))
+            embed.title = '{} attacks with {}!'.format(a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:], a_or_an(attack.get('name')))
         
         for arg in ('rr', 'ac'):
             try:

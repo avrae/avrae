@@ -28,6 +28,7 @@ class PDFSheetParser(SheetParser):
 
     async def get_character(self):
         file = self.file
+        if not file['filename'].endswith('.pdf'): raise Exception('This is not a PDF file!')
         async with aiohttp.get(file['url']) as f:
             fp = io.BytesIO(await f.read())
         
@@ -50,9 +51,9 @@ class PDFSheetParser(SheetParser):
                 character[name.decode('iso-8859-1')] = value
             return character
         loop = asyncio.get_event_loop()
-        async with await loop.run_in_executor(None, parsePDF) as character:
-            self.character = character
-            return character
+        character = await loop.run_in_executor(None, parsePDF)
+        self.character = character
+        return character
     
     def get_sheet(self):
         """Returns a dict with character sheet data."""

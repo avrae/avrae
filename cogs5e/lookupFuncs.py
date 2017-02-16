@@ -109,14 +109,14 @@ def searchMonster(monstername, visible=True, return_monster=False):
                 monsterDesc.append("**{name}:** {text}\n".format(**a))
                 if 'attack' in a:
                     attacks.append(a)
-        
-        monsterDesc.append("\n**__Actions:__**\n")
-        for a in monster["action"]:      
-            if isinstance(a['text'], list):
-                a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-            monsterDesc.append("**{name}:** {text}\n".format(**a))
-            if 'attack' in a:
-                attacks.append(a)
+        if "action" in monster:
+            monsterDesc.append("\n**__Actions:__**\n")
+            for a in monster["action"]:      
+                if isinstance(a['text'], list):
+                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+                monsterDesc.append("**{name}:** {text}\n".format(**a))
+                if 'attack' in a:
+                    attacks.append(a)
             
         if "reaction" in monster:
             monsterDesc.append("\n**__Reactions:__**\n")

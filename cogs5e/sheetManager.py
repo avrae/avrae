@@ -17,7 +17,7 @@ from discord.ext import commands
 
 from cogs5e.dice import roll
 from cogs5e.sheets.dicecloud import DicecloudParser
-from utils.functions import list_get, embed_trim, get_positivity
+from utils.functions import list_get, embed_trim, get_positivity, a_or_an
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 
 
@@ -80,9 +80,9 @@ class SheetManager:
             embed.description = '~~' + ' '*500 + '~~'
             
         if args.get('t') is not None:
-            embed.title = '{} attacks with a {} at {}!'.format(character.get('stats').get('name'), attack.get('name'), args.get('t'))
+            embed.title = '{} attacks with {} at {}!'.format(character.get('stats').get('name'), a_or_an(attack.get('name')), args.get('t'))
         else:
-            embed.title = '{} attacks with a {}!'.format(character.get('stats').get('name'), attack.get('name'))
+            embed.title = '{} attacks with {}!'.format(character.get('stats').get('name'), a_or_an(attack.get('name')))
         
         for arg in ('rr', 'ac'):
             try:
@@ -187,8 +187,8 @@ class SheetManager:
         else:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
             
-        embed.title = '{} makes a {}!'.format(character.get('stats', {}).get('name'),
-                                              re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title())
+        embed.title = '{} makes {}!'.format(character.get('stats', {}).get('name'),
+                                            a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()))
             
         embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         
@@ -234,8 +234,8 @@ class SheetManager:
         else:
             check_roll = roll('1d20' + '{:+}'.format(skills[skill]), adv=adv, inline=True)
         
-        embed.title = '{} makes a {} check!'.format(character.get('stats', {}).get('name'),
-                                                    re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title())
+        embed.title = '{} makes {} check!'.format(character.get('stats', {}).get('name'),
+                                                  a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()))
         embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         
         await self.bot.say(embed=embed)
@@ -335,20 +335,24 @@ class SheetManager:
         if active_character is None:
             return await self.bot.say('You have no character active.')
         url = active_character
-        type = user_characters[url].get('type', 'dicecloud')
-        if type == 'dicecloud':
+        sheet_type = user_characters[url].get('type', 'dicecloud')
+        if sheet_type == 'dicecloud':
             parser = DicecloudParser(url)
             loading = await self.bot.say('Updating character data from Dicecloud...')
         else:
             return await self.bot.say("Updating PDF sheets is not supported yet.")
-        character = await parser.get_character()
         try:
-            await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(character.get('characters')[0].get('name')))
-        except TypeError:
-            return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
+            character = await parser.get_character()
+        except Exception as e:
+            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         
         try:
+            if sheet_type == 'dicecloud':
+                fmt = character.get('characters')[0].get('name')
+            await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
             sheet = parser.get_sheet()
+        except TypeError:
+            return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
@@ -444,7 +448,12 @@ class SheetManager:
         
         loading = await self.bot.say('Loading character data from PDF...')
         parser = PDFSheetParser(file)
-        await parser.get_character()
+        try:
+            await parser.get_character()
+        except Exception as e:
+            print("Error loading PDFChar sheet:")
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         
         try:
             sheet = parser.get_sheet()

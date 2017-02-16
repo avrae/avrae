@@ -3,8 +3,9 @@ Created on Oct 29, 2016
 
 @author: andrew
 '''
-import os
 import errno
+import os
+import re
 
 
 def print_table(table):
@@ -87,5 +88,10 @@ def parse_args(args):
             out[a] = True
         index += 1
     return out
+
+def a_or_an(string):
+    if re.match('[AEIOUaeiou].*', string):
+        return 'an {0}'.format(string)
+    return 'a {0}'.format(string)
 
     

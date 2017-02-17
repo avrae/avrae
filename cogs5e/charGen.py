@@ -5,6 +5,7 @@ from discord.ext import commands
 import json
 from string import capwords
 from math import *
+from cogs5e.dice import roll
 
 class CharGenerator:
     """Random character generator."""
@@ -234,15 +235,7 @@ class CharGenerator:
         return a + b + c + d - lowest
     
     def genStats(self):
-        total_mod = 0
-        stats = []
-        while not (total_mod >= 4 and total_mod <= 9):
-            stats.clear()
-            total_mod = 0
-            for i in range(6):
-                stat = self.statGen()
-                stats.append(stat)
-                total_mod += floor((stat-10)/2)
+        stats = [roll('4d6kh3').total for i in range(6)]
         return stats
     
     def getRaceTraits(self, race, level):

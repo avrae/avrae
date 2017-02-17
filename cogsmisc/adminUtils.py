@@ -35,15 +35,6 @@ class AdminUtils:
         await self.bot.say("Byeeeeeee!")
         await self.bot.logout()
         sys.exit()
-        
-    @commands.command(pass_context=True, no_pm=True, hidden=True)
-    @checks.is_owner()
-    async def say(self, ctx, channel : discord.Channel, *, message : str):
-        """Makes the bot say something."""
-        try:
-            await self.bot.send_message(channel, message)
-        except Exception as e:
-            await self.bot.say('Failed to send message: ' + e)
             
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()

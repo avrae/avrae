@@ -94,4 +94,7 @@ def a_or_an(string):
         return 'an {0}'.format(string)
     return 'a {0}'.format(string)
 
+def camel_to_title(string):
+    return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
+
     

@@ -133,6 +133,8 @@ async def enter():
     for stat in bot.botStats.keys():
         bot.botStats[stat] = int(bot.botStats[stat])
     bot.db.set_dict('botStats', bot.botStats)
+    if not bot.db.exists('build_num'): bot.db.set('build_num', 114) # this was added in build 114
+    bot.db.incr('build_num')
     await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
     
 @bot.event
@@ -209,6 +211,7 @@ def sigterm_handler(_signum, _frame):
         except:
             pass
     asyncio.ensure_future(bot.logout())
+    sys.exit(0)
     
 signal.signal(signal.SIGTERM, sigterm_handler)
             

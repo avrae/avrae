@@ -29,6 +29,12 @@ class DataIO:
     def set(self, key, value):
         return self._db.set(key, value)
     
+    def incr(self, key):
+        return self._db.incr(key)
+    
+    def exists(self, key):
+        return self._db.exists(key)
+    
     def set_dict(self, key, dictionary):
         if len(dictionary) == 0:
             return self._db.delete(key)

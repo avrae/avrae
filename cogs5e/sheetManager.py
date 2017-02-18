@@ -56,13 +56,13 @@ class SheetManager:
                          -phrase [flavor text]
                          crit (automatically crit)
                          [user snippet]"""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.active_characters.get(ctx.message.author.id)
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
+        active_character = self.active_characters.get(ctx.message.author.id) # get user's active
         if active_character is None:
             return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
-        attacks = character.get('attacks')
-        try:
+        character = user_characters[active_character] # get Sheet of character
+        attacks = character.get('attacks') # get attacks
+        try: #fuzzy search for atk_name
             attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
         except StopIteration:
             try:
@@ -70,39 +70,42 @@ class SheetManager:
             except StopIteration:
                 return await self.bot.say('No attack with that name found.')
         
-        embed = discord.Embed()
+        embed = discord.Embed() # set up embed
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
-        for snippet, arguments in self.snippets.get(ctx.message.author.id, {}).items():
-            args = args.replace(snippet, arguments)
         args = shlex.split(args)
+        tempargs = []
+        for arg in args: # parse snippets
+            for snippet, arguments in self.snippets.get(ctx.message.author.id, {}).items():
+                if arg == snippet: tempargs += shlex.split(arguments)
+                else: tempargs.append(arg)
         total_damage = 0
-        args = self.parse_args(args)
+        args = self.parse_args(tempargs)
         
         dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)]
         dnum = {}
-        for k in dnum_keys:
+        for k in dnum_keys: # parse d# args
             dnum[args[k]] = int(k.split('d')[-1])
             
-        if args.get('phrase') is not None:
+        if args.get('phrase') is not None: # parse phrase
             embed.description = '*' + args.get('phrase') + '*'
         else:
             embed.description = '~~' + ' '*500 + '~~'
             
             
-        if args.get('t') is not None:
+        if args.get('t') is not None: # parse target
             embed.title = '{} attacks with {} at {}!'.format(character.get('stats').get('name'), a_or_an(attack.get('name')), args.get('t'))
         else:
             embed.title = '{} attacks with {}!'.format(character.get('stats').get('name'), a_or_an(attack.get('name')))
         
-        for arg in ('rr', 'ac'):
+        for arg in ('rr', 'ac'): # parse reroll/ac
             try:
                 args[arg] = int(args.get(arg, None))
             except (ValueError, TypeError):
                 args[arg] = None
         args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         args['crit'] = 1 if args.get('crit', False) else None
-        for r in range(args.get('rr', 1) or 1):
+        for r in range(args.get('rr', 1) or 1): # start rolling attacks
             out = ''
             itercrit = 0
             if attack.get('attackBonus') is not None:
@@ -261,13 +264,14 @@ class SheetManager:
         stats = character.get('stats')
         image = stats.get('image', '')
         desc = stats.get('description', 'No description available.')
-        if len(desc) > 1024:
-            desc = desc[:1020] + '...'
+        if len(desc) > 2048:
+            desc = desc[:2044] + '...'
         elif len(desc) < 2:
             desc = 'No description available.'
         
         embed = discord.Embed()
-        embed.add_field(name=stats.get('name'), value=desc)
+        embed.title = stats.get('name')
+        embed.description = desc
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         embed.set_thumbnail(url=image)
         
@@ -345,8 +349,16 @@ class SheetManager:
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(url)
             loading = await self.bot.say('Updating character data from Dicecloud...')
+        elif sheet_type == 'pdf':
+            if not 0 < len(ctx.message.attachments) < 2:
+                return await self.bot.say('You must call this command in the same message you upload a PDF sheet.')
+            
+            file = ctx.message.attachments[0]
+            
+            loading = await self.bot.say('Updating character data from PDF...')
+            parser = PDFSheetParser(file)
         else:
-            return await self.bot.say("Updating PDF sheets is not supported yet.")
+            return await self.bot.say("Error: Unknown sheet type.")
         try:
             character = await parser.get_character()
         except Exception as e:
@@ -355,6 +367,8 @@ class SheetManager:
         try:
             if sheet_type == 'dicecloud':
                 fmt = character.get('characters')[0].get('name')
+            elif sheet_type == 'pdf':
+                fmt = character.get('CharacterName')
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
             sheet = parser.get_sheet()
         except TypeError:
@@ -416,7 +430,10 @@ class SheetManager:
     @commands.command(pass_context=True)
     async def snippet(self, ctx, snipname, *, snippet=None):
         """Creates a snippet to use in attack macros.
-        Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
+        Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*.
+        Valid commands: *!snippet list* - lists all user snippets.
+        *!snippet [name]* - shows what the snippet is a shortcut for.
+        *!snippet remove [name]* - deletes a snippet."""
         user_id = ctx.message.author.id
         user_snippets = self.snippets.get(user_id, {})
         
@@ -424,13 +441,21 @@ class SheetManager:
             return await self.bot.say('Your snippets:\n{}'.format(', '.join([name for name in user_snippets.keys()])))
         
         if snippet is None:
-            return await self.bot.say('**' + snipname + '**:\n' + user_snippets[snipname])
+            return await self.bot.say('**' + snipname + '**:\n' + user_snippets.get(snipname, 'Not defined.'))
         
-        user_snippets[snipname] = snippet
+        if snipname == 'remove':
+            try:
+                del user_snippets[snippet]
+            except KeyError:
+                return await self.bot.say('Snippet not found.')
+            await self.bot.say('Shortcut {} removed.'.format(snippet))
+        else:
+            user_snippets[snipname] = snippet
+            await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
         
         self.snippets[user_id] = user_snippets
         self.bot.db.not_json_set('damage_snippets', self.snippets)
-        await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
+        
     
     @commands.command(pass_context=True)
     async def dicecloud(self, ctx, url:str):

@@ -126,7 +126,7 @@ class Core:
         embed.add_field(name='Members', value=members)
         embed.add_field(name='Channels', value='{} total\n{} text\n{} voice'.format(text + voice, text, voice))
         embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
-        embed.set_footer(text='May the RNG be with you', icon_url='http://www.clipartkid.com/images/25/six-sided-dice-clip-art-at-clker-com-vector-clip-art-online-royalty-tUAGdd-clipart.png')
+        embed.set_footer(text='May the RNG be with you | Build {}'.format(self.bot.db.get('build_num')), icon_url='http://www.clipartkid.com/images/25/six-sided-dice-clip-art-at-clker-com-vector-clip-art-online-royalty-tUAGdd-clipart.png')
         commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up".format(**self.bot.botStats)
         embed.add_field(name="Commands Run", value=commands_run)
         embed.add_field(name="Servers", value=len(self.bot.servers))

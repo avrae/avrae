@@ -47,19 +47,39 @@ class Customization:
                     break
         
     @commands.command(pass_context=True)
-    async def alias(self, ctx, alias_name, *, commands):
+    async def alias(self, ctx, alias_name, *, commands=None):
         """Adds an alias for a long command.
-        After an alias has been added, you can instead run the aliased command with !<alias_name>."""
+        After an alias has been added, you can instead run the aliased command with !<alias_name>.
+        Valid Commands: *!alias list* - lists your aliases.
+        *!alias [alias name]* - reveals what the alias runs.
+        *!alias remove [alias name]* - removes an alias."""
         user_id = ctx.message.author.id
         user_aliases = self.aliases.get(user_id, {})
         if alias_name in self.bot.commands:
             return await self.bot.say('There is already a built-in command with that name!')
         
-        user_aliases[alias_name] = commands
+        if alias_name == 'list':
+            return await self.bot.say('Your aliases:\n{}'.format(', '.join([name for name in user_aliases.keys()])))
+        
+        if commands is None:
+            alias = user_aliases.get(alias_name)
+            if alias is None: alias = 'Not defined.'
+            else: alias = '!' + alias
+            return await self.bot.say('**' + alias_name + '**:\n' + alias)
+        
+        if alias_name == 'remove':
+            try:
+                del user_aliases[commands]
+            except KeyError:
+                return await self.bot.say('Alias not found.')
+            await self.bot.say('Alias {} removed.'.format(commands))
+        else:
+            user_aliases[alias_name] = commands
+            await self.bot.say('Alias {} added for command:\n`{}`'.format(alias_name, commands))
         
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)
-        await self.bot.say('Alias {} added for command:\n`{}`'.format(alias_name, commands))
+        
         
         
         

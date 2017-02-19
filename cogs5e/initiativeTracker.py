@@ -90,7 +90,11 @@ class Combat(object):
             yield c
     
     async def update_summary(self, bot):
-        await bot.edit_message(self.summary_message, self.getSummary())
+        try:
+            msg = await bot.edit_message(self.summary_message, self.getSummary())
+        except:
+            return
+        self.summary_message = msg
         
 class CombatantGroup(object):
     def __init__(self, init:int=0, name:str='', author:discord.User=None, notes:str=''):

@@ -11,6 +11,9 @@ from aiohttp import web
 import aiohttp_jinja2
 import jinja2
 
+_errors = {403: 'Forbidden',
+           404: 'Page not found',
+           500: 'Internal server error'}
 
 class Web:
     """A simple webserver."""
@@ -34,8 +37,9 @@ class Web:
         self.loop.run_until_complete(self.app.cleanup())
         
     def setup_middlewares(self, app):
-        error_middleware = self.error_pages({404: self.handle_404,
-                                             500: self.handle_500})
+        error_middleware = self.error_pages({403: self.handle_error,
+                                             404: self.handle_error,
+                                             500: self.handle_error})
         app.middlewares.append(error_middleware)
         
     def error_pages(self, overrides):
@@ -57,17 +61,11 @@ class Web:
             return middleware_handler
         return middleware
     
-    async def handle_404(self, request, response):
-        response = aiohttp_jinja2.render_template('404.html',
+    async def handle_error(self, request, response):
+        response = aiohttp_jinja2.render_template('error.html',
                                                   request,
-                                                  {})
-        return response
-    
-    
-    async def handle_500(self, request, response):
-        response = aiohttp_jinja2.render_template('500.html',
-                                                  request,
-                                                  {})
+                                                  {'status': response.status,
+                                                   'error': response.reason})
         return response
 
     def run_app(self, app, *, host='0.0.0.0', port=None,

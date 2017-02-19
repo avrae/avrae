@@ -77,8 +77,10 @@ class SheetManager:
         tempargs = []
         for arg in args: # parse snippets
             for snippet, arguments in self.snippets.get(ctx.message.author.id, {}).items():
-                if arg == snippet: tempargs += shlex.split(arguments)
-                else: tempargs.append(arg)
+                if arg == snippet: 
+                    tempargs += shlex.split(arguments)
+                    break
+            tempargs.append(arg)
         total_damage = 0
         args = self.parse_args(tempargs)
         

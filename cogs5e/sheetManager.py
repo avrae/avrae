@@ -36,6 +36,9 @@ class SheetManager:
             if a == '-b' or a == '-d':
                 if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, None, args)
                 else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, None, args)
+            elif re.match(r'-d\d+', a):
+                if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, None, args)
+                else: out[a.replace('-', '')] += '|' + list_get(index + 1, None, args)
             elif a.startswith('-'):
                 out[a.replace('-', '')] = list_get(index + 1, None, args)
             else:
@@ -84,10 +87,11 @@ class SheetManager:
         total_damage = 0
         args = self.parse_args(tempargs)
         
-        dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)]
+        dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)] # ['d1', 'd2'...]
         dnum = {}
         for k in dnum_keys: # parse d# args
-            dnum[args[k]] = int(k.split('d')[-1])
+            for dmg in args[k].split('|'):
+                dnum[dmg] = int(k.split('d')[-1])
             
         if args.get('phrase') is not None: # parse phrase
             embed.description = '*' + args.get('phrase') + '*'

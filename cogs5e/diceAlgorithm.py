@@ -122,7 +122,7 @@ class Dice:
         await self.bot.say(ctx.message.author.mention + '\n' + outStr)
         
     @commands.command(pass_context=True, name='iterroll', aliases=['rrr'])
-    async def rrr(self, ctx, iterations:int, rollStr, dc:int, *, args=''):
+    async def rrr(self, ctx, iterations:int, rollStr, dc:int=0, *, args=''):
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
         if iterations < 1 or iterations > 500:

@@ -19,7 +19,7 @@ from discord.ext import commands
 from cogs5e.dice import roll
 from cogs5e.lookupFuncs import searchMonster
 from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
-    fuzzy_search
+    fuzzy_search, get_positivity
 import traceback
 
 
@@ -294,7 +294,7 @@ class InitTracker:
             await self.bot.pin_message(summaryMsg)
         except:
             pass
-        await self.bot.say("Everyone roll for initiative! (\"!init add <MODIFIER> <NAME>\")")
+        await self.bot.say("Everyone roll for initiative!\nIf you have a character set up with SheetManager: `!init dcadd`\nIf it's a 5e monster: `!init madd [monster name]`\nOtherwise: `!init add [modifier] [name]`")
             
     @init.command(pass_context=True)
     async def add(self, ctx, modifier : int, name : str, *, args:str=''):
@@ -795,6 +795,22 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
+        msg = await self.bot.say('Are you sure you want to end combat? (Reply with yes/no)')
+        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
+        reply = get_positivity(reply.content) if reply is not None else None
+        if reply is None:
+            return await self.bot.say('Timed out waiting for a response or invalid response.', delete_after=10)
+        elif not reply:
+            try:
+                await self.bot.delete_messages([msg, reply])
+            except:
+                pass
+            return await self.bot.say('OK, canelling.', delete_after=10)
+            
+        try:
+            await self.bot.delete_messages([msg, reply])
+        except:
+            pass
         for c in combat.combatants:
             del c
         

@@ -8,12 +8,12 @@ import asyncio
 import os
 
 from aiohttp import web
+from aiohttp.web_reqrep import StreamResponse
 import aiohttp_jinja2
 import jinja2
 
-_errors = {403: 'Forbidden',
-           404: 'Page not found',
-           500: 'Internal server error'}
+from web.CustomStaticRoute import CustomStaticRoute
+
 
 class Web:
     """A simple webserver."""
@@ -26,8 +26,29 @@ class Web:
         aiohttp_jinja2.setup(self.app,
                              loader=jinja2.FileSystemLoader('./web/templates'))
         self.setup_middlewares(self.app)
-        self.app.router.add_static('/', './web/data')
+        self.app.router.add_static('/5etools/', './web/data/5etools')
+        self.add_static('/', './web/data', show_index=True)
         self.run_app(self.app, host=os.environ.get('HOST'), port=os.environ.get('PORT'))
+    
+    def add_static(self, prefix, path, *, name=None, expect_handler=None,
+                   chunk_size=256 * 1024, response_factory=StreamResponse,
+                   show_index=False):
+        """Add static files view.
+
+        prefix - url prefix
+        path - folder with files
+
+        """
+        assert prefix.startswith('/')
+        if not prefix.endswith('/'):
+            prefix += '/'
+        route = CustomStaticRoute(name, prefix, path,
+                            expect_handler=expect_handler,
+                            chunk_size=chunk_size,
+                            response_factory=response_factory,
+                            show_index=show_index)
+        self.app.router.register_route(route)
+        return route
         
     def __unload(self):
         self.app.srv.close()

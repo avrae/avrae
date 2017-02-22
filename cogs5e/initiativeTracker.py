@@ -797,20 +797,17 @@ class InitTracker:
         
         msg = await self.bot.say('Are you sure you want to end combat? (Reply with yes/no)')
         reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
-        reply = get_positivity(reply.content) if reply is not None else None
-        if reply is None:
-            return await self.bot.say('Timed out waiting for a response or invalid response.', delete_after=10)
-        elif not reply:
-            try:
-                await self.bot.delete_messages([msg, reply])
-            except:
-                pass
-            return await self.bot.say('OK, canelling.', delete_after=10)
-            
+        replyBool = get_positivity(reply.content) if reply is not None else None
         try:
-            await self.bot.delete_messages([msg, reply])
+            await self.bot.delete_message(msg)
+            await self.bot.delete_message(reply)
         except:
             pass
+        if replyBool is None:
+            return await self.bot.say('Timed out waiting for a response or invalid response.', delete_after=10)
+        elif not replyBool:
+            return await self.bot.say('OK, cancelling.', delete_after=10)
+            
         for c in combat.combatants:
             del c
         

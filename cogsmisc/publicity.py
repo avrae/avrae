@@ -31,8 +31,12 @@ class Publicity:
             'key': self.bot.credentials.carbon_key,
             'servercount': len(self.bot.servers)
         }
+        
+        carbon_headers = {
+            'content-type': 'application/json'
+        }
 
-        async with self.session.post(CARBONITEX_API_BOTDATA, data=carbon_payload) as resp:
+        async with self.session.post(CARBONITEX_API_BOTDATA, data=carbon_payload, headers=carbon_headers) as resp:
             print('Carbon statistics returned {0.status} for {1}'.format(resp, carbon_payload))
 
         payload = json.dumps({

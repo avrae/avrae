@@ -7,7 +7,8 @@ import aiohttp
 import json
 
 
-DISCORD_BOTS_API = 'https://bots.discord.pw/api'
+DISCORD_BOTS_API =       'https://bots.discord.pw/api'
+CARBONITEX_API_BOTDATA = 'https://www.carbonitex.net/discord/data/botdata.php'
 
 class Publicity:
     '''
@@ -23,6 +24,16 @@ class Publicity:
         self.bot.loop.create_task(self.session.close())
 
     async def update(self):
+        
+        if self.bot.testing: return
+        
+        carbon_payload = {
+            'key': self.bot.credentials.carbon_key,
+            'servercount': len(self.bot.servers)
+        }
+
+        async with self.session.post(CARBONITEX_API_BOTDATA, data=carbon_payload) as resp:
+            print('Carbon statistics returned {0.status} for {1}'.format(resp, carbon_payload))
 
         payload = json.dumps({
             'server_count': len(self.bot.servers)

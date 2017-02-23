@@ -49,6 +49,7 @@ Love the bot? Donate to me [here](https://www.paypal.me/avrae)! \u2764
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True)
 bot.prefix = prefix
 bot.remove_command('help')
+bot.testing = TESTING
 
 if os.path.isfile('./resources.txt'):
     with open('./resources.txt', 'r') as f:  # this is really inefficient
@@ -67,12 +68,14 @@ try:
     bot.credentials.testToken = credentials.testToken
     bot.credentials.officialToken = credentials.officialToken
     bot.credentials.discord_bots_key = credentials.discord_bots_key
+    bot.credentials.carbon_key = credentials.carbon_key
     bot.credentials.test_database_url = credentials.test_database_url
 except ImportError:
     bot.credentials = Credentials()
     bot.credentials.testToken = os.environ.get('TEST_TOKEN')
     bot.credentials.officialToken = os.environ.get('OFFICIAL_TOKEN')
     bot.credentials.discord_bots_key = os.environ.get('DISCORD_BOTS_KEY')
+    bot.credentials.carbon_key = os.environ.get('CARBON_KEY')
     bot.credentials.test_database_url = os.environ.get('TEST_DATABASE_URL')
     
 bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot.credentials.test_database_url)

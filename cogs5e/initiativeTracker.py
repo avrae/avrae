@@ -34,6 +34,8 @@ class Combat(object):
         self.summary_message = summary_message
         self.options = options
         self.name = name
+        self.currentCombatant = None
+        self.dm = None
         
     def get_combatant(self, name):
         combatant = None
@@ -290,6 +292,7 @@ class InitTracker:
         self.combats.append(combat)
         summaryMsg = await self.bot.say(combat.getSummary())
         combat.summary_message = summaryMsg
+        combat.dm = ctx.message.author
         try:
             await self.bot.pin_message(summaryMsg)
         except:
@@ -522,6 +525,7 @@ class InitTracker:
     @init.command(pass_context=True, name="next", aliases=['n'])
     async def nextInit(self, ctx):
         """Moves to the next turn in initiative order.
+        It must be your turn or you must be the DM (the person who started combat) to use this command.
         Usage: !init next"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
@@ -532,6 +536,13 @@ class InitTracker:
         if len(combat.combatants) == 0:
             await self.bot.say("There are no combatants.")
             return
+        
+        if combat.currentCombatant is None:
+            pass
+        elif not ctx.message.author.id in (combat.currentCombatant.author.id, combat.dm.id):
+            await self.bot.say("It is not your turn.")
+            return
+        
         if combat.combatantGenerator is None:
             combat.combatantGenerator = combat.getNextCombatant()
         try:

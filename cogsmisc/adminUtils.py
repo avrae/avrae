@@ -13,6 +13,8 @@ from discord.enums import ChannelType
 from discord.ext import commands
 
 from utils import checks
+from discord.channel import PrivateChannel
+from discord.user import User
 
 
 class AdminUtils:
@@ -146,7 +148,10 @@ class AdminUtils:
             except:
                 pass
         if self.assume_dir_control_chan is not None:
-            if message.channel.id == self.assume_dir_control_chan.id or message.channel.user.id == self.assume_dir_control_chan.id:
+            if isinstance(self.assume_dir_control_chan, User):
+                if message.channel.user.id == self.assume_dir_control_chan.id:
+                    await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
+            elif message.channel.id == self.assume_dir_control_chan.id:
                 await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
         
     def msg(self, dest, out):

@@ -491,6 +491,7 @@ class InitTracker:
             name = args.get('name', monster['name'][:2].upper() + '#').replace('#', str(i + 1))
             if combat.get_combatant(name) is not None:
                 out += "{} already exists.\n".format(name)
+                continue
             
             try:
                 if b is not None:

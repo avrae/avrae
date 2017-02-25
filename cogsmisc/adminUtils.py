@@ -126,6 +126,8 @@ class AdminUtils:
             # remove `foo`
             return content.strip('` \n')
         self.assume_dir_control_chan = self.bot.get_channel(chan)
+        if self.assume_dir_control_chan is None:
+            self.assume_dir_control_chan = await self.bot.get_user_info(chan)
         while True:
             response = await self.bot.wait_for_message(author=ctx.message.author, channel=ctx.message.channel,
                                                        check=lambda m: m.content.startswith('`'))
@@ -144,7 +146,7 @@ class AdminUtils:
             except:
                 pass
         if self.assume_dir_control_chan is not None:
-            if message.channel.id == self.assume_dir_control_chan.id:
+            if message.channel.id == self.assume_dir_control_chan.id or message.channel.user.id == self.assume_dir_control_chan.id:
                 await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
         
     def msg(self, dest, out):

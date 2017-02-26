@@ -4,6 +4,7 @@ Created on Dec 29, 2016
 @author: andrew
 '''
 import aiohttp
+import asyncio
 import json
 
 
@@ -37,7 +38,7 @@ class Publicity:
         }
 
         async with self.session.post(CARBONITEX_API_BOTDATA, data=carbon_payload, headers=carbon_headers) as resp:
-            print('Carbon statistics returned {0.status} for {1}'.format(resp, carbon_payload))
+            print('Carbon statistics returned {0.status}'.format(resp))
 
         payload = json.dumps({
             'server_count': len(self.bot.servers)
@@ -52,11 +53,15 @@ class Publicity:
         async with self.session.post(url, data=payload, headers=headers) as resp:
             print('DBots statistics returned {0.status} for {1}'.format(resp, payload))
 
-    async def on_server_join(self, server):
-        await self.update()
-
-    async def on_server_remove(self, server):
-        await self.update()
-
+    async def background_update():
+        try:
+            await self.bot.wait_until_ready()
+            while not self.bot.is_closed:
+                await asyncio.sleep(3600)  # every hour
+                await self.update()
+        except asyncio.CancelledError:
+            pass
+    
     async def on_ready(self):
         await self.update()
+        self.bot.loop.create_task(self.background_update())

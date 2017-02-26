@@ -67,7 +67,7 @@ class Publicity:
         self.bot.loop.create_task(self.background_update())
         
     async def on_server_join(self, server):
-        print('Joined server {}: {}, {} members'.format(server, server.id, len(server.members)))
+        print('Joined server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))
         
     async def on_server_remove(self, server):
-        print('Left server {}: {}, {} members'.format(server, server.id, len(server.members)))
+        print('Left server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))

@@ -53,7 +53,7 @@ class Publicity:
         async with self.session.post(url, data=payload, headers=headers) as resp:
             print('DBots statistics returned {0.status} for {1}'.format(resp, payload))
 
-    async def background_update():
+    async def background_update(self):
         try:
             await self.bot.wait_until_ready()
             while not self.bot.is_closed:

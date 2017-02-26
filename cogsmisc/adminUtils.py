@@ -15,6 +15,7 @@ from discord.ext import commands
 
 from utils import checks
 
+_blacklisted_serv_ids = ['252388688766435328']
 
 class AdminUtils:
     '''
@@ -161,7 +162,10 @@ class AdminUtils:
                     await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
             elif message.channel.id == self.assume_dir_control_chan.id:
                 await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
-        
+    
+    async def on_server_join(self, server):
+        if server.id in _blacklisted_serv_ids: await self.bot.leave_server(server)
+    
     def msg(self, dest, out):
         coro = self.bot.send_message(dest, out)
         asyncio.ensure_future(coro)

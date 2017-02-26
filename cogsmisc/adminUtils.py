@@ -58,10 +58,19 @@ class AdminUtils:
         
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def servInfo(self):
+    async def servInfo(self, server:str=None):
         out = ''
-        for s in sorted(self.bot.servers, key=lambda k: len(k.members), reverse=True):
-            out += "\n{} ({}, {} members)".format(s, s.id, len(s.members))
+        if server is None:
+            for s in sorted(self.bot.servers, key=lambda k: len(k.members), reverse=True):
+                out += "\n{} ({}, {} members)".format(s, s.id, len(s.members))
+        else:
+            s = self.bot.get_server(server)
+            try:
+                out += "\n\n**{} ({}, {})**".format(s, s.id, (await self.bot.create_invite(s)).url)
+            except:
+                out += "\n\n**{} ({})**".format(s, s.id)
+            for c in [ch for ch in s.channels if ch.type is not ChannelType.voice]:
+                out += '\n|- {} ({})'.format(c, c.id)
         out = self.discord_trim(out)
         for m in out:
             await self.bot.say(m)

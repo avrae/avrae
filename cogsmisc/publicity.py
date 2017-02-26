@@ -65,3 +65,9 @@ class Publicity:
     async def on_ready(self):
         await self.update()
         self.bot.loop.create_task(self.background_update())
+        
+    async def on_server_join(self, server):
+        print('Joined server {}: {}, {} members'.format(server, server.id, len(server.members)))
+        
+    async def on_server_remove(self, server):
+        print('Left server {}: {}, {} members'.format(server, server.id, len(server.members)))

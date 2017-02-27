@@ -89,6 +89,23 @@ def parse_args(args):
         index += 1
     return out
 
+def parse_args_2(args):
+        out = {}
+        index = 0
+        for a in args:
+            if a == '-b' or a == '-d':
+                if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, None, args)
+                else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, None, args)
+            elif re.match(r'-d\d+', a):
+                if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, None, args)
+                else: out[a.replace('-', '')] += '|' + list_get(index + 1, None, args)
+            elif a.startswith('-'):
+                out[a.replace('-', '')] = list_get(index + 1, None, args)
+            else:
+                out[a] = True
+            index += 1
+        return out
+
 def a_or_an(string):
     if re.match('[AEIOUaeiou].*', string):
         return 'an {0}'.format(string)

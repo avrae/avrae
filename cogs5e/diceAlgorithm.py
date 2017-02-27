@@ -237,7 +237,7 @@ class Dice:
         
         args = shlex.split(args)
         args = parse_args(args)
-        args['name'] = a_or_an(monster.get('name'))
+        args['name'] = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
         
         result = sheet_attack(attack, args)
         embed = result['embed']

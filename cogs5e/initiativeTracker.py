@@ -19,9 +19,9 @@ from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchMonster
-from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
-    fuzzy_search, get_positivity
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
+    fuzzy_search, get_positivity, a_or_an, parse_args_2
 
 
 class Combat(object):
@@ -186,10 +186,17 @@ class Combatant(object):
                 hpStr = "<Dead>"
         return hpStr
     
+    def get_hp_and_ac(self, private:bool=False):
+        out = []
+        out.append(self.get_hp(private))
+        if self.ac is not None and not self.private:
+            out.append("(AC {})".format(self.ac))
+        return ' '.join(out)
+    
     def get_status(self):
         csFormat = "{} {} {}{}"
         status = csFormat.format(self.name,
-                                 self.get_hp(),
+                                 self.get_hp_and_ac(),
                                  '\n> ' + self.notes if self.notes is not '' else '',
                                  ('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else '')
         return status
@@ -793,7 +800,7 @@ class InitTracker:
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True, aliases=['a'])
-    async def attack(self, ctx, atk_name, target_name, *, args):
+    async def attack(self, ctx, target_name, atk_name, *, args=''):
         """Rolls an attack against another combatant.
         Valid Arguments: see !a and !ma."""
         try:
@@ -827,13 +834,40 @@ class InitTracker:
                         tempargs += shlex.split(arguments)
                         break
                 tempargs.append(arg)
-            args = self.parse_args(tempargs)
+            args = parse_args_2(tempargs)
             args['name'] = combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
             result = sheet_attack(attack, args)
+            result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get('color') is None else combatant.sheet.get('settings', {}).get('color')
             target.hp -= result['total_damage']
-        await self.bot.say(embed=result['embed'])
+        elif isinstance(combatant, MonsterCombatant):
+            attacks = combatant.monster.get('attacks') # get attacks
+            attack = fuzzy_search(attacks, 'name', atk_name)
+            if attack is None:
+                return await self.bot.say("No attack with that name found.", delete_after=15)
+                    
+            args = shlex.split(args)
+            args = parse_args_2(args)
+            args['name'] = a_or_an(combatant.monster.get('name'))[0].upper() + a_or_an(combatant.monster.get('name'))[1:]
+            if target.ac is not None: args['ac'] = target.ac
+            args['t'] = target.name
+            result = sheet_attack(attack, args)
+            result['embed'].colour = random.randint(0, 0xffffff)
+            if target.ac is not None: target.hp -= result['total_damage']
+        else:
+            return await self.bot.say('Integrated attacks are only supported for combatants added via `madd` or `dcadd`.', delete_after=15)
+        embed = result['embed']
+        if target.ac is not None: 
+            embed.set_footer(text="{}: {}".format(target.name, target.get_hp()))
+            if target.private:
+                try:
+                    await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                except:
+                    pass
+        else: embed.set_footer(text="Target AC not set.")
+        await self.bot.say(embed=embed)
+        await combat.update_summary(self.bot)
         
     @init.command(pass_context=True, name='remove')
     async def remove_combatant(self, ctx, *, name : str):

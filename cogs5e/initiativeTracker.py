@@ -12,15 +12,16 @@ import re
 import shlex
 import signal
 from string import capwords
+import traceback
 
 import discord
 from discord.ext import commands
 
-from cogs5e.dice import roll
-from cogs5e.lookupFuncs import searchMonster
+from cogs5e.funcs.dice import roll
+from cogs5e.funcs.lookupFuncs import searchMonster
 from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
     fuzzy_search, get_positivity
-import traceback
+from cogs5e.funcs.sheetFuncs import sheet_attack
 
 
 class Combat(object):
@@ -125,7 +126,7 @@ class CombatantGroup(object):
         return status
         
 class Combatant(object):
-    def __init__(self, init:int=0, name:str='', author:discord.User=None, mod:int=0, notes:str='', effects=[], hp:int=None, max_hp:int=None, private:bool=False, group:str=None):
+    def __init__(self, init:int=0, name:str='', author:discord.User=None, mod:int=0, notes:str='', effects=[], hp:int=None, max_hp:int=None, private:bool=False, group:str=None, ac:int=None):
         self.init = init
         self.name = name
         self.author = author
@@ -134,6 +135,7 @@ class Combatant(object):
         self.effects = effects
         self.hp = hp
         self.max_hp = max_hp
+        self.ac = ac
         self.private = private
         self.group = group
         
@@ -157,6 +159,8 @@ class Combatant(object):
     
     def get_effects_and_notes(self):
         out = []
+        if self.ac is not None and not self.private:
+            out.append('AC {}'.format(self.ac))
         for e in self.effects:
             out.append('{} [{} rds]'.format(e.name, e.remaining if not e.remaining < 0 else '∞'))
         if not self.notes == '':
@@ -207,6 +211,7 @@ class DicecloudCombatant(Combatant):
         self.effects = effects
         self.hp = sheet.get('hp')
         self.max_hp = sheet.get('hp')
+        self.ac = sheet.get('armor')
         self.private = private
         self.group = group
         self.sheet = sheet
@@ -224,6 +229,7 @@ class MonsterCombatant(Combatant):
         self.effects = effects
         self.hp = int(monster['hp'].split(' (')[0])
         self.max_hp = int(monster['hp'].split(' (')[0])
+        self.ac = int(monster['ac'].split(' (')[0])
         self.private = private
         self.group = group
         self.monster = monster
@@ -315,6 +321,7 @@ class InitTracker:
         controller = ctx.message.author
         group = None
         hp = None
+        ac = None
         args = shlex.split(args.lower())
         
         if '-h' in args:
@@ -346,6 +353,12 @@ class InitTracker:
             except:
                 await self.bot.say("You must pass in a positive, nonzero HP with the --hp tag.")
                 return
+        if '--ac' in args:
+            try:
+                ac = int(args[args.index('--ac') + 1])
+            except:
+                await self.bot.say("You must pass in an AC with the --ac tag.")
+                return
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -365,7 +378,7 @@ class InitTracker:
             else:
                 init = modifier
                 modifier = 0
-            me = Combatant(name=name, init=init, author=controller, mod=modifier, effects=[], notes='', private=private, hp=hp, max_hp=hp, group=group)
+            me = Combatant(name=name, init=init, author=controller, mod=modifier, effects=[], notes='', private=private, hp=hp, max_hp=hp, group=group, ac=ac)
             if group is None:
                 combat.combatants.append(me)
                 await self.bot.say("{}\n{} was added to combat with initiative {}.".format(controller.mention, name, init), delete_after=10)
@@ -627,7 +640,8 @@ class InitTracker:
         """Edits the options of a combatant.
         Usage: !init opt <NAME> <ARGS>
         Valid Arguments:    -h (hides HP)
-                            --controller <CONTROLLER> (pings a different person on turn)"""
+                            --controller <CONTROLLER> (pings a different person on turn)
+                            --ac <AC> (changes combatant AC)"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -642,10 +656,12 @@ class InitTracker:
         private = combatant.private
         controller = combatant.author
         args = shlex.split(args)
+        out = ''
         
         if '-h' in args:
             private = not private
             combatant.private = private
+            out += "\u2705 Combatant {}.\n".format('hidden' if private else 'unhidden')
         if '--controller' in args:
             try:
                 controllerStr = args[args.index('--controller') + 1]
@@ -653,11 +669,18 @@ class InitTracker:
                 a = ctx.message.server.get_member(controllerEscaped)
                 b = ctx.message.server.get_member_named(controllerStr)
                 combatant.author = a if a is not None else b if b is not None else controller
+                out += "\u2705 Combatant controller set to {}.\n".format(combatant.author.mention)
             except IndexError:
-                await self.bot.say("You must pass in a controller with the --controller tag.")
-                return
+                out += "\u274c You must pass in a controller with the --controller tag.\n"
+        if '--ac' in args:
+            try:
+                ac = int(args[args.index('--ac') + 1])
+                combatant.ac = ac
+                out += "\u2705 Combatant AC set to {}.\n".format(ac)
+            except:
+                out += "\u274c You must pass in an AC with the --ac tag.\n"
         
-        await self.bot.say("Combatant options updated.", delete_after=10)
+        await self.bot.say("Combatant options updated.\n" + out, delete_after=10)
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True)
@@ -768,6 +791,49 @@ class InitTracker:
             combatant.effects.remove(to_remove)
             await self.bot.say('Effect {} removed from {}.'.format(to_remove.name, combatant.name), delete_after=10)
         await combat.update_summary(self.bot)
+        
+    @init.command(pass_context=True, aliases=['a'])
+    async def attack(self, ctx, atk_name, target_name, *, args):
+        """Rolls an attack against another combatant.
+        Valid Arguments: see !a and !ma."""
+        try:
+            combat = next(c for c in self.combats if c.channel is ctx.message.channel)
+        except StopIteration:
+            await self.bot.say("You are not in combat.")
+            return
+        target = combat.get_combatant(target_name)
+        if target is None:
+            await self.bot.say("Target not found.")
+            return
+        combatant = combat.currentCombatant
+        if combatant is None:
+            return await self.bot.say("You must begin combat with !init next first.")
+        
+        if isinstance(combatant, DicecloudCombatant):
+            attacks = combatant.sheet.get('attacks') # get attacks
+            try: #fuzzy search for atk_name
+                attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
+            except StopIteration:
+                try:
+                    attack = next(a for a in attacks if atk_name.lower() in a.get('name').lower())
+                except StopIteration:
+                    return await self.bot.say('No attack with that name found.')
+                    
+            args = shlex.split(args)
+            tempargs = []
+            for arg in args: # parse snippets
+                for snippet, arguments in self.bot.get_cog("SheetManager").snippets.get(ctx.message.author.id, {}).items():
+                    if arg == snippet: 
+                        tempargs += shlex.split(arguments)
+                        break
+                tempargs.append(arg)
+            args = self.parse_args(tempargs)
+            args['name'] = combatant.sheet.get('stats', {}).get('name', "NONAME")
+            if target.ac is not None: args['ac'] = target.ac
+            args['t'] = target.name
+            result = sheet_attack(attack, args)
+            target.hp -= result['total_damage']
+        await self.bot.say(embed=result['embed'])
         
     @init.command(pass_context=True, name='remove')
     async def remove_combatant(self, ctx, *, name : str):

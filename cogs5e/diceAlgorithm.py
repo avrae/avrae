@@ -9,10 +9,11 @@ import discord
 from discord.ext import commands
 import numexpr
 
-from cogs5e.dice import roll
-from cogs5e.lookupFuncs import searchSpell, searchMonster
+from cogs5e.funcs.dice import roll
+from cogs5e.funcs.lookupFuncs import searchSpell, searchMonster
 from utils import checks
 from utils.functions import fuzzy_search, parse_args, a_or_an
+from cogs5e.funcs.sheetFuncs import sheet_attack
 
 
 class Dice:
@@ -234,195 +235,13 @@ class Dice:
         if attack is None:
             return await self.bot.say("No attack with that name found.", delete_after=15)
         
-        embed = discord.Embed()
-        embed.colour = random.randint(0, 0xffffff)
-        
         args = shlex.split(args)
-        total_damage = 0
         args = parse_args(args)
+        args['name'] = a_or_an(monster.get('name'))
         
-        dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)]
-        dnum = {}
-        for k in dnum_keys:
-            dnum[args[k]] = int(k.split('d')[-1])
-            
-        if args.get('phrase') is not None:
-            embed.description = '*' + args.get('phrase') + '*'
-        else:
-            embed.description = '~~' + ' '*500 + '~~'
-            
-        if args.get('t') is not None:
-            embed.title = '{} attacks with {} at {}!'.format(a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:], a_or_an(attack.get('name')), args.get('t'))
-        else:
-            embed.title = '{} attacks with {}!'.format(a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:], a_or_an(attack.get('name')))
-        
-        for arg in ('rr', 'ac'):
-            try:
-                args[arg] = int(args.get(arg, 1))
-            except (ValueError, TypeError):
-                args[arg] = None
-        args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
-        args['crit'] = 1 if args.get('crit', False) else None
-        for r in range(args.get('rr', 1) or 1):
-            out = ''
-            itercrit = 0
-            if attack.get('attackBonus') is not None:
-                if args.get('b') is not None:
-                    toHit = roll('1d20+' + attack.get('attackBonus') + '+' + args.get('b'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
-                else:
-                    toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
-    
-                out += toHit.result + '\n'
-                itercrit = toHit.crit if not args.get('crit') else args.get('crit', 0)
-                if args.get('ac') is not None:
-                    if toHit.total < args.get('ac') and itercrit == 0:
-                        itercrit = 2 # miss!
-                
-            if attack.get('damage') is not None:
-                if args.get('d') is not None:
-                    damage = attack.get('damage') + '+' + args.get('d')
-                else:
-                    damage = attack.get('damage')
-                
-                for dice, numHits in dnum.items():
-                    if not itercrit == 2 and numHits > 0:
-                        damage += '+' + dice
-                        dnum[dice] -= 1
-                
-                if itercrit == 1:
-                    dmgroll = roll(damage, rollFor='Damage (CRIT!)', inline=True, double=True, show_blurbs=False)
-                    out += dmgroll.result + '\n'
-                    total_damage += dmgroll.total
-                elif itercrit == 2:
-                    out += '**Miss!**\n'
-                else:
-                    dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
-                    out += dmgroll.result + '\n'
-                    total_damage += dmgroll.total
-            
-            if out is not '':
-                if args.get('rr', 1) > 1:
-                    embed.add_field(name='Attack {}'.format(r+1), value=out, inline=False)
-                else:
-                    embed.add_field(name='Attack', value=out, inline=False)
-            
-        if args.get('rr', 1) > 1 and attack.get('damage') is not None:
-            embed.add_field(name='Total Damage', value=str(total_damage))
-        
-        if attack.get('desc') is not None:
-            embed.add_field(name='Details', value=(attack.get('desc', '')))
+        result = sheet_attack(attack, args)
+        embed = result['embed']
+        embed.colour = random.randint(0, 0xffffff)
         
         await self.bot.say(embed=embed)
             
-#     def roll(self, dice, author=None, rolling_for='', inline=False):  # unused old command
-#         resultTotal = 0 
-#         resultString = ''
-#         crit = 0
-#         args = dice.split(' ')[2:]
-#         dice = dice.split(' ')[1]
-#         try:  # check for +/-
-#             toAdd = int(dice.split('+')[1])
-#         except Exception:
-#             toAdd = 0
-#         try:
-#             toAdd = int(dice.split('-')[1]) * -1
-#         except:
-#             pass
-#         dice = dice.split('+')[0].split('-')[0]
-#     
-#         try:  # grab dice
-#             numDice = dice.split('d')[0]
-#             diceVal = dice.split('d')[1]
-#         except Exception:
-#             return "Format has to be in .r xdy+z. I don't have a high enough INT to read otherwise."
-#     
-#         if numDice == '':  # clean up dice in case of "d20"
-#             numDice = '1'
-#             dice = '1' + dice
-#     
-#         if int(numDice) > 500:  # make sure we aren't rolling too much
-#             return "I'm a dragon, not a robot! Roll less dice."
-#     
-#         rolls, limit = map(int, dice.split('d'))
-#     
-#         for r in range(rolls):
-#             number = random.randint(1, limit)
-#             if re.search('(^|\s+)(adv|dis)(\s+|$)', args):
-#                 number2 = random.randint(1, limit)
-#                 if re.search('(^|\s+)adv(\s+|$)', args):
-#                     number = number if number > number2 else number2
-#                 else:
-#                     number = number if number < number2 else number2
-#             resultTotal = resultTotal + number
-#             
-#             if number == limit or number == 1:
-#                 numStr = '**' + str(number) + '**'
-#             else:
-#                 numStr = str(number)
-#         
-#             if resultString == '':
-#                 resultString += numStr
-#             else:
-#                 resultString += ', ' + numStr
-#     
-#         if numDice == '1' and diceVal == '20' and resultTotal == 20:
-#             crit = 1
-#         elif numDice == '1' and diceVal == '20' and resultTotal == 1:
-#             crit = 2
-#         
-#         rolling_for = rolling_for if rolling_for is not None else "Result"
-#         rolling_for = re.sub('(adv|dis)(\s+|$)', '', rolling_for)
-#         if not inline:
-#             if toAdd:
-#                 resultTotal = resultTotal + toAdd
-#                 resultString = resultString + ' ({:+})'.format(toAdd)
-#                 
-#             if resultTotal < 1:
-#                 resultString += "\nYou... actually rolled less than a 1. Good job."
-#             
-#             if rolling_for is '':
-#                 rolling_for = None
-#                 
-#             if toAdd == 0 and numDice == '1':
-#                 resultString = author.mention + "  :game_die:\n**{}:** ".format(rolling_for if rolling_for is not None else 'Result') + resultString
-#             else:
-#                 resultString = author.mention + "  :game_die:\n**{}:** ".format(rolling_for if rolling_for is not None else 'Result') + resultString + "\n**Total:** " + str(resultTotal)
-#                 
-#             if 'adv' in args:
-#                 resultString += "\n**Rolled with Advantage**"
-#             elif 'dis' in args:
-#                 resultString += "\n**Rolled with Disadvantage**"
-#         
-#             if crit == 1:
-#                 critStr = "\n_**Critical Hit!**_  " + tables.getCritMessage()
-#                 resultString += critStr
-#             elif crit == 2:
-#                 critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
-#                 resultString += critStr
-#         else:
-#             if toAdd:
-#                 resultTotal = resultTotal + toAdd
-#                 resultString = resultString + '{:+}'.format(toAdd)
-#             
-#             if rolling_for is '':
-#                 rolling_for = None
-#                 
-#             if toAdd == 0 and numDice == '1':
-#                 resultString = author.mention + "  :game_die:\n**{}:** `".format(rolling_for if rolling_for is not None else 'Result') + resultString + "`"
-#             else:
-#                 resultString = author.mention + "  :game_die:\n**{}:** `".format(rolling_for if rolling_for is not None else 'Result') + resultString + "` = `" + str(resultTotal) + '`'
-#                 
-#             if re.search('(^|\s+)adv(\s+|$)', args):
-#                 resultString += "\n**Rolled with Advantage**"
-#             elif re.search('(^|\s+)dis(\s+|$)', args):
-#                 resultString += "\n**Rolled with Disadvantage**"
-#         
-#             if crit == 1:
-#                 critStr = "\n_**Critical Hit!**_  " + tables.getCritMessage()
-#                 resultString += critStr
-#             elif crit == 2:
-#                 critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
-#                 resultString += critStr
-#             
-#         return resultString        
-    

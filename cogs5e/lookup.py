@@ -13,8 +13,8 @@ import shlex
 import discord
 from discord.ext import commands
 
-from cogs5e.dice import roll
-from cogs5e.lookupFuncs import searchCondition, searchMonster, searchSpell
+from cogs5e.funcs.dice import roll
+from cogs5e.funcs.lookupFuncs import searchCondition, searchMonster, searchSpell
 from utils import checks
 from utils.functions import discord_trim, print_table, list_get, get_positivity
 

@@ -1,11 +1,14 @@
-import random
 import asyncio
+import json
+from math import *
+import random
+from string import capwords
+
 import discord
 from discord.ext import commands
-import json
-from string import capwords
-from math import *
-from cogs5e.dice import roll
+
+from cogs5e.funcs.dice import roll
+
 
 class CharGenerator:
     """Random character generator."""

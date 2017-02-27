@@ -101,7 +101,7 @@ helpCog = Help(bot)
 sheetCog = SheetManager(bot)
 customizationCog = Customization(bot)
 cogs = [diceCog,
-        charGenCog,
+        #charGenCog,
         initiativeTrackerCog,
         adminUtilsCog,
         lookupCog,
@@ -203,11 +203,9 @@ background_tasks.append(bot.loop.create_task(save_stats()))
 
 # SIGNAL HANDLING
 def sigterm_handler(_signum, _frame):
-    for cog in cogs:
-        try:
-            cog.__unload()
-        except:
-            pass
+    try:
+        bot.get_cog("InitTracker").__unload()
+    except: pass
     for task in background_tasks:
         try:
             task.cancel()

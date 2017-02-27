@@ -270,6 +270,8 @@ class SheetManager:
         stats = character.get('stats')
         image = stats.get('image', '')
         desc = stats.get('description', 'No description available.')
+        if desc is None:
+            desc = 'No description available.'
         if len(desc) > 2048:
             desc = desc[:2044] + '...'
         elif len(desc) < 2:

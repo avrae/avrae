@@ -51,6 +51,12 @@ class DataIO:
             out[k.decode()] = encoded_dict[k].decode()
         return out
     
+    def jset(self, key, data, **kwargs):
+        return self.not_json_set(key, data, **kwargs)
+    
+    def jget(self, key, default=None):
+        return self.not_json_get(key, default)
+    
     def not_json_set(self, key, data, **kwargs):
         data = json.dumps(data, **kwargs)
         return self.set(key, data)

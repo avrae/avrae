@@ -294,7 +294,8 @@ class SheetManager:
         """Switches the active character.
         Breaks for characters created before Jan. 20, 2017.
         Valid arguments:
-        `delete` - deletes a character."""
+        `delete` - deletes a character.
+        `list` - lists all of your characters."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if user_characters is None:

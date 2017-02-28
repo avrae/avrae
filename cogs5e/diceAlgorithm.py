@@ -69,9 +69,11 @@ class Dice:
                !r xdy-z dis Hide with Heavy Armor!
                !r xdy+xdy*z
                !r XdYkhZ
+               !r 4d6mi2[fire] Elemental Adept, Fire
         Supported Operators: k (keep)
                              ro (reroll once)
                              rr (reroll infinitely)
+                             mi/ma (min/max result)
                              >/< (test if result is greater than/less than)
         Supported Selectors: lX (lowest X)
                              hX (highest X)"""

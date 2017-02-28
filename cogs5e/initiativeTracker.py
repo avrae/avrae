@@ -256,7 +256,7 @@ class Effect(object):
 
 class InitTracker:
     '''
-    Initiative tracking commands.
+    Initiative tracking commands. Use !help init for more details.
     To use, first start combat in a channel by saying "!init begin".
     Then, each combatant should add themselves to the combat with "!init add <MOD> <NAME>".
     To hide a combatant's HP, add them with "!init add <MOD> <NAME> -h".
@@ -642,7 +642,7 @@ class InitTracker:
         await self.bot.say("Added note.", delete_after=10)
         await combat.update_summary(self.bot)
         
-    @init.command(pass_context=True)
+    @init.command(pass_context=True, aliases=['opts'])
     async def opt(self, ctx, combatant : str, *, args : str):
         """Edits the options of a combatant.
         Usage: !init opt <NAME> <ARGS>
@@ -854,7 +854,7 @@ class InitTracker:
                     
             args = shlex.split(args)
             args = parse_args_2(args)
-            args['name'] = a_or_an(combatant.monster.get('name'))[0].upper() + a_or_an(combatant.monster.get('name'))[1:]
+            args['name'] = a_or_an(combatant.monster.get('name')).title()
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
             result = sheet_attack(attack, args)
@@ -897,7 +897,7 @@ class InitTracker:
         else:
             group = combat.get_combatant_group(combatant.group)
             group.combatants.remove(combatant)
-        await self.bot.say("{} removed from combat.".format(name), delete_after=10)
+        await self.bot.say("{} removed from combat.".format(combatant.name), delete_after=10)
         await combat.update_summary(self.bot)
         combat.sortCombatants()
         combat.checkGroups()
@@ -942,7 +942,6 @@ class InitTracker:
             await self.bot.say("Combat ended.")
             
     def __unload(self):
-        make_sure_path_exists('./saves/init/')
         for combat in self.combats:
             combat.combatantGenerator = None
             path = '{}.avrae'.format(combat.channel.id)

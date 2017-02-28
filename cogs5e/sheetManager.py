@@ -396,7 +396,7 @@ class SheetManager:
     
     @commands.command(pass_context=True)
     async def dicecloud(self, ctx, url:str):
-        """Loads a character sheet from Dicecloud, resetting all settings."""
+        """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings."""
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
         
@@ -426,7 +426,7 @@ class SheetManager:
         
     @commands.command(pass_context=True)
     async def pdfsheet(self, ctx):
-        """Loads a character sheet from a Wizards PDF, resetting all settings."""
+        """Loads a character sheet from [this](https://www.reddit.com/r/dndnext/comments/2iyydv/5th_edition_editable_pdf_character_sheets/) PDF, resetting all settings."""
         
         if not 0 < len(ctx.message.attachments) < 2:
             return await self.bot.say('You must call this command in the same message you upload the sheet.')

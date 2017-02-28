@@ -15,6 +15,9 @@ import numexpr
 from cogs5e import tables
 from utils.functions import list_get
 
+VALID_OPERATORS = 'k|rr|ro|mi|ma'
+VALID_OPERATORS_2 = '|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')])
+VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
 
 # Rolls Dice
 def d_roller(obj, adv=0, double=False):
@@ -45,7 +48,7 @@ def d_roller(obj, adv=0, double=False):
         numDice = obj[0]
         diceVal = obj[1]
         args = re.split('(\d+d\d+)', args)[-1]
-        splargs = re.split('(k)|(rr)|(ro)', args)
+        splargs = re.split(VALID_OPERATORS_2, args)
         splargs = [a for a in splargs if a is not None]
         
     if double:
@@ -90,7 +93,7 @@ def d_roller(obj, adv=0, double=False):
         rerollList = []
         reroll_once = []
         keep = None
-        valid_operators = ['rr', 'k', 'ro']
+        valid_operators = VALID_OPERATORS_ARRAY
         for a in range(len(splargs)):
             if splargs[a] == 'rr':
                 rerollList += parse_selectors([list_get(a + 1, 0, splargs)], res)
@@ -108,6 +111,22 @@ def d_roller(obj, adv=0, double=False):
             elif splargs[a] in valid_operators:
                 reroll(reroll_once, 1)
                 reroll_once = []
+            if splargs[a] == 'mi':
+                min = list_get(a + 1, 0, splargs)
+                for i, r in enumerate(res):
+                    if r < int(min): 
+                        try:
+                            rawRes[rawRes.index(str(r))] = "{} -> _{}_".format(r, min)
+                        except: pass
+                        res[i] = int(min)
+            if splargs[a] == 'ma':
+                max = list_get(a + 1, 0, splargs)
+                for i, r in enumerate(res):
+                    if r > int(max): 
+                        try:
+                            rawRes[rawRes.index(str(r))] = "{} -> _{}_".format(r, max)
+                        except: pass
+                        res[i] = int(max)
         reroll(reroll_once, 1)
         reroll(rerollList)
         res = keep if keep is not None else res
@@ -124,10 +143,13 @@ def d_roller(obj, adv=0, double=False):
     
     res = list(map(str, res))
     for r in range(len(rawRes)):
-        if rawRes[len(rawRes) - (r + 1)] in res:
-            res.remove(rawRes[len(rawRes) - (r + 1)])
+        toCompare = rawRes[len(rawRes) - (r + 1)]
+        index = len(rawRes) - (r + 1)
+        if '->' in toCompare: toCompare = toCompare.split('_')[-2]
+        if toCompare in res:
+            res.remove(toCompare)
         else:
-            rawRes[len(rawRes) - (r + 1)] = '~~' + rawRes[len(rawRes) - (r + 1)] + '~~'
+            rawRes[index] = '~~' + rawRes[index] + '~~'
     
     # Returns string of answer
     
@@ -191,7 +213,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
                 eval_set[i] = ''
                 continue
             
-            if re.search('^\s*((\d*(d|k|rr|ro|padellis)?(h\d|l\d|\d)+)+|([-+*/^().<>= ]))?(\[.*\])?\s*$', t, flags=IGNORECASE):
+            if re.search('^\s*((\d*(d|' + VALID_OPERATORS + '|padellis)?(h\d|l\d|\d)+)+|([-+*/^().<>= ]))?(\[.*\])?\s*$', t, flags=IGNORECASE):
                 if 'd' in t:
                     try:
                         result = d_roller(t, adv, double=double)

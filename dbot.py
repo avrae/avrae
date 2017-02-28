@@ -101,7 +101,7 @@ helpCog = Help(bot)
 sheetCog = SheetManager(bot)
 customizationCog = Customization(bot)
 cogs = [diceCog,
-        #charGenCog,
+        charGenCog,
         initiativeTrackerCog,
         adminUtilsCog,
         lookupCog,

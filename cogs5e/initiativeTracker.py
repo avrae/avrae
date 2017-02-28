@@ -711,7 +711,7 @@ class InitTracker:
             await self.bot.say("```markdown\n" + combatant.get_status() + "```", delete_after=30)
         
     @init.command(pass_context=True)
-    async def hp(self, ctx, combatant : str, operator : str, hp : int):
+    async def hp(self, ctx, combatant : str, operator : str, *, hp : str):
         """Modifies the HP of a combatant.
         Usage: !init hp <NAME> <mod/set/max> <HP>"""
         try:
@@ -725,25 +725,30 @@ class InitTracker:
             await self.bot.say("Combatant not found.")
             return
         
+        hp_roll = roll(hp, inline=True, show_blurbs=False)
+        
         if 'mod' in operator.lower():
             if combatant.hp is None:
                 combatant.hp = 0
-            combatant.hp += hp
+            combatant.hp += hp_roll.total
         elif 'set' in operator.lower():
-            combatant.hp = hp
+            combatant.hp = hp_roll.total
         elif 'max' in operator.lower():
             if hp < 1:
                 await self.bot.say("You can't have a negative max HP!")
             elif combatant.hp is None:
-                combatant.hp = hp
-                combatant.max_hp = hp
+                combatant.hp = hp_roll.total
+                combatant.max_hp = hp_roll.total
             else:
-                combatant.max_hp = hp
+                combatant.max_hp = hp_roll.total
         else:
             await self.bot.say("Incorrect operator. Use mod, set, or max.")
             return
         
-        await self.bot.say("{}: {}".format(combatant.name, combatant.get_hp()), delete_after=10)
+        out = "{}: {}".format(combatant.name, combatant.get_hp())
+        if 'd' in hp: out += '\n' + hp_roll.skeleton
+        
+        await self.bot.say(out, delete_after=10)
         if combatant.private:
             try:
                 await self.bot.send_message(combatant.author, "{}'s HP: {}/{}".format(combatant.name, combatant.hp, combatant.max_hp))

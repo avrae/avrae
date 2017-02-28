@@ -15,7 +15,7 @@ from discord.ext import commands
 
 from utils import checks
 
-_blacklisted_serv_ids = ['252388688766435328']
+_blacklisted_serv_ids = ['252388688766435328', '285532897874673666']
 
 class AdminUtils:
     '''
@@ -27,7 +27,15 @@ class AdminUtils:
         self.bot = bot
         self.muted = []
         self.assume_dir_control_chan = None
+        _blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
     
+    
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def blacklist(self, _id):
+        _blacklisted_serv_ids.append(_id)
+        self.bot.db.not_json_set('blacklist', _blacklisted_serv_ids)
+        await self.bot.say(':ok_hand:')
     
     @commands.command(hidden=True)
     @checks.is_owner()

@@ -187,10 +187,11 @@ class DicecloudParser(SheetParser):
         for level in character.get('classes', []):
             if level.get('removed', False): continue
             levels['level'] += level.get('level')
-            if levels.get(level.get('name') + 'Level') is None:
-                levels[level.get('name') + 'Level'] = level.get('level')
+            levelName = level.get('name') + 'Level'
+            if levels.get(levelName) is None:
+                levels[levelName] = level.get('level')
             else:
-                levels[level.get('name') + 'Level'] += level.get('level')
+                levels[levelName] += level.get('level')
         return levels
             
     def calculate_stat(self, stat, base=0, replacements:dict={}):
@@ -199,6 +200,7 @@ class DicecloudParser(SheetParser):
         character = self.character
         replacements.update(self.get_stats())
         replacements.update(self.get_levels())
+        replacements = dict((k.lower(), v) for k,v in replacements.items())
         effects = character.get('effects', [])
         add = 0
         mult = 1
@@ -210,7 +212,7 @@ class DicecloudParser(SheetParser):
                 if effect.get('value') is not None:
                     value = effect.get('value')
                 else:
-                    calculation = effect.get('calculation', '').replace('{', '').replace('}', '')
+                    calculation = effect.get('calculation', '').replace('{', '').replace('}', '').lower()
                     if calculation == '': continue
                     try:
                         value = numexpr.evaluate(calculation, local_dict=replacements)

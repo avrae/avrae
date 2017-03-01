@@ -11,6 +11,7 @@ import time
 import traceback
 
 import discord
+from discord.errors import Forbidden
 from discord.ext import commands
 import psutil
 
@@ -152,6 +153,11 @@ async def on_command_error(error, ctx):
         return
     elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):
         await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nUse `!help " + ctx.command.qualified_name + "` for help.")
+    elif isinstance(error, Forbidden):
+        try:
+            await bot.send_message(ctx.message.author, "Error: I am missing permissions to run this command.")
+        except:
+            pass
     elif bot.mask & coreCog.debug_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
         try:

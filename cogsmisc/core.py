@@ -29,19 +29,6 @@ class Core:
         self.start_time = time.monotonic()
         
     @commands.command(pass_context=True, hidden=True)
-    @checks.admin_or_permissions(manage_messages=True)
-    async def purge(self, ctx, num):
-        """Purges messages from the channel.
-        Usage: !purge <Number of messages to purge>
-        Requires: Bot Admin or Manage Messages"""
-        if self.bot.mask & self.monitor_mask:
-            await self.bot.send_message(self.bot.owner, "Purging {} messages from {}.".format(str(int(num) + 1), ctx.message.server))
-        try:
-            await self.bot.purge_from(ctx.message.channel, limit=(int(num) + 1))
-        except Exception as e:
-            await self.bot.say('Failed to purge: ' + str(e))
-        
-    @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
     async def bitmask(self, ctx, *args):
         """Edits/shows the bitmask.

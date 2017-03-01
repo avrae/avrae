@@ -11,8 +11,8 @@ import time
 import traceback
 
 import discord
-from discord.errors import Forbidden
 from discord.ext import commands
+from discord.ext.commands.errors import CommandInvokeError
 import psutil
 
 from cogs5e.charGen import CharGenerator
@@ -32,6 +32,7 @@ from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim, get_positivity
 from utils.help import Help
 from web.web import Web
+from discord.errors import Forbidden
 
 
 TESTING = get_positivity(os.environ.get("TESTING", False))
@@ -84,7 +85,7 @@ bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+handler.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
 #-----COGS-----
@@ -145,20 +146,20 @@ async def enter():
 async def on_command_error(error, ctx):
     if isinstance(error, commands.CommandNotFound):
         return
-    print("Error caused by message: `{}`".format(ctx.message.content))
-    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if isinstance(error, commands.CheckFailure):
         await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command or the command is disabled.")
         return
     elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):
-        await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nUse `!help " + ctx.command.qualified_name + "` for help.")
-    elif isinstance(error, Forbidden):
-        try:
-            await bot.send_message(ctx.message.author, "Error: I am missing permissions to run this command.")
-        except:
-            pass
-    elif bot.mask & coreCog.debug_mask:
+        return await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nUse `!help " + ctx.command.qualified_name + "` for help.")
+    elif isinstance(error, CommandInvokeError):
+        original = error.original
+        if isinstance(original, Forbidden):
+            try:
+                return await bot.send_message(ctx.message.author, "Error: I am missing permissions to run this command. Please make sure I have permission to send messages to <#{}>.".format(ctx.message.channel.id))
+            except:
+                pass        
+    if bot.mask & coreCog.debug_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
         try:
             await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, repr(error), ctx.message.content))
@@ -168,6 +169,8 @@ async def on_command_error(error, ctx):
             await bot.send_message(bot.owner, o)
     else:
         await bot.send_message(ctx.message.channel, "Error: " + str(error))
+    print("Error caused by message: `{}`".format(ctx.message.content))
+    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
                 
 @bot.event
 async def on_message(message):

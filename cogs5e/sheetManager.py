@@ -377,7 +377,7 @@ class SheetManager:
                     except (ValueError, TypeError):
                         out += '\u274c Invalid number. Use "!csettings criton reset" to reset it to 20.\n'
                     else:
-                        if not 0 < criton < 20:
+                        if not 0 < criton <= 20:
                             out += '\u274c Crit range must be between 1 and 20.\n'
                         elif criton == 20:
                             character['settings']['criton'] = None

@@ -29,7 +29,7 @@ class Combat(object):
         self.channel = channel
         self.combatants = combatants
         self.sorted_combatants = None
-        self.combatantGenerator = None
+        self.index = None
         self.current = init
         self.round = init_round
         self.summary_message = summary_message
@@ -85,12 +85,15 @@ class Combat(object):
     
     def sortCombatants(self):
         self.sorted_combatants = sorted(self.combatants, key=lambda k: (k.init, k.mod), reverse=True)
+        if self.currentCombatant is not None:
+            self.index = self.sorted_combatants.index(self.currentCombatant)
     
     def getNextCombatant(self):
+        if self.index is None: self.index = -1
         if self.sorted_combatants is None:
             self.sortCombatants()
-        for c in self.sorted_combatants:
-            yield c
+        self.index += 1
+        return self.sorted_combatants[self.index]
     
     async def update_summary(self, bot):
         try:
@@ -564,18 +567,15 @@ class InitTracker:
             await self.bot.say("It is not your turn.")
             return
         
-        if combat.combatantGenerator is None:
-            combat.combatantGenerator = combat.getNextCombatant()
         try:
-            nextCombatant = next(combat.combatantGenerator)
+            nextCombatant = combat.getNextCombatant()
             combat.current = nextCombatant.init
             combat.currentCombatant = nextCombatant
-        except StopIteration:
-            combat.combatantGenerator.close()
-            combat.combatantGenerator = combat.getNextCombatant()
+        except IndexError:
             combat.current = combat.sorted_combatants[0].init
             combat.round += 1
-            nextCombatant = next(combat.combatantGenerator)
+            combat.index = None
+            nextCombatant = combat.getNextCombatant()
             combat.currentCombatant = nextCombatant
         if isinstance(nextCombatant, CombatantGroup):
             thisTurn = [c for c in nextCombatant.combatants]
@@ -888,6 +888,8 @@ class InitTracker:
         if combatant is None:
             await self.bot.say("Combatant not found.")
             return
+        if combatant == combat.currentCombatant:
+            return await self.bot.say("You cannot remove a combatant on their own turn.")
         
         for e in combatant.effects:
             combatant.effects.remove(e)

@@ -85,6 +85,7 @@ class SheetManager:
             tempargs.append(arg)
         args = self.parse_args(tempargs)
         args['name'] = character.get('stats', {}).get('name', "NONAME")
+        args['criton'] = character.get('settings', {}).get('criton', 20) or 20
         
         result = sheet_attack(attack, args)
         embed = result['embed']
@@ -328,7 +329,8 @@ class SheetManager:
     async def csettings(self, ctx, *, args):
         """Updates personalization settings for the currently active character.
         Valid Arguments:
-        `color <hex color>` - Colors all embeds this color."""
+        `color <hex color>` - Colors all embeds this color.
+        `criton <number>` - Makes attacks crit on something other than a 20."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
@@ -361,8 +363,29 @@ class SheetManager:
                         else:
                             character['settings']['color'] = color
                             out += "\u2705 Color set to {}.\n".format(hex(color))
+            if arg == 'criton':
+                criton = list_get(index + 1, None, args)
+                if criton is None:
+                    out += '\u2139 Your character\'s current crit range is {}. Use "!csettings criton reset" to reset it to 20.\n' \
+                    .format(str(character['settings'].get('criton')) + '-20' if character['settings'].get('criton') is not None else "20")
+                elif criton.lower() == 'reset':
+                    character['settings']['criton'] = None
+                    out += "\u2705 Crit range reset to 20.\n"
+                else:
+                    try:
+                        criton = int(criton)
+                    except (ValueError, TypeError):
+                        out += '\u274c Invalid number. Use "!csettings criton reset" to reset it to 20.\n'
+                    else:
+                        if not 0 < criton < 20:
+                            out += '\u274c Crit range must be between 1 and 20.\n'
+                        elif criton == 20:
+                            character['settings']['criton'] = None
+                            out += "\u2705 Crit range reset to 20.\n"
+                        else:
+                            character['settings']['criton'] = criton
+                            out += "\u2705 Crit range set to {}-20.\n".format(criton)
             index += 1
-                    
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         await self.bot.say(out)

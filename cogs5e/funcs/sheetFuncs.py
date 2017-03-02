@@ -6,6 +6,7 @@ Created on Feb 27, 2017
 import re
 
 import discord
+import numexpr
 
 from cogs5e.funcs.dice import roll
 from utils.functions import a_or_an
@@ -49,7 +50,13 @@ def sheet_attack(attack, args):
                 toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
 
             out += toHit.result + '\n'
-            itercrit = toHit.crit if not args.get('crit') else args.get('crit', 0)
+            raw = toHit.total - (numexpr.evaluate(attack.get('attackBonus')) + int(args.get('b') or 0))
+            if args.get('crit'):
+                itercrit = args.get('crit', 0)
+            elif raw >= (args.get('criton', 20) or 20):
+                itercrit = 1
+            else:
+                itercrit = toHit.crit
             if args.get('ac') is not None:
                 if toHit.total < args.get('ac') and itercrit == 0:
                     itercrit = 2 # miss!

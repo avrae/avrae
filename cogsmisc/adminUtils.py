@@ -76,7 +76,7 @@ class AdminUtils:
             server = None
         if server is None:
             for s in sorted(self.bot.servers, key=lambda k: len(k.members), reverse=True):
-                out += "\n{} ({}, {} members)".format(s, s.id, len(s.members))
+                out += "\n{} ({}, {} members, {} bot)".format(s, s.id, len(s.members), sum(1 for m in s.members if m.bot))
         else:
             s = self.bot.get_server(server)
             try:

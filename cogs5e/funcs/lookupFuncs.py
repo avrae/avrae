@@ -343,6 +343,7 @@ def searchItem(itemname, return_item=False):
         if (_type == "GUN"): return "Firearm"
         if (_type == "SIMW"): return "Simple Weapon"
         if (_type == "MARW"): return "Martial Weapon"
+        if (_type == "$"): return "Valuable Object"
         return "n/a"
     
     def parsedamagetype (damagetype): 

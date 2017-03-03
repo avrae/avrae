@@ -30,7 +30,10 @@ def check_permissions(ctx, perms):
 
     ch = ctx.message.channel
     author = ctx.message.author
-    resolved = ch.permissions_for(author)
+    try:
+        resolved = ch.permissions_for(author)
+    except AttributeError:
+        resolved = None
     return all(getattr(resolved, name, None) == value for name, value in perms.items())
 
 def role_or_permissions(ctx, check, **perms):

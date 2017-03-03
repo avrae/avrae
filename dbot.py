@@ -148,7 +148,7 @@ async def on_command_error(error, ctx):
         return
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if isinstance(error, commands.CheckFailure):
-        await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command or the command is disabled.")
+        await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command, the command is disabled, or something went wrong internally.")
         return
     elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):
         return await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nUse `!help " + ctx.command.qualified_name + "` for help.")

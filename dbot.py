@@ -130,11 +130,11 @@ async def enter():
     appInfo = await bot.application_info()
     bot.owner = appInfo.owner
     bot.botStats = bot.db.get_whole_dict('botStats')
-    statKeys = ["dice_rolled_session", "spells_looked_up_session", "monsters_looked_up_session", "commands_used_session", "dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life"]
+    statKeys = ["dice_rolled_session", "spells_looked_up_session", "monsters_looked_up_session", "commands_used_session", "dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life", "items_looked_up_life", "items_looked_up_session"]
     for k in statKeys:
         if k not in bot.botStats.keys():
             bot.botStats[k] = 0
-    bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
+    bot.botStats["items_looked_up_session"] = bot.botStats["items_looked_up_life"] = bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
     for stat in bot.botStats.keys():
         bot.botStats[stat] = int(bot.botStats[stat])
     bot.db.set_dict('botStats', bot.botStats)

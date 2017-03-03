@@ -71,7 +71,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
         monster['size'] = parsesize(monster['size'])
         monster['type'] = ','.join(monster['type'].split(',')[:-1])
         for stat in ['str', 'dex', 'con', 'wis', 'int', 'cha']:
-            monster[stat + 'Str'] = monster[stat] + " ({:+})".format(floor((int(monster[stat])-10)/2))
+            monster[stat + 'Str'] = monster[stat] + " ({:+})".format(floor((int(monster[stat]) - 10) / 2))
         if monster.get('skill') is not None:
             monster['skill'] = monster['skill'][0]
         if monster.get('senses') is None:
@@ -100,7 +100,7 @@ def searchMonster(monstername, visible=True, return_monster=False):
             monsterDesc.append("**Languages:** --\n".format(**monster))
         monsterDesc.append("**CR:** {cr}\n".format(**monster))
         
-        attacks = [] # setup things
+        attacks = []  # setup things
         if "trait" in monster:
             monsterDesc.append("\n**__Special Abilities:__**\n")
             for a in monster["trait"]:
@@ -253,10 +253,10 @@ def searchSpell(spellname, serv_id='', return_spell=False):
     
     def parsespelllevel(level):
         if (level == "0"): return "cantrip"
-        if (level == "2"): return level+"nd level"
-        if (level == "3"): return level+"rd level"
-        if (level == "1"): return level+"st level"
-        return level+"th level"
+        if (level == "2"): return level + "nd level"
+        if (level == "3"): return level + "rd level"
+        if (level == "1"): return level + "st level"
+        return level + "th level"
     
     spell['level'] = parsespelllevel(spell['level'])
     spell['school'] = parseschool(spell['school'])
@@ -267,9 +267,9 @@ def searchSpell(spellname, serv_id='', return_spell=False):
     if isinstance(spell['text'], list):
         for a in spell["text"]:
             if a is '': continue
-            spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion",""))
+            spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion", ""))
     else:
-        spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion",""))
+        spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion", ""))
   
     tempStr = '\n'.join(spellDesc)
     
@@ -277,3 +277,135 @@ def searchSpell(spellname, serv_id='', return_spell=False):
         return {'spell': spell, 'string': discord_trim(tempStr)}
     else:
         return discord_trim(tempStr)
+    
+def searchItem(itemname, return_item=False):
+    with open('./res/items.json', 'r') as f:
+        items = json.load(f)
+    itemDesc = []
+    try:
+        item = next(i for i in items if itemname.upper() == i["name"].upper())
+    except Exception:
+        try:
+            item = next(i for i in items if itemname.upper() in i["name"].upper())
+        except Exception:
+            itemDesc.append("Item does not exist or is misspelled.")
+            if return_item: return {'spell': None, 'string': itemDesc}
+            return itemDesc
+    
+    def parsesource(src):
+        source = src
+        if (source == " monster manual"): source = "MM";
+        if (source == " Player's Handbook"): source = "PHB";
+        if (source == " Dungeon Master's Guide"): source = "DMG";
+        if (source == " Volo's Guide"): source = "VGM";
+        if (source == " Volo's Guide to Monsters"): source = "VGM";
+        if (source == " Princes of the Apocalypse"): source = "PotA";
+        if (source == " Elemental Evil PDF supplement"): source = "EEPC";
+        if (source == " elemental evil"): source = "PotA";
+        if (source == " Storm King's Thunder"): source = "SKT";
+        if (source == " storm kings thunder"): source = "SKT";
+        if (source == " The Rise of Tiamat"): source = "RoT";
+        if (source == " Rise of Tiamat Online Supplement"): source = "RoT";
+        if (source == " Hoard of the Dragon Queen"): source = "HotDQ";
+        if (source == " tyranny of dragons"): source = "ToD";
+        if (source == " Out of the Abyss"): source = "OotA";
+        if (source == " out of the abyss"): source = "OotA";
+        if (source == " Curse of Strahd"): source = "CoS";
+        if (source == " curse of strahd"): source = "CoS";
+        if (source == " Sword Coast Adventurer's Guide"): source = "SCAG";
+        if (source == " Lost Mines of Phandelver"): source = "LMoP";
+        if (source == " lost mine of phandelver"): source = "LMoP";
+        if (source == " Modern Magic Unearthed Arcana"): source = "UA";
+        return source;
+    
+    def parsetype (_type):
+        if (_type == "G"): return "Adventuring Gear"
+        if (_type == "SCF"): return "Spellcasting Focus"
+        if (_type == "AT"): return "Artisan Tool"
+        if (_type == "T"): return "Tool"
+        if (_type == "GS"): return "Gaming Set"
+        if (_type == "INS"): return "Instrument"
+        if (_type == "A"): return "Ammunition"
+        if (_type == "M"): return "Melee Weapon"
+        if (_type == "R"): return "Ranged Weapon"
+        if (_type == "LA"): return "Light Armor"
+        if (_type == "MA"): return "Medium Armor"
+        if (_type == "HA"): return "Heavy Armor"
+        if (_type == "S"): return "Shield"
+        if (_type == "W"): return "Wondrous Item"
+        if (_type == "P"): return "Potion"
+        if (_type == "ST"): return "Staff"
+        if (_type == "RD"): return "Rod"
+        if (_type == "RG"): return "Ring"
+        if (_type == "WD"): return "Wand"
+        if (_type == "SC"): return "Scroll"
+        if (_type == "EXP"): return "Explosive"
+        if (_type == "GUN"): return "Firearm"
+        if (_type == "SIMW"): return "Simple Weapon"
+        if (_type == "MARW"): return "Martial Weapon"
+        return "n/a"
+    
+    def parsedamagetype (damagetype): 
+        if (damagetype == "B"): return "bludgeoning"
+        if (damagetype == "P"): return "piercing"
+        if (damagetype == "S"): return "slashing"
+        if (damagetype == "N"): return "necrotic"
+        if (damagetype == "R"): return "radiant"
+        return 'n/a'
+    
+    def parseproperty (_property):
+        if (_property == "A"): return "ammunition"
+        if (_property == "LD"): return "loading"
+        if (_property == "L"): return "light"
+        if (_property == "F"): return "finesse"
+        if (_property == "T"): return "thrown"
+        if (_property == "H"): return "heavy"
+        if (_property == "R"): return "reach"
+        if (_property == "2H"): return "two-handed"
+        if (_property == "V"): return "versatile"
+        if (_property == "S"): return "special"
+        if (_property == "RLD"): return "reload"
+        if (_property == "BF"): return "burst fire"
+        return "n/a"
+    itemDict = {}
+    itemDict['name'] = item['name']
+    itemDict['type'] = ', '.join(parsetype(t) for t in item['type'].split(','))
+    itemDict['rarity'] = item.get('rarity')
+    itemDict['type_and_rarity'] = itemDict['type'] + ((', ' + itemDict['rarity']) if itemDict['rarity'] is not None else '')
+    itemDict['value'] = (item.get('value') + (', ' if 'weight' in item else '')) if 'value' in item else ''
+    itemDict['weight'] = (item.get('weight') + (' lb.' if item.get('weight') == '1' else ' lbs.')) if 'weight' in item else ''
+    itemDict['weight_and_value'] = itemDict['value'] + itemDict['weight']
+    itemDict['damage'] = ''
+    for iType in item['type'].split(','):
+        if iType in ('M', 'R', 'GUN'):
+            itemDict['damage'] = item.get('dmg1') + ' ' + parsedamagetype(item.get('dmgType'))
+        if iType == 'S': itemDict['damage'] = "AC +" + item.get('ac')
+        if iType == 'LA': itemDict['damage'] = "AC " + item.get('ac') + '+ DEX'
+        if iType == 'MA': itemDict['damage'] = "AC " + item.get('ac') + '+ DEX (Max 2)'
+        if iType == 'HA': itemDict['damage'] = "AC " + item.get('ac')
+    itemDict['properties'] = ""
+    for prop in item.get('property', '').split(','):
+        if prop == '': continue
+        a = b = prop
+        a = parseproperty(a)
+        if b == 'V': a += " (" + item.get('dmg2') + ")"
+        if b in ('T', 'A'): a += " (" + item.get('range') + "ft.)"
+        if b == 'RLD': a += " (" + item.get('reload') + " shots)"
+        if len(itemDict['properties']): a = ', ' + a
+        itemDict['properties'] += a
+    itemDict['damage_and_properties'] = (itemDict['damage'] + ' - ' + itemDict['properties']) if itemDict['properties'] is not '' else itemDict['damage']
+    itemDict['damage_and_properties'] = (' --- ' + itemDict['damage_and_properties']) if itemDict['weight_and_value'] is not '' and itemDict['damage_and_properties'] is not '' else itemDict['damage_and_properties']
+    
+    itemDesc.append("**{name}**\n*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n".format(**itemDict))
+    itemDesc.append('\n'.join(a for a in item['text'] if a is not None and 'Rarity:' not in a and 'Source:' not in a))
+    
+    tempStr = '\n'.join(itemDesc)
+    if return_item:
+        return {'item': item, 'string': discord_trim(tempStr)}
+    else:
+        return discord_trim(tempStr)
+    
+    
+    
+    
+    

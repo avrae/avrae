@@ -14,7 +14,8 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import searchCondition, searchMonster, searchSpell
+from cogs5e.funcs.lookupFuncs import searchCondition, searchMonster, searchSpell, \
+    searchItem
 from utils import checks
 from utils.functions import discord_trim, print_table, list_get, get_positivity
 
@@ -126,6 +127,25 @@ class Lookup:
         result = searchSpell(args)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.botStats["spells_looked_up_life"] += 1
+
+        for r in result:
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r)
+                
+    @commands.command(pass_context=True, name='item')
+    async def item_lookup(self, ctx, *, itemname):
+        """Looks up an item."""
+        try:
+            guild_id = ctx.message.server.id 
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)    
+        except:
+            pm = False
+        
+        result = searchItem(itemname)
+        self.bot.botStats["items_looked_up_session"] += 1
+        self.bot.botStats["items_looked_up_life"] += 1
 
         for r in result:
             if pm:

@@ -371,27 +371,27 @@ def searchItem(itemname, return_item=False):
     itemDict = {}
     itemDict['name'] = item['name']
     itemDict['type'] = ', '.join(parsetype(t) for t in item['type'].split(','))
-    itemDict['rarity'] = item.get('rarity')
+    itemDict['rarity'] = item.get('rarity', 'n/a')
     itemDict['type_and_rarity'] = itemDict['type'] + ((', ' + itemDict['rarity']) if itemDict['rarity'] is not None else '')
-    itemDict['value'] = (item.get('value') + (', ' if 'weight' in item else '')) if 'value' in item else ''
-    itemDict['weight'] = (item.get('weight') + (' lb.' if item.get('weight') == '1' else ' lbs.')) if 'weight' in item else ''
+    itemDict['value'] = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
+    itemDict['weight'] = (item.get('weight', 'n/a') + (' lb.' if item.get('weight', 'n/a') == '1' else ' lbs.')) if 'weight' in item else ''
     itemDict['weight_and_value'] = itemDict['value'] + itemDict['weight']
     itemDict['damage'] = ''
     for iType in item['type'].split(','):
         if iType in ('M', 'R', 'GUN'):
-            itemDict['damage'] = item.get('dmg1') + ' ' + parsedamagetype(item.get('dmgType'))
-        if iType == 'S': itemDict['damage'] = "AC +" + item.get('ac')
-        if iType == 'LA': itemDict['damage'] = "AC " + item.get('ac') + '+ DEX'
-        if iType == 'MA': itemDict['damage'] = "AC " + item.get('ac') + '+ DEX (Max 2)'
-        if iType == 'HA': itemDict['damage'] = "AC " + item.get('ac')
+            itemDict['damage'] = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(item.get('dmgType', 'n/a'))) if 'dmg1' in item and 'dmgType' in item else ''
+        if iType == 'S': itemDict['damage'] = "AC +" + item.get('ac', 'n/a')
+        if iType == 'LA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX'
+        if iType == 'MA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX (Max 2)'
+        if iType == 'HA': itemDict['damage'] = "AC " + item.get('ac', 'n/a')
     itemDict['properties'] = ""
     for prop in item.get('property', '').split(','):
         if prop == '': continue
         a = b = prop
         a = parseproperty(a)
-        if b == 'V': a += " (" + item.get('dmg2') + ")"
-        if b in ('T', 'A'): a += " (" + item.get('range') + "ft.)"
-        if b == 'RLD': a += " (" + item.get('reload') + " shots)"
+        if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
+        if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
+        if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
         if len(itemDict['properties']): a = ', ' + a
         itemDict['properties'] += a
     itemDict['damage_and_properties'] = (itemDict['damage'] + ' - ' + itemDict['properties']) if itemDict['properties'] is not '' else itemDict['damage']

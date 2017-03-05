@@ -50,7 +50,7 @@ def sheet_attack(attack, args):
                 toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
 
             out += toHit.result + '\n'
-            raw = toHit.total - (numexpr.evaluate(attack.get('attackBonus')) + int(args.get('b') or 0))
+            raw = toHit.total - roll(attack.get('attackBonus') + '+' + (args.get('b') or '0')).total
             if args.get('crit'):
                 itercrit = args.get('crit', 0)
             elif raw >= (args.get('criton', 20) or 20):

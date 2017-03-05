@@ -523,7 +523,7 @@ class InitTracker:
                     check_roll = roll('1d20' + '{:+}'.format(dexMod), adv=adv, inline=True)
                 init = check_roll.total
                 controller = ctx.message.author
-                me = MonsterCombatant(name=name, init=init, author=controller, private=private, group=group, monster=monster, modifier=dexMod)
+                me = MonsterCombatant(name=name, init=init, author=controller, effects=[], notes='', private=private, group=group, monster=monster, modifier=dexMod)
                 if group is None:
                     combat.combatants.append(me)
                     out += "{} was added to combat with initiative {}.\n".format(name, check_roll.skeleton)

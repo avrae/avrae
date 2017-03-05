@@ -48,8 +48,11 @@ def sheet_attack(attack, args):
                 toHit = roll('1d20+' + attack.get('attackBonus') + '+' + args.get('b'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
             else:
                 toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
-
-            out += toHit.result + '\n'
+            
+            if toHit.rolled != '': # output wherever was there if error
+                out += toHit.result + '\n'
+            else:
+                out += "**To Hit**: " + attack.get('attackBonus') + '\n'
             raw = toHit.total - roll(attack.get('attackBonus') + '+' + (args.get('b') or '0')).total
             if args.get('crit'):
                 itercrit = args.get('crit', 0)

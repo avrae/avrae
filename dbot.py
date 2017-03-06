@@ -158,7 +158,9 @@ async def on_command_error(error, ctx):
             try:
                 return await bot.send_message(ctx.message.author, "Error: I am missing permissions to run this command. Please make sure I have permission to send messages to <#{}>.".format(ctx.message.channel.id))
             except:
-                pass        
+                pass
+        if isinstance(original, ValueError) and str(original) == "No closing quotation":
+            return await bot.send_message(ctx.message.channel, "Error: No closing quotation.")
     if bot.mask & coreCog.debug_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
         try:

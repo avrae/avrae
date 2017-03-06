@@ -134,7 +134,7 @@ async def enter():
     for k in statKeys:
         if k not in bot.botStats.keys():
             bot.botStats[k] = 0
-    bot.botStats["items_looked_up_session"] = bot.botStats["items_looked_up_life"] = bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
+    bot.botStats["items_looked_up_session"] = bot.botStats["items_looked_up_session"] = bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
     for stat in bot.botStats.keys():
         bot.botStats[stat] = int(bot.botStats[stat])
     bot.db.set_dict('botStats', bot.botStats)

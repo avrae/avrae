@@ -67,7 +67,7 @@ class Customization:
             else: alias = '!' + alias
             return await self.bot.say('**' + alias_name + '**:\n' + alias)
         
-        if alias_name == 'remove':
+        if alias_name == 'remove' or alias_name == 'delete':
             try:
                 del user_aliases[commands]
             except KeyError:

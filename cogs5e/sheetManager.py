@@ -20,6 +20,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.pdfsheet import PDFSheetParser
+from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import list_get, embed_trim, get_positivity, a_or_an
 
 
@@ -212,6 +213,46 @@ class SheetManager:
         embed.description = desc
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         embed.set_thumbnail(url=image)
+        
+        await self.bot.say(embed=embed)
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+        
+    @commands.command(pass_context=True)
+    async def portrait(self, ctx):
+        """Shows the image of your currently active character."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.active_characters.get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        character = user_characters[active_character]
+        stats = character.get('stats')
+        image = stats.get('image', '')
+        if image == '': return await self.bot.say('No image available.')
+        embed = discord.Embed()
+        embed.title = stats.get('name')
+        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
+        embed.set_image(url=image)
+        
+        await self.bot.say(embed=embed)
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+        
+    @commands.command(pass_context=True)
+    async def sheet(self, ctx):
+        """Prints the embed sheet of your currently active character."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.active_characters.get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        character = user_characters[active_character]
+        parser = SheetParser(character)
+        embed = parser.get_embed()
+        embed.colour = embed.colour if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         await self.bot.say(embed=embed)
         try:

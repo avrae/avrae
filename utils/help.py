@@ -49,7 +49,10 @@ class Help:
             else:
                 command = bot.commands.get(name)
                 if command is None:
-                    await bot.send_message(destination, bot.command_not_found.format(name))
+                    try:
+                        await bot.send_message(destination, bot.command_not_found.format(name))
+                    except Forbidden:
+                        await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
                     return
     
             embed = self.formatter.format_help_for(ctx, command)
@@ -57,7 +60,10 @@ class Help:
             name = self._mention_pattern.sub(repl, commands[0])
             command = bot.commands.get(name)
             if command is None:
-                await bot.send_message(destination, bot.command_not_found.format(name))
+                try:
+                    await bot.send_message(destination, bot.command_not_found.format(name))
+                except Forbidden:
+                    await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
                 return
     
             for key in commands[1:]:
@@ -65,10 +71,16 @@ class Help:
                     key = self._mention_pattern.sub(repl, key)
                     command = command.commands.get(key)
                     if command is None:
-                        await bot.send_message(destination, bot.command_not_found.format(key))
+                        try:
+                            await bot.send_message(destination, bot.command_not_found.format(key))
+                        except Forbidden:
+                            await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
                         return
                 except AttributeError:
-                    await bot.send_message(destination, bot.command_has_no_subcommands.format(command, key))
+                    try:
+                        await bot.send_message(destination, bot.command_has_no_subcommands.format(command, key))
+                    except Forbidden:
+                        await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
                     return
     
             embed = self.formatter.format_help_for(ctx, command)

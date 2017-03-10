@@ -325,7 +325,8 @@ class InitTracker:
                             -p (places at given number instead of rolling)
                             --controller <CONTROLLER> (pings a different person on turn)
                             --group <GROUP> (adds the combatant to a group)
-                            --hp <HP> (starts with HP)"""
+                            --hp <HP> (starts with HP)
+                            --ac <AC> (sets combatant AC)"""
         private = False
         place = False
         controller = ctx.message.author
@@ -481,7 +482,7 @@ class InitTracker:
         Args: adv/dis
               -b [conditional bonus]
               -n [number of monsters]
-              --name [name scheme, use "A#" for auto-numbering]
+              --name [name scheme, use "#" for auto-numbering, ex. "Orc#"]
               -h (same as !init add, default true)
               --group (same as !init add)"""
         

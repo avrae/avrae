@@ -133,11 +133,11 @@ class AdminUtils:
     @checks.is_owner()
     async def mute(self, target : discord.Member):
         """Mutes a person."""
-        if target in self.muted:
-            self.muted.remove(target)
+        if target.id in self.muted:
+            self.muted.remove(target.id)
             await self.bot.say("{} unmuted.".format(target))
         else:
-            self.muted.append(target)
+            self.muted.append(target.id)
             await self.bot.say("{} muted.".format(target))
         self.bot.db.not_json_set('muted', self.muted)
             
@@ -168,7 +168,7 @@ class AdminUtils:
                 await self.bot.send_message(self.assume_dir_control_chan, cleaned)
             
     async def on_message(self, message):
-        if message.author in self.muted:
+        if message.author.id in self.muted:
             try:
                 await self.bot.delete_message(message)
             except:

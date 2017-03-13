@@ -472,7 +472,7 @@ class SheetManager:
         try:
             character = await parser.get_character()
         except socket.timeout:
-            return await self.bot.say("We're having some issues connecting to Dicecloud right now. Please try again in a few minutes.")
+            return await self.bot.say("I'm having some issues connecting to Dicecloud right now. Please try again in a few minutes.")
         try:
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.get('characters')[0].get('name')))
         except TypeError:
@@ -486,13 +486,15 @@ class SheetManager:
         
         self.active_characters[ctx.message.author.id] = url
         self.bot.db.not_json_set('active_characters', self.active_characters)
-        
-        embed = sheet['embed']
-        await self.bot.say(embed=embed)
-        
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[url] = sheet['sheet']
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        
+        embed = sheet['embed']
+        try:
+            await self.bot.say(embed=embed)
+        except:
+            await self.bot.say("...something went wrong generating your character sheet. Don't worry, your character has been saved.")
         
     @commands.command(pass_context=True)
     async def pdfsheet(self, ctx):

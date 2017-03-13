@@ -260,7 +260,7 @@ class SheetManager:
         except:
             pass
             
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, aliases=['char'])
     async def character(self, ctx, name:str=None, *, args:str=''):
         """Switches the active character.
         Breaks for characters created before Jan. 20, 2017.
@@ -318,8 +318,9 @@ class SheetManager:
         await self.bot.say("Active character changed to {}.".format(name), delete_after=20)
         
     @commands.command(pass_context=True)
-    async def update(self, ctx):
-        """Updates the current character sheet, preserving all settings."""
+    async def update(self, ctx, *, args):
+        """Updates the current character sheet, preserving all settings.
+        Valid Arguments: -h - Hides character sheet after update is complete."""
         active_character = self.active_characters.get(ctx.message.author.id)
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         if active_character is None:
@@ -364,7 +365,8 @@ class SheetManager:
         user_characters[url] = sheet
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
-        await self.bot.say(embed=embed)
+        if not '-h' in args:
+            await self.bot.say(embed=embed)
     
     @commands.command(pass_context=True)
     async def csettings(self, ctx, *, args):
@@ -494,7 +496,7 @@ class SheetManager:
         try:
             await self.bot.say(embed=embed)
         except:
-            await self.bot.say("...something went wrong generating your character sheet. Don't worry, your character has been saved.")
+            await self.bot.say("...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
         
     @commands.command(pass_context=True)
     async def pdfsheet(self, ctx):

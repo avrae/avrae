@@ -169,7 +169,7 @@ class DicecloudParser(SheetParser):
                  "proficiencyBonus":0}
         stats['name'] = character.get('characters')[0].get('name')
         stats['description'] = character.get('characters')[0].get('description')
-        stats['image'] = character.get('characters')[0].get('picture')
+        stats['image'] = character.get('characters')[0].get('picture', '')
         profByLevel = floor(self.get_levels()['level'] / 4 + 1.75)
         stats['proficiencyBonus'] = profByLevel + self.get_stat('proficiencyBonus', base=0)
         

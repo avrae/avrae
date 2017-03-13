@@ -17,7 +17,7 @@ class CharGenerator:
         self.bot = bot
         self.makingChar = []
     
-    @commands.command(pass_context=True, name='char')
+    @commands.command(pass_context=True, name='randchar')
     async def randChar(self, ctx, level="0"):
         """Makes a random 5e character."""
         try:
@@ -37,7 +37,7 @@ class CharGenerator:
         
         await self.genChar(ctx, level)
         
-    @commands.command(pass_context=True, name='makeChar')
+    @commands.command(pass_context=True, name='makechar')
     async def char(self, ctx, level):
         """Gives you stats for a 5e character."""
         try:

@@ -318,7 +318,7 @@ class SheetManager:
         await self.bot.say("Active character changed to {}.".format(name), delete_after=20)
         
     @commands.command(pass_context=True)
-    async def update(self, ctx, *, args):
+    async def update(self, ctx, *, args=''):
         """Updates the current character sheet, preserving all settings.
         Valid Arguments: -h - Hides character sheet after update is complete."""
         active_character = self.active_characters.get(ctx.message.author.id)

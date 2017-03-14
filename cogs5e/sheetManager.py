@@ -280,18 +280,21 @@ class SheetManager:
         args = shlex.split(args)
         
         char_url = None
+        char_name = None
         for url, character in user_characters.items():
             if character.get('stats', {}).get('name', '').lower() == name.lower():
                 char_url = url
-                name = character.get('stats').get('name')
+                char_name = character.get('stats').get('name')
                 break
             
             if name.lower() in character.get('stats', {}).get('name', '').lower():
                 char_url = url
-                name = character.get('stats').get('name')
+                char_name = character.get('stats').get('name')
         
         if char_url is None:
             return await self.bot.say('Character not found.')
+        
+        name = char_name
         
         if 'delete' in args:
             await self.bot.say('Are you sure you want to delete {}? (Reply with yes/no)'.format(name))

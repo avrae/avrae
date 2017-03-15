@@ -182,9 +182,9 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
         nextAnno = ''
         rollForTemp = ''
         for i, t in enumerate(dice_set):
-#             print("Processing a t: " + t)
-#             print("Stack: " + str(stack))
-#             print("NextAnno: " + nextAnno)
+        #             print("Processing a t: " + t)
+        #             print("Stack: " + str(stack))
+        #             print("NextAnno: " + nextAnno)
             breakCheck = False
             if t is '':
                 continue

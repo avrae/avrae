@@ -35,7 +35,11 @@ class SheetManager:
     def parse_args(self, args):
         out = {}
         index = 0
+        cFlag = False
         for a in args:
+            if cFlag:
+                cFlag = False
+                continue
             if a == '-b' or a == '-d':
                 if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, None, args)
                 else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, None, args)
@@ -46,7 +50,10 @@ class SheetManager:
                 out[a.replace('-', '')] = list_get(index + 1, None, args)
             else:
                 out[a] = True
-            index += 1
+                index += 1
+                continue
+            index += 2
+            cFlag = True
         return out
         
     @commands.command(pass_context=True, aliases=['a'])
@@ -149,6 +156,7 @@ class SheetManager:
         """Rolls a check for your current active character.
         Args: adv/dis
               -b [conditional bonus]
+              -mc [minimum roll]
               -phrase [flavor text]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
@@ -173,12 +181,19 @@ class SheetManager:
         args = self.parse_args(args)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
+        mc = args.get('mc', None)
         phrase = args.get('phrase', None)
+        formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
+                        + ('ro{}'.format(character.get('settings', {}).get('reroll', 0)) 
+                        if not character.get('settings', {}).get('reroll', '0') == '0' else '') \
+                        + ('mi{}'.format(mc) if mc is not None else '')
+#                         ('mi{}'.format(character.get('settings', {}).get('mincheck', 1))
+#                         if not character.get('settings', {}).get('mincheck', '1') == '1' else '')
         
         if b is not None:
-            check_roll = roll('1d20' + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
+            check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
         else:
-            check_roll = roll('1d20' + '{:+}'.format(skills[skill]), adv=adv, inline=True)
+            check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]), adv=adv, inline=True)
         
         embed.title = '{} makes {} check!'.format(character.get('stats', {}).get('name'),
                                                   a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()))
@@ -376,7 +391,9 @@ class SheetManager:
         """Updates personalization settings for the currently active character.
         Valid Arguments:
         `color <hex color>` - Colors all embeds this color.
-        `criton <number>` - Makes attacks crit on something other than a 20."""
+        `criton <number>` - Makes attacks crit on something other than a 20.
+        `mincheck <number>` - Does nothing right now.
+        `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if active_character is None:
@@ -431,6 +448,47 @@ class SheetManager:
                         else:
                             character['settings']['criton'] = criton
                             out += "\u2705 Crit range set to {}-20.\n".format(criton)
+            if arg == 'mincheck':
+                mincheck = list_get(index + 1, None, args)
+                if mincheck is None:
+                    out += '\u2139 Your character\'s current minimum check roll is {}. Use "!csettings mincheck reset" to reset it to 1.\n' \
+                    .format(str(character['settings'].get('mincheck')) if character['settings'].get('mincheck') is not '1' else "1")
+                elif mincheck.lower() == 'reset':
+                    character['settings']['mincheck'] = '1'
+                    out += "\u2705 Minimum check roll reset to 1.\n"
+                else:
+                    try:
+                        mincheck = int(mincheck)
+                    except (ValueError, TypeError):
+                        out += '\u274c Invalid number. Use "!csettings mincheck reset" to reset it to 1.\n'
+                    else:
+                        if not 1 <= mincheck <= 20:
+                            out += '\u274c Minimum check roll must be between 1 and 20.\n'
+                        elif mincheck == 1:
+                            character['settings']['mincheck'] = '1'
+                            out += "\u2705 Minimum check roll reset to 1.\n"
+                        else:
+                            character['settings']['mincheck'] = mincheck
+                            out += "\u2705 Minimum check roll set to {}.\n".format(mincheck)
+            if arg == 'reroll':
+                reroll = list_get(index + 1, None, args)
+                if reroll is None:
+                    out += '\u2139 Your character\'s current reroll is {}. Use "!csettings reroll reset" to reset it.\n' \
+                    .format(str(character['settings'].get('reroll')) if character['settings'].get('reroll') is not '0' else "0")
+                elif reroll.lower() == 'reset':
+                    character['settings']['reroll'] = '0'
+                    out += "\u2705 Reroll reset.\n"
+                else:
+                    try:
+                        reroll = int(reroll)
+                    except (ValueError, TypeError):
+                        out += '\u274c Invalid number. Use "!csettings reroll reset" to reset it.\n'
+                    else:
+                        if not 1 <= reroll <= 20:
+                            out += '\u274c Reroll must be between 1 and 20.\n'
+                        else:
+                            character['settings']['reroll'] = reroll
+                            out += "\u2705 Reroll set to {}.\n".format(reroll)
             index += 1
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)

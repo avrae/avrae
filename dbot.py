@@ -222,7 +222,8 @@ def sigterm_handler(_signum, _frame):
             task.cancel()
         except:
             pass
-    asyncio.ensure_future(bot.logout())
+    bot.loop.run_until_complete(bot.logout())
+    bot.loop.close()
     sys.exit(0)
     
 signal.signal(signal.SIGTERM, sigterm_handler)

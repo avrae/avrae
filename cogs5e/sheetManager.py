@@ -49,7 +49,7 @@ class SheetManager:
             elif a.startswith('-'):
                 out[a.replace('-', '')] = list_get(index + 1, None, args)
             else:
-                out[a] = True
+                out[a] = 'True'
                 index += 1
                 continue
             index += 2

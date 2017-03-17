@@ -857,6 +857,7 @@ class InitTracker:
             attack = fuzzy_search(attacks, 'name', atk_name)
             if attack is None:
                 return await self.bot.say("No attack with that name found.", delete_after=15)
+            attack['details'] = attack.get('desc')
                     
             args = shlex.split(args)
             args = parse_args_2(args)

@@ -10,3 +10,5 @@
 *.avrae
 
 *.ini
+/tests/
+/venv/

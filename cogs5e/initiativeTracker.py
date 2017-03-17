@@ -865,17 +865,20 @@ class InitTracker:
             args['t'] = target.name
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff)
-            if target.ac is not None: target.hp -= result['total_damage']
+            if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
         else:
             return await self.bot.say('Integrated attacks are only supported for combatants added via `madd` or `dcadd`.', delete_after=15)
         embed = result['embed']
-        if target.ac is not None: 
-            embed.set_footer(text="{}: {}".format(target.name, target.get_hp()))
-            if target.private:
-                try:
-                    await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
-                except:
-                    pass
+        if target.ac is not None:
+            if target.hp is not None:
+                embed.set_footer(text="{}: {}".format(target.name, target.get_hp()))
+                if target.private:
+                    try:
+                        await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                    except:
+                        pass
+            else:
+                embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
         else: embed.set_footer(text="Target AC not set.")
         await self.bot.say(embed=embed)
         await combat.update_summary(self.bot)

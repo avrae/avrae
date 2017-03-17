@@ -32,7 +32,7 @@ from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim, get_positivity
 from utils.help import Help
 from web.web import Web
-from discord.errors import Forbidden
+from discord.errors import Forbidden, NotFound
 
 
 TESTING = get_positivity(os.environ.get("TESTING", False))
@@ -159,6 +159,8 @@ async def on_command_error(error, ctx):
                 return await bot.send_message(ctx.message.author, "Error: I am missing permissions to run this command. Please make sure I have permission to send messages to <#{}>.".format(ctx.message.channel.id))
             except:
                 pass
+        if isinstance(original, NotFound):
+            return await bot.send_message(ctx.message.channel, "Error: I tried to edit a message that no longer exists.")
         if isinstance(original, ValueError) and str(original) == "No closing quotation":
             return await bot.send_message(ctx.message.channel, "Error: No closing quotation.")
     if bot.mask & coreCog.debug_mask:

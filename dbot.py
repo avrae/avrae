@@ -4,6 +4,7 @@ import json
 import logging
 from math import floor
 import os
+import pickle
 import random
 import signal
 import sys
@@ -11,6 +12,7 @@ import time
 import traceback
 
 import discord
+from discord.errors import Forbidden, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 import psutil
@@ -32,7 +34,6 @@ from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim, get_positivity
 from utils.help import Help
 from web.web import Web
-from discord.errors import Forbidden, NotFound
 
 
 TESTING = get_positivity(os.environ.get("TESTING", False))
@@ -212,18 +213,18 @@ async def save_stats():
     except asyncio.CancelledError:
         pass
 
-background_tasks.append(bot.loop.create_task(save_stats()))
+bot.loop.create_task(save_stats())
 
 # SIGNAL HANDLING
 def sigterm_handler(_signum, _frame):
     try:
-        bot.get_cog("InitTracker").__unload()
+        print("Attempting to save combats...")
+        for combat in bot.get_cog("InitTracker").combats:
+            combat.combatantGenerator = None
+            path = '{}.avrae'.format(combat.channel.id)
+            bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
+            print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
     except: pass
-    for task in background_tasks:
-        try:
-            task.cancel()
-        except:
-            pass
     bot.loop.run_until_complete(bot.logout())
     bot.loop.close()
     sys.exit(0)

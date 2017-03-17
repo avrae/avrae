@@ -55,6 +55,17 @@ class SheetManager:
             index += 2
             cFlag = True
         return out
+    
+    def parse_snippets(self, args, _id):
+        tempargs = []
+        user_snippets = self.snippets.get(_id, {})
+        for arg in args: # parse snippets
+            for snippet, arguments in user_snippets.items():
+                if arg == snippet: 
+                    tempargs += shlex.split(arguments)
+                    break
+            tempargs.append(arg)
+        return tempargs
         
     @commands.command(pass_context=True, aliases=['a'])
     async def attack(self, ctx, atk_name:str, *, args:str=''):
@@ -84,14 +95,8 @@ class SheetManager:
                 return await self.bot.say('No attack with that name found.')
                 
         args = shlex.split(args)
-        tempargs = []
-        for arg in args: # parse snippets
-            for snippet, arguments in self.snippets.get(ctx.message.author.id, {}).items():
-                if arg == snippet: 
-                    tempargs += shlex.split(arguments)
-                    break
-            tempargs.append(arg)
-        args = self.parse_args(tempargs)
+        args = self.parse_snippets(args, ctx.message.author.id)
+        args = self.parse_args(args)
         args['name'] = character.get('stats', {}).get('name', "NONAME")
         args['criton'] = character.get('settings', {}).get('criton', 20) or 20
         
@@ -130,6 +135,7 @@ class SheetManager:
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
+        args = self.parse_snippets(args, ctx.message.author.id)
         args = self.parse_args(args)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
@@ -178,6 +184,7 @@ class SheetManager:
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
+        args = self.parse_snippets(args, ctx.message.author.id)
         args = self.parse_args(args)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
@@ -510,7 +517,7 @@ class SheetManager:
         if snippet is None:
             return await self.bot.say('**' + snipname + '**:\n' + user_snippets.get(snipname, 'Not defined.'))
         
-        if snipname == 'remove':
+        if snipname == 'remove' or snipname == 'delete':
             try:
                 del user_snippets[snippet]
             except KeyError:

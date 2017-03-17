@@ -31,7 +31,8 @@ from cogsmisc.publicity import Publicity
 from cogsmisc.repl import REPL
 from utils import checks
 from utils.dataIO import DataIO
-from utils.functions import make_sure_path_exists, discord_trim, get_positivity
+from utils.functions import make_sure_path_exists, discord_trim, get_positivity, \
+    list_get
 from utils.help import Help
 from web.web import Web
 
@@ -40,6 +41,16 @@ TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
 prefix = '!' if not TESTING else '#'
+shard_id = 0
+shard_count = 1
+SHARDED = False
+if '-s' in sys.argv:
+    temp_shard_id = list_get(sys.argv.index('-s') + 1, None, sys.argv)
+    if temp_shard_id is not None:
+        shard_count = os.environ.get('SHARDS', 1)
+        shard_id = temp_shard_id if temp_shard_id < shard_count else 0
+        SHARDED = True
+
 
 # TODO: 
 # more flavor text
@@ -233,6 +244,8 @@ signal.signal(signal.SIGTERM, sigterm_handler)
             
 for cog in cogs:
     bot.add_cog(cog)
+
+if SHARDED: print("I am shard {} of {}.".format(bot.shard_id + 1, bot.shard_count))
 
 if not TESTING:        
     bot.run(bot.credentials.officialToken)  # official token

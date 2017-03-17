@@ -2,7 +2,7 @@
 # launch.sh
 # launch discord bots
 
-while true; do
-    python3 dbot.py
-    sleep 10
+for ((i=0; i<${SHARDS}; i++))
+do
+    echo "Launching shard $i"
 done

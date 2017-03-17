@@ -712,7 +712,7 @@ class InitTracker:
             await self.bot.say("```markdown\n" + combatant.get_status() + "```", delete_after=30)
         
     @init.command(pass_context=True)
-    async def hp(self, ctx, combatant : str, operator : str, *, hp : str):
+    async def hp(self, ctx, combatant : str, operator : str, *, hp : str = ''):
         """Modifies the HP of a combatant.
         Usage: !init hp <NAME> <mod/set/max> <HP>"""
         try:
@@ -742,6 +742,11 @@ class InitTracker:
                 combatant.max_hp = hp_roll.total
             else:
                 combatant.max_hp = hp_roll.total
+        elif hp == '':
+            hp_roll = roll(operator, inline=True, show_blurbs=False)
+            if combatant.hp is None:
+                combatant.hp = 0
+            combatant.hp += hp_roll.total
         else:
             await self.bot.say("Incorrect operator. Use mod, set, or max.")
             return

@@ -41,13 +41,13 @@ class SheetManager:
                 cFlag = False
                 continue
             if a == '-b' or a == '-d':
-                if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, None, args)
-                else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, None, args)
+                if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, '0', args)
+                else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, '0', args)
             elif re.match(r'-d\d+', a):
-                if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, None, args)
-                else: out[a.replace('-', '')] += '|' + list_get(index + 1, None, args)
+                if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, '0', args)
+                else: out[a.replace('-', '')] += '|' + list_get(index + 1, '0', args)
             elif a.startswith('-'):
-                out[a.replace('-', '')] = list_get(index + 1, None, args)
+                out[a.replace('-', '')] = list_get(index + 1, 'MISSING_ARGUMENT', args)
             else:
                 out[a] = 'True'
                 index += 1

@@ -125,7 +125,12 @@ class DicecloudParser(SheetParser):
                                                                  a['damage'] if a['damage'] is not None else 'no'))
         if tempAttacks == []:
             tempAttacks = ['No attacks.']
-        embed.add_field(name="Attacks", value='\n'.join(tempAttacks))
+        a = '\n'.join(tempAttacks)
+        if len(a) > 1023:
+            a = ', '.join(atk['name'] for atk in attacks)
+        if len(a) > 1023:
+            a = "Too many attacks, values hidden!"
+        embed.add_field(name="Attacks", value=a)
         
         return embed
         

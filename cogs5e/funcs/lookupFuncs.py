@@ -371,7 +371,7 @@ def searchItem(itemname, return_item=False):
     itemDict = {}
     itemDict['name'] = item['name']
     itemDict['type'] = ', '.join(parsetype(t) for t in item['type'].split(','))
-    itemDict['rarity'] = item.get('rarity', 'n/a')
+    itemDict['rarity'] = item.get('rarity')
     itemDict['type_and_rarity'] = itemDict['type'] + ((', ' + itemDict['rarity']) if itemDict['rarity'] is not None else '')
     itemDict['value'] = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
     itemDict['weight'] = (item.get('weight', 'n/a') + (' lb.' if item.get('weight', 'n/a') == '1' else ' lbs.')) if 'weight' in item else ''

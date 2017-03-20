@@ -143,6 +143,9 @@ class Lookup:
         except:
             pm = False
         
+        if itemname.lower() == 'spirit wing' and guild_id == '122795398384451588': #Fine, Matt
+            return await self.bot.say("Error: Item is missing or completely broken.")
+        
         result = searchItem(itemname)
         self.bot.botStats["items_looked_up_session"] += 1
         self.bot.botStats["items_looked_up_life"] += 1

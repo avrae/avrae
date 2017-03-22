@@ -21,6 +21,10 @@ VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
 
 # Rolls Dice
 def d_roller(obj, adv=0, double=False):
+    if double:
+        def critSub(matchobj):
+            return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
+        obj = re.sub(r'(\d+)d(\d+)', critSub, obj)
     res = []
     splargs = None
     crit = 0
@@ -50,9 +54,6 @@ def d_roller(obj, adv=0, double=False):
         args = re.split('(\d+d\d+)', args)[-1]
         splargs = re.split(VALID_OPERATORS_2, args)
         splargs = [a for a in splargs if a is not None]
-        
-    if double:
-        numDice = numDice * 2
             
     # dice repair/modification
     if numDice > 300 or diceVal < 1 or numDice == 0:

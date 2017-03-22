@@ -77,6 +77,7 @@ class SheetManager:
                          -d# [applies damage to the first # hits]
                          -rr [times to reroll]
                          -t [target]
+                         -c [damage bonus on crit]
                          -phrase [flavor text]
                          crit (automatically crit)
                          [user snippet]"""

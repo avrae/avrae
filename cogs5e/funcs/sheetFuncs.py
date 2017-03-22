@@ -76,7 +76,12 @@ def sheet_attack(attack, args):
                     dnum[dice] -= 1
             
             if itercrit == 1:
-                dmgroll = roll(damage, rollFor='Damage (CRIT!)', inline=True, double=True, show_blurbs=False)
+                def critSub(matchobj):
+                    return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
+                critDice = re.sub(r'(\d+)d(\d+)', critSub, damage)
+                if args.get('c') is not None:
+                    critDice += '+' + args.get('c', '')
+                dmgroll = roll(critDice, rollFor='Damage (CRIT!)', inline=True, show_blurbs=False)
                 out += dmgroll.result + '\n'
                 total_damage += dmgroll.total
             elif itercrit == 2:

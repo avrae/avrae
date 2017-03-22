@@ -15,8 +15,6 @@ from discord.ext import commands
 
 from utils import checks
 
-_blacklisted_serv_ids = ['252388688766435328', '285532897874673666']
-
 class AdminUtils:
     '''
     Administrative Utilities.
@@ -27,14 +25,15 @@ class AdminUtils:
         self.bot = bot
         self.muted = self.bot.db.not_json_get('muted', [])
         self.assume_dir_control_chan = None
-        _blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
+        self.assume_dir_control_controller = None
+        self.blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
     
     
     @commands.command(hidden=True)
     @checks.is_owner()
     async def blacklist(self, _id):
-        _blacklisted_serv_ids.append(_id)
-        self.bot.db.not_json_set('blacklist', _blacklisted_serv_ids)
+        self.blacklisted_serv_ids.append(_id)
+        self.bot.db.not_json_set('blacklist', self.blacklisted_serv_ids)
         await self.bot.say(':ok_hand:')
     
     @commands.command(hidden=True)
@@ -131,7 +130,7 @@ class AdminUtils:
                 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def mute(self, target : discord.Member):
+    async def mute(self, target : discord.User):
         """Mutes a person."""
         if target.id in self.muted:
             self.muted.remove(target.id)
@@ -154,6 +153,7 @@ class AdminUtils:
             # remove `foo`
             return content.strip('` \n')
         self.assume_dir_control_chan = self.bot.get_channel(chan)
+        self.assume_dir_control_controller = ctx.message.channel
         if self.assume_dir_control_chan is None:
             self.assume_dir_control_chan = await self.bot.get_user_info(chan)
         while True:
@@ -176,12 +176,12 @@ class AdminUtils:
         if self.assume_dir_control_chan is not None:
             if isinstance(message.channel, PrivateChannel):
                 if message.channel.user.id == self.assume_dir_control_chan.id:
-                    await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
+                    await self.bot.send_message(self.assume_dir_control_controller, "**" + message.author.display_name + "**: " + message.content)
             elif message.channel.id == self.assume_dir_control_chan.id:
-                await self.bot.send_message(self.bot.owner, "**" + message.author.display_name + "**: " + message.content)
+                await self.bot.send_message(self.assume_dir_control_controller, "**" + message.author.display_name + "**: " + message.content)
     
     async def on_server_join(self, server):
-        if server.id in _blacklisted_serv_ids: await self.bot.leave_server(server)
+        if server.id in self.blacklisted_serv_ids: await self.bot.leave_server(server)
     
     def msg(self, dest, out):
         coro = self.bot.send_message(dest, out)

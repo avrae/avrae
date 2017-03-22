@@ -268,7 +268,13 @@ class DicecloudParser(SheetParser):
         attacks = []
         for attack in character.get('attacks', []):
             if attack.get('enabled') and not attack.get('removed'):
-                attacks.append(self.get_attack(attack))
+                atkDict = self.get_attack(attack)
+                atkNum = 2
+                if atkDict['name'] in (a['name'] for a in attacks):
+                    while atkDict['name'] + str(atkNum) in (a['name'] for a in attacks):
+                        atkNum += 1
+                    atkDict['name'] = atkDict['name'] + str(atkNum)
+                attacks.append(atkDict)
         return attacks
             
     def get_skills(self):

@@ -35,6 +35,12 @@ class DataIO:
     def exists(self, key):
         return self._db.exists(key)
     
+    def delete(self, key):
+        return self._db.delete(key)
+    
+    def setex(self, key, value, expiration):
+        return self._db.setex(key, value, expiration)
+    
     def set_dict(self, key, dictionary):
         if len(dictionary) == 0:
             return self._db.delete(key)
@@ -53,6 +59,10 @@ class DataIO:
     
     def jset(self, key, data, **kwargs):
         return self.not_json_set(key, data, **kwargs)
+    
+    def jsetex(self, key, data, exp, **kwargs):
+        data = json.dumps(data, **kwargs)
+        return self.setex(key, data, exp)
     
     def jget(self, key, default=None):
         return self.not_json_get(key, default)

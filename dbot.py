@@ -230,11 +230,12 @@ bot.loop.create_task(save_stats())
 def sigterm_handler(_signum, _frame):
     try:
         print("Attempting to save combats...")
-        for combat in bot.get_cog("InitTracker").combats:
-            combat.combatantGenerator = None
-            path = '{}.avrae'.format(combat.channel.id)
-            bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
-            print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
+        bot.get_cog("InitTracker").panic_save()
+#         for combat in bot.get_cog("InitTracker").combats:
+#             combat.combatantGenerator = None
+#             path = '{}.avrae'.format(combat.channel.id)
+#             bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
+#             print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
     except: pass
     bot.loop.run_until_complete(bot.logout())
     bot.loop.close()

@@ -22,6 +22,7 @@ from cogs5e.funcs.lookupFuncs import searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
     fuzzy_search, get_positivity, a_or_an, parse_args_2
+from discord.errors import NotFound
 
 
 class Combat(object):
@@ -272,6 +273,7 @@ class InitTracker:
     def __init__(self, bot):
         self.bot = bot
         self.combats = []  # structure: array of dicts with structure {channel (Channel/Member), combatants (list of dict, [{init, name, author, mod, notes, effects}]), current (int), round (int)}
+        self.bot.loop.create_task(self.panic_load())
         
     @commands.group(pass_context=True, aliases=['i'], no_pm=True)
     async def init(self, ctx):
@@ -409,7 +411,7 @@ class InitTracker:
         await combat.update_summary(self.bot)
         combat.sortCombatants()
         
-    @init.command(pass_context=True, hidden=True)
+    @init.command(pass_context=True, name='cadd', aliases=['dcadd'])
     async def dcadd(self, ctx, *, args:str=''):
         """Adds the current active character to combat. A character must be loaded through the SheetManager module first.
         Args: adv/dis
@@ -476,7 +478,29 @@ class InitTracker:
         await combat.update_summary(self.bot)
         combat.sortCombatants()
         
-    @init.command(pass_context=True, hidden=True)
+    @init.command(pass_context=True)
+    async def update(self, ctx, combatant):
+        """Updates a combatant's sheet if they were `cadd`ed."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no characters loaded.')
+        character = user_characters[active_character]
+        try:
+            combat = next(c for c in self.combats if c.channel is ctx.message.channel)
+        except StopIteration:
+            await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
+            return
+        combatant = combat.get_combatant(combatant)
+        if combatant is None:
+            return await self.bot.say('Combatant not found.', delete_after=10)
+        elif not isinstance(combatant, DicecloudCombatant):
+            return await self.bot.say('Combatant is not a SheetManager integrated combatant.', delete_after=10)
+        else:
+            combatant.sheet = character
+            await self.bot.say('Combatant sheet updated!', delete_after=15)
+        
+    @init.command(pass_context=True)
     async def madd(self, ctx, monster_name:str, *, args:str=''):
         """Adds a monster to combat.
         Args: adv/dis
@@ -959,6 +983,34 @@ class InitTracker:
             path = '{}.avrae'.format(combat.channel.id)
             self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
             print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
+            
+    def panic_save(self):
+        temp_key = []
+        for combat in self.combats:
+            combat.combatantGenerator = None
+            path = '{}.avrae'.format(combat.channel.id)
+            self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
+            print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
+            temp_key.append(combat.channel.id)
+        self.bot.db.jsetex('temp_combatpanic', temp_key, 600) # timeout in 10 minutes
+        
+    async def panic_load(self):
+        await self.bot.wait_until_ready()
+        combats = self.bot.db.jget('temp_combatpanic', [])
+        for c in combats:
+            path = '{}.avrae'.format(c)
+            combat = self.bot.db.get(path, None)
+            if combat is None:
+                print('Combat not found reloading {}'.format(c))
+            combat = pickle.loads(combat.encode('cp437'))
+            combat.channel = self.bot.get_channel(combat.channel.id)
+            self.combats.append(combat)
+            try:
+                combat.summary_message = await self.bot.get_message(combat.channel, combat.summary_message.id)
+            except NotFound:
+                print('Summary Message not found reloading {}'.format(c))
+            await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!")
+        self.bot.db.delete('temp_combatpanic')
             
     @init.command(pass_context=True)
     async def save(self, ctx):

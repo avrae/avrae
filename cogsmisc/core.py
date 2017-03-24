@@ -65,12 +65,12 @@ class Core:
         await self.bot.send_message(self.bot.owner, "Bug reported by {} ({}) from {}:\n{}".format(ctx.message.author.mention, str(ctx.message.author), ctx.message.server, report))
         await self.bot.say("Bug report sent to developer! He'll get to it eventually.")
         
-    @commands.command(hidden=True)
-    @checks.mod_or_permissions(manage_nicknames=True)
-    async def avatar(self, user : discord.User):
+    @commands.command(hidden=True, pass_context=True)
+    async def avatar(self, ctx, user : discord.User = None):
         """Gets a user's avatar.
-        Usage: !avatar <USER>
-        Requires: Bot Mod or Manage Nicknames"""
+        Usage: !avatar <USER>"""
+        if user is None:
+            user = ctx.message.author
         if user.avatar_url is not "":
             await self.bot.say(user.avatar_url)
         else:

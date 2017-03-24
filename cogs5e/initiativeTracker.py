@@ -1002,13 +1002,17 @@ class InitTracker:
             combat = self.bot.db.get(path, None)
             if combat is None:
                 print('Combat not found reloading {}'.format(c))
+                continue
             combat = pickle.loads(combat.encode('cp437'))
             combat.channel = self.bot.get_channel(combat.channel.id)
             self.combats.append(combat)
             try:
-                combat.summary_message = await self.bot.get_message(combat.channel, combat.summary_message.id)
+                if combat.summary_message is not None:
+                    combat.summary_message = await self.bot.get_message(combat.channel, combat.summary_message.id)
             except NotFound:
                 print('Summary Message not found reloading {}'.format(c))
+            except:
+                pass
             await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!")
         self.bot.db.delete('temp_combatpanic')
             

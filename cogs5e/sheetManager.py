@@ -546,7 +546,7 @@ class SheetManager:
             return await self.bot.say('Your snippets:\n{}'.format(', '.join([name for name in user_snippets.keys()])))
         
         if snippet is None:
-            return await self.bot.say('**' + snipname + '**:\n' + user_snippets.get(snipname, 'Not defined.'))
+            return await self.bot.say('**' + snipname + '**:\n```md\n' + user_snippets.get(snipname, 'Not defined.') + '\n```')
         
         if snipname == 'remove' or snipname == 'delete':
             try:

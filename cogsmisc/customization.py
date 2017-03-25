@@ -65,7 +65,7 @@ class Customization:
             alias = user_aliases.get(alias_name)
             if alias is None: alias = 'Not defined.'
             else: alias = '!' + alias
-            return await self.bot.say('**' + alias_name + '**:\n' + alias)
+            return await self.bot.say('**' + alias_name + '**:\n```md\n' + alias + "\n```")
         
         if alias_name == 'remove' or alias_name == 'delete':
             try:

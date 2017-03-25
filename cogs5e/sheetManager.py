@@ -109,6 +109,7 @@ class SheetManager:
                          -t [target]
                          -c [damage bonus on crit]
                          -phrase [flavor text]
+                         -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
                          crit (automatically crit)
                          [user snippet]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters

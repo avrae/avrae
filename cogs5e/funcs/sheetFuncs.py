@@ -27,8 +27,10 @@ def sheet_attack(attack, args):
     else:
         embed.description = '~~' + ' '*500 + '~~'
         
-        
-    if args.get('t') is not None: # parse target
+    
+    if args.get('title') is not None:
+        embed.title = args.get('title').replace('[charname]', args.get('name')).replace('[aname]', attack.get('name')).replace('[target]', args.get('t', ''))
+    elif args.get('t') is not None: # parse target
         embed.title = '{} attacks with {} at {}!'.format(args.get('name'), a_or_an(attack.get('name')), args.get('t'))
     else:
         embed.title = '{} attacks with {}!'.format(args.get('name'), a_or_an(attack.get('name')))

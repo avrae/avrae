@@ -1013,6 +1013,7 @@ class InitTracker:
                 print('Summary Message not found reloading {}'.format(c))
             except:
                 pass
+            print("Autoreloaded {}".format(c))
             await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!")
         self.bot.db.delete('temp_combatpanic')
             

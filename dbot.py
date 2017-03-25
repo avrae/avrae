@@ -36,7 +36,7 @@ from utils.functions import make_sure_path_exists, discord_trim, get_positivity,
 from utils.help import Help
 from web.web import Web
 
-
+INITIALIZING = True
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
@@ -172,7 +172,7 @@ async def on_command_error(error, ctx):
             except:
                 pass
         if isinstance(original, NotFound):
-            return await bot.send_message(ctx.message.channel, "Error: I tried to edit a message that no longer exists.")
+            return await bot.send_message(ctx.message.channel, "Error: I tried to edit or delete a message that no longer exists.")
         if isinstance(original, ValueError) and str(original) == "No closing quotation":
             return await bot.send_message(ctx.message.channel, "Error: No closing quotation.")
     if bot.mask & coreCog.debug_mask:
@@ -205,6 +205,7 @@ async def on_message(message):
     if message.content.startswith(guild_prefix):
         message.content = message.content.replace(guild_prefix, bot.prefix, 1)
     elif message.content.startswith(bot.prefix): return
+    if message.content.startswith(bot.prefix) and INITIALIZING: return await bot.send_message(message.channel, "Bot is initializing, try again in a few seconds!")
     await bot.process_commands(message)
     
 @bot.event
@@ -248,7 +249,8 @@ for cog in cogs:
 
 if SHARDED: print("I am shard {} of {}.".format(bot.shard_id + 1, bot.shard_count))
 
-if not TESTING:        
+INITIALIZING = False
+if not TESTING:     
     bot.run(bot.credentials.officialToken)  # official token
 else:
     bot.run(bot.credentials.testToken)  # test token

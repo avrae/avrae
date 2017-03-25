@@ -4,6 +4,7 @@ Created on Jan 19, 2017
 @author: andrew
 '''
 import asyncio
+import copy
 from datetime import datetime
 import json
 import random
@@ -31,6 +32,35 @@ class SheetManager:
         self.bot = bot
         self.active_characters = bot.db.not_json_get('active_characters', {})
         self.snippets = self.bot.db.not_json_get('damage_snippets', {})
+        self.cvars = self.bot.db.not_json_get('char_vars', {})
+        
+    def arg_stuff(self, args, ctx, character, char_id):
+        args = self.parse_snippets(args, ctx.message.author.id)
+        args = self.parse_cvars(args, ctx.message.author.id, character, char_id)
+        args = self.parse_args(args)
+        return args
+    
+    def parse_cvars(self, args, _id, character, char_id):
+        tempargs = []
+        user_cvars = copy.copy(self.cvars.get(_id, {}).get(char_id, {}))
+        stat_vars = {}
+        stats = copy.copy(character['stats'])
+        for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
+            stats[stat+'Score'] = stats[stat]
+            del stats[stat]
+        stat_vars.update(stats)
+        stat_vars.update(character['levels'])
+        for arg in args:
+            for var in re.finditer(r'{([^{}]+)}', arg):
+                raw = var.group(0)
+                out = var.group(1)
+                for cvar, value in user_cvars.items():
+                    out = out.replace(cvar, str(value))
+                for cvar, value in stat_vars.items():
+                    out = out.replace(cvar, str(value))
+                arg = arg.replace(raw, '`{}`'.format(roll(out).total))
+            tempargs.append(arg)
+        return tempargs
         
     def parse_args(self, args):
         out = {}
@@ -96,10 +126,11 @@ class SheetManager:
                 return await self.bot.say('No attack with that name found.')
                 
         args = shlex.split(args)
-        args = self.parse_snippets(args, ctx.message.author.id)
-        args = self.parse_args(args)
+        args = self.arg_stuff(args, ctx, character, active_character)
         args['name'] = character.get('stats', {}).get('name', "NONAME")
         args['criton'] = character.get('settings', {}).get('criton', 20) or 20
+        if attack.get('details') is not None:
+            attack['details'] = self.parse_cvars([attack['details']], ctx.message.author.id, character, active_character)[0]
         
         result = sheet_attack(attack, args)
         embed = result['embed']
@@ -136,8 +167,7 @@ class SheetManager:
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
-        args = self.parse_snippets(args, ctx.message.author.id)
-        args = self.parse_args(args)
+        args = self.arg_stuff(args, ctx, character, active_character)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
         phrase = args.get('phrase', None)
@@ -185,8 +215,7 @@ class SheetManager:
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
         args = shlex.split(args)
-        args = self.parse_snippets(args, ctx.message.author.id)
-        args = self.parse_args(args)
+        args = self.arg_stuff(args, ctx, character, active_character)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
         mc = args.get('mc', None)
@@ -530,6 +559,54 @@ class SheetManager:
         
         self.snippets[user_id] = user_snippets
         self.bot.db.not_json_set('damage_snippets', self.snippets)
+        
+    @commands.group(pass_context=True, invoke_without_command=True)
+    async def cvar(self, ctx, name, *, value=None):
+        """Commands to manage character variables for use in snippets and aliases.
+        Character variables can be called in the `-phrase` tag by surrounding the variable name with curly braces.
+        This will roll whatever is surrounded as if it were dice.
+        Dicecloud `statMod` and `statScore` variables are also available."""
+        active_character = self.active_characters.get(ctx.message.author.id) # get user's active
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        user_id = ctx.message.author.id
+        user_cvars = self.cvars.get(user_id, {})
+        if value is None:
+            cvar = user_cvars.get(active_character, {}).get(name)
+            if cvar is None: cvar = 'Not defined.'
+            return await self.bot.say('**' + name + '**:\n' + cvar)
+        
+        if user_cvars.get(active_character) is None: user_cvars[active_character] = {}
+        user_cvars[active_character][name] = value
+        self.cvars[user_id] = user_cvars
+        self.bot.db.not_json_set('char_vars', self.cvars)
+        await self.bot.say('Variable `{}` set to: `{}`'.format(name, value))
+        
+    @cvar.command(pass_context=True, name='remove', aliases=['delete'])
+    async def remove_cvar(self, ctx, name):
+        """Deletes a cvar from the currently active character."""
+        active_character = self.active_characters.get(ctx.message.author.id) # get user's active
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        user_id = ctx.message.author.id
+        user_cvars = self.cvars.get(user_id, {})
+        try:
+            del user_cvars.get(active_character, {})[name]
+        except KeyError:
+            return await self.bot.say('Variable not found.')
+        self.cvars[user_id] = user_cvars
+        self.bot.db.not_json_set('char_vars', self.cvars)
+        await self.bot.say('Variable {} removed.'.format(name))
+        
+    @cvar.command(pass_context=True, name='list')
+    async def list_cvar(self, ctx):
+        """Lists all cvars for the currently active character."""
+        active_character = self.active_characters.get(ctx.message.author.id) # get user's active
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        user_id = ctx.message.author.id
+        user_cvars = self.cvars.get(user_id, {})
+        await self.bot.say('Your variables:\n{}'.format(', '.join([name for name in user_cvars.get(active_character,{}).keys()])))
         
     
     @commands.command(pass_context=True)

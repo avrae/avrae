@@ -39,6 +39,7 @@ class DicecloudParser(SheetParser):
         client.on('added', update_character)
         await asyncio.sleep(10)
         client.close()
+        character['id'] = url
         self.character = character
         return character
             

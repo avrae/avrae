@@ -4,6 +4,7 @@ Created on Sep 18, 2016
 @author: andrew
 '''
 import asyncio
+import copy
 from math import floor
 from os.path import isfile
 import pickle
@@ -15,6 +16,7 @@ from string import capwords
 import traceback
 
 import discord
+from discord.errors import NotFound
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
@@ -22,7 +24,6 @@ from cogs5e.funcs.lookupFuncs import searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
     fuzzy_search, get_positivity, a_or_an, parse_args_2
-from discord.errors import NotFound
 
 
 class Combat(object):
@@ -274,6 +275,39 @@ class InitTracker:
         self.bot = bot
         self.combats = []  # structure: array of dicts with structure {channel (Channel/Member), combatants (list of dict, [{init, name, author, mod, notes, effects}]), current (int), round (int)}
         self.bot.loop.create_task(self.panic_load())
+        
+    def parse_cvars(self, args, _id, character, char_id):
+        tempargs = []
+        user_cvars = copy.copy(self.bot.get_cog('SheetManager').cvars.get(_id, {}).get(char_id, {}))
+        stat_vars = {}
+        stats = copy.copy(character['stats'])
+        for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
+            stats[stat+'Score'] = stats[stat]
+            del stats[stat]
+        stat_vars.update(stats)
+        stat_vars.update(character['levels'])
+        stat_vars['hp'] = character['hp']
+        stat_vars['armor'] = character['armor']
+        stat_vars.update(character['saves'])
+        for arg in args:
+            for var in re.finditer(r'{([^{}]+)}', arg):
+                raw = var.group(0)
+                out = var.group(1)
+                for cvar, value in user_cvars.items():
+                    out = out.replace(cvar, str(value))
+                for cvar, value in stat_vars.items():
+                    out = out.replace(cvar, str(value))
+                arg = arg.replace(raw, '`{}`'.format(roll(out).total))
+            for var in re.finditer(r'<([^<>]+)>', arg):
+                raw = var.group(0)
+                out = var.group(1)
+                for cvar, value in user_cvars.items():
+                    out = out.replace(cvar, str(value))
+                for cvar, value in stat_vars.items():
+                    out = out.replace(cvar, str(value))
+                arg = arg.replace(raw, out)
+            tempargs.append(arg)
+        return tempargs
         
     @commands.group(pass_context=True, aliases=['i'], no_pm=True)
     async def init(self, ctx):
@@ -869,6 +903,7 @@ class InitTracker:
                         tempargs += shlex.split(arguments)
                         break
                 tempargs.append(arg)
+            tempargs = self.parse_cvars(tempargs, ctx.message.author.id, combatant.sheet, self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id))
             args = parse_args_2(tempargs)
             args['name'] = combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac

@@ -50,6 +50,9 @@ class SheetManager:
             del stats[stat]
         stat_vars.update(stats)
         stat_vars.update(character['levels'])
+        stat_vars['hp'] = character['hp']
+        stat_vars['armor'] = character['armor']
+        stat_vars.update(character['saves'])
         for arg in args:
             for var in re.finditer(r'{([^{}]+)}', arg):
                 raw = var.group(0)
@@ -59,6 +62,14 @@ class SheetManager:
                 for cvar, value in stat_vars.items():
                     out = out.replace(cvar, str(value))
                 arg = arg.replace(raw, '`{}`'.format(roll(out).total))
+            for var in re.finditer(r'<([^<>]+)>', arg):
+                raw = var.group(0)
+                out = var.group(1)
+                for cvar, value in user_cvars.items():
+                    out = out.replace(cvar, str(value))
+                for cvar, value in stat_vars.items():
+                    out = out.replace(cvar, str(value))
+                arg = arg.replace(raw, out)
             tempargs.append(arg)
         return tempargs
         
@@ -564,8 +575,7 @@ class SheetManager:
     @commands.group(pass_context=True, invoke_without_command=True)
     async def cvar(self, ctx, name, *, value=None):
         """Commands to manage character variables for use in snippets and aliases.
-        Character variables can be called in the `-phrase` tag by surrounding the variable name with curly braces.
-        This will roll whatever is surrounded as if it were dice.
+        Character variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Dicecloud `statMod` and `statScore` variables are also available."""
         active_character = self.active_characters.get(ctx.message.author.id) # get user's active
         if active_character is None:

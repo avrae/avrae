@@ -30,7 +30,7 @@ class SheetManager:
     
     def __init__(self, bot):
         self.bot = bot
-        self.active_characters = bot.db.not_json_get('active_characters', {})
+        self.active_characters = self.bot.db.not_json_get('active_characters', {})
         self.snippets = self.bot.db.not_json_get('damage_snippets', {})
         self.cvars = self.bot.db.not_json_get('char_vars', {})
         
@@ -42,7 +42,7 @@ class SheetManager:
     
     def parse_cvars(self, args, _id, character, char_id):
         tempargs = []
-        user_cvars = copy.copy(self.cvars.get(_id, {}).get(char_id, {}))
+        user_cvars = copy.copy(self.bot.db.not_json_get('char_vars', {}).get(_id, {}).get(char_id, {}))
         stat_vars = {}
         stats = copy.copy(character['stats'])
         for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
@@ -99,7 +99,7 @@ class SheetManager:
     
     def parse_snippets(self, args, _id):
         tempargs = []
-        user_snippets = self.snippets.get(_id, {})
+        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(_id, {})
         for arg in args: # parse snippets
             for snippet, arguments in user_snippets.items():
                 if arg == snippet: 
@@ -124,7 +124,7 @@ class SheetManager:
                          crit (automatically crit)
                          [user snippet]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
-        active_character = self.active_characters.get(ctx.message.author.id) # get user's active
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character] # get Sheet of character
@@ -160,7 +160,7 @@ class SheetManager:
               -b [conditional bonus]
               -phrase [flavor text]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.active_characters.get(ctx.message.author.id)
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -208,7 +208,7 @@ class SheetManager:
               -mc [minimum roll]
               -phrase [flavor text]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.active_characters.get(ctx.message.author.id)
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -258,7 +258,7 @@ class SheetManager:
     async def desc(self, ctx):
         """Prints a description of your currently active character."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.active_characters.get(ctx.message.author.id)
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -288,7 +288,7 @@ class SheetManager:
     async def portrait(self, ctx):
         """Shows the image of your currently active character."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.active_characters.get(ctx.message.author.id)
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -310,7 +310,7 @@ class SheetManager:
     async def sheet(self, ctx):
         """Prints the embed sheet of your currently active character."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.active_characters.get(ctx.message.author.id)
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -332,7 +332,8 @@ class SheetManager:
         `delete` - deletes a character.
         `list` - lists all of your characters."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        self.active_characters = self.bot.db.not_json_get('active_characters', {})
+        active_character = self.active_characters.get(ctx.message.author.id)
         if user_characters is None:
             return await self.bot.say('You have no characters.')
         
@@ -388,7 +389,7 @@ class SheetManager:
     async def update(self, ctx, *, args=''):
         """Updates the current character sheet, preserving all settings.
         Valid Arguments: -h - Hides character sheet after update is complete."""
-        active_character = self.active_characters.get(ctx.message.author.id)
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         if active_character is None:
             return await self.bot.say('You have no character active.')
@@ -444,7 +445,7 @@ class SheetManager:
         `mincheck <number>` - Does nothing right now.
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.active_characters.get(ctx.message.author.id)
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -551,6 +552,7 @@ class SheetManager:
         *!snippet [name]* - shows what the snippet is a shortcut for.
         *!snippet remove [name]* - deletes a snippet."""
         user_id = ctx.message.author.id
+        self.snippets = self.bot.db.not_json_get('damage_snippets', {})
         user_snippets = self.snippets.get(user_id, {})
         
         if snipname == 'list':
@@ -577,10 +579,11 @@ class SheetManager:
         """Commands to manage character variables for use in snippets and aliases.
         Character variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Dicecloud `statMod` and `statScore` variables are also available."""
-        active_character = self.active_characters.get(ctx.message.author.id) # get user's active
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
         if active_character is None:
             return await self.bot.say('You have no character active.')
         user_id = ctx.message.author.id
+        self.cvars = self.bot.db.not_json_get('char_vars', {})
         user_cvars = self.cvars.get(user_id, {})
         if value is None:
             cvar = user_cvars.get(active_character, {}).get(name)
@@ -596,10 +599,11 @@ class SheetManager:
     @cvar.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
         """Deletes a cvar from the currently active character."""
-        active_character = self.active_characters.get(ctx.message.author.id) # get user's active
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
         if active_character is None:
             return await self.bot.say('You have no character active.')
         user_id = ctx.message.author.id
+        self.cvars = self.bot.db.not_json_get('char_vars', {})
         user_cvars = self.cvars.get(user_id, {})
         try:
             del user_cvars.get(active_character, {})[name]
@@ -612,11 +616,11 @@ class SheetManager:
     @cvar.command(pass_context=True, name='list')
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""
-        active_character = self.active_characters.get(ctx.message.author.id) # get user's active
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
         if active_character is None:
             return await self.bot.say('You have no character active.')
         user_id = ctx.message.author.id
-        user_cvars = self.cvars.get(user_id, {})
+        user_cvars = self.bot.db.not_json_get('char_vars', {}).get(user_id, {})
         await self.bot.say('Your variables:\n{}'.format(', '.join([name for name in user_cvars.get(active_character,{}).keys()])))
         
     
@@ -643,6 +647,7 @@ class SheetManager:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet. Capitalization matters!\n' + str(e))
         
+        self.active_characters = self.bot.db.not_json_get('active_characters', {})
         self.active_characters[ctx.message.author.id] = url
         self.bot.db.not_json_set('active_characters', self.active_characters)
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
@@ -681,6 +686,7 @@ class SheetManager:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         
+        self.active_characters = self.bot.db.not_json_get('active_characters', {})
         self.active_characters[ctx.message.author.id] = file['filename']
         self.bot.db.not_json_set('active_characters', self.active_characters)
         

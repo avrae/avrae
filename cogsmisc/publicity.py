@@ -19,6 +19,7 @@ class Publicity:
     def __init__(self, bot):
         self.bot = bot
         self.session = aiohttp.ClientSession()
+        self.bot.loop.create_task(self.background_update())
         
     def __unload(self):
         # pray it closes
@@ -28,9 +29,13 @@ class Publicity:
         
         if self.bot.testing: return
         
+        shard_servers = self.bot.db.jget('shard_servers', {0: len(self.bot.servers)})
+        shard_servers[getattr(self.bot, 'shard_id')] = len(self.bot.servers)
+        self.bot.db.jset('shard_servers', shard_servers)
+        
         carbon_payload = {
             'key': self.bot.credentials.carbon_key,
-            'servercount': len(self.bot.servers)
+            'servercount': sum(a for a in shard_servers.values())
         }
         
         carbon_headers = {
@@ -41,6 +46,8 @@ class Publicity:
             print('Carbon statistics returned {0.status}'.format(resp))
 
         payload = json.dumps({
+            'shard_id': getattr(self.bot, 'shard_id', 0),
+            'shard_count': getattr(self.bot, 'shard_count', 1),
             'server_count': len(self.bot.servers)
         })
 
@@ -64,7 +71,6 @@ class Publicity:
     
     async def on_ready(self):
         await self.update()
-        self.bot.loop.create_task(self.background_update())
         
     async def on_server_join(self, server):
         print('Joined server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))

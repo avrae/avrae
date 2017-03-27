@@ -32,6 +32,7 @@ class AdminUtils:
     @commands.command(hidden=True)
     @checks.is_owner()
     async def blacklist(self, _id):
+        self.blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
         self.blacklisted_serv_ids.append(_id)
         self.bot.db.not_json_set('blacklist', self.blacklisted_serv_ids)
         await self.bot.say(':ok_hand:')
@@ -132,6 +133,7 @@ class AdminUtils:
     @checks.is_owner()
     async def mute(self, target : discord.User):
         """Mutes a person."""
+        self.muted = self.bot.db.not_json_get('muted', [])
         if target.id in self.muted:
             self.muted.remove(target.id)
             await self.bot.say("{} unmuted.".format(target))

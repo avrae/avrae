@@ -1027,11 +1027,11 @@ class InitTracker:
             self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
             print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
             temp_key.append(combat.channel.id)
-        self.bot.db.jsetex('temp_combatpanic', temp_key, 600) # timeout in 10 minutes
+        self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 600) # timeout in 10 minutes
         
     async def panic_load(self):
         await self.bot.wait_until_ready()
-        combats = self.bot.db.jget('temp_combatpanic', [])
+        combats = self.bot.db.jget('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), [])
         for c in combats:
             path = '{}.avrae'.format(c)
             combat = self.bot.db.get(path, None)
@@ -1040,6 +1040,9 @@ class InitTracker:
                 continue
             combat = pickle.loads(combat.encode('cp437'))
             combat.channel = self.bot.get_channel(combat.channel.id)
+            if combat.channel is None:
+                print('Combat channel not found reloading {}'.format(c))
+                continue
             self.combats.append(combat)
             try:
                 if combat.summary_message is not None:
@@ -1050,7 +1053,7 @@ class InitTracker:
                 pass
             print("Autoreloaded {}".format(c))
             await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!")
-        self.bot.db.delete('temp_combatpanic')
+        self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
             
     @init.command(pass_context=True)
     async def save(self, ctx):

@@ -33,6 +33,18 @@ class SheetManager:
         self.active_characters = self.bot.db.not_json_get('active_characters', {})
         self.snippets = self.bot.db.not_json_get('damage_snippets', {})
         self.cvars = self.bot.db.not_json_get('char_vars', {})
+        self.bot.loop.create_task(self.backup_user_data())
+        
+    async def backup_user_data(self):
+        try:
+            await self.bot.wait_until_ready()
+            while not self.bot.is_closed:
+                await asyncio.sleep(3600)  # every hour
+                self.bot.db.jset('active_characters_backup', self.bot.db.jget('active_characters', {}))
+                self.bot.db.jset('damage_snippets_backup', self.bot.db.jget('damage_snippets', {}))
+                self.bot.db.jset('char_vars_backup', self.bot.db.jget('char_vars', {}))
+        except asyncio.CancelledError:
+            pass
         
     def arg_stuff(self, args, ctx, character, char_id):
         args = self.parse_snippets(args, ctx.message.author.id)

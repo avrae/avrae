@@ -19,15 +19,16 @@ class Web:
     """A simple webserver."""
     
     
-    def __init__(self, bot):
-        self.bot = bot
-        self.loop = self.bot.loop
+    def __init__(self, loop=None):
+        self.loop = asyncio.get_event_loop() if loop is None else loop
         self.app = web.Application(loop=self.loop)
         aiohttp_jinja2.setup(self.app,
                              loader=jinja2.FileSystemLoader('./web/templates'))
         self.setup_middlewares(self.app)
         self.app.router.add_static('/5etools/', './web/data/5etools')
         self.add_static('/', './web/data', show_index=True)
+        
+    def run(self):
         self.run_app(self.app, host=os.environ.get('HOST'), port=os.environ.get('PORT'))
     
     def add_static(self, prefix, path, *, name=None, expect_handler=None,
@@ -98,16 +99,24 @@ class Web:
                 port = 8080
             else:
                 port = 8443
-    
+     
         loop = app.loop
-    
+     
         app.handler = app.make_handler()
         server = loop.create_server(app.handler, host, port, ssl=ssl_context,
                                     backlog=backlog)
         app.srv, app.startup_res = loop.run_until_complete(asyncio.gather(server,
                                                                   app.startup(),
                                                                   loop=loop))
-    
+     
         scheme = 'https' if ssl_context else 'http'
         print("======== Running on {scheme}://{host}:{port}/ ========".format(
                   scheme=scheme, host=host, port=port))
+        
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:  # pragma: no cover
+            pass
+        finally:
+            self.__unload()
+        loop.close()

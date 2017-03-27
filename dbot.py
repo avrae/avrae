@@ -34,7 +34,6 @@ from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim, get_positivity, \
     list_get
 from utils.help import Help
-from web.web import Web
 
 INITIALIZING = True
 TESTING = get_positivity(os.environ.get("TESTING", False))
@@ -60,7 +59,10 @@ Invite Avrae to your server [here](https://discordapp.com/oauth2/authorize?&clie
 Join the official testing server [here](https://discord.gg/pQbd4s6)!
 Love the bot? Donate to me [here](https://www.paypal.me/avrae)! \u2764
 '''
-bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True)
+if not SHARDED:
+    bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True)
+else:
+    bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True, shard_id=int(shard_id), shard_count=int(shard_count))
 bot.prefix = prefix
 bot.remove_command('help')
 bot.testing = TESTING
@@ -110,7 +112,6 @@ coreCog = Core(bot)
 permissionsCog = Permissions(bot)
 publicityCog = Publicity(bot)
 pbpCog = PBPUtils(bot)
-webCog = Web(bot)
 helpCog = Help(bot)
 sheetCog = SheetManager(bot)
 customizationCog = Customization(bot)
@@ -123,7 +124,6 @@ cogs = [diceCog,
         permissionsCog,
         publicityCog,
         pbpCog,
-        webCog,
         helpCog,
         sheetCog,
         customizationCog,
@@ -247,7 +247,7 @@ signal.signal(signal.SIGTERM, sigterm_handler)
 for cog in cogs:
     bot.add_cog(cog)
 
-if SHARDED: print("I am shard {} of {}.".format(bot.shard_id + 1, bot.shard_count))
+if SHARDED: print("I am shard {} of {}.".format(str(int(bot.shard_id) + 1), str(bot.shard_count)))
 
 INITIALIZING = False
 if not TESTING:     

@@ -1,2 +1,2 @@
-web: python3 dbot.py
+web: sh launch.sh
 test: python3 dbot.py test

@@ -278,7 +278,7 @@ class InitTracker:
         
     def parse_cvars(self, args, _id, character, char_id):
         tempargs = []
-        user_cvars = copy.copy(self.bot.get_cog('SheetManager').cvars.get(_id, {}).get(char_id, {}))
+        user_cvars = copy.copy(self.bot.db.not_json_get('char_vars', {}).get(_id, {}).get(char_id, {}))
         stat_vars = {}
         stats = copy.copy(character['stats'])
         for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
@@ -898,7 +898,7 @@ class InitTracker:
             args = shlex.split(args)
             tempargs = []
             for arg in args: # parse snippets
-                for snippet, arguments in self.bot.get_cog("SheetManager").snippets.get(ctx.message.author.id, {}).items():
+                for snippet, arguments in self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {}).items():
                     if arg == snippet: 
                         tempargs += shlex.split(arguments)
                         break

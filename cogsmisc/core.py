@@ -116,7 +116,7 @@ class Core:
         embed.set_footer(text='May the RNG be with you | Build {} | Shard {}'.format(self.bot.db.get('build_num'), getattr(self.bot, 'shard_id', 0)), icon_url='http://www.clipartkid.com/images/25/six-sided-dice-clip-art-at-clker-com-vector-clip-art-online-royalty-tUAGdd-clipart.png')
         commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n{items_looked_up_life} items looked up".format(**self.bot.botStats)
         embed.add_field(name="Commands Run on this shard", value=commands_run)
-        embed.add_field(name="Servers", value=len(self.bot.servers) + ' on this shard\n' + sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values()) + ' total')
+        embed.add_field(name="Servers", value=str(len(self.bot.servers)) + ' on this shard\n' + str(sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values())) + ' total')
         memory_usage = psutil.Process().memory_full_info().uss / 1024**2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
         embed.add_field(name='About', value='Bot coded by @zhu.exe#4211\nFound a bug? Report it with `!bug`!\nHelp me buy a cup of coffee [here](https://www.paypal.me/avrae)!\nJoin the official testing server [here](https://discord.gg/pQbd4s6)!', inline=False)

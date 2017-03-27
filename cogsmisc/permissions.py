@@ -48,6 +48,7 @@ class Permissions:
         guild_id = ctx.message.server.id
         if prefix is None:
             return await self.bot.say("My current prefix is: `" + self.bot.global_prefixes.get(guild_id, '!') + '`')
+        self.bot.global_prefixes = self.bot.db.not_json_get("prefixes", {})
         self.bot.global_prefixes[guild_id] = prefix
         self.bot.db.not_json_set("prefixes", self.bot.global_prefixes)
         await self.bot.say("Prefix set to `{}` for this server.".format(prefix))

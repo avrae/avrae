@@ -39,7 +39,7 @@ class SheetManager:
         try:
             await self.bot.wait_until_ready()
             while not self.bot.is_closed:
-                await asyncio.sleep(3600)  # every hour
+                await asyncio.sleep(1800)  # every half hour
                 self.bot.db.jset('active_characters_backup', self.bot.db.jget('active_characters', {}))
                 self.bot.db.jset('damage_snippets_backup', self.bot.db.jget('damage_snippets', {}))
                 self.bot.db.jset('char_vars_backup', self.bot.db.jget('char_vars', {}))

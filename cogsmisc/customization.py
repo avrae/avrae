@@ -4,6 +4,7 @@ Created on Jan 30, 2017
 @author: andrew
 '''
 from discord.ext import commands
+import asyncio
 
 class Customization:
     """Commands to help streamline using the bot."""
@@ -11,6 +12,26 @@ class Customization:
     def __init__(self, bot):
         self.bot = bot
         self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        self.bot.loop.create_task(self.update_aliases())
+        self.bot.loop.create_task(self.backup_aliases())
+        
+    async def update_aliases(self):
+        try:
+            await self.bot.wait_until_ready()
+            while not self.bot.is_closed:
+                await asyncio.sleep(10)
+                self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        except asyncio.CancelledError:
+            pass
+        
+    async def backup_aliases(self):
+        try:
+            await self.bot.wait_until_ready()
+            while not self.bot.is_closed:
+                await asyncio.sleep(1800)
+                self.bot.db.jset('cmd_aliases_backup', self.bot.db.not_json_get('cmd_aliases', {}))
+        except asyncio.CancelledError:
+            pass
         
     async def on_message(self, message):
         await self.handle_aliases(message)
@@ -54,6 +75,7 @@ class Customization:
         *!alias [alias name]* - reveals what the alias runs.
         *!alias remove [alias name]* - removes an alias."""
         user_id = ctx.message.author.id
+        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
         user_aliases = self.aliases.get(user_id, {})
         if alias_name in self.bot.commands:
             return await self.bot.say('There is already a built-in command with that name!')

@@ -12,7 +12,4 @@ do
     sleep 10
 done
 
-while true
-do
-    sleep 10
-done
+python3 beAnnoying.py # don't fall asleep

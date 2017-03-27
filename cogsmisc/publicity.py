@@ -27,7 +27,7 @@ class Publicity:
 
     async def update(self):
         shard_servers = self.bot.db.jget('shard_servers', {0: len(self.bot.servers)})
-        shard_servers[getattr(self.bot, 'shard_id')] = len(self.bot.servers)
+        shard_servers[str(getattr(self.bot, 'shard_id'))] = len(self.bot.servers)
         self.bot.db.jset('shard_servers', shard_servers)
         if self.bot.testing: return
         

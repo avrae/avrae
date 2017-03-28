@@ -41,7 +41,7 @@ class Publicity:
         }
 
         async with self.session.post(CARBONITEX_API_BOTDATA, data=carbon_payload, headers=carbon_headers) as resp:
-            print('Carbon statistics returned {0.status}'.format(resp))
+            print('s.{0}: Carbon statistics returned {1.status}'.format(getattr(self.bot, 'shard_id', 0), resp))
 
         payload = json.dumps({
             'shard_id': getattr(self.bot, 'shard_id', 0),
@@ -56,7 +56,7 @@ class Publicity:
 
         url = '{0}/bots/{1.user.id}/stats'.format(DISCORD_BOTS_API, self.bot)
         async with self.session.post(url, data=payload, headers=headers) as resp:
-            print('DBots statistics returned {0.status} for {1}'.format(resp, payload))
+            print('s.{}: DBots statistics returned {1.status} for {2}'.format(getattr(self.bot, 'shard_id', 0), resp, payload))
 
     async def background_update(self):
         try:
@@ -71,7 +71,7 @@ class Publicity:
         await self.update()
         
     async def on_server_join(self, server):
-        print('Joined server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))
+        print('s.{}: Joined server {}: {}, {} members ({} bot)'.format(getattr(self.bot, 'shard_id', 0), server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))
         
     async def on_server_remove(self, server):
-        print('Left server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))
+        print('s.{}: Left server {}: {}, {} members ({} bot)'.format(getattr(self.bot, 'shard_id', 0), server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))

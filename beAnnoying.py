@@ -8,11 +8,11 @@ import sys
 import time
 
 def sigterm_handler(_signum, _frame):
-    print("Sleeping for 20 seconds before exit...")
-    time.sleep(20)
+    print("Python beAnnoying caught SIGTERM, sleeping for 15!")
+    time.sleep(15)
     sys.exit(0)
     
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, sigterm_handler)
     while True:
-        time.sleep(20)
+        time.sleep(1)

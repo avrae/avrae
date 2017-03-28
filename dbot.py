@@ -99,7 +99,7 @@ bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter('%(levelname)s:%(name)s: %(message)s'))
+handler.setFormatter(logging.Formatter('s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, shard_id, 0))))
 logger.addHandler(handler)
 
 #-----COGS-----
@@ -178,14 +178,14 @@ async def on_command_error(error, ctx):
     if bot.mask & coreCog.debug_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
         try:
-            await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, repr(error), ctx.message.content))
+            await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}), shard {}: {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, getattr(bot, 'shard_id', 0), repr(error), ctx.message.content))
         except AttributeError:
-            await bot.send_message(bot.owner, "Error in PM with {} ({}): {}\nCaused by message: `{}`".format(ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
+            await bot.send_message(bot.owner, "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
         for o in discord_trim(tb):
             await bot.send_message(bot.owner, o)
     else:
         await bot.send_message(ctx.message.channel, "Error: " + str(error))
-    print("Error caused by message: `{}`".format(ctx.message.content))
+    print("s.{}: Error caused by message: `{}`".format(getattr(bot, 'shard_id', 0), ctx.message.content))
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
                 
 @bot.event
@@ -194,6 +194,7 @@ async def on_message(message):
         return
     if message.content.startswith('avraepls'):
         if coreCog.verbose_mask & bot.mask:
+            print("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))
             await bot.send_message(message.channel, "`Reseeding RNG...`")
         random.seed()
     if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!

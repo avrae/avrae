@@ -451,6 +451,7 @@ class InitTracker:
         Args: adv/dis
               -b [conditional bonus]
               -phrase [flavor text]
+              -p [init value]
               -h (same as !init add)
               --group (same as !init add)"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
@@ -479,23 +480,28 @@ class InitTracker:
         args = parse_args(args)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
+        p = args.get('p', None)
         phrase = args.get('phrase', None)
         
-        if b is not None:
-            check_roll = roll('1d20' + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
+        if p is None:
+            if b is not None:
+                check_roll = roll('1d20' + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
+            else:
+                check_roll = roll('1d20' + '{:+}'.format(skills[skill]), adv=adv, inline=True)
+            
+            embed.title = '{} makes an {} check!'.format(character.get('stats', {}).get('name'),
+                                                        re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title())
+            embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+            init = check_roll.total
         else:
-            check_roll = roll('1d20' + '{:+}'.format(skills[skill]), adv=adv, inline=True)
-        
-        embed.title = '{} makes an {} check!'.format(character.get('stats', {}).get('name'),
-                                                    re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title())
-        embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+            init = int(p)
+            embed.title = "{} already rolled initiative!".format(character.get('stats', {}).get('name'))
+            embed.description = "Placed at initiative `{}`.".format(init)
         
         group = args.get('group')
         controller = ctx.message.author
-        init = check_roll.total
         
-        
-        me = DicecloudCombatant(init=check_roll.total, author=ctx.message.author, effects=[], notes='', private=args.get('h', False), group=args.get('group', None), sheet=character)
+        me = DicecloudCombatant(init=init, author=ctx.message.author, effects=[], notes='', private=args.get('h', False), group=args.get('group', None), sheet=character)
         if group is None:
             combat.combatants.append(me)
             embed.set_footer(text="Added to combat!")
@@ -546,7 +552,7 @@ class InitTracker:
         
         monster = searchMonster(monster_name, return_monster=True, visible=True)
         self.bot.botStats["monsters_looked_up_session"] += 1
-        self.bot.botStats["monsters_looked_up_life"] += 1
+        self.bot.db.incr("monsters_looked_up_life")
         if monster['monster'] is None:
             return await self.bot.say(monster['string'][0], delete_after=15)
         monster = monster['monster']
@@ -558,6 +564,7 @@ class InitTracker:
         group = args.get('group')
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
+        p = args.get('p', None)
         
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
@@ -576,21 +583,24 @@ class InitTracker:
                 continue
             
             try:
-                if b is not None:
-                    check_roll = roll('1d20' + '{:+}'.format(dexMod) + '+' + b, adv=adv, inline=True)
+                if p is None:
+                    if b is not None:
+                        check_roll = roll('1d20' + '{:+}'.format(dexMod) + '+' + b, adv=adv, inline=True)
+                    else:
+                        check_roll = roll('1d20' + '{:+}'.format(dexMod), adv=adv, inline=True)
+                    init = check_roll.total
                 else:
-                    check_roll = roll('1d20' + '{:+}'.format(dexMod), adv=adv, inline=True)
-                init = check_roll.total
+                    init = int(p)
                 controller = ctx.message.author
                 me = MonsterCombatant(name=name, init=init, author=controller, effects=[], notes='', private=private, group=group, monster=monster, modifier=dexMod)
                 if group is None:
                     combat.combatants.append(me)
-                    out += "{} was added to combat with initiative {}.\n".format(name, check_roll.skeleton)
+                    out += "{} was added to combat with initiative {}.\n".format(name, check_roll.skeleton if p is None else p)
                 elif combat.get_combatant_group(group) is None:
                     newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
                     newGroup.combatants.append(me)
                     combat.combatants.append(newGroup)
-                    out += "{} was added to combat as part of group {}, with initiative {}.\n".format(name, group, check_roll.skeleton)
+                    out += "{} was added to combat as part of group {}, with initiative {}.\n".format(name, group, check_roll.skeleton if p is None else p)
                 else:
                     temp_group = combat.get_combatant_group(group)
                     temp_group.combatants.append(me)
@@ -706,6 +716,7 @@ class InitTracker:
         """Edits the options of a combatant.
         Usage: !init opt <NAME> <ARGS>
         Valid Arguments:    -h (hides HP)
+                            -p (changes init)
                             --controller <CONTROLLER> (pings a different person on turn)
                             --ac <AC> (changes combatant AC)"""
         try:
@@ -745,6 +756,17 @@ class InitTracker:
                 out += "\u2705 Combatant AC set to {}.\n".format(ac)
             except:
                 out += "\u274c You must pass in an AC with the --ac tag.\n"
+        if '-p' in args:
+            if combatant == combat.currentCombatant:
+                out += "\u274c You cannot change a combatant's initiative on their own turn.\n"
+            else:
+                try:
+                    p = int(args[args.index('-p') + 1])
+                    combatant.init = p
+                    combat.sortCombatants()
+                    out += "\u2705 Combatant initiative set to {}.\n".format(p)
+                except:
+                    out += "\u274c You must pass in a number with the -p tag.\n"
         
         await self.bot.say("Combatant options updated.\n" + out, delete_after=10)
         await combat.update_summary(self.bot)

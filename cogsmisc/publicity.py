@@ -31,17 +31,18 @@ class Publicity:
         self.bot.db.jset('shard_servers', shard_servers)
         if self.bot.testing: return
         
-        carbon_payload = {
-            'key': self.bot.credentials.carbon_key,
-            'servercount': sum(a for a in shard_servers.values())
-        }
-        
-        carbon_headers = {
-            'content-type': 'application/json'
-        }
-
-        async with self.session.post(CARBONITEX_API_BOTDATA, data=carbon_payload, headers=carbon_headers) as resp:
-            print('s.{0}: Carbon statistics returned {1.status}'.format(getattr(self.bot, 'shard_id', 0), resp))
+        if getattr(self.bot, "shard_id", 0) == 0:
+            carbon_payload = {
+                'key': self.bot.credentials.carbon_key,
+                'servercount': sum(a for a in shard_servers.values())
+            }
+            
+            carbon_headers = {
+                'content-type': 'application/json'
+            }
+    
+            async with self.session.post(CARBONITEX_API_BOTDATA, data=carbon_payload, headers=carbon_headers) as resp:
+                print('s.{0}: Carbon statistics returned {1.status}'.format(getattr(self.bot, 'shard_id', 0), resp))
 
         payload = json.dumps({
             'shard_id': getattr(self.bot, 'shard_id', 0),
@@ -56,7 +57,7 @@ class Publicity:
 
         url = '{0}/bots/{1.user.id}/stats'.format(DISCORD_BOTS_API, self.bot)
         async with self.session.post(url, data=payload, headers=headers) as resp:
-            print('s.{}: DBots statistics returned {1.status} for {2}'.format(getattr(self.bot, 'shard_id', 0), resp, payload))
+            print('s.{0}: DBots statistics returned {1.status} for {2}'.format(getattr(self.bot, 'shard_id', 0), resp, payload))
 
     async def background_update(self):
         try:

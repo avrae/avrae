@@ -40,7 +40,7 @@ def clean_shard_servers():
     bot.db.jset("shard_servers", temp)
 
 def sigterm_handler(_signum, _frame):
-    print("Python beAnnoying caught SIGTERM, sleeping for 15!")
+    print("Overseer caught SIGTERM, sleeping for 15!")
     time.sleep(15)
     sys.exit(0)
     

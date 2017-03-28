@@ -246,6 +246,15 @@ class MonsterCombatant(Combatant):
         self.group = group
         self.monster = monster
         
+    def get_status(self):
+        csFormat = "{} {} {}{}{}"
+        status = csFormat.format(self.name,
+                                 self.get_hp_and_ac(),
+                                 '\n> ' + self.notes if self.notes is not '' else '',
+                                 ('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else '',
+                                 "\n- This combatant will be automatically removed if they remain below 0 HP." if self.hp <= 0 else "")
+        return status
+        
     def __str__(self):
         return self.name
     
@@ -546,6 +555,7 @@ class InitTracker:
         Args: adv/dis
               -b [conditional bonus]
               -n [number of monsters]
+              -p [init value]
               --name [name scheme, use "#" for auto-numbering, ex. "Orc#"]
               -h (same as !init add, default true)
               --group (same as !init add)"""
@@ -636,6 +646,16 @@ class InitTracker:
             await self.bot.say("It is not your turn.")
             return
         
+        toRemove = []
+        if combat.currentCombatant is not None:
+            if isinstance(combat.currentCombatant, CombatantGroup):
+                thisTurn = [c for c in combat.currentCombatant.combatants]
+            else:
+                thisTurn = [combat.currentCombatant]
+            for c in thisTurn:
+                if isinstance(c, MonsterCombatant) and c.hp <= 0:
+                    toRemove.append(c)
+        
         try:
             nextCombatant = combat.getNextCombatant()
             combat.current = nextCombatant.init
@@ -673,8 +693,16 @@ class InitTracker:
                                    combat.round,
                                    " and ".join(["{} ({})".format(c.name, c.author.mention) for c in thisTurn]),
                                    '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
-        
-        
+        for c in toRemove:
+            if c.group is None:
+                combat.combatants.remove(c)
+            else:
+                group = combat.get_combatant_group(c.group)
+                group.combatants.remove(c)
+            outStr += "\n{} automatically removed from combat.".format(c.name)
+        if len(toRemove) > 0:
+            combat.sortCombatants()
+            combat.checkGroups()
         await self.bot.say(outStr)
         await combat.update_summary(self.bot)
         

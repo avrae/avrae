@@ -18,4 +18,4 @@ done
 
 trap _term SIGTERM
 
-python3 beAnnoying.py # don't fall asleep
+python3 beAnnoying.py $2 # don't fall asleep

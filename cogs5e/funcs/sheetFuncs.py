@@ -104,5 +104,8 @@ def sheet_attack(attack, args):
     
     if attack.get('details') is not None:
         embed.add_field(name='Effect', value=(attack.get('details', '')))
+    
+    if args.get('image') is not None:
+        embed.set_thumbnail(url=args.get('image'))
         
     return {'embed': embed, 'total_damage': total_damage}

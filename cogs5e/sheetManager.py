@@ -206,6 +206,9 @@ class SheetManager:
             
         embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         
+        if args.get('image') is not None:
+            embed.set_thumbnail(url=args.get('image'))
+        
         await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)
@@ -259,7 +262,8 @@ class SheetManager:
         embed.title = '{} makes {} check!'.format(character.get('stats', {}).get('name'),
                                                   a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()))
         embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
-        
+        if args.get('image') is not None:
+            embed.set_thumbnail(url=args.get('image'))
         await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)

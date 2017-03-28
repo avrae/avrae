@@ -1017,9 +1017,15 @@ class InitTracker:
             return await self.bot.say('Timed out waiting for a response or invalid response.', delete_after=10)
         elif not replyBool:
             return await self.bot.say('OK, cancelling.', delete_after=10)
+        
+        msg = await self.bot.say("OK, ending...")
             
         for c in combat.combatants:
-            del c
+            if isinstance(c, DicecloudCombatant):
+                try:
+                    await self.bot.send_message(c.author, "{}'s final HP: {}".format(c.name, c.get_hp(True)))
+                except:
+                    pass
         
         try:
             await self.bot.edit_message(combat.summary_message, combat.summary_message.content + "\n```-----COMBAT ENDED-----```")
@@ -1030,9 +1036,9 @@ class InitTracker:
         try:
             self.combats.remove(combat)
         except:
-            await self.bot.say("Failed to end combat.")
+            await self.bot.edit_message(msg, "Failed to end combat.")
         else:
-            await self.bot.say("Combat ended.")
+            await self.bot.edit_message(msg, "Combat ended.")
             
     def __unload(self):
         for combat in self.combats:

@@ -98,6 +98,9 @@ class Core:
     @commands.command(aliases=['stats', 'info'])
     async def about(self):
         """Information about the bot."""
+        statKeys = ["dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life", "items_looked_up_life"]
+        for k in statKeys:
+            self.bot.botStats[k] = int(self.bot.db.get(k))
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808"

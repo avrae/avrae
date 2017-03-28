@@ -141,15 +141,12 @@ async def enter():
     await bot.wait_until_ready()
     appInfo = await bot.application_info()
     bot.owner = appInfo.owner
-    bot.botStats = bot.db.get_whole_dict('botStats')
+    bot.botStats = {}
     statKeys = ["dice_rolled_session", "spells_looked_up_session", "monsters_looked_up_session", "commands_used_session", "dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life", "items_looked_up_life", "items_looked_up_session"]
     for k in statKeys:
-        if k not in bot.botStats.keys():
-            bot.botStats[k] = 0
+        if not bot.db.exists(k): bot.db.set(k, 0)
+        bot.botStats[k] = int(bot.db.get(k, 0))
     bot.botStats["items_looked_up_session"] = bot.botStats["items_looked_up_session"] = bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
-    for stat in bot.botStats.keys():
-        bot.botStats[stat] = int(bot.botStats[stat])
-    bot.db.set_dict('botStats', bot.botStats)
     if not bot.db.exists('build_num'): bot.db.set('build_num', 114) # this was added in build 114
     bot.db.incr('build_num')
     await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
@@ -212,32 +209,13 @@ async def on_message(message):
 @bot.event
 async def on_command(command, ctx):
     bot.botStats['commands_used_session'] += 1
-    bot.botStats['commands_used_life'] += 1
-
-# BACKGROUND
-background_tasks = []
-
-async def save_stats():
-    try:
-        await bot.wait_until_ready()
-        while not bot.is_closed:
-            await asyncio.sleep(3600)  # every hour
-            bot.db.set_dict('botStats', bot.botStats)
-    except asyncio.CancelledError:
-        pass
-
-bot.loop.create_task(save_stats())
+    bot.db.incr('commands_used_life')
 
 # SIGNAL HANDLING
 def sigterm_handler(_signum, _frame):
     try:
         print("Attempting to save combats...")
         bot.get_cog("InitTracker").panic_save()
-#         for combat in bot.get_cog("InitTracker").combats:
-#             combat.combatantGenerator = None
-#             path = '{}.avrae'.format(combat.channel.id)
-#             bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
-#             print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
     except: pass
     bot.loop.run_until_complete(bot.logout())
     bot.loop.close()

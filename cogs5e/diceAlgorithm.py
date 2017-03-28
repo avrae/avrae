@@ -24,7 +24,7 @@ class Dice:
     async def on_message(self, message):
         if message.content.startswith('!d20'):
             self.bot.botStats["dice_rolled_session"] += 1
-            self.bot.botStats["dice_rolled_life"] += 1
+            self.bot.db.incr('dice_rolled_life')
             rollStr = message.content.replace('!', '1').split(' ')[0]
             try:
                 rollFor = ' '.join(message.content.split(' ')[1:])
@@ -46,7 +46,7 @@ class Dice:
     async def quick_roll(self, ctx, *, mod:str='0'):
         """Quickly rolls a d20."""
         self.bot.botStats["dice_rolled_session"] += 1
-        self.bot.botStats["dice_rolled_life"] += 1
+        self.bot.db.incr('dice_rolled_life')
         rollStr = '1d20+' + mod
         adv = 0
         if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
@@ -80,7 +80,7 @@ class Dice:
         
         adv = 0
         self.bot.botStats["dice_rolled_session"] += 1
-        self.bot.botStats["dice_rolled_life"] += 1
+        self.bot.db.incr('dice_rolled_life')
         if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
             adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
             rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
@@ -103,7 +103,7 @@ class Dice:
         if iterations < 1 or iterations > 500:
             return await self.bot.say("Too many or too few iterations.")
         self.bot.botStats["dice_rolled_session"] += iterations
-        self.bot.botStats["dice_rolled_life"] += iterations
+        self.bot.db.incr('dice_rolled_life')
         adv = 0
         out = []
         if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
@@ -131,7 +131,7 @@ class Dice:
         if iterations < 1 or iterations > 500:
             return await self.bot.say("Too many or too few iterations.")
         self.bot.botStats["dice_rolled_session"] += iterations
-        self.bot.botStats["dice_rolled_life"] += iterations
+        self.bot.db.incr('dice_rolled_life')
         adv = 0
         out = []
         successes = 0
@@ -177,7 +177,7 @@ class Dice:
         
         spell = searchSpell(spellName, return_spell=True)
         self.bot.botStats["spells_looked_up_session"] += 1
-        self.bot.botStats["spells_looked_up_life"] += 1
+        self.bot.db.incr('spells_looked_up_life')
         if spell['spell'] is None:
             return await self.bot.say(spell['string'][0], delete_after=15)
         result = spell['string']
@@ -228,7 +228,7 @@ class Dice:
         
         monster = searchMonster(monster_name, return_monster=True, visible=True)
         self.bot.botStats["monsters_looked_up_session"] += 1
-        self.bot.botStats["monsters_looked_up_life"] += 1
+        self.bot.db.incr('monsters_looked_up_life')
         if monster['monster'] is None:
             return await self.bot.say(monster['string'][0], delete_after=15)
         monster = monster['monster']

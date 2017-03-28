@@ -61,6 +61,7 @@ class Lookup:
                               -pm_result [True/False] - PMs the result of the lookup to reduce spam."""
         args = shlex.split(args.lower())
         guild_id = ctx.message.server.id
+        self.settings = self.bot.db.not_json_get("lookup_settings", {})
         guild_settings = self.settings.get(guild_id, {})
         if '-req_dm_monster' in args:
             try:
@@ -104,7 +105,7 @@ class Lookup:
         
         result = searchMonster(monstername, visible=visible)
         self.bot.botStats["monsters_looked_up_session"] += 1
-        self.bot.botStats["monsters_looked_up_life"] += 1
+        self.bot.db.incr('monsters_looked_up_life')
     
         # do stuff here
         for r in result:
@@ -126,7 +127,7 @@ class Lookup:
         
         result = searchSpell(args)
         self.bot.botStats["spells_looked_up_session"] += 1
-        self.bot.botStats["spells_looked_up_life"] += 1
+        self.bot.db.incr('spells_looked_up_life')
 
         for r in result:
             if pm:
@@ -145,7 +146,7 @@ class Lookup:
         
         result = searchItem(itemname)
         self.bot.botStats["items_looked_up_session"] += 1
-        self.bot.botStats["items_looked_up_life"] += 1
+        self.bot.db.incr('items_looked_up_life')
 
         for r in result:
             if pm:

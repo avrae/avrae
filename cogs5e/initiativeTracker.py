@@ -699,7 +699,7 @@ class InitTracker:
             else:
                 group = combat.get_combatant_group(c.group)
                 group.combatants.remove(c)
-            outStr += "\n{} automatically removed from combat.".format(c.name)
+            outStr += "{} automatically removed from combat.\n".format(c.name)
         if len(toRemove) > 0:
             combat.sortCombatants()
             combat.checkGroups()
@@ -960,7 +960,7 @@ class InitTracker:
             args['t'] = target.name
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get('color') is None else combatant.sheet.get('settings', {}).get('color')
-            target.hp -= result['total_damage']
+            if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
         elif isinstance(combatant, MonsterCombatant):
             attacks = combatant.monster.get('attacks') # get attacks
             attack = fuzzy_search(attacks, 'name', atk_name)
@@ -971,6 +971,25 @@ class InitTracker:
             args = shlex.split(args)
             args = parse_args_2(args)
             args['name'] = a_or_an(combatant.monster.get('name')).title()
+            if target.ac is not None: args['ac'] = target.ac
+            args['t'] = target.name
+            result = sheet_attack(attack, args)
+            result['embed'].colour = random.randint(0, 0xffffff)
+            if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
+        elif isinstance(combatant, CombatantGroup):
+            attacks = []
+            for c in combatant.combatants:
+                if isinstance(c, DicecloudCombatant):
+                    attacks += c.sheet.get('attacks', [])
+                elif isinstance(c, MonsterCombatant):
+                    attacks += c.monster.get('attacks', [])
+            attack = fuzzy_search(attacks, 'name', atk_name)
+            if attack is None:
+                return await self.bot.say("No attack with that name found.", delete_after=15)
+            attack['details'] = attack.get('desc') if attack.get('details') is None else attack['details']
+            args = shlex.split(args)
+            args = parse_args_2(args)
+            args['name'] = "One of the {}".format(combatant.name)
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
             result = sheet_attack(attack, args)
@@ -1089,6 +1108,9 @@ class InitTracker:
         await self.bot.wait_until_ready()
         combats = self.bot.db.jget('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), [])
         for c in combats:
+            if not (int(c) >> 22) % getattr(self.bot, 'shard_count', 0) == getattr(self.bot, 'shard_id', 0):
+                print('Combat in wrong shard for {}'.format(c))
+                continue
             path = '{}.avrae'.format(c)
             combat = self.bot.db.get(path, None)
             if combat is None:

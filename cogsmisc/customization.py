@@ -3,8 +3,14 @@ Created on Jan 30, 2017
 
 @author: andrew
 '''
-from discord.ext import commands
 import asyncio
+import copy
+import re
+
+from discord.ext import commands
+
+from cogs5e.funcs.dice import roll
+
 
 class Customization:
     """Commands to help streamline using the bot."""
@@ -59,11 +65,49 @@ class Customization:
             elif ctx.message.content.startswith(self.bot.prefix): return
             await self.bot.process_commands(ctx.message)
             
+    def parse_cvars(self, args, _id, character, char_id):
+        tempargs = []
+        user_cvars = copy.copy(self.bot.db.not_json_get('char_vars', {}).get(_id, {}).get(char_id, {}))
+        stat_vars = {}
+        stats = copy.copy(character['stats'])
+        for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
+            stats[stat+'Score'] = stats[stat]
+            del stats[stat]
+        stat_vars.update(stats)
+        stat_vars.update(character['levels'])
+        stat_vars['hp'] = character['hp']
+        stat_vars['armor'] = character['armor']
+        stat_vars.update(character['saves'])
+        for arg in [args]:
+            for var in re.finditer(r'{([^{}]+)}', arg):
+                raw = var.group(0)
+                out = var.group(1)
+                for cvar, value in user_cvars.items():
+                    out = out.replace(cvar, str(value))
+                for cvar, value in stat_vars.items():
+                    out = out.replace(cvar, str(value))
+                arg = arg.replace(raw, '`{}`'.format(roll(out).total))
+            for var in re.finditer(r'<([^<>]+)>', arg):
+                raw = var.group(0)
+                out = var.group(1)
+                for cvar, value in user_cvars.items():
+                    out = out.replace(cvar, str(value))
+                for cvar, value in stat_vars.items():
+                    out = out.replace(cvar, str(value))
+                arg = arg.replace(raw, out)
+            tempargs.append(arg)
+        return "".join(tempargs)
+            
     async def handle_aliases(self, message):
         if message.content.startswith(self.bot.prefix):
             for alias, command in self.aliases.get(message.author.id, {}).items():
                 if self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0] == alias:
                     message.content = message.content.replace(alias, command, 1)
+                    user_characters = self.bot.db.not_json_get(message.author.id + '.characters', {}) # grab user's characters
+                    if len(user_characters) > 0:
+                        active_character = self.bot.db.not_json_get('active_characters', {}).get(message.author.id) # get user's active
+                        if active_character is not None:
+                            message.content = self.parse_cvars(message.content, message.author.id, user_characters[active_character], active_character)
                     await self.bot.process_commands(message)
                     break
         

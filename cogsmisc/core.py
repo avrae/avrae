@@ -13,6 +13,7 @@ from discord.ext import commands
 import psutil
 
 from utils import checks
+from discord.channel import PrivateChannel
 
 
 class Core:
@@ -62,7 +63,10 @@ class Core:
     @commands.command(pass_context=True, aliases=['feedback'])
     async def bug(self, ctx, *, report:str):
         """Reports a bug to the developer."""
-        await self.bot.send_message(self.bot.owner, "Bug reported by {} ({}) from {}:\n{}".format(ctx.message.author.mention, str(ctx.message.author), ctx.message.server, report))
+        if not isinstance(ctx.message.channel, PrivateChannel):
+            await self.bot.send_message(self.bot.owner, "Bug reported by {} ({}) from {} ({}):\n{}".format(ctx.message.author.mention, str(ctx.message.author), ctx.message.server, ctx.message.server.id, report))
+        else:
+            await self.bot.send_message(self.bot.owner, "Bug reported by {} ({}):\n{}".format(ctx.message.author.mention, str(ctx.message.author), report))
         await self.bot.say("Bug report sent to developer! He'll get to it eventually.")
         
     @commands.command(hidden=True, pass_context=True)

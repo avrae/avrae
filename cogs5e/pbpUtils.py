@@ -45,7 +45,7 @@ class PBPUtils:
         
     @commands.command(pass_context=True, hidden=True)
     async def embed(self, ctx, *, args):
-        """Echos a message.
+        """Creates and prints an Embed.
         Arguments: -title [title]
         -desc [description text]
         -thumb [image url]

@@ -1102,7 +1102,7 @@ class InitTracker:
             self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
             print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
             temp_key.append(combat.channel.id)
-        self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 600) # timeout in 10 minutes
+        self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 120) # timeout in 2 minutes
         
     async def panic_load(self):
         await self.bot.wait_until_ready()
@@ -1134,7 +1134,7 @@ class InitTracker:
                     pass
                 print("Autoreloaded {}".format(c))
                 await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!")
-        self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
+        #self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
             
     @init.command(pass_context=True)
     async def save(self, ctx):

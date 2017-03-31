@@ -1109,8 +1109,10 @@ class InitTracker:
         combats = self.bot.db.jget('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), [])
         for c in combats:
             if not (int(c) >> 22) % getattr(self.bot, 'shard_count', 0) == getattr(self.bot, 'shard_id', 0):
-                print('Combat in wrong shard for {}'.format(c))
-                continue
+                print('Initial shard check for {} failed.'.format(c))
+                if self.bot.get_server(c) is None:
+                    print('2nd shard check for {} failed, aborting.'.format(c))
+                    continue
             path = '{}.avrae'.format(c)
             combat = self.bot.db.get(path, None)
             if combat is None:

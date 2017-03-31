@@ -1106,33 +1106,34 @@ class InitTracker:
         
     async def panic_load(self):
         await self.bot.wait_until_ready()
-        combats = self.bot.db.jget('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), [])
-        for c in combats:
-            if not (int(c) >> 22) % getattr(self.bot, 'shard_count', 0) == getattr(self.bot, 'shard_id', 0):
-                print('Initial shard check for {} failed.'.format(c))
-                if self.bot.get_server(c) is None:
-                    print('2nd shard check for {} failed, aborting.'.format(c))
+        for i in range(getattr(self.bot, 'shard_count', 1)):
+            combats = self.bot.db.jget('temp_combatpanic.{}'.format(i), [])
+            for c in combats:
+                if not (int(c) >> 22) % getattr(self.bot, 'shard_count', 1) == getattr(self.bot, 'shard_id', 0):
+                    print('Initial shard check for {} failed.'.format(c))
+                    if self.bot.get_server(c) is None:
+                        print('2nd shard check for {} failed, aborting.'.format(c))
+                        continue
+                path = '{}.avrae'.format(c)
+                combat = self.bot.db.get(path, None)
+                if combat is None:
+                    print('Combat not found reloading {}'.format(c))
                     continue
-            path = '{}.avrae'.format(c)
-            combat = self.bot.db.get(path, None)
-            if combat is None:
-                print('Combat not found reloading {}'.format(c))
-                continue
-            combat = pickle.loads(combat.encode('cp437'))
-            combat.channel = self.bot.get_channel(combat.channel.id)
-            if combat.channel is None:
-                print('Combat channel not found reloading {}'.format(c))
-                continue
-            self.combats.append(combat)
-            try:
-                if combat.summary_message is not None:
-                    combat.summary_message = await self.bot.get_message(combat.channel, combat.summary_message.id)
-            except NotFound:
-                print('Summary Message not found reloading {}'.format(c))
-            except:
-                pass
-            print("Autoreloaded {}".format(c))
-            await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!")
+                combat = pickle.loads(combat.encode('cp437'))
+                combat.channel = self.bot.get_channel(combat.channel.id)
+                if combat.channel is None:
+                    print('Combat channel not found reloading {}'.format(c))
+                    continue
+                self.combats.append(combat)
+                try:
+                    if combat.summary_message is not None:
+                        combat.summary_message = await self.bot.get_message(combat.channel, combat.summary_message.id)
+                except NotFound:
+                    print('Summary Message not found reloading {}'.format(c))
+                except:
+                    pass
+                print("Autoreloaded {}".format(c))
+                await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!")
         self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
             
     @init.command(pass_context=True)

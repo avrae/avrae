@@ -130,22 +130,11 @@ class Lookup:
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
         
-        if random.randint(1, 25) == 1:
-            a = "".join([l.upper() + ". " for l in args]) + args.title() + "."
-            aprfools = await self.bot.say(a)
-            await asyncio.sleep(5)
-            await self.bot.edit_message(aprfools, a + "\nJust kidding! Here's your spell, and happy April Fool's!")
-            for r in result:
-                if pm:
-                    await self.bot.send_message(ctx.message.author, r)
-                else:
-                    await self.bot.say(r)
-        else:
-            for r in result:
-                if pm:
-                    await self.bot.send_message(ctx.message.author, r)
-                else:
-                    await self.bot.say(r)
+        for r in result:
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r)
                 
     @commands.command(pass_context=True, name='item')
     async def item_lookup(self, ctx, *, itemname):

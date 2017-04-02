@@ -9,6 +9,7 @@ import discord
 from discord.ext import commands
 
 from utils.functions import list_get
+from math import sqrt
 
 
 class PBPUtils:
@@ -84,4 +85,10 @@ class PBPUtils:
         except:
             pass
         
-        await self.bot.say("```" + '-'*50 + "```")
+        await self.bot.say("```" + '-' * 50 + "```")
+        
+    @commands.command()
+    async def pythag(self, num1:int, num2:int):
+        """Performs a pythagorean theorem calculation to calculate diagonals."""
+        await self.bot.say(sqrt(num1 ** 2 + num2 ** 2))
+        

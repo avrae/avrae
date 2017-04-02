@@ -99,7 +99,7 @@ bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter('s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, shard_id, 0))))
+handler.setFormatter(logging.Formatter('s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, 'shard_id', 0))))
 logger.addHandler(handler)
 
 #-----COGS-----
@@ -148,7 +148,7 @@ async def enter():
         bot.botStats[k] = int(bot.db.get(k, 0))
     bot.botStats["items_looked_up_session"] = bot.botStats["items_looked_up_session"] = bot.botStats["dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = bot.botStats["commands_used_session"] = 0
     if not bot.db.exists('build_num'): bot.db.set('build_num', 114) # this was added in build 114
-    bot.db.incr('build_num')
+    if getattr(bot, "shard_id", 0) == 0: bot.db.incr('build_num')
     await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
     
 @bot.event

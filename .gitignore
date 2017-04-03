@@ -12,3 +12,9 @@
 *.ini
 /tests/
 /venv/
+
+cmd_aliases-backup.json
+
+char_vars-backup.json
+
+damage_snippets-backup.json

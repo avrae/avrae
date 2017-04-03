@@ -64,7 +64,7 @@ class Publicity:
     async def backup(self):
         backup_chan = self.bot.get_channel('298542945479557120')
         if backup_chan is None: return
-        await self.bot.say('{0} - {1}'.format(time.time(), sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values())))
+        await self.bot.send_message(backup_chan, '{0} - {1}'.format(time.time(), sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values())))
         backup_keys = ['cmd_aliases', 'damage_snippets', 'char_vars']
         for k in backup_keys:
             path = './{}-backup.json'.format(k)
@@ -85,6 +85,7 @@ class Publicity:
     
     async def on_ready(self):
         await self.update()
+        await self.backup()
         
     async def on_server_join(self, server):
         print('s.{}: Joined server {}: {}, {} members ({} bot)'.format(getattr(self.bot, 'shard_id', 0), server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))

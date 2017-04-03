@@ -16,7 +16,7 @@ from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchCondition, searchMonster, searchSpell, \
-    searchItem
+    searchItem, searchRule
 from utils import checks
 from utils.functions import discord_trim, print_table, list_get, get_positivity
 
@@ -40,6 +40,31 @@ class Lookup:
         result = searchCondition(name)
         if result is None:
             return await self.bot.say('Condition not found.')
+        
+        conName = result['name']
+        conHeader = '-' * len(conName)
+        conDesc = result['desc']
+        out = "```markdown\n{0}\n{1}\n{2}```".format(conName, conHeader, conDesc)
+
+        # do stuff here
+        for r in discord_trim(out):
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r)
+                
+    @commands.command(pass_context=True)
+    async def rule(self, ctx, *, name : str):
+        """Looks up a rule."""
+        try:
+            guild_id = ctx.message.server.id 
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)    
+        except:
+            pm = False
+        
+        result = searchRule(name)
+        if result is None:
+            return await self.bot.say('Rule not found. PM the bot author if you think this rule is missing.')
         
         conName = result['name']
         conHeader = '-' * len(conName)

@@ -15,6 +15,11 @@ def searchCondition(condition):
         conditions = json.load(f)
     return fuzzy_search(conditions, 'name', condition)
 
+def searchRule(rule):
+    with open('./res/rules.json', 'r') as f:
+        rules = json.load(f)
+    return fuzzy_search(rules, 'name', rule)
+
 def searchMonster(monstername, visible=True, return_monster=False):
     with open('./res/bestiary.json', 'r') as f:
         monsters = json.load(f)

@@ -96,7 +96,7 @@ class SheetManager:
             if a == '-b' or a == '-d':
                 if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, '0', args)
                 else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, '0', args)
-            elif re.match(r'-d\d+', a):
+            elif re.match(r'-d\d+', a) or a in ('-resist', '-immune', '-vuln'):
                 if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, '0', args)
                 else: out[a.replace('-', '')] += '|' + list_get(index + 1, '0', args)
             elif a.startswith('-'):
@@ -133,6 +133,9 @@ class SheetManager:
                          -c [damage bonus on crit]
                          -phrase [flavor text]
                          -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
+                         -resist [damage resistance]
+                         -immune [damage immunity]
+                         -vuln [damage vulnerability]
                          crit (automatically crit)
                          [user snippet]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters

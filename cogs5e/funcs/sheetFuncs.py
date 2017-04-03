@@ -77,19 +77,51 @@ def sheet_attack(attack, args):
                     damage += '+' + dice
                     dnum[dice] -= 1
             
+            rollFor = "Damage"
             if itercrit == 1:
                 def critSub(matchobj):
                     return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
                 critDice = re.sub(r'(\d+)d(\d+)', critSub, damage)
                 if args.get('c') is not None:
                     critDice += '+' + args.get('c', '')
-                dmgroll = roll(critDice, rollFor='Damage (CRIT!)', inline=True, show_blurbs=False)
-                out += dmgroll.result + '\n'
-                total_damage += dmgroll.total
-            elif itercrit == 2:
+                damage = critDice
+                rollFor = "Damage (CRIT!)"
+            
+            if 'resist' in args or 'immune' in args or 'vuln' in args:
+                COMMENT_REGEX = r'\[(?P<comment>.*?)\]'
+                ROLL_STRING_REGEX = r'\[.*?]'
+                
+                comments = re.findall(COMMENT_REGEX, damage)
+                roll_strings = re.split(ROLL_STRING_REGEX, damage)
+                
+                index = 0
+                resistances = args.get('resist', '').split('|')
+                immunities = args.get('immune', '').split('|')
+                vulnerabilities = args.get('vuln', '').split('|')
+                
+                for comment in comments:
+                    roll_string = roll_strings[index].replace(' ', '')
+                    preop = ''
+                    if roll_string[0] in '-+*/().<>=':
+                        preop = roll_string[0]
+                        roll_string = roll_string[1:]
+                    for resistance in resistances:
+                        if resistance in comment and len(resistance) > 0:
+                            roll_string = '({0}) / 2'.format(roll_string)
+                    for immunity in immunities:
+                        if immunity in comment and len(immunity) > 0:
+                            roll_string = '({0}) * 0'.format(roll_string)
+                    for vulnerability in vulnerabilities:
+                        if vulnerability in comment and len(vulnerability) > 0:
+                            roll_string = '({0}) * 2'.format(roll_string)
+                    roll_strings[index] = '{0}{1}[{2}]'.format(preop, roll_string, comment)
+                    index = index + 1
+                damage = ''.join(roll_strings)
+            
+            if itercrit == 2:
                 out += '**Miss!**\n'
             else:
-                dmgroll = roll(damage, rollFor='Damage', inline=True, show_blurbs=False)
+                dmgroll = roll(damage, rollFor=rollFor, inline=True, show_blurbs=False)
                 out += dmgroll.result + '\n'
                 total_damage += dmgroll.total
         

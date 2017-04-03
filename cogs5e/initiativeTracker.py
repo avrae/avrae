@@ -244,6 +244,9 @@ class MonsterCombatant(Combatant):
         self.ac = int(monster['ac'].split(' (')[0])
         self.private = private
         self.group = group
+        self.resist = monster.get('resist', '').replace(' ', '').replace(',', '|')
+        self.immune = monster.get('immune', '').replace(' ', '').replace(',', '|')
+        self.vuln = monster.get('vulnerable', '').replace(' ', '').replace(',', '|')
         self.monster = monster
         
     def get_status(self):
@@ -958,6 +961,10 @@ class InitTracker:
             args['name'] = combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
+            if isinstance(target, MonsterCombatant):
+                args['resist'] = target.resist
+                args['immune'] = target.immune
+                args['vuln'] = target.vuln
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get('color') is None else combatant.sheet.get('settings', {}).get('color')
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
@@ -973,6 +980,10 @@ class InitTracker:
             args['name'] = a_or_an(combatant.monster.get('name')).title()
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
+            if isinstance(target, MonsterCombatant):
+                args['resist'] = target.resist
+                args['immune'] = target.immune
+                args['vuln'] = target.vuln
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff)
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']

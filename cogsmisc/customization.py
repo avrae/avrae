@@ -44,7 +44,7 @@ class Customization:
         
     @commands.command(pass_context=True)
     async def multiline(self, ctx, *, commands:str):
-        """Runs each line as a separate command.
+        """Runs each line as a separate command, with a 1 second delay between commands.
         Usage:
         "!multiline
         !roll 1d20
@@ -64,6 +64,7 @@ class Customization:
                 ctx.message.content = ctx.message.content.replace(guild_prefix, self.bot.prefix, 1)
             elif ctx.message.content.startswith(self.bot.prefix): return
             await self.bot.process_commands(ctx.message)
+            await asyncio.sleep(1)
             
     def parse_cvars(self, args, _id, character, char_id):
         tempargs = []

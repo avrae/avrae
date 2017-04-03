@@ -3,9 +3,11 @@ Created on Dec 29, 2016
 
 @author: andrew
 '''
-import aiohttp
 import asyncio
 import json
+import time
+
+import aiohttp
 
 
 DISCORD_BOTS_API =       'https://bots.discord.pw/api'
@@ -58,13 +60,26 @@ class Publicity:
         url = '{0}/bots/{1.user.id}/stats'.format(DISCORD_BOTS_API, self.bot)
         async with self.session.post(url, data=payload, headers=headers) as resp:
             print('s.{0}: DBots statistics returned {1.status} for {2}'.format(getattr(self.bot, 'shard_id', 0), resp, payload))
-
+    
+    async def backup(self):
+        backup_chan = self.bot.get_channel('298542945479557120')
+        if backup_chan is None: return
+        await self.bot.say('{0} - {1}'.format(time.time(), sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values())))
+        backup_keys = ['cmd_aliases', 'damage_snippets', 'char_vars']
+        for k in backup_keys:
+            path = './{}-backup.json'.format(k)
+            with open(path, mode='w') as f:
+                f.write(self.bot.db.get(k))
+            await self.bot.send_file(backup_chan, path)
+        
+        
     async def background_update(self):
         try:
             await self.bot.wait_until_ready()
             while not self.bot.is_closed:
                 await asyncio.sleep(3600)  # every hour
                 await self.update()
+                await self.backup()
         except asyncio.CancelledError:
             pass
     

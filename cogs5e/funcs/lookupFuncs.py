@@ -212,7 +212,8 @@ def searchMonster(monstername, visible=True, return_monster=False):
         if "trait" in monster:
             monsterDesc.append("**__Special Abilities:__** " + str(len(monster["trait"])) + "\n")
         
-        monsterDesc.append("**__Actions:__** " + str(len(monster["action"])) + "\n")
+        if "action" in monster:
+            monsterDesc.append("**__Actions:__** " + str(len(monster["action"])) + "\n")
         
         if "reaction" in monster:
             monsterDesc.append("**__Reactions:__** " + str(len(monster["reaction"])) + "\n")

@@ -54,6 +54,10 @@ class DicecloudParser(SheetParser):
             armor = self.calculate_stat('armor', replacements={'dexterityArmor':dexArmor})
             attacks = self.get_attacks()
             skills = self.get_skills()
+            temp_resist = self.get_resistances()
+            resistances = temp_resist['resist']
+            immunities = temp_resist['immune']
+            vulnerabilities = temp_resist['vuln']
         except:
             raise
         
@@ -64,6 +68,9 @@ class DicecloudParser(SheetParser):
                  'armor': int(armor),
                  'attacks': attacks,
                  'skills': skills,
+                 'resist': resistances,
+                 'immune': immunities,
+                 'vuln': vulnerabilities,
                  'saves': {}}
         
         for key, skill in skills.items():
@@ -153,6 +160,36 @@ class DicecloudParser(SheetParser):
                 elif operation == 'add':
                     add += value
                 elif operation == 'mul' and value > mult:
+                    mult = value
+                elif operation == 'min':
+                    minV = value if minV is None else value if value < minV else minV
+                elif operation == 'max':
+                    maxV = value if maxV is None else value if value > maxV else maxV
+        out = (base * mult) + add
+        if minV is not None:
+            out = max(out, minV)
+        if maxV is not None:
+            out = min(out, maxV)
+        return out
+    
+    def get_stat_float(self, stat, base=0):
+        """Returns the stat value."""
+        if self.character is None: raise Exception('You must call get_character() first.')
+        character = self.character
+        effects = character.get('effects', [])
+        add = 0
+        mult = 1
+        maxV = None
+        minV = None
+        for effect in effects:
+            if effect.get('stat') == stat and effect.get('enabled', True) and not effect.get('removed', False):
+                operation = effect.get('operation', 'base')
+                value = float(effect.get('value', 0))
+                if operation == 'base' and value > base:
+                    base = value
+                elif operation == 'add':
+                    add += value
+                elif operation == 'mul':
                     mult = value
                 elif operation == 'min':
                     minV = value if minV is None else value if value < minV else minV
@@ -315,5 +352,22 @@ class DicecloudParser(SheetParser):
         
         return skills
         
-            
-            
+    def get_resistances(self):
+        if self.character is None: raise Exception('You must call get_character() first.')
+        out = {'resist': [], 'immune': [], 'vuln': []}
+        damageTypes = ['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison',
+                       'psychic', 'radiant', 'slashing', 'thunder']
+        for dmgType in damageTypes:
+            mult = self.get_stat_float(dmgType + "Multiplier", 1)
+            if mult <= 0:
+                out['immune'].append(dmgType)
+            elif mult < 1:
+                out['resist'].append(dmgType)
+            elif mult > 1:
+                out['vuln'].append(dmgType)
+        print(out)
+        return out
+        
+        
+        
+        

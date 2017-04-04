@@ -143,9 +143,9 @@ class Combatant(object):
         self.ac = ac
         self.private = private
         self.group = group
-        self.resist = ""
-        self.immune = ""
-        self.vuln = ""
+        self.resist = []
+        self.immune = []
+        self.vuln = []
         
     def __str__(self):
         return self.name
@@ -229,6 +229,9 @@ class DicecloudCombatant(Combatant):
         self.ac = sheet.get('armor')
         self.private = private
         self.group = group
+        self.resist = sheet.get('resist', [])
+        self.immune = sheet.get('immune', [])
+        self.vuln = sheet.get('vuln', [])
         self.sheet = sheet
         
     def __str__(self):
@@ -247,9 +250,9 @@ class MonsterCombatant(Combatant):
         self.ac = int(monster['ac'].split(' (')[0])
         self.private = private
         self.group = group
-        self.resist = monster.get('resist', '').replace(' ', '').replace(',', '|')
-        self.immune = monster.get('immune', '').replace(' ', '').replace(',', '|')
-        self.vuln = monster.get('vulnerable', '').replace(' ', '').replace(',', '|')
+        self.resist = monster.get('resist', '').replace(' ', '').split(',')
+        self.immune = monster.get('immune', '').replace(' ', '').split(',')
+        self.vuln = monster.get('vulnerable', '').replace(' ', '').split(',')
         self.monster = monster
         
     def get_status(self):
@@ -759,7 +762,10 @@ class InitTracker:
         Valid Arguments:    -h (hides HP)
                             -p (changes init)
                             --controller <CONTROLLER> (pings a different person on turn)
-                            --ac <AC> (changes combatant AC)"""
+                            --ac <AC> (changes combatant AC)
+                            --resist <RESISTANCE>
+                            --immune <IMMUNITY>
+                            --vuln <VULNERABILITY>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -774,15 +780,16 @@ class InitTracker:
         private = combatant.private
         controller = combatant.author
         args = shlex.split(args)
+        args = parse_args(args)
         out = ''
         
-        if '-h' in args:
+        if args.get('h'):
             private = not private
             combatant.private = private
             out += "\u2705 Combatant {}.\n".format('hidden' if private else 'unhidden')
-        if '--controller' in args:
+        if 'controller' in args:
             try:
-                controllerStr = args[args.index('--controller') + 1]
+                controllerStr = args.get('controller')
                 controllerEscaped = controllerStr.replace('<', '').replace('>', '').replace('@', '').replace('!', '')
                 a = ctx.message.server.get_member(controllerEscaped)
                 b = ctx.message.server.get_member_named(controllerStr)
@@ -790,24 +797,48 @@ class InitTracker:
                 out += "\u2705 Combatant controller set to {}.\n".format(combatant.author.mention)
             except IndexError:
                 out += "\u274c You must pass in a controller with the --controller tag.\n"
-        if '--ac' in args:
+        if 'ac' in args:
             try:
-                ac = int(args[args.index('--ac') + 1])
+                ac = int(args.get('ac'))
                 combatant.ac = ac
                 out += "\u2705 Combatant AC set to {}.\n".format(ac)
             except:
                 out += "\u274c You must pass in an AC with the --ac tag.\n"
-        if '-p' in args:
+        if 'p' in args:
             if combatant == combat.currentCombatant:
                 out += "\u274c You cannot change a combatant's initiative on their own turn.\n"
             else:
                 try:
-                    p = int(args[args.index('-p') + 1])
+                    p = int(args.get('p'))
                     combatant.init = p
                     combat.sortCombatants()
                     out += "\u2705 Combatant initiative set to {}.\n".format(p)
                 except:
                     out += "\u274c You must pass in a number with the -p tag.\n"
+        if 'resist' in args:
+            resist = args.get('resist')
+            if resist in combatant.resist:
+                combatant.resist.remove(resist)
+                out += "\u2705 {} removed from combatant resistances.\n".format(resist)
+            else:
+                combatant.resist.append(resist)
+                out += "\u2705 {} added to combatant resistances.\n".format(resist)
+        if 'immune' in args:
+            immune = args.get('immune')
+            if immune in combatant.immune:
+                combatant.immune.remove(immune)
+                out += "\u2705 {} removed from combatant immunities.\n".format(immune)
+            else:
+                combatant.immune.append(immune)
+                out += "\u2705 {} added to combatant immunities.\n".format(immune)
+        if 'vuln' in args:
+            vuln = args.get('vuln')
+            if vuln in combatant.vuln:
+                combatant.vuln.remove(vuln)
+                out += "\u2705 {} removed from combatant vulnerabilities.\n".format(vuln)
+            else:
+                combatant.vuln.append(vuln)
+                out += "\u2705 {} added to combatant vulnerabilities.\n".format(vuln)
         
         await self.bot.say("Combatant options updated.\n" + out, delete_after=10)
         await combat.update_summary(self.bot)
@@ -971,10 +1002,9 @@ class InitTracker:
             args['name'] = combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
-            if isinstance(target, MonsterCombatant):
-                args['resist'] = target.resist
-                args['immune'] = target.immune
-                args['vuln'] = target.vuln
+            args['resist'] = args.get('resist') or '|'.join(target.resist)
+            args['immune'] = args.get('immune') or '|'.join(target.immune)
+            args['vuln'] = args.get('vuln') or '|'.join(target.vuln)
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get('color') is None else combatant.sheet.get('settings', {}).get('color')
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
@@ -990,10 +1020,9 @@ class InitTracker:
             args['name'] = a_or_an(combatant.monster.get('name')).title()
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
-            if isinstance(target, MonsterCombatant):
-                args['resist'] = target.resist
-                args['immune'] = target.immune
-                args['vuln'] = target.vuln
+            args['resist'] = args.get('resist') or '|'.join(target.resist)
+            args['immune'] = args.get('immune') or '|'.join(target.immune)
+            args['vuln'] = args.get('vuln') or '|'.join(target.vuln)
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff)
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']

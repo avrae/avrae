@@ -143,6 +143,9 @@ class Combatant(object):
         self.ac = ac
         self.private = private
         self.group = group
+        self.resist = ""
+        self.immune = ""
+        self.vuln = ""
         
     def __str__(self):
         return self.name
@@ -309,7 +312,7 @@ class InitTracker:
                     out = out.replace(cvar, str(value))
                 for cvar, value in stat_vars.items():
                     out = out.replace(cvar, str(value))
-                arg = arg.replace(raw, '`{}`'.format(roll(out).total))
+                arg = arg.replace(raw, '{}'.format(roll(out).total))
             for var in re.finditer(r'<([^<>]+)>', arg):
                 raw = var.group(0)
                 out = var.group(1)
@@ -336,6 +339,7 @@ class InitTracker:
         """Begins combat in the channel the command is invoked.
         Usage: !init begin <ARGS (opt)>
         Valid Arguments:    -1 (modifies initiative rolls)
+                            -dyn (dynamic init; rerolls all initiatives at the start of a round)
                             --name <NAME> (names the combat)"""
         if [c for c in self.combats if c.channel is ctx.message.channel]:
             await self.bot.say("You are already in combat. To end combat, use \"!init end\".")
@@ -345,6 +349,8 @@ class InitTracker:
         args = shlex.split(args.lower())
         if '-1' in args:  # rolls a d100 instead of a d20 and multiplies modifier by 5
             options['d100_init'] = True
+        if '-dyn' in args:  # rolls a d100 instead of a d20 and multiplies modifier by 5
+            options['dynamic'] = True
         if '--name' in args:
             try:
                 a = args[args.index('--name') + 1]
@@ -667,6 +673,10 @@ class InitTracker:
             combat.current = combat.sorted_combatants[0].init
             combat.round += 1
             combat.index = None
+            if combat.options.get('dynamic', False):
+                for combatant in combat.combatants:
+                    combatant.init = roll('1d20+' + str(combatant.mod)).total
+                combat.sorted_combatants = sorted(combat.combatants, key=lambda k: (k.init, k.mod), reverse=True)
             nextCombatant = combat.getNextCombatant()
             combat.currentCombatant = nextCombatant
         if isinstance(nextCombatant, CombatantGroup):

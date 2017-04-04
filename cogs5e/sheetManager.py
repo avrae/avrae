@@ -73,7 +73,7 @@ class SheetManager:
                     out = out.replace(cvar, str(value))
                 for cvar, value in stat_vars.items():
                     out = out.replace(cvar, str(value))
-                arg = arg.replace(raw, '`{}`'.format(roll(out).total))
+                arg = arg.replace(raw, '{}'.format(roll(out).total))
             for var in re.finditer(r'<([^<>]+)>', arg):
                 raw = var.group(0)
                 out = var.group(1)

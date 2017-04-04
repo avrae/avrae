@@ -365,7 +365,6 @@ class DicecloudParser(SheetParser):
                 out['resist'].append(dmgType)
             elif mult > 1:
                 out['vuln'].append(dmgType)
-        print(out)
         return out
         
         

@@ -65,12 +65,12 @@ class Publicity:
         backup_chan = self.bot.get_channel('298542945479557120')
         if backup_chan is None: return
         await self.bot.send_message(backup_chan, '{0} - {1}'.format(time.time(), sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values())))
-        backup_keys = ['cmd_aliases', 'damage_snippets', 'char_vars']
-        for k in backup_keys:
-            path = './{}-backup.json'.format(k)
-            with open(path, mode='w') as f:
-                f.write(self.bot.db.get(k))
-            await self.bot.send_file(backup_chan, path)
+#         backup_keys = ['cmd_aliases', 'damage_snippets', 'char_vars']
+#         for k in backup_keys:
+#             path = './{}-backup.json'.format(k)
+#             with open(path, mode='w') as f:
+#                 f.write(self.bot.db.get(k))
+#             await self.bot.send_file(backup_chan, path)
         
         
     async def background_update(self):

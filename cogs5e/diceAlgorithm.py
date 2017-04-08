@@ -209,8 +209,9 @@ class Dice:
                 await self.bot.say(r, delete_after=15)
                 
     @commands.command(pass_context=True, aliases=['ma'])
-    async def monster_atk(self, ctx, monster_name, atk_name, *, args=''):
+    async def monster_atk(self, ctx, monster_name, atk_name='list', *, args=''):
         """Rolls a monster's attack.
+        Attack name can be "list" for a list of all of the monster's attacks.
         Valid Arguments: adv/dis
                          -ac [target ac]
                          -b [to hit bonus]
@@ -233,13 +234,19 @@ class Dice:
             return await self.bot.say(monster['string'][0], delete_after=15)
         monster = monster['monster']
         attacks = monster.get('attacks')
+        monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
+        if atk_name == 'list':
+            attacks_string = '\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
+                                                                                  a['attackBonus'],
+                                                                                  a['damage'] or 'no') for a in attacks)
+            return await self.bot.say("{}'s attacks:\n{}".format(monster_name, attacks_string))
         attack = fuzzy_search(attacks, 'name', atk_name)
         if attack is None:
             return await self.bot.say("No attack with that name found.", delete_after=15)
         
         args = shlex.split(args)
         args = parse_args(args)
-        args['name'] = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
+        args['name'] = monster_name
         attack['details'] = attack.get('desc')
         
         result = sheet_attack(attack, args)

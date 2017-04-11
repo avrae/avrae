@@ -171,6 +171,8 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
         total = 0
         # Parses math/dice terms
         #dice_temp = rollStr.replace('^', '**')
+        if '**' in rollStr:
+            raise Exception("Exponents are currently disabled.")
         dice_temp = rollStr
         # Splits into sections of ['dice', 'operator', 'dice'...] like ['1d20', '+', '4d6', '+', '5']
         dice_set = re.split('([-+*/().<>= ])', dice_temp)

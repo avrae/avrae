@@ -191,11 +191,11 @@ async def on_command_error(error, ctx):
                 
 @bot.event
 async def on_message(message):
-    if message.author in adminUtilsCog.muted:
+    if message.author in bot.get_cog("AdminUtils").muted:
         return
     if message.content.startswith('avraepls'):
+        print("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))
         if coreCog.verbose_mask & bot.mask:
-            print("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))
             await bot.send_message(message.channel, "`Reseeding RNG...`")
         random.seed()
     if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!

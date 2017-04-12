@@ -20,7 +20,14 @@ def sheet_attack(attack, args):
     dnum = {}
     for k in dnum_keys: # parse d# args
         for dmg in args[k].split('|'):
-            dnum[dmg] = int(k.split('d')[-1])
+            try:
+                dnum[dmg] = int(k.split('d')[-1])
+            except ValueError:
+                embed = discord.Embed()
+                embed.title = "Error"
+                embed.colour = 0xff0000
+                embed.description = "Malformed tag: {}".format(k)
+                return {"embed": embed, "total_damage": 0}
         
     if args.get('phrase') is not None: # parse phrase
         embed.description = '*' + args.get('phrase') + '*'

@@ -12,7 +12,7 @@ import time
 import traceback
 
 import discord
-from discord.errors import Forbidden, NotFound
+from discord.errors import Forbidden, NotFound, HTTPException
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 import psutil
@@ -172,6 +172,10 @@ async def on_command_error(error, ctx):
             return await bot.send_message(ctx.message.channel, "Error: I tried to edit or delete a message that no longer exists.")
         if isinstance(original, ValueError) and str(original) == "No closing quotation":
             return await bot.send_message(ctx.message.channel, "Error: No closing quotation.")
+        if isinstance(original, HTTPException):
+            if original.response.status == 400:
+                return await bot.send_message(ctx.message.channel, "Error: Message is too long, malformed, or empty.")
+            
     if bot.mask & coreCog.debug_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
         try:

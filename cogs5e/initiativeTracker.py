@@ -932,6 +932,9 @@ class InitTracker:
             await self.bot.say("Combatant not found.")
             return
         
+        if effect.lower() in (e.name.lower() for e in combatant.effects):
+            return await self.bot.say("Effect already exists.", delete_after=10)
+        
         effectObj = Effect(duration=duration, name=effect, desc=desc, remaining=duration)
         combatant.effects.append(effectObj)
         await self.bot.say("Added effect {} to {}.".format(effect, combatant.name), delete_after=10)

@@ -1091,6 +1091,8 @@ class InitTracker:
             combat.combatants.remove(combatant)
         else:
             group = combat.get_combatant_group(combatant.group)
+            if len(group.combatants) <= 1:
+                return await self.bot.say("You cannot remove a combatant if they are the only remaining combatant in this turn.")
             group.combatants.remove(combatant)
         await self.bot.say("{} removed from combat.".format(combatant.name), delete_after=10)
         await combat.update_summary(self.bot)

@@ -62,16 +62,16 @@ def sheet_attack(attack, args):
                 out += toHit.result + '\n'
             else:
                 out += "**To Hit**: " + attack.get('attackBonus') + '\n'
-            raw = toHit.total - roll(attack.get('attackBonus') + '+' + (args.get('b') or '0')).total
-            if args.get('crit'):
-                itercrit = args.get('crit', 0)
-            elif raw >= (args.get('criton', 20) or 20):
-                itercrit = 1
-            else:
-                itercrit = toHit.crit
-            if args.get('ac') is not None:
-                if toHit.total < args.get('ac') and itercrit == 0:
-                    itercrit = 2 # miss!
+                raw = int(re.match(r'1d20 \(\**(.+?)\**\)', toHit.rolled).group(1))
+                if args.get('crit'):
+                    itercrit = args.get('crit', 0)
+                elif raw >= (args.get('criton', 20) or 20):
+                    itercrit = 1
+                else:
+                    itercrit = toHit.crit
+                if args.get('ac') is not None:
+                    if toHit.total < args.get('ac') and itercrit == 0:
+                        itercrit = 2 # miss!
             
         if attack.get('damage') is not None:
             if args.get('d') is not None:

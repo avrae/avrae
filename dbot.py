@@ -47,7 +47,7 @@ if '-s' in sys.argv:
     temp_shard_id = list_get(sys.argv.index('-s') + 1, None, sys.argv)
     if temp_shard_id is not None:
         shard_count = os.environ.get('SHARDS', 1)
-        shard_id = temp_shard_id if temp_shard_id < shard_count else 0
+        shard_id = temp_shard_id if int(temp_shard_id) < int(shard_count) else 0
         SHARDED = True
 
 

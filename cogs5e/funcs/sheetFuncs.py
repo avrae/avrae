@@ -58,11 +58,9 @@ def sheet_attack(attack, args):
             else:
                 toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
             
-            if toHit.rolled != '': # output wherever was there if error
+            if toHit.rolled != '':
                 out += toHit.result + '\n'
-            else:
-                out += "**To Hit**: " + attack.get('attackBonus') + '\n'
-                raw = int(re.match(r'1d20 \(\**(.+?)\**\)', toHit.rolled).group(1))
+                raw = int(re.match(r'1d20 .*?[(* ]+(\d+)[*),]+.*?', toHit.rolled).group(1))
                 if args.get('crit'):
                     itercrit = args.get('crit', 0)
                 elif raw >= (args.get('criton', 20) or 20):
@@ -72,6 +70,8 @@ def sheet_attack(attack, args):
                 if args.get('ac') is not None:
                     if toHit.total < args.get('ac') and itercrit == 0:
                         itercrit = 2 # miss!
+            else: # output wherever was there if error
+                out += "**To Hit**: " + attack.get('attackBonus') + '\n'
             
         if attack.get('damage') is not None:
             if args.get('d') is not None:

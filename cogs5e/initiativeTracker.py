@@ -154,8 +154,11 @@ class Combatant(object):
         effect = None
         try:
             effect = next(c for c in self.effects if c.name.lower() == name.lower())
-        except:
-            pass
+        except StopIteration:
+            try:
+                effect = next(c for c in self.effects if name.lower() in c.name.lower())
+            except StopIteration:
+                pass
         return effect
         
     def get_effects(self):
@@ -951,8 +954,7 @@ class InitTracker:
         
         to_remove = combatant.get_effect(effect)
         if effect is '':
-            for e in combatant.effects:
-                combatant.effects.remove(e)
+            combatant.effects = []
             await self.bot.say("All effects removed from {}.".format(combatant.name), delete_after=10)
         elif to_remove is None:
             await self.bot.say("Effect not found.")

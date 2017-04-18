@@ -1148,11 +1148,7 @@ class InitTracker:
             await self.bot.edit_message(msg, "Combat ended.")
             
     def __unload(self):
-        for combat in self.combats:
-            combat.combatantGenerator = None
-            path = '{}.avrae'.format(combat.channel.id)
-            self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
-            print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
+        self.panic_save()
             
     def panic_save(self):
         temp_key = []
@@ -1174,12 +1170,12 @@ class InitTracker:
             path = '{}.avrae'.format(c)
             combat = self.bot.db.get(path, None)
             if combat is None:
-                print('Combat not found reloading {}'.format(c))
+                print('Combat not found reloading {}, aborting'.format(c))
                 continue
             combat = pickle.loads(combat.encode('cp437'))
             combat.channel = self.bot.get_channel(combat.channel.id)
             if combat.channel is None:
-                print('Combat channel not found reloading {}'.format(c))
+                print('Combat channel not found reloading {}, aborting'.format(c))
                 continue
             self.combats.append(combat)
             try:
@@ -1191,9 +1187,9 @@ class InitTracker:
                 pass
             print("Autoreloaded {}".format(c))
             await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!")
-        #self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
+        self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
             
-    @init.command(pass_context=True)
+    @init.command(pass_context=True, hidden=True)
     async def save(self, ctx):
         """Saves combat to a file for long-term storage.
         Usage: !init save"""
@@ -1206,7 +1202,7 @@ class InitTracker:
         self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
         await self.bot.say("Combat saved.")
         
-    @init.command(pass_context=True)
+    @init.command(pass_context=True, hidden=True)
     async def load(self, ctx):
         """Loads combat from a file.
         Usage: !init load"""

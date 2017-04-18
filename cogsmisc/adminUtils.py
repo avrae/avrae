@@ -61,7 +61,7 @@ class AdminUtils:
     @commands.command(hidden=True)
     @checks.is_owner()
     async def announce(self, *, msg : str):
-        for s in self.bot.servers:
+        for s in [se for se in self.bot.servers]:
             try:
                 await self.bot.send_message(s, msg)
             except:
@@ -189,7 +189,7 @@ class AdminUtils:
         members = len(server.members)
         ratio = bots/members
         if ratio >= 0.8 and members >= 25:
-            print("s.{} Detected bot collection server ({}), ratio {}. Leaving.".format(getattr(self.bot, 'shard_id', 0), server.id, ratio))
+            print("s.{}: Detected bot collection server ({}), ratio {}. Leaving.".format(getattr(self.bot, 'shard_id', 0), server.id, ratio))
             try: await self.bot.send_message(server, "Please do not add me to bot collection servers. If you believe this is an error, please PM the bot author.")
             except: pass
             await self.bot.leave_server(server)

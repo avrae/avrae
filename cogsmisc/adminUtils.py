@@ -37,11 +37,12 @@ class AdminUtils:
         self.bot.db.not_json_set('blacklist', self.blacklisted_serv_ids)
         await self.bot.say(':ok_hand:')
     
-    @commands.command(hidden=True)
+    @commands.command(hidden=True, aliases=['kill'])
     @checks.is_owner()
     async def restart(self):
         """Restarts Avrae. May fail sometimes due to bad programming on zhu.exe's end.
         Requires: Owner"""
+        print("Shard {} going down for restart!".format(getattr(self.bot, 'shard_id', 0)))
         await self.bot.say("Byeeeeeee!")
         await self.bot.logout()
         sys.exit()
@@ -184,6 +185,14 @@ class AdminUtils:
     
     async def on_server_join(self, server):
         if server.id in self.blacklisted_serv_ids: await self.bot.leave_server(server)
+        bots = sum(1 for m in server.members if m.bot)
+        members = len(server.members)
+        ratio = bots/members
+        if ratio >= 0.8 and members >= 25:
+            print("s.{} Detected bot collection server ({}), ratio {}. Leaving.".format(getattr(self.bot, 'shard_id', 0), server.id, ratio))
+            try: await self.bot.send_message(server, "Please do not add me to bot collection servers. If you believe this is an error, please PM the bot author.")
+            except: pass
+            await self.bot.leave_server(server)
     
     def msg(self, dest, out):
         coro = self.bot.send_message(dest, out)

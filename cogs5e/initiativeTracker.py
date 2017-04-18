@@ -1002,8 +1002,11 @@ class InitTracker:
                         tempargs += shlex.split(arguments)
                         break
                 tempargs.append(arg)
-            tempargs = self.parse_cvars(tempargs, ctx.message.author.id, combatant.sheet, self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id))
+            active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+            tempargs = self.parse_cvars(tempargs, ctx.message.author.id, combatant.sheet, active_character)
             args = parse_args_2(tempargs)
+            if attack.get('details') is not None:
+                attack['details'] = self.parse_cvars([attack['details']], ctx.message.author.id, combatant.sheet, active_character)[0]
             args['name'] = combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name

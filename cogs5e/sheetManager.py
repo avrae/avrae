@@ -93,12 +93,15 @@ class SheetManager:
             if cFlag:
                 cFlag = False
                 continue
-            if a == '-b' or a == '-d':
+            if a == '-b' or a == '-d' or a == '-c':
                 if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, '0', args)
                 else: out[a.replace('-', '')] += ' + ' + list_get(index + 1, '0', args)
             elif re.match(r'-d\d+', a) or a in ('-resist', '-immune', '-vuln'):
                 if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, '0', args)
                 else: out[a.replace('-', '')] += '|' + list_get(index + 1, '0', args)
+            elif a in ('-phrase'):
+                if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = list_get(index + 1, '0', args)
+                else: out[a.replace('-', '')] += '\n' + list_get(index + 1, '0', args)
             elif a.startswith('-'):
                 out[a.replace('-', '')] = list_get(index + 1, 'MISSING_ARGUMENT', args)
             else:

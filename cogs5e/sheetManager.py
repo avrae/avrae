@@ -173,7 +173,8 @@ class SheetManager:
         """Rolls a save for your current active character.
         Args: adv/dis
               -b [conditional bonus]
-              -phrase [flavor text]"""
+              -phrase [flavor text]
+              -title [title] *note: [charname] and [sname] will be replaced automatically*"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -204,8 +205,9 @@ class SheetManager:
         else:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
             
-        embed.title = '{} makes {}!'.format(character.get('stats', {}).get('name'),
-                                            a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()))
+        embed.title = args.get('title', '').replace('[charname]', character.get('stats', {}).get('name')).replace('[sname]', re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) \
+                      or '{} makes {}!'.format(character.get('stats', {}).get('name'),
+                                               a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()))
             
         embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         
@@ -224,7 +226,8 @@ class SheetManager:
         Args: adv/dis
               -b [conditional bonus]
               -mc [minimum roll]
-              -phrase [flavor text]"""
+              -phrase [flavor text]
+              -title [title] *note: [charname] and [cname] will be replaced automatically*"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -262,8 +265,9 @@ class SheetManager:
         else:
             check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]), adv=adv, inline=True)
         
-        embed.title = '{} makes {} check!'.format(character.get('stats', {}).get('name'),
-                                                  a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()))
+        embed.title = args.get('title', '').replace('[charname]', character.get('stats', {}).get('name')).replace('[cname]', re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()) \
+                      or '{} makes {} check!'.format(character.get('stats', {}).get('name'),
+                                                     a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()))
         embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))

@@ -19,7 +19,7 @@
   #commands-navbar.affix {
     position: fixed;
     top:25px;
-    width: 13%;
+    width: 120px;
   }
 }
 

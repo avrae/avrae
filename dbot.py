@@ -50,11 +50,8 @@ if '-s' in sys.argv:
         shard_id = temp_shard_id if int(temp_shard_id) < int(shard_count) else 0
         SHARDED = True
 
-
-# TODO: 
-# more flavor text
-# More Breath Weapons
 description = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.
+A full command list can be found [here](https://www.avraebot.com/commands.html)!
 Invite Avrae to your server [here](https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808)!
 Join the official testing server [here](https://discord.gg/pQbd4s6)!
 Love the bot? Donate to me [here](https://www.paypal.me/avrae)! \u2764

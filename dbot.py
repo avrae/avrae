@@ -158,6 +158,8 @@ async def on_command_error(error, ctx):
         return
     elif isinstance(error, (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):
         return await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nUse `!help " + ctx.command.qualified_name + "` for help.")
+    elif isinstance(error, commands.CommandOnCooldown):
+        return await bot.send_message(ctx.message.channel, "This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
     elif isinstance(error, CommandInvokeError):
         original = error.original
         if isinstance(original, Forbidden):

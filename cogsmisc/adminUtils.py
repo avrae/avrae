@@ -188,7 +188,7 @@ class AdminUtils:
         bots = sum(1 for m in server.members if m.bot)
         members = len(server.members)
         ratio = bots/members
-        if ratio >= 0.8 and members >= 25:
+        if ratio >= 0.6 and members >= 20:
             print("s.{}: Detected bot collection server ({}), ratio {}. Leaving.".format(getattr(self.bot, 'shard_id', 0), server.id, ratio))
             try: await self.bot.send_message(server, "Please do not add me to bot collection servers. If you believe this is an error, please PM the bot author.")
             except: pass

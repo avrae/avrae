@@ -13,6 +13,7 @@ from discord.ext import commands
 from discord.ext.commands.core import Command
 from discord.ext.commands.formatter import HelpFormatter
 from discord.errors import Forbidden
+from discord.ext.commands.cooldowns import BucketType
 
 
 class Help:
@@ -29,6 +30,7 @@ class Help:
         self.bot = bot
     
     @commands.command(name='help', aliases=['commands'], pass_context=True)
+    @commands.cooldown(1, 5, BucketType.user)
     async def _default_help_command(self, ctx, *commands : str):
         """Shows this message."""
         bot = ctx.bot

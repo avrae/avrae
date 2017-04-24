@@ -80,6 +80,14 @@ class AdminUtils:
                 out += "\n{} ({}, {} members, {} bot)".format(s, s.id, len(s.members), sum(1 for m in s.members if m.bot))
         else:
             s = self.bot.get_server(server)
+            if s is None:
+                s = self.bot.get_channel(server)
+                if s is None:
+                    return await self.bot.say("Not found.")
+                elif isinstance(s, PrivateChannel):
+                    return await self.bot.say("{} - {}".format(s, s.user.id))
+                else:
+                    s = s.server
             try:
                 out += "\n\n**{} ({}, {})**".format(s, s.id, (await self.bot.create_invite(s)).url)
             except:

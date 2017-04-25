@@ -23,7 +23,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
-    fuzzy_search, get_positivity, a_or_an, parse_args_2
+    fuzzy_search, get_positivity, a_or_an, parse_args_2, text_to_numbers
 
 
 class Combat(object):
@@ -39,6 +39,7 @@ class Combat(object):
         self.name = name
         self.currentCombatant = None
         self.dm = None
+        self.stats = {}
         
     def get_combatant(self, name):
         combatant = None
@@ -1069,6 +1070,87 @@ class InitTracker:
         else: embed.set_footer(text="Target AC not set.")
         await self.bot.say(embed=embed)
         await combat.update_summary(self.bot)
+        
+    @init.command(pass_context=True, hidden=True)
+    async def sim(self, ctx):
+        """Simulates the current turn of combat.
+        MonsterCombatants will target any non-monster combatant, and DicecloudCombatants will target any monster combatants."""
+        try:
+            combat = next(c for c in self.combats if c.channel is ctx.message.channel)
+        except StopIteration:
+            await self.bot.say("You are not in combat.")
+            return
+        current = combat.currentCombatant
+        if isinstance(current, CombatantGroup):
+            thisTurn = [c for c in current.combatants]
+        else:
+            thisTurn = [current]
+        for current in thisTurn:
+            await asyncio.sleep(1) #select target
+            isMonster = isinstance(current, MonsterCombatant)
+            numAtks = 1
+            if isMonster: # TODO: better multiattack parsing
+                if 'multiattack' in [a.get('name', '').lower() for a in current.monster.get('action', [{}])]:
+                    ma_text = next(''.join(a.get('text')) for a in current.monster.get('action', [{}]) if a['name'].lower() == 'multiattack')
+                    ma_text = text_to_numbers(ma_text)
+                    numAtks = int(re.search(r'\d+', ma_text).group())
+            for a in range(numAtks):
+                await asyncio.sleep(1) #select attack
+                if isMonster:
+                    targets = [c for c in combat.combatants if not isinstance(c, MonsterCombatant)]
+                else:
+                    targets = [c for c in combat.combatants if isinstance(c, MonsterCombatant)]
+                if len(targets) == 0:
+                    await self.bot.say("```diff\n+ {} sees no targets!\n```".format(current.name))
+                    break
+                target = random.choice(targets)
+                await self.bot.say("```diff\n+ {} swings at {}!```".format(current.name, target.name))
+                
+                if isinstance(current, DicecloudCombatant):
+                    attacks = current.sheet.get('attacks') # get attacks
+                    attacks = [a for a in attacks if a.get('attackBonus') is not None]
+                    if len(attacks) < 1:
+                        await self.bot.say("```diff\n- {} has no attacks!```".format(current.name))
+                        break
+                    attack = random.choice(attacks)
+                    args = {}
+                    args['name'] = current.sheet.get('stats', {}).get('name', "NONAME")
+                    if target.ac is not None: args['ac'] = target.ac
+                    args['t'] = target.name
+                    result = sheet_attack(attack, args)
+                    result['embed'].colour = random.randint(0, 0xffffff) if current.sheet.get('settings', {}).get('color') is None else current.sheet.get('settings', {}).get('color')
+                    target.hp -= result['total_damage']
+                elif isinstance(current, MonsterCombatant):
+                    attacks = current.monster.get('attacks') # get attacks
+                    attacks = [a for a in attacks if a.get('attackBonus') is not None]
+                    if len(attacks) < 1:
+                        await self.bot.say("```diff\n- {} has no attacks!```".format(current.name))
+                        break
+                    attack = random.choice(attacks)
+                    args = {}
+                    args['name'] = a_or_an(current.monster.get('name')).title()
+                    if target.ac is not None: args['ac'] = target.ac
+                    args['t'] = target.name
+                    result = sheet_attack(attack, args)
+                    result['embed'].colour = random.randint(0, 0xffffff)
+                    if target.ac is not None: target.hp -= result['total_damage']
+                else:
+                    return await self.bot.say('Integrated attacks are only supported for combatants added via `madd` or `dcadd`.', delete_after=15)
+                embed = result['embed']
+                if target.ac is not None: 
+                    embed.set_footer(text="{}: {}".format(target.name, target.get_hp()))
+                else: embed.set_footer(text="Target AC not set.")
+                killed = "\n- Killed {}!".format(target.name) if target.hp <= 0 else ""
+                if target.hp <= 0:
+                    if target.group is None:
+                        combat.combatants.remove(target)
+                    else:
+                        group = combat.get_combatant_group(target.group)
+                        group.combatants.remove(target)
+                    combat.sortCombatants()
+                    combat.checkGroups()
+                await self.bot.say("```diff\n- Dealt {} damage!{}```".format(result['total_damage'], killed), embed=embed)
+                await combat.update_summary(self.bot)
         
     @init.command(pass_context=True, name='remove')
     async def remove_combatant(self, ctx, *, name : str):

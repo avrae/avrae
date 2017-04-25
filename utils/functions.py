@@ -124,4 +124,22 @@ def a_or_an(string):
 def camel_to_title(string):
     return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
 
+def text_to_numbers(string):
+    numbers = {'one': '1',
+               'two': '2',
+               'three': '3',
+               'four': '4',
+               'five': '5',
+               'six': '6',
+               'seven': '7',
+               'eight': '8',
+               'nine': '9',
+               'ten': '10',
+               'once': '1',
+               'twice': '2',
+               'thrice': '3'}
+    for t, i in numbers.items():
+        string = string.replace(t, i)
+    return string
+
     

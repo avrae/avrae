@@ -7,34 +7,31 @@ import json
 from math import floor
 import math
 
-from utils.functions import print_table, discord_trim, fuzzy_search
+from utils.functions import print_table, discord_trim, fuzzy_search, \
+    fuzzywuzzy_search
 
 
 def searchCondition(condition):
     with open('./res/conditions.json', 'r') as f:
         conditions = json.load(f)
-    return fuzzy_search(conditions, 'name', condition)
+    return fuzzywuzzy_search(conditions, 'name', condition)
 
 def searchRule(rule):
     with open('./res/rules.json', 'r') as f:
         rules = json.load(f)
-    return fuzzy_search(rules, 'name', rule)
+    return fuzzywuzzy_search(rules, 'name', rule)
 
 def searchMonster(monstername, visible=True, return_monster=False):
     with open('./res/bestiary.json', 'r') as f:
         monsters = json.load(f)
     
     monsterDesc = []
-
-    try:
-        monster = next(item for item in monsters if monstername.upper() == item["name"].upper())
-    except Exception:
-        try:
-            monster = next(item for item in monsters if monstername.upper() in item["name"].upper())
-        except Exception:
-            monsterDesc.append("Monster does not exist or is misspelled.")
-            if return_monster: return {'monster': None, 'string': monsterDesc}
-            return monsterDesc
+    
+    monster = fuzzywuzzy_search(monsters, 'name', monstername)
+    if monster is None:
+        monsterDesc.append("Monster does not exist or is misspelled.")
+        if return_monster: return {'monster': None, 'string': monsterDesc}
+        return monsterDesc
         
     def parsesource (src):
         source = src
@@ -235,15 +232,12 @@ def searchSpell(spellname, serv_id='', return_spell=False):
     spellDesc = []
     with open('./res/spells.json', 'r') as f:
         contextualSpells = json.load(f)
-    try:
-        spell = next(item for item in contextualSpells if spellname.upper() == item["name"].upper())
-    except Exception:
-        try:
-            spell = next(item for item in contextualSpells if spellname.upper() in item["name"].upper())
-        except Exception:
-            spellDesc.append("Spell does not exist or is misspelled (ha).")
-            if return_spell: return {'spell': None, 'string': spellDesc}
-            return spellDesc
+    
+    spell = fuzzywuzzy_search(contextualSpells, 'name', spellname)
+    if spell is None:
+        spellDesc.append("Spell does not exist or is misspelled (ha).")
+        if return_spell: return {'spell': None, 'string': spellDesc}
+        return spellDesc
     
     def parseschool(school):
         if (school == "A"): return "abjuration"
@@ -288,15 +282,11 @@ def searchItem(itemname, return_item=False):
     with open('./res/items.json', 'r') as f:
         items = json.load(f)
     itemDesc = []
-    try:
-        item = next(i for i in items if itemname.upper() == i["name"].upper())
-    except Exception:
-        try:
-            item = next(i for i in items if itemname.upper() in i["name"].upper())
-        except Exception:
-            itemDesc.append("Item does not exist or is misspelled.")
-            if return_item: return {'spell': None, 'string': itemDesc}
-            return itemDesc
+    item = fuzzywuzzy_search(items, 'name', itemname)
+    if item is None:
+        itemDesc.append("Item does not exist or is misspelled.")
+        if return_item: return {'spell': None, 'string': itemDesc}
+        return itemDesc
     
     def parsesource(src):
         source = src

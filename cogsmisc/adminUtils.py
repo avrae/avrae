@@ -200,6 +200,7 @@ class AdminUtils:
             print("s.{}: Detected bot collection server ({}), ratio {}. Leaving.".format(getattr(self.bot, 'shard_id', 0), server.id, ratio))
             try: await self.bot.send_message(server, "Please do not add me to bot collection servers. If you believe this is an error, please PM the bot author.")
             except: pass
+            await asyncio.sleep(members/200)
             await self.bot.leave_server(server)
     
     def msg(self, dest, out):

@@ -7,6 +7,8 @@ import errno
 import os
 import re
 
+from fuzzywuzzy import process
+
 
 def print_table(table):
     tableStr = ''
@@ -71,7 +73,14 @@ def fuzzy_search(list_to_search:list, key, value):
             result = next(a for a in list_to_search if value.lower() in a.get(key, '').lower())
         except StopIteration:
             return None
-    return result    
+    return result 
+
+def fuzzywuzzy_search(list_to_search:list, key, value):
+    """Fuzzy searches a list for a dict with a key "key" of value "value" """
+    names = [d[key] for d in list_to_search]
+    result = process.extractOne(value, names, score_cutoff=5)
+    if result is None: return None
+    else: return next(a for a in list_to_search if result[0] == a.get(key, ''))
 
 def parse_args(args):
     out = {}

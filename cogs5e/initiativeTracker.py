@@ -844,7 +844,11 @@ class InitTracker:
                 combatant.vuln.append(vuln)
                 out += "\u2705 {} added to combatant vulnerabilities.\n".format(vuln)
         
-        await self.bot.say("Combatant options updated.\n" + out, delete_after=10)
+        if combatant.private:
+            await self.bot.send_message(combatant.author, "{}'s options updated.\n".format(combatant.name) + out)
+            await self.bot.say("Combatant options updated.", delete_after=10)
+        else:
+            await self.bot.say("{}'s options updated.\n".format(combatant.name) + out, delete_after=10)
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True)

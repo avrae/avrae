@@ -68,12 +68,13 @@ class PDFSheetParser(SheetParser):
             armor = character.get('AC')
             attacks = self.get_attacks()
             skills = self.get_skills()
+            level = self.get_level()
         except:
             raise
         
         sheet = {'type': 'pdf',
                  'stats': stats,
-                 'levels': {'level': 0},
+                 'levels': {'level': int(level)},
                  'hp': int(hp),
                  'armor': int(armor),
                  'attacks': attacks,
@@ -93,13 +94,14 @@ class PDFSheetParser(SheetParser):
         hp = sheet['hp']
         skills = sheet['skills']
         attacks = sheet['attacks']
+        levels = sheet['levels']
         saves = sheet['saves']
         armor = sheet['armor']
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
         embed.title = stats['name']
         embed.set_thumbnail(url=stats['image'])
-        embed.add_field(name="HP", value="**HP:** {}".format(hp))
+        embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels))
         embed.add_field(name="AC", value=str(armor))
         embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+})\n" \
                                             "**DEX:** {dexterity} ({dexterityMod:+})\n" \
@@ -209,3 +211,12 @@ class PDFSheetParser(SheetParser):
             skills[stat] = int(character.get(stat[:3].upper() + 'bonus'))
         
         return skills
+    
+    def get_level(self):
+        if self.character is None: raise Exception('You must call get_character() first.')
+        character = self.character
+        level = 0
+        classlevel = character.get("ClassLevel", "")
+        for l in re.finditer(r'\d+', classlevel):
+            level += int(l.group(0))
+        return level

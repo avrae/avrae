@@ -14,6 +14,7 @@ from discord.enums import ChannelType
 from discord.ext import commands
 
 from utils import checks
+from discord.errors import NotFound
 
 class AdminUtils:
     '''
@@ -140,15 +141,19 @@ class AdminUtils:
                 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def mute(self, target : discord.User):
+    async def mute(self, target):
         """Mutes a person."""
         self.muted = self.bot.db.not_json_get('muted', [])
-        if target.id in self.muted:
-            self.muted.remove(target.id)
-            await self.bot.say("{} unmuted.".format(target))
+        try:
+            target_user = await self.bot.get_user_info(target)
+        except NotFound:
+            target_user = "Not Found"
+        if target in self.muted:
+            self.muted.remove(target)
+            await self.bot.say("{} ({}) unmuted.".format(target, target_user))
         else:
-            self.muted.append(target.id)
-            await self.bot.say("{} muted.".format(target))
+            self.muted.append(target)
+            await self.bot.say("{} ({}) muted.".format(target, target_user))
         self.bot.db.not_json_set('muted', self.muted)
             
     @commands.command(hidden=True, pass_context=True)

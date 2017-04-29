@@ -190,7 +190,7 @@ async def on_command_error(error, ctx):
                 
 @bot.event
 async def on_message(message):
-    if message.author in bot.get_cog("AdminUtils").muted:
+    if message.author.id in bot.get_cog("AdminUtils").muted:
         return
     if message.content.startswith('avraepls'):
         print("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))

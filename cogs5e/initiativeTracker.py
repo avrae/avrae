@@ -1075,7 +1075,7 @@ class InitTracker:
         await self.bot.say(embed=embed)
         await combat.update_summary(self.bot)
         
-    @init.command(pass_context=True, hidden=True)
+    @init.command(pass_context=True)
     async def sim(self, ctx):
         """Simulates the current turn of combat.
         MonsterCombatants will target any non-monster combatant, and DicecloudCombatants will target any monster combatants."""
@@ -1092,14 +1092,32 @@ class InitTracker:
         for current in thisTurn:
             await asyncio.sleep(1) #select target
             isMonster = isinstance(current, MonsterCombatant)
-            numAtks = 1
-            if isMonster: # TODO: better multiattack parsing
+            if isMonster: 
                 if 'multiattack' in [a.get('name', '').lower() for a in current.monster.get('action', [{}])]:
-                    ma_text = next(''.join(a.get('text')) for a in current.monster.get('action', [{}]) if a['name'].lower() == 'multiattack')
-                    ma_text = text_to_numbers(ma_text)
-                    numAtks = int(re.search(r'\d+', ma_text).group())
-            for a in range(numAtks):
-                await asyncio.sleep(1) #select attack
+                    mon_attacks = current.monster.get('attacks')
+                    possible_attacks = next(a.get('multiattack', []) for a in current.monster.get('action', [{}]) if a['name'].lower() == 'multiattack')
+                    chosen_attack = random.choice(possible_attacks)
+                    attacks = []
+                    for atk in chosen_attack:
+                        for i in range(int(list(atk.values())[0])):
+                            attacks.append(next(a for a in mon_attacks if list(atk.keys())[0] in a.get('name')))
+                    random.shuffle(attacks)
+                else:
+                    mon_attacks = current.monster.get('attacks') # get attacks
+                    mon_attacks = [a for a in mon_attacks if a.get('attackBonus') is not None]
+                    if len(mon_attacks) < 1:
+                        await self.bot.say("```diff\n- {} has no attacks!```".format(current.name))
+                        break
+                    attacks = [random.choice(mon_attacks)]
+            else:
+                char_attacks = current.sheet.get('attacks') # get attacks
+                char_attacks = [a for a in char_attacks if a.get('attackBonus') is not None]
+                if len(char_attacks) < 1:
+                    await self.bot.say("```diff\n- {} has no attacks!```".format(current.name))
+                    break
+                attack = random.choice(char_attacks)
+                attacks = [attack]
+            for a in attacks:
                 if isMonster:
                     targets = [c for c in combat.combatants if not isinstance(c, MonsterCombatant)]
                 else:
@@ -1108,36 +1126,19 @@ class InitTracker:
                     await self.bot.say("```diff\n+ {} sees no targets!\n```".format(current.name))
                     break
                 target = random.choice(targets)
+                
                 await self.bot.say("```diff\n+ {} swings at {}!```".format(current.name, target.name))
+                args = {}
+                args['name'] = current.name
+                if target.ac is not None: args['ac'] = target.ac
+                args['t'] = target.name
+                result = sheet_attack(a, args)
+                if target.ac is not None: target.hp -= result['total_damage']
                 
                 if isinstance(current, DicecloudCombatant):
-                    attacks = current.sheet.get('attacks') # get attacks
-                    attacks = [a for a in attacks if a.get('attackBonus') is not None]
-                    if len(attacks) < 1:
-                        await self.bot.say("```diff\n- {} has no attacks!```".format(current.name))
-                        break
-                    attack = random.choice(attacks)
-                    args = {}
-                    args['name'] = current.sheet.get('stats', {}).get('name', "NONAME")
-                    if target.ac is not None: args['ac'] = target.ac
-                    args['t'] = target.name
-                    result = sheet_attack(attack, args)
                     result['embed'].colour = random.randint(0, 0xffffff) if current.sheet.get('settings', {}).get('color') is None else current.sheet.get('settings', {}).get('color')
-                    target.hp -= result['total_damage']
                 elif isinstance(current, MonsterCombatant):
-                    attacks = current.monster.get('attacks') # get attacks
-                    attacks = [a for a in attacks if a.get('attackBonus') is not None]
-                    if len(attacks) < 1:
-                        await self.bot.say("```diff\n- {} has no attacks!```".format(current.name))
-                        break
-                    attack = random.choice(attacks)
-                    args = {}
-                    args['name'] = a_or_an(current.monster.get('name')).title()
-                    if target.ac is not None: args['ac'] = target.ac
-                    args['t'] = target.name
-                    result = sheet_attack(attack, args)
-                    result['embed'].colour = random.randint(0, 0xffffff)
-                    if target.ac is not None: target.hp -= result['total_damage']
+                    result['embed'].colour = random.randint(0, 0xffffff)  
                 else:
                     return await self.bot.say('Integrated attacks are only supported for combatants added via `madd` or `dcadd`.', delete_after=15)
                 embed = result['embed']
@@ -1155,6 +1156,7 @@ class InitTracker:
                     combat.checkGroups()
                 await self.bot.say("```diff\n- Dealt {} damage!{}```".format(result['total_damage'], killed), embed=embed)
                 await combat.update_summary(self.bot)
+                await asyncio.sleep(2) #select attack
         
     @init.command(pass_context=True, name='remove')
     async def remove_combatant(self, ctx, *, name : str):

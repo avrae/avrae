@@ -97,6 +97,7 @@
               <h1>Command List</h1>
               <p>This page is a list of all commands, subcommands, and valid arguments that Avrae can parse.</p>
               <p>Avrae's command system is split into distinct modules. All commands are called by starting a message with the message prefix (default <kbd>!</kbd>, but can be configured), followed by the command name.</p>
+              <p><small>This list is current as of Build 324.</small></p>
             </div>
             <div class="row" id="chargen">
               <h2>CharGen</h2>
@@ -722,6 +723,12 @@
                         </tbody>
                       </table>
                     </td>
+                  </tr>
+                  <tr>
+                    <td>sim</td>
+                    <td>Simulates one turn of combat. Requires all combatants to be added with either <code>!init madd</code> or <code>!init cadd</code>. Any MonsterCombatant will attack any CharacterCombatant, and vice versa.</td>
+                    <td>!init sim</td>
+                    <td>None</td>
                   </tr>
                   <tr>
                     <td>status</td>

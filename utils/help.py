@@ -30,7 +30,7 @@ class Help:
         self.bot = bot
     
     @commands.command(name='help', aliases=['commands'], pass_context=True)
-    @commands.cooldown(1, 5, BucketType.user)
+    @commands.cooldown(1, 2, BucketType.user)
     async def _default_help_command(self, ctx, *commands : str):
         """Shows this message."""
         bot = ctx.bot

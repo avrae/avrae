@@ -14,7 +14,7 @@ MarkupSafe==0.23
 meteor-ejson==1.1.0
 multidict==2.1.4
 nbformat==4.3.0
-numexpr==2.6.1
+numexpr>=2.6.1
 numpy==1.11.3
 pdfminer.six==20160614
 plotly==2.0.6
@@ -23,7 +23,7 @@ pycparser==2.17
 pyee==3.0.1
 PyNaCl==1.0.1
 python-ddp==0.1.5
-python-Levenshtein==0.12.0
+python-Levenshtein>=0.12.0
 pytz==2017.2
 redis==2.10.5
 requests==2.13.0

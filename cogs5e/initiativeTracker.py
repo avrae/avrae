@@ -242,7 +242,7 @@ class DicecloudCombatant(Combatant):
         return self.name
     
 class MonsterCombatant(Combatant):
-    def __init__(self, name:str='', init:int=0, author:discord.User=None, notes:str='', effects=[], private:bool=True, group:str=None, modifier:int=0, monster=None):
+    def __init__(self, name:str='', init:int=0, author:discord.User=None, notes:str='', effects=[], private:bool=True, group:str=None, modifier:int=0, monster=None, opts={}):
         self.init = init
         self.name = name
         self.author = author
@@ -258,6 +258,13 @@ class MonsterCombatant(Combatant):
         self.immune = monster.get('immune', '').replace(' ', '').split(',')
         self.vuln = monster.get('vulnerable', '').replace(' ', '').split(',')
         self.monster = monster
+        
+        # fix npr and blug/pierc/slash
+        if opts.get('npr'):
+            for t in (self.resist, self.immune, self.vuln):
+                for e in t:
+                    for d in ('bludgeoning', 'piercing', 'slashing'):
+                        if d in e: t.remove(e)
         
     def get_status(self):
         csFormat = "{} {} {}{}{}"
@@ -574,7 +581,8 @@ class InitTracker:
               -p [init value]
               --name [name scheme, use "#" for auto-numbering, ex. "Orc#"]
               -h (same as !init add, default true)
-              --group (same as !init add)"""
+              --group (same as !init add)
+              -npr (removes physical resistances when added)"""
         
         monster = searchMonster(monster_name, return_monster=True, visible=True)
         self.bot.botStats["monsters_looked_up_session"] += 1
@@ -586,11 +594,15 @@ class InitTracker:
 
         args = shlex.split(args)
         args = parse_args(args)
-        private = args.get('h', True)
+        private = not 'h' in args
         group = args.get('group')
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
         p = args.get('p', None)
+        
+        opts = {}
+        if 'npr' in args:
+            opts['npr'] = True
         
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
@@ -618,7 +630,7 @@ class InitTracker:
                 else:
                     init = int(p)
                 controller = ctx.message.author
-                me = MonsterCombatant(name=name, init=init, author=controller, effects=[], notes='', private=private, group=group, monster=monster, modifier=dexMod)
+                me = MonsterCombatant(name=name, init=init, author=controller, effects=[], notes='', private=private, group=group, monster=monster, modifier=dexMod, opts=opts)
                 if group is None:
                     combat.combatants.append(me)
                     out += "{} was added to combat with initiative {}.\n".format(name, check_roll.skeleton if p is None else p)

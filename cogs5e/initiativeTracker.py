@@ -264,7 +264,7 @@ class MonsterCombatant(Combatant):
             for t in (self.resist, self.immune, self.vuln):
                 for e in t:
                     for d in ('bludgeoning', 'piercing', 'slashing'):
-                        if d in e: self.resist.remove(e)
+                        if d in e: t.remove(e)
         
     def get_status(self):
         csFormat = "{} {} {}{}{}"

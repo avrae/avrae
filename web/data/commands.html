@@ -97,7 +97,7 @@
               <h1>Command List</h1>
               <p>This page is a list of all commands, subcommands, and valid arguments that Avrae can parse.</p>
               <p>Avrae's command system is split into distinct modules. All commands are called by starting a message with the message prefix (default <kbd>!</kbd>, but can be configured), followed by the command name.</p>
-              <p><small>This list is current as of Build 324.</small></p>
+              <p><small>This list is current as of Build 330.</small></p>
             </div>
             <div class="row" id="chargen">
               <h2>CharGen</h2>
@@ -635,13 +635,18 @@
                           </tr>
                           <tr>
                             <td>-h</td>
-                            <td>Hides combatant's HP and AC.</td>
+                            <td>Unhides combatant's HP and AC.</td>
                             <td>-h</td>
                           </tr>
                           <tr>
                             <td>--group</td>
                             <td>Adds the combatant to a group. Creates the group if it doesn't exist.</td>
                             <td>--group &lt;group name&gt;</td>
+                          </tr>
+                          <tr>
+                            <td>-npr</td>
+                            <td>Adds the combatant without physical (bludgeoning, slashing, and piercing) resistances, immunities, or vulnerabilities. Usually used for parties with a lot of magical weapons.</td>
+                            <td>-npr</td>
                           </tr>
                         </tbody>
                       </table>
@@ -899,6 +904,68 @@
                     <td>Prints a scene break (horizontal line).</td>
                     <td>!br</td>
                     <td>None</td>
+                  </tr>
+                  <tr>
+                    <td>echo</td>
+                    <td>Echoes a message.</td>
+                    <td>!echo &lt;msg&gt;</td>
+                    <td>
+                      <kbd>msg</kbd> - The message to echo.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>embed</td>
+                    <td>Generates and prints an embed.</td>
+                    <td>!embed &lt;args&gt;</td>
+                    <td>
+                      <kbd>args</kbd> - See table.<br><br>
+                      <table class="table table-striped table-bordered">
+                        <thead>
+                          <tr>
+                            <th>Arg</th>
+                            <th>Description</th>
+                            <th>Syntax</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>-title</td>
+                            <td>Sets the title of the embed.</td>
+                            <td>-title &lt;title&gt;</td>
+                          </tr>
+                          <tr>
+                            <td>-desc</td>
+                            <td>Sets the description of the embed.</td>
+                            <td>-desc &lt;description text&gt;</td>
+                          </tr>
+                          <tr>
+                            <td>-thumb</td>
+                            <td>Sets the image URL displayed in the thumbnail.</td>
+                            <td>-thumb &lt;image url&gt;</td>
+                          </tr>
+                          <tr>
+                            <td>-image</td>
+                            <td>Sets the image URL.</td>
+                            <td>-image &lt;image url&gt;</td>
+                          </tr>
+                          <tr>
+                            <td>-footer</td>
+                            <td>Sets the text of the footer.</td>
+                            <td>-footer &lt;footer text&gt;</td>
+                          </tr>
+                          <tr>
+                            <td>-color</td>
+                            <td>Sets the color of the embed.</td>
+                            <td>-color &lt;hex code&gt;</td>
+                          </tr>
+                          <tr>
+                            <td>-f</td>
+                            <td>Adds a field to the embed. This can be called multiple times.</td>
+                            <td>-f &lt;"Field Title|Field Text"&gt;</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
                   </tr>
                   <tr>
                     <td>pythag</td>

@@ -11,7 +11,9 @@ import re
 from DDPClient import DDPClient
 import discord
 import numexpr
+
 from cogs5e.sheets.sheetParser import SheetParser
+
 
 class DicecloudParser(SheetParser):
     

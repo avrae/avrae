@@ -34,7 +34,7 @@ class PBPUtils:
             index += 1
         return out
         
-    @commands.command(pass_context=True, hidden=True)
+    @commands.command(pass_context=True)
     async def echo(self, ctx, *, msg):
         """Echos a message."""
         try:
@@ -44,7 +44,7 @@ class PBPUtils:
         
         await self.bot.say(ctx.message.author.display_name + ": " + msg)
         
-    @commands.command(pass_context=True, hidden=True)
+    @commands.command(pass_context=True)
     async def embed(self, ctx, *, args):
         """Creates and prints an Embed.
         Arguments: -title [title]

@@ -10,7 +10,7 @@ import json
 import random
 import re
 import shlex
-from socket import socket
+from socket import timeout
 import sys
 import traceback
 
@@ -438,7 +438,7 @@ class SheetManager:
             character = await parser.get_character()
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
-        except socket.timeout:
+        except timeout:
             return await self.bot.say("We're having some issues connecting to Dicecloud right now. Please try again in a few minutes.")
         
         try:
@@ -660,7 +660,7 @@ class SheetManager:
         parser = DicecloudParser(url)
         try:
             character = await parser.get_character()
-        except socket.timeout:
+        except timeout:
             return await self.bot.say("I'm having some issues connecting to Dicecloud right now. Please try again in a few minutes.")
         try:
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.get('characters')[0].get('name')))

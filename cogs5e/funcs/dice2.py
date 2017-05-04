@@ -11,6 +11,7 @@ import re
 import traceback
 
 from utils.functions import list_get
+from math import floor
 
 
 VALID_OPERATORS = 'k|rr|ro|mi|ma'
@@ -25,6 +26,8 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
             raise Exception("Exponents are currently disabled.")
         results = []
         # split roll string into XdYoptsSel [comment] or Op
+        # set remainder to comment
+        # parse each, returning a SingleDiceResult
         dice_set = re.split('([-+*/().<>=])', rollStr)
         for index, dice in enumerate(dice_set):
             match = re.match(DICE_PATTERN, dice, IGNORECASE)
@@ -41,9 +44,47 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
                     results.append(Operator(op=match.group(0)))
             else:
                 results.append(Comment(''.join(dice_set[index:])))
-        # set remainder to comment
-        # parse each, returning a SingleDiceResult
+        
+        # calculate total
         # return final solution
+        skeletonReply = ''
+        if not inline:
+            # Builds end result while showing rolls
+            reply = ''.join(str(res for res in results if not isinstance(res, Comment))) + '\n_Total:_ ' + str(floor(total))
+            skeletonReply = reply
+            rollFor = rollFor if rollFor is not '' else 'Result'
+            reply = '**{}:** '.format(rollFor) + reply
+            if show_blurbs:
+                if adv == 1:
+                    reply += '\n**Rolled with Advantage**'
+                elif adv == -1:
+                    reply += '\n**Rolled with Disadvantage**'
+                if crit == 1:
+                    critStr = "\n_**Critical Hit!**_  "
+                    reply += critStr
+                elif crit == 2:
+                    critStr = "\n_**Critical Fail!**_  "
+                    reply += critStr
+        else:
+            # Builds end result while showing rolls
+            reply = ' '.join(str(res for res in results if not isinstance(res, Comment))) + ' = `' + str(floor(total)) + '`')
+            skeletonReply = reply
+            rollFor = rollFor if rollFor is not '' else 'Result'
+            reply = '**{}:** '.format(rollFor) + reply
+            if show_blurbs:
+                if adv == 1:
+                    reply += '\n**Rolled with Advantage**'
+                elif adv == -1:
+                    reply += '\n**Rolled with Disadvantage**'
+                if crit == 1:
+                    critStr = "\n_**Critical Hit!**_  "
+                    reply += critStr
+                elif crit == 2:
+                    critStr = "\n_**Critical Fail!**_  "
+                    reply += critStr
+        reply = re.sub(' +', ' ', reply)
+        skeletonReply = re.sub(' +', ' ', str(skeletonReply))
+        return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply)
     except Exception as ex:
         print('Error in roll():')
         traceback.print_exc()
@@ -84,6 +125,10 @@ def roll_one(dice, adv:int=0):
     # dice repair/modification
     if numDice > 300 or diceVal < 1 or numDice == 0:
         raise Exception('Too many dice rolled.')
+    
+    result.max_value = diceVal
+    result.num_dice = numDice
+    result.operators = ops
     
     for die in range(numDice):
         try:
@@ -150,14 +195,15 @@ def roll_one(dice, adv:int=0):
         reroll(reroll_once, 1)
         reroll(rerollList)
         result.keep(keep)
+        
+    return result
 
 class Part:
     """Class to hold one part of the roll string."""
     pass
 
 class SingleDiceGroup(Part):
-    def __init__(self, total:int=0, num_dice:int=0, max_value:int=0, rolled:list=[], annotation:str="", result:str="", operators:list=[]):
-        self.total = total
+    def __init__(self, num_dice:int=0, max_value:int=0, rolled:list=[], annotation:str="", result:str="", operators:list=[]):
         self.num_dice = num_dice
         self.max_value = max_value
         self.rolled = rolled # list of SingleDice
@@ -165,10 +211,22 @@ class SingleDiceGroup(Part):
         self.result = result
         self.operators = operators
         
-    def keep(self, rolls_to_keep:list): # TODO
+    def keep(self, rolls_to_keep):
+        if rolls_to_keep is None: return
         for roll in self.rolled:
             if not roll.value in rolls_to_keep:
                 roll.kept = False
+            else:
+                rolls_to_keep.remove(roll.value)
+                
+    def get_total(self):
+        """Returns:
+        int - The total value of the dice."""
+        return sum(r.value for r in self.rolled if r.kept)
+    
+    def __str__(self):
+        return "{0.num_dice}d{0.max_value}{1} ({2}) {0.annotation}".format(
+                self, ''.join(self.operators), ''.join(str(r for r in self.rolled)))
                 
 class SingleDice:
     def __init__(self, value:int=0, max_value:int=0, kept:bool=True):
@@ -184,18 +242,36 @@ class SingleDice:
         self.value = new_value
         self.rolls.append(new_value)
         
+    def __str__(self):
+        formatted_rolls = [str(r) for r in self.rolls]
+        if int(formatted_rolls[-1]) == self.max_value:
+            formatted_rolls[-1] = '**' + formatted_rolls + '**'
+        if self.kept:
+            return ' -> '.join(formatted_rolls)
+        else:
+            return '~~' + ' -> '.join(formatted_rolls) + '~~'
+        
 class Constant(Part):
     def __init__(self, value:int=0, annotation:str=""):
         self.value = value
         self.annotation = annotation
+        
+    def __str__(self):
+        return "{0.value} {0.annotation}".format(self)
 
 class Operator(Part):
     def __init__(self, op:str="+"):
         self.op = op
+        
+    def __str__(self):
+        return self.op
 
 class Comment(Part):
     def __init__(self, comment:str=""):
         self.comment = comment
+        
+    def __str__(self):
+        return self.comment
 
 def parse_selectors(opts, res):
     """Returns a list of ints."""

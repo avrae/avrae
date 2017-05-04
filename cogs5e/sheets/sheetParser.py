@@ -30,11 +30,24 @@ class SheetParser():
         attacks = sheet['attacks']
         saves = sheet['saves']
         armor = sheet['armor']
+        resistStr = ''
+        try:
+            resist= sheet['resist']
+            immune= sheet['immune']
+            vuln  = sheet['vuln']
+            if len(resist) > 0:
+                resistStr += "\nResistances: " + ', '.join(resist).title()
+            if len(immune) > 0:
+                resistStr += "\nImmunities: " + ', '.join(immune).title()
+            if len(vuln) > 0:
+                resistStr += "\nVulnerabilities: " + ', '.join(vuln).title()
+        except KeyError:
+            resistStr = "\nPlease update your sheet to view resistances."
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
         embed.title = stats['name']
         embed.set_thumbnail(url=stats['image'])
-        embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']))
+        embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']) + resistStr)
         embed.add_field(name="AC", value=str(armor))
         embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+})\n" \
                                             "**DEX:** {dexterity} ({dexterityMod:+})\n" \

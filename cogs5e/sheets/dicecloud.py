@@ -64,6 +64,7 @@ class DicecloudParser(SheetParser):
             raise
         
         sheet = {'type': 'dicecloud',
+                 'version': 5,
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -91,11 +92,21 @@ class DicecloudParser(SheetParser):
         attacks = sheet['attacks']
         saves = sheet['saves']
         armor = sheet['armor']
+        resist= sheet['resist']
+        immune= sheet['immune']
+        vuln  = sheet['vuln']
+        resistStr = ''
+        if len(resist) > 0:
+            resistStr += "\nResistances: " + ', '.join(resist).title()
+        if len(immune) > 0:
+            resistStr += "\nImmunities: " + ', '.join(immune).title()
+        if len(vuln) > 0:
+            resistStr += "\nVulnerabilities: " + ', '.join(vuln).title()
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
         embed.title = stats['name']
         embed.set_thumbnail(url=stats['image'])
-        embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']))
+        embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']) + resistStr)
         embed.add_field(name="AC", value=str(armor))
         embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+})\n" \
                                             "**DEX:** {dexterity} ({dexterityMod:+})\n" \

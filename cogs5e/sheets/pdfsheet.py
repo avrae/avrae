@@ -73,12 +73,16 @@ class PDFSheetParser(SheetParser):
             raise
         
         sheet = {'type': 'pdf',
+                 'version': 2,
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': int(hp),
                  'armor': int(armor),
                  'attacks': attacks,
                  'skills': skills,
+                 'resist': [],
+                 'immune': [],
+                 'vuln': [],
                  'saves': {}}
         
         for key, skill in skills.items():

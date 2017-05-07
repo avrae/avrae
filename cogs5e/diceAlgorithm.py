@@ -109,7 +109,7 @@ class Dice:
         if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
             adv = 1 if re.search('(^|\s+)adv(\s+|$)', args) is not None else -1
             args = re.sub('(adv|dis)(\s+|$)', '', args)
-        for r in range(iterations):
+        for _ in range(iterations):
             res = roll(rollStr, adv=adv, rollFor=args, inline=True)
             out.append(res)
         outStr = "Rolling {} iterations...\n".format(iterations)

@@ -23,6 +23,7 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import list_get, embed_trim, get_positivity, a_or_an
+import numexpr
 
 
 class SheetManager:
@@ -124,7 +125,7 @@ class SheetManager:
         return tempargs
         
     @commands.command(pass_context=True, aliases=['a'])
-    async def attack(self, ctx, atk_name:str, *, args:str=''):
+    async def attack(self, ctx, atk_name:str='list', *, args:str=''):
         """Rolls an attack for the current active character.
         Valid Arguments: adv/dis
                          -ac [target ac]
@@ -147,6 +148,30 @@ class SheetManager:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character] # get Sheet of character
         attacks = character.get('attacks') # get attacks
+        
+        if atk_name == 'list':
+            tempAttacks = []
+            for a in attacks:
+                if a['attackBonus'] is not None:
+                    try:
+                        bonus = numexpr.evaluate(a['attackBonus'])
+                    except:
+                        bonus = a['attackBonus']
+                    tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
+                                                                                  bonus,
+                                                                                  a['damage'] if a['damage'] is not None else 'no'))
+                else:
+                    tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
+                                                                     a['damage'] if a['damage'] is not None else 'no'))
+            if tempAttacks == []:
+                tempAttacks = ['No attacks.']
+            a = '\n'.join(tempAttacks)
+            if len(a) > 2000:
+                a = ', '.join(atk['name'] for atk in attacks)
+            if len(a) > 2000:
+                a = "Too many attacks, values hidden!"
+            return await self.bot.say("{}'s attacks:\n{}".format(character.get('stats', {}).get('name', "NONAME"), a))
+        
         try: #fuzzy search for atk_name
             attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
         except StopIteration:

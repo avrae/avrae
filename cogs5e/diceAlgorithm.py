@@ -92,7 +92,7 @@ class Dice:
             pass
         outStr = ctx.message.author.mention + '  :game_die:\n' + out
         if len(outStr) > 1999:
-            await self.bot.say(ctx.message.author.mention + '  :game_die:\n**Result:** ' + str(res.plain))
+            await self.bot.say(ctx.message.author.mention + '  :game_die:\n[Output truncated due to length]\n**Result:** ' + str(res.plain))
         else:
             await self.bot.say(outStr)
     
@@ -117,7 +117,8 @@ class Dice:
         if len(outStr) < 1500:
             outStr += '\n{} total.'.format(sum(o.total for o in out))
         else:
-            outStr = "Rolling {} iterations...\n".format(iterations) + '{} total.'.format(sum(o.total for o in out))
+            outStr = "Rolling {} iterations...\n[Output trancated due to length]\n".format(iterations) + \
+            '{} total.'.format(sum(o.total for o in out))
         try:
             await self.bot.delete_message(ctx.message)
         except:
@@ -148,7 +149,7 @@ class Dice:
         if len(outStr) < 1500:
             outStr += '\n{} successes.'.format(str(successes))
         else:
-            outStr = "Rolling {} iterations, DC {}...\n".format(iterations, dc) + '{} successes.'.format(str(successes))
+            outStr = "Rolling {} iterations, DC {}...\n[Output truncated due to length]\n".format(iterations, dc) + '{} successes.'.format(str(successes))
         try:
             await self.bot.delete_message(ctx.message)
         except:

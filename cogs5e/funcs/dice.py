@@ -3,330 +3,367 @@ Created on Dec 25, 2016
 
 @author: andrew
 '''
+
 from heapq import nlargest, nsmallest
-from math import floor
 import random
 from re import IGNORECASE
 import re
 import traceback
 
-import numexpr
-
-from cogs5e import tables
 from utils.functions import list_get
+from math import floor
+import numexpr
+from copy import copy
+
 
 VALID_OPERATORS = 'k|rr|ro|mi|ma'
 VALID_OPERATORS_2 = '|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')])
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
+DICE_PATTERN = r'^\s*(?:(?:(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+))\s*(\[.*\])?)|(?:[-+*/().<>=])?))(.*?)\s*$'
 
-# Rolls Dice
-def d_roller(obj, adv=0, double=False):
-    if double:
-        def critSub(matchobj):
-            return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
-        obj = re.sub(r'(\d+)d(\d+)', critSub, obj)
-    res = []
-    splargs = None
-    crit = 0
-    total = 0
-    # Recognizes dice
-    args = obj
-    obj = re.findall('\d+', obj)
-    obj = [int(x) for x in obj]
-    numArgs = len(obj)
-    if numArgs == 1:
-        if not args.startswith('d'):
-            raise Exception('Please pass in the value of the dice.')
-        numDice = 1
-        diceVal = obj[0]
-        if adv is not 0 and diceVal == 20:
-            numDice = 2
-            splargs = ['k', 'h1'] if adv is 1 else ['k', 'l1']
-    elif numArgs == 2:
-        numDice = obj[0]
-        diceVal = obj[-1]
-        if adv is not 0 and diceVal == 20:
-            splargs = ['k', 'h' + str(numDice)] if adv is 1 else ['k', 'l' + str(numDice)]
-            numDice = numDice * 2
-    else: # split into xdy and operators
-        numDice = obj[0]
-        diceVal = obj[1]
-        args = re.split('(\d+d\d+)', args)[-1]
-        splargs = re.split(VALID_OPERATORS_2, args)
-        splargs = [a for a in splargs if a is not None]
-            
-    # dice repair/modification
-    if numDice > 300 or diceVal < 1 or numDice == 0:
-        raise Exception('Too many dice rolled.')
-    
-    for die in range(numDice):
-        try:
-            randres = random.randrange(1, diceVal + 1)
-            res.append(randres)
-        except:
-            res.append(1)
-            
-    if adv is not 0 and diceVal == 20:
-        numDice = floor(numDice / 2) # for crit detection
-            
-    rawRes = list(map(str, res))
-    
-    if splargs is not None:
-        def reroll(rerollList, iterations=250):
-            for i in range(iterations): # let's only iterate 250 times for sanity
-                breakCheck = True
-                for r in rerollList:
-                    if r in res:
-                        breakCheck = False
-                for r in range(len(res)):
-                    if res[r] in rerollList:
-                        try:
-                            randres = random.randint(1, diceVal)
-                            res[r] = randres
-                            rawRes.append(str(randres))
-                        except:
-                            res[r] = 1
-                            rawRes.append('1')
-                if breakCheck:
-                    break
-            rerollList = []
-            
-        rerollList = []
-        reroll_once = []
-        keep = None
-        valid_operators = VALID_OPERATORS_ARRAY
-        for a in range(len(splargs)):
-            if splargs[a] == 'rr':
-                rerollList += parse_selectors([list_get(a + 1, 0, splargs)], res)
-            elif splargs[a] in valid_operators:
-                reroll(rerollList)
-                rerollList = []
-            if splargs[a] == 'k':
-                keep = [] if keep is None else keep
-                keep += parse_selectors([list_get(a + 1, 0, splargs)], res)
-            elif splargs[a] in valid_operators:
-                res = keep if keep is not None else res
-                keep = None
-            if splargs[a] == 'ro':
-                reroll_once += parse_selectors([list_get(a + 1, 0, splargs)], res)
-            elif splargs[a] in valid_operators:
-                reroll(reroll_once, 1)
-                reroll_once = []
-            if splargs[a] == 'mi':
-                min = list_get(a + 1, 0, splargs)
-                for i, r in enumerate(res):
-                    if r < int(min): 
-                        try:
-                            rawRes[rawRes.index(str(r))] = "{} -> _{}_".format(r, min)
-                        except: pass
-                        res[i] = int(min)
-            if splargs[a] == 'ma':
-                max = list_get(a + 1, 0, splargs)
-                for i, r in enumerate(res):
-                    if r > int(max): 
-                        try:
-                            rawRes[rawRes.index(str(r))] = "{} -> _{}_".format(r, max)
-                        except: pass
-                        res[i] = int(max)
-        reroll(reroll_once, 1)
-        reroll(rerollList)
-        res = keep if keep is not None else res
-        
-        
-    for r in res:
-        total += r
-        
-    # check for crits/crails        
-    if numDice == 1 and diceVal == 20 and total == 20:
-        crit = 1
-    elif numDice == 1 and diceVal == 20 and total == 1:
-        crit = 2
-    
-    res = list(map(str, res))
-    for r in range(len(rawRes)):
-        toCompare = rawRes[len(rawRes) - (r + 1)]
-        index = len(rawRes) - (r + 1)
-        if '->' in toCompare: toCompare = toCompare.split('_')[-2]
-        if toCompare in res:
-            res.remove(toCompare)
-        else:
-            rawRes[index] = '~~' + rawRes[index] + '~~'
-    
-    # Returns string of answer
-    
-    for r in range(0, len(rawRes)):
-        if rawRes[r] == '1' or rawRes[r] == str(diceVal):
-            rawRes[r] = '_' + rawRes[r] + '_'
-    
-    # build the output list
-    out = DiceResult(total, '(' + ', '.join(rawRes) + ')', crit)
-    return out
-
-# # Dice Roller
 def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs=True):
-    try:
-        reply = []
-        out_set = []
-        crit = 0
-        total = 0
-        # Parses math/dice terms
-        #dice_temp = rollStr.replace('^', '**')
-        if '**' in rollStr:
-            raise Exception("Exponents are currently disabled.")
-        dice_temp = rollStr
-        # Splits into sections of ['dice', 'operator', 'dice'...] like ['1d20', '+', '4d6', '+', '5']
-        dice_set = re.split('([-+*/().<>= ])', dice_temp)
-        out_set = re.split('([-+*/().<>= ])', dice_temp)
-        eval_set = re.split('([-+*/().<>= ])', dice_temp)
-#         print("Dice Set is: " + str(dice_set))
+    roller = Roll()
+    result = roller.roll(rollStr, adv, rollFor, inline, double, show_blurbs)
+    return result
+
+class Roll:
+    def __init__(self, parts:list=[]):
+        self.parts = parts
         
-        # Replaces dice sets with rolled results
-        stack = []
-        nextAnno = ''
-        rollForTemp = ''
-        for i, t in enumerate(dice_set):
-        #             print("Processing a t: " + t)
-        #             print("Stack: " + str(stack))
-        #             print("NextAnno: " + nextAnno)
-            breakCheck = False
-            if t is '':
-                continue
-            
-            if not 'annotation' in stack:
-                try: # t looks like: " 1d20[annotation] words"
-                    nextAnno = re.findall(r'\[.*\]', t)[0] # finds any annotation encosed by brackets
-                    t = t.replace(nextAnno, '') # and removes it from the string
-                except:
-                    nextAnno = '' # no annotation
-                if '[' in t:
-                    stack.append('annotation')
-                    nextAnno += t 
-                    out_set[i] = ''
-                    eval_set[i] = ''
-                    continue
-            if ']' in t:
-                if 'annotation' in stack:
-                    t = nextAnno + t
-                    nextAnno = re.findall(r'\[.*\]', t)[0] # finds any annotation encosed by brackets
-                    t = t.replace(nextAnno, '') # and removes it from the string
-                    stack.remove('annotation')
-            if 'annotation' in stack:
-                nextAnno += t 
-                out_set[i] = ''
-                eval_set[i] = ''
-                continue
-            
-            if re.search('^\s*((\d*(d|' + VALID_OPERATORS + '|padellis)?(h\d|l\d|\d)+)+|([-+*/^().<>= ]))?(\[.*\])?\s*$', t, flags=IGNORECASE):
-                if 'd' in t:
-                    try:
-                        result = d_roller(t, adv, double=double)
-                        out_set[i] = t + " " + result.result + " " + nextAnno if nextAnno is not '' else t + " " + result.result
-                        eval_set[i] = str(result.plain)
-                        if not result.crit == 0:
-                            crit = result.crit
-                    except Exception as e:
-                        out_set[i] = t + " (ERROR: {}) ".format(str(e)) + nextAnno if nextAnno is not '' else t + " (ERROR: {})".format(str(e))
-                        eval_set[i] = "0"
-                else:
-                    out_set[i] = t + " " + nextAnno if nextAnno is not '' else t
-                    eval_set[i] = t
-                nextAnno = ''
-            else:
-                rollForTemp = ''.join(dice_set[i:]) # that means the rest of the string isn't part of the roll
-                rollForTemp = re.sub('(^\s+|\s+$)', '', rollForTemp) # get rid of starting/trailing whitespace
-                breakCheck = True
-                
-            if breakCheck:
-                out_set = out_set[:i]
-                eval_set = eval_set[:i]
-                break
- 
-#         print("Out Set is: " + str(out_set))
-#         print("Eval Set is: " + str(eval_set))
-        total = ''.join(eval_set)
+    def get_crit(self):
+        """Returns: int"""
         try:
-            total = numexpr.evaluate(total)
-        except SyntaxError:
-            total = 0
-            return DiceResult(verbose_result="Invalid input: Nothing rolled or missing argument after operator.")
-        
-        rolled = ''.join(out_set).replace('**', '^').replace('_', '**')
-        totalStr = str(floor(total))
-        
-        if rollFor is '':
-            rollFor = rollForTemp if rollForTemp is not '' else rollFor
-        
-        skeletonReply = ''
-        if not inline:
-            # Builds end result while showing rolls
-            reply.append(' '.join(out_set) + '\n_Total:_ ' + str(floor(total)))
-            # Replies to user with message
-            reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')
-            skeletonReply = reply
-            rollFor = rollFor if rollFor is not '' else 'Result'
-            reply = '**{}:** '.format(rollFor) + reply
-            if show_blurbs:
-                if adv == 1:
-                    reply += '\n**Rolled with Advantage**'
-                elif adv == -1:
-                    reply += '\n**Rolled with Disadvantage**'
-                if crit == 1:
-                    critStr = "\n_**Critical Hit!**_  " + tables.getCritMessage()
-                    reply += critStr
-                elif crit == 2:
-                    critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
-                    reply += critStr
-        else:
-            # Builds end result while showing rolls
-            reply.append('' + ' '.join(out_set) + ' = `' + str(floor(total)) + '`')
-            # Replies to user with message
-            reply = '\n\n'.join(reply).replace('**', '^').replace('_', '**')
-            skeletonReply = reply
-            rollFor = rollFor if rollFor is not '' else 'Result'
-            reply = '**{}:** '.format(rollFor) + reply
-            if show_blurbs:
-                if adv == 1:
-                    reply += '\n**Rolled with Advantage**'
-                elif adv == -1:
-                    reply += '\n**Rolled with Disadvantage**'
-                if crit == 1:
-                    critStr = "\n_**Critical Hit!**_  " + tables.getCritMessage()
-                    reply += critStr
-                elif crit == 2:
-                    critStr = "\n_**Critical Fail!**_  " + tables.getFailMessage()
-                    reply += critStr
-        reply = re.sub(' +', ' ', reply)
-        skeletonReply = re.sub(' +', ' ', str(skeletonReply))
-        return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply)
-        
-    except Exception as ex:
-        print('Error in roll():')
-        traceback.print_exc()
-        return DiceResult(verbose_result="Invalid input: {}".format(ex))
+            crit = next(p.get_crit() for p in self.parts if isinstance(p, SingleDiceGroup))
+        except StopIteration:
+            crit = 0
+        return crit
+            
+    def get_total(self):
+        """Returns: int"""
+        return numexpr.evaluate(''.join(p.get_eval() for p in self.parts if not isinstance(p, Comment)))
     
-def parse_selectors(opts, res):
+    # # Dice Roller
+    def roll(self, rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs=True):
+        try:
+            if '**' in rollStr:
+                raise Exception("Exponents are currently disabled.")
+            results = self
+            results.parts = []
+            # split roll string into XdYoptsSel [comment] or Op
+            # set remainder to comment
+            # parse each, returning a SingleDiceResult
+            dice_set = re.split('([-+*/().<>=])', rollStr)
+            for index, dice in enumerate(dice_set):
+                match = re.match(DICE_PATTERN, dice, IGNORECASE)
+                # check if it's dice
+                if match.group(1):
+                    roll = self.roll_one(dice.replace(match.group(4), ''), adv)
+                    results.parts.append(roll)
+                # or a constant
+                elif match.group(2):
+                    results.parts.append(Constant(value=int(match.group(2)), annotation=match.group(3)))
+                # or an operator
+                else:
+                    results.parts.append(Operator(op=match.group(0)))
+                    
+                if match.group(4):
+                    results.parts.append(Comment(match.group(4) + ''.join(dice_set[index+1:])))
+                    break
+            
+            # calculate total
+            crit = results.get_crit()
+            total = results.get_total()
+            rolled = ' '.join(str(res) for res in results.parts if not isinstance(res, Comment))
+            if rollFor is '':
+                rollFor = ''.join(str(c) for c in results.parts if isinstance(c, Comment))
+            # return final solution
+            skeletonReply = ''
+            if not inline:
+                # Builds end result while showing rolls
+                reply = ' '.join(str(res) for res in results.parts if not isinstance(res, Comment)) + '\n**Total:** ' + str(floor(total))
+                skeletonReply = reply
+                rollFor = rollFor if rollFor is not '' else 'Result'
+                reply = '**{}:** '.format(rollFor) + reply
+                if show_blurbs:
+                    if adv == 1:
+                        reply += '\n**Rolled with Advantage**'
+                    elif adv == -1:
+                        reply += '\n**Rolled with Disadvantage**'
+                    if crit == 1:
+                        critStr = "\n_**Critical Hit!**_  "
+                        reply += critStr
+                    elif crit == 2:
+                        critStr = "\n_**Critical Fail!**_  "
+                        reply += critStr
+            else:
+                # Builds end result while showing rolls
+                reply = ' '.join(str(res) for res in results.parts if not isinstance(res, Comment)) + ' = `' + str(floor(total)) + '`'
+                skeletonReply = reply
+                rollFor = rollFor if rollFor is not '' else 'Result'
+                reply = '**{}:** '.format(rollFor) + reply
+                if show_blurbs:
+                    if adv == 1:
+                        reply += '\n**Rolled with Advantage**'
+                    elif adv == -1:
+                        reply += '\n**Rolled with Disadvantage**'
+                    if crit == 1:
+                        critStr = "\n_**Critical Hit!**_  "
+                        reply += critStr
+                    elif crit == 2:
+                        critStr = "\n_**Critical Fail!**_  "
+                        reply += critStr
+            reply = re.sub(' +', ' ', reply)
+            skeletonReply = re.sub(' +', ' ', str(skeletonReply))
+            return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply, raw_dice=results)
+        except Exception as ex:
+            print('Error in roll():')
+            traceback.print_exc()
+            return DiceResult(verbose_result="Invalid input: {}".format(ex))
+        
+    def roll_one(self, dice, adv:int=0):
+        result = SingleDiceGroup()
+        result.rolled = []
+        # splits dice and comments
+        split = re.match(r'^([^\[\]]*?)\s*(\[.*\])?\s*$', dice)
+        dice = split.group(1)
+        annotation = split.group(2)
+        result.annotation = annotation if annotation is not None else ''
+        # Recognizes dice
+        obj = re.findall('\d+', dice)
+        obj = [int(x) for x in obj]
+        numArgs = len(obj)
+        
+        ops = []
+        if numArgs == 1:
+            if not dice.startswith('d'):
+                raise Exception('Please pass in the value of the dice.')
+            numDice = 1
+            diceVal = obj[0]
+            if adv is not 0 and diceVal == 20:
+                numDice = 2
+                ops = ['k', 'h1'] if adv is 1 else ['k', 'l1']
+        elif numArgs == 2:
+            numDice = obj[0]
+            diceVal = obj[-1]
+            if adv is not 0 and diceVal == 20:
+                ops = ['k', 'h' + str(numDice)] if adv is 1 else ['k', 'l' + str(numDice)]
+                numDice = numDice * 2
+        else: # split into xdy and operators
+            numDice = obj[0]
+            diceVal = obj[1]
+            dice = re.split('(\d+d\d+)', dice)[-1]
+            ops = re.split(VALID_OPERATORS_2, dice)
+            ops = [a for a in ops if a is not None]
+    
+        # dice repair/modification
+        if numDice > 300 or diceVal < 1 or numDice == 0:
+            raise Exception('Too many dice rolled.')
+        
+        result.max_value = diceVal
+        result.num_dice = numDice
+        result.operators = ops
+        
+        for die in range(numDice):
+            try:
+                tempdice = SingleDice()
+                tempdice.value = random.randint(1, diceVal)
+                tempdice.rolls = [tempdice.value]
+                tempdice.max_value = diceVal
+                tempdice.kept = True
+                result.rolled.append(tempdice)
+            except:
+                result.rolled.append(SingleDice())
+                
+        if ops is not None:
+            
+                
+            rerollList = []
+            reroll_once = []
+            keep = None
+            valid_operators = VALID_OPERATORS_ARRAY
+            for index, op in enumerate(ops):
+                if op == 'rr':
+                    rerollList += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
+                elif op in valid_operators:
+                    result.reroll(rerollList)
+                    rerollList = []
+                if op == 'k':
+                    keep = [] if keep is None else keep
+                    keep += parse_selectors([list_get(index + 1, 0, ops)], result)
+                elif op in valid_operators:
+                    result.keep(keep)
+                    keep = None
+                if op == 'ro':
+                    reroll_once += parse_selectors([list_get(index + 1, 0, ops)], result)
+                elif op in valid_operators:
+                    result.reroll(reroll_once, 1)
+                    reroll_once = []
+                if op == 'mi':
+                    _min = list_get(index + 1, 0, ops)
+                    for r in result.rolled:
+                        if r.value < int(_min): 
+                            r.update(int(_min))
+                if op == 'ma':
+                    _max = list_get(index + 1, 0, ops)
+                    for r in result.rolled:
+                        if r.value > int(_max): 
+                            r.update(int(_max))
+            result.reroll(reroll_once, 1)
+            result.reroll(rerollList)
+            result.keep(keep)
+            
+        return result
+
+class Part:
+    """Class to hold one part of the roll string."""
+    pass
+
+class SingleDiceGroup(Part):
+    def __init__(self, num_dice:int=0, max_value:int=0, rolled:list=[], annotation:str="", result:str="", operators:list=[]):
+        self.num_dice = num_dice
+        self.max_value = max_value
+        self.rolled = rolled # list of SingleDice
+        self.annotation = annotation
+        self.result = result
+        self.operators = operators
+        
+    def keep(self, rolls_to_keep):
+        if rolls_to_keep is None: return
+        for roll in self.rolled:
+            if not roll.value in rolls_to_keep:
+                roll.kept = False
+            else:
+                rolls_to_keep.remove(roll.value)
+                
+    def reroll(self, rerollList, iterations=250, greedy=False):
+        for i in range(iterations): # let's only iterate 250 times for sanity
+            temp = copy(rerollList)
+            breakCheck = True
+            for r in rerollList:
+                if r in (d.value for d in self.rolled if d.kept):
+                    breakCheck = False
+            for r in self.rolled:
+                if r.value in temp and r.kept:
+                    try:
+                        tempdice = SingleDice()
+                        tempdice.value = random.randint(1, self.max_value)
+                        tempdice.rolls = [tempdice.value]
+                        tempdice.max_value = self.max_value
+                        tempdice.kept = True
+                        self.rolled.append(tempdice)
+                        r.drop()
+                    except:
+                        self.rolled.append(SingleDice())
+                        r.drop()
+                    if not greedy:
+                        temp.remove(r.value)
+            if breakCheck:
+                break
+        rerollList = []
+                
+    def get_total(self):
+        """Returns:
+        int - The total value of the dice."""
+        return sum(r.value for r in self.rolled if r.kept)
+    
+    def get_eval(self):
+        return str(self.get_total())
+    
+    def get_num_kept(self):
+        return sum(1 for r in self.rolled if r.kept)
+    
+    def get_crit(self):
+        """Returns:
+        int - 0 for no crit, 1 for crit, 2 for crit fail."""
+        if self.get_num_kept() == 1 and self.max_value == 20:
+            if self.get_total() == 20:
+                return 1
+            elif self.get_total() == 1:
+                return 2
+        return 0
+    
+    def __str__(self):
+        return "{0.num_dice}d{0.max_value}{1} ({2}) {0.annotation}".format(
+                self, ''.join(self.operators), ', '.join(str(r) for r in self.rolled))
+                
+class SingleDice:
+    def __init__(self, value:int=0, max_value:int=0, kept:bool=True):
+        self.value = value
+        self.max_value = max_value
+        self.kept = kept
+        self.rolls = [value] # list of ints (for X -> Y -> Z)
+        
+    def drop(self):
+        self.kept = False
+        
+    def update(self, new_value):
+        self.value = new_value
+        self.rolls.append(new_value)
+        
+    def __str__(self):
+        formatted_rolls = [str(r) for r in self.rolls]
+        if int(formatted_rolls[-1]) == self.max_value or int(formatted_rolls[-1]) == 1:
+            formatted_rolls[-1] = '**' + formatted_rolls[-1] + '**'
+        if self.kept:
+            return ' -> '.join(formatted_rolls)
+        else:
+            return '~~' + ' -> '.join(formatted_rolls) + '~~'
+        
+class Constant(Part):
+    def __init__(self, value:int=0, annotation:str=""):
+        self.value = value
+        self.annotation = annotation if annotation is not None else ''
+        
+    def __str__(self):
+        return "{0.value} {0.annotation}".format(self)
+    
+    def get_eval(self):
+        return str(self.value)
+
+class Operator(Part):
+    def __init__(self, op:str="+"):
+        self.op = op
+        
+    def __str__(self):
+        return self.op
+    
+    def get_eval(self):
+        return str(self)
+
+class Comment(Part):
+    def __init__(self, comment:str=""):
+        self.comment = comment
+        
+    def __str__(self):
+        return re.sub(r'\s*(.*)\s*', r'\1', self.comment)
+
+def parse_selectors(opts, res, greedy=False):
+    """Returns a list of ints."""
     for o in range(len(opts)):
         if opts[o][0] is 'h':
-            opts[o] = nlargest(int(opts[o].split('h')[1]), res)
+            opts[o] = nlargest(int(opts[o].split('h')[1]), (d.value for d in res.rolled))
         if opts[o][0] is 'l':
-            opts[o] = nsmallest(int(opts[o].split('l')[1]), res)
+            opts[o] = nsmallest(int(opts[o].split('l')[1]), (d.value for d in res.rolled))
     out = []
     for o in opts:
         if isinstance(o, list):
             out += [int(l) for l in o]
+        elif not greedy:
+            out += [int(o) for a in res.rolled if a.value is int(o)]
         else:
-            out += [int(o) for a in res if a is int(o)]
+            out += [int(o)]
     return out
 
 class DiceResult:
     """Class to hold the output of a dice roll."""
-    def __init__(self, result:int=0, verbose_result:str='', crit:int=0, rolled:str='', skeleton:str=''):
+    def __init__(self, result:int=0, verbose_result:str='', crit:int=0, rolled:str='', skeleton:str='', raw_dice:Roll=None):
         self.plain = result
         self.total = result
         self.result = verbose_result
         self.crit = crit
         self.rolled = rolled
         self.skeleton = skeleton if skeleton is not '' else verbose_result
+        self.raw_dice = raw_dice # Roll
         
     def __str__(self):
         return self.result

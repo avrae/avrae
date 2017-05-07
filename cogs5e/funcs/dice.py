@@ -19,7 +19,7 @@ from copy import copy
 VALID_OPERATORS = 'k|rr|ro|mi|ma'
 VALID_OPERATORS_2 = '|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')])
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
-DICE_PATTERN = r'^\s*(?:(?:(?:(?:(\d+d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+))\s*(\[.*\])?)|(?:[-+*/().<>=])?))(.*?)\s*$'
+DICE_PATTERN = r'^\s*(?:(?:(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+))\s*(\[.*\])?)|(?:[-+*/().<>=])?))(.*?)\s*$'
 
 def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs=True):
     roller = Roll()

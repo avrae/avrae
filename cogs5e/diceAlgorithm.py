@@ -117,7 +117,7 @@ class Dice:
         if len(outStr) < 1500:
             outStr += '\n{} total.'.format(sum(o.total for o in out))
         else:
-            outStr = "Rolling {} iterations...\n[Output trancated due to length]\n".format(iterations) + \
+            outStr = "Rolling {} iterations...\n[Output truncated due to length]\n".format(iterations) + \
             '{} total.'.format(sum(o.total for o in out))
         try:
             await self.bot.delete_message(ctx.message)

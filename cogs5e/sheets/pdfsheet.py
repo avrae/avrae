@@ -17,6 +17,7 @@ from pdfminer.pdfparser import PDFParser
 from pdfminer.pdftypes import resolve1
 from pdfminer.psparser import PSLiteral
 
+from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.sheetParser import SheetParser
 
 
@@ -160,8 +161,11 @@ class PDFSheetParser(SheetParser):
         stats['proficiencyBonus'] = int(character.get('ProfBonus'))
         
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
-            stats[stat] = int(character.get(stat[:3].upper() + 'score'))
-            stats[stat + 'Mod'] = int(character.get(stat[:3].upper() + 'bonus'))
+            try:
+                stats[stat] = int(character.get(stat[:3].upper() + 'score'))
+                stats[stat + 'Mod'] = int(character.get(stat[:3].upper() + 'bonus'))
+            except TypeError:
+                raise MissingAttribute(stat)
         
         return stats
             

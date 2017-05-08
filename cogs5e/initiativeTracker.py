@@ -1091,9 +1091,10 @@ class InitTracker:
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True)
-    async def sim(self, ctx):
+    async def sim(self, ctx, *, args:str=""):
         """Simulates the current turn of combat.
-        MonsterCombatants will target any non-monster combatant, and DicecloudCombatants will target any monster combatants."""
+        MonsterCombatants will target any non-monster combatant, and DicecloudCombatants will target any monster combatants.
+        Valid Arguments: -t [target]"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -1106,6 +1107,14 @@ class InitTracker:
             thisTurn = [c for c in current.combatants]
         else:
             thisTurn = [current]
+            
+        args = parse_args(shlex.split(args))
+        if 't' in args:
+            supplied_target = combat.get_combatant(args.get('t'))
+            if supplied_target is None:
+                await self.bot.say("Target not found.")
+                return
+        
         for current in thisTurn:
             await asyncio.sleep(1) #select target
             isMonster = isinstance(current, MonsterCombatant)
@@ -1138,14 +1147,15 @@ class InitTracker:
                 await self.bot.say("Simulation is only supported for combatants added with `madd` or `cadd`.")
                 continue
             for a in attacks:
-                if isMonster:
-                    targets = [c for c in combat.combatants if not isinstance(c, MonsterCombatant)]
-                else:
-                    targets = [c for c in combat.combatants if isinstance(c, MonsterCombatant)]
-                if len(targets) == 0:
-                    await self.bot.say("```diff\n+ {} sees no targets!\n```".format(current.name))
-                    break
-                target = random.choice(targets)
+                if supplied_target is None:
+                    if isMonster:
+                        targets = [c for c in combat.combatants if not isinstance(c, MonsterCombatant)]
+                    else:
+                        targets = [c for c in combat.combatants if isinstance(c, MonsterCombatant)]
+                    if len(targets) == 0:
+                        await self.bot.say("```diff\n+ {} sees no targets!\n```".format(current.name))
+                        break
+                target = supplied_target or random.choice(targets)
                 
                 await self.bot.say("```diff\n+ {} swings at {}!```".format(current.name, target.name))
                 args = {}

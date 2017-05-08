@@ -483,7 +483,8 @@ class SheetManager:
                 fmt = character.acell("C6").value
                 sheet = await parser.get_sheet()
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
-        except TypeError:
+        except TypeError as e:
+            #traceback.print_exc()
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))

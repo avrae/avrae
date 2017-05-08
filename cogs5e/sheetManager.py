@@ -16,14 +16,16 @@ import traceback
 
 import discord
 from discord.ext import commands
+from gspread.utils import extract_id_from_url
+import numexpr
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.sheets.dicecloud import DicecloudParser
+from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import list_get, embed_trim, get_positivity, a_or_an
-import numexpr
 
 
 class SheetManager:
@@ -457,6 +459,9 @@ class SheetManager:
             
             loading = await self.bot.say('Updating character data from PDF...')
             parser = PDFSheetParser(file)
+        elif sheet_type == 'google':
+            parser = GoogleSheet(url)
+            loading = await self.bot.say('Updating character data from Google...')
         else:
             return await self.bot.say("Error: Unknown sheet type.")
         try:
@@ -464,13 +469,15 @@ class SheetManager:
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         except timeout:
-            return await self.bot.say("We're having some issues connecting to Dicecloud right now. Please try again in a few minutes.")
+            return await self.bot.say("We're having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
         
         try:
             if sheet_type == 'dicecloud':
                 fmt = character.get('characters')[0].get('name')
             elif sheet_type == 'pdf':
                 fmt = character.get('CharacterName')
+            elif sheet_type == 'google':
+                fmt = character.acell("C6")
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
             sheet = parser.get_sheet()
         except TypeError:
@@ -747,4 +754,44 @@ class SheetManager:
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[file['filename']] = sheet['sheet']
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        
+    @commands.command(pass_context=True)
+    async def gsheet(self, ctx, url:str):
+        """Loads a character sheet from [this Google sheet](https://docs.google.com/spreadsheets/d/1etrBJ0qCDXACovYHUM4XvjE0erndThwRLcUQzX6ts8w/edit?usp=sharing), resetting all settings. The sheet must be shared with Avrae (see specific command help) for this to work.
+        Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
+        
+        loading = await self.bot.say('Loading character data from Google...')
+        url = extract_id_from_url(url)
+        parser = GoogleSheet(url)
+        
+        try:
+            character = await parser.get_character()
+        except:
+            return await self.bot.say("I'm having some issues connecting to Google right now. Please try again in a few minutes.")
+        try:
+            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.acell("C6").value))
+        except TypeError:
+            return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
+        
+        try:
+            sheet = parser.get_sheet()
+        except Exception as e:
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+        
+        self.active_characters = self.bot.db.not_json_get('active_characters', {})
+        self.active_characters[ctx.message.author.id] = url
+        self.bot.db.not_json_set('active_characters', self.active_characters)
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        user_characters[url] = sheet['sheet']
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        
+        embed = sheet['embed']
+        try:
+            await self.bot.say(embed=embed)
+        except:
+            await self.bot.say("...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
+
+    
+    
         

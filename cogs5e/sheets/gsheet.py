@@ -1,63 +1,39 @@
 '''
-Created on Feb 14, 2017
+Created on May 8, 2017
 
 @author: andrew
 '''
-
-
 import asyncio
-import io
 import random
 import re
 
-import aiohttp
 import discord
-from pdfminer.pdfdocument import PDFDocument
-from pdfminer.pdfparser import PDFParser
-from pdfminer.pdftypes import resolve1
-from pdfminer.psparser import PSLiteral
+import gspread
+from gspread.utils import extract_id_from_url
+import numexpr
+from oauth2client.service_account import ServiceAccountCredentials
 
 from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.sheetParser import SheetParser
 
 
-class PDFSheetParser(SheetParser):
+class GoogleSheet(SheetParser):
     
-    def __init__(self, file):
-        self.file = file
+    def __init__(self, url):
+        self.url = url
         self.character = None
-
+    
+    def _gchar(self):
+        scope = ['https://spreadsheets.google.com/feeds']
+        credentials = ServiceAccountCredentials.from_json_keyfile_name('avrae-0b82f09d7ab3.json', scope)
+        gc = gspread.authorize(credentials)
+        sheet = gc.open_by_key(self.url).sheet1
+        self.character = sheet
+        return sheet
+    
     async def get_character(self):
-        file = self.file
-        if not file['filename'].endswith('.pdf'): raise Exception('This is not a PDF file!')
-        async with aiohttp.get(file['url']) as f:
-            fp = io.BytesIO(await f.read())
-        
-        def parsePDF():
-            character = {}
-            parser = PDFParser(fp)
-            doc = PDFDocument(parser)
-            try:
-                fields = resolve1(doc.catalog['AcroForm'])['Fields']
-            except:
-                raise Exception('This is not a form-fillable character sheet!')
-            for i in fields:
-                field = resolve1(i)
-                name, value = field.get('T'), field.get('V')
-                if isinstance(value, PSLiteral):
-                    value = value.name
-                elif value is not None:
-                    try:
-                        value = value.decode('iso-8859-1')
-                    except:
-                        pass
-                    
-                character[name.decode('iso-8859-1')] = value
-            return character
         loop = asyncio.get_event_loop()
-        character = await loop.run_in_executor(None, parsePDF)
-        self.character = character
-        return character
+        return await loop.run_in_executor(None, self._gchar)
     
     def get_sheet(self):
         """Returns a dict with character sheet data."""
@@ -65,16 +41,16 @@ class PDFSheetParser(SheetParser):
         character = self.character
         try:
             stats = self.get_stats()
-            hp = character.get('HPMax')
-            armor = character.get('AC')
+            hp = character.acell("U16").value
+            armor = character.acell("R12").value
             attacks = self.get_attacks()
             skills = self.get_skills()
             level = self.get_level()
         except:
             raise
         
-        sheet = {'type': 'pdf',
-                 'version': 2,
+        sheet = {'type': 'google',
+                 'version': 1,
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': int(hp),
@@ -147,7 +123,7 @@ class PDFSheetParser(SheetParser):
         embed.add_field(name="Attacks", value='\n'.join(tempAttacks))
         
         return embed
-        
+    
     def get_stats(self):
         """Returns a dict of stats."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -156,14 +132,17 @@ class PDFSheetParser(SheetParser):
                  "strength":10, "dexterity":10, "constitution":10, "wisdom":10, "intelligence":10, "charisma":10,
                  "strengthMod":0, "dexterityMod":0, "constitutionMod":0, "wisdomMod":0, "intelligenceMod":0, "charismaMod":0,
                  "proficiencyBonus":0}
-        stats['name'] = character.get('CharacterName')
-        stats['description'] = "Description is not supported with the PDF loader."
-        stats['proficiencyBonus'] = int(character.get('ProfBonus'))
+        stats['name'] = character.acell("C6").value
+        stats['description'] = "The Google sheet does not have a description field."
+        stats['proficiencyBonus'] = int(character.acell("H14").value)
+        stats['image'] = character.acell("C176").value
         
+        index = 15
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             try:
-                stats[stat] = int(character.get(stat[:3].upper() + 'score'))
-                stats[stat + 'Mod'] = int(character.get(stat[:3].upper() + 'bonus'))
+                stats[stat] = int(character.acell("C" + str(index)).value)
+                stats[stat + 'Mod'] = int(character.acell("C" + str(index-2)).value)
+                index += 5
             except TypeError:
                 raise MissingAttribute(stat)
         
@@ -174,13 +153,18 @@ class PDFSheetParser(SheetParser):
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
         attack = {'attackBonus': '0', 'damage':'0', 'name': ''}
+        name_index = "R" + str(32 + atkIn)
+        bonus_index = "Y" + str(32 + atkIn)
+        damage_index = "AC" + str(32 + atkIn)
         
-        attack['name'] = character.get('Attack' + str(atkIn))
-        attack['attackBonus'] = character.get('AtkBonus' + str(atkIn))
-        attack['damage'] = character.get('Damage' + str(atkIn))
+        attack['name'] = character.acell(name_index).value
+        attack['attackBonus'] = character.acell(bonus_index).value
+        attack['damage'] = character.acell(damage_index).value
         
-        if attack['name'] is None:
+        if attack['name'] is "":
             return None
+        if attack['damage'] is "":
+            attack['damage'] = None
         
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
         
@@ -190,7 +174,7 @@ class PDFSheetParser(SheetParser):
         """Returns a list of dicts of all of the character's attacks."""
         if self.character is None: raise Exception('You must call get_character() first.')
         attacks = []
-        for attack in range(3):
+        for attack in range(5):
             a = self.get_attack(attack)
             if a is not None: attacks.append(a)
         return attacks
@@ -199,32 +183,31 @@ class PDFSheetParser(SheetParser):
         """Returns a dict of all the character's skills."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        skillslist = ['Acrobatics', 'AnHan', 'Arcana', 'Athletics',
-                      'CHAsave', 'CONsave', 'Deception', 'DEXsave',
-                      'History', 'Init', 'Insight', 'INTsave',
-                      'Intimidation', 'Investigation', 'Medicine', 'Nature',
-                      'Perception', 'Performance', 'Persuasion', 'Religion',
-                      'SleightofHand', 'Stealth', 'STRsave', 'Survival', 'WISsave']
+        skillslist = ['I25', 'I26', 'I27', 'I28',
+                      'I22', 'I19', 'I29', 'I18',
+                      'I30', 'V12', 'I31', 'I20',
+                      'I32', 'I33', 'I34', 'I35',
+                      'I36', 'I37', 'I38', 'I39',
+                      'I40', 'I41', 'I17', 'I42', 'I21',
+                      'C13', 'C18', 'C23', 'C33', 'C28', 'C38']
         skillsMap = ['acrobatics', 'animalHandling', 'arcana', 'athletics',
                      'charismaSave', 'constitutionSave', 'deception', 'dexteritySave',
                      'history', 'initiative', 'insight', 'intelligenceSave',
                      'intimidation', 'investigation', 'medicine', 'nature',
                      'perception', 'performance', 'persuasion', 'religion',
-                     'sleightOfHand', 'stealth', 'strengthSave', 'survival', 'wisdomSave']
+                     'sleightOfHand', 'stealth', 'strengthSave', 'survival', 'wisdomSave',
+                     'strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma']
         skills = {}
-        for skill in skillslist:
-            skills[skillsMap[skillslist.index(skill)]] = int(character.get(skill))
-             
-        for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
-            skills[stat] = int(character.get(stat[:3].upper() + 'bonus'))
+        for index, skill in enumerate(skillslist):
+            skills[skillsMap[index]] = int(character.acell(skill).value)
         
         return skills
     
     def get_level(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        level = 0
-        classlevel = character.get("ClassLevel", "")
-        for l in re.finditer(r'\d+', classlevel):
-            level += int(l.group(0))
+        level = int(character.acell("AL6").value)
         return level
+    
+    
+    

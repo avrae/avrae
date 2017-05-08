@@ -7,7 +7,7 @@ import errno
 import os
 import re
 
-from fuzzywuzzy import process
+from fuzzywuzzy import process, fuzz
 
 
 def print_table(table):
@@ -78,7 +78,7 @@ def fuzzy_search(list_to_search:list, key, value):
 def fuzzywuzzy_search(list_to_search:list, key, value):
     """Fuzzy searches a list for a dict with a key "key" of value "value" """
     names = [d[key] for d in list_to_search]
-    result = process.extractOne(value, names, score_cutoff=5)
+    result = process.extractOne(value, names, scorer=fuzz.token_sort_ratio, score_cutoff=5)
     if result is None: return None
     else: return next(a for a in list_to_search if result[0] == a.get(key, ''))
 

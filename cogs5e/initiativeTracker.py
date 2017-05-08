@@ -1097,7 +1097,9 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         current = combat.currentCombatant
-        if isinstance(current, CombatantGroup):
+        if current is None:
+            return self.bot.say("I can't simulate nobody's turn.")
+        elif isinstance(current, CombatantGroup):
             thisTurn = [c for c in current.combatants]
         else:
             thisTurn = [current]
@@ -1121,7 +1123,7 @@ class InitTracker:
                         await self.bot.say("```diff\n- {} has no attacks!```".format(current.name))
                         break
                     attacks = [random.choice(mon_attacks)]
-            else:
+            elif isinstance(current, DicecloudCombatant):
                 char_attacks = current.sheet.get('attacks') # get attacks
                 char_attacks = [a for a in char_attacks if a.get('attackBonus') is not None]
                 if len(char_attacks) < 1:
@@ -1129,6 +1131,9 @@ class InitTracker:
                     break
                 attack = random.choice(char_attacks)
                 attacks = [attack]
+            else:
+                await self.bot.say("Simulation is only supported for combatants added with `madd` or `cadd`.")
+                continue
             for a in attacks:
                 if isMonster:
                     targets = [c for c in combat.combatants if not isinstance(c, MonsterCombatant)]
@@ -1157,15 +1162,17 @@ class InitTracker:
                 if target.ac is not None: 
                     embed.set_footer(text="{}: {}".format(target.name, target.get_hp()))
                 else: embed.set_footer(text="Target AC not set.")
-                killed = "\n- Killed {}!".format(target.name) if target.hp <= 0 else ""
-                if target.hp <= 0:
-                    if target.group is None:
-                        combat.combatants.remove(target)
-                    else:
-                        group = combat.get_combatant_group(target.group)
-                        group.combatants.remove(target)
-                    combat.sortCombatants()
-                    combat.checkGroups()
+                killed = ""
+                if target.hp is not None:
+                    killed = "\n- Killed {}!".format(target.name) if target.hp <= 0 else ""
+                    if target.hp <= 0:
+                        if target.group is None:
+                            combat.combatants.remove(target)
+                        else:
+                            group = combat.get_combatant_group(target.group)
+                            group.combatants.remove(target)
+                        combat.sortCombatants()
+                        combat.checkGroups()
                 await self.bot.say("```diff\n- Dealt {} damage!{}```".format(result['total_damage'], killed), embed=embed)
                 await combat.update_summary(self.bot)
                 await asyncio.sleep(2) #select attack

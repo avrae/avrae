@@ -475,12 +475,14 @@ class SheetManager:
         try:
             if sheet_type == 'dicecloud':
                 fmt = character.get('characters')[0].get('name')
+                sheet = parser.get_sheet()
             elif sheet_type == 'pdf':
                 fmt = character.get('CharacterName')
+                sheet = parser.get_sheet()
             elif sheet_type == 'google':
-                fmt = character.acell("C6")
+                fmt = character.acell("C6").value
+                sheet = await parser.get_sheet()
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
-            sheet = parser.get_sheet()
         except TypeError:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         except Exception as e:

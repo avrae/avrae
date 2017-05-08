@@ -26,6 +26,7 @@ from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import list_get, embed_trim, get_positivity, a_or_an
+from gspread.exceptions import SpreadsheetNotFound
 
 
 class SheetManager:
@@ -766,8 +767,8 @@ class SheetManager:
         
         try:
             character = await parser.get_character()
-        except:
-            return await self.bot.say("I'm having some issues connecting to Google right now. Please try again in a few minutes.")
+        except SpreadsheetNotFound:
+            return await self.bot.edit_message(loading, "Invalid character sheet. Make sure you've shared it with me at `avrae-320@avrae-bot.iam.gserviceaccount.com`!")
         try:
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.acell("C6").value))
         except TypeError:

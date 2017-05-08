@@ -310,6 +310,9 @@ class SingleDice:
         else:
             return '~~' + ' -> '.join(formatted_rolls) + '~~'
         
+    def __repr__(self):
+        return "<SingleDice object: value={0.value}, max_value={0.max_value}, kept={0.kept}, rolls={0.rolls}>".format(self)
+        
 class Constant(Part):
     def __init__(self, value:int=0, annotation:str=""):
         self.value = value

@@ -775,7 +775,7 @@ class SheetManager:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
         try:
-            sheet = parser.get_sheet()
+            sheet = await parser.get_sheet()
         except Exception as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))

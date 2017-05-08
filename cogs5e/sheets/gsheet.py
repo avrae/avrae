@@ -35,7 +35,11 @@ class GoogleSheet(SheetParser):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self._gchar)
     
-    def get_sheet(self):
+    async def get_sheet(self):
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._get_sheet())
+    
+    def _get_sheet(self):
         """Returns a dict with character sheet data."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character

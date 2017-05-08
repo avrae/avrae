@@ -8,7 +8,7 @@ import re
 import discord
 import numexpr
 
-from cogs5e.funcs.dice import roll
+from cogs5e.funcs.dice import roll, SingleDiceGroup
 from utils.functions import a_or_an
 
 
@@ -58,9 +58,12 @@ def sheet_attack(attack, args):
             else:
                 toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
             
-            if toHit.rolled != '':
+            if len(toHit.raw_dice.parts) > 0:
                 out += toHit.result + '\n'
-                raw = int(re.match(r'1d20 .*?[(* ]+(\d+)[*),]+.*?', toHit.rolled).group(1))
+                try:
+                    raw = next(p for p in toHit.raw_dice.parts if isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
+                except StopIteration:
+                    raw = 0
                 if args.get('crit'):
                     itercrit = args.get('crit', 0)
                 elif raw >= (args.get('criton', 20) or 20):

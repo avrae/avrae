@@ -116,8 +116,9 @@ class Roll:
             skeletonReply = re.sub(' +', ' ', str(skeletonReply))
             return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply, raw_dice=results)
         except Exception as ex:
-            print('Error in roll():')
-            traceback.print_exc()
+            if not isinstance(ex, (SyntaxError, KeyError)):
+                print('Error in roll():')
+                traceback.print_exc()
             return DiceResult(verbose_result="Invalid input: {}".format(ex))
         
     def roll_one(self, dice, adv:int=0):

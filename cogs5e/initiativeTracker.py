@@ -1109,8 +1109,9 @@ class InitTracker:
             thisTurn = [current]
             
         args = parse_args(shlex.split(args))
-        supplied_target = combat.get_combatant(args.get('t'))
+        supplied_target = None
         if 't' in args:
+            supplied_target = combat.get_combatant(args.get('t'))
             if supplied_target is None:
                 await self.bot.say("Target not found.")
                 return

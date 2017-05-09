@@ -88,7 +88,8 @@ class Help:
             embed = self.formatter.format_help_for(ctx, command)
         
         try:
-            await bot.send_message(destination, embed=embed)
+            for e in embed:
+                await bot.send_message(destination, embed=e)
         except Forbidden:
             await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
         else:
@@ -122,7 +123,10 @@ class CustomHelpFormatter(HelpFormatter):
         embed
             An embed.
         """
+        
         self.embed = discord.Embed()
+        self.embeds = [self.embed]
+        length = 0
 
         # we need a padding of ~80 or so
 
@@ -131,6 +135,7 @@ class CustomHelpFormatter(HelpFormatter):
         if description:
             # <description> portion
             self.embed.description = description
+            length += len(description)
 
         if isinstance(self.command, Command):
             # <signature portion>
@@ -140,6 +145,7 @@ class CustomHelpFormatter(HelpFormatter):
             # <long doc> section
             if self.command.help:
                 self.embed.description = self.command.help
+                length += len(self.command.help)
 
             # end it here if it's just a regular command
             if not self.has_subcommands():
@@ -161,13 +167,21 @@ class CustomHelpFormatter(HelpFormatter):
                 if len(commands) > 0:
                     title = category
                     value = self._get_subcommands(commands)
-                    self.embed.add_field(name=title, value=value, inline=False)
+                    length += len(description) + len(title)
+                    if length > 3500:
+                        current_embed = discord.Embed()
+                        self.embeds.append(current_embed)
+                    else:
+                        current_embed = self.embed
+                    current_embed.add_field(name=title, value=value, inline=False)
+                    
 
         else:
+            current_embed = self.embed
             title = 'Commands'
             value = self._get_subcommands(self.filter_command_list())
             self.embed.add_field(name=title, value=value, inline=False)
 
         ending_note = self.get_ending_note()
-        self.embed.add_field(name='More Help', value=ending_note, inline=False)
-        return self.embed
+        current_embed.add_field(name='More Help', value=ending_note, inline=False)
+        return self.embeds

@@ -30,7 +30,7 @@ from gspread.exceptions import SpreadsheetNotFound
 
 
 class SheetManager:
-    """Commands to import a character sheet from Dicecloud (https://dicecloud.com) or the fillable Wizards character PDF. Currently in Beta."""
+    """Commands to import a character sheet from Dicecloud (https://dicecloud.com) or the fillable Wizards character PDF."""
     
     def __init__(self, bot):
         self.bot = bot

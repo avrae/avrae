@@ -142,7 +142,7 @@ class GoogleSheet(SheetParser):
         stats['image'] = character.acell("C176").value
         
         index = 15
-        for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
+        for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
             try:
                 stats[stat] = int(character.acell("C" + str(index)).value)
                 stats[stat + 'Mod'] = int(character.acell("C" + str(index-2)).value)

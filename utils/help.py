@@ -149,7 +149,7 @@ class CustomHelpFormatter(HelpFormatter):
 
             # end it here if it's just a regular command
             if not self.has_subcommands():
-                return self.embed
+                return [self.embed]
 
         max_width = self.max_name_size
 

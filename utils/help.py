@@ -178,7 +178,12 @@ class CustomHelpFormatter(HelpFormatter):
             title = 'Commands'
             value = self._get_subcommands(self.filter_command_list())
             self.embed.add_field(name=title, value=value, inline=False)
-
+        
+        if length > 3500:
+            current_embed = discord.Embed()
+            self.embeds.append(current_embed)
+            length = 0
+        
         ending_note = self.get_ending_note()
         current_embed.add_field(name='More Help', value=ending_note, inline=False)
         return self.embeds

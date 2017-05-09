@@ -124,8 +124,8 @@ class CustomHelpFormatter(HelpFormatter):
             An embed.
         """
         
-        self.embed = discord.Embed()
-        self.embeds = [self.embed]
+        embed = discord.Embed()
+        self.embeds = [embed]
         length = 0
 
         # we need a padding of ~80 or so
@@ -134,22 +134,22 @@ class CustomHelpFormatter(HelpFormatter):
 
         if description:
             # <description> portion
-            self.embed.description = description
+            embed.description = description
             length += len(description)
 
         if isinstance(self.command, Command):
             # <signature portion>
             signature = self.get_command_signature()
-            self.embed.title = signature
+            embed.title = signature
 
             # <long doc> section
             if self.command.help:
-                self.embed.description = self.command.help
+                embed.description = self.command.help
                 length += len(self.command.help)
 
             # end it here if it's just a regular command
             if not self.has_subcommands():
-                return [self.embed]
+                return [embed]
 
         max_width = self.max_name_size
 
@@ -159,7 +159,7 @@ class CustomHelpFormatter(HelpFormatter):
             # last place sorting position.
             return cog if cog is not None else '\u200bNo Category'
         
-        current_embed = self.embed
+        current_embed = embed
         if self.is_bot():
             data = sorted(self.filter_command_list(), key=category)
             for category, commands in itertools.groupby(data, key=category):
@@ -168,16 +168,29 @@ class CustomHelpFormatter(HelpFormatter):
                 if len(commands) > 0:
                     title = category
                     value = self._get_subcommands(commands)
-                    length += len(description) + len(title)
+                    length += len(value) + len(title)
+                    field_length = len(value)
                     if length > 3500:
                         current_embed = discord.Embed()
                         self.embeds.append(current_embed)
                         length = 0
-                    current_embed.add_field(name=title, value=value, inline=False)
+                    if field_length > 1024:
+                        split = value.split('\n')
+                        v1 = ""
+                        v2 = ""
+                        index = 0
+                        while len(v1) + len(split[index]) < 1024:
+                            v1 += split[index] + '\n'
+                            index += 1
+                        v2 = '\n'.join(split[index:])
+                        current_embed.add_field(name=title, value=v1, inline=False)
+                        current_embed.add_field(name=title + " Part 2", value=v2, inline=False)
+                    else:
+                        current_embed.add_field(name=title, value=value, inline=False)
         else:
             title = 'Commands'
             value = self._get_subcommands(self.filter_command_list())
-            self.embed.add_field(name=title, value=value, inline=False)
+            current_embed.add_field(name=title, value=value, inline=False)
         
         if length > 3500:
             current_embed = discord.Embed()

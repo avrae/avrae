@@ -158,7 +158,8 @@ class CustomHelpFormatter(HelpFormatter):
             # we insert the zero width space there to give it approximate
             # last place sorting position.
             return cog if cog is not None else '\u200bNo Category'
-
+        
+        current_embed = self.embed
         if self.is_bot():
             data = sorted(self.filter_command_list(), key=category)
             for category, commands in itertools.groupby(data, key=category):
@@ -171,13 +172,9 @@ class CustomHelpFormatter(HelpFormatter):
                     if length > 3500:
                         current_embed = discord.Embed()
                         self.embeds.append(current_embed)
-                    else:
-                        current_embed = self.embed
+                        length = 0
                     current_embed.add_field(name=title, value=value, inline=False)
-                    
-
         else:
-            current_embed = self.embed
             title = 'Commands'
             value = self._get_subcommands(self.filter_command_list())
             self.embed.add_field(name=title, value=value, inline=False)

@@ -58,7 +58,12 @@ def sheet_attack(attack, args):
             else:
                 toHit = roll('1d20+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
             
-            if len(toHit.raw_dice.parts) > 0:
+            try:
+                parts = len(toHit.raw_dice.parts)
+            except:
+                parts = 0
+            
+            if parts > 0:
                 out += toHit.result + '\n'
                 try:
                     raw = next(p for p in toHit.raw_dice.parts if isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()

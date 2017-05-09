@@ -26,7 +26,7 @@ from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import list_get, embed_trim, get_positivity, a_or_an
-from gspread.exceptions import SpreadsheetNotFound
+from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 
 
 class SheetManager:
@@ -765,7 +765,10 @@ class SheetManager:
         Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
         
         loading = await self.bot.say('Loading character data from Google...')
-        url = extract_id_from_url(url)
+        try:
+            url = extract_id_from_url(url)
+        except NoValidUrlKeyFound:
+            return await self.bot.edit_message(loading, "This is not a Google Sheets link.")
         parser = GoogleSheet(url)
         
         try:

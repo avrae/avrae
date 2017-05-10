@@ -1284,6 +1284,7 @@ class InitTracker:
     async def panic_load(self):
         await self.bot.wait_until_ready()
         combats = self.bot.db.jget('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), [])
+        temp_msgs = []
         for c in combats:
             if self.bot.get_channel(c) is None:
                 print('Shard check for {} failed, aborting.'.format(c))
@@ -1307,8 +1308,14 @@ class InitTracker:
             except:
                 pass
             print("Autoreloaded {}".format(c))
-            await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!")
+            temp_msgs.append(await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!"))
         self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
+        await asyncio.sleep(30)
+        for msg in temp_msgs:
+            try:
+                await self.bot.delete_message(msg)
+            except:
+                pass
             
     @init.command(pass_context=True, hidden=True)
     async def save(self, ctx):

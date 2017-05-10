@@ -69,7 +69,10 @@ class PBPUtils:
         embed.set_thumbnail(url=args.get('thumb', ''))
         embed.set_image(url=args.get('image', ''))
         embed.set_footer(text=args.get('footer', ''))
-        embed.colour = int(args.get('color', "0"), base=16)
+        try:
+            embed.colour = int(args.get('color', "0").strip('#'), base=16)
+        except:
+            pass
         for f in args.get('f', []):
             title = f.split('|')[0]
             value = "|".join(f.split('|')[1:])

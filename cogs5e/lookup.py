@@ -18,7 +18,8 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchCondition, searchMonster, searchSpell, \
     searchItem, searchRule
 from utils import checks
-from utils.functions import discord_trim, print_table, list_get, get_positivity
+from utils.functions import discord_trim, print_table, list_get, get_positivity,\
+    fuzzywuzzy_search, fuzzywuzzy_search_all
 
 
 class Lookup:
@@ -37,9 +38,19 @@ class Lookup:
         except:
             pm = False
         
-        result = searchCondition(name)
+        result = searchCondition(name, search=fuzzywuzzy_search_all)
         if result is None:
             return await self.bot.say('Condition not found.')
+        
+        top = result[0]
+        top_score = top[1]
+        top_key = top[0]
+        if top_score < 60:
+            results = "Condition not found! Did you mean:\n"
+            results += '\n'.join("{0} ({1}% match)".format(a[0], a[1]) for a in result)
+            return await self.bot.say(results)
+        else:
+            result = searchCondition(top_key)
         
         conName = result['name']
         conHeader = '-' * len(conName)
@@ -62,9 +73,19 @@ class Lookup:
         except:
             pm = False
         
-        result = searchRule(name)
+        result = searchRule(name, search=fuzzywuzzy_search_all)
         if result is None:
             return await self.bot.say('Rule not found. PM the bot author if you think this rule is missing.')
+        
+        top = result[0]
+        top_score = top[1]
+        top_key = top[0]
+        if top_score < 60:
+            results = "Rule not found! Did you mean:\n"
+            results += '\n'.join("{0} ({1}% match)".format(a[0], a[1]) for a in result)
+            return await self.bot.say(results)
+        else:
+            result = searchRule(top_key)
         
         conName = result['name']
         conHeader = '-' * len(conName)
@@ -129,9 +150,19 @@ class Lookup:
             visible = True
             pm = False
         
-        result = searchMonster(monstername, visible=visible)
+        result = searchMonster(monstername, visible=visible, search=fuzzywuzzy_search_all)
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr('monsters_looked_up_life')
+        
+        top = result[0]
+        top_score = top[1]
+        top_key = top[0]
+        if top_score < 60:
+            results = "Monster not found! Did you mean:\n"
+            results += '\n'.join("{0} ({1}% match)".format(a[0], a[1]) for a in result)
+            return await self.bot.say(results)
+        else:
+            result = searchMonster(top_key, visible=visible)
     
         # do stuff here
         for r in result:
@@ -151,9 +182,19 @@ class Lookup:
         except:
             pm = False
         
-        result = searchSpell(args)
+        result = searchSpell(args, search=fuzzywuzzy_search_all)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
+        
+        top = result[0]
+        top_score = top[1]
+        top_key = top[0]
+        if top_score < 60:
+            results = "Spell not found! Did you mean:\n"
+            results += '\n'.join("{0} ({1}% match)".format(a[0], a[1]) for a in result)
+            return await self.bot.say(results)
+        else:
+            result = searchSpell(top_key)
         
         for r in result:
             if pm:
@@ -170,11 +211,21 @@ class Lookup:
         except:
             pm = False
         
-        result = searchItem(itemname)
+        result = searchItem(itemname, search=fuzzywuzzy_search_all)
         self.bot.botStats["items_looked_up_session"] += 1
         self.bot.db.incr('items_looked_up_life')
+        
+        top = result[0]
+        top_score = top[1]
+        top_key = top[0]
+        if top_score < 60:
+            results = "Item not found! Did you mean:\n"
+            results += '\n'.join("{0} ({1}% match)".format(a[0], a[1]) for a in result)
+            return await self.bot.say(results)
+        else:
+            result = searchItem(top_key)
 
-        for r in result:
+        for r in discord_trim(result):
             if pm:
                 await self.bot.send_message(ctx.message.author, r)
             else:

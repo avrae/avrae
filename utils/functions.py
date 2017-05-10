@@ -75,15 +75,19 @@ def fuzzy_search(list_to_search:list, key, value):
             return None
     return result 
 
-def fuzzywuzzy_search(list_to_search:list, key, value, return_list=False):
+def fuzzywuzzy_search(list_to_search:list, key, value):
     """Fuzzy searches a list for a dict with a key "key" of value "value" """
     names = [d[key] for d in list_to_search]
-    if return_list:
-        return process.extract(value, names, score_cutoff=5)
-    else:
-        result = process.extractOne(value, names, score_cutoff=5)
-        if result is None: return None
-        else: return next(a for a in list_to_search if result[0] == a.get(key, ''))
+    result = process.extractOne(value, names, score_cutoff=5)
+    if result is None: return None
+    else: return next(a for a in list_to_search if result[0] == a.get(key, ''))
+    
+def fuzzywuzzy_search_all(list_to_search:list, key, value):
+    """Fuzzy searches a list for a dict with all keys "key" of value "value" """
+    names = [d[key] for d in list_to_search]
+    result = process.extract(value, names, scorer=fuzz.ratio)
+    if len(result) is 0: return None
+    else: return result
 
 def parse_args(args):
     out = {}

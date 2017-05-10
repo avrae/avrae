@@ -8,30 +8,32 @@ from math import floor
 import math
 
 from utils.functions import print_table, discord_trim, fuzzy_search, \
-    fuzzywuzzy_search
+    fuzzywuzzy_search, fuzzywuzzy_search_all
 
 
-def searchCondition(condition):
+def searchCondition(condition, search=fuzzywuzzy_search):
     with open('./res/conditions.json', 'r') as f:
         conditions = json.load(f)
-    return fuzzywuzzy_search(conditions, 'name', condition)
+    return search(conditions, 'name', condition)
 
-def searchRule(rule):
+def searchRule(rule, search=fuzzywuzzy_search):
     with open('./res/rules.json', 'r') as f:
         rules = json.load(f)
-    return fuzzywuzzy_search(rules, 'name', rule)
+    return search(rules, 'name', rule)
 
-def searchMonster(monstername, visible=True, return_monster=False):
+def searchMonster(monstername, visible=True, return_monster=False, search=fuzzywuzzy_search):
     with open('./res/bestiary.json', 'r') as f:
         monsters = json.load(f)
     
     monsterDesc = []
     
-    monster = fuzzywuzzy_search(monsters, 'name', monstername)
+    monster = search(monsters, 'name', monstername)
     if monster is None:
         monsterDesc.append("Monster does not exist or is misspelled.")
         if return_monster: return {'monster': None, 'string': monsterDesc}
         return monsterDesc
+    if search is fuzzywuzzy_search_all:
+        return monster
         
     def parsesource (src):
         source = src
@@ -228,16 +230,18 @@ def searchMonster(monstername, visible=True, return_monster=False):
     else:
         return discord_trim(''.join(monsterDesc))
 
-def searchSpell(spellname, serv_id='', return_spell=False):
+def searchSpell(spellname, serv_id='', return_spell=False, search=fuzzywuzzy_search):
     spellDesc = []
     with open('./res/spells.json', 'r') as f:
         contextualSpells = json.load(f)
     
-    spell = fuzzywuzzy_search(contextualSpells, 'name', spellname)
+    spell = search(contextualSpells, 'name', spellname)
     if spell is None:
         spellDesc.append("Spell does not exist or is misspelled (ha).")
         if return_spell: return {'spell': None, 'string': spellDesc}
         return spellDesc
+    if search is fuzzywuzzy_search_all:
+        return spell
     
     def parseschool(school):
         if (school == "A"): return "abjuration"
@@ -278,15 +282,18 @@ def searchSpell(spellname, serv_id='', return_spell=False):
     else:
         return discord_trim(tempStr)
     
-def searchItem(itemname, return_item=False):
+def searchItem(itemname, return_item=False, search=fuzzywuzzy_search):
     with open('./res/items.json', 'r') as f:
         items = json.load(f)
     itemDesc = []
-    item = fuzzywuzzy_search(items, 'name', itemname)
+    item = search(items, 'name', itemname)
     if item is None:
         itemDesc.append("Item does not exist or is misspelled.")
         if return_item: return {'spell': None, 'string': itemDesc}
         return itemDesc
+    
+    if search is fuzzywuzzy_search_all:
+        return item
     
     def parsesource(src):
         source = src
@@ -400,7 +407,7 @@ def searchItem(itemname, return_item=False):
     if return_item:
         return {'item': item, 'string': discord_trim(tempStr)}
     else:
-        return discord_trim(tempStr)
+        return tempStr
     
     
     

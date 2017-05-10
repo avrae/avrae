@@ -105,7 +105,7 @@ class Dice:
         if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
             adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
             rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
-        res = roll(rollStr, adv=adv)
+        res = roll(rollStr, adv=adv, debug=True)
         out = res.result
         try:
             await self.bot.delete_message(ctx.message)
@@ -125,7 +125,7 @@ class Dice:
             elif isinstance(p, Constant):
                 debug += "Constant:\nvalue={0.value}, annotation={0.annotation}\n\n".format(p)
             elif isinstance(p, Operator):
-                debug += "Operator:\nop={0.op}\n\n".format(p)
+                debug += "Operator:\nop={0.op}, annotation={0.annotation}\n\n".format(p)
             else:
                 debug += "Comment:\ncomment={0.comment}\n\n".format(p)
         for t in discord_trim(debug):

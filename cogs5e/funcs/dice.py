@@ -19,11 +19,11 @@ from copy import copy
 VALID_OPERATORS = 'k|rr|ro|mi|ma'
 VALID_OPERATORS_2 = '|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')])
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
-DICE_PATTERN = r'^\s*(?:(?:(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+))\s*(\[.*\])?)|(?:[-+*/().<>=])?))(.*?)\s*$'
+DICE_PATTERN = r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+)|([-+*/().<>=])?)\s*(\[.*\])?)(.*?)\s*$'
 
-def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs=True):
+def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs=True, **kwargs):
     roller = Roll()
-    result = roller.roll(rollStr, adv, rollFor, inline, double, show_blurbs)
+    result = roller.roll(rollStr, adv, rollFor, inline, double, show_blurbs, **kwargs)
     return result
 
 class Roll:
@@ -43,7 +43,7 @@ class Roll:
         return numexpr.evaluate(''.join(p.get_eval() for p in self.parts if not isinstance(p, Comment)))
     
     # # Dice Roller
-    def roll(self, rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs=True):
+    def roll(self, rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs=True, **kwargs):
         try:
             if '**' in rollStr:
                 raise Exception("Exponents are currently disabled.")
@@ -53,21 +53,26 @@ class Roll:
             # set remainder to comment
             # parse each, returning a SingleDiceResult
             dice_set = re.split('([-+*/().<>=])', rollStr)
+            dice_set = [d for d in dice_set if not d in (None, '')]
+            if kwargs.get('debug'):
+                print("Found dice set: " + str(dice_set))
             for index, dice in enumerate(dice_set):
                 match = re.match(DICE_PATTERN, dice, IGNORECASE)
+                if kwargs.get('debug'):
+                    print("Found dice group: " + str(match.groups()))
                 # check if it's dice
                 if match.group(1):
-                    roll = self.roll_one(dice.replace(match.group(4), ''), adv)
+                    roll = self.roll_one(dice.replace(match.group(5), ''), adv)
                     results.parts.append(roll)
                 # or a constant
                 elif match.group(2):
-                    results.parts.append(Constant(value=int(match.group(2)), annotation=match.group(3)))
+                    results.parts.append(Constant(value=int(match.group(2)), annotation=match.group(4)))
                 # or an operator
                 else:
-                    results.parts.append(Operator(op=match.group(0)))
+                    results.parts.append(Operator(op=match.group(3), annotation=match.group(4)))
                     
-                if match.group(4):
-                    results.parts.append(Comment(match.group(4) + ''.join(dice_set[index+1:])))
+                if match.group(5):
+                    results.parts.append(Comment(match.group(5) + ''.join(dice_set[index+1:])))
                     break
             
             # calculate total
@@ -117,7 +122,7 @@ class Roll:
             return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply, raw_dice=results)
         except Exception as ex:
             if not isinstance(ex, (SyntaxError, KeyError)):
-                print('Error in roll():')
+                print('Error in roll() caused by roll {}:'.format(rollStr))
                 traceback.print_exc()
             return DiceResult(verbose_result="Invalid input: {}".format(ex))
         
@@ -325,14 +330,15 @@ class Constant(Part):
         return str(self.value)
 
 class Operator(Part):
-    def __init__(self, op:str="+"):
-        self.op = op
+    def __init__(self, op:str="+", annotation:str=""):
+        self.op = op if op is not None else ''
+        self.annotation = annotation if annotation is not None else ''
         
     def __str__(self):
-        return self.op
+        return "{0.op} {0.annotation}".format(self)
     
     def get_eval(self):
-        return str(self)
+        return self.op
 
 class Comment(Part):
     def __init__(self, comment:str=""):

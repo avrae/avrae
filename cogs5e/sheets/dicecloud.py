@@ -4,7 +4,7 @@ Created on Jan 19, 2017
 @author: andrew
 '''
 import asyncio
-from math import floor
+from math import *
 import random
 import re
 
@@ -300,12 +300,33 @@ class DicecloudParser(SheetParser):
         replacements.update(self.get_levels())
         attack = {'attackBonus': '0', 'damage':'0', 'name': atkIn.get('name'), 'details': atkIn.get('details')}
         
+        #make a list of safe functions
+        safe_list = ['ceil', 'floor']
+        #use the list to filter the local namespace
+        safe_dict = dict([(k, locals().get(k, None)) for k in safe_list])
+        safe_dict['max'] = max
+        safe_dict['min'] = min
+        safe_dict.update(replacements)
+        
         attackBonus = re.split('([-+*/^().<>= ])', atkIn.get('attackBonus', '').replace('{', '').replace('}', ''))
         attack['attackBonus'] = ''.join(str(replacements.get(word, word)) for word in attackBonus)
         if attack['attackBonus'] == '':
             attack['attackBonus'] = None
+        else:
+            try:
+                attack['attackBonus'] = str(eval(attack['attackBonus'], {"__builtins__": None}, safe_dict))
+            except:
+                pass
         
-        damage = re.split('([-+*/^().<>= ])', atkIn.get('damage', '').replace('{', '').replace('}', ''))
+        def damage_sub(match):
+            out = match.group(1)
+            try:
+                return str(eval(out, {"__builtins__": None}, safe_dict))
+            except:
+                return out
+        
+        damage = re.sub(r'{(.*)}', damage_sub, atkIn.get('damage', ''))
+        damage = re.split('([-+*/^().<>= ])', damage.replace('{', '').replace('}', ''))
         attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage) + ' [{}]'.format(atkIn.get('damageType'))
         if ''.join(str(replacements.get(word, word)) for word in damage) == '':
             attack['damage'] = None

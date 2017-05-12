@@ -45,11 +45,13 @@ class GoogleSheet(SheetParser):
         character = self.character
         try:
             stats = self.get_stats()
-            hp = character.acell("U16").value
+            hp = int(character.acell("U16").value)
             armor = character.acell("R12").value
             attacks = self.get_attacks()
             skills = self.get_skills()
             level = self.get_level()
+        except ValueError:
+            raise MissingAttribute("Max HP")
         except:
             raise
         
@@ -57,7 +59,7 @@ class GoogleSheet(SheetParser):
                  'version': 1,
                  'stats': stats,
                  'levels': {'level': int(level)},
-                 'hp': int(hp),
+                 'hp': hp,
                  'armor': int(armor),
                  'attacks': attacks,
                  'skills': skills,
@@ -138,7 +140,10 @@ class GoogleSheet(SheetParser):
                  "proficiencyBonus":0}
         stats['name'] = character.acell("C6").value
         stats['description'] = "The Google sheet does not have a description field."
-        stats['proficiencyBonus'] = int(character.acell("H14").value)
+        try:
+            stats['proficiencyBonus'] = int(character.acell("H14").value)
+        except (TypeError, ValueError):
+            raise MissingAttribute("Proficiency Bonus")
         stats['image'] = character.acell("C176").value
         
         index = 15
@@ -147,7 +152,7 @@ class GoogleSheet(SheetParser):
                 stats[stat] = int(character.acell("C" + str(index)).value)
                 stats[stat + 'Mod'] = int(character.acell("C" + str(index-2)).value)
                 index += 5
-            except TypeError:
+            except (TypeError, ValueError):
                 raise MissingAttribute(stat)
         
         return stats
@@ -203,7 +208,10 @@ class GoogleSheet(SheetParser):
                      'strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma']
         skills = {}
         for index, skill in enumerate(skillslist):
-            skills[skillsMap[index]] = int(character.acell(skill).value)
+            try:
+                skills[skillsMap[index]] = int(character.acell(skill).value)
+            except (TypeError, ValueError):
+                raise MissingAttribute(skillsMap[index])
         
         return skills
     

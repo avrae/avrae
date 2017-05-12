@@ -3,10 +3,10 @@
 # launch discord bots
 
 _term() { 
-    echo "Caught SIGTERM signal!"
+    echo "l.0: Caught SIGTERM signal!"
 }
 
-echo "Launching web"
+echo "l.0: Launching web"
 python3 webLauncher.py &
 
 trap _term SIGTERM

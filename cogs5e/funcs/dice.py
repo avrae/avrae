@@ -131,7 +131,7 @@ class Roll:
         result.rolled = []
         # splits dice and comments
         split = re.match(r'^([^\[\]]*?)\s*(\[.*\])?\s*$', dice)
-        dice = split.group(1)
+        dice = split.group(1).strip()
         annotation = split.group(2)
         result.annotation = annotation if annotation is not None else ''
         # Recognizes dice

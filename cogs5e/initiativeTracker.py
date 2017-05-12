@@ -780,6 +780,7 @@ class InitTracker:
         Usage: !init opt <NAME> <ARGS>
         Valid Arguments:    -h (hides HP)
                             -p (changes init)
+                            --name <NAME> (changes combatant name)
                             --controller <CONTROLLER> (pings a different person on turn)
                             --ac <AC> (changes combatant AC)
                             --resist <RESISTANCE>
@@ -834,6 +835,15 @@ class InitTracker:
                     out += "\u2705 Combatant initiative set to {}.\n".format(p)
                 except:
                     out += "\u274c You must pass in a number with the -p tag.\n"
+        if 'name' in args:
+            name = args.get('name')
+            if combat.get_combatant(name) is not None:
+                out += "\u274c There is already another combatant with that name.\n"
+            elif name:
+                combatant.name = name
+                out += "\u2705 Combatant name set to {}.\n".format(name)
+            else:
+                out += "\u274c You must pass in a name with the -name tag.\n"
         if 'resist' in args:
             resist = args.get('resist')
             if resist in combatant.resist:

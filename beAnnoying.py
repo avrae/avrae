@@ -39,23 +39,23 @@ def loop():
 def launch_shards():
     for shard in range(int(os.environ.get('SHARDS', 1))):
         if TESTING:
-            print("Launching shard test {}".format(shard))
+            print("o.0: Launching shard test {}".format(shard))
             bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard), 'test'])
         else:
-            print("Launching shard production {}".format(shard))
+            print("o.0: Launching shard production {}".format(shard))
             bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard)])
         time.sleep(10)
-    print("Shards launched: {}".format({shard: process.pid for shard, process in bot.shards.items()}))
+    print("o.0: Shards launched: {}".format({shard: process.pid for shard, process in bot.shards.items()}))
     
 def check_shards():
     for shard, process in bot.shards.items():
         if process.poll() is not None:
-            print('Shard {} crashed with exit code {}, restarting...'.format(shard, process.returncode))
+            print('o.0: Shard {} crashed with exit code {}, restarting...'.format(shard, process.returncode))
             if TESTING:
-                print("Launching shard test {}".format(shard))
+                print("o.0: Launching shard test {}".format(shard))
                 bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard), 'test'])
             else:
-                print("Launching shard production {}".format(shard))
+                print("o.0: Launching shard production {}".format(shard))
                 bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard)])
             
     
@@ -66,13 +66,13 @@ def clean_shard_servers():
     for shard in shard_servers.keys():
         if int(shard) >= num_shards:
             del temp[shard]
-            print("Overseer process deleted server data for shard {}".format(shard))
+            print("o.0: Overseer process deleted server data for shard {}".format(shard))
     bot.db.jset("shard_servers", temp)
 
 def sigterm_handler(_signum, _frame):
     global RUNNING
     RUNNING = False
-    print("Overseer caught SIGTERM, sleeping for 15!")
+    print("o.0: Overseer caught SIGTERM, sleeping for 15!")
     time.sleep(15)
     sys.exit(0)
     

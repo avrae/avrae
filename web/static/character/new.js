@@ -20,9 +20,9 @@ $(function(){
         lineColor: '#eee',
         particleRadius: 7, // Dot size
         lineWidth: 1,
-        curvedLines: true,
+        curvedLines: false,
         proximity: 100, // How close two dots need to be before they join
-        parallax: false
+        parallax: true
     });
 
 });

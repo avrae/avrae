@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Avrae - New Character</title>
+
+    <!-- Bootstrap -->
+    <link href="/web/data/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="container">
+      <h1>New Character</h1>
+      <p>D&amp;D 5e Simple Character Sheet.</p>
+      <p><small>I'm bad at making webpages don't judge me.</small></p>
+      <form>
+        <div class="row">
+          <div class="col-md-5">
+            <h4>Name</h4>
+            <input type="text" class="form-control" required>
+          </div>
+          <div class="col-md-3">
+            <h4>Level</h4>
+            <input type="number" class="form-control" min="1" max="20" required>
+          </div>
+          <div class="col-md-2">
+            <h4>Max HP</h4>
+            <input type="number" class="form-control" min="1" required>
+          </div>
+          <div class="col-md-2">
+            <h4>AC</h4>
+            <input type="number" class="form-control" min="0" required>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4">
+            <h4>Proficiency Bonus</h4>
+            <input type="number" class="form-control" min="1" required>
+          </div>
+          <div class="col-md-8">
+            <h4>Image URL</h4>
+            <input type="url" class="form-control">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4">
+            <h3>Ability Scores</h3>
+            <div class="col-md-6">
+              <h5>STR</h5>
+              <h5>DEX</h5>
+              <h5>CON</h5>
+            </div>
+            <div class="col-md-6">
+              <h5>INT</h5>
+              <h5>WIS</h5>
+              <h5>CHA</h5>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <h3>Saves</h3>
+          </div>
+          <div class="col-md-4">
+            <h3>Skills</h3>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4">
+            <h3>Resistances</h3>
+          </div>
+          <div class="col-md-4">
+            <h3>Immunities</h3>
+          </div>
+          <div class="col-md-4">
+            <h3>Vulnerabilities</h3>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <h4>Description</h4>
+          </div>
+          <div class="col-md-6">
+            <h4>Attacks</h4>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="/web/data/bootstrap/js/bootstrap.min.js"></script>
+  </body>
+</html>

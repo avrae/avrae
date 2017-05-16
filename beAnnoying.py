@@ -18,6 +18,7 @@ class Overseer():
     def __init__(self):
         self.db = DataIO(TESTING, credentials.test_database_url)
         self.shards = {}
+        self.web = None
 
 TESTING = False
 RUNNING = True
@@ -27,6 +28,7 @@ bot = Overseer()
 
 def init():
     signal.signal(signal.SIGTERM, sigterm_handler)
+    launch_web()
     launch_shards()
     clean_shard_servers()
 
@@ -35,6 +37,12 @@ def loop():
     if RUNNING:
         check_shards()
     
+def launch_web():
+    print("o.0: Launching webserver")
+    if TESTING:
+        bot.web = subprocess.Popen(["gunicorn", "-w", "2", "web.web:app"])
+    else:
+        bot.web = subprocess.Popen(["gunicorn", "-w", "4", "-b", "0.0.0.0:{}".format(os.environ.get("PORT")), "web.web:app"])
     
 def launch_shards():
     for shard in range(int(os.environ.get('SHARDS', 1))):
@@ -64,9 +72,12 @@ def clean_shard_servers():
     num_shards = int(os.environ.get('SHARDS', 1))
     temp = copy.copy(shard_servers)
     for shard in shard_servers.keys():
-        if int(shard) >= num_shards:
-            del temp[shard]
-            print("o.0: Overseer process deleted server data for shard {}".format(shard))
+        try:
+            if int(shard) >= num_shards:
+                del temp[shard]
+                print("o.0: Overseer process deleted server data for shard {}".format(shard))
+        except:
+            print("o.0: Error processing shard servers")
     bot.db.jset("shard_servers", temp)
 
 def sigterm_handler(_signum, _frame):

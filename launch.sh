@@ -6,8 +6,8 @@ _term() {
     echo "l.0: Caught SIGTERM signal!"
 }
 
-echo "l.0: Launching web"
-python3 webLauncher.py &
+# echo "l.0: Launching web"
+# python3 webLauncher.py &
 
 trap _term SIGTERM
 

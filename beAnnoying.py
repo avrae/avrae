@@ -24,11 +24,17 @@ TESTING = False
 RUNNING = True
 if "test" in sys.argv:
     TESTING = True
+
+SHARDS = int(os.environ.get('SHARDS', 1))
+CLUSTER = int(os.environ.get('DYNO', "0").split('.')[-1])
+CLUSTER_START = 3 * (CLUSTER - 1)
+CLUSTER_END = 3 * CLUSTER
 bot = Overseer()
 
 def init():
     signal.signal(signal.SIGTERM, sigterm_handler)
-    launch_web()
+    launch_web() # I mean okay
+    time.sleep(10 * CLUSTER_START) # rolling restart
     launch_shards()
     clean_shard_servers()
 
@@ -45,7 +51,9 @@ def launch_web():
         bot.web = subprocess.Popen(["gunicorn", "-w", "4", "-b", "0.0.0.0:{}".format(os.environ.get("PORT")), "web.web:app"])
     
 def launch_shards():
-    for shard in range(int(os.environ.get('SHARDS', 1))):
+    if SHARDS <= CLUSTER_START:
+        print("o.0: TOO MANY CLUSTERS")
+    for shard in range(CLUSTER_START, min(CLUSTER_END, SHARDS)):
         if TESTING:
             print("o.0: Launching shard test {}".format(shard))
             bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard), 'test'])

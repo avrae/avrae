@@ -50,13 +50,14 @@ class GoogleSheet(SheetParser):
             attacks = self.get_attacks()
             skills = self.get_skills()
             level = self.get_level()
+            stats['description'] = self.get_description()
         except ValueError:
             raise MissingAttribute("Max HP")
         except:
             raise
         
         sheet = {'type': 'google',
-                 'version': 1,
+                 'version': 2,
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': hp,
@@ -175,7 +176,7 @@ class GoogleSheet(SheetParser):
         if attack['damage'] is "":
             attack['damage'] = None
         
-        attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
+        attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not '' else None
         
         return attack
         
@@ -220,6 +221,26 @@ class GoogleSheet(SheetParser):
         character = self.character
         level = int(character.acell("AL6").value)
         return level
+    
+    def get_description(self):
+        if self.character is None: raise Exception('You must call get_character() first.')
+        character = self.character
+        g = character.acell("C150").value.lower()
+        n = character.acell("C6").value
+        pronoun = "She" if g == "female" else "He" if g == "male" else n
+        desc = "{0} is a level {1} {2} {3}. {4} is {5} years old, {6} tall, and appears to weigh about {7}. {4} has {8} eyes, {9} hair, and {10} skin."
+        desc = desc.format(n,
+                           character.acell("AL6").value,
+                           character.acell("T7").value,
+                           character.acell("T5").value,
+                           pronoun,
+                           character.acell("C148").value or "unknown",
+                           character.acell("F148").value or "unknown",
+                           character.acell("I148").value or "unknown",
+                           character.acell("F150").value.lower() or "unknown",
+                           character.acell("I150").value.lower() or "unknown",
+                           character.acell("L150").value.lower() or "unknown")
+        return desc
     
     
     

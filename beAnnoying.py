@@ -26,7 +26,7 @@ if "test" in sys.argv:
     TESTING = True
 
 SHARDS = int(os.environ.get('SHARDS', 1))
-CLUSTER = int(os.environ.get('DYNO', "0").split('.')[-1])
+CLUSTER = int(os.environ.get('DYNO', "1").split('.')[-1])
 CLUSTER_START = 3 * (CLUSTER - 1)
 CLUSTER_END = 3 * CLUSTER
 bot = Overseer()
@@ -48,7 +48,7 @@ def launch_web():
     if TESTING:
         bot.web = subprocess.Popen(["gunicorn", "-w", "2", "web.web:app"])
     else:
-        bot.web = subprocess.Popen(["gunicorn", "-w", "4", "-b", "0.0.0.0:{}".format(os.environ.get("PORT")), "web.web:app"])
+        bot.web = subprocess.Popen(["gunicorn", "-w", "2", "-b", "0.0.0.0:{}".format(os.environ.get("PORT")), "--max-requests", "1000", "--max-requests-jitter", "50", "web.web:app"])
     
 def launch_shards():
     if SHARDS <= CLUSTER_START:

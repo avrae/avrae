@@ -1043,6 +1043,7 @@ class InitTracker:
             args['resist'] = args.get('resist') or '|'.join(target.resist)
             args['immune'] = args.get('immune') or '|'.join(target.immune)
             args['vuln'] = args.get('vuln') or '|'.join(target.vuln)
+            args['criton'] = combatant.sheet.get('settings', {}).get('criton', 20) or 20
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get('color') is None else combatant.sheet.get('settings', {}).get('color')
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']

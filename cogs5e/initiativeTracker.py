@@ -82,7 +82,8 @@ class Combat(object):
         outStr = "```markdown\n{}: {} (round {})\n".format(self.name if self.name is not '' else "Current initiative", self.current, self.round)
         outStr += '=' * (len(outStr) - 13) 
         outStr += '\n'
-        outStr += '\n'.join([c.get_short_status() for c in combatants])
+        for c in combatants:
+            outStr += ("# " if c is self.currentCombatant else "  ") + c.get_short_status() + "\n"
         outStr += "```"
         return outStr
     

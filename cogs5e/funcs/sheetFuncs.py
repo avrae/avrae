@@ -121,13 +121,13 @@ def sheet_attack(attack, args):
                         preop = roll_string[0]
                         roll_string = roll_string[1:]
                     for resistance in resistances:
-                        if resistance in comment and len(resistance) > 0:
+                        if resistance.lower() in comment.lower() and len(resistance) > 0:
                             roll_string = '({0}) / 2'.format(roll_string)
                     for immunity in immunities:
-                        if immunity in comment and len(immunity) > 0:
+                        if immunity.lower() in comment.lower() and len(immunity) > 0:
                             roll_string = '({0}) * 0'.format(roll_string)
                     for vulnerability in vulnerabilities:
-                        if vulnerability in comment and len(vulnerability) > 0:
+                        if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
                             roll_string = '({0}) * 2'.format(roll_string)
                     roll_strings[index] = '{0}{1}[{2}]'.format(preop, roll_string, comment)
                     index = index + 1

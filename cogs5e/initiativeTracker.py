@@ -1041,7 +1041,7 @@ class InitTracker:
             args = parse_args_2(tempargs)
             if attack.get('details') is not None:
                 attack['details'] = self.parse_cvars([attack['details']], ctx.message.author.id, combatant.sheet, active_character)[0]
-            args['name'] = combatant.sheet.get('stats', {}).get('name', "NONAME")
+            args['name'] = combatant.name #combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
             args['resist'] = args.get('resist') or '|'.join(target.resist)
@@ -1060,7 +1060,7 @@ class InitTracker:
                     
             args = shlex.split(args)
             args = parse_args_2(args)
-            args['name'] = a_or_an(combatant.monster.get('name')).title()
+            args['name'] = combatant.name #a_or_an(combatant.monster.get('name')).title()
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
             args['resist'] = args.get('resist') or '|'.join(target.resist)

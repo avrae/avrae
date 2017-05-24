@@ -13,7 +13,8 @@ from cogs5e.funcs.dice import roll, SingleDiceGroup, Constant, Operator
 from cogs5e.funcs.lookupFuncs import searchSpell, searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils import checks
-from utils.functions import fuzzy_search, parse_args, a_or_an, discord_trim
+from utils.functions import fuzzy_search, a_or_an, discord_trim, \
+    parse_args_2
 
 
 class Dice:
@@ -281,7 +282,7 @@ class Dice:
             return await self.bot.say("No attack with that name found.", delete_after=15)
         
         args = shlex.split(args)
-        args = parse_args(args)
+        args = parse_args_2(args)
         args['name'] = monster_name
         attack['details'] = attack.get('desc')
         

@@ -82,12 +82,26 @@ def fuzzywuzzy_search(list_to_search:list, key, value):
     if result is None: return None
     else: return next(a for a in list_to_search if result[0] == a.get(key, ''))
     
-def fuzzywuzzy_search_all(list_to_search:list, key, value):
+def fuzzywuzzy_search_all_old(list_to_search:list, key, value):
     """Fuzzy searches a list for a dict with all keys "key" of value "value" """
     names = [d[key] for d in list_to_search]
     result = process.extract(value, names, scorer=fuzz.ratio)
     if len(result) is 0: return None
     else: return result
+    
+def fuzzywuzzy_search_all(list_to_search:list, key, value):
+    """Fuzzy searches a list for a dict with all keys "key" of value "value" """
+    try:
+        result = next(a for a in list_to_search if value.lower() == a.get(key, '').lower())
+    except StopIteration:
+        try:
+            result = next(a for a in list_to_search if value.lower() in a.get(key, '').lower())
+        except StopIteration:
+            names = [d[key] for d in list_to_search]
+            result = process.extract(value, names, scorer=fuzz.ratio)
+            if len(result) is 0: return None
+            else: return result
+    return [(result[key], 99)]
 
 def parse_args(args):
     out = {}
@@ -126,6 +140,26 @@ def parse_args_2(args):
             out[a.replace('-', '')] = list_get(index + 1, 'MISSING_ARGUMENT', args)
         else:
             out[a] = 'True'
+            index += 1
+            continue
+        index += 2
+        cFlag = True
+    return out
+
+def parse_args_3(args):
+    out = {}
+    index = 0
+    cFlag = False
+    for a in args:
+        if cFlag:
+            cFlag = False
+            continue
+        if a.startswith('-'):
+            if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = [list_get(index + 1, '0', args)]
+            else: out[a.replace('-', '')].append(list_get(index + 1, 'MISSING_ARGUMENT', args))
+        else:
+            if out.get(a) is None: out[a] = ["True"]
+            else: out[a].append("True")
             index += 1
             continue
         index += 2

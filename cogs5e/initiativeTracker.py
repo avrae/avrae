@@ -23,7 +23,8 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
-    fuzzy_search, get_positivity, a_or_an, parse_args_2, text_to_numbers
+    fuzzy_search, get_positivity, a_or_an, parse_args_2, text_to_numbers,\
+    parse_args_3
 
 
 class Combat(object):
@@ -41,7 +42,7 @@ class Combat(object):
         self.dm = None
         self.stats = {}
         
-    def get_combatant(self, name):
+    def get_combatant(self, name, precise=False):
         combatant = None
         allCombatants = []
         for c in self.combatants:
@@ -54,7 +55,8 @@ class Combat(object):
             combatant = next(c for c in allCombatants if c.name.lower() == name.lower() and isinstance(c, Combatant))
         except StopIteration:
             try:
-                combatant = next(c for c in allCombatants if name.lower() in c.name.lower() and isinstance(c, Combatant))
+                if not precise:
+                    combatant = next(c for c in allCombatants if name.lower() in c.name.lower() and isinstance(c, Combatant))
             except StopIteration:
                 pass
             
@@ -78,11 +80,12 @@ class Combat(object):
                     self.combatants.remove(c)
     
     def getSummary(self):
-        combatants = sorted(self.combatants, key=lambda k: k.init, reverse=True)
+        combatants = sorted(self.combatants, key=lambda k: (k.init, k.mod), reverse=True)
         outStr = "```markdown\n{}: {} (round {})\n".format(self.name if self.name is not '' else "Current initiative", self.current, self.round)
         outStr += '=' * (len(outStr) - 13) 
         outStr += '\n'
-        outStr += '\n'.join([c.get_short_status() for c in combatants])
+        for c in combatants:
+            outStr += ("# " if c is self.currentCombatant else "  ") + c.get_short_status() + "\n"
         outStr += "```"
         return outStr
     
@@ -401,15 +404,16 @@ class InitTracker:
         group = None
         hp = None
         ac = None
-        args = shlex.split(args.lower())
+        args = shlex.split(args)
+        args = parse_args_3(args)
         
-        if '-h' in args:
+        if 'h' in args:
             private = True
-        if '-p' in args:
+        if 'p' in args:
             place = True
-        if '--controller' in args:
+        if 'controller' in args:
             try:
-                controllerStr = args[args.index('--controller') + 1]
+                controllerStr = args['controller'][0]
                 controllerEscaped = controllerStr.replace('<', '').replace('>', '').replace('@', '').replace('!', '')
                 a = ctx.message.server.get_member(controllerEscaped)
                 b = ctx.message.server.get_member_named(controllerStr)
@@ -417,24 +421,24 @@ class InitTracker:
             except IndexError:
                 await self.bot.say("You must pass in a controller with the --controller tag.")
                 return
-        if '--group' in args:
+        if 'group' in args:
             try:
-                group = capwords(args[args.index('--group') + 1])
+                group = args['group'][0]
             except IndexError:
                 await self.bot.say("You must pass in a group with the --group tag.")
                 return
-        if '--hp' in args:
+        if 'hp' in args:
             try:
-                hp = int(args[args.index('--hp') + 1])
+                hp = int(args['hp'][0])
                 if hp < 1:
                     hp = None
                     raise Exception
             except:
                 await self.bot.say("You must pass in a positive, nonzero HP with the --hp tag.")
                 return
-        if '--ac' in args:
+        if 'ac' in args:
             try:
-                ac = int(args[args.index('--ac') + 1])
+                ac = int(args['ac'][0])
             except:
                 await self.bot.say("You must pass in an AC with the --ac tag.")
                 return
@@ -444,7 +448,7 @@ class InitTracker:
             await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
             return
         
-        if combat.get_combatant(name) is not None:
+        if combat.get_combatant(name, True) is not None:
             await self.bot.say("Combatant already exists.")
             return
         
@@ -501,7 +505,7 @@ class InitTracker:
             await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
             return
         
-        if combat.get_combatant(character.get('stats', {}).get('name')) is not None:
+        if combat.get_combatant(character.get('stats', {}).get('name'), True) is not None:
             await self.bot.say("Combatant already exists.")
             return
         
@@ -619,7 +623,7 @@ class InitTracker:
         
         for i in range(recursion):
             name = args.get('name', monster['name'][:2].upper() + '#').replace('#', str(i + 1))
-            if combat.get_combatant(name) is not None:
+            if combat.get_combatant(name, True) is not None:
                 out += "{} already exists.\n".format(name)
                 continue
             
@@ -837,7 +841,7 @@ class InitTracker:
                     out += "\u274c You must pass in a number with the -p tag.\n"
         if 'name' in args:
             name = args.get('name')
-            if combat.get_combatant(name) is not None:
+            if combat.get_combatant(name, True) is not None:
                 out += "\u274c There is already another combatant with that name.\n"
             elif name:
                 combatant.name = name
@@ -1037,12 +1041,13 @@ class InitTracker:
             args = parse_args_2(tempargs)
             if attack.get('details') is not None:
                 attack['details'] = self.parse_cvars([attack['details']], ctx.message.author.id, combatant.sheet, active_character)[0]
-            args['name'] = combatant.sheet.get('stats', {}).get('name', "NONAME")
+            args['name'] = combatant.name #combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
             args['resist'] = args.get('resist') or '|'.join(target.resist)
             args['immune'] = args.get('immune') or '|'.join(target.immune)
             args['vuln'] = args.get('vuln') or '|'.join(target.vuln)
+            args['criton'] = combatant.sheet.get('settings', {}).get('criton', 20) or 20
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get('color') is None else combatant.sheet.get('settings', {}).get('color')
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
@@ -1055,7 +1060,7 @@ class InitTracker:
                     
             args = shlex.split(args)
             args = parse_args_2(args)
-            args['name'] = a_or_an(combatant.monster.get('name')).title()
+            args['name'] = combatant.name #a_or_an(combatant.monster.get('name')).title()
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
             args['resist'] = args.get('resist') or '|'.join(target.resist)

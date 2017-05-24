@@ -24,6 +24,7 @@ nbformat==4.3.0
 numexpr==2.6.1
 numpy==1.11.3
 oauth2client==4.0.0
+oauthlib==2.0.2
 pdfminer.six==20160614
 plotly==2.0.6
 psutil==5.0.1
@@ -39,6 +40,7 @@ pytz==2017.2
 PyYAML==3.12
 redis==2.10.5
 requests==2.13.0
+requests-oauthlib==0.8.0
 rsa==3.4.2
 six==1.10.0
 traitlets==4.3.2

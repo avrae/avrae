@@ -74,7 +74,8 @@ def callback():
         client_secret=OAUTH2_CLIENT_SECRET,
         authorization_response=request.url)
     session['oauth2_token'] = token
-    return redirect(url_for(session.get('original_page', '.home')))
+    original_page = session.pop("original_page", ".home")
+    return redirect(url_for(original_page))
 
 @app.route('/auth')
 def auth():
@@ -95,7 +96,6 @@ def aliases_list():
         return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
-    print(resp.status_code)
     if resp.status_code == 401:
         session['original_page'] = ".aliases_list"
         return redirect(url_for(".auth"))

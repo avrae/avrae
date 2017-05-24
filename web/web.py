@@ -18,7 +18,7 @@ TESTING = True if os.environ.get("TESTING") else False
 
 OAUTH2_CLIENT_ID = credentials.oauth2_client_id
 OAUTH2_CLIENT_SECRET = credentials.oauth2_client_secret
-OAUTH2_REDIRECT_URI = 'http://localhost:8000/' if TESTING else "https://www.avraebot.com/"
+OAUTH2_REDIRECT_URI = 'http://localhost:8000/callback' if TESTING else "https://www.avraebot.com/callback"
 
 API_BASE_URL = os.environ.get('API_BASE_URL', 'https://discordapp.com/api')
 AUTHORIZATION_BASE_URL = API_BASE_URL + '/oauth2/authorize'
@@ -50,13 +50,13 @@ def token_updater(token):
     session['oauth2_token'] = token
 
 
-def make_session(token=None, state=None, scope=None, redirect_uri=OAUTH2_REDIRECT_URI):
+def make_session(token=None, state=None, scope=None):
     return OAuth2Session(
         client_id=OAUTH2_CLIENT_ID,
         token=token,
         state=state,
         scope=scope,
-        redirect_uri=redirect_uri,
+        redirect_uri=OAUTH2_REDIRECT_URI,
         auto_refresh_kwargs={
             'client_id': OAUTH2_CLIENT_ID,
             'client_secret': OAUTH2_CLIENT_SECRET,
@@ -64,65 +64,64 @@ def make_session(token=None, state=None, scope=None, redirect_uri=OAUTH2_REDIREC
         auto_refresh_url=TOKEN_URL,
         token_updater=token_updater)
 
-@app.route('/<redir>callback')
-def callback(redir):
+@app.route('/callback')
+def callback():
     if request.values.get('error'):
         return request.values['error']
-    discord = make_session(state=session.get('oauth2_state'), redirect_uri=OAUTH2_REDIRECT_URI + "{}callback".format(redir))
+    discord = make_session(state=session.get('oauth2_state'))
     token = discord.fetch_token(
         TOKEN_URL,
         client_secret=OAUTH2_CLIENT_SECRET,
         authorization_response=request.url)
     session['oauth2_token'] = token
-    return redirect(url_for('.{}'.format(redir)))
+    return redirect(url_for(session.get('original_page', '.home')))
+
+@app.route('/auth')
+def auth():
+    scope = request.args.get(
+        'scope',
+        'identify')
+    discord = make_session(scope=scope.split(' '))
+    authorization_url, state = discord.authorization_url(AUTHORIZATION_BASE_URL)
+    session['oauth2_state'] = state
+    return redirect(authorization_url)
 
 # -----Web Alias Test-----
 
-@app.route('/aliases/auth')
-def aliases_auth():
-    scope = request.args.get(
-        'scope',
-        'identify')
-    discord = make_session(scope=scope.split(' '), redirect_uri=OAUTH2_REDIRECT_URI + "aliases_listcallback")
-    authorization_url, state = discord.authorization_url(AUTHORIZATION_BASE_URL)
-    session['oauth2_state'] = state
-    return redirect(authorization_url)
-
 @app.route('/aliases/list')
 def aliases_list():
+    if not 'oauth2_token' in session:
+        session['original_page'] = ".aliases_list"
+        return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
+    print(resp.status_code)
     if resp.status_code == 401:
-        return redirect(url_for(".aliases_auth"))
-    else:
-        r = "Aliases:<br>"
-        user_id = resp.json().get('id')
-        aliases = db.jget('cmd_aliases', {}).get(user_id, {})
-        snippets = db.jget('damage_snippets', {}).get(user_id, {})
-        cvars = db.jget('char_vars', {}).get(user_id, {})
-        r += ', '.join([name for name in aliases.keys()]) + '<br><br>Snippets:<br>' + \
-             ', '.join([name for name in snippets.keys()]) + '<br><br>Cvars:<br>' + \
-             ', '.join([name for name in cvars.keys()])
-        return r
+        session['original_page'] = ".aliases_list"
+        return redirect(url_for(".auth"))
+    r = "Aliases:<br>"
+    user_id = resp.json().get('id')
+    aliases = db.jget('cmd_aliases', {}).get(user_id, {})
+    snippets = db.jget('damage_snippets', {}).get(user_id, {})
+    cvars = db.jget('char_vars', {}).get(user_id, {})
+    r += ', '.join([name for name in aliases.keys()]) + '<br><br>Snippets:<br>' + \
+         ', '.join([name for name in snippets.keys()]) + '<br><br>Cvars:<br>' + \
+         ', '.join([name for name in cvars.keys()])
+    return r
 
 # -----Tests-----
 
-@app.route('/test/oauth')
-def test_oauth():
-    scope = request.args.get(
-        'scope',
-        'identify')
-    discord = make_session(scope=scope.split(' '), redirect_uri=OAUTH2_REDIRECT_URI + "test_testcallback")
-    authorization_url, state = discord.authorization_url(AUTHORIZATION_BASE_URL)
-    session['oauth2_state'] = state
-    return redirect(authorization_url)
-
 @app.route('/test/test')
 def test_test():
+    if not 'oauth2_token' in session:
+        session['original_page'] = ".test_test"
+        return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
+    print(resp.status_code)
     if resp.status_code == 401:
-        return redirect(url_for(".test_oauth"))
+        session['original_page'] = ".test_test"
+        return redirect(url_for(".auth"))
     else:
         return jsonify(resp.json())
     
@@ -134,15 +133,15 @@ def test_testclear():
 
 # -----Misc Handlers-----
 
-@app.after_request
-def add_header(response):
-    """
-    Add headers to both force latest IE rendering engine or Chrome Frame,
-    and also to cache the rendered page for 10 minutes.
-    """
-    response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
-    response.headers['Cache-Control'] = 'public, max-age=600'
-    return response
+# @app.after_request
+# def add_header(response):
+#     """
+#     Add headers to both force latest IE rendering engine or Chrome Frame,
+#     and also to cache the rendered page for 10 minutes.
+#     """
+#     response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
+#     response.headers['Cache-Control'] = 'public, max-age=600'
+#     return response
 
 
 @app.errorhandler(404)

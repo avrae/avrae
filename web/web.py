@@ -99,15 +99,11 @@ def aliases_list():
     if resp.status_code == 401:
         session['original_page'] = ".aliases_list"
         return redirect(url_for(".auth"))
-    r = "Aliases:<br>"
     user_id = resp.json().get('id')
     aliases = db.jget('cmd_aliases', {}).get(user_id, {})
     snippets = db.jget('damage_snippets', {}).get(user_id, {})
     cvars = db.jget('char_vars', {}).get(user_id, {})
-    r += ', '.join([name for name in aliases.keys()]) + '<br><br>Snippets:<br>' + \
-         ', '.join([name for name in snippets.keys()]) + '<br><br>Cvars:<br>' + \
-         ', '.join([name for name in cvars.keys()])
-    return r
+    return render_template('aliases/list.html', aliases=aliases, snippets=snippets, cvars=cvars)
 
 # -----Tests-----
 

@@ -1142,7 +1142,13 @@ class InitTracker:
                     attacks = []
                     for atk in chosen_attack:
                         for i in range(int(list(atk.values())[0])):
-                            attacks.append(next(a for a in mon_attacks if list(atk.keys())[0] in a.get('name')))
+                            try:
+                                attacks.append(next(a for a in mon_attacks if list(atk.keys())[0] in a.get('name')))
+                            except StopIteration:
+                                try:
+                                    attacks.append(next(a for a in mon_attacks if list(atk.keys())[0] in a.get('text')))
+                                except:
+                                    raise
                     random.shuffle(attacks)
                 else:
                     mon_attacks = current.monster.get('attacks') # get attacks

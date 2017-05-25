@@ -103,7 +103,8 @@ def aliases_list():
     aliases = db.jget('cmd_aliases', {}).get(user_id, {})
     snippets = db.jget('damage_snippets', {}).get(user_id, {})
     cvars = db.jget('char_vars', {}).get(user_id, {})
-    return render_template('aliases/list.html', aliases=aliases, snippets=snippets, cvars=cvars)
+    chars = db.jget(user_id + ".characters", {})
+    return render_template('aliases/list.html', aliases=aliases, snippets=snippets, cvars=cvars, chars=chars)
 
 # -----Tests-----
 

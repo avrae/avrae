@@ -3,8 +3,9 @@
 {% block main %}
     <h1>Aliases</h1>
     <p class="important">
-      A list of all of your aliases.
+      A list of all of your aliases, snippets, and cvars.
     </p>
+    <h3>Aliases</h3>
     <table class="table table-hover">
       <thead>
         <tr>
@@ -16,7 +17,58 @@
         {% for alias, commands in aliases.items() %}
           <tr>
             <td>{{alias}}</td>
-            <td><code>{{commands}}</code></td>
+            <td><pre>{{commands}}</pre></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h3>Snippets</h3>
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Snippet</th>
+          <th>Arguments</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for snippet, args in snippets.items() %}
+          <tr>
+            <td>{{snippet}}</td>
+            <td><pre>{{args}}</pre></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h3>Cvars</h3>
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Character</th>
+          <th>Variables</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cid, vars in cvars.items() %}
+          <tr>
+            <td>{{chars.get(cid, {}).get('stats', {}).get('name', 'No name')}}</td>
+            <td>
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for name, value in vars.items() %}
+                    <tr>
+                      <td>{{name}}</td>
+                      <td><pre>{{value}}</pre></td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </td>
           </tr>
         {% endfor %}
       </tbody>

@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import os
 import random
@@ -42,6 +43,10 @@ class Dice:
             except:
                 pass
             await self.bot.send_message(message.channel, message.author.mention + '  :game_die:\n' + out)
+            
+    def parse_roll_args(self, ctx, args, char_id, character):
+        user_cvars = copy.copy(self.bot.db.not_json_get('char_vars', {}).get(ctx.message.author.id, {}).get(char_id, {}))
+        return args.replace('SPELL', str(user_cvars.get('SPELL', 'SPELL')).strip('+')).replace('PROF', str(character.get('stats', {}).get('proficiencyBonus', "0")))
             
     @commands.command(name='2', hidden=True, pass_context=True)
     async def quick_roll(self, ctx, *, mod:str='0'):
@@ -199,7 +204,8 @@ class Dice:
         
         try:
             guild_id = ctx.message.server.id 
-            pm = self.bot.db.not_json_get("lookup_settings", {}).get(guild_id, {}).get("pm_result", False)    
+            pm = self.bot.db.not_json_get("lookup_settings", {}).get(guild_id, {}).get("pm_result", False)
+               
         except:
             pm = False
         
@@ -221,12 +227,23 @@ class Dice:
         spell = spell['spell']
         
         if len(args) == 1:
-            rolls = spell.get('roll', '')
+            rolls = spell.get('roll', None)
             if isinstance(rolls, list):
-                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls)
-            else:
+                active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
+                if active_character is not None:
+                    user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
+                    character = user_characters[active_character] # get Sheet of character
+                    rolls = self.parse_roll_args(ctx, '\n'.join(rolls), active_character, character)
+                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls.split('\n'))
+            elif rolls is not None:
+                active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
+                if active_character is not None:
+                    user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
+                    character = user_characters[active_character] # get Sheet of character
+                    rolls = self.parse_roll_args(ctx, rolls, active_character, character)
                 out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls, inline=True).skeleton
-
+            else:
+                out = "**{} casts {}!** ".format(ctx.message.author.mention, spell['name'])
         else:
             rolls = args[1:]
             roll_results = ""

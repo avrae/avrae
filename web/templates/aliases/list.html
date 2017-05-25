@@ -29,6 +29,13 @@
               </td>
             </tr>
           {% endfor %}
+          <tr>
+              <td>New Alias</td>
+              <td></td>
+              <td>
+                <button class="btn btn-default" type="button" data-toggle="modal" data-target="#newModal" data-type="alias">Create</button>
+              </td>
+            </tr>
         </tbody>
       </table>
       <h3>Snippets</h3>
@@ -51,6 +58,13 @@
               </td>
             </tr>
           {% endfor %}
+          <tr>
+              <td>New Snippet</td>
+              <td></td>
+              <td>
+                <button class="btn btn-default" type="button" data-toggle="modal" data-target="#newModal" data-type="snippet">Create</button>
+              </td>
+            </tr>
         </tbody>
       </table>
       <h3>Cvars</h3>
@@ -85,6 +99,13 @@
                         </td>
                       </tr>
                     {% endfor %}
+                    <tr>
+                      <td>New Cvar</td>
+                      <td></td>
+                      <td>
+                        <button class="btn btn-default" type="button" data-toggle="modal" data-target="#newModal" data-type="cvar-{{cid}}">Create</button>
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </td>
@@ -142,6 +163,34 @@
         </div>
       </div>
     </div>
+
+    <div class="modal fade" id="newModal" tabindex="-1" role="dialog" aria-labelledby="newModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="newModalLabel">New ...</h4>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="form-group">
+                <label for="alias-name" class="control-label">Name:</label>
+                <input type="text" class="form-control" id="alias-name">
+              </div>
+              <div class="form-group">
+                <label for="alias-value" class="control-label">Value:</label>
+                <textarea class="form-control" id="alias-value"></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" id="newModalConfirm">Create</button>
+          </div>
+          <div class="modal-data-type hidden">...</div>
+        </div>
+      </div>
+    </div>
 {% endblock %}
 {% block js %}
 <script>
@@ -192,6 +241,29 @@ $('#editModalConfirm').click(function() {
   $.post("edit", {target: target, type: type, name: name, value: value})
     .done(function() {
       alert( "edited!" );
+      window.location.reload(false); // fix this later
+    })
+    .fail(function() {
+      alert( "error" );
+    })
+})
+  
+$('#newModal').on('show.bs.modal', function (event) {
+  var button = $(event.relatedTarget) // Button that triggered the modal
+  var type = button.data('type') // Extract info from data-* attributes
+  var modal = $(this)
+  modal.find('.modal-title').text('New ' + type)
+  modal.find('.modal-data-type').text(type)
+})
+  
+$('#newModalConfirm').click(function() {
+  var modal = $('#newModal')
+  var type = modal.find('.modal-data-type').text()
+  var name = modal.find('.modal-body input').val()
+  var value = modal.find('.modal-body textarea').val()
+  $.post("new", {type: type, name: name, value: value})
+    .done(function() {
+      alert( "created!" );
       window.location.reload(false); // fix this later
     })
     .fail(function() {

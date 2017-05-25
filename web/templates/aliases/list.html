@@ -1,7 +1,7 @@
 {% extends "baseSimple.html" %}
 {% block title %}Avrae - Alias List{% endblock %}
 {% block css %}
-<link href="{{url_for('static', filename='aliases/list.css')}}" rel="stylesheet">
+<link href="/static/aliases/list.css" rel="stylesheet">
 {% endblock %}
 {% block main %}
     <div class="col-xs-12">
@@ -19,12 +19,12 @@
           </tr>
         </thead>
         <tbody>
-          {% for alias, commands in aliases.items() %}
+          {% for alias, commands in aliases %}
             <tr>
               <td>{{alias}}</td>
               <td><pre>{{commands}}</pre></td>
               <td>
-                <button class="btn btn-default" type="submit">Edit</button>
+                <button class="btn btn-default" type="button" data-toggle="modal" data-target="#editModal" data-name="{{alias}}" data-type="alias" data-content="{{commands}}">Edit</button>
                 <button class="btn btn-danger" type="button" data-toggle="modal" data-target="#deleteModal" data-name="{{alias}}" data-type="alias">Delete</button>
               </td>
             </tr>
@@ -41,12 +41,12 @@
           </tr>
         </thead>
         <tbody>
-          {% for snippet, args in snippets.items() %}
+          {% for snippet, args in snippets %}
             <tr>
               <td>{{snippet}}</td>
               <td><pre>{{args}}</pre></td>
               <td>
-                <button class="btn btn-default" type="submit">Edit</button>
+                <button class="btn btn-default" type="button" data-toggle="modal" data-target="#editModal" data-name="{{snippet}}" data-type="snippet" data-content="{{args}}">Edit</button>
                 <button class="btn btn-danger" type="button" data-toggle="modal" data-target="#deleteModal" data-name="{{snippet}}" data-type="snippet">Delete</button>
               </td>
             </tr>
@@ -62,7 +62,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for cid, vars in cvars.items() %}
+          {% for cid, vars in cvars %}
             <tr>
               <td>{{chars.get(cid, {}).get('stats', {}).get('name', 'No name')}}</td>
               <td>
@@ -75,12 +75,12 @@
                     </tr>
                   </thead>
                   <tbody>
-                    {% for name, value in vars.items() %}
+                    {% for name, value in vars %}
                       <tr>
                         <td>{{name}}</td>
                         <td><pre>{{value}}</pre></td>
                         <td>
-                          <button class="btn btn-default" type="submit">Edit</button>
+                          <button class="btn btn-default" type="button" data-toggle="modal" data-target="#editModal" data-name="{{name}}" data-type="cvar-{{cid}}" data-content="{{value}}">Edit</button>
                           <button class="btn btn-danger" type="button" data-toggle="modal" data-target="#deleteModal" data-name="{{name}}" data-type="cvar-{{cid}}">Delete</button>
                         </td>
                       </tr>
@@ -113,6 +113,35 @@
         </div>
       </div>
     </div>
+
+    <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="editModalLabel">Editing ...</h4>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="form-group">
+                <label for="alias-name" class="control-label">Name:</label>
+                <input type="text" class="form-control" id="alias-name">
+              </div>
+              <div class="form-group">
+                <label for="alias-value" class="control-label">Value:</label>
+                <textarea class="form-control" id="alias-value"></textarea>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" data-dismiss="modal" id="editModalConfirm">Update</button>
+          </div>
+          <div class="modal-data-type hidden">...</div>
+          <div class="modal-data hidden">...</div>
+        </div>
+      </div>
+    </div>
 {% endblock %}
 {% block js %}
 <script>
@@ -134,6 +163,35 @@ $('#deleteModalConfirm').click(function() {
   $.post("delete", {name: target, type: type})
     .done(function() {
       alert( "deleted!" );
+      window.location.reload(false); // fix this later
+    })
+    .fail(function() {
+      alert( "error" );
+    })
+})
+  
+$('#editModal').on('show.bs.modal', function (event) {
+  var button = $(event.relatedTarget) // Button that triggered the modal
+  var name = button.data('name') // Extract info from data-* attributes
+  var type = button.data('type') // Extract info from data-* attributes
+  var content = button.data('content')
+  var modal = $(this)
+  modal.find('.modal-title').text('Editing ' + name)
+  modal.find('.modal-data').text(name)
+  modal.find('.modal-data-type').text(type)
+  modal.find('.modal-body input').val(name)
+  modal.find('.modal-body textarea').val(content)
+})
+  
+$('#editModalConfirm').click(function() {
+  var modal = $('#editModal')
+  var type = modal.find('.modal-data-type').text()
+  var target = modal.find('.modal-data').text()
+  var name = modal.find('.modal-body input').val()
+  var value = modal.find('.modal-body textarea').val()
+  $.post("edit", {target: target, type: type, name: name, value: value})
+    .done(function() {
+      alert( "edited!" );
       window.location.reload(false); // fix this later
     })
     .fail(function() {

@@ -217,6 +217,9 @@ def aliases_new():
     new_alias_name = request.values.get('name')
     new_alias_value = request.values.get('value')
     if alias_type == 'alias':
+        default_commands = db.jget('default_commands', [])
+        if new_alias_name in default_commands:
+            return "Alias is a built-in bot command", 409
         aliases = db.jget('cmd_aliases', {})
         user_aliases = aliases.get(user_id, {})
         user_aliases[new_alias_name] = new_alias_value

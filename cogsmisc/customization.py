@@ -21,6 +21,11 @@ class Customization:
         self.bot.loop.create_task(self.update_aliases())
         self.bot.loop.create_task(self.backup_aliases())
         
+    async def on_ready(self):
+        if getattr(self.bot, "shard_id", 0) == 0:
+            commands = list(self.bot.commands.keys())
+            self.bot.db.jset('default_commands', commands)
+        
     async def update_aliases(self):
         try:
             await self.bot.wait_until_ready()

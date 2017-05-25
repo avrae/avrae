@@ -3,6 +3,22 @@
 {% block main %}
     <h1>Aliases</h1>
     <p class="important">
-      This is a test.
+      A list of all of your aliases.
     </p>
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Alias</th>
+          <th>Commands</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alias, commands in aliases.items() %}
+          <tr>
+            <td>{{alias}}</td>
+            <td><code>{{commands}}</code></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
 {% endblock %}

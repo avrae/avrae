@@ -234,7 +234,8 @@ class Dice:
                     user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
                     character = user_characters[active_character] # get Sheet of character
                     rolls = self.parse_roll_args(ctx, '\n'.join(rolls), active_character, character)
-                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls.split('\n'))
+                    rolls = rolls.split('\n')
+                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls)
             elif rolls is not None:
                 active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
                 if active_character is not None:

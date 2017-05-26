@@ -87,7 +87,7 @@ def auth():
     session['oauth2_state'] = state
     return redirect(authorization_url)
 
-# -----Web Alias Test-----
+# -----Web Alias Things-----
 
 @app.route('/aliases/list')
 def aliases_list():
@@ -103,8 +103,142 @@ def aliases_list():
     aliases = db.jget('cmd_aliases', {}).get(user_id, {})
     snippets = db.jget('damage_snippets', {}).get(user_id, {})
     cvars = db.jget('char_vars', {}).get(user_id, {})
+    aliases = sorted([(k, v) for k, v in aliases.items()], key=lambda i: i[0])
+    snippets = sorted([(k, v) for k, v in snippets.items()], key=lambda i: i[0])
+    cvars = sorted([[k, v] for k, v in cvars.items()], key=lambda i: i[0])
+    for cvar in cvars:
+        cvar[1] = sorted([(k, v) for k, v in cvar[1].items()], key=lambda i: i[0])
     chars = db.jget(user_id + ".characters", {})
     return render_template('aliases/list.html', aliases=aliases, snippets=snippets, cvars=cvars, chars=chars)
+
+@app.route('/aliases/delete', methods=['POST'])
+def aliases_delete():
+    if not 'oauth2_token' in session:
+        session['original_page'] = ".aliases_list"
+        return redirect(url_for(".auth"))
+    discord = make_session(token=session.get('oauth2_token'))
+    resp = discord.get(API_BASE_URL + '/users/@me')
+    if resp.status_code == 401:
+        session['original_page'] = ".aliases_list"
+        return redirect(url_for(".auth"))
+    user_id = resp.json().get('id')
+    alias_type = request.values.get('type')
+    alias_name = request.values.get('name')
+    if alias_type == 'alias':
+        aliases = db.jget('cmd_aliases', {})
+        user_aliases = aliases.get(user_id, {})
+        try:
+            del user_aliases[alias_name]
+        except KeyError:
+            return "Alias not found", 404
+        aliases[user_id] = user_aliases
+        db.jset('cmd_aliases', aliases)
+    elif alias_type == 'snippet':
+        snippets = db.jget('damage_snippets', {})
+        user_snippets = snippets.get(user_id, {})
+        try:
+            del user_snippets[alias_name]
+        except KeyError:
+            return "Alias not found", 404
+        snippets[user_id] = user_snippets
+        db.jset('damage_snippets', snippets)
+    else: # "cvar-cid"
+        cvars = db.jget('char_vars', {})
+        cid = '-'.join(alias_type.split('-')[1:])
+        char_cvars = cvars.get(user_id, {}).get(cid, {})
+        try:
+            del char_cvars[alias_name]
+        except KeyError:
+            return "Alias not found", 404
+        cvars[user_id][cid] = char_cvars
+        db.jset('char_vars', cvars)
+    return "Alias deleted"
+
+@app.route('/aliases/edit', methods=['POST'])
+def aliases_edit():
+    if not 'oauth2_token' in session:
+        session['original_page'] = ".aliases_list"
+        return redirect(url_for(".auth"))
+    discord = make_session(token=session.get('oauth2_token'))
+    resp = discord.get(API_BASE_URL + '/users/@me')
+    if resp.status_code == 401:
+        session['original_page'] = ".aliases_list"
+        return redirect(url_for(".auth"))
+    user_id = resp.json().get('id')
+    alias_type = request.values.get('type')
+    old_alias_name = request.values.get('target')
+    new_alias_name = request.values.get('name')
+    new_alias_value = request.values.get('value')
+    if alias_type == 'alias':
+        aliases = db.jget('cmd_aliases', {})
+        user_aliases = aliases.get(user_id, {})
+        try:
+            del user_aliases[old_alias_name]
+        except KeyError:
+            return "Alias not found", 404
+        user_aliases[new_alias_name] = new_alias_value
+        aliases[user_id] = user_aliases
+        db.jset('cmd_aliases', aliases)
+    elif alias_type == 'snippet':
+        snippets = db.jget('damage_snippets', {})
+        user_snippets = snippets.get(user_id, {})
+        try:
+            del user_snippets[old_alias_name]
+        except KeyError:
+            return "Alias not found", 404
+        user_snippets[new_alias_name] = new_alias_value
+        snippets[user_id] = user_snippets
+        db.jset('damage_snippets', snippets)
+    else: # "cvar-cid"
+        cvars = db.jget('char_vars', {})
+        cid = '-'.join(alias_type.split('-')[1:])
+        char_cvars = cvars.get(user_id, {}).get(cid, {})
+        try:
+            del char_cvars[old_alias_name]
+        except KeyError:
+            return "Alias not found", 404
+        char_cvars[new_alias_name] = new_alias_value
+        cvars[user_id][cid] = char_cvars
+        db.jset('char_vars', cvars)
+    return "Alias edited"
+
+@app.route('/aliases/new', methods=['POST'])
+def aliases_new():
+    if not 'oauth2_token' in session:
+        session['original_page'] = ".aliases_list"
+        return redirect(url_for(".auth"))
+    discord = make_session(token=session.get('oauth2_token'))
+    resp = discord.get(API_BASE_URL + '/users/@me')
+    if resp.status_code == 401:
+        session['original_page'] = ".aliases_list"
+        return redirect(url_for(".auth"))
+    user_id = resp.json().get('id')
+    alias_type = request.values.get('type')
+    new_alias_name = request.values.get('name')
+    new_alias_value = request.values.get('value')
+    if alias_type == 'alias':
+        default_commands = db.jget('default_commands', [])
+        if new_alias_name in default_commands:
+            return "Alias is a built-in bot command", 409
+        aliases = db.jget('cmd_aliases', {})
+        user_aliases = aliases.get(user_id, {})
+        user_aliases[new_alias_name] = new_alias_value
+        aliases[user_id] = user_aliases
+        db.jset('cmd_aliases', aliases)
+    elif alias_type == 'snippet':
+        snippets = db.jget('damage_snippets', {})
+        user_snippets = snippets.get(user_id, {})
+        user_snippets[new_alias_name] = new_alias_value
+        snippets[user_id] = user_snippets
+        db.jset('damage_snippets', snippets)
+    else: # "cvar-cid"
+        cvars = db.jget('char_vars', {})
+        cid = '-'.join(alias_type.split('-')[1:])
+        char_cvars = cvars.get(user_id, {}).get(cid, {})
+        char_cvars[new_alias_name] = new_alias_value
+        cvars[user_id][cid] = char_cvars
+        db.jset('char_vars', cvars)
+    return "Alias created"
 
 # -----Tests-----
 

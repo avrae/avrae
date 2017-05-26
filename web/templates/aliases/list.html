@@ -228,7 +228,7 @@ $('#deleteModalConfirm').click(function() {
     })
     .fail(function(data) {
       $.notify({
-        message: "Error - alias not found." 
+        message: "Error - " + data.responseText + "." 
       }, {
         type: 'danger',
         animate: {
@@ -277,7 +277,7 @@ $('#editModalConfirm').click(function() {
     })
     .fail(function(data) {
       $.notify({
-        message: "Error - alias not found." 
+        message: "Error - " + data.responseText + "." 
       }, {
         type: 'danger',
         animate: {
@@ -320,7 +320,7 @@ $('#newModalConfirm').click(function() {
     })
     .fail(function(data) {
       $.notify({
-        message: "Error - alias is already a builtin bot command." 
+        message: "Error - " + data.responseText + "." 
       }, {
         type: 'danger',
         animate: {

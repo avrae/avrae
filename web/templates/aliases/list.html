@@ -2,6 +2,7 @@
 {% block title %}Avrae - Alias List{% endblock %}
 {% block css %}
 <link href="/static/aliases/list.css" rel="stylesheet">
+<link href="/static/bootstrap/css/animate.css" rel="stylesheet">
 {% endblock %}
 {% block main %}
     <div class="col-xs-12">
@@ -193,6 +194,7 @@
     </div>
 {% endblock %}
 {% block js %}
+<script src="/static/bootstrap/js/bootstrap-notify.min.js"></script>
 <script>
 $('#deleteModal').on('show.bs.modal', function (event) {
   var button = $(event.relatedTarget) // Button that triggered the modal
@@ -210,12 +212,32 @@ $('#deleteModalConfirm').click(function() {
   var type = modal.find('.modal-data-type').text()
   var target = modal.find('.modal-data').text()
   $.post("delete", {name: target, type: type})
-    .done(function() {
-      alert( "deleted!" );
+    .done(function(data) {
+      $.notify({
+        message: data + "." 
+      }, {
+        type: 'success',
+        animate: {
+          enter: 'animated fadeInDown',
+          exit: 'animated fadeOutUp'
+        },
+        delay: 5000,
+	    timer: 1000
+      });
       window.location.reload(false); // fix this later
     })
-    .fail(function() {
-      alert( "error" );
+    .fail(function(data) {
+      $.notify({
+        message: "Error - alias not found." 
+      }, {
+        type: 'danger',
+        animate: {
+          enter: 'animated fadeInDown',
+          exit: 'animated fadeOutUp'
+        },
+        delay: 5000,
+	    timer: 1000
+      });
     })
 })
   
@@ -239,12 +261,32 @@ $('#editModalConfirm').click(function() {
   var name = modal.find('.modal-body input').val()
   var value = modal.find('.modal-body textarea').val()
   $.post("edit", {target: target, type: type, name: name, value: value})
-    .done(function() {
-      alert( "edited!" );
+    .done(function(data) {
+      $.notify({
+        message: data + "." 
+      }, {
+        type: 'success',
+        animate: {
+          enter: 'animated fadeInDown',
+          exit: 'animated fadeOutUp'
+        },
+        delay: 5000,
+	    timer: 1000
+      });
       window.location.reload(false); // fix this later
     })
-    .fail(function() {
-      alert( "error" );
+    .fail(function(data) {
+      $.notify({
+        message: "Error - alias not found." 
+      }, {
+        type: 'danger',
+        animate: {
+          enter: 'animated fadeInDown',
+          exit: 'animated fadeOutUp'
+        },
+        delay: 5000,
+	    timer: 1000
+      });
     })
 })
   
@@ -262,12 +304,32 @@ $('#newModalConfirm').click(function() {
   var name = modal.find('.modal-body input').val()
   var value = modal.find('.modal-body textarea').val()
   $.post("new", {type: type, name: name, value: value})
-    .done(function() {
-      alert( "created!" );
+    .done(function(data) {
+      $.notify({
+        message: data + "." 
+      }, {
+        type: 'success',
+        animate: {
+          enter: 'animated fadeInDown',
+          exit: 'animated fadeOutUp'
+        },
+        delay: 5000,
+	    timer: 1000
+      });
       window.location.reload(false); // fix this later
     })
-    .fail(function() {
-      alert( "error" );
+    .fail(function(data) {
+      $.notify({
+        message: "Error - alias is already a builtin bot command." 
+      }, {
+        type: 'danger',
+        animate: {
+          enter: 'animated fadeInDown',
+          exit: 'animated fadeOutUp'
+        },
+        delay: 5000,
+	    timer: 1000
+      });
     })
 })
 </script>

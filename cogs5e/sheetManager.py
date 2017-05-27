@@ -187,6 +187,7 @@ class SheetManager:
         args = self.arg_stuff(args, ctx, character, active_character)
         args['name'] = character.get('stats', {}).get('name', "NONAME")
         args['criton'] = character.get('settings', {}).get('criton', 20) or 20
+        args['c'] = character.get('settings', {}).get('critdmg') or None
         if attack.get('details') is not None:
             attack['details'] = self.parse_cvars([attack['details']], ctx.message.author.id, character, active_character)[0]
         
@@ -505,7 +506,8 @@ class SheetManager:
         `color <hex color>` - Colors all embeds this color.
         `criton <number>` - Makes attacks crit on something other than a 20.
         `mincheck <number>` - Does nothing right now.
-        `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck."""
+        `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
+        `critdmg <dice>` - Adds damage on a crit."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -601,6 +603,17 @@ class SheetManager:
                         else:
                             character['settings']['reroll'] = reroll
                             out += "\u2705 Reroll set to {}.\n".format(reroll)
+            if arg == 'critdmg':
+                critdmg = list_get(index + 1, None, args)
+                if critdmg is None:
+                    out += '\u2139 Your character\'s current critdmg is {}. Use "!csettings critdmg reset" to reset it.\n' \
+                    .format(str(character['settings'].get('critdmg')) if character['settings'].get('critdmg') is not '0' else "0")
+                elif critdmg.lower() == 'reset':
+                    del character['settings']['critdmg']
+                    out += "\u2705 Critdmg reset.\n"
+                else:
+                    character['settings']['critdmg'] = critdmg
+                    out += "\u2705 Critdmg set to {}.\n".format(critdmg)
             index += 1
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)

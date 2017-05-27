@@ -208,10 +208,10 @@ class Combatant(object):
             out.append("(AC {})".format(self.ac))
         return ' '.join(out)
     
-    def get_status(self):
+    def get_status(self, private:bool=False):
         csFormat = "{} {} {}{}"
         status = csFormat.format(self.name,
-                                 self.get_hp_and_ac(),
+                                 self.get_hp_and_ac(private),
                                  '\n> ' + self.notes if self.notes is not '' else '',
                                  ('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else '')
         return status
@@ -1048,6 +1048,7 @@ class InitTracker:
             args['immune'] = args.get('immune') or '|'.join(target.immune)
             args['vuln'] = args.get('vuln') or '|'.join(target.vuln)
             args['criton'] = combatant.sheet.get('settings', {}).get('criton', 20) or 20
+            args['c'] = combatant.sheet.get('settings', {}).get('critdmg') or None
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get('color') is None else combatant.sheet.get('settings', {}).get('color')
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']

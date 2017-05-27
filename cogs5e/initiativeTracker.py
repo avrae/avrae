@@ -208,10 +208,10 @@ class Combatant(object):
             out.append("(AC {})".format(self.ac))
         return ' '.join(out)
     
-    def get_status(self):
+    def get_status(self, private:bool=False):
         csFormat = "{} {} {}{}"
         status = csFormat.format(self.name,
-                                 self.get_hp_and_ac(),
+                                 self.get_hp_and_ac(private),
                                  '\n> ' + self.notes if self.notes is not '' else '',
                                  ('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else '')
         return status

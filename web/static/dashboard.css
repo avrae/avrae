@@ -1,0 +1,25 @@
+.jumbotron .table.borderless td, .jumbotron .table.borderless th {
+  border: none; 
+}
+
+.profile-item img {
+  display: inline;
+  width: 180px;
+  height: 180px;
+  border-radius: 180px;
+  -webkit-border-radius: 180px;
+  -moz-border-radius: 180px;
+  border: 1px solid #ff9999;
+  box-shadow: 0 0 4px rgba(255, 153, 153, 0.8);
+  -webkit-box-shadow: 0 0 4px rgba(255, 153, 153, 0.8);
+  -moz-box-shadow: 0 0 4px rgba(255, 153, 153, 0.8);
+  margin-bottom: 10px; 
+}
+
+.profile-discriminator {
+  font-size: 18px; 
+}
+
+.row-centered {
+  text-align: center;
+}

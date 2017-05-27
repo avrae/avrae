@@ -1,0 +1,31 @@
+{% extends "baseSimple.html" %}
+{% block title %}Avrae - Dashboard{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="/static/dashboard.css">
+{% endblock %}
+{% block main %}
+<div class="col-xs-12">
+  <div class="jumbotron">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4">
+          <div class="profile-item row-centered">
+            <img src="{{avatar}}">
+          </div>
+        </div>
+        <div class="col-md-8">
+          <h1>
+            {{username}}
+            <span class="profile-discriminator">
+              #{{discriminator}}
+            </span>
+          </h1>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block js %}
+
+{% endblock %}

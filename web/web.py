@@ -115,6 +115,25 @@ def dashboard():
                            numChars=numChars,
                            numCustomizations=numCustomizations,
                            characters=characters)
+    
+# -----Character-----
+
+@app.route('/character/<cid>')
+def character(cid):
+    if not 'oauth2_token' in session:
+        session['original_page'] = ".dashboard"
+        return redirect(url_for(".auth"))
+    discord = make_session(token=session.get('oauth2_token'))
+    resp = discord.get(API_BASE_URL + '/users/@me')
+    if resp.status_code == 401:
+        session['original_page'] = ".dashboard"
+        return redirect(url_for(".auth"))
+    user_info = resp.json()
+    user_id = user_info.get('id')
+    character = db.jget(user_id + '.characters', {}).get(cid)
+    if character is None:
+        return render_template('error.html', status=404, error="Character not found"), 404
+    return "<h1>This page is under construction!</h1><br><br>" + str(character)
 
 # -----Web Alias Things-----
 

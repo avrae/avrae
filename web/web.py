@@ -100,13 +100,21 @@ def dashboard():
         session['original_page'] = ".dashboard"
         return redirect(url_for(".auth"))
     user_info = resp.json()
+    user_id = user_info.get('id')
     if user_info.get('avatar'):
         avatar_url = "https://cdn.discordapp.com/avatars/{}/{}.webp?size=1024".format(user_info.get('id'), user_info.get('avatar'))
     else:
         avatar_url = "/static/assets/AvraeSquare.jpg"
+    characters = db.jget(user_id + '.characters', {})
+    numChars = len(characters)
+    numCustomizations = len(db.jget('cmd_aliases', {}).get(user_id)) + len(db.jget('damage_snippets', {}).get(user_id))
+    numCustomizations += sum(len(v) for v in db.jget('char_vars', {}).get(user_id, {}).values())
     return render_template('dashboard.html', username=user_info.get('username'),
                            discriminator=user_info.get('discriminator'),
-                           avatar=avatar_url)
+                           avatar=avatar_url,
+                           numChars=numChars,
+                           numCustomizations=numCustomizations,
+                           characters=characters)
 
 # -----Web Alias Things-----
 

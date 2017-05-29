@@ -4,10 +4,30 @@
 <link rel="stylesheet" href="/static/dashboard.css">
 {% endblock %}
 {% block main %}
-<div class="col-xs-12">
-  <div class="jumbotron">
-    <div class="container">
-      <div class="row">
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-sm-3 col-md-2 sidebar">
+      <ul class="nav nav-sidebar">
+        <li class="active"><a href="#">Overview <span class="sr-only">(current)</span></a></li>
+        <li><a href="/aliases/list">Customization</a></li>
+      </ul>
+      <!--<ul class="nav nav-sidebar">
+        <li><a href="">Nav item</a></li>
+        <li><a href="">Nav item again</a></li>
+        <li><a href="">One more nav</a></li>
+        <li><a href="">Another nav item</a></li>
+        <li><a href="">More navigation</a></li>
+      </ul>
+      <ul class="nav nav-sidebar">
+        <li><a href="">Nav item again</a></li>
+        <li><a href="">One more nav</a></li>
+        <li><a href="">Another nav item</a></li>
+      </ul>-->
+    </div>
+  </div>
+  <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+    <div class="jumbotron">
+      <div class="container">
         <div class="col-md-4">
           <div class="profile-item row-centered">
             <img src="{{avatar}}">
@@ -15,13 +35,44 @@
         </div>
         <div class="col-md-8">
           <h1>
-            {{username}}
-            <span class="profile-discriminator">
-              #{{discriminator}}
-            </span>
+            {{username}}<span class="profile-discriminator">#{{discriminator}}</span>
           </h1>
+          <p>
+            Characters: {{numChars}}<br>
+            Customizations: {{numCustomizations}}
+          </p>
         </div>
       </div>
+    </div>
+    <div class="row">
+      {% for cid, char in characters.items() %}
+        <div class="col-md-6 col-lg-4">
+          <div class="row">
+            <div class="col-xs-12">
+              <a href="/character/{{cid}}">
+                <div class="jumbotron character-container">
+                  <div class="container text-center">
+                    <div class="character-image row-centered">
+                      <img src="{{char.get('stats', {}).get('image') or '/static/assets/AvraeSquare.jpg'}}">
+                    </div>
+                    <div class="character-info">
+                      <p>
+                        {{char.get('stats', {}).get('name', 'No name')}}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+        {% if not loop.index % 2 %}
+          <div class="clearfix visible-md-block"></div>
+        {% endif %}
+        {% if not loop.index % 3 %}
+          <div class="clearfix visible-lg-block"></div>
+        {% endif %}
+      {% endfor %}
     </div>
   </div>
 </div>

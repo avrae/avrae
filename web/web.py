@@ -87,6 +87,54 @@ def auth():
     session['oauth2_state'] = state
     return redirect(authorization_url)
 
+# -----Dashboard----
+
+@app.route('/dashboard')
+def dashboard():
+    if not 'oauth2_token' in session:
+        session['original_page'] = ".dashboard"
+        return redirect(url_for(".auth"))
+    discord = make_session(token=session.get('oauth2_token'))
+    resp = discord.get(API_BASE_URL + '/users/@me')
+    if resp.status_code == 401:
+        session['original_page'] = ".dashboard"
+        return redirect(url_for(".auth"))
+    user_info = resp.json()
+    user_id = user_info.get('id')
+    if user_info.get('avatar'):
+        avatar_url = "https://cdn.discordapp.com/avatars/{}/{}.webp?size=1024".format(user_info.get('id'), user_info.get('avatar'))
+    else:
+        avatar_url = "/static/assets/AvraeSquare.jpg"
+    characters = db.jget(user_id + '.characters', {})
+    numChars = len(characters)
+    numCustomizations = len(db.jget('cmd_aliases', {}).get(user_id)) + len(db.jget('damage_snippets', {}).get(user_id))
+    numCustomizations += sum(len(v) for v in db.jget('char_vars', {}).get(user_id, {}).values())
+    return render_template('dashboard.html', username=user_info.get('username'),
+                           discriminator=user_info.get('discriminator'),
+                           avatar=avatar_url,
+                           numChars=numChars,
+                           numCustomizations=numCustomizations,
+                           characters=characters)
+    
+# -----Character-----
+
+@app.route('/character/<cid>')
+def character(cid):
+    if not 'oauth2_token' in session:
+        session['original_page'] = ".dashboard"
+        return redirect(url_for(".auth"))
+    discord = make_session(token=session.get('oauth2_token'))
+    resp = discord.get(API_BASE_URL + '/users/@me')
+    if resp.status_code == 401:
+        session['original_page'] = ".dashboard"
+        return redirect(url_for(".auth"))
+    user_info = resp.json()
+    user_id = user_info.get('id')
+    character = db.jget(user_id + '.characters', {}).get(cid)
+    if character is None:
+        return render_template('error.html', status=404, error="Character not found"), 404
+    return "<h1>This page is under construction!</h1><br><br>" + str(character)
+
 # -----Web Alias Things-----
 
 @app.route('/aliases/list')
@@ -249,7 +297,6 @@ def test_test():
         return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
-    print(resp.status_code)
     if resp.status_code == 401:
         session['original_page'] = ".test_test"
         return redirect(url_for(".auth"))

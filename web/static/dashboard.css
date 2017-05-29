@@ -80,14 +80,48 @@ body {
   margin-top: 0;
 }
 
-pre {
-  white-space: pre-wrap;       /* Since CSS 2.1 */
-  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
-  white-space: -pre-wrap;      /* Opera 4-6 */
-  white-space: -o-pre-wrap;    /* Opera 7 */
-  word-wrap: break-word;       /* Internet Explorer 5.5+ */
+.profile-item img {
+  display: inline;
+  width: 180px;
+  height: 180px;
+  border-radius: 180px;
+  -webkit-border-radius: 180px;
+  -moz-border-radius: 180px;
+  border: 1px solid #ff9999;
+  box-shadow: 0 0 4px rgba(255, 153, 153, 0.8);
+  -webkit-box-shadow: 0 0 4px rgba(255, 153, 153, 0.8);
+  -moz-box-shadow: 0 0 4px rgba(255, 153, 153, 0.8);
+  margin-bottom: 10px; 
 }
 
-textarea {
-  resize: vertical;
+.profile-discriminator {
+  font-size: 18px; 
+}
+
+.row-centered {
+  text-align: center;
+}
+
+.character-container {
+  background-color: #fee
+}
+
+.character-image {
+  margin: 0 auto;
+  width: 150px;
+  height: 150px;
+}
+
+.character-image img {
+  display: inline;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 150px;
+  -webkit-border-radius: 150px;
+  -moz-border-radius: 150px;
+  border: 1px solid #ff9999;
+  box-shadow: 0 0 4px rgba(255, 153, 153, 0.8);
+  -webkit-box-shadow: 0 0 4px rgba(255, 153, 153, 0.8);
+  -moz-box-shadow: 0 0 4px rgba(255, 153, 153, 0.8);
+  margin-bottom: 10px; 
 }

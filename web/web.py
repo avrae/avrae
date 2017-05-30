@@ -4,6 +4,7 @@ Created on May 16, 2017
 @author: andrew
 '''
 
+import json
 import os
 
 from flask import Flask, g, session, redirect, request, url_for, jsonify
@@ -18,7 +19,7 @@ TESTING = True if os.environ.get("TESTING") else False
 
 OAUTH2_CLIENT_ID = credentials.oauth2_client_id
 OAUTH2_CLIENT_SECRET = credentials.oauth2_client_secret
-OAUTH2_REDIRECT_URI = 'http://localhost:8000/callback' if TESTING else "https://avrae.io/callback"
+OAUTH2_REDIRECT_URI = 'http://localhost:5000/callback' if TESTING else "https://avrae.io/callback"
 
 API_BASE_URL = os.environ.get('API_BASE_URL', 'https://discordapp.com/api')
 AUTHORIZATION_BASE_URL = API_BASE_URL + '/oauth2/authorize'
@@ -87,6 +88,12 @@ def auth():
     session['oauth2_state'] = state
     return redirect(authorization_url)
 
+@app.route('/logout')
+def logout():
+    session.pop('oauth2_token', None)
+    session.pop('oauth2_state', None)
+    return redirect(url_for(".home"))
+
 # -----Dashboard----
 
 @app.route('/dashboard')
@@ -133,7 +140,16 @@ def character(cid):
     character = db.jget(user_id + '.characters', {}).get(cid)
     if character is None:
         return render_template('error.html', status=404, error="Character not found"), 404
-    return "<h1>This page is under construction!</h1><br><br>" + str(character)
+    numAttacks = len(character.get("attacks", []))
+    classLevels = []
+    for cls, lvl in character.get('levels', {}).items():
+        if not cls == "level":
+            classLevels.append("{} {}".format(cls.split("Level")[0], lvl))
+            
+    return render_template('character/view.html', character=character,
+                           classLevels='/'.join(classLevels) or "Level " + str(character.get('levels', {}).get('level', 0)),
+                           numAttacks=str(numAttacks) + (" Attack" if numAttacks==1 else " Attacks"),
+                           rawCharInfo=json.dumps(character, sort_keys=True, indent=4)) #"<h1>This page is under construction!</h1><br><br>" + str(character)
 
 # -----Web Alias Things-----
 

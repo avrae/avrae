@@ -18,7 +18,7 @@ TESTING = True if os.environ.get("TESTING") else False
 
 OAUTH2_CLIENT_ID = credentials.oauth2_client_id
 OAUTH2_CLIENT_SECRET = credentials.oauth2_client_secret
-OAUTH2_REDIRECT_URI = 'http://localhost:8000/callback' if TESTING else "https://avrae.io/callback"
+OAUTH2_REDIRECT_URI = 'http://localhost:5000/callback' if TESTING else "https://avrae.io/callback"
 
 API_BASE_URL = os.environ.get('API_BASE_URL', 'https://discordapp.com/api')
 AUTHORIZATION_BASE_URL = API_BASE_URL + '/oauth2/authorize'
@@ -86,6 +86,12 @@ def auth():
     authorization_url, state = discord.authorization_url(AUTHORIZATION_BASE_URL)
     session['oauth2_state'] = state
     return redirect(authorization_url)
+
+@app.route('/logout')
+def logout():
+    session.pop('oauth2_token', None)
+    session.pop('oauth2_state', None)
+    return redirect(url_for(".home"))
 
 # -----Dashboard----
 

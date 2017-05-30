@@ -1,0 +1,48 @@
+{% extends "baseSimple.html" %}
+{% block title %}Avrae - {{character.get("stats", {}).get("name", "Unnamed Character")}}{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="/static/character/view.css">
+{% endblock %}
+{% block main %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-sm-3 col-md-2 sidebar">
+      <ul class="nav nav-sidebar">
+        <li><a href="/dashboard">Overview</a></li>
+        <li><a href="/aliases/list">Customization</a></li>
+      </ul>
+      <ul class="nav nav-sidebar">
+        <li><a href="/logout">Logout</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+    <div class="jumbotron">
+      <div class="container">
+        <div class="col-md-4">
+          <div class="character-item row-centered">
+            <img src="{{character.get('stats', {}).get('image') or '/static/assets/AvraeSquare.jpg'}}">
+          </div>
+        </div>
+        <div class="col-md-8">
+          <h1>
+            {{character.get("stats", {}).get("name", "Unnamed Character")}}
+          </h1>
+          <p>
+            {{classLevels}}<br>
+            {{character.get("hp", 0)}} Max HP, {{character.get("armor", 0)}} AC<br>
+            {{numAttacks}}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <h2>This page is still under construction.</h2>
+      <pre>{{rawCharInfo}}</pre>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block js %}
+
+{% endblock %}

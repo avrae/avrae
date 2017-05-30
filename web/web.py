@@ -4,6 +4,7 @@ Created on May 16, 2017
 @author: andrew
 '''
 
+import json
 import os
 
 from flask import Flask, g, session, redirect, request, url_for, jsonify
@@ -139,7 +140,16 @@ def character(cid):
     character = db.jget(user_id + '.characters', {}).get(cid)
     if character is None:
         return render_template('error.html', status=404, error="Character not found"), 404
-    return "<h1>This page is under construction!</h1><br><br>" + str(character)
+    numAttacks = len(character.get("attacks", []))
+    classLevels = []
+    for cls, lvl in character.get('levels', {}).items():
+        if not cls == "level":
+            classLevels.append("{} {}".format(cls.split("Level")[0], lvl))
+            
+    return render_template('character/view.html', character=character,
+                           classLevels='/'.join(classLevels) or "Level " + str(character.get('levels', {}).get('level', 0)),
+                           numAttacks=str(numAttacks) + (" Attack" if numAttacks==1 else " Attacks"),
+                           rawCharInfo=json.dumps(character, sort_keys=True, indent=4)) #"<h1>This page is under construction!</h1><br><br>" + str(character)
 
 # -----Web Alias Things-----
 

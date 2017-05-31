@@ -21,6 +21,11 @@ def searchRule(rule, search=fuzzywuzzy_search):
         rules = json.load(f)
     return search(rules, 'name', rule)
 
+def searchFeat(feat, search=fuzzywuzzy_search):
+    with open('./res/feats.json', 'r') as f:
+        feats = json.load(f)
+    return search(feats, 'name', feat)
+
 def searchMonster(monstername, visible=True, return_monster=False, search=fuzzywuzzy_search):
     with open('./res/bestiary.json', 'r') as f:
         monsters = json.load(f)

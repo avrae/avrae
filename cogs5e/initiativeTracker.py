@@ -269,10 +269,10 @@ class MonsterCombatant(Combatant):
                     for d in ('bludgeoning', 'piercing', 'slashing'):
                         if d in e: t.remove(e)
         
-    def get_status(self):
+    def get_status(self, private:bool=False):
         csFormat = "{} {} {}{}{}"
         status = csFormat.format(self.name,
-                                 self.get_hp_and_ac(),
+                                 self.get_hp_and_ac(private),
                                  '\n> ' + self.notes if self.notes is not '' else '',
                                  ('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else '',
                                  "\n- This combatant will be automatically removed if they remain below 0 HP." if self.hp <= 0 else "")
@@ -745,7 +745,7 @@ class InitTracker:
         await self.bot.say(outStr)
         await combat.update_summary(self.bot)
         
-    @init.command(pass_context=True, name="list")
+    @init.command(pass_context=True, name="list", aliases=['summary'])
     async def listInits(self, ctx):
         """Lists the combatants.
         Usage: !init list"""
@@ -909,7 +909,7 @@ class InitTracker:
         
     @init.command(pass_context=True)
     async def status(self, ctx, combatant : str, *, args:str=''):
-        """Gets the status of a combatant.
+        """Gets the status of a combatant or group.
         Usage: !init status <NAME> <ARGS (opt)>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
@@ -917,15 +917,20 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(combatant)
+        combatant = combat.get_combatant(combatant) or combat.get_combatant_group(combatant)
         if combatant is None:
-            await self.bot.say("Combatant not found.")
+            await self.bot.say("Combatant or group not found.")
             return
         
-        if 'private' in args.lower():
-            await self.bot.send_message(combatant.author, "```markdown\n" + combatant.get_status(private=True) + "```")
+        private = 'private' in args.lower() if ctx.message.author.id == combatant.author.id else False
+        if isinstance(combatant, Combatant):
+            status = combatant.get_status(private=private)
         else:
-            await self.bot.say("```markdown\n" + combatant.get_status() + "```", delete_after=30)
+            status = "\n".join([c.get_status(private=private) for c in combatant.combatants])
+        if private:
+            await self.bot.send_message(combatant.author, "```markdown\n" + status + "```")
+        else:
+            await self.bot.say("```markdown\n" + status + "```", delete_after=30)
         
     @init.command(pass_context=True)
     async def hp(self, ctx, combatant : str, operator : str, *, hp : str = ''):

@@ -789,7 +789,8 @@ class InitTracker:
                             --ac <AC> (changes combatant AC)
                             --resist <RESISTANCE>
                             --immune <IMMUNITY>
-                            --vuln <VULNERABILITY>"""
+                            --vuln <VULNERABILITY>
+                            --group <GROUP> (changes group)"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -839,6 +840,32 @@ class InitTracker:
                     out += "\u2705 Combatant initiative set to {}.\n".format(p)
                 except:
                     out += "\u274c You must pass in a number with the -p tag.\n"
+        if 'group' in args:
+            if combatant == combat.currentCombatant:
+                out += "\u274c You cannot change a combatant's group on their own turn.\n"
+            else:
+                group = args.get('group')
+                if group.lower() == 'none':
+                    if combatant.group:
+                        currentGroup = combat.get_combatant_group(combatant.group)
+                        currentGroup.combatants.remove(combatant)
+                    combatant.group = None
+                    combat.combatants.append(combatant)
+                    combat.sortCombatants()
+                    out += "\u2705 Combatant removed from all groups.\n"
+                elif combat.get_combatant_group(group) is not None:
+                    if combatant.group:
+                        currentGroup = combat.get_combatant_group(combatant.group)
+                        currentGroup.combatants.remove(combatant)
+                    else:
+                        combat.combatants.remove(combatant)
+                    combatant.group = group
+                    group = combat.get_combatant_group(group)
+                    group.combatants.append(combatant)
+                    combat.sortCombatants()
+                    out += "\u2705 Combatant group set to {}.\n".format(group)
+                else:
+                    out += "\u274c New group not found.\n"
         if 'name' in args:
             name = args.get('name')
             if combat.get_combatant(name, True) is not None:
@@ -952,9 +979,9 @@ class InitTracker:
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True)
-    async def effect(self, ctx, combatant : str, duration : int, effect : str, *, desc : str=''):
+    async def effect(self, ctx, combatant : str, duration : int, *, effect : str):
         """Attaches a status effect to a combatant.
-        Usage: !init effect <NAME> <DURATION (rounds)> <EFFECT> <DESC (opt)>"""
+        Usage: !init effect <NAME> <DURATION (rounds)> <EFFECT>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -969,7 +996,7 @@ class InitTracker:
         if effect.lower() in (e.name.lower() for e in combatant.effects):
             return await self.bot.say("Effect already exists.", delete_after=10)
         
-        effectObj = Effect(duration=duration, name=effect, desc=desc, remaining=duration)
+        effectObj = Effect(duration=duration, name=effect, remaining=duration)
         combatant.effects.append(effectObj)
         await self.bot.say("Added effect {} to {}.".format(effect, combatant.name), delete_after=10)
         await combat.update_summary(self.bot)

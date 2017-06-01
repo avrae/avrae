@@ -2,6 +2,7 @@
 {% block title %}Avrae - {{character.get("stats", {}).get("name", "Unnamed Character")}}{% endblock %}
 {% block css %}
 <link rel="stylesheet" href="/static/character/view.css">
+<link rel="stylesheet" href="/static/bootstrap/css/animate.css">
 {% endblock %}
 {% block main %}
 <div class="container-fluid">
@@ -31,8 +32,62 @@
           <p>
             {{classLevels}}<br>
             {{character.get("hp", 0)}} Max HP, AC {{character.get("armor", 0)}}<br>
-            {{numAttacks}}
+            Proficiency Bonus: +{{character.get("stats", {}).get("proficiencyBonus", 0)}}
           </p>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="panel panel-default">
+        <div class="panel-heading" role="tab" id="headingStr">
+          <h4 class="panel-title">
+             <a role="button" data-toggle="collapse" href="#collapseStr" aria-expanded="false" aria-controls="collapseStr">
+              <div class="col-sm-4 col-md-3 col-lg-2">
+                <div class="score-container">
+                  <div class="score-progress" style="height: {{heights['strength']}}px; background: #{{colors['strength']}};"></div>
+                  <div class="score-animation" style="animation: 2s ease-out 0s 1 slideAway;"></div>
+                  <div class="score-img"><img src="/static/assets/character/str.png" class="img-responsive"></div>
+                </div>
+              </div>
+              <div class="col-sm-8 col-md-9 col-lg-10">
+                <h2 class="text-center">
+                  Strength: {{character.get("stats", {}).get("strength", 0)}} ({{"%+d"|format(character.get("stats", {}).get("strengthMod", 0))}})
+                </h2>
+              </div>
+            </a>
+          </h4>
+        </div>
+        <div id="collapseStr" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingStr">
+          <div class="panel-body">
+            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="panel panel-default">
+        <div class="panel-heading" role="tab" id="headingStr">
+          <h4 class="panel-title">
+             <a role="button" data-toggle="collapse" href="#collapseStr" aria-expanded="false" aria-controls="collapseStr">
+              <div class="col-sm-4 col-md-3 col-lg-2">
+                <div class="score-container">
+                  <div class="score-progress" style="height: {{heights['strength']}}px; background: #{{colors['strength']}};"></div>
+                  <div class="score-animation" style="animation: 2s ease-out 0s 1 slideAway;"></div>
+                  <div class="score-img"><img src="/static/assets/character/str.png" class="img-responsive"></div>
+                </div>
+              </div>
+              <div class="col-sm-8 col-md-9 col-lg-10">
+                <h2 class="text-center">
+                  Strength: {{character.get("stats", {}).get("strength", 0)}} ({{"%+d"|format(character.get("stats", {}).get("strengthMod", 0))}})
+                </h2>
+              </div>
+            </a>
+          </h4>
+        </div>
+        <div id="collapseStr" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingStr">
+          <div class="panel-body">
+            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+          </div>
         </div>
       </div>
     </div>

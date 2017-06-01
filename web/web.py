@@ -145,10 +145,22 @@ def character(cid):
     for cls, lvl in character.get('levels', {}).items():
         if not cls == "level":
             classLevels.append("{} {}".format(cls.split("Level")[0], lvl))
-            
+    
+    heights = {}
+    colors = {}
+    for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
+        heights[stat] = max(0, min(75, (int(character.get('stats', {}).get(stat, 0)) - 5) * (75/15)))
+        redness = int(max(0, min(255, (int(character.get('stats', {}).get(stat, 0)) - 5) * (255/15))))
+        red = (0xff - redness) * 0x10000
+        green = (0x00 + redness) * 0x100
+        blue = 0x00
+        colors[stat] = "{:0>6}".format(hex(red + green + blue)[2:])
+        
     return render_template('character/view.html', character=character,
                            classLevels='/'.join(classLevels) or "Level " + str(character.get('levels', {}).get('level', 0)),
                            numAttacks=str(numAttacks) + (" Attack" if numAttacks==1 else " Attacks"),
+                           heights=heights,
+                           colors=colors,
                            rawCharInfo=json.dumps(character, sort_keys=True, indent=4)) #"<h1>This page is under construction!</h1><br><br>" + str(character)
 
 # -----Web Alias Things-----

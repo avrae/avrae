@@ -269,10 +269,10 @@ class MonsterCombatant(Combatant):
                     for d in ('bludgeoning', 'piercing', 'slashing'):
                         if d in e: t.remove(e)
         
-    def get_status(self):
+    def get_status(self, private:bool=False):
         csFormat = "{} {} {}{}{}"
         status = csFormat.format(self.name,
-                                 self.get_hp_and_ac(),
+                                 self.get_hp_and_ac(private),
                                  '\n> ' + self.notes if self.notes is not '' else '',
                                  ('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else '',
                                  "\n- This combatant will be automatically removed if they remain below 0 HP." if self.hp <= 0 else "")
@@ -745,7 +745,7 @@ class InitTracker:
         await self.bot.say(outStr)
         await combat.update_summary(self.bot)
         
-    @init.command(pass_context=True, name="list")
+    @init.command(pass_context=True, name="list", aliases=['summary'])
     async def listInits(self, ctx):
         """Lists the combatants.
         Usage: !init list"""
@@ -789,7 +789,8 @@ class InitTracker:
                             --ac <AC> (changes combatant AC)
                             --resist <RESISTANCE>
                             --immune <IMMUNITY>
-                            --vuln <VULNERABILITY>"""
+                            --vuln <VULNERABILITY>
+                            --group <GROUP> (changes group)"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -839,6 +840,32 @@ class InitTracker:
                     out += "\u2705 Combatant initiative set to {}.\n".format(p)
                 except:
                     out += "\u274c You must pass in a number with the -p tag.\n"
+        if 'group' in args:
+            if combatant == combat.currentCombatant:
+                out += "\u274c You cannot change a combatant's group on their own turn.\n"
+            else:
+                group = args.get('group')
+                if group.lower() == 'none':
+                    if combatant.group:
+                        currentGroup = combat.get_combatant_group(combatant.group)
+                        currentGroup.combatants.remove(combatant)
+                    combatant.group = None
+                    combat.combatants.append(combatant)
+                    combat.sortCombatants()
+                    out += "\u2705 Combatant removed from all groups.\n"
+                elif combat.get_combatant_group(group) is not None:
+                    if combatant.group:
+                        currentGroup = combat.get_combatant_group(combatant.group)
+                        currentGroup.combatants.remove(combatant)
+                    else:
+                        combat.combatants.remove(combatant)
+                    combatant.group = group
+                    group = combat.get_combatant_group(group)
+                    group.combatants.append(combatant)
+                    combat.sortCombatants()
+                    out += "\u2705 Combatant group set to {}.\n".format(group)
+                else:
+                    out += "\u274c New group not found.\n"
         if 'name' in args:
             name = args.get('name')
             if combat.get_combatant(name, True) is not None:
@@ -882,7 +909,7 @@ class InitTracker:
         
     @init.command(pass_context=True)
     async def status(self, ctx, combatant : str, *, args:str=''):
-        """Gets the status of a combatant.
+        """Gets the status of a combatant or group.
         Usage: !init status <NAME> <ARGS (opt)>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
@@ -890,15 +917,20 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(combatant)
+        combatant = combat.get_combatant(combatant) or combat.get_combatant_group(combatant)
         if combatant is None:
-            await self.bot.say("Combatant not found.")
+            await self.bot.say("Combatant or group not found.")
             return
         
-        if 'private' in args.lower():
-            await self.bot.send_message(combatant.author, "```markdown\n" + combatant.get_status(private=True) + "```")
+        private = 'private' in args.lower() if ctx.message.author.id == combatant.author.id else False
+        if isinstance(combatant, Combatant):
+            status = combatant.get_status(private=private)
         else:
-            await self.bot.say("```markdown\n" + combatant.get_status() + "```", delete_after=30)
+            status = "\n".join([c.get_status(private=private) for c in combatant.combatants])
+        if private:
+            await self.bot.send_message(combatant.author, "```markdown\n" + status + "```")
+        else:
+            await self.bot.say("```markdown\n" + status + "```", delete_after=30)
         
     @init.command(pass_context=True)
     async def hp(self, ctx, combatant : str, operator : str, *, hp : str = ''):
@@ -952,9 +984,9 @@ class InitTracker:
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True)
-    async def effect(self, ctx, combatant : str, duration : int, effect : str, *, desc : str=''):
+    async def effect(self, ctx, combatant : str, duration : int, *, effect : str):
         """Attaches a status effect to a combatant.
-        Usage: !init effect <NAME> <DURATION (rounds)> <EFFECT> <DESC (opt)>"""
+        Usage: !init effect <NAME> <DURATION (rounds)> <EFFECT>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -969,7 +1001,7 @@ class InitTracker:
         if effect.lower() in (e.name.lower() for e in combatant.effects):
             return await self.bot.say("Effect already exists.", delete_after=10)
         
-        effectObj = Effect(duration=duration, name=effect, desc=desc, remaining=duration)
+        effectObj = Effect(duration=duration, name=effect, remaining=duration)
         combatant.effects.append(effectObj)
         await self.bot.say("Added effect {} to {}.".format(effect, combatant.name), delete_after=10)
         await combat.update_summary(self.bot)

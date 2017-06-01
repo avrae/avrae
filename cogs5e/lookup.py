@@ -16,9 +16,9 @@ from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchCondition, searchMonster, searchSpell, \
-    searchItem, searchRule
+    searchItem, searchRule, searchFeat
 from utils import checks
-from utils.functions import discord_trim, print_table, list_get, get_positivity,\
+from utils.functions import discord_trim, print_table, list_get, get_positivity, \
     fuzzywuzzy_search, fuzzywuzzy_search_all
 
 
@@ -91,6 +91,40 @@ class Lookup:
         conHeader = '-' * len(conName)
         conDesc = result['desc']
         out = "```markdown\n{0}\n{1}\n{2}```".format(conName, conHeader, conDesc)
+
+        # do stuff here
+        for r in discord_trim(out):
+            if pm:
+                await self.bot.send_message(ctx.message.author, r)
+            else:
+                await self.bot.say(r)
+                
+    @commands.command(pass_context=True)
+    async def feat(self, ctx, *, name : str):
+        """Looks up a feat."""
+        try:
+            guild_id = ctx.message.server.id 
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)    
+        except:
+            pm = False
+        
+        result = searchFeat(name, search=fuzzywuzzy_search_all)
+        if result is None:
+            return await self.bot.say('Feat not found.')
+        
+        top = result[0]
+        top_score = top[1]
+        top_key = top[0]
+        if top_score < 60:
+            results = "Feat not found! Did you mean:\n"
+            results += '\n'.join("{0} ({1}% match)".format(a[0], a[1]) for a in result)
+            return await self.bot.say(results)
+        else:
+            result = searchFeat(top_key)
+        
+        result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None and not t.startswith('Source:'))
+        result['prerequisite'] = result.get('prerequisite') or "None"
+        out = "**{name}**\n**Source**: {source}\n*Prerequisite: {prerequisite}*\n\n{text}".format(**result)
 
         # do stuff here
         for r in discord_trim(out):

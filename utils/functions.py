@@ -149,21 +149,14 @@ def parse_args_2(args):
 def parse_args_3(args):
     out = {}
     index = 0
-    cFlag = False
     for a in args:
-        if cFlag:
-            cFlag = False
-            continue
         if a.startswith('-'):
             if out.get(a.replace('-', '')) is None: out[a.replace('-', '')] = [list_get(index + 1, '0', args)]
             else: out[a.replace('-', '')].append(list_get(index + 1, 'MISSING_ARGUMENT', args))
         else:
             if out.get(a) is None: out[a] = ["True"]
             else: out[a].append("True")
-            index += 1
-            continue
-        index += 2
-        cFlag = True
+        index += 1
     return out
 
 def a_or_an(string):

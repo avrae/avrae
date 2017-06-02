@@ -267,11 +267,14 @@ def searchSpell(spellname, serv_id='', return_spell=False, search=fuzzywuzzy_sea
         if (level == "1"): return level + "st level"
         return level + "th level"
     
-    spell['level'] = parsespelllevel(spell['level'])
-    spell['school'] = parseschool(spell['school'])
+    spell['school'] = parseschool(spell.get('school'))
     spell['ritual'] = spell.get('ritual', 'no').lower()
     
-    spellDesc.append("{name}, {level} {school}. ({classes})\n**Casting Time:** {time}\n**Range:** {range}\n**Components:** {components}\n**Duration:** {duration}\n**Ritual:** {ritual}".format(**spell))    
+    if spell.get("source") == "UAMystic":
+        spellDesc.append("{name}, {level} Mystic Talent. ({classes})\n".format(**spell))
+    else:
+        spell['level'] = parsespelllevel(spell['level'])
+        spellDesc.append("{name}, {level} {school}. ({classes})\n**Casting Time:** {time}\n**Range:** {range}\n**Components:** {components}\n**Duration:** {duration}\n**Ritual:** {ritual}".format(**spell))    
     
     if isinstance(spell['text'], list):
         for a in spell["text"]:

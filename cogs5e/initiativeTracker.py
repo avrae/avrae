@@ -1218,7 +1218,8 @@ class InitTracker:
                 if target.ac is not None: args['ac'] = target.ac
                 args['t'] = target.name
                 result = sheet_attack(a, args)
-                if target.ac is not None: target.hp -= result['total_damage']
+                if target.ac is not None:
+                    if target.hp is not None: target.hp -= result['total_damage']
                 
                 if isinstance(current, DicecloudCombatant):
                     result['embed'].colour = random.randint(0, 0xffffff) if current.sheet.get('settings', {}).get('color') is None else current.sheet.get('settings', {}).get('color')
@@ -1227,8 +1228,9 @@ class InitTracker:
                 else:
                     return await self.bot.say('Integrated attacks are only supported for combatants added via `madd` or `dcadd`.', delete_after=15)
                 embed = result['embed']
-                if target.ac is not None: 
-                    embed.set_footer(text="{}: {}".format(target.name, target.get_hp()))
+                if target.ac is not None:
+                    if target.hp is not None: embed.set_footer(text="{}: {}".format(target.name, target.get_hp()))
+                    else: embed.set_footer(text="Target HP not set.")
                 else: embed.set_footer(text="Target AC not set.")
                 killed = ""
                 if target.hp is not None:

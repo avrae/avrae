@@ -42,14 +42,14 @@
         <div class="panel-heading" role="tab" id="headingStr">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseStr" aria-expanded="false" aria-controls="collapseStr">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['strength']}}px; background: hsl({{colors['strength']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 0s;"></div>
                   <div class="score-img"><img src="/static/assets/character/str.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Strength: {{character.get("stats", {}).get("strength", 0)}} ({{"%+d"|format(character.get("stats", {}).get("strengthMod", 0))}})
                 </h2>
@@ -59,7 +59,25 @@
         </div>
         <div id="collapseStr" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingStr">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Strength measures bodily power and athletic training.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("strengthSave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Athletics</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("athletics", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -69,14 +87,14 @@
         <div class="panel-heading" role="tab" id="headingDex">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseDex" aria-expanded="false" aria-controls="collapseDex">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['dexterity']}}px; background: hsl({{colors['dexterity']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 0.5s;"></div>
                   <div class="score-img"><img src="/static/assets/character/dex.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Dexterity: {{character.get("stats", {}).get("dexterity", 0)}} ({{"%+d"|format(character.get("stats", {}).get("dexterityMod", 0))}})
                 </h2>
@@ -86,7 +104,33 @@
         </div>
         <div id="collapseDex" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingDex">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Dexterity measures agility, reflexes, and balance.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("dexteritySave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Acrobatics</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("acrobatics", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Sleight of Hand</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("sleightOfHand", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Stealth</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("stealth", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -96,14 +140,14 @@
         <div class="panel-heading" role="tab" id="headingCon">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseCon" aria-expanded="false" aria-controls="collapseCon">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['constitution']}}px; background: hsl({{colors['constitution']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 1s;"></div>
                   <div class="score-img"><img src="/static/assets/character/con.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Constitution: {{character.get("stats", {}).get("constitution", 0)}} ({{"%+d"|format(character.get("stats", {}).get("constitutionMod", 0))}})
                 </h2>
@@ -113,7 +157,21 @@
         </div>
         <div id="collapseCon" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingCon">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Constitution measures health, stamina, and vital force.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("constitutionSave", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -123,14 +181,14 @@
         <div class="panel-heading" role="tab" id="headingInt">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseInt" aria-expanded="false" aria-controls="collapseInt">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['intelligence']}}px; background: hsl({{colors['intelligence']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 1.5s;"></div>
                   <div class="score-img"><img src="/static/assets/character/int.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Intelligence: {{character.get("stats", {}).get("intelligence", 0)}} ({{"%+d"|format(character.get("stats", {}).get("intelligenceMod", 0))}})
                 </h2>
@@ -140,7 +198,41 @@
         </div>
         <div id="collapseInt" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingInt">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Intelligence measures mental acuity, accuracy of recall, and the ability to reason.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("intelligenceSave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Arcana</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("arcana", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>History</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("history", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Investigation</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("investigation", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Nature</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("nature", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Religion</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("religion", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -150,14 +242,14 @@
         <div class="panel-heading" role="tab" id="headingWis">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseWis" aria-expanded="false" aria-controls="collapseWis">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['wisdom']}}px; background: hsl({{colors['wisdom']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 2s;"></div>
                   <div class="score-img"><img src="/static/assets/character/wis.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Wisdom: {{character.get("stats", {}).get("wisdom", 0)}} ({{"%+d"|format(character.get("stats", {}).get("wisdomMod", 0))}})
                 </h2>
@@ -167,7 +259,41 @@
         </div>
         <div id="collapseWis" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingWis">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Wisdom measures perceptiveness, intuition, and attunement with the surrounding world.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("wisdomSave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Animal Handling</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("animalHandling", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Insight</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("insight", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Medicine</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("medicine", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Perception</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("perception", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Survival</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("survival", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -177,14 +303,14 @@
         <div class="panel-heading" role="tab" id="headingCha">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseCha" aria-expanded="false" aria-controls="collapseCha">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['charisma']}}px; background: hsl({{colors['charisma']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 2.5s;"></div>
                   <div class="score-img"><img src="/static/assets/character/cha.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Charisma: {{character.get("stats", {}).get("charisma", 0)}} ({{"%+d"|format(character.get("stats", {}).get("charismaMod", 0))}})
                 </h2>
@@ -194,7 +320,37 @@
         </div>
         <div id="collapseCha" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingCha">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Charisma measures force of personality, persuasiveness, personal magnetism, social influence, and physical attractiveness.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("charismaSave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Deception</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("deception", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Intimidation</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("intimidation", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Performance</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("performance", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Persuasion</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("persuasion", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

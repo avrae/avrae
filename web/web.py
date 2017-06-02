@@ -150,11 +150,8 @@ def character(cid):
     colors = {}
     for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
         heights[stat] = max(0, min(75, (int(character.get('stats', {}).get(stat, 0)) - 5) * (75/15)))
-        redness = int(max(0, min(255, (int(character.get('stats', {}).get(stat, 0)) - 5) * (255/15))))
-        red = (0xff - redness) * 0x10000
-        green = (0x00 + redness) * 0x100
-        blue = 0x00
-        colors[stat] = "{:0>6}".format(hex(red + green + blue)[2:])
+        hue = int(max(0, min(120, (int(character.get('stats', {}).get(stat, 0)) - 5) * (120/15))))
+        colors[stat] = hue
         
     return render_template('character/view.html', character=character,
                            classLevels='/'.join(classLevels) or "Level " + str(character.get('levels', {}).get('level', 0)),

@@ -44,8 +44,8 @@
              <a role="button" data-toggle="collapse" href="#collapseStr" aria-expanded="false" aria-controls="collapseStr">
               <div class="col-sm-4 col-md-3 col-lg-2">
                 <div class="score-container">
-                  <div class="score-progress" style="height: {{heights['strength']}}px; background: #{{colors['strength']}};"></div>
-                  <div class="score-animation" style="animation: 2s ease-out 0s 1 slideAway;"></div>
+                  <div class="score-progress" style="height: {{heights['strength']}}px; background: hsl({{colors['strength']}}, 100%, 50%);"></div>
+                  <div class="score-animation" style="animation-delay: 0s;"></div>
                   <div class="score-img"><img src="/static/assets/character/str.png" class="img-responsive"></div>
                 </div>
               </div>
@@ -66,25 +66,133 @@
     </div>
     <div class="row">
       <div class="panel panel-default">
-        <div class="panel-heading" role="tab" id="headingStr">
+        <div class="panel-heading" role="tab" id="headingDex">
           <h4 class="panel-title">
-             <a role="button" data-toggle="collapse" href="#collapseStr" aria-expanded="false" aria-controls="collapseStr">
+             <a role="button" data-toggle="collapse" href="#collapseDex" aria-expanded="false" aria-controls="collapseDex">
               <div class="col-sm-4 col-md-3 col-lg-2">
                 <div class="score-container">
-                  <div class="score-progress" style="height: {{heights['strength']}}px; background: #{{colors['strength']}};"></div>
-                  <div class="score-animation" style="animation: 2s ease-out 0s 1 slideAway;"></div>
-                  <div class="score-img"><img src="/static/assets/character/str.png" class="img-responsive"></div>
+                  <div class="score-progress" style="height: {{heights['dexterity']}}px; background: hsl({{colors['dexterity']}}, 100%, 50%);"></div>
+                  <div class="score-animation" style="animation-delay: 0.5s;"></div>
+                  <div class="score-img"><img src="/static/assets/character/dex.png" class="img-responsive"></div>
                 </div>
               </div>
               <div class="col-sm-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
-                  Strength: {{character.get("stats", {}).get("strength", 0)}} ({{"%+d"|format(character.get("stats", {}).get("strengthMod", 0))}})
+                  Dexterity: {{character.get("stats", {}).get("dexterity", 0)}} ({{"%+d"|format(character.get("stats", {}).get("dexterityMod", 0))}})
                 </h2>
               </div>
             </a>
           </h4>
         </div>
-        <div id="collapseStr" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingStr">
+        <div id="collapseDex" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingDex">
+          <div class="panel-body">
+            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="panel panel-default">
+        <div class="panel-heading" role="tab" id="headingCon">
+          <h4 class="panel-title">
+             <a role="button" data-toggle="collapse" href="#collapseCon" aria-expanded="false" aria-controls="collapseCon">
+              <div class="col-sm-4 col-md-3 col-lg-2">
+                <div class="score-container">
+                  <div class="score-progress" style="height: {{heights['constitution']}}px; background: hsl({{colors['constitution']}}, 100%, 50%);"></div>
+                  <div class="score-animation" style="animation-delay: 1s;"></div>
+                  <div class="score-img"><img src="/static/assets/character/con.png" class="img-responsive"></div>
+                </div>
+              </div>
+              <div class="col-sm-8 col-md-9 col-lg-10">
+                <h2 class="text-center">
+                  Constitution: {{character.get("stats", {}).get("constitution", 0)}} ({{"%+d"|format(character.get("stats", {}).get("constitutionMod", 0))}})
+                </h2>
+              </div>
+            </a>
+          </h4>
+        </div>
+        <div id="collapseCon" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingCon">
+          <div class="panel-body">
+            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="panel panel-default">
+        <div class="panel-heading" role="tab" id="headingInt">
+          <h4 class="panel-title">
+             <a role="button" data-toggle="collapse" href="#collapseInt" aria-expanded="false" aria-controls="collapseInt">
+              <div class="col-sm-4 col-md-3 col-lg-2">
+                <div class="score-container">
+                  <div class="score-progress" style="height: {{heights['intelligence']}}px; background: hsl({{colors['intelligence']}}, 100%, 50%);"></div>
+                  <div class="score-animation" style="animation-delay: 1.5s;"></div>
+                  <div class="score-img"><img src="/static/assets/character/int.png" class="img-responsive"></div>
+                </div>
+              </div>
+              <div class="col-sm-8 col-md-9 col-lg-10">
+                <h2 class="text-center">
+                  Intelligence: {{character.get("stats", {}).get("intelligence", 0)}} ({{"%+d"|format(character.get("stats", {}).get("intelligenceMod", 0))}})
+                </h2>
+              </div>
+            </a>
+          </h4>
+        </div>
+        <div id="collapseInt" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingInt">
+          <div class="panel-body">
+            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="panel panel-default">
+        <div class="panel-heading" role="tab" id="headingWis">
+          <h4 class="panel-title">
+             <a role="button" data-toggle="collapse" href="#collapseWis" aria-expanded="false" aria-controls="collapseWis">
+              <div class="col-sm-4 col-md-3 col-lg-2">
+                <div class="score-container">
+                  <div class="score-progress" style="height: {{heights['wisdom']}}px; background: hsl({{colors['wisdom']}}, 100%, 50%);"></div>
+                  <div class="score-animation" style="animation-delay: 2s;"></div>
+                  <div class="score-img"><img src="/static/assets/character/wis.png" class="img-responsive"></div>
+                </div>
+              </div>
+              <div class="col-sm-8 col-md-9 col-lg-10">
+                <h2 class="text-center">
+                  Wisdom: {{character.get("stats", {}).get("wisdom", 0)}} ({{"%+d"|format(character.get("stats", {}).get("wisdomMod", 0))}})
+                </h2>
+              </div>
+            </a>
+          </h4>
+        </div>
+        <div id="collapseWis" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingWis">
+          <div class="panel-body">
+            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="panel panel-default">
+        <div class="panel-heading" role="tab" id="headingCha">
+          <h4 class="panel-title">
+             <a role="button" data-toggle="collapse" href="#collapseCha" aria-expanded="false" aria-controls="collapseCha">
+              <div class="col-sm-4 col-md-3 col-lg-2">
+                <div class="score-container">
+                  <div class="score-progress" style="height: {{heights['charisma']}}px; background: hsl({{colors['charisma']}}, 100%, 50%);"></div>
+                  <div class="score-animation" style="animation-delay: 2.5s;"></div>
+                  <div class="score-img"><img src="/static/assets/character/cha.png" class="img-responsive"></div>
+                </div>
+              </div>
+              <div class="col-sm-8 col-md-9 col-lg-10">
+                <h2 class="text-center">
+                  Charisma: {{character.get("stats", {}).get("charisma", 0)}} ({{"%+d"|format(character.get("stats", {}).get("charismaMod", 0))}})
+                </h2>
+              </div>
+            </a>
+          </h4>
+        </div>
+        <div id="collapseCha" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingCha">
           <div class="panel-body">
             Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
           </div>

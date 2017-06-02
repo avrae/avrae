@@ -160,6 +160,17 @@ body {
 
 .score-animation {
   z-index: -1;
+  height: 100%;
+  animation-duration: 2s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  animation-iteration-count: 1;
+  animation-name: slideAway;
+  -webkit-animation-duration: 2s;
+  -webkit-animation-timing-function: ease-out;
+  -webkit-animation-fill-mode: forwards;
+  -webkit-animation-iteration-count: 1;
+  -webkit-animation-name: slideAway;
   position: absolute;
   overflow: hidden;
   width: 100%;

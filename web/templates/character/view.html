@@ -42,14 +42,14 @@
         <div class="panel-heading" role="tab" id="headingStr">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseStr" aria-expanded="false" aria-controls="collapseStr">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['strength']}}px; background: hsl({{colors['strength']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 0s;"></div>
                   <div class="score-img"><img src="/static/assets/character/str.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Strength: {{character.get("stats", {}).get("strength", 0)}} ({{"%+d"|format(character.get("stats", {}).get("strengthMod", 0))}})
                 </h2>
@@ -87,14 +87,14 @@
         <div class="panel-heading" role="tab" id="headingDex">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseDex" aria-expanded="false" aria-controls="collapseDex">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['dexterity']}}px; background: hsl({{colors['dexterity']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 0.5s;"></div>
                   <div class="score-img"><img src="/static/assets/character/dex.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Dexterity: {{character.get("stats", {}).get("dexterity", 0)}} ({{"%+d"|format(character.get("stats", {}).get("dexterityMod", 0))}})
                 </h2>
@@ -140,14 +140,14 @@
         <div class="panel-heading" role="tab" id="headingCon">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseCon" aria-expanded="false" aria-controls="collapseCon">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['constitution']}}px; background: hsl({{colors['constitution']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 1s;"></div>
                   <div class="score-img"><img src="/static/assets/character/con.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Constitution: {{character.get("stats", {}).get("constitution", 0)}} ({{"%+d"|format(character.get("stats", {}).get("constitutionMod", 0))}})
                 </h2>
@@ -181,14 +181,14 @@
         <div class="panel-heading" role="tab" id="headingInt">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseInt" aria-expanded="false" aria-controls="collapseInt">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['intelligence']}}px; background: hsl({{colors['intelligence']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 1.5s;"></div>
                   <div class="score-img"><img src="/static/assets/character/int.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Intelligence: {{character.get("stats", {}).get("intelligence", 0)}} ({{"%+d"|format(character.get("stats", {}).get("intelligenceMod", 0))}})
                 </h2>
@@ -242,14 +242,14 @@
         <div class="panel-heading" role="tab" id="headingWis">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseWis" aria-expanded="false" aria-controls="collapseWis">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['wisdom']}}px; background: hsl({{colors['wisdom']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 2s;"></div>
                   <div class="score-img"><img src="/static/assets/character/wis.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Wisdom: {{character.get("stats", {}).get("wisdom", 0)}} ({{"%+d"|format(character.get("stats", {}).get("wisdomMod", 0))}})
                 </h2>
@@ -303,14 +303,14 @@
         <div class="panel-heading" role="tab" id="headingCha">
           <h4 class="panel-title">
              <a role="button" data-toggle="collapse" href="#collapseCha" aria-expanded="false" aria-controls="collapseCha">
-              <div class="col-sm-4 col-md-3 col-lg-2">
+              <div class="col-xs-4 col-md-3 col-lg-2">
                 <div class="score-container">
                   <div class="score-progress" style="height: {{heights['charisma']}}px; background: hsl({{colors['charisma']}}, 100%, 50%);"></div>
                   <div class="score-animation" style="animation-delay: 2.5s;"></div>
                   <div class="score-img"><img src="/static/assets/character/cha.png" class="img-responsive"></div>
                 </div>
               </div>
-              <div class="col-sm-8 col-md-9 col-lg-10">
+              <div class="col-xs-8 col-md-9 col-lg-10">
                 <h2 class="text-center">
                   Charisma: {{character.get("stats", {}).get("charisma", 0)}} ({{"%+d"|format(character.get("stats", {}).get("charismaMod", 0))}})
                 </h2>

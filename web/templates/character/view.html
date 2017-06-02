@@ -59,7 +59,25 @@
         </div>
         <div id="collapseStr" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingStr">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Strength measures bodily power and athletic training.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("strengthSave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Athletics</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("athletics", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -86,7 +104,33 @@
         </div>
         <div id="collapseDex" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingDex">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Dexterity measures agility, reflexes, and balance.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("dexteritySave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Acrobatics</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("acrobatics", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Sleight of Hand</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("sleightOfHand", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Stealth</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("stealth", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -113,7 +157,21 @@
         </div>
         <div id="collapseCon" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingCon">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Constitution measures health, stamina, and vital force.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("constitutionSave", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -140,7 +198,41 @@
         </div>
         <div id="collapseInt" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingInt">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Intelligence measures mental acuity, accuracy of recall, and the ability to reason.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("intelligenceSave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Arcana</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("arcana", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>History</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("history", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Investigation</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("investigation", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Nature</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("nature", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Religion</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("religion", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -167,7 +259,41 @@
         </div>
         <div id="collapseWis" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingWis">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Wisdom measures perceptiveness, intuition, and attunement with the surrounding world.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("wisdomSave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Animal Handling</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("animalHandling", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Insight</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("insight", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Medicine</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("medicine", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Perception</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("perception", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Survival</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("survival", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -194,7 +320,37 @@
         </div>
         <div id="collapseCha" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingCha">
           <div class="panel-body">
-            Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
+            <table class="table table-hover">
+              <caption><em>Charisma measures force of personality, persuasiveness, personal magnetism, social influence, and physical attractiveness.</em></caption>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Score</th>
+                </tr> 
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Save</td>
+                  <td>{{"%+d"|format(character.get("saves", {}).get("charismaSave", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Deception</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("deception", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Intimidation</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("intimidation", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Performance</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("performance", 0))}}</td>
+                </tr>
+                <tr>
+                  <td>Persuasion</td>
+                  <td>{{"%+d"|format(character.get("skills", {}).get("persuasion", 0))}}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

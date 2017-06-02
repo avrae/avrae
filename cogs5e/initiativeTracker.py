@@ -775,7 +775,10 @@ class InitTracker:
             return
         
         combatant.notes = note
-        await self.bot.say("Added note.", delete_after=10)
+        if note == '':
+            await self.bot.say("Removed note.", delete_after=10)
+        else:
+            await self.bot.say("Added note.", delete_after=10)
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True, aliases=['opts'])
@@ -1332,7 +1335,7 @@ class InitTracker:
         for combat in self.combats:
             combat.combatantGenerator = None
             path = '{}.avrae'.format(combat.channel.id)
-            self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
+            self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
             print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
             temp_key.append(combat.channel.id)
         self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 120) # timeout in 2 minutes
@@ -1383,7 +1386,7 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         path = '{}.avrae'.format(ctx.message.channel.id)
-        self.bot.db.set(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'))
+        self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
         await self.bot.say("Combat saved.")
         
     @init.command(pass_context=True, hidden=True)

@@ -5,16 +5,18 @@ Created on Sep 23, 2016
 '''
 import asyncio
 import os
+import re
 import sys
 import traceback
 
 import discord
 from discord.channel import PrivateChannel
 from discord.enums import ChannelType
+from discord.errors import NotFound
 from discord.ext import commands
 
 from utils import checks
-from discord.errors import NotFound
+
 
 class AdminUtils:
     '''
@@ -118,6 +120,19 @@ class AdminUtils:
         serv = self.bot.get_server(servID)
         await self.bot.leave_server(serv)
         await self.bot.say("Left {}.".format(serv))
+        
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def clean_combat_keys(self):
+        keys = self.bot.db._db.keys("*")
+        keys = [k.decode() for k in keys]
+        combat_keys = [k for k in keys if re.match(r'\d{18}\.avrae', k)]
+        deleted = 0
+        for k in combat_keys:
+            self.bot.db.delete(k)
+            print("deleted", k)
+            deleted += 1
+        await self.bot.say("Done! Deleted {} keys".format(deleted))
         
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()

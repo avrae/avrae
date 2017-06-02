@@ -130,6 +130,7 @@ class AdminUtils:
         deleted = 0
         for k in combat_keys:
             self.bot.db.delete(k)
+            print("deleted", k)
             deleted += 1
         await self.bot.say("Done! Deleted {} keys".format(deleted))
         

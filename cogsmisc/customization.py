@@ -147,7 +147,7 @@ class Customization:
             await self.bot.say('Alias {} removed.'.format(commands))
         else:
             user_aliases[alias_name] = commands
-            await self.bot.say('Alias {} added for command:\n`{}`'.format(alias_name, commands))
+            await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, commands))
         
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)

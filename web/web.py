@@ -7,8 +7,9 @@ Created on May 16, 2017
 import json
 import os
 
-from flask import Flask, g, session, redirect, request, url_for, jsonify
+from flask import Flask, session, redirect, request, url_for, jsonify
 from flask.templating import render_template
+import markdown2
 from requests_oauthlib.oauth2_session import OAuth2Session
 
 import credentials
@@ -158,6 +159,7 @@ def character(cid):
                            numAttacks=str(numAttacks) + (" Attack" if numAttacks==1 else " Attacks"),
                            heights=heights,
                            colors=colors,
+                           renderedCharDesc=markdown2.markdown(character.get("stats", {}).get("description", "No description available.")),
                            rawCharInfo=json.dumps(character, sort_keys=True, indent=4)) #"<h1>This page is under construction!</h1><br><br>" + str(character)
 
 # -----Web Alias Things-----

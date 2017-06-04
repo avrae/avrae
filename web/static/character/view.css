@@ -104,6 +104,49 @@ body {
   text-align: center;
 }
 
+/* Attack stuff */
+
+.attack-heading {
+  height: 46px;
+}
+
+.attack-name {
+  margin-top: 3px;
+}
+
+.attack-to-hit {
+  margin: 0px;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0%;
+    }
+    100% {
+        opacity: 100%;
+    }
+}
+
+.attack-panel {
+  opacity: 0;
+  animation-duration: 1s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  animation-iteration-count: 1;
+  animation-name: fadeIn;
+  -webkit-animation-duration: 1s;
+  -webkit-animation-timing-function: ease-out;
+  -webkit-animation-fill-mode: forwards;
+  -webkit-animation-iteration-count: 1;
+  -webkit-animation-name: fadeIn;
+}
+
+/* Score stuff */
+
+.panel-title {
+  height: 75px;
+}
+
 .score-container {
   z-index: 1;
   width: 75px;
@@ -115,10 +158,6 @@ body {
   position: relative;
   top: 0;
   left: 0;
-}
-
-.panel-title {
-  height: 75px;
 }
 
 .score-img {

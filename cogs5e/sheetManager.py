@@ -16,6 +16,7 @@ import traceback
 
 import discord
 from discord.ext import commands
+from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 from gspread.utils import extract_id_from_url
 import numexpr
 
@@ -26,7 +27,7 @@ from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import list_get, embed_trim, get_positivity, a_or_an
-from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
+from utils.loggers import TextLogger
 
 
 class SheetManager:
@@ -38,6 +39,7 @@ class SheetManager:
         self.snippets = self.bot.db.not_json_get('damage_snippets', {})
         self.cvars = self.bot.db.not_json_get('char_vars', {})
         self.bot.loop.create_task(self.backup_user_data())
+        self.logger = TextLogger('dicecloud.txt')
         
     async def backup_user_data(self):
         try:
@@ -453,6 +455,7 @@ class SheetManager:
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(url)
             loading = await self.bot.say('Updating character data from Dicecloud...')
+            self.logger.text_log(ctx, "s.{} Dicecloud Request ({}): ".format(getattr(self.bot, 'shard_id', 0), url))
         elif sheet_type == 'pdf':
             if not 0 < len(ctx.message.attachments) < 2:
                 return await self.bot.say('You must call this command in the same message you upload a PDF sheet.')
@@ -704,6 +707,8 @@ class SheetManager:
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings."""
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
+        
+        self.logger.text_log(ctx, "s.{} Dicecloud Request ({}): ".format(getattr(self.bot, 'shard_id', 0), url))
         
         loading = await self.bot.say('Loading character data from Dicecloud...')
         parser = DicecloudParser(url)

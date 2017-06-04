@@ -30,6 +30,7 @@ class AdminUtils:
         self.assume_dir_control_chan = None
         self.assume_dir_control_controller = None
         self.blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
+        self.bot.loop.create_task(self.send_logs())
     
     
     @commands.command(hidden=True)
@@ -242,4 +243,17 @@ class AdminUtils:
             result.append(str[lastLen:trimLen])
             lastLen += 1999
         return result
+    
+    async def send_logs(self):
+        try:
+            await self.bot.wait_until_ready()
+            chan = self.bot.get_channel('298542945479557120')
+            if chan is None: return
+            while not self.bot.is_closed:
+                await asyncio.sleep(3600)  # every hour
+                await self.bot.send_file(chan, 'dicecloud.txt')
+        except FileNotFoundError:
+            pass
+        except asyncio.CancelledError:
+            pass
     

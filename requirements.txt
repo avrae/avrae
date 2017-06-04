@@ -17,6 +17,7 @@ itsdangerous==0.24
 Jinja2==2.9.4
 jsonschema==2.6.0
 jupyter-core==4.3.0
+markdown2==2.3.4
 MarkupSafe==0.23
 meteor-ejson==1.1.0
 multidict==2.1.4

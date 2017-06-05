@@ -76,7 +76,7 @@ class Combat(object):
     def checkGroups(self):
         for c in self.combatants:
             if isinstance(c, CombatantGroup):
-                if len(c.combatants) is 0:
+                if len(c.combatants) == 0:
                     self.combatants.remove(c)
     
     def getSummary(self):
@@ -854,6 +854,7 @@ class InitTracker:
                         currentGroup.combatants.remove(combatant)
                     combatant.group = None
                     combat.combatants.append(combatant)
+                    combat.checkGroups()
                     combat.sortCombatants()
                     out += "\u2705 Combatant removed from all groups.\n"
                 elif combat.get_combatant_group(group) is not None:
@@ -862,9 +863,10 @@ class InitTracker:
                         currentGroup.combatants.remove(combatant)
                     else:
                         combat.combatants.remove(combatant)
-                    combatant.group = group
                     group = combat.get_combatant_group(group)
+                    combatant.group = group.name
                     group.combatants.append(combatant)
+                    combat.checkGroups()
                     combat.sortCombatants()
                     out += "\u2705 Combatant group set to {}.\n".format(group)
                 else:
@@ -1274,13 +1276,13 @@ class InitTracker:
             combat.combatants.remove(combatant)
         else:
             group = combat.get_combatant_group(combatant.group)
-            if len(group.combatants) <= 1:
+            if len(group.combatants) <= 1 and group == combat.currentCombatant:
                 return await self.bot.say("You cannot remove a combatant if they are the only remaining combatant in this turn.")
             group.combatants.remove(combatant)
         await self.bot.say("{} removed from combat.".format(combatant.name), delete_after=10)
         await combat.update_summary(self.bot)
-        combat.sortCombatants()
         combat.checkGroups()
+        combat.sortCombatants()
         
     @init.command(pass_context=True)
     async def end(self, ctx):

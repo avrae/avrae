@@ -808,7 +808,7 @@ class InitTracker:
         private = combatant.private
         controller = combatant.author
         args = shlex.split(args)
-        args = parse_args(args)
+        args = parse_args_2(args)
         out = ''
         
         if args.get('h'):
@@ -882,28 +882,31 @@ class InitTracker:
                 out += "\u274c You must pass in a name with the -name tag.\n"
         if 'resist' in args:
             resist = args.get('resist')
-            if resist in combatant.resist:
-                combatant.resist.remove(resist)
-                out += "\u2705 {} removed from combatant resistances.\n".format(resist)
-            else:
-                combatant.resist.append(resist)
-                out += "\u2705 {} added to combatant resistances.\n".format(resist)
+            for resist in resist.split('|'):
+                if resist in combatant.resist:
+                    combatant.resist.remove(resist)
+                    out += "\u2705 {} removed from combatant resistances.\n".format(resist)
+                else:
+                    combatant.resist.append(resist)
+                    out += "\u2705 {} added to combatant resistances.\n".format(resist)
         if 'immune' in args:
             immune = args.get('immune')
-            if immune in combatant.immune:
-                combatant.immune.remove(immune)
-                out += "\u2705 {} removed from combatant immunities.\n".format(immune)
-            else:
-                combatant.immune.append(immune)
-                out += "\u2705 {} added to combatant immunities.\n".format(immune)
+            for immune in immune.split('|'):
+                if immune in combatant.immune:
+                    combatant.immune.remove(immune)
+                    out += "\u2705 {} removed from combatant immunities.\n".format(immune)
+                else:
+                    combatant.immune.append(immune)
+                    out += "\u2705 {} added to combatant immunities.\n".format(immune)
         if 'vuln' in args:
             vuln = args.get('vuln')
-            if vuln in combatant.vuln:
-                combatant.vuln.remove(vuln)
-                out += "\u2705 {} removed from combatant vulnerabilities.\n".format(vuln)
-            else:
-                combatant.vuln.append(vuln)
-                out += "\u2705 {} added to combatant vulnerabilities.\n".format(vuln)
+            for vuln in vuln.split('|'):
+                if vuln in combatant.vuln:
+                    combatant.vuln.remove(vuln)
+                    out += "\u2705 {} removed from combatant vulnerabilities.\n".format(vuln)
+                else:
+                    combatant.vuln.append(vuln)
+                    out += "\u2705 {} added to combatant vulnerabilities.\n".format(vuln)
         
         if combatant.private:
             await self.bot.send_message(combatant.author, "{}'s options updated.\n".format(combatant.name) + out)

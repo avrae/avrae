@@ -114,24 +114,41 @@ def sheet_attack(attack, args):
                 immunities = args.get('immune', '').split('|')
                 vulnerabilities = args.get('vuln', '').split('|')
                 
+                formatted_comments = []
+                formatted_roll_strings = []
+                
+                t = 0
                 for comment in comments:
-                    roll_string = roll_strings[index].replace(' ', '')
+                    if not roll_strings[t].replace(' ', '') == '':
+                        formatted_roll_strings.append(roll_strings[t])
+                        formatted_comments.append(comments[t])
+                    else:
+                        formatted_comments[-1] += ' ' + comments[t]
+                    t += 1
+                        
+                
+                for comment in formatted_comments:
+                    roll_string = formatted_roll_strings[index].replace(' ', '')
+                            
                     preop = ''
-                    if roll_string[0] in '-+*/().<>=':
+                    if roll_string[0] in '-+*/().<>=': # case: +6[blud]
                         preop = roll_string[0]
                         roll_string = roll_string[1:]
                     for resistance in resistances:
                         if resistance.lower() in comment.lower() and len(resistance) > 0:
                             roll_string = '({0}) / 2'.format(roll_string)
+                            break
                     for immunity in immunities:
                         if immunity.lower() in comment.lower() and len(immunity) > 0:
                             roll_string = '({0}) * 0'.format(roll_string)
+                            break
                     for vulnerability in vulnerabilities:
                         if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
                             roll_string = '({0}) * 2'.format(roll_string)
-                    roll_strings[index] = '{0}{1}[{2}]'.format(preop, roll_string, comment)
+                            break
+                    formatted_roll_strings[index] = '{0}{1}[{2}]'.format(preop, roll_string, comment)
                     index = index + 1
-                damage = ''.join(roll_strings)
+                damage = ''.join(formatted_roll_strings)
             
             if itercrit == 2:
                 out += '**Miss!**\n'

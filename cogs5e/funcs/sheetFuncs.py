@@ -125,7 +125,10 @@ def sheet_attack(attack, args):
                     else:
                         formatted_comments[-1] += ' ' + comments[t]
                     t += 1
-                        
+                
+                if not roll_strings[-1].replace(' ', '') == '':
+                    formatted_roll_strings.append(roll_strings[-1])
+                    formatted_comments.append("")
                 
                 for comment in formatted_comments:
                     roll_string = formatted_roll_strings[index].replace(' ', '')
@@ -146,7 +149,7 @@ def sheet_attack(attack, args):
                         if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
                             roll_string = '({0}) * 2'.format(roll_string)
                             break
-                    formatted_roll_strings[index] = '{0}{1}[{2}]'.format(preop, roll_string, comment)
+                    formatted_roll_strings[index] = '{0}{1}{2}'.format(preop, roll_string, "[{}]".format(comment) if comment is not '' else "")
                     index = index + 1
                 if formatted_roll_strings:
                     damage = ''.join(formatted_roll_strings)

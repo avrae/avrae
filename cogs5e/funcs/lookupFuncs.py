@@ -129,7 +129,10 @@ def searchMonster(monstername, visible=True, return_monster=False, search=fuzzyw
             
         if "reaction" in monster:
             monsterDesc.append("\n**__Reactions:__**\n")
-            monsterDesc.append("**{name}:** {text}\n".format(**monster['reaction']))
+            a = monster["reaction"] 
+            if isinstance(a['text'], list):
+                a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+            monsterDesc.append("**{name}:** {text}\n".format(**a))
             if 'attack' in a:
                 attacks.append(a)
             
@@ -146,22 +149,22 @@ def searchMonster(monstername, visible=True, return_monster=False, search=fuzzyw
                     attacks.append(a)
                     
         # fix list of attack dicts
-        tempAttacks = []
-        for a in attacks:
-            desc = a['text']
-            parentName = a['name']
-            for atk in a['attack']:
-                if atk is None: continue
-                data = atk.split('|')
-                name = data[0] if not data[0] == '' else parentName
-                toHit = data[1] if not data[1] == '' else None
-                damage = data[2] if not data[2] == '' else None
-                atkObj = {'name': name,
-                          'desc': desc,
-                          'attackBonus': toHit,
-                          'damage': damage}
-                tempAttacks.append(atkObj)
-        monster['attacks'] = tempAttacks
+#         tempAttacks = []
+#         for a in attacks:
+#             desc = a['text']
+#             parentName = a['name']
+#             for atk in a['attack']:
+#                 if atk is None: continue
+#                 data = atk.split('|')
+#                 name = data[0] if not data[0] == '' else parentName
+#                 toHit = data[1] if not data[1] == '' else None
+#                 damage = data[2] if not data[2] == '' else None
+#                 atkObj = {'name': name,
+#                           'desc': desc,
+#                           'attackBonus': toHit,
+#                           'damage': damage}
+#                 tempAttacks.append(atkObj)
+#         monster['attacks'] = tempAttacks
     else:
         monster['hp'] = int(monster['hp'].split(' (')[0])
         monster['ac'] = int(monster['ac'].split(' (')[0])

@@ -148,7 +148,8 @@ def sheet_attack(attack, args):
                             break
                     formatted_roll_strings[index] = '{0}{1}[{2}]'.format(preop, roll_string, comment)
                     index = index + 1
-                damage = ''.join(formatted_roll_strings)
+                if formatted_roll_strings:
+                    damage = ''.join(formatted_roll_strings)
             
             if itercrit == 2:
                 out += '**Miss!**\n'

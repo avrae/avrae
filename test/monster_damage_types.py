@@ -64,14 +64,16 @@ for monster in monsters:
             name = data[0] if not data[0] == '' else parentName
             toHit = data[1] if not data[1] == '' else None
             damage = data[2] if not data[2] == '' else None
-            occ = 1
+            occ = []
             for damage_str in re.finditer(r'\((.*?)\)\s+(\w+)', desc):
                 oldDamage = damage_str.group(1).replace(' ', '')
                 dtype = damage_str.group(2)
+                occNum = len([o for o in occ if oldDamage in o])+1
                 newDamage = oldDamage + '[{}]'.format(dtype)
                 if damage:
-                    damage = nth_repl(damage, oldDamage, newDamage, occ)
-                occ += 1
+                    if occNum > damage.count(oldDamage): continue
+                    damage = nth_repl(damage, oldDamage, newDamage, occNum)
+                occ.append(oldDamage)
             atkObj = {'name': name,
                       'desc': desc,
                       'attackBonus': toHit,

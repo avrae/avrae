@@ -818,11 +818,16 @@ class InitTracker:
         if 'controller' in args:
             try:
                 controllerStr = args.get('controller')
-                controllerEscaped = controllerStr.replace('<', '').replace('>', '').replace('@', '').replace('!', '')
+                controllerEscaped = controllerStr.strip('<>@!')
                 a = ctx.message.server.get_member(controllerEscaped)
                 b = ctx.message.server.get_member_named(controllerStr)
-                combatant.author = a if a is not None else b if b is not None else controller
-                out += "\u2705 Combatant controller set to {}.\n".format(combatant.author.mention)
+                cont = a if a is not None else b if b is not None else controller
+                if combatant.group:
+                    combat.get_combatant_group(combatant.group).author = cont
+                    out += "\u2705 Combatant group controller set to {}.\n".format(combatant.group.author.mention)
+                else:
+                    combatant.author = cont
+                    out += "\u2705 Combatant controller set to {}.\n".format(combatant.author.mention)
             except IndexError:
                 out += "\u274c You must pass in a controller with the --controller tag.\n"
         if 'ac' in args:
@@ -1257,7 +1262,7 @@ class InitTracker:
         
     @init.command(pass_context=True, name='remove')
     async def remove_combatant(self, ctx, *, name : str):
-        """Removes a combatant from the combat.
+        """Removes a combatant or group from the combat.
         Usage: !init remove <NAME>"""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
@@ -1265,23 +1270,28 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(name)
+        combatant = combat.get_combatant(name) or combat.get_combatant_group(name)
         if combatant is None:
-            await self.bot.say("Combatant not found.")
+            await self.bot.say("Combatant or group not found.")
             return
         if combatant == combat.currentCombatant:
             return await self.bot.say("You cannot remove a combatant on their own turn.")
         
-        for e in combatant.effects:
-            combatant.effects.remove(e)
-        
-        if combatant.group is None:
+        if isinstance(combatant, CombatantGroup):
+            for e in combatant.combatants:
+                combatant.combatants.remove(e)
             combat.combatants.remove(combatant)
         else:
-            group = combat.get_combatant_group(combatant.group)
-            if len(group.combatants) <= 1 and group == combat.currentCombatant:
-                return await self.bot.say("You cannot remove a combatant if they are the only remaining combatant in this turn.")
-            group.combatants.remove(combatant)
+            for e in combatant.effects:
+                combatant.effects.remove(e)
+            
+            if combatant.group is None:
+                combat.combatants.remove(combatant)
+            else:
+                group = combat.get_combatant_group(combatant.group)
+                if len(group.combatants) <= 1 and group == combat.currentCombatant:
+                    return await self.bot.say("You cannot remove a combatant if they are the only remaining combatant in this turn.")
+                group.combatants.remove(combatant)
         await self.bot.say("{} removed from combat.".format(combatant.name), delete_after=10)
         await combat.update_summary(self.bot)
         combat.checkGroups()

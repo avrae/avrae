@@ -95,7 +95,8 @@ def sheet_attack(attack, args):
             rollFor = "Damage"
             if itercrit == 1:
                 def critSub(matchobj):
-                    return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
+                    hocrit = 1 if args.get('hocrit') else 0
+                    return str(int(matchobj.group(1)) * 2 + hocrit) + 'd' + matchobj.group(2)
                 critDice = re.sub(r'(\d+)d(\d+)', critSub, damage)
                 if args.get('c') is not None:
                     critDice += '+' + args.get('c', '')

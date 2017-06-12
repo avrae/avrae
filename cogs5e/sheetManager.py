@@ -190,6 +190,7 @@ class SheetManager:
         args['name'] = character.get('stats', {}).get('name', "NONAME")
         args['criton'] = character.get('settings', {}).get('criton', 20) or 20
         args['c'] = character.get('settings', {}).get('critdmg') or None
+        args['hocrit'] = character.get('settings', {}).get('hocrit') or False
         if attack.get('details') is not None:
             attack['details'] = self.parse_cvars([attack['details']], ctx.message.author.id, character, active_character)[0]
         
@@ -508,9 +509,8 @@ class SheetManager:
         Valid Arguments:
         `color <hex color>` - Colors all embeds this color.
         `criton <number>` - Makes attacks crit on something other than a 20.
-        `mincheck <number>` - Does nothing right now.
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
-        `critdmg <dice>` - Adds damage on a crit."""
+        `hocrit true/false` - Enables/disables a half-orc's Brutal Critical."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -565,28 +565,6 @@ class SheetManager:
                         else:
                             character['settings']['criton'] = criton
                             out += "\u2705 Crit range set to {}-20.\n".format(criton)
-            if arg == 'mincheck':
-                mincheck = list_get(index + 1, None, args)
-                if mincheck is None:
-                    out += '\u2139 Your character\'s current minimum check roll is {}. Use "!csettings mincheck reset" to reset it to 1.\n' \
-                    .format(str(character['settings'].get('mincheck')) if character['settings'].get('mincheck') is not '1' else "1")
-                elif mincheck.lower() == 'reset':
-                    character['settings']['mincheck'] = '1'
-                    out += "\u2705 Minimum check roll reset to 1.\n"
-                else:
-                    try:
-                        mincheck = int(mincheck)
-                    except (ValueError, TypeError):
-                        out += '\u274c Invalid number. Use "!csettings mincheck reset" to reset it to 1.\n'
-                    else:
-                        if not 1 <= mincheck <= 20:
-                            out += '\u274c Minimum check roll must be between 1 and 20.\n'
-                        elif mincheck == 1:
-                            character['settings']['mincheck'] = '1'
-                            out += "\u2705 Minimum check roll reset to 1.\n"
-                        else:
-                            character['settings']['mincheck'] = mincheck
-                            out += "\u2705 Minimum check roll set to {}.\n".format(mincheck)
             if arg == 'reroll':
                 reroll = list_get(index + 1, None, args)
                 if reroll is None:
@@ -606,7 +584,7 @@ class SheetManager:
                         else:
                             character['settings']['reroll'] = reroll
                             out += "\u2705 Reroll set to {}.\n".format(reroll)
-            if arg == 'critdmg':
+            if arg == 'critdmg': # DEPRECATED
                 critdmg = list_get(index + 1, None, args)
                 if critdmg is None:
                     out += '\u2139 Your character\'s current critdmg is {}. Use "!csettings critdmg reset" to reset it.\n' \
@@ -617,6 +595,17 @@ class SheetManager:
                 else:
                     character['settings']['critdmg'] = critdmg
                     out += "\u2705 Critdmg set to {}.\n".format(critdmg)
+            if arg == 'hocrit':
+                hocrit = list_get(index + 1, None, args)
+                if hocrit is None:
+                    out += '\u2139 Half-orc crits are currently {}.\n' \
+                    .format("enabled" if character['settings'].get('hocrit') else "disabled")
+                else:
+                    try: hocrit = get_positivity(hocrit)
+                    except AttributeError: out += '\u274c Invalid input. Use "!csettings hocrit false" to reset it.\n'
+                    else:
+                        character['settings']['hocrit'] = hocrit
+                        out += "\u2705 Half-orc crits {}.\n".format("enabled" if character['settings'].get('hocrit') else "disabled")
             index += 1
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)

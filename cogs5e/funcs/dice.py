@@ -26,7 +26,7 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
     result = roller.roll(rollStr, adv, rollFor, inline, double, show_blurbs, **kwargs)
     return result
 
-class Roll:
+class Roll(object):
     def __init__(self, parts:list=[]):
         self.parts = parts
         

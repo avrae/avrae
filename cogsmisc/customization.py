@@ -92,14 +92,14 @@ class Customization:
                     out = out.replace(cvar, str(value))
                 for cvar, value in stat_vars.items():
                     out = out.replace(cvar, str(value))
-                arg = arg.replace(raw, '{}'.format(roll(out).total))
+                arg = arg.replace(raw, '{}'.format(roll(out).total), 1)
             for var in re.finditer(r'<([^<>]+)>', arg):
                 raw = var.group(0)
                 out = var.group(1)
                 for cvar, value in user_cvars.items():
                     out = out.replace(cvar, str(value))
                 for cvar, value in stat_vars.items():
-                    out = out.replace(cvar, str(value))
+                    out = out.replace(cvar, str(value), 1)
                 arg = arg.replace(raw, out)
             tempargs.append(arg)
         return "".join(tempargs)

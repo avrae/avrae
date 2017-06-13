@@ -172,6 +172,17 @@ class Combatant(object):
         out = ', '.join(out)
         return out
     
+    def get_long_effects(self):
+        out = ''
+        for e in self.effects:
+            edesc = e.name
+            if e.remaining >= 0:
+                edesc += " [{} rounds]".format(e.remaining)
+            if hasattr(e, "effect") and e.effect:
+                edesc += " ({})".format(e.effect)
+            out += '\n* ' + edesc
+        return out #('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else ''
+    
     def get_effects_and_notes(self):
         out = []
         if self.ac is not None and not self.private:
@@ -213,7 +224,7 @@ class Combatant(object):
         status = csFormat.format(self.name,
                                  self.get_hp_and_ac(private),
                                  '\n> ' + self.notes if self.notes is not '' else '',
-                                 ('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else '')
+                                 self.get_long_effects())
         return status
     
     def get_short_status(self):
@@ -282,14 +293,17 @@ class MonsterCombatant(Combatant):
         return self.name
     
 class Effect(object):
-    def __init__(self, duration:int=-1, name:str='', desc:str='', remaining:int=-1):
+    def __init__(self, duration:int=-1, name:str='', effect:str='', remaining:int=-1):
         self.name = name
         self.duration = duration
         self.remaining = remaining
-        self.desc = desc
+        self.effect = effect
         
     def __str__(self):
         return self.name
+    
+    def __repr__(self):
+        return "<initiativeTracker.Effect object name={} duration={} remaining={} effect={}>".format(self.name, self.duration, self.remaining, self.effect)
 
 class InitTracker:
     '''
@@ -997,9 +1011,10 @@ class InitTracker:
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True)
-    async def effect(self, ctx, combatant : str, duration : int, *, effect : str):
+    async def effect(self, ctx, combatant : str, duration : int, name : str, *, effect : str=None):
         """Attaches a status effect to a combatant.
-        Usage: !init effect <NAME> <DURATION (rounds)> <EFFECT>"""
+        Usage: !init effect <COMBATANT> <DURATION (rounds)> <NAME> [effect]
+        [effect] is a set of args that will be appended to every `!i a` the combatant makes."""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -1011,12 +1026,12 @@ class InitTracker:
             await self.bot.say("Combatant not found.")
             return
         
-        if effect.lower() in (e.name.lower() for e in combatant.effects):
+        if name.lower() in (e.name.lower() for e in combatant.effects):
             return await self.bot.say("Effect already exists.", delete_after=10)
         
-        effectObj = Effect(duration=duration, name=effect, remaining=duration)
+        effectObj = Effect(duration=duration, name=name, remaining=duration, effect=effect)
         combatant.effects.append(effectObj)
-        await self.bot.say("Added effect {} to {}.".format(effect, combatant.name), delete_after=10)
+        await self.bot.say("Added effect {} to {}.".format(name, combatant.name), delete_after=10)
         await combat.update_summary(self.bot)
         
     @init.command(pass_context=True, name='re')
@@ -1063,6 +1078,11 @@ class InitTracker:
         if combatant is None:
             return await self.bot.say("You must begin combat with !init next first.")
         
+        if not isinstance(combatant, CombatantGroup):
+            for eff in combatant.effects:
+                if hasattr(eff, "effect"):
+                    args += eff.effect or ''
+            
         if isinstance(combatant, DicecloudCombatant):
             attacks = combatant.sheet.get('attacks') # get attacks
             try: #fuzzy search for atk_name
@@ -1072,7 +1092,7 @@ class InitTracker:
                     attack = next(a for a in attacks if atk_name.lower() in a.get('name').lower())
                 except StopIteration:
                     return await self.bot.say('No attack with that name found.')
-                    
+            
             args = shlex.split(args)
             tempargs = []
             for arg in args: # parse snippets

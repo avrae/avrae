@@ -1269,14 +1269,14 @@ class InitTracker:
                 killed = ""
                 if target.hp is not None:
                     killed = "\n- Killed {}!".format(target.name) if target.hp <= 0 else ""
-                    if target.hp <= 0:
-                        if target.group is None:
-                            combat.combatants.remove(target)
-                        else:
-                            group = combat.get_combatant_group(target.group)
-                            group.combatants.remove(target)
-                        combat.sortCombatants()
-                        combat.checkGroups()
+#                     if target.hp <= 0:
+#                         if target.group is None:
+#                             combat.combatants.remove(target)
+#                         else:
+#                             group = combat.get_combatant_group(target.group)
+#                             group.combatants.remove(target)
+#                         combat.sortCombatants()
+#                         combat.checkGroups()
                 await self.bot.say("```diff\n- Dealt {} damage!{}```".format(result['total_damage'], killed), embed=embed)
                 await combat.update_summary(self.bot)
                 await asyncio.sleep(2) #select attack

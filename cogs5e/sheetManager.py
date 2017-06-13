@@ -312,9 +312,9 @@ class SheetManager:
         except:
             pass
             
-    @commands.command(pass_context=True)
+    @commands.group(pass_context=True, invoke_without_command=True)
     async def desc(self, ctx):
-        """Prints a description of your currently active character."""
+        """Prints or edits a description of your currently active character."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -341,6 +341,46 @@ class SheetManager:
             await self.bot.delete_message(ctx.message)
         except:
             pass
+        
+    @desc.command(pass_context=True, name='update', aliases=['edit'])
+    async def edit_desc(self, ctx, *, desc):
+        """Updates the character description."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        character = user_characters[active_character]
+        
+        overrides = character.get('overrides', {})
+        overrides['desc'] = desc
+        character['stats']['description'] = desc
+        
+        character['overrides'] = overrides
+        user_characters[active_character] = character
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        
+        await self.bot.say("Description updated!")
+        
+    @desc.command(pass_context=True, name='remove', aliases=['delete'])
+    async def remove_desc(self, ctx):
+        """Removes the character description, returning to the default."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        character = user_characters[active_character]
+        
+        overrides = character.get('overrides', {})
+        if not 'desc' in overrides:
+            return await self.bot.say("There is no custom description set.")
+        else:
+            del overrides['desc']
+            
+        character['overrides'] = overrides
+        user_characters[active_character] = character
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        
+        await self.bot.say("Description override removed! Use `!update` to return to the old description.")
         
     @commands.command(pass_context=True)
     async def portrait(self, ctx):
@@ -452,7 +492,8 @@ class SheetManager:
         if active_character is None:
             return await self.bot.say('You have no character active.')
         url = active_character
-        sheet_type = user_characters[url].get('type', 'dicecloud')
+        old_character = user_characters[url]
+        sheet_type = old_character.get('type', 'dicecloud')
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(url)
             loading = await self.bot.say('Updating character data from Dicecloud...')
@@ -496,7 +537,12 @@ class SheetManager:
 
         embed = sheet['embed']
         sheet = sheet['sheet']
-        sheet['settings'] = user_characters[url].get('settings', {})
+        sheet['settings'] = old_character.get('settings', {})
+        sheet['overrides'] = old_character.get('overrides', {})
+        
+        overrides = old_character.get('overrides', {})
+        sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description", "No description available.")
+        
         user_characters[url] = sheet
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)

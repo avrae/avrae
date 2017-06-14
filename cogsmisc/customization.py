@@ -106,16 +106,16 @@ class Customization:
             
     async def handle_aliases(self, message):
         if message.content.startswith(self.bot.prefix):
-            for alias, command in self.aliases.get(message.author.id, {}).items():
-                if self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0] == alias:
-                    message.content = message.content.replace(alias, command, 1)
-                    user_characters = self.bot.db.not_json_get(message.author.id + '.characters', {}) # grab user's characters
-                    if len(user_characters) > 0:
-                        active_character = self.bot.db.not_json_get('active_characters', {}).get(message.author.id) # get user's active
-                        if active_character is not None:
-                            message.content = self.parse_cvars(message.content, message.author.id, user_characters[active_character], active_character)
-                    await self.bot.process_commands(message)
-                    break
+            alias = self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0]
+            command = self.aliases.get(message.author.id, {}).get(alias)
+            if command:
+                message.content = message.content.replace(alias, command, 1)
+                user_characters = self.bot.db.not_json_get(message.author.id + '.characters', {}) # grab user's characters
+                if len(user_characters) > 0:
+                    active_character = self.bot.db.not_json_get('active_characters', {}).get(message.author.id) # get user's active
+                    if active_character is not None:
+                        message.content = self.parse_cvars(message.content, message.author.id, user_characters[active_character], active_character)
+                await self.bot.process_commands(message)
         
     @commands.command(pass_context=True)
     async def alias(self, ctx, alias_name, *, commands=None):

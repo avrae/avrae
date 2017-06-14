@@ -38,7 +38,7 @@ class SheetManager:
         self.bot = bot
         self.active_characters = self.bot.db.not_json_get('active_characters', {})
         self.snippets = self.bot.db.not_json_get('damage_snippets', {})
-        self.cvars = self.bot.db.not_json_get('char_vars', {})
+        #self.cvars = self.bot.db.not_json_get('char_vars', {})
         self.bot.loop.create_task(self.backup_user_data())
         self.logger = TextLogger('dicecloud.txt')
         
@@ -49,7 +49,7 @@ class SheetManager:
                 await asyncio.sleep(1800)  # every half hour
                 self.bot.db.jset('active_characters_backup', self.bot.db.jget('active_characters', {}))
                 self.bot.db.jset('damage_snippets_backup', self.bot.db.jget('damage_snippets', {}))
-                self.bot.db.jset('char_vars_backup', self.bot.db.jget('char_vars', {}))
+                #self.bot.db.jset('char_vars_backup', self.bot.db.jget('char_vars', {}))
         except asyncio.CancelledError:
             pass
         

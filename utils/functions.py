@@ -199,19 +199,22 @@ def parse_cvars(cstr, character):
     ops = r"([-+*/().<>=])"
     cvars = character.get('cvars', {})
     stat_vars = character.get('stat_cvars', {})
-    cvars.update(stat_vars)
     for var in re.finditer(r'{([^{}]+)}', cstr):
         raw = var.group(0)
         varstr = var.group(1)
         out = ""
         for substr in re.split(ops, varstr):
             temp = substr.strip()
-            out += str(cvars.get(temp, temp)) + " "    
+            temp = str(cvars.get(temp, temp))
+        for substr in re.split(ops, temp):
+            temp = substr.strip()
+            out += str(stat_vars.get(temp, temp)) + " "
         cstr = cstr.replace(raw, str(roll(out).total), 1)
     for var in re.finditer(r'<([^<>]+)>', cstr):
         raw = var.group(0)
         out = var.group(1)
         out = str(cvars.get(out, out))
+        out = str(stat_vars.get(out, out))
         cstr = cstr.replace(raw, out, 1)
     return cstr
     

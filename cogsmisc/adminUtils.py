@@ -145,10 +145,16 @@ class AdminUtils:
             print("migrating cvars for {}...".format(user_id))
             user_chars = self.bot.db.not_json_get(user_id + '.characters', {})
             num_users += 1
-            for character_id, character_cvars in user_cvars.items():
+            for character_id in user_cvars:
                 print("  migrating character {}...".format(character_id))
                 try:
-                    user_chars[character_id]['cvars'] = character_cvars or {}
+                    stat_vars = {}
+                    stat_vars.update(user_chars[character_id]['stats'])
+                    stat_vars.update(user_chars[character_id]['levels'])
+                    stat_vars['hp'] = user_chars[character_id]['hp']
+                    stat_vars['armor'] = user_chars[character_id]['armor']
+                    stat_vars.update(user_chars[character_id]['saves'])
+                    user_chars[character_id]['stat_cvars'] = stat_vars
                 except KeyError:
                     print("  error character not found")
                 num_cvars += 1

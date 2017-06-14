@@ -56,8 +56,20 @@ class GoogleSheet(SheetParser):
         except:
             raise
         
+        saves = {}
+        for key in skills:
+            if 'Save' in key:
+                saves[key] = skills[key]
+        
+        stat_vars = {}
+        stat_vars.update(stats)
+        stat_vars['level'] = int(level)
+        stat_vars['hp'] = hp
+        stat_vars['armor'] = int(armor)
+        stat_vars.update(saves)
+        
         sheet = {'type': 'google',
-                 'version': 2,
+                 'version': 3, #v3: added stat cvars
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': hp,
@@ -67,11 +79,8 @@ class GoogleSheet(SheetParser):
                  'resist': [],
                  'immune': [],
                  'vuln': [],
-                 'saves': {}}
-        
-        for key, skill in skills.items():
-            if 'Save' in key:
-                sheet['saves'][key] = skills[key]
+                 'saves': saves,
+                 'stat_cvars': stat_vars}
                 
         embed = self.get_embed(sheet)
         

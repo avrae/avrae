@@ -135,6 +135,26 @@ class AdminUtils:
             deleted += 1
         await self.bot.say("Done! Deleted {} keys".format(deleted))
         
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def migrate_cvars(self):
+        cvars = self.bot.db.not_json_get('char_vars', {})
+        num_users = 0
+        num_cvars = 0
+        for user_id, user_cvars in cvars.items():
+            print("migrating cvars for {}...".format(user_id))
+            user_chars = self.bot.db.not_json_get(user_id + '.characters', {})
+            num_users += 1
+            for character_id, character_cvars in user_cvars.items():
+                print("  migrating character {}...".format(character_id))
+                try:
+                    user_chars[character_id]['cvars'] = character_cvars or {}
+                except KeyError:
+                    print("  error character not found")
+                num_cvars += 1
+            self.bot.db.not_json_set(user_id + '.characters', user_chars)
+        await self.bot.say("Migrated {} cvars for {} users".format(num_cvars, num_users))
+        
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
     async def code(self, ctx, *, code : str):

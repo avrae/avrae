@@ -177,14 +177,14 @@ def aliases_list():
     user_id = resp.json().get('id')
     aliases = db.jget('cmd_aliases', {}).get(user_id, {})
     snippets = db.jget('damage_snippets', {}).get(user_id, {})
-    cvars = db.jget('char_vars', {}).get(user_id, {})
+    chars = db.jget(user_id + '.characters', {})
+    cvars = {c.get('stats', {}).get('name', 'No name'): c.get('cvars', {}) for c in chars.values()}
     aliases = sorted([(k, v) for k, v in aliases.items()], key=lambda i: i[0])
     snippets = sorted([(k, v) for k, v in snippets.items()], key=lambda i: i[0])
     cvars = sorted([[k, v] for k, v in cvars.items()], key=lambda i: i[0])
     for cvar in cvars:
         cvar[1] = sorted([(k, v) for k, v in cvar[1].items()], key=lambda i: i[0])
-    chars = db.jget(user_id + ".characters", {})
-    return render_template('aliases/list.html', aliases=aliases, snippets=snippets, cvars=cvars, chars=chars)
+    return render_template('aliases/list.html', aliases=aliases, snippets=snippets, cvars=cvars)
 
 @app.route('/aliases/delete', methods=['POST'])
 def aliases_delete():

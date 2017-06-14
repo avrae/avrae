@@ -96,9 +96,9 @@
           </tr>
         </thead>
         <tbody>
-          {% for cid, vars in cvars %}
+          {% for cname, vars in cvars %}
             <tr>
-              <td>{{chars.get(cid, {}).get('stats', {}).get('name', 'No name')}}</td>
+              <td>{{cname}}</td>
               <td>
                 <table class="table table-hover">
                   <thead>

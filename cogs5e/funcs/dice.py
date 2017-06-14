@@ -4,22 +4,28 @@ Created on Dec 25, 2016
 @author: andrew
 '''
 
+from copy import copy
 from heapq import nlargest, nsmallest
+from math import floor
 import random
 from re import IGNORECASE
 import re
 import traceback
 
-from utils.functions import list_get
-from math import floor
 import numexpr
-from copy import copy
 
 
 VALID_OPERATORS = 'k|rr|ro|mi|ma'
 VALID_OPERATORS_2 = '|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')])
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
 DICE_PATTERN = r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+)|([-+*/().<>=])?)\s*(\[.*\])?)(.*?)\s*$'
+
+def list_get(index, default, l):
+    try:
+        a = l[index]
+    except IndexError:
+        a = default
+    return a
 
 def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs=True, **kwargs):
     roller = Roll()

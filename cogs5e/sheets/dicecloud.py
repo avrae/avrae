@@ -63,8 +63,20 @@ class DicecloudParser(SheetParser):
         except:
             raise
         
+        saves = {}
+        for key in skills:
+            if 'Save' in key:
+                saves[key] = skills[key]
+        
+        stat_vars = {}
+        stat_vars.update(stats)
+        stat_vars.update(levels)
+        stat_vars['hp'] = int(hp)
+        stat_vars['armor'] = int(armor)
+        stat_vars.update(saves)
+        
         sheet = {'type': 'dicecloud',
-                 'version': 5,
+                 'version': 6, #v6: added stat cvars
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -74,11 +86,8 @@ class DicecloudParser(SheetParser):
                  'resist': resistances,
                  'immune': immunities,
                  'vuln': vulnerabilities,
-                 'saves': {}}
-        
-        for key, skill in skills.items():
-            if 'Save' in key:
-                sheet['saves'][key] = skills[key]
+                 'saves': saves,
+                 'stat_cvars': stat_vars}
                 
         embed = self.get_embed(sheet)
         

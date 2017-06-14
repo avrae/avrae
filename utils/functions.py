@@ -9,6 +9,8 @@ import re
 
 from fuzzywuzzy import process, fuzz
 
+from cogs5e.funcs.dice import roll
+
 
 def print_table(table):
     tableStr = ''
@@ -190,4 +192,26 @@ def text_to_numbers(string):
         string = string.replace(t, i)
     return string
 
+def parse_cvars(cstr, character):
+    """Parses cvars.
+    cstr - The string to parse.
+    character - the Character dict of a character."""
+    ops = r"([-+*/().<>=])"
+    cvars = character.get('cvars', {})
+    stat_vars = character.get('stat_cvars', {})
+    cvars.update(stat_vars)
+    for var in re.finditer(r'{([^{}]+)}', cstr):
+        raw = var.group(0)
+        varstr = var.group(1)
+        out = ""
+        for substr in re.split(ops, varstr):
+            temp = substr.strip()
+            out += str(cvars.get(temp, temp)) + " "    
+        cstr = cstr.replace(raw, str(roll(out).total), 1)
+    for var in re.finditer(r'<([^<>]+)>', cstr):
+        raw = var.group(0)
+        out = var.group(1)
+        out = str(cvars.get(out, out))
+        cstr = cstr.replace(raw, out, 1)
+    return cstr
     

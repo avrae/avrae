@@ -26,7 +26,8 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import list_get, embed_trim, get_positivity, a_or_an
+from utils.functions import list_get, embed_trim, get_positivity, a_or_an, \
+    parse_cvars
 from utils.loggers import TextLogger
 
 
@@ -52,44 +53,12 @@ class SheetManager:
         except asyncio.CancelledError:
             pass
         
-    def arg_stuff(self, args, ctx, character, char_id):
+    def arg_stuff(self, args, ctx, character):
+        args = parse_cvars(args, character)
+        args = shlex.split(args)
         args = self.parse_snippets(args, ctx.message.author.id)
-        args = self.parse_cvars(args, ctx.message.author.id, character, char_id)
         args = self.parse_args(args)
         return args
-    
-    def parse_cvars(self, args, _id, character, char_id):
-        tempargs = []
-        user_cvars = copy.copy(self.bot.db.not_json_get('char_vars', {}).get(_id, {}).get(char_id, {}))
-        stat_vars = {}
-        stats = copy.copy(character['stats'])
-        for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
-            stats[stat+'Score'] = stats[stat]
-            del stats[stat]
-        stat_vars.update(stats)
-        stat_vars.update(character['levels'])
-        stat_vars['hp'] = character['hp']
-        stat_vars['armor'] = character['armor']
-        stat_vars.update(character['saves'])
-        for arg in args:
-            for var in re.finditer(r'{([^{}]+)}', arg):
-                raw = var.group(0)
-                out = var.group(1)
-                for cvar, value in user_cvars.items():
-                    out = out.replace(cvar, str(value))
-                for cvar, value in stat_vars.items():
-                    out = out.replace(cvar, str(value))
-                arg = arg.replace(raw, '{}'.format(roll(out).total))
-            for var in re.finditer(r'<([^<>]+)>', arg):
-                raw = var.group(0)
-                out = var.group(1)
-                for cvar, value in user_cvars.items():
-                    out = out.replace(cvar, str(value))
-                for cvar, value in stat_vars.items():
-                    out = out.replace(cvar, str(value))
-                arg = arg.replace(raw, out)
-            tempargs.append(arg)
-        return tempargs
         
     def parse_args(self, args):
         out = {}
@@ -185,14 +154,13 @@ class SheetManager:
             except StopIteration:
                 return await self.bot.say('No attack with that name found.')
                 
-        args = shlex.split(args)
         args = self.arg_stuff(args, ctx, character, active_character)
         args['name'] = character.get('stats', {}).get('name', "NONAME")
         args['criton'] = character.get('settings', {}).get('criton', 20) or 20
         args['c'] = character.get('settings', {}).get('critdmg') or None
         args['hocrit'] = character.get('settings', {}).get('hocrit') or False
         if attack.get('details') is not None:
-            attack['details'] = self.parse_cvars([attack['details']], ctx.message.author.id, character, active_character)[0]
+            attack['details'] = parse_cvars(attack['details'], character)
         
         result = sheet_attack(attack, args)
         embed = result['embed']
@@ -229,7 +197,6 @@ class SheetManager:
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
-        args = shlex.split(args)
         args = self.arg_stuff(args, ctx, character, active_character)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
@@ -282,7 +249,6 @@ class SheetManager:
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
-        args = shlex.split(args)
         args = self.arg_stuff(args, ctx, character, active_character)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
@@ -292,8 +258,6 @@ class SheetManager:
                         + ('ro{}'.format(character.get('settings', {}).get('reroll', 0)) 
                         if not character.get('settings', {}).get('reroll', '0') == '0' else '') \
                         + ('mi{}'.format(mc) if mc is not None else '')
-#                         ('mi{}'.format(character.get('settings', {}).get('mincheck', 1))
-#                         if not character.get('settings', {}).get('mincheck', '1') == '1' else '')
         
         if b is not None:
             check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
@@ -539,11 +503,13 @@ class SheetManager:
         sheet = sheet['sheet']
         sheet['settings'] = old_character.get('settings', {})
         sheet['overrides'] = old_character.get('overrides', {})
+        sheet['cvars'] = old_character.get('cvars', {})
         
         overrides = old_character.get('overrides', {})
         sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description", "No description available.")
         
         user_characters[url] = sheet
+        #print(sheet)
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         if not '-h' in args:
@@ -681,6 +647,7 @@ class SheetManager:
                 return await self.bot.say('Snippet not found.')
             await self.bot.say('Shortcut {} removed.'.format(snippet))
         else:
+            if len(snipname) < 2: return await self.bot.say("Snippets must be at least 2 characters long!")
             user_snippets[snipname] = snippet
             await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
         
@@ -692,49 +659,56 @@ class SheetManager:
         """Commands to manage character variables for use in snippets and aliases.
         Character variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Dicecloud `statMod` and `statScore` variables are also available."""
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
-        user_id = ctx.message.author.id
-        self.cvars = self.bot.db.not_json_get('char_vars', {})
-        user_cvars = self.cvars.get(user_id, {})
-        if value is None:
-            cvar = user_cvars.get(active_character, {}).get(name)
+        character = user_characters[active_character]
+        
+        if value is None: # display value
+            cvar = character.get('cvars', {}).get(name)
             if cvar is None: cvar = 'Not defined.'
             return await self.bot.say('**' + name + '**:\n' + cvar)
         
-        if user_cvars.get(active_character) is None: user_cvars[active_character] = {}
-        user_cvars[active_character][name] = value
-        self.cvars[user_id] = user_cvars
-        self.bot.db.not_json_set('char_vars', self.cvars)
+        if name in character.get('stat_cvars', {}): return await self.bot.say("This is already a built-in cvar!")
+        
+        character['cvars'] = character.get('cvars', {}) # set value
+        character['cvars'][name] = value
+
+        user_characters[active_character] = character # commit
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         await self.bot.say('Variable `{}` set to: `{}`'.format(name, value))
         
     @cvar.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
         """Deletes a cvar from the currently active character."""
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
-        user_id = ctx.message.author.id
-        self.cvars = self.bot.db.not_json_get('char_vars', {})
-        user_cvars = self.cvars.get(user_id, {})
+        character = user_characters[active_character]
+
         try:
-            del user_cvars.get(active_character, {})[name]
+            del character.get('cvars', {})[name]
         except KeyError:
             return await self.bot.say('Variable not found.')
-        self.cvars[user_id] = user_cvars
-        self.bot.db.not_json_set('char_vars', self.cvars)
+        
+        user_characters[active_character] = character # commit
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        
         await self.bot.say('Variable {} removed.'.format(name))
         
     @cvar.command(pass_context=True, name='list')
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
-        user_id = ctx.message.author.id
-        user_cvars = self.bot.db.not_json_get('char_vars', {}).get(user_id, {})
-        await self.bot.say('Your variables:\n{}'.format(', '.join([name for name in user_cvars.get(active_character,{}).keys()])))
+        character = user_characters[active_character]
+        cvars = character.get('cvars', {})
+        
+        await self.bot.say('Your variables:\n{}'.format(', '.join([name for name in cvars.keys()])))
         
     
     @commands.command(pass_context=True)

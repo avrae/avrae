@@ -154,7 +154,7 @@ class SheetManager:
             except StopIteration:
                 return await self.bot.say('No attack with that name found.')
                 
-        args = self.arg_stuff(args, ctx, character, active_character)
+        args = self.arg_stuff(args, ctx, character)
         args['name'] = character.get('stats', {}).get('name', "NONAME")
         args['criton'] = character.get('settings', {}).get('criton', 20) or 20
         args['c'] = character.get('settings', {}).get('critdmg') or None
@@ -197,7 +197,7 @@ class SheetManager:
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
-        args = self.arg_stuff(args, ctx, character, active_character)
+        args = self.arg_stuff(args, ctx, character)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
         phrase = args.get('phrase', None)
@@ -249,7 +249,7 @@ class SheetManager:
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         
-        args = self.arg_stuff(args, ctx, character, active_character)
+        args = self.arg_stuff(args, ctx, character)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
         mc = args.get('mc', None)

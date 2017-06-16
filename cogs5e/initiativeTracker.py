@@ -1064,10 +1064,10 @@ class InitTracker:
             user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
             for index, arg in enumerate(tempargs): # parse snippets
                 tempargs[index] = user_snippets.get(arg, arg)
-            args =  " ".join(tempargs)
+            args = " ".join(tempargs)
             args = parse_cvars(args, combatant.sheet)
             args = shlex.split(args)
-            args = parse_args_2(tempargs)
+            args = parse_args_2(args)
             if attack.get('details') is not None:
                 attack['details'] = parse_cvars(attack['details'], combatant.sheet)
             args['name'] = combatant.name #combatant.sheet.get('stats', {}).get('name', "NONAME")

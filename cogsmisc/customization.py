@@ -6,6 +6,7 @@ Created on Jan 30, 2017
 import asyncio
 import copy
 import re
+import shlex
 
 from discord.ext import commands
 
@@ -77,13 +78,29 @@ class Customization:
             alias = self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0]
             command = self.aliases.get(message.author.id, {}).get(alias)
             if command:
-                message.content = message.content.replace(alias, command, 1)
+                message.content = self.handle_alias_arguments(command, message)
+                #message.content = message.content.replace(alias, command, 1)
                 user_characters = self.bot.db.not_json_get(message.author.id + '.characters', {}) # grab user's characters
                 if len(user_characters) > 0:
                     active_character = self.bot.db.not_json_get('active_characters', {}).get(message.author.id) # get user's active
                     if active_character is not None:
                         message.content = parse_cvars(message.content, user_characters[active_character])
                 await self.bot.process_commands(message)
+                
+    def handle_alias_arguments(self, command, message):
+        """Takes an alias name, alias value, and message and handles percent-encoded args.
+        Returns: string"""
+        args = " ".join(self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[1:])
+        args = shlex.split(args)
+        tempargs = args[:]
+        new_command = command
+        for index, value in enumerate(args):
+            key = '%{}%'.format(index + 1)
+            if key in command:
+                new_command = new_command.replace(key, value)
+                tempargs.remove(value)
+        
+        return self.bot.prefix + new_command + " " + ' '.join(tempargs)
         
     @commands.command(pass_context=True)
     async def alias(self, ctx, alias_name, *, commands=None):

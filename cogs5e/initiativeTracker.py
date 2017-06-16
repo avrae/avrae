@@ -178,7 +178,7 @@ class Combatant(object):
             edesc = e.name
             if e.remaining >= 0:
                 edesc += " [{} rounds]".format(e.remaining)
-            if hasattr(e, "effect") and e.effect:
+            if getattr(e, 'effect', None):
                 edesc += " ({})".format(e.effect)
             out += '\n* ' + edesc
         return out #('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else ''
@@ -1048,8 +1048,8 @@ class InitTracker:
         if not isinstance(combatant, CombatantGroup):
             for eff in combatant.effects:
                 if hasattr(eff, "effect"):
-                    args += eff.effect or ''
-            
+                    args += " " + eff.effect or ''
+        
         if isinstance(combatant, DicecloudCombatant):
             attacks = combatant.sheet.get('attacks') # get attacks
             try: #fuzzy search for atk_name
@@ -1060,15 +1060,13 @@ class InitTracker:
                 except StopIteration:
                     return await self.bot.say('No attack with that name found.')
             
+            tempargs = shlex.split(args)
+            user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
+            for index, arg in enumerate(tempargs): # parse snippets
+                tempargs[index] = user_snippets.get(arg, arg)
+            args =  " ".join(tempargs)
             args = parse_cvars(args, combatant.sheet)
             args = shlex.split(args)
-            tempargs = []
-            for arg in args: # parse snippets
-                for snippet, arguments in self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {}).items():
-                    if arg == snippet: 
-                        tempargs += shlex.split(arguments)
-                        break
-                tempargs.append(arg)
             args = parse_args_2(tempargs)
             if attack.get('details') is not None:
                 attack['details'] = parse_cvars(attack['details'], combatant.sheet)

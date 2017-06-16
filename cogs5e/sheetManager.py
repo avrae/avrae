@@ -54,9 +54,9 @@ class SheetManager:
             pass
         
     def arg_stuff(self, args, ctx, character):
+        args = self.parse_snippets(args, ctx.message.author.id)
         args = parse_cvars(args, character)
         args = shlex.split(args)
-        args = self.parse_snippets(args, ctx.message.author.id)
         args = self.parse_args(args)
         return args
         
@@ -88,15 +88,11 @@ class SheetManager:
         return out
     
     def parse_snippets(self, args, _id):
-        tempargs = []
+        tempargs = shlex.split(args)
         user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(_id, {})
-        for arg in args: # parse snippets
-            for snippet, arguments in user_snippets.items():
-                if arg == snippet: 
-                    tempargs += shlex.split(arguments)
-                    break
-            tempargs.append(arg)
-        return tempargs
+        for index, arg in enumerate(tempargs): # parse snippets
+            tempargs[index] = user_snippets.get(arg, arg)
+        return " ".join(tempargs)
         
     @commands.command(pass_context=True, aliases=['a'])
     async def attack(self, ctx, atk_name:str='list', *, args:str=''):

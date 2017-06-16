@@ -92,6 +92,9 @@ class Customization:
         Returns: string"""
         args = " ".join(self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[1:])
         args = shlex.split(args)
+        for index, arg in enumerate(args):
+            if " " in arg:
+                args[index] = shlex.quote(arg)
         tempargs = args[:]
         new_command = command
         for index, value in enumerate(args):

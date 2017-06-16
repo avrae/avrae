@@ -14,6 +14,7 @@ from utils.functions import a_or_an
 
 def sheet_attack(attack, args):
     """Returns: a dict with structure {"embed": discord.Embed(), "result": {metadata}}"""
+    #print(args)
     embed = discord.Embed()
     total_damage = 0
     dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)] # ['d1', 'd2'...]

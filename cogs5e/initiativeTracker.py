@@ -1063,7 +1063,12 @@ class InitTracker:
             tempargs = shlex.split(args)
             user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
             for index, arg in enumerate(tempargs): # parse snippets
-                tempargs[index] = user_snippets.get(arg, arg)
+                snippet_value = user_snippets.get(arg)
+                if snippet_value:
+                    tempargs[index] = snippet_value
+                elif ' ' in arg:
+                    tempargs[index] = shlex.quote(arg)
+                
             args = " ".join(tempargs)
             args = parse_cvars(args, combatant.sheet)
             args = shlex.split(args)

@@ -91,7 +91,11 @@ class SheetManager:
         tempargs = shlex.split(args)
         user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(_id, {})
         for index, arg in enumerate(tempargs): # parse snippets
-            tempargs[index] = user_snippets.get(arg, arg)
+            snippet_value = user_snippets.get(arg)
+            if snippet_value:
+                tempargs[index] = snippet_value
+            elif ' ' in arg:
+                tempargs[index] = shlex.quote(arg)
         return " ".join(tempargs)
         
     @commands.command(pass_context=True, aliases=['a'])

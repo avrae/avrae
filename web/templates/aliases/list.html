@@ -96,9 +96,9 @@
           </tr>
         </thead>
         <tbody>
-          {% for cname, vars in cvars %}
+          {% for cid, char in chars|dictsort %}
             <tr>
-              <td>{{cname}}</td>
+              <td>{{char.get("stats", {}).get("name", "No name")}}</td>
               <td>
                 <table class="table table-hover">
                   <thead>
@@ -109,7 +109,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    {% for name, value in vars %}
+                    {% for name, value in char.get("cvars", {})|dictsort %}
                       <tr>
                         <td>{{name}}</td>
                         <td><pre>{{value}}</pre></td>

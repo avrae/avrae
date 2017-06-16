@@ -184,7 +184,7 @@ def aliases_list():
     cvars = sorted([[k, v] for k, v in cvars.items()], key=lambda i: i[0])
     for cvar in cvars:
         cvar[1] = sorted([(k, v) for k, v in cvar[1].items()], key=lambda i: i[0])
-    return render_template('aliases/list.html', aliases=aliases, snippets=snippets, cvars=cvars)
+    return render_template('aliases/list.html', aliases=aliases, snippets=snippets, cvars=cvars, chars=chars)
 
 @app.route('/aliases/delete', methods=['POST'])
 def aliases_delete():
@@ -214,19 +214,19 @@ def aliases_delete():
         try:
             del user_snippets[alias_name]
         except KeyError:
-            return "Alias not found", 404
+            return "Snippet not found", 404
         snippets[user_id] = user_snippets
         db.jset('damage_snippets', snippets)
     else: # "cvar-cid"
-        cvars = db.jget('char_vars', {})
+        chars = db.jget(user_id + '.characters', {})
         cid = '-'.join(alias_type.split('-')[1:])
-        char_cvars = cvars.get(user_id, {}).get(cid, {})
+        char_cvars = chars.get(cid, {}).get('cvars', {})
         try:
             del char_cvars[alias_name]
         except KeyError:
-            return "Alias not found", 404
-        cvars[user_id][cid] = char_cvars
-        db.jset('char_vars', cvars)
+            return "Cvar not found", 404
+        chars[cid]['cvars'] = char_cvars
+        db.jset(user_id + '.characters', chars)
     return "Alias deleted"
 
 @app.route('/aliases/edit', methods=['POST'])
@@ -265,16 +265,16 @@ def aliases_edit():
         snippets[user_id] = user_snippets
         db.jset('damage_snippets', snippets)
     else: # "cvar-cid"
-        cvars = db.jget('char_vars', {})
+        chars = db.jget(user_id + '.characters', {})
         cid = '-'.join(alias_type.split('-')[1:])
-        char_cvars = cvars.get(user_id, {}).get(cid, {})
+        char_cvars = chars.get(cid, {}).get('cvars', {})
         try:
             del char_cvars[old_alias_name]
         except KeyError:
-            return "Alias not found", 404
+            return "Cvar not found", 404
         char_cvars[new_alias_name] = new_alias_value
-        cvars[user_id][cid] = char_cvars
-        db.jset('char_vars', cvars)
+        chars[cid]['cvars'] = char_cvars
+        db.jset(user_id + '.characters', chars)
     return "Alias edited"
 
 @app.route('/aliases/new', methods=['POST'])
@@ -307,12 +307,14 @@ def aliases_new():
         snippets[user_id] = user_snippets
         db.jset('damage_snippets', snippets)
     else: # "cvar-cid"
-        cvars = db.jget('char_vars', {})
+        chars = db.jget(user_id + '.characters', {})
         cid = '-'.join(alias_type.split('-')[1:])
-        char_cvars = cvars.get(user_id, {}).get(cid, {})
+        if new_alias_name in chars.get(cid, {}).get("stat_cvars", {}):
+            return "Cvar is a built-in variable", 409
+        char_cvars = chars.get(cid, {}).get('cvars', {})
         char_cvars[new_alias_name] = new_alias_value
-        cvars[user_id][cid] = char_cvars
-        db.jset('char_vars', cvars)
+        chars[cid]['cvars'] = char_cvars
+        db.jset(user_id + '.characters', chars)
     return "Alias created"
 
 # -----Tests-----

@@ -5,6 +5,7 @@ Created on Sep 18, 2016
 '''
 import asyncio
 import copy
+import datetime
 from math import floor
 from os.path import isfile
 import pickle
@@ -16,14 +17,14 @@ from string import capwords
 import traceback
 
 import discord
-from discord.errors import NotFound
+from discord.errors import NotFound, Forbidden
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
-    fuzzy_search, get_positivity, a_or_an, parse_args_2, text_to_numbers,\
+    fuzzy_search, get_positivity, a_or_an, parse_args_2, text_to_numbers, \
     parse_args_3, parse_cvars
 
 
@@ -41,6 +42,7 @@ class Combat(object):
         self.currentCombatant = None
         self.dm = None
         self.stats = {}
+        self.lastmodified = datetime.datetime.now()
         
     def get_combatant(self, name, precise=False):
         combatant = None
@@ -656,6 +658,8 @@ class InitTracker:
             await self.bot.say("There are no combatants.")
             return
         
+        combat.lastmodified = datetime.datetime.now()
+        
         if combat.currentCombatant is None:
             pass
         elif not ctx.message.author.id in (combat.currentCombatant.author.id, combat.dm.id):
@@ -1048,7 +1052,7 @@ class InitTracker:
         if not isinstance(combatant, CombatantGroup):
             for eff in combatant.effects:
                 if hasattr(eff, "effect"):
-                    args += " " + eff.effect or ''
+                    args += " " + eff.effect if eff.effect is not None else ""
         
         if isinstance(combatant, DicecloudCombatant):
             attacks = combatant.sheet.get('attacks') # get attacks
@@ -1359,6 +1363,9 @@ class InitTracker:
                 print('Combat not found reloading {}, aborting'.format(c))
                 continue
             combat = pickle.loads(combat.encode('cp437'))
+            if getattr(combat, 'lastmodified') + datetime.timedelta(weeks=1) < datetime.datetime.now():
+                print('Combat not modified for over 1w reloading {}, aborting'.format(c))
+                continue
             combat.channel = self.bot.get_channel(combat.channel.id)
             if combat.channel is None:
                 print('Combat channel not found reloading {}, aborting'.format(c))
@@ -1372,7 +1379,10 @@ class InitTracker:
             except:
                 pass
             print("Autoreloaded {}".format(c))
-            temp_msgs.append(await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!"))
+            try:
+                temp_msgs.append(await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!"))
+            except Forbidden:
+                print('No permission to post in {}'.format(c))
         self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
         await asyncio.sleep(30)
         for msg in temp_msgs:

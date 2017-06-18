@@ -1363,7 +1363,7 @@ class InitTracker:
                 print('Combat not found reloading {}, aborting'.format(c))
                 continue
             combat = pickle.loads(combat.encode('cp437'))
-            if getattr(combat, 'lastmodified') + datetime.timedelta(weeks=1) < datetime.datetime.now():
+            if combat.lastmodified + datetime.timedelta(weeks=1) < datetime.datetime.now():
                 print('Combat not modified for over 1w reloading {}, aborting'.format(c))
                 continue
             combat.channel = self.bot.get_channel(combat.channel.id)

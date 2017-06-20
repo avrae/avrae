@@ -203,10 +203,11 @@ def parse_cvars(cstr, character):
         raw = var.group(0)
         varstr = var.group(1)
         out = ""
+        tempout = ''
         for substr in re.split(ops, varstr):
             temp = substr.strip()
-            temp = str(cvars.get(temp, temp))
-        for substr in re.split(ops, temp):
+            tempout += str(cvars.get(temp, temp)) + " "
+        for substr in re.split(ops, tempout):
             temp = substr.strip()
             out += str(stat_vars.get(temp, temp)) + " "
         cstr = cstr.replace(raw, str(roll(out).total), 1)

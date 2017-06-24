@@ -44,8 +44,8 @@ class Dice:
                 pass
             await self.bot.send_message(message.channel, message.author.mention + '  :game_die:\n' + out)
             
-    def parse_roll_args(self, ctx, args, char_id, character):
-        user_cvars = copy.copy(self.bot.db.not_json_get('char_vars', {}).get(ctx.message.author.id, {}).get(char_id, {}))
+    def parse_roll_args(self, args, character):
+        user_cvars = character.get('cvars', {})
         return args.replace('SPELL', str(user_cvars.get('SPELL', 'SPELL')).strip('+')).replace('PROF', str(character.get('stats', {}).get('proficiencyBonus', "0")))
             
     @commands.command(name='2', hidden=True, pass_context=True)
@@ -233,7 +233,7 @@ class Dice:
                 if active_character is not None:
                     user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
                     character = user_characters[active_character] # get Sheet of character
-                    rolls = self.parse_roll_args(ctx, '\n'.join(rolls), active_character, character)
+                    rolls = self.parse_roll_args('\n'.join(rolls), character)
                     rolls = rolls.split('\n')
                 out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls)
             elif rolls is not None:
@@ -241,7 +241,7 @@ class Dice:
                 if active_character is not None:
                     user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
                     character = user_characters[active_character] # get Sheet of character
-                    rolls = self.parse_roll_args(ctx, rolls, active_character, character)
+                    rolls = self.parse_roll_args(rolls, character)
                 out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls, inline=True).skeleton
             else:
                 out = "**{} casts {}!** ".format(ctx.message.author.mention, spell['name'])

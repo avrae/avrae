@@ -157,7 +157,6 @@ class SheetManager:
         args = self.arg_stuff(args, ctx, character)
         args['name'] = character.get('stats', {}).get('name', "NONAME")
         args['criton'] = character.get('settings', {}).get('criton', 20) or 20
-        args['c'] = character.get('settings', {}).get('critdmg') or None
         args['hocrit'] = character.get('settings', {}).get('hocrit') or False
         if attack.get('details') is not None:
             attack['details'] = parse_cvars(attack['details'], character)

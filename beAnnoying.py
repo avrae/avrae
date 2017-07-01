@@ -26,17 +26,19 @@ if "test" in sys.argv:
     TESTING = True
 
 SHARDS = int(os.environ.get('SHARDS', 1))
-CLUSTER = int(os.environ.get('DYNO', "1").split('.')[-1])
-CLUSTER_START = 3 * (CLUSTER - 1)
-CLUSTER_END = 3 * CLUSTER
+CLUSTER = int(sys.argv[-1])
+CLUSTER_START = 3 * CLUSTER
+CLUSTER_END = 3 * (CLUSTER + 1)
 bot = Overseer()
 
 def init():
     signal.signal(signal.SIGTERM, sigterm_handler)
-    launch_web() # I mean okay
+    if CLUSTER == 0:
+        launch_web() # I mean okay
     time.sleep(10 * CLUSTER_START) # rolling restart
     launch_shards()
-    clean_shard_servers()
+    if CLUSTER == 0:
+        clean_shard_servers()
 
 def loop():
     time.sleep(30)
@@ -44,7 +46,7 @@ def loop():
         check_shards()
     
 def launch_web():
-    print("o.0: Launching webserver")
+    print("o.{}: Launching webserver".format(CLUSTER))
     if TESTING:
         bot.web = subprocess.Popen(["gunicorn", "-w", "2", "web.web:app"])
     else:
@@ -52,26 +54,26 @@ def launch_web():
     
 def launch_shards():
     if SHARDS <= CLUSTER_START:
-        print("o.0: TOO MANY CLUSTERS")
+        print("o.{}: TOO MANY CLUSTERS".format(CLUSTER))
     for shard in range(CLUSTER_START, min(CLUSTER_END, SHARDS)):
         if TESTING:
-            print("o.0: Launching shard test {}".format(shard))
+            print("o.{}: Launching shard test {}".format(CLUSTER, shard))
             bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard), 'test'])
         else:
-            print("o.0: Launching shard production {}".format(shard))
+            print("o.{}: Launching shard production {}".format(CLUSTER, shard))
             bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard)])
         time.sleep(10)
-    print("o.0: Shards launched: {}".format({shard: process.pid for shard, process in bot.shards.items()}))
+    print("o.{}: Shards launched: {}".format(CLUSTER, {shard: process.pid for shard, process in bot.shards.items()}))
     
 def check_shards():
     for shard, process in bot.shards.items():
         if process.poll() is not None:
-            print('o.0: Shard {} crashed with exit code {}, restarting...'.format(shard, process.returncode))
+            print('o.{}: Shard {} crashed with exit code {}, restarting...'.format(CLUSTER, shard, process.returncode))
             if TESTING:
-                print("o.0: Launching shard test {}".format(shard))
+                print("o.{}: Launching shard test {}".format(CLUSTER, shard))
                 bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard), 'test'])
             else:
-                print("o.0: Launching shard production {}".format(shard))
+                print("o.{}: Launching shard production {}".format(CLUSTER, shard))
                 bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard)])
             
     
@@ -83,15 +85,15 @@ def clean_shard_servers():
         try:
             if int(shard) >= num_shards:
                 del temp[shard]
-                print("o.0: Overseer process deleted server data for shard {}".format(shard))
+                print("o.{}: Overseer process deleted server data for shard {}".format(CLUSTER, shard))
         except:
-            print("o.0: Error processing shard servers")
+            print("o.{}: Error processing shard servers".format(CLUSTER))
     bot.db.jset("shard_servers", temp)
 
 def sigterm_handler(_signum, _frame):
     global RUNNING
     RUNNING = False
-    print("o.0: Overseer caught SIGTERM, sleeping for 15!")
+    print("o.{}: Overseer caught SIGTERM, sleeping for 15!".format(CLUSTER))
     time.sleep(15)
     sys.exit(0)
     

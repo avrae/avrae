@@ -9,11 +9,11 @@ import os
 import time
 
 import discord
+from discord.channel import PrivateChannel
 from discord.ext import commands
 import psutil
 
 from utils import checks
-from discord.channel import PrivateChannel
 
 
 class Core:
@@ -70,7 +70,7 @@ class Core:
         await self.bot.say("Bug report sent to developer! He'll get to it eventually.")
         
     @commands.command(hidden=True, pass_context=True)
-    async def avatar(self, ctx, user : discord.User = None):
+    async def avatar(self, ctx, user : discord.User=None):
         """Gets a user's avatar.
         Usage: !avatar <USER>"""
         if user is None:
@@ -108,10 +108,10 @@ class Core:
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808"
-        embed.colour = 0xec3333
+        embed.colour = 0xff3333
         embed.set_author(name=str(self.bot.owner), icon_url=self.bot.owner.avatar_url)
         total_members = sum(len(s.members) for s in self.bot.servers)
-        total_online  = sum(1 for m in self.bot.get_all_members() if m.status != discord.Status.offline)
+        total_online = sum(1 for m in self.bot.get_all_members() if m.status != discord.Status.offline)
         unique_members = set(self.bot.get_all_members())
         unique_online = sum(1 for m in unique_members if m.status != discord.Status.offline)
         text = len([c for c in self.bot.get_all_channels() if c.type is discord.ChannelType.text])
@@ -120,11 +120,11 @@ class Core:
         embed.add_field(name='Shard Members', value=members)
         embed.add_field(name='Shard Channels', value='{} total\n{} text\n{} voice'.format(text + voice, text, voice))
         embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
-        embed.set_footer(text='May the RNG be with you | Build {} | Cluster {} | Shard {}'.format(self.bot.db.get('build_num'), os.environ.get("DYNO", "0").split('.')[-1], getattr(self.bot, 'shard_id', 0)), icon_url='http://www.clipartkid.com/images/25/six-sided-dice-clip-art-at-clker-com-vector-clip-art-online-royalty-tUAGdd-clipart.png')
+        embed.set_footer(text='May the RNG be with you | Build {} | Cluster {} | Shard {}'.format(self.bot.db.get('build_num'), floor(int(getattr(self.bot, 'shard_id', 0)) / 3) + 1, getattr(self.bot, 'shard_id', 0)), icon_url='http://www.clipartkid.com/images/25/six-sided-dice-clip-art-at-clker-com-vector-clip-art-online-royalty-tUAGdd-clipart.png')
         commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n{items_looked_up_life} items looked up".format(**self.bot.botStats)
         embed.add_field(name="Commands Run", value=commands_run)
         embed.add_field(name="Servers", value=str(len(self.bot.servers)) + ' on this shard\n' + str(sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values())) + ' total')
-        memory_usage = psutil.Process().memory_full_info().uss / 1024**2
+        memory_usage = psutil.Process().memory_full_info().uss / 1024 ** 2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
         embed.add_field(name='About', value='Bot coded by @zhu.exe#4211\nFound a bug? Report it with `!bug`!\nHelp me buy a cup of coffee [here](https://www.paypal.me/avrae)!\nJoin the official testing server [here](https://discord.gg/pQbd4s6)!', inline=False)
         

@@ -6,6 +6,7 @@ Created on Sep 18, 2016
 import asyncio
 import copy
 import datetime
+import json
 from math import floor
 from os.path import isfile
 import pickle
@@ -20,12 +21,12 @@ import discord
 from discord.errors import NotFound, Forbidden
 from discord.ext import commands
 
-from cogs5e.funcs.dice import roll
+from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.funcs.lookupFuncs import searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
-from utils.functions import make_sure_path_exists, discord_trim, parse_args, \
-    fuzzy_search, get_positivity, a_or_an, parse_args_2, text_to_numbers, \
-    parse_args_3, parse_cvars
+from utils.functions import parse_args, \
+    fuzzy_search, get_positivity, parse_args_2, \
+    parse_args_3, parse_cvars, evaluate_cvar, parse_resistances
 
 
 class Combat(object):
@@ -252,6 +253,7 @@ class DicecloudCombatant(Combatant):
         self.resist = sheet.get('resist', [])
         self.immune = sheet.get('immune', [])
         self.vuln = sheet.get('vuln', [])
+        self.saves = sheet.get('saves', {})
         self.sheet = sheet
         
     def __str__(self):
@@ -270,9 +272,30 @@ class MonsterCombatant(Combatant):
         self.ac = int(monster['ac'].split(' (')[0])
         self.private = private
         self.group = group
-        self.resist = monster.get('resist', '').replace(' ', '').split(',')
+        self.resist = monster.get('resist', '').replace(' ', '').split(',') # TODO: fix "slashing from nonmagical weapons"
         self.immune = monster.get('immune', '').replace(' ', '').split(',')
         self.vuln = monster.get('vulnerable', '').replace(' ', '').split(',')
+        
+        self.saves = {'strengthSave': floor((int(monster['str'])-10)/2),
+                       'dexteritySave': floor((int(monster['dex'])-10)/2),
+                       'constitutionSave': floor((int(monster['con'])-10)/2),
+                       'intelligenceSave': floor((int(monster['int'])-10)/2),
+                       'wisdomSave': floor((int(monster['wis'])-10)/2),
+                       'charismaSave': floor((int(monster['cha'])-10)/2)}
+        save_overrides = monster.get('save', '').split(', ')
+        for s in save_overrides:
+            try:
+                _type = next(sa for sa in ('strengthSave',
+                                           'dexteritySave',
+                                           'constitutionSave',
+                                           'intelligenceSave',
+                                           'wisdomSave',
+                                           'charismaSave') if s.split(' ')[0].lower() in sa.lower())
+                mod = int(s.split(' ')[1])
+                self.saves[_type] = mod
+            except:
+                pass
+        
         self.monster = monster
         
         # fix npr and blug/pierc/slash
@@ -1144,7 +1167,231 @@ class InitTracker:
         else: embed.set_footer(text="Target AC not set.")
         await self.bot.say(embed=embed)
         await combat.update_summary(self.bot)
+    
+    @init.command(pass_context=True)
+    async def cast(self, ctx, spell_name, *, args):
+        """Casts a spell against another combatant.
+        Valid Arguments: -t [target (chainable)] - Required
+        **__Save Spells__**
+        -dc [Save DC] - Default: Pulls a cvar called `dc`.
+        -save [Save type] - Default: The spell's default save.
+        -d [damage] - adds additional damage.
+        adv/dis - forces all saves to be at adv/dis.
+        **__Attack Spells__**
+        See `!a`.
+        **__All Spells__**
+        -phrase [phrase] - adds flavor text."""
+        try:
+            combat = next(c for c in self.combats if c.channel is ctx.message.channel)
+        except StopIteration:
+            await self.bot.say("You are not in combat.")
+            return
         
+        combatant = combat.currentCombatant
+        if combatant is None:
+            return await self.bot.say("You must begin combat with !init next first.")
+        
+        tempargs = shlex.split(args)
+        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
+        for index, arg in enumerate(tempargs): # parse snippets
+            snippet_value = user_snippets.get(arg)
+            if snippet_value:
+                tempargs[index] = snippet_value
+            elif ' ' in arg:
+                tempargs[index] = shlex.quote(arg)
+        
+        is_character = isinstance(combatant, DicecloudCombatant)
+        
+        args = " ".join(tempargs)
+        if is_character: args = parse_cvars(args, combatant.sheet)
+        args = shlex.split(args)
+        args = parse_args_3(args)
+        
+        if not args.get('t'):
+            return await self.bot.say("You must pass in targets with `-t target`.", delete_after=15)
+        
+        with open('./res/auto_spells.json', 'r') as f:
+            spells = json.load(f)
+        
+        embed = discord.Embed()
+        embed_footer = ''
+        if args.get('phrase') is not None: # parse phrase
+            embed.description = '*' + '\n'.join(args.get('phrase')) + '*'
+        else:
+            embed.description = '~~' + ' '*500 + '~~'
+        
+        
+        spell = fuzzy_search(spells, 'name', spell_name)
+        if spell is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
+                                                                        description="The spell was not found or is not supported."))
+        
+        if args.get('title') is not None:
+            embed.title = args.get('title')[-1].replace('[charname]', args.get('name')).replace('[sname]', spell['name']).replace('[target]', args.get('t', ''))
+        else:
+            embed.title = '{} casts {} at...'.format(combatant.name, spell['name'])
+        
+        damage_save = None
+        for i, t in enumerate(args.get('t', [])):
+            target = combat.get_combatant(t)
+            if target is None:
+                embed.add_field(name="{} not found!".format(t), value="Target not found.")
+            elif not isinstance(target, (DicecloudCombatant, MonsterCombatant)):
+                embed.add_field(name="{} not supported!".format(t), value="Target must be a monster or player added with `madd` or `cadd`.")
+            else:
+                spell_type = spell.get('type')
+                if spell_type == 'save': # save spell
+                    out = ''
+                    if is_character:
+                        calculated_dc = evaluate_cvar(combatant.sheet.get('cvars', {}).get('dc', ''), combatant.sheet) or None
+                    else:
+                        calculated_dc = None
+                    dc = args.get('dc', [None])[-1] or calculated_dc
+                    if dc is None:
+                        return await self.bot.say(embed=discord.Embed(title="Error: Save DC not set.",
+                                                                  description="Your spell save DC is not set. You can set it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`.\nRemember to run `!i update [NAME]` for the a changed cvar to take effect."))
+                    try: dc = int(dc)
+                    except: return await self.bot.say(embed=discord.Embed(title="Error: Save DC not set.",
+                                                                          description="Your spell save DC is not set. You can set it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`.\nRemember to run `!i update [NAME]` for the a changed cvar to take effect."))
+
+                    save_skill = args.get('save', [None])[-1] or spell.get('save', {}).get('save')
+                    try:
+                        save_skill = next(s for s in ('strengthSave',
+                                                      'dexteritySave',
+                                                      'constitutionSave',
+                                                      'intelligenceSave',
+                                                      'wisdomSave',
+                                                      'charismaSave') if save_skill.lower() in s.lower())
+                    except StopIteration:
+                        return await self.bot.say(embed=discord.Embed(title="Invalid save!",
+                                                                      description="{} is not a valid save.".format(save_skill)))
+                    save = spell['save']
+                    
+                    save_roll_mod = target.saves.get(save_skill, 0)
+                    adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
+                    
+                    save_roll = roll('1d20{:+}'.format(save_roll_mod), adv=adv, rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
+                    is_success = save_roll.total >= dc
+                    out += save_roll.result + ("; Success!" if is_success else "; Failure!") + '\n'
+                    
+                    if save['damage'] is None:
+                        if i == 0:
+                            embed.add_field(name="DC", value=str(dc))
+                        embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
+                    else: # damage spell
+                        if damage_save is None:
+                            dmg = save['damage']
+                            
+                            if is_character and spell['level'] == '0' and spell.get('scales', True):
+                                def lsub(matchobj):
+                                    level = combatant.sheet.get('levels', {}).get('level', 0)
+                                    if level < 5: levelDice = "1"
+                                    elif level < 11: levelDice = "2"
+                                    elif level < 17: levelDice = "3"
+                                    else: levelDice = "4"
+                                    return levelDice + 'd' + matchobj.group(2)
+                                dmg = re.sub(r'(\d+)d(\d+)', lsub, dmg)
+                            
+                            if args.get('d') is not None:
+                                dmg = dmg + '+' + "+".join(args.get('d', []))
+                                
+                            dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
+                            embed.add_field(name="Damage/DC", value=dmgroll.result + "\n**DC**: {}".format(str(dc)))
+                            d = ""
+                            for p in dmgroll.raw_dice.parts:
+                                if isinstance(p, SingleDiceGroup):
+                                    d += "{} {}".format(p.get_total(), p.annotation)
+                                else:
+                                    d += str(p)
+                            damage_save = d
+                        dmg = damage_save
+                        
+                        if is_success:
+                            if save['success'] == 'half': dmg = "({})/2".format(dmg)
+                            else: dmg = "0"
+                        
+                        dmg = parse_resistances(dmg, args.get('resist', []) or target.resist,
+                                                args.get('immune', []) or target.immune,
+                                                args.get('vuln', []) or target.vuln)
+                        
+                        dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
+                        out += dmgroll.result + '\n'
+                        
+                        embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
+                        
+                        if target.hp is not None:
+                            target.hp -= dmgroll.total
+                            embed_footer += "{}: {}\n".format(target.name, target.get_hp())
+                            if target.private:
+                                try:
+                                    await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                                except:
+                                    pass
+                        else:
+                            embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
+                else: # attack spell
+                    if not is_character: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
+                                                                        description="Attack spells are only supported for combatants added with `cadd`."))
+                    
+                    outargs = copy.copy(args)
+                    outargs['t'] = target.name
+                    if target.ac is not None: outargs['ac'] = target.ac
+                    outargs['resist'] = '|'.join(args.get('resist', [])) or '|'.join(target.resist)
+                    outargs['immune'] = '|'.join(args.get('immune', [])) or '|'.join(target.immune)
+                    outargs['vuln'] = '|'.join(args.get('vuln', [])) or '|'.join(target.vuln)
+                    attack = spell['atk']
+                    if not 'SPELL' in combatant.sheet.get('cvars', {}):
+                        return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not set.",
+                                                                      description="Your casting ability is not set. You can set it for this character by running `!cvar SPELL [ABILITY]`, where `[ABILITY]` is your spellcasting modifier.\nFor example, a sorcerer (CHA caster) with 20 CHA would use `!cvar SPELL 5.`\nRemember to run `!i update [NAME]` for the changes to take effect."))
+                    attack['attackBonus'] = str(evaluate_cvar(attack['attackBonus'], combatant.sheet))
+                    
+                    if is_character and spell['level'] == '0' and spell.get('scales', True):
+                        def lsub(matchobj):
+                            level = combatant.sheet.get('levels', {}).get('level', 0)
+                            if level < 5: levelDice = "1"
+                            elif level < 11: levelDice = "2"
+                            elif level < 17: levelDice = "3"
+                            else: levelDice = "4"
+                            return levelDice + 'd' + matchobj.group(2)
+                        attack['damage'] = re.sub(r'(\d+)d(\d+)', lsub, attack['damage'])
+                    
+                    result = sheet_attack(attack, outargs)
+                    out = result['embed'].fields[0].value
+                    
+                    embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
+                        
+                    if target.hp is not None:
+                        target.hp -= result['total_damage']
+                        embed_footer += "{}: {}\n".format(target.name, target.get_hp())
+                        if target.private:
+                            try:
+                                await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                            except:
+                                pass
+                    else:
+                        embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
+        
+        if spell['type'] == 'save':
+            if isinstance(spell['text'], list):
+                text = '\n'.join(spell['text'])
+            else:
+                text = spell['text']
+            sentences = text.split('.')
+            context = ""
+            for i, s in enumerate(sentences):
+                if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
+                    if i + 2 < len(sentences):
+                        context += s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
+                    elif i + 1 < len(sentences):
+                        context += s + '. ' + sentences[i+1] + '. '
+                    else:
+                        context += s + '. '
+                    context += '\n'
+            embed.add_field(name="Effect", value=context)
+        
+        embed.colour = getattr(combatant, 'sheet', {}).get('settings', {}).get('color') or random.randint(0, 0xffffff)
+        embed.set_footer(text=embed_footer)
+        await self.bot.say(embed=embed)
+    
     @init.command(pass_context=True)
     async def sim(self, ctx, *, args:str=""):
         """Simulates the current turn of combat.
@@ -1181,7 +1428,7 @@ class InitTracker:
                     chosen_attack = random.choice(possible_attacks)
                     attacks = []
                     for atk in chosen_attack: # [{"Melee": 2}],
-                        for i in range(int(list(atk.values())[0])):
+                        for _ in range(int(list(atk.values())[0])):
                             try:
                                 attacks.append(next(a for a in mon_attacks if list(atk.keys())[0] in a.get('name')))
                             except StopIteration:

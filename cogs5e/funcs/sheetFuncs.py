@@ -3,13 +3,14 @@ Created on Feb 27, 2017
 
 @author: andrew
 '''
+import json
 import re
 
 import discord
 import numexpr
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
-from utils.functions import a_or_an
+from utils.functions import a_or_an, parse_resistances
 
 
 def sheet_attack(attack, args):
@@ -105,56 +106,10 @@ def sheet_attack(attack, args):
                 rollFor = "Damage (CRIT!)"
             
             if 'resist' in args or 'immune' in args or 'vuln' in args:
-                COMMENT_REGEX = r'\[(?P<comment>.*?)\]'
-                ROLL_STRING_REGEX = r'\[.*?]'
-                
-                comments = re.findall(COMMENT_REGEX, damage)
-                roll_strings = re.split(ROLL_STRING_REGEX, damage)
-                
-                index = 0
                 resistances = args.get('resist', '').split('|')
                 immunities = args.get('immune', '').split('|')
                 vulnerabilities = args.get('vuln', '').split('|')
-                
-                formatted_comments = []
-                formatted_roll_strings = []
-                
-                t = 0
-                for comment in comments:
-                    if not roll_strings[t].replace(' ', '') == '':
-                        formatted_roll_strings.append(roll_strings[t])
-                        formatted_comments.append(comments[t])
-                    else:
-                        formatted_comments[-1] += ' ' + comments[t]
-                    t += 1
-                
-                if not roll_strings[-1].replace(' ', '') == '':
-                    formatted_roll_strings.append(roll_strings[-1])
-                    formatted_comments.append("")
-                
-                for comment in formatted_comments:
-                    roll_string = formatted_roll_strings[index].replace(' ', '')
-                            
-                    preop = ''
-                    if roll_string[0] in '-+*/().<>=': # case: +6[blud]
-                        preop = roll_string[0]
-                        roll_string = roll_string[1:]
-                    for resistance in resistances:
-                        if resistance.lower() in comment.lower() and len(resistance) > 0:
-                            roll_string = '({0}) / 2'.format(roll_string)
-                            break
-                    for immunity in immunities:
-                        if immunity.lower() in comment.lower() and len(immunity) > 0:
-                            roll_string = '({0}) * 0'.format(roll_string)
-                            break
-                    for vulnerability in vulnerabilities:
-                        if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
-                            roll_string = '({0}) * 2'.format(roll_string)
-                            break
-                    formatted_roll_strings[index] = '{0}{1}{2}'.format(preop, roll_string, "[{}]".format(comment) if comment is not '' else "")
-                    index = index + 1
-                if formatted_roll_strings:
-                    damage = ''.join(formatted_roll_strings)
+                damage = parse_resistances(damage, resistances, immunities, vulnerabilities)
             
             if itercrit == 2:
                 out += '**Miss!**\n'
@@ -179,3 +134,7 @@ def sheet_attack(attack, args):
         embed.set_thumbnail(url=args.get('image'))
         
     return {'embed': embed, 'total_damage': total_damage}
+
+
+
+

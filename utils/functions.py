@@ -218,4 +218,69 @@ def parse_cvars(cstr, character):
         out = str(stat_vars.get(out, out))
         cstr = cstr.replace(raw, out, 1)
     return cstr
+
+def evaluate_cvar(varstr, character):
+    ops = r"([-+*/().<>=])"
+    cvars = character.get('cvars', {})
+    stat_vars = character.get('stat_cvars', {})
+    out = ""
+    tempout = ''
+    for substr in re.split(ops, varstr):
+        temp = substr.strip()
+        tempout += str(cvars.get(temp, temp)) + " "
+    for substr in re.split(ops, tempout):
+        temp = substr.strip()
+        out += str(stat_vars.get(temp, temp)) + " "
+    return roll(out).total
+
+def parse_resistances(damage, resistances, immunities, vulnerabilities):
+    COMMENT_REGEX = r'\[(?P<comment>.*?)\]'
+    ROLL_STRING_REGEX = r'\[.*?]'
+    
+    comments = re.findall(COMMENT_REGEX, damage)
+    roll_strings = re.split(ROLL_STRING_REGEX, damage)
+    
+    index = 0
+    formatted_comments = []
+    formatted_roll_strings = []
+    
+    t = 0
+    for comment in comments:
+        if not roll_strings[t].replace(' ', '') == '':
+            formatted_roll_strings.append(roll_strings[t])
+            formatted_comments.append(comments[t])
+        else:
+            formatted_comments[-1] += ' ' + comments[t]
+        t += 1
+    
+    if not roll_strings[-1].replace(' ', '') == '':
+        formatted_roll_strings.append(roll_strings[-1])
+        formatted_comments.append("")
+    
+    for comment in formatted_comments:
+        roll_string = formatted_roll_strings[index].replace(' ', '')
+                
+        preop = ''
+        if roll_string[0] in '-+*/().<>=': # case: +6[blud]
+            preop = roll_string[0]
+            roll_string = roll_string[1:]
+        for resistance in resistances:
+            if resistance.lower() in comment.lower() and len(resistance) > 0:
+                roll_string = '({0}) / 2'.format(roll_string)
+                break
+        for immunity in immunities:
+            if immunity.lower() in comment.lower() and len(immunity) > 0:
+                roll_string = '({0}) * 0'.format(roll_string)
+                break
+        for vulnerability in vulnerabilities:
+            if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
+                roll_string = '({0}) * 2'.format(roll_string)
+                break
+        formatted_roll_strings[index] = '{0}{1}{2}'.format(preop, roll_string, "[{}]".format(comment) if comment is not '' else "")
+        index = index + 1
+    if formatted_roll_strings:
+        damage = ''.join(formatted_roll_strings)
+    
+    return damage
+    
     

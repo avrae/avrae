@@ -30,7 +30,7 @@ class AdminUtils:
         self.assume_dir_control_chan = None
         self.assume_dir_control_controller = None
         self.blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
-        self.bot.loop.create_task(self.send_logs())
+        #self.bot.loop.create_task(self.send_logs())
     
     
     @commands.command(hidden=True)

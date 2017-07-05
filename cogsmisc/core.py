@@ -108,7 +108,7 @@ class Core:
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808"
-        embed.colour = 0xff3333
+        embed.colour = 0x7289da
         embed.set_author(name=str(self.bot.owner), icon_url=self.bot.owner.avatar_url)
         total_members = sum(len(s.members) for s in self.bot.servers)
         total_online = sum(1 for m in self.bot.get_all_members() if m.status != discord.Status.offline)

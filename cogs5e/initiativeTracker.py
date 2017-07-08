@@ -703,9 +703,11 @@ class InitTracker:
             nextCombatant = combat.getNextCombatant()
             combat.current = nextCombatant.init
             combat.currentCombatant = nextCombatant
+            self.bot.db.incr('turns_init_tracked_life')
         except IndexError:
             combat.current = combat.sorted_combatants[0].init
             combat.round += 1
+            self.bot.db.incr('rounds_init_tracked_life')
             combat.index = None
             if combat.options.get('dynamic', False):
                 for combatant in combat.combatants:

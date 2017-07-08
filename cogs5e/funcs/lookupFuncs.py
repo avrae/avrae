@@ -10,21 +10,49 @@ import math
 from utils.functions import print_table, discord_trim, fuzzy_search, \
     fuzzywuzzy_search, fuzzywuzzy_search_all
 
+class Compendium: # TODO: move more things to this
+    def __init__(self):
+        with open('./res/conditions.json', 'r') as f:
+            self.conditions = json.load(f)
+        with open('./res/rules.json', 'r') as f:
+            self.rules = json.load(f)
+        with open('./res/feats.json', 'r') as f:
+            self.feats = json.load(f)
+        with open('./res/races.json', 'r') as f:
+            _raw = json.load(f)
+            self.rfeats = []
+            for race in _raw:
+                one_rfeats = race.get('trait', [])
+                for i, rfeat in enumerate(one_rfeats):
+                    one_rfeats[i]['name'] = "{}: {}".format(race['name'], rfeat['name'])
+                self.rfeats += one_rfeats
+        with open('./res/classes.json', 'r') as f:
+            _raw = json.load(f)
+            self.cfeats = []
+            for _class in _raw:
+                one_clevels = [f for f in _class.get('autolevel', []) if 'feature' in f]
+                for i, clevel in enumerate(one_clevels):
+                    for cfeat in clevel.get('feature', []):
+                        cfeat['name'] = "{}: {}".format(_class['name'], cfeat['name'])
+                        self.cfeats.append(cfeat)
+            
+
+c = Compendium()
 
 def searchCondition(condition, search=fuzzywuzzy_search):
-    with open('./res/conditions.json', 'r') as f:
-        conditions = json.load(f)
-    return search(conditions, 'name', condition)
+    return search(c.conditions, 'name', condition)
 
 def searchRule(rule, search=fuzzywuzzy_search):
-    with open('./res/rules.json', 'r') as f:
-        rules = json.load(f)
-    return search(rules, 'name', rule)
+    return search(c.rules, 'name', rule)
 
 def searchFeat(feat, search=fuzzywuzzy_search):
-    with open('./res/feats.json', 'r') as f:
-        feats = json.load(f)
-    return search(feats, 'name', feat)
+    return search(c.feats, 'name', feat)
+
+def searchRacialFeat(feat, search=fuzzywuzzy_search):
+    return search(c.rfeats, 'name', feat)
+
+def searchClassFeat(feat, search=fuzzywuzzy_search):
+    return search(c.cfeats, 'name', feat)
 
 def searchMonster(monstername, visible=True, return_monster=False, search=fuzzywuzzy_search):
     with open('./res/bestiary.json', 'r') as f:

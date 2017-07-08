@@ -122,7 +122,8 @@ class Lookup:
         else:
             result = searchFeat(top_key)
         
-        result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None and not t.startswith('Source:'))
+        if isinstance(result['text'], list):
+            result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None and not t.startswith('Source:'))
         result['prerequisite'] = result.get('prerequisite') or "None"
         out = "**{name}**\n**Source**: {source}\n*Prerequisite: {prerequisite}*\n\n{text}".format(**result)
 

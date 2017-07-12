@@ -790,7 +790,7 @@ class SheetManager:
         """Loads a character sheet from [this Google sheet](https://docs.google.com/spreadsheets/d/1etrBJ0qCDXACovYHUM4XvjE0erndThwRLcUQzX6ts8w/edit?usp=sharing), resetting all settings. The sheet must be shared with Avrae (see specific command help) for this to work.
         Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
         
-        loading = await self.bot.say('Loading character data from Google...')
+        loading = await self.bot.say('Loading character data from Google... (This usually takes ~30 sec)')
         try:
             url = extract_id_from_url(url)
         except NoValidUrlKeyFound:
@@ -801,16 +801,17 @@ class SheetManager:
             character = await parser.get_character()
         except SpreadsheetNotFound:
             return await self.bot.edit_message(loading, "Invalid character sheet. Make sure you've shared it with me at `avrae-320@avrae-bot.iam.gserviceaccount.com`!")
-        try:
-            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.acell("C6").value))
-        except TypeError:
-            return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
         try:
             sheet = await parser.get_sheet()
         except Exception as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+        
+        try:
+            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.acell("C6").value))
+        except TypeError:
+            return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
         self.active_characters = self.bot.db.not_json_get('active_characters', {})
         self.active_characters[ctx.message.author.id] = url

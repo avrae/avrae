@@ -310,7 +310,7 @@ class AdminUtils:
     def request_server_info(self, serv_id):
         request = ServerInfoRequest(self.bot, serv_id)
         self.server_info[request.uuid] = {}
-        r = json.dumps(dict(request))
+        r = json.dumps(request.to_dict())
         self.bot.db.pubsub.publish('server-info-requests', r)
         return request.uuid
     
@@ -335,7 +335,7 @@ class AdminUtils:
         except:
             invite = None
         response = ServerInfoResponse(self.bot, reply_to, server_id, invite)
-        r = json.dumps(dict(response))
+        r = json.dumps(response.to_dict())
         self.bot.db.pubsub.publish('server-info-response', r)
     
     async def _handle_server_info_response(self, message):
@@ -351,7 +351,7 @@ class PubSubMessage(object):
         self.shard_id = int(getattr(bot, 'shard_id', 0))
         self.uuid = str(uuid.uuid4())
         
-    def __dict__(self):
+    def to_dict(self):
         d = {}
         d['shard'] = self.shard_id
         d['uuid'] = self.uuid
@@ -361,8 +361,8 @@ class ServerInfoRequest(PubSubMessage):
         super().__init__(bot)
         self.server_id = server_id
         
-    def __dict__(self):
-        d = dict(super())
+    def to_dict(self):
+        d = super().to_dict()
         d['server-id'] = self.server_id
 
 class ServerInfoResponse(PubSubMessage):
@@ -396,8 +396,8 @@ class ServerInfoResponse(PubSubMessage):
                              'invite': server_invite,
                              'private_message': False}
             
-    def __dict__(self):
-        d = dict(super())
+    def to_dict(self):
+        d = super().to_dict()
         d['server-id'] = self.server_id
         d['reply-to'] = self.server_id
         d['data'] = self.data

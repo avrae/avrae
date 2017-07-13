@@ -355,6 +355,7 @@ class PubSubMessage(object):
         d = {}
         d['shard'] = self.shard_id
         d['uuid'] = self.uuid
+        return d
 
 class ServerInfoRequest(PubSubMessage):
     def __init__(self, bot, server_id):
@@ -364,6 +365,7 @@ class ServerInfoRequest(PubSubMessage):
     def to_dict(self):
         d = super().to_dict()
         d['server-id'] = self.server_id
+        return d
 
 class ServerInfoResponse(PubSubMessage):
     def __init__(self, bot, reply_to, server_id, server_invite=None):
@@ -401,4 +403,5 @@ class ServerInfoResponse(PubSubMessage):
         d['server-id'] = self.server_id
         d['reply-to'] = self.server_id
         d['data'] = self.data
+        return d
         

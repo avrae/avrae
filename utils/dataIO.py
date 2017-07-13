@@ -76,5 +76,6 @@ class DataIO:
         data = self.get(key)
         return json.loads(data) if data is not None else default
     
-        
+    def publish(self, channel, data):
+        return self._db.publish(channel, data)
         

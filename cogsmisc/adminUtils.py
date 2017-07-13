@@ -311,7 +311,7 @@ class AdminUtils:
         request = ServerInfoRequest(self.bot, serv_id)
         self.server_info[request.uuid] = {}
         r = json.dumps(request.to_dict())
-        self.bot.db.pubsub.publish('server-info-requests', r)
+        self.bot.db.publish('server-info-requests', r)
         return request.uuid
     
     async def handle_pubsub(self):
@@ -328,19 +328,21 @@ class AdminUtils:
             pass
         
     async def _handle_server_info_request(self, message):
-        server_id = message['data']['server-id']
-        reply_to = message['data']['uuid']
+        _data = json.loads(message['data'])
+        server_id = _data['server-id']
+        reply_to = _data['uuid']
         try:
             invite = await self.bot.create_invite(self.bot.get_channel(server_id).server).url
         except:
             invite = None
         response = ServerInfoResponse(self.bot, reply_to, server_id, invite)
         r = json.dumps(response.to_dict())
-        self.bot.db.pubsub.publish('server-info-response', r)
+        self.bot.db.publish('server-info-response', r)
     
     async def _handle_server_info_response(self, message):
-        reply_to = message['data']['reply-to']
-        data = message['data']['data']
+        _data = json.loads(message['data'])
+        reply_to = _data['reply-to']
+        data = _data['data']
         shard_id = message['data']['shard']
         if not reply_to in self.server_info: return
         else:

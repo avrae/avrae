@@ -181,13 +181,13 @@ class DicecloudParser(SheetParser):
                     base = value
                 elif operation == 'add':
                     add += value
-                elif operation == 'mul' and value > mult:
-                    mult = value
+                elif operation == 'mul':
+                    mult *= value
                 elif operation == 'min':
                     minV = value if minV is None else value if value < minV else minV
                 elif operation == 'max':
                     maxV = value if maxV is None else value if value > maxV else maxV
-        out = (base * mult) + add
+        out = (base + add) * mult
         if minV is not None:
             out = max(out, minV)
         if maxV is not None:
@@ -212,12 +212,12 @@ class DicecloudParser(SheetParser):
                 elif operation == 'add':
                     add += value
                 elif operation == 'mul':
-                    mult = value
+                    mult *= value
                 elif operation == 'min':
                     minV = value if minV is None else value if value < minV else minV
                 elif operation == 'max':
                     maxV = value if maxV is None else value if value > maxV else maxV
-        out = (base * mult) + add
+        out = (base + add) * mult
         if minV is not None:
             out = max(out, minV)
         if maxV is not None:
@@ -289,13 +289,13 @@ class DicecloudParser(SheetParser):
                     base = value
                 elif operation == 'add':
                     add += value
-                elif operation == 'mul' and value > mult:
-                    mult = value
+                elif operation == 'mul':
+                    mult *= value
                 elif operation == 'min':
                     minV = value if minV is None else value if value < minV else minV
                 elif operation == 'max':
                     maxV = value if maxV is None else value if value > maxV else maxV
-        out = (base * mult) + add
+        out = (base + add) * mult
         if minV is not None:
             out = max(out, minV)
         if maxV is not None:

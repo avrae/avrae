@@ -95,13 +95,14 @@ class AdminUtils:
         data = self.server_info[req]
         del self.server_info[req]
         for shard in range(num_shards):
-            if shard not in data:
+            if str(shard) not in data:
                 out += '\nMissing data from shard {}'.format(shard)
         
         if server is None: # grab all server info
             all_servers = []
             for _shard, _data in data.items():
-                _data['shard'] = _shard
+                for s in _data:
+                    s['shard'] = _shard
                 all_servers += _data
             for s in sorted(all_servers, key=lambda k: k['members'], reverse=True):
                 out += "\n{} ({}, {} members, {} bot, shard {})".format(s['name'], s['id'], s['members'], s['bots'], s['shard'])
@@ -320,7 +321,11 @@ class AdminUtils:
             while not self.bot.is_closed:
                 await asyncio.sleep(0.1)
                 message = self.bot.db.pubsub.get_message()
+                if message: print(message)
                 if message is None: continue
+                for k, v in message.items():
+                    if isinstance(v, bytes):
+                        message[k] = v.decode()
                 if not message['type'] in ('message', 'pmessage'): continue
                 if message['channel'] == 'server-info-requests': await self._handle_server_info_request(message)
                 elif message['channel'] == 'server-info-response': await self._handle_server_info_response(message)
@@ -343,7 +348,7 @@ class AdminUtils:
         _data = json.loads(message['data'])
         reply_to = _data['reply-to']
         data = _data['data']
-        shard_id = message['data']['shard']
+        shard_id = _data['shard']
         if not reply_to in self.server_info: return
         else:
             self.server_info[reply_to][str(shard_id)] = data
@@ -403,7 +408,7 @@ class ServerInfoResponse(PubSubMessage):
     def to_dict(self):
         d = super().to_dict()
         d['server-id'] = self.server_id
-        d['reply-to'] = self.server_id
+        d['reply-to'] = self.reply_to
         d['data'] = self.data
         return d
         

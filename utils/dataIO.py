@@ -21,6 +21,7 @@ class DataIO:
             self._db = redis.from_url(os.environ.get("REDIS_URL"))
         else:
             self._db = redis.from_url(test_database_url)
+        self.pubsub = self._db.pubsub(ignore_subscribe_messages=True)
         
     def get(self, key, default=None):
         encoded_data = self._db.get(key)
@@ -74,5 +75,6 @@ class DataIO:
     def not_json_get(self, key, default=None):
         data = self.get(key)
         return json.loads(data) if data is not None else default
+    
         
         

@@ -4,10 +4,13 @@ Created on Sep 23, 2016
 @author: andrew
 '''
 import asyncio
+import copy
+import json
 import os
 import re
 import sys
 import traceback
+import uuid
 
 import discord
 from discord.channel import PrivateChannel
@@ -30,8 +33,11 @@ class AdminUtils:
         self.assume_dir_control_chan = None
         self.assume_dir_control_controller = None
         self.blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
-        #self.bot.loop.create_task(self.send_logs())
-    
+        
+        self.bot.loop.create_task(self.handle_pubsub())
+        self.bot.db.pubsub.subscribe('server-info-requests', 'server-info-response')
+        self.server_info = {}
+        
     
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -76,29 +82,47 @@ class AdminUtils:
     async def servInfo(self, server:str=None):
         out = ''
         page = None
+        num_shards = int(getattr(self.bot, 'shard_count', 1))
         if len(server) < 3:
             page = int(server)
             server = None
-        if server is None:
-            for s in sorted(self.bot.servers, key=lambda k: len(k.members), reverse=True):
-                out += "\n{} ({}, {} members, {} bot)".format(s, s.id, len(s.members), sum(1 for m in s.members if m.bot))
-        else:
-            s = self.bot.get_server(server)
-            if s is None:
-                s = self.bot.get_channel(server)
-                if s is None:
-                    return await self.bot.say("Not found.")
-                elif isinstance(s, PrivateChannel):
-                    return await self.bot.say("{} - {}".format(s, s.user.id))
-                else:
-                    s = s.server
+            
+        req = self.request_server_info(server)
+        for _ in range(300): # timeout after 30 sec
+            if len(self.server_info[req]) >= num_shards: break
+            else: await asyncio.sleep(0.1)
+        
+        data = self.server_info[req]
+        del self.server_info[req]
+        for shard in range(num_shards):
+            if shard not in data:
+                out += '\nMissing data from shard {}'.format(shard)
+        
+        if server is None: # grab all server info
+            all_servers = []
+            for _shard, _data in data.items():
+                _data['shard'] = _shard
+                all_servers += _data
+            for s in sorted(all_servers, key=lambda k: k['members'], reverse=True):
+                out += "\n{} ({}, {} members, {} bot, shard {})".format(s['name'], s['id'], s['members'], s['bots'], s['shard'])
+        else: # grab one server info
             try:
-                out += "\n\n**{} ({}, {})**".format(s, s.id, (await self.bot.create_invite(s)).url)
-            except:
-                out += "\n\n**{} ({})**".format(s, s.id)
-            out += "\n{} members, {} bot".format(len(s.members), sum(1 for m in s.members if m.bot))
-            for c in [ch for ch in s.channels if ch.type is not ChannelType.voice]:
-                out += '\n|- {} ({})'.format(c, c.id)
+                _data = next((s, d) for s, d in data.items() if d is not None) # here we assume only one shard will reply
+                shard = _data[0]
+                data = _data[1]
+            except StopIteration:
+                return await self.bot.say("Not found.")
+            
+            if data.get('private_message'):
+                return await self.bot.say("{} - {} - Shard 0".format(data['name'], data['user']))
+            else:
+                if data.get('invite'):
+                    out += "\n\n**{} ({}, {}, shard {})**".format(data['name'], data['id'], data['invite'], shard)
+                else:
+                    out += "\n\n**{} ({}, shard {})**".format(data['name'], data['id'], shard)
+                out += "\n{} members, {} bot".format(data['members'], data['bots'])
+                for c in data['channels']:
+                    out += '\n|- {} ({})'.format(c['name'], c['id'])
         out = self.discord_trim(out)
         if page is None:
             for m in out:
@@ -283,3 +307,98 @@ class AdminUtils:
         except asyncio.CancelledError:
             pass
     
+    def request_server_info(self, serv_id):
+        request = ServerInfoRequest(self.bot, serv_id)
+        self.server_info[request.uuid] = {}
+        r = json.dumps(dict(request))
+        self.bot.db.pubsub.publish('server-info-requests', r)
+        return request.uuid
+    
+    async def handle_pubsub(self):
+        try:
+            await self.bot.wait_until_ready()
+            while not self.bot.is_closed:
+                await asyncio.sleep(0.1)
+                message = self.bot.db.pubsub.get_message()
+                if message is None: continue
+                if not message['type'] in ('message', 'pmessage'): continue
+                if message['channel'] == 'server-info-requests': await self._handle_server_info_request(message)
+                elif message['channel'] == 'server-info-response': await self._handle_server_info_response(message)
+        except asyncio.CancelledError:
+            pass
+        
+    async def _handle_server_info_request(self, message):
+        server_id = message['data']['server-id']
+        reply_to = message['data']['uuid']
+        try:
+            invite = await self.bot.create_invite(self.bot.get_channel(server_id).server).url
+        except:
+            invite = None
+        response = ServerInfoResponse(self.bot, reply_to, server_id, invite)
+        r = json.dumps(dict(response))
+        self.bot.db.pubsub.publish('server-info-response', r)
+    
+    async def _handle_server_info_response(self, message):
+        reply_to = message['data']['reply-to']
+        data = message['data']['data']
+        shard_id = message['data']['shard']
+        if not reply_to in self.server_info: return
+        else:
+            self.server_info[reply_to][str(shard_id)] = data
+        
+class PubSubMessage(object):
+    def __init__(self, bot):
+        self.shard_id = int(getattr(bot, 'shard_id', 0))
+        self.uuid = str(uuid.uuid4())
+        
+    def __dict__(self):
+        d = {}
+        d['shard'] = self.shard_id
+        d['uuid'] = self.uuid
+
+class ServerInfoRequest(PubSubMessage):
+    def __init__(self, bot, server_id):
+        super().__init__(bot)
+        self.server_id = server_id
+        
+    def __dict__(self):
+        d = dict(super())
+        d['server-id'] = self.server_id
+
+class ServerInfoResponse(PubSubMessage):
+    def __init__(self, bot, reply_to, server_id, server_invite=None):
+        super().__init__(bot)
+        self.server_id = server_id
+        self.reply_to = reply_to
+        if server_id is None:
+            self.data = [{'id': s.id,
+                          'name': s.name,
+                          'members': len(s.members),
+                          'bots': sum(m.bot for m in s.members)} for s in bot.servers]
+        else:
+            s = bot.get_channel(server_id)
+            if s is None:
+                self.data = None
+            elif isinstance(s, PrivateChannel):
+                self.data = {'id': s.id,
+                             'name': str(s),
+                             'user': s.user.id,
+                             'private_message': True}
+            else:
+                s = s.server
+                channels = [{'id': c.id,
+                             'name': c.name} for c in s.channels if c.type is not ChannelType.voice]
+                self.data = {'id': s.id,
+                             'name': s.name,
+                             'members': len(s.members),
+                             'bots': sum(m.bot for m in s.members),
+                             'channels': channels,
+                             'invite': server_invite,
+                             'private_message': False}
+            
+    def __dict__(self):
+        d = dict(super())
+        d['server-id'] = self.server_id
+        d['reply-to'] = self.server_id
+        d['data'] = self.data
+        

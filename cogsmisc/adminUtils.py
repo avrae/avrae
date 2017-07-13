@@ -321,7 +321,7 @@ class AdminUtils:
             while not self.bot.is_closed:
                 await asyncio.sleep(0.1)
                 message = self.bot.db.pubsub.get_message()
-                if message: print(message)
+                # if message: print(message)
                 if message is None: continue
                 for k, v in message.items():
                     if isinstance(v, bytes):
@@ -337,7 +337,7 @@ class AdminUtils:
         server_id = _data['server-id']
         reply_to = _data['uuid']
         try:
-            invite = await self.bot.create_invite(self.bot.get_channel(server_id).server).url
+            invite = (await self.bot.create_invite(self.bot.get_channel(server_id).server)).url
         except:
             invite = None
         response = ServerInfoResponse(self.bot, reply_to, server_id, invite)

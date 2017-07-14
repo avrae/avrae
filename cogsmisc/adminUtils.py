@@ -35,8 +35,9 @@ class AdminUtils:
         self.blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
         
         self.bot.loop.create_task(self.handle_pubsub())
-        self.bot.db.pubsub.subscribe('server-info-requests', 'server-info-response')
-        self.server_info = {}
+        self.bot.db.pubsub.subscribe('server-info-requests', 'server-info-response', # all-shard communication
+                                     'admin-commands') # 1-shard communication
+        self.requests = {}
         
     
     @commands.command(hidden=True)
@@ -89,11 +90,11 @@ class AdminUtils:
             
         req = self.request_server_info(server)
         for _ in range(300): # timeout after 30 sec
-            if len(self.server_info[req]) >= num_shards: break
+            if len(self.requests[req]) >= num_shards: break
             else: await asyncio.sleep(0.1)
         
-        data = self.server_info[req]
-        del self.server_info[req]
+        data = self.requests[req]
+        del self.requests[req]
         for shard in range(num_shards):
             if str(shard) not in data:
                 out += '\nMissing data from shard {}'.format(shard)
@@ -143,9 +144,19 @@ class AdminUtils:
     @commands.command(hidden=True, name='leave')
     @checks.is_owner()
     async def leave_server(self, servID : str):
-        serv = self.bot.get_server(servID)
-        await self.bot.leave_server(serv)
-        await self.bot.say("Left {}.".format(serv))
+        req = self.request_leave_server(servID)
+        for _ in range(300): # timeout after 30 sec
+            if len(self.requests[req]) >= 1: break
+            else: await asyncio.sleep(0.1)
+        
+        out = ''
+        data = self.requests[req]
+        del self.requests[req]
+        
+        for shard, response in data.items():
+            out += 'Shard {}: {}\n'.format(shard, response['response'])
+        await self.bot.say(out)
+        
         
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -310,9 +321,16 @@ class AdminUtils:
     
     def request_server_info(self, serv_id):
         request = ServerInfoRequest(self.bot, serv_id)
-        self.server_info[request.uuid] = {}
+        self.requests[request.uuid] = {}
         r = json.dumps(request.to_dict())
         self.bot.db.publish('server-info-requests', r)
+        return request.uuid
+    
+    def request_leave_server(self, serv_id):
+        request = CommandRequest(self.bot, 'leave', server_id=serv_id)
+        self.requests[request.uuid] = {}
+        r = json.dumps(request.to_dict())
+        self.bot.db.publish('admin-commands', r)
         return request.uuid
     
     async def handle_pubsub(self):
@@ -329,6 +347,7 @@ class AdminUtils:
                 if not message['type'] in ('message', 'pmessage'): continue
                 if message['channel'] == 'server-info-requests': await self._handle_server_info_request(message)
                 elif message['channel'] == 'server-info-response': await self._handle_server_info_response(message)
+                elif message['channel'] == 'admin-commands': await self._handle_admin_command(message)
         except asyncio.CancelledError:
             pass
         
@@ -347,11 +366,35 @@ class AdminUtils:
     async def _handle_server_info_response(self, message):
         _data = json.loads(message['data'])
         reply_to = _data['reply-to']
-        data = _data['data']
+        __data = _data['data']
         shard_id = _data['shard']
-        if not reply_to in self.server_info: return
+        if not reply_to in self.requests: return
         else:
-            self.server_info[reply_to][str(shard_id)] = data
+            self.requests[reply_to][str(shard_id)] = __data
+            
+    async def _handle_admin_command(self, message):
+        _data = json.loads(message['data'])
+        if _data['command'] == 'leave': await self.__handle_leave_command(_data)
+        elif _data['command'] == 'reply': await self.__handle_command_reply(_data)
+        
+    async def __handle_leave_command(self, data):
+        _data = data['data']
+        reply_to = data['uuid']
+        server_id = _data['server_id']
+        serv = self.bot.get_server(server_id)
+        if serv is not None:
+            await self.bot.leave_server(serv)
+            response = CommandResponse(self.bot, reply_to, "Left {}.".format(serv))
+            r = json.dumps(response.to_dict())
+            self.bot.db.publish('admin-commands', r)
+    
+    async def __handle_command_reply(self, data):
+        _data = data['data']
+        reply_to = data['reply-to']
+        shard_id = data['shard']
+        if not reply_to in self.requests: return
+        else:
+            self.requests[reply_to][str(shard_id)] = _data
         
 class PubSubMessage(object):
     def __init__(self, bot):
@@ -364,6 +407,32 @@ class PubSubMessage(object):
         d['uuid'] = self.uuid
         return d
 
+class CommandRequest(PubSubMessage):
+    def __init__(self, bot, command, **kwargs):
+        super().__init__(bot)
+        self.command = command
+        self.kwargs = kwargs
+        
+    def to_dict(self):
+        d = super().to_dict()
+        d['command'] = self.command
+        d['data'] = self.kwargs
+        return d
+    
+class CommandResponse(PubSubMessage):
+    def __init__(self, bot, reply_to, response):
+        super().__init__(bot)
+        self.reply_to = reply_to
+        self.response = response
+        
+    def to_dict(self):
+        d = super().to_dict()
+        d['command'] = 'reply'
+        d['reply-to'] = self.reply_to
+        d['data'] = {'response': self.response}
+        return d
+
+        
 class ServerInfoRequest(PubSubMessage):
     def __init__(self, bot, server_id):
         super().__init__(bot)
@@ -373,7 +442,7 @@ class ServerInfoRequest(PubSubMessage):
         d = super().to_dict()
         d['server-id'] = self.server_id
         return d
-
+    
 class ServerInfoResponse(PubSubMessage):
     def __init__(self, bot, reply_to, server_id, server_invite=None):
         super().__init__(bot)

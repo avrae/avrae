@@ -57,7 +57,7 @@ Join the official testing server [here](https://discord.gg/pQbd4s6)!
 Love the bot? Donate to me [here](https://www.paypal.me/avrae)! \u2764
 '''
 if not SHARDED:
-    bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True)
+    bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True, shard_id=0, shard_count=1)
 else:
     bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True, shard_id=int(shard_id), shard_count=int(shard_count))
 bot.prefix = prefix

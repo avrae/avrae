@@ -16,6 +16,7 @@ import traceback
 
 import discord
 from discord.ext import commands
+from discord.ext.commands.cooldowns import BucketType
 from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 from gspread.utils import extract_id_from_url
 import numexpr
@@ -447,6 +448,7 @@ class SheetManager:
         await self.bot.say("Active character changed to {}.".format(name), delete_after=20)
         
     @commands.command(pass_context=True)
+    @commands.cooldown(1, 15, BucketType.user)
     async def update(self, ctx, *, args=''):
         """Updates the current character sheet, preserving all settings.
         Valid Arguments: -h - Hides character sheet after update is complete."""

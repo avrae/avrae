@@ -174,6 +174,8 @@ async def on_command_error(error, ctx):
         if isinstance(original, HTTPException):
             if original.response.status == 400:
                 return await bot.send_message(ctx.message.channel, "Error: Message is too long, malformed, or empty.")
+            if original.response.status == 500:
+                return await bot.send_message(ctx.message.channel, "Error: Internal server error on Discord's end. Please try again.")
             
     if bot.mask & coreCog.debug_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")

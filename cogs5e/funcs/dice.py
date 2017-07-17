@@ -176,7 +176,7 @@ class Roll(object):
         result.num_dice = numDice
         result.operators = ops
         
-        for die in range(numDice):
+        for _ in range(numDice):
             try:
                 tempdice = SingleDice()
                 tempdice.value = random.randint(1, diceVal)
@@ -352,7 +352,7 @@ class Comment(Part):
         self.comment = comment
         
     def __str__(self):
-        return re.sub(r'\s*(.*)\s*', r'\1', self.comment)
+        return self.comment.strip()
 
 def parse_selectors(opts, res, greedy=False):
     """Returns a list of ints."""

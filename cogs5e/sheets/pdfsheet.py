@@ -197,9 +197,9 @@ class PDFSheetParser(SheetParser):
             damageTypes = ['acid', 'bludgeoning', 'cold', 'fire', 'force',
                            'lightning', 'necrotic', 'piercing', 'poison',
                            'psychic', 'radiant', 'slashing', 'thunder']
-            comment = get_roll_comment(attack['damage'])
+            dice, comment = get_roll_comment(attack['damage'])
             if any(d in comment for d in damageTypes):
-                attack['damage'] = "{} [{}]".format(attack['damage'], comment)
+                attack['damage'] = "{} [{}]".format(dice, comment)
             else:
                 attack['details'] = comment
         

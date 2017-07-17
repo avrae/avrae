@@ -36,18 +36,25 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
     return result
 
 def get_roll_comment(rollStr):
+    """Returns: A two-tuple (dice without comment, comment)"""
     try:
+        comment = ''
+        no_comment = ''
         dice_set = re.split('([-+*/().<>=])', rollStr)
         dice_set = [d for d in dice_set if not d in (None, '')]
         log.debug("Found dice set: " + str(dice_set))
         for index, dice in enumerate(dice_set):
             match = re.match(DICE_PATTERN, dice, IGNORECASE)
             log.debug("Found dice group: " + str(match.groups()))
+            no_comment += dice.replace(match.group(5), '')
             if match.group(5):
-                return match.group(5) + ''.join(dice_set[index+1:])
+                comment = match.group(5) + ''.join(dice_set[index+1:])
+                break
+                
+        return (no_comment, comment)
     except:
         pass
-    return ''
+    return (rollStr, '')
 
 class Roll(object):
     def __init__(self, parts:list=[]):

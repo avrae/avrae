@@ -29,11 +29,13 @@ from cogsmisc.customization import Customization
 from cogsmisc.permissions import Permissions
 from cogsmisc.publicity import Publicity
 from cogsmisc.repl import REPL
+from cogsmisc.stats import Stats
 from utils import checks
 from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim, get_positivity, \
     list_get
 from utils.help import Help
+
 
 INITIALIZING = True
 TESTING = get_positivity(os.environ.get("TESTING", False))
@@ -126,7 +128,8 @@ cogs = [diceCog,
         helpCog,
         sheetCog,
         customizationCog,
-        REPL(bot)]
+        REPL(bot),
+        Stats(bot)]
 
 @bot.event
 async def on_ready():

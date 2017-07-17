@@ -17,6 +17,7 @@ from pdfminer.pdfparser import PDFParser
 from pdfminer.pdftypes import resolve1
 from pdfminer.psparser import PSLiteral
 
+from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.sheetParser import SheetParser
 
@@ -190,6 +191,18 @@ class PDFSheetParser(SheetParser):
         
         if attack['name'] is None:
             return None
+        if attack['damage'] is "":
+            attack['damage'] = None
+        else:
+            damageTypes = ['acid', 'bludgeoning', 'cold', 'fire', 'force',
+                           'lightning', 'necrotic', 'piercing', 'poison',
+                           'psychic', 'radiant', 'slashing', 'thunder']
+            dice, comment = get_roll_comment(attack['damage'])
+            if any(d in comment for d in damageTypes):
+                attack['damage'] = "{}[{}]".format(dice, comment)
+            else:
+                attack['damage'] = dice
+                attack['details'] = comment
         
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
         

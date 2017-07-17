@@ -7,6 +7,7 @@ import asyncio
 import copy
 import datetime
 import json
+import logging
 from math import floor
 from os.path import isfile
 import pickle
@@ -28,6 +29,8 @@ from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
     parse_args_3, parse_cvars, evaluate_cvar, parse_resistances
 
+
+log = logging.getLogger(__name__)
 
 class Combat(object):
     def __init__(self, channel:discord.Channel, combatants=[], init:int=0, init_round:int=0, summary_message=None, options={}, name=""):
@@ -218,15 +221,30 @@ class Combatant(object):
     def get_hp_and_ac(self, private:bool=False):
         out = []
         out.append(self.get_hp(private))
-        if self.ac is not None and not self.private:
+        if self.ac is not None and (not self.private or private):
             out.append("(AC {})".format(self.ac))
         return ' '.join(out)
     
+    def get_resist_string(self, private:bool=False):
+        resistStr = ''
+        self.resist = [r for r in self.resist if r] # clean empty resists
+        self.immune = [r for r in self.immune if r] # clean empty resists
+        self.vuln = [r for r in self.vuln if r] # clean empty resists
+        if not self.private or private:
+            if len(self.resist) > 0:
+                resistStr += "\n> Resistances: " + ', '.join(self.resist).title()
+            if len(self.immune) > 0:
+                resistStr += "\n> Immunities: " + ', '.join(self.immune).title()
+            if len(self.vuln) > 0:
+                resistStr += "\n> Vulnerabilities: " + ', '.join(self.vuln).title()
+        return resistStr
+    
     def get_status(self, private:bool=False):
-        csFormat = "{} {} {}{}"
+        csFormat = "{} {} {}{}{}"
         status = csFormat.format(self.name,
                                  self.get_hp_and_ac(private),
-                                 '\n> ' + self.notes if self.notes is not '' else '',
+                                 self.get_resist_string(private),
+                                 '\n# ' + self.notes if self.notes is not '' else '',
                                  self.get_long_effects())
         return status
     
@@ -272,7 +290,7 @@ class MonsterCombatant(Combatant):
         self.ac = int(monster['ac'].split(' (')[0])
         self.private = private
         self.group = group
-        self.resist = monster.get('resist', '').replace(' ', '').split(',') # TODO: fix "slashing from nonmagical weapons"
+        self.resist = monster.get('resist', '').replace(' ', '').split(',')
         self.immune = monster.get('immune', '').replace(' ', '').split(',')
         self.vuln = monster.get('vulnerable', '').replace(' ', '').split(',')
         
@@ -304,13 +322,20 @@ class MonsterCombatant(Combatant):
                 for e in t:
                     for d in ('bludgeoning', 'piercing', 'slashing'):
                         if d in e: t.remove(e)
+        for t in (self.resist, self.immune, self.vuln):
+            for e in t:
+                for d in ('bludgeoning', 'piercing', 'slashing'):
+                    if d in e and not d.lower() == e.lower():
+                        t.remove(e)
+                        t.append(d)
         
     def get_status(self, private:bool=False):
-        csFormat = "{} {} {}{}{}"
+        csFormat = "{} {} {}{}{}{}"
         status = csFormat.format(self.name,
                                  self.get_hp_and_ac(private),
-                                 '\n> ' + self.notes if self.notes is not '' else '',
-                                 ('\n* ' + '\n* '.join([e.name + (" [{} rounds]".format(e.remaining) if e.remaining >= 0 else '') for e in self.effects])) if len(self.effects) is not 0 else '',
+                                 self.get_resist_string(private),
+                                 '\n# ' + self.notes if self.notes is not '' else '',
+                                 self.get_long_effects(),
                                  "\n- This combatant will be automatically removed if they remain below 0 HP." if self.hp <= 0 else "")
         return status
         
@@ -372,7 +397,7 @@ class InitTracker:
         args = shlex.split(args.lower())
         if '-1' in args:  # rolls a d100 instead of a d20 and multiplies modifier by 5
             options['d100_init'] = True
-        if '-dyn' in args:  # rolls a d100 instead of a d20 and multiplies modifier by 5
+        if '-dyn' in args:  # rerolls all inits at the start of each round
             options['dynamic'] = True
         if '--name' in args:
             try:
@@ -390,7 +415,7 @@ class InitTracker:
             await self.bot.pin_message(summaryMsg)
         except:
             pass
-        await self.bot.say("Everyone roll for initiative!\nIf you have a character set up with SheetManager: `!init dcadd`\nIf it's a 5e monster: `!init madd [monster name]`\nOtherwise: `!init add [modifier] [name]`")
+        await self.bot.say("Everyone roll for initiative!\nIf you have a character set up with SheetManager: `!init cadd`\nIf it's a 5e monster: `!init madd [monster name]`\nOtherwise: `!init add [modifier] [name]`")
             
     @init.command(pass_context=True)
     async def add(self, ctx, modifier : int, name : str, *, args:str=''):
@@ -950,7 +975,7 @@ class InitTracker:
             status = combatant.get_status(private=private)
         else:
             status = "\n".join([c.get_status(private=private) for c in combatant.combatants])
-        if private:
+        if 'private' in args.lower():
             await self.bot.send_message(combatant.author, "```markdown\n" + status + "```")
         else:
             await self.bot.say("```markdown\n" + status + "```", delete_after=30)
@@ -1111,7 +1136,7 @@ class InitTracker:
             args['immune'] = args.get('immune') or '|'.join(target.immune)
             args['vuln'] = args.get('vuln') or '|'.join(target.vuln)
             args['criton'] = combatant.sheet.get('settings', {}).get('criton', 20) or 20
-            args['c'] = combatant.sheet.get('settings', {}).get('critdmg') or None
+            args['c'] = combatant.sheet.get('settings', {}).get('critdmg') or args.get('c')
             args['hocrit'] = combatant.sheet.get('settings', {}).get('hocrit') or False
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get('color') is None else combatant.sheet.get('settings', {}).get('color')
@@ -1594,7 +1619,7 @@ class InitTracker:
             combat.combatantGenerator = None
             path = '{}.avrae'.format(combat.channel.id)
             self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
-            print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
+            log.info("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
             temp_key.append(combat.channel.id)
         self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 120) # timeout in 2 minutes
         
@@ -1604,34 +1629,34 @@ class InitTracker:
         temp_msgs = []
         for c in combats:
             if self.bot.get_channel(c) is None:
-                print('Shard check for {} failed, aborting.'.format(c))
+                log.warning('Shard check for {} failed, aborting.'.format(c))
                 continue
             path = '{}.avrae'.format(c)
             combat = self.bot.db.get(path, None)
             if combat is None:
-                print('Combat not found reloading {}, aborting'.format(c))
+                log.warning('Combat not found reloading {}, aborting'.format(c))
                 continue
             combat = pickle.loads(combat.encode('cp437'))
             if combat.lastmodified + datetime.timedelta(weeks=1) < datetime.datetime.now():
-                print('Combat not modified for over 1w reloading {}, aborting'.format(c))
+                log.warning('Combat not modified for over 1w reloading {}, aborting'.format(c))
                 continue
             combat.channel = self.bot.get_channel(combat.channel.id)
             if combat.channel is None:
-                print('Combat channel not found reloading {}, aborting'.format(c))
+                log.warning('Combat channel not found reloading {}, aborting'.format(c))
                 continue
             self.combats.append(combat)
             try:
                 if combat.summary_message is not None:
                     combat.summary_message = await self.bot.get_message(combat.channel, combat.summary_message.id)
             except NotFound:
-                print('Summary Message not found reloading {}'.format(c))
+                log.warning('Summary Message not found reloading {}'.format(c))
             except:
                 pass
-            print("Autoreloaded {}".format(c))
+            log.info("Autoreloaded {}".format(c))
             try:
                 temp_msgs.append(await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!"))
             except Forbidden:
-                print('No permission to post in {}'.format(c))
+                log.warning('No permission to post in {}'.format(c))
         self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
         await asyncio.sleep(30)
         for msg in temp_msgs:

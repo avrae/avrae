@@ -7,6 +7,7 @@ import asyncio
 import copy
 from datetime import datetime
 import json
+import logging
 import random
 import re
 import shlex
@@ -16,6 +17,7 @@ import traceback
 
 import discord
 from discord.ext import commands
+from discord.ext.commands.cooldowns import BucketType
 from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 from gspread.utils import extract_id_from_url
 import numexpr
@@ -30,6 +32,8 @@ from utils.functions import list_get, embed_trim, get_positivity, a_or_an, \
     parse_cvars
 from utils.loggers import TextLogger
 
+
+log = logging.getLogger(__name__)
 
 class SheetManager:
     """Commands to import a character sheet from Dicecloud (https://dicecloud.com) or the fillable Wizards character PDF."""
@@ -432,6 +436,7 @@ class SheetManager:
                 self.active_characters[ctx.message.author.id] = None
                 del user_characters[char_url]
                 self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+                self.bot.db.not_json_set('active_characters', self.active_characters)
                 return await self.bot.say('{} has been deleted.'.format(name))
             else:
                 return await self.bot.say("OK, cancelling.")
@@ -447,6 +452,7 @@ class SheetManager:
         await self.bot.say("Active character changed to {}.".format(name), delete_after=20)
         
     @commands.command(pass_context=True)
+    @commands.cooldown(1, 15, BucketType.user)
     async def update(self, ctx, *, args=''):
         """Updates the current character sheet, preserving all settings.
         Valid Arguments: -h - Hides character sheet after update is complete."""
@@ -460,7 +466,7 @@ class SheetManager:
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(url)
             loading = await self.bot.say('Updating character data from Dicecloud...')
-            self.logger.text_log(ctx, "s.{} Dicecloud Request ({}): ".format(getattr(self.bot, 'shard_id', 0), url))
+            self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(url))
         elif sheet_type == 'pdf':
             if not 0 < len(ctx.message.attachments) < 2:
                 return await self.bot.say('You must call this command in the same message you upload a PDF sheet.')
@@ -716,7 +722,7 @@ class SheetManager:
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
         
-        self.logger.text_log(ctx, "s.{} Dicecloud Request ({}): ".format(getattr(self.bot, 'shard_id', 0), url))
+        self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(url))
         
         loading = await self.bot.say('Loading character data from Dicecloud...')
         parser = DicecloudParser(url)
@@ -762,7 +768,7 @@ class SheetManager:
         try:
             await parser.get_character()
         except Exception as e:
-            print("Error loading PDFChar sheet:")
+            log.error("Error loading PDFChar sheet:")
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         
@@ -770,7 +776,7 @@ class SheetManager:
             sheet = parser.get_sheet()
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(sheet['sheet'].get('stats', {}).get('name')))
         except Exception as e:
-            print("Error loading PDFChar sheet:")
+            log.error("Error loading PDFChar sheet:")
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         

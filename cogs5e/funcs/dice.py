@@ -6,6 +6,7 @@ Created on Dec 25, 2016
 
 from copy import copy
 from heapq import nlargest, nsmallest
+import logging
 from math import floor
 import random
 from re import IGNORECASE
@@ -14,6 +15,8 @@ import traceback
 
 import numexpr
 
+
+log = logging.getLogger(__name__)
 
 VALID_OPERATORS = 'k|rr|ro|mi|ma'
 VALID_OPERATORS_2 = '|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')])
@@ -31,6 +34,27 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
     roller = Roll()
     result = roller.roll(rollStr, adv, rollFor, inline, double, show_blurbs, **kwargs)
     return result
+
+def get_roll_comment(rollStr):
+    """Returns: A two-tuple (dice without comment, comment)"""
+    try:
+        comment = ''
+        no_comment = ''
+        dice_set = re.split('([-+*/().<>=])', rollStr)
+        dice_set = [d for d in dice_set if not d in (None, '')]
+        log.debug("Found dice set: " + str(dice_set))
+        for index, dice in enumerate(dice_set):
+            match = re.match(DICE_PATTERN, dice, IGNORECASE)
+            log.debug("Found dice group: " + str(match.groups()))
+            no_comment += dice.replace(match.group(5), '')
+            if match.group(5):
+                comment = match.group(5) + ''.join(dice_set[index+1:])
+                break
+                
+        return (no_comment, comment)
+    except:
+        pass
+    return (rollStr, '')
 
 class Roll(object):
     def __init__(self, parts:list=[]):
@@ -60,12 +84,10 @@ class Roll(object):
             # parse each, returning a SingleDiceResult
             dice_set = re.split('([-+*/().<>=])', rollStr)
             dice_set = [d for d in dice_set if not d in (None, '')]
-            if kwargs.get('debug'):
-                print("Found dice set: " + str(dice_set))
+            log.debug("Found dice set: " + str(dice_set))
             for index, dice in enumerate(dice_set):
                 match = re.match(DICE_PATTERN, dice, IGNORECASE)
-                if kwargs.get('debug'):
-                    print("Found dice group: " + str(match.groups()))
+                log.debug("Found dice group: " + str(match.groups()))
                 # check if it's dice
                 if match.group(1):
                     roll = self.roll_one(dice.replace(match.group(5), ''), adv)
@@ -128,7 +150,7 @@ class Roll(object):
             return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply, raw_dice=results)
         except Exception as ex:
             if not isinstance(ex, (SyntaxError, KeyError)):
-                print('Error in roll() caused by roll {}:'.format(rollStr))
+                log.error('Error in roll() caused by roll {}:'.format(rollStr))
                 traceback.print_exc()
             return DiceResult(verbose_result="Invalid input: {}".format(ex))
         
@@ -175,7 +197,7 @@ class Roll(object):
         result.num_dice = numDice
         result.operators = ops
         
-        for die in range(numDice):
+        for _ in range(numDice):
             try:
                 tempdice = SingleDice()
                 tempdice.value = random.randint(1, diceVal)
@@ -351,7 +373,7 @@ class Comment(Part):
         self.comment = comment
         
     def __str__(self):
-        return re.sub(r'\s*(.*)\s*', r'\1', self.comment)
+        return self.comment.strip()
 
 def parse_selectors(opts, res, greedy=False):
     """Returns a list of ints."""

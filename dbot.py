@@ -29,11 +29,13 @@ from cogsmisc.customization import Customization
 from cogsmisc.permissions import Permissions
 from cogsmisc.publicity import Publicity
 from cogsmisc.repl import REPL
+from cogsmisc.stats import Stats
 from utils import checks
 from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim, get_positivity, \
     list_get
 from utils.help import Help
+
 
 INITIALIZING = True
 TESTING = get_positivity(os.environ.get("TESTING", False))
@@ -93,11 +95,13 @@ except ImportError:
     
 bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot.credentials.test_database_url)
 
-logger = logging.getLogger('discord')
-logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(logging.Formatter('s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, 'shard_id', 0))))
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 logger.addHandler(handler)
+
+log = logging.getLogger('bot')
 
 #-----COGS-----
 diceCog = Dice(bot)
@@ -124,7 +128,8 @@ cogs = [diceCog,
         helpCog,
         sheetCog,
         customizationCog,
-        REPL(bot)]
+        REPL(bot),
+        Stats(bot)]
 
 @bot.event
 async def on_ready():
@@ -174,6 +179,8 @@ async def on_command_error(error, ctx):
         if isinstance(original, HTTPException):
             if original.response.status == 400:
                 return await bot.send_message(ctx.message.channel, "Error: Message is too long, malformed, or empty.")
+            if original.response.status == 500:
+                return await bot.send_message(ctx.message.channel, "Error: Internal server error on Discord's end. Please try again.")
             
     if bot.mask & coreCog.debug_mask:
         await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
@@ -185,7 +192,7 @@ async def on_command_error(error, ctx):
             await bot.send_message(bot.owner, o)
     else:
         await bot.send_message(ctx.message.channel, "Error: " + str(error))
-    print("s.{}: Error caused by message: `{}`".format(getattr(bot, 'shard_id', 0), ctx.message.content))
+    log.error("Error caused by message: `{}`".format(ctx.message.content))
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
                 
 @bot.event
@@ -193,7 +200,7 @@ async def on_message(message):
     if message.author.id in bot.get_cog("AdminUtils").muted:
         return
     if message.content.startswith('avraepls'):
-        print("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))
+        log.info("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))
         if coreCog.verbose_mask & bot.mask:
             await bot.send_message(message.channel, "`Reseeding RNG...`")
         random.seed()
@@ -213,11 +220,15 @@ async def on_message(message):
 async def on_command(command, ctx):
     bot.botStats['commands_used_session'] += 1
     bot.db.incr('commands_used_life')
+    try:
+        log.debug("Command called in channel {0.message.channel} ({0.message.channel.id}), server {0.message.server} ({0.message.server.id}): {0.message.content}".format(ctx))
+    except AttributeError:
+        log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 
 # SIGNAL HANDLING
 def sigterm_handler(_signum, _frame):
     try:
-        print("Attempting to save combats...")
+        log.info("Attempting to save combats...")
         bot.get_cog("InitTracker").panic_save()
     except: pass
     bot.loop.run_until_complete(bot.logout())
@@ -229,7 +240,7 @@ signal.signal(signal.SIGTERM, sigterm_handler)
 for cog in cogs:
     bot.add_cog(cog)
 
-if SHARDED: print("I am shard {} of {}.".format(str(int(bot.shard_id) + 1), str(bot.shard_count)))
+if SHARDED: log.info("I am shard {} of {}.".format(str(int(bot.shard_id) + 1), str(bot.shard_count)))
 
 INITIALIZING = False
 if not TESTING:     

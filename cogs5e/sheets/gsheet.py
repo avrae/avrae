@@ -193,6 +193,7 @@ class GoogleSheet(SheetParser):
             if any(d in comment for d in damageTypes):
                 attack['damage'] = "{}[{}]".format(dice, comment)
             else:
+                attack['damage'] = dice
                 attack['details'] = comment
         
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not '' else None

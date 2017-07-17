@@ -93,10 +93,10 @@ except ImportError:
     
 bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot.credentials.test_database_url)
 
-logger = logging.getLogger('discord')
-logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(logging.Formatter('s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, 'shard_id', 0))))
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 #-----COGS-----

@@ -107,3 +107,5 @@ class REPL:
                 pass
             except discord.HTTPException as e:
                 await self.bot.send_message(msg.channel, 'Unexpected error: `{}`'.format(e))
+                
+    

@@ -436,6 +436,7 @@ class SheetManager:
                 self.active_characters[ctx.message.author.id] = None
                 del user_characters[char_url]
                 self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+                self.bot.db.not_json_set('active_characters', self.active_characters)
                 return await self.bot.say('{} has been deleted.'.format(name))
             else:
                 return await self.bot.say("OK, cancelling.")

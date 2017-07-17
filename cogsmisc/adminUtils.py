@@ -6,6 +6,7 @@ Created on Sep 23, 2016
 import asyncio
 import copy
 import json
+import logging
 import os
 import re
 import sys
@@ -20,6 +21,8 @@ from discord.ext import commands
 
 from utils import checks
 
+
+log = logging.getLogger(__name__)
 
 class AdminUtils:
     '''
@@ -280,7 +283,7 @@ class AdminUtils:
         members = len(server.members)
         ratio = bots/members
         if ratio >= 0.6 and members >= 20:
-            print("s.{}: Detected bot collection server ({}), ratio {}. Leaving.".format(getattr(self.bot, 'shard_id', 0), server.id, ratio))
+            log.info("Detected bot collection server ({}), ratio {}. Leaving.".format(server.id, ratio))
             try: await self.bot.send_message(server, "Please do not add me to bot collection servers. If you believe this is an error, please PM the bot author.")
             except: pass
             await asyncio.sleep(members/200)
@@ -336,14 +339,15 @@ class AdminUtils:
     async def handle_pubsub(self):
         try:
             await self.bot.wait_until_ready()
+            pslog = logging.getLogger("cogsmisc.adminUtils.PubSub")
             while not self.bot.is_closed:
                 await asyncio.sleep(0.1)
                 message = self.bot.db.pubsub.get_message()
-                # if message: print(message)
                 if message is None: continue
                 for k, v in message.items():
                     if isinstance(v, bytes):
                         message[k] = v.decode()
+                pslog.debug(str(message))
                 if not message['type'] in ('message', 'pmessage'): continue
                 if message['channel'] == 'server-info-requests': await self._handle_server_info_request(message)
                 elif message['channel'] == 'server-info-response': await self._handle_server_info_response(message)

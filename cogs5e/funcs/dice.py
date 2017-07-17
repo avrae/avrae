@@ -6,6 +6,7 @@ Created on Dec 25, 2016
 
 from copy import copy
 from heapq import nlargest, nsmallest
+import logging
 from math import floor
 import random
 from re import IGNORECASE
@@ -14,6 +15,8 @@ import traceback
 
 import numexpr
 
+
+log = logging.getLogger(__name__)
 
 VALID_OPERATORS = 'k|rr|ro|mi|ma'
 VALID_OPERATORS_2 = '|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')])
@@ -60,12 +63,10 @@ class Roll(object):
             # parse each, returning a SingleDiceResult
             dice_set = re.split('([-+*/().<>=])', rollStr)
             dice_set = [d for d in dice_set if not d in (None, '')]
-            if kwargs.get('debug'):
-                print("Found dice set: " + str(dice_set))
+            log.debug("Found dice set: " + str(dice_set))
             for index, dice in enumerate(dice_set):
                 match = re.match(DICE_PATTERN, dice, IGNORECASE)
-                if kwargs.get('debug'):
-                    print("Found dice group: " + str(match.groups()))
+                log.debug("Found dice group: " + str(match.groups()))
                 # check if it's dice
                 if match.group(1):
                     roll = self.roll_one(dice.replace(match.group(5), ''), adv)
@@ -128,7 +129,7 @@ class Roll(object):
             return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply, raw_dice=results)
         except Exception as ex:
             if not isinstance(ex, (SyntaxError, KeyError)):
-                print('Error in roll() caused by roll {}:'.format(rollStr))
+                log.error('Error in roll() caused by roll {}:'.format(rollStr))
                 traceback.print_exc()
             return DiceResult(verbose_result="Invalid input: {}".format(ex))
         

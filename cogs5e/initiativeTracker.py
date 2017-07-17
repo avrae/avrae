@@ -7,6 +7,7 @@ import asyncio
 import copy
 import datetime
 import json
+import logging
 from math import floor
 from os.path import isfile
 import pickle
@@ -28,6 +29,8 @@ from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
     parse_args_3, parse_cvars, evaluate_cvar, parse_resistances
 
+
+log = logging.getLogger(__name__)
 
 class Combat(object):
     def __init__(self, channel:discord.Channel, combatants=[], init:int=0, init_round:int=0, summary_message=None, options={}, name=""):
@@ -1616,7 +1619,7 @@ class InitTracker:
             combat.combatantGenerator = None
             path = '{}.avrae'.format(combat.channel.id)
             self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
-            print("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
+            log.info("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
             temp_key.append(combat.channel.id)
         self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 120) # timeout in 2 minutes
         
@@ -1626,34 +1629,34 @@ class InitTracker:
         temp_msgs = []
         for c in combats:
             if self.bot.get_channel(c) is None:
-                print('Shard check for {} failed, aborting.'.format(c))
+                log.warning('Shard check for {} failed, aborting.'.format(c))
                 continue
             path = '{}.avrae'.format(c)
             combat = self.bot.db.get(path, None)
             if combat is None:
-                print('Combat not found reloading {}, aborting'.format(c))
+                log.warning('Combat not found reloading {}, aborting'.format(c))
                 continue
             combat = pickle.loads(combat.encode('cp437'))
             if combat.lastmodified + datetime.timedelta(weeks=1) < datetime.datetime.now():
-                print('Combat not modified for over 1w reloading {}, aborting'.format(c))
+                log.warning('Combat not modified for over 1w reloading {}, aborting'.format(c))
                 continue
             combat.channel = self.bot.get_channel(combat.channel.id)
             if combat.channel is None:
-                print('Combat channel not found reloading {}, aborting'.format(c))
+                log.warning('Combat channel not found reloading {}, aborting'.format(c))
                 continue
             self.combats.append(combat)
             try:
                 if combat.summary_message is not None:
                     combat.summary_message = await self.bot.get_message(combat.channel, combat.summary_message.id)
             except NotFound:
-                print('Summary Message not found reloading {}'.format(c))
+                log.warning('Summary Message not found reloading {}'.format(c))
             except:
                 pass
-            print("Autoreloaded {}".format(c))
+            log.info("Autoreloaded {}".format(c))
             try:
                 temp_msgs.append(await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!"))
             except Forbidden:
-                print('No permission to post in {}'.format(c))
+                log.warning('No permission to post in {}'.format(c))
         self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
         await asyncio.sleep(30)
         for msg in temp_msgs:

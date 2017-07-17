@@ -5,10 +5,13 @@ Created on Dec 29, 2016
 '''
 import asyncio
 import json
+import logging
 import time
 
 import aiohttp
 
+
+log = logging.getLogger(__name__)
 
 DISCORD_BOTS_API =       'https://bots.discord.pw/api'
 CARBONITEX_API_BOTDATA = 'https://www.carbonitex.net/discord/data/botdata.php'
@@ -44,7 +47,7 @@ class Publicity:
             }
     
             async with self.session.post(CARBONITEX_API_BOTDATA, data=carbon_payload, headers=carbon_headers) as resp:
-                print('s.{0}: Carbon statistics returned {1.status}'.format(getattr(self.bot, 'shard_id', 0), resp))
+                log.info('Carbon statistics returned {0.status}'.format(resp))
 
         payload = json.dumps({
             'shard_id': getattr(self.bot, 'shard_id', 0),
@@ -59,7 +62,7 @@ class Publicity:
 
         url = '{0}/bots/{1.user.id}/stats'.format(DISCORD_BOTS_API, self.bot)
         async with self.session.post(url, data=payload, headers=headers) as resp:
-            print('s.{0}: DBots statistics returned {1.status} for {2}'.format(getattr(self.bot, 'shard_id', 0), resp, payload))
+            log.info('DBots statistics returned {0.status} for {1}'.format(resp, payload))
     
     async def backup(self):
         backup_chan = self.bot.get_channel('298542945479557120')
@@ -88,7 +91,7 @@ class Publicity:
         await self.backup()
         
     async def on_server_join(self, server):
-        print('s.{}: Joined server {}: {}, {} members ({} bot)'.format(getattr(self.bot, 'shard_id', 0), server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))
+        log.info('Joined server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))
         
     async def on_server_remove(self, server):
-        print('s.{}: Left server {}: {}, {} members ({} bot)'.format(getattr(self.bot, 'shard_id', 0), server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))
+        log.info('Left server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members), sum(1 for m in server.members if m.bot)))

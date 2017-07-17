@@ -7,6 +7,7 @@ import asyncio
 import copy
 from datetime import datetime
 import json
+import logging
 import random
 import re
 import shlex
@@ -31,6 +32,8 @@ from utils.functions import list_get, embed_trim, get_positivity, a_or_an, \
     parse_cvars
 from utils.loggers import TextLogger
 
+
+log = logging.getLogger(__name__)
 
 class SheetManager:
     """Commands to import a character sheet from Dicecloud (https://dicecloud.com) or the fillable Wizards character PDF."""
@@ -764,7 +767,7 @@ class SheetManager:
         try:
             await parser.get_character()
         except Exception as e:
-            print("Error loading PDFChar sheet:")
+            log.error("Error loading PDFChar sheet:")
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         
@@ -772,7 +775,7 @@ class SheetManager:
             sheet = parser.get_sheet()
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(sheet['sheet'].get('stats', {}).get('name')))
         except Exception as e:
-            print("Error loading PDFChar sheet:")
+            log.error("Error loading PDFChar sheet:")
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         

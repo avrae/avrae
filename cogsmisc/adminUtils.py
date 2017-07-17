@@ -263,6 +263,23 @@ class AdminUtils:
                 return
             else:
                 await self.bot.send_message(self.assume_dir_control_chan, cleaned)
+                
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def loglevel(self, level:int, logger=None):
+        """Changes the loglevel. Do not pass logger for global. Default: 20"""
+        req = self.request_log_level(level, logger)
+        for _ in range(300): # timeout after 30 sec
+            if len(self.requests[req]) >= self.bot.shard_count: break
+            else: await asyncio.sleep(0.1)
+        
+        out = ''
+        data = self.requests[req]
+        del self.requests[req]
+        
+        for shard, response in data.items():
+            out += 'Shard {}: {}\n'.format(shard, response['response'])
+        await self.bot.say(out)
             
     async def on_message(self, message):
         if message.author.id in self.muted:
@@ -336,6 +353,13 @@ class AdminUtils:
         self.bot.db.publish('admin-commands', r)
         return request.uuid
     
+    def request_log_level(self, level, logger):
+        request = CommandRequest(self.bot, 'loglevel', level=level, logger=logger)
+        self.requests[request.uuid] = {}
+        r = json.dumps(request.to_dict())
+        self.bot.db.publish('admin-commands', r)
+        return request.uuid
+    
     async def handle_pubsub(self):
         try:
             await self.bot.wait_until_ready()
@@ -378,8 +402,10 @@ class AdminUtils:
             
     async def _handle_admin_command(self, message):
         _data = json.loads(message['data'])
-        if _data['command'] == 'leave': await self.__handle_leave_command(_data)
-        elif _data['command'] == 'reply': await self.__handle_command_reply(_data)
+        _commands = {'leave': self.__handle_leave_command,
+                     'loglevel': self.__handle_log_level_command,
+                     'reply': self.__handle_command_reply}
+        await _commands.get(_data['command'])(_data) #... don't question this.
         
     async def __handle_leave_command(self, data):
         _data = data['data']
@@ -391,6 +417,16 @@ class AdminUtils:
             response = CommandResponse(self.bot, reply_to, "Left {}.".format(serv))
             r = json.dumps(response.to_dict())
             self.bot.db.publish('admin-commands', r)
+            
+    async def __handle_log_level_command(self, data):
+        _data = data['data']
+        reply_to = data['uuid']
+        level = _data['level']
+        logger = _data['logger']
+        logging.getLogger(logger).setLevel(level)
+        response = CommandResponse(self.bot, reply_to, "Set level of logger {} to {}.".format(logger, level))
+        r = json.dumps(response.to_dict())
+        self.bot.db.publish('admin-commands', r)
     
     async def __handle_command_reply(self, data):
         _data = data['data']

@@ -35,6 +35,20 @@ def roll(rollStr, adv:int=0, rollFor='', inline=False, double=False, show_blurbs
     result = roller.roll(rollStr, adv, rollFor, inline, double, show_blurbs, **kwargs)
     return result
 
+def get_roll_comment(rollStr):
+    try:
+        dice_set = re.split('([-+*/().<>=])', rollStr)
+        dice_set = [d for d in dice_set if not d in (None, '')]
+        log.debug("Found dice set: " + str(dice_set))
+        for index, dice in enumerate(dice_set):
+            match = re.match(DICE_PATTERN, dice, IGNORECASE)
+            log.debug("Found dice group: " + str(match.groups()))
+            if match.group(5):
+                return match.group(5) + ''.join(dice_set[index+1:])
+    except:
+        pass
+    return ''
+
 class Roll(object):
     def __init__(self, parts:list=[]):
         self.parts = parts

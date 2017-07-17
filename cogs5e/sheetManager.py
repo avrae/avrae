@@ -465,7 +465,7 @@ class SheetManager:
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(url)
             loading = await self.bot.say('Updating character data from Dicecloud...')
-            self.logger.text_log(ctx, "s.{} Dicecloud Request ({}): ".format(getattr(self.bot, 'shard_id', 0), url))
+            self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(url))
         elif sheet_type == 'pdf':
             if not 0 < len(ctx.message.attachments) < 2:
                 return await self.bot.say('You must call this command in the same message you upload a PDF sheet.')
@@ -721,7 +721,7 @@ class SheetManager:
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
         
-        self.logger.text_log(ctx, "s.{} Dicecloud Request ({}): ".format(getattr(self.bot, 'shard_id', 0), url))
+        self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(url))
         
         loading = await self.bot.say('Loading character data from Dicecloud...')
         parser = DicecloudParser(url)

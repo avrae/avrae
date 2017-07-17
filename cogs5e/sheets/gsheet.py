@@ -15,6 +15,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.sheetParser import SheetParser
+from cogs5e.funcs.dice import get_roll_comment
 
 
 class GoogleSheet(SheetParser):
@@ -184,6 +185,15 @@ class GoogleSheet(SheetParser):
             return None
         if attack['damage'] is "":
             attack['damage'] = None
+        else:
+            damageTypes = ['acid', 'bludgeoning', 'cold', 'fire', 'force',
+                           'lightning', 'necrotic', 'piercing', 'poison',
+                           'psychic', 'radiant', 'slashing', 'thunder']
+            comment = get_roll_comment(attack['damage'])
+            if any(d in comment for d in damageTypes):
+                attack['damage'] = "{} [{}]".format(attack['damage'], comment)
+            else:
+                attack['details'] = comment
         
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not '' else None
         

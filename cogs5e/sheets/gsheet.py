@@ -191,7 +191,7 @@ class GoogleSheet(SheetParser):
                            'psychic', 'radiant', 'slashing', 'thunder']
             dice, comment = get_roll_comment(attack['damage'])
             if any(d in comment for d in damageTypes):
-                attack['damage'] = "{} [{}]".format(dice, comment)
+                attack['damage'] = "{}[{}]".format(dice, comment)
             else:
                 attack['details'] = comment
         

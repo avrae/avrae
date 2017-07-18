@@ -198,11 +198,12 @@ class PDFSheetParser(SheetParser):
                            'lightning', 'necrotic', 'piercing', 'poison',
                            'psychic', 'radiant', 'slashing', 'thunder']
             dice, comment = get_roll_comment(attack['damage'])
-            if any(d in comment for d in damageTypes):
+            if any(d in comment.lower() for d in damageTypes):
                 attack['damage'] = "{}[{}]".format(dice, comment)
             else:
                 attack['damage'] = dice
-                attack['details'] = comment
+                if comment.strip():
+                    attack['details'] = comment.strip()
         
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
         

@@ -149,7 +149,7 @@ class GoogleSheet(SheetParser):
                  "strength":10, "dexterity":10, "constitution":10, "wisdom":10, "intelligence":10, "charisma":10,
                  "strengthMod":0, "dexterityMod":0, "constitutionMod":0, "wisdomMod":0, "intelligenceMod":0, "charismaMod":0,
                  "proficiencyBonus":0}
-        stats['name'] = character.acell("C6").value
+        stats['name'] = character.acell("C6").value or "Unnamed"
         stats['description'] = "The Google sheet does not have a description field."
         try:
             stats['proficiencyBonus'] = int(character.acell("H14").value)

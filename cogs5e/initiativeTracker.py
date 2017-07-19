@@ -1365,6 +1365,10 @@ class InitTracker:
                     outargs['resist'] = '|'.join(args.get('resist', [])) or '|'.join(target.resist)
                     outargs['immune'] = '|'.join(args.get('immune', [])) or '|'.join(target.immune)
                     outargs['vuln'] = '|'.join(args.get('vuln', [])) or '|'.join(target.vuln)
+                    outargs['d'] = "+".join(args.get('d', []))
+                    for _arg, _value in outargs.items():
+                        if isinstance(_value, list):
+                            outargs[_arg] = _value[-1]
                     attack = spell['atk']
                     if not 'SPELL' in combatant.sheet.get('cvars', {}):
                         return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not set.",

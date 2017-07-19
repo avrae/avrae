@@ -214,7 +214,7 @@ class PDFSheetParser(SheetParser):
         if self.character is None: raise Exception('You must call get_character() first.')
         attacks = []
         for attack in range(3):
-            a = self.get_attack(attack)
+            a = self.get_attack(attack + 1)
             if a is not None: attacks.append(a)
         return attacks
             

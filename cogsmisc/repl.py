@@ -2,6 +2,7 @@ import asyncio
 from contextlib import redirect_stdout
 import inspect
 import io
+import textwrap
 import traceback
 
 import discord
@@ -14,6 +15,7 @@ class REPL:
     def __init__(self, bot):
         self.bot = bot
         self.sessions = set()
+        self._last_result = None
 
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
@@ -108,4 +110,51 @@ class REPL:
             except discord.HTTPException as e:
                 await self.bot.send_message(msg.channel, 'Unexpected error: `{}`'.format(e))
                 
+    @commands.command(pass_context=True, hidden=True, name='eval')
+    @checks.is_owner()
+    async def _eval(self, ctx, *, body: str):
+        """Evaluates some code"""
+
+        env = {
+            'bot': self.bot,
+            'ctx': ctx,
+            'channel': ctx.message.channel,
+            'author': ctx.message.author,
+            'server': ctx.message.server,
+            'message': ctx.message,
+            '_': self._last_result
+        }
+
+        env.update(globals())
+
+        body = self.cleanup_code(body)
+        stdout = io.StringIO()
+
+        to_compile = 'async def func():\n{}'.format(textwrap.indent(body, "  "))
+
+        try:
+            exec(to_compile, env)
+        except Exception as e:
+            return await ctx.send('```py\n{}: {}\n```'.format(e.__class__.__name__, e))
+
+        func = env['func']
+        try:
+            with redirect_stdout(stdout):
+                ret = await func()
+        except Exception as e:
+            value = stdout.getvalue()
+            await ctx.send('```py\n{}{}\n```'.format(value, traceback.format_exc()))
+        else:
+            value = stdout.getvalue()
+            try:
+                await ctx.message.add_reaction('\u2705')
+            except:
+                pass
+
+            if ret is None:
+                if value:
+                    await ctx.send('```py\n{}\n```'.format(value))
+            else:
+                self._last_result = ret
+                await ctx.send('```py\n{}{}\n```'.format(value, ret))
     

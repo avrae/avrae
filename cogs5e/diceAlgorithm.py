@@ -15,7 +15,8 @@ from cogs5e.funcs.lookupFuncs import searchSpell, searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils import checks
 from utils.functions import fuzzy_search, a_or_an, discord_trim, \
-    parse_args_2
+    parse_args_2, parse_args_3
+from math import floor
 
 
 class Dice:
@@ -263,7 +264,7 @@ class Dice:
             else:
                 await self.bot.say(r, delete_after=15)
                 
-    @commands.command(pass_context=True, aliases=['ma'])
+    @commands.command(pass_context=True, aliases=['ma', 'monster_attack'])
     async def monster_atk(self, ctx, monster_name, atk_name='list', *, args=''):
         """Rolls a monster's attack.
         Attack name can be "list" for a list of all of the monster's attacks.
@@ -309,4 +310,150 @@ class Dice:
         embed.colour = random.randint(0, 0xffffff)
         
         await self.bot.say(embed=embed)
+    
+    @commands.command(pass_context=True, aliases=['mc'])
+    async def monster_check(self, ctx, monster_name, check, *args):
+        """Rolls a check for a monster.
+        Args: adv/dis
+              -b [conditional bonus]
+              -phrase [flavor text]
+              -title [title] *note: [mname] and [cname] will be replaced automatically*"""
+        
+        monster = searchMonster(monster_name, return_monster=True, visible=True)
+        self.bot.botStats["monsters_looked_up_session"] += 1
+        self.bot.db.incr('monsters_looked_up_life')
+        if monster['monster'] is None:
+            return await self.bot.say(monster['string'][0], delete_after=15)
+        monster = monster['monster']
+        _skills = monster.get('skill').split(', ')
+        monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
+        skills = {}
+        for s in _skills:
+            _name = ' '.join(s.split(' ')[:-1]).lower()
+            _value = int(s.split(' ')[-1])
+            skills[_name] = _value
+        
+        skillslist = ['acrobatics', 'animal handling', 'arcana', 'athletics',
+                      'deception', 'history', 'initiative', 'insight',
+                      'intimidation', 'investigation', 'medicine', 'nature',
+                      'perception', 'performance', 'persuasion', 'religion',
+                      'sleight of hand', 'stealth', 'survival',
+                      'strength', 'dexterity', 'constitution', 'intelligence',
+                      'wisdom', 'charisma']
+        skillsmap = ['dex', 'wis', 'int', 'str',
+                     'cha', 'int', 'dex', 'wis',
+                     'cha', 'int', 'wis', 'int',
+                     'wis', 'cha', 'cha', 'int',
+                     'dex', 'dex', 'wis',
+                     'str', 'dex', 'con', 'int',
+                     'wis', 'cha']
+        for i, s in enumerate(skillslist):
+            if not s in skills:
+                skills[s] = floor((int(monster.get(skillsmap[i]))-10)/2)
+        
+        
+        try:
+            skill = next(a for a in skills.keys() if check.lower() == a.lower())
+        except StopIteration:
+            try:
+                skill = next(a for a in skills.keys() if check.lower() in a.lower())
+            except StopIteration:
+                return await self.bot.say('That\'s not a valid check.')
+        
+        embed = discord.Embed()
+        embed.colour = random.randint(0, 0xffffff)
+        
+        args = parse_args_3(args)
+        adv = 0 if args.get('adv', []) and args.get('dis', []) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
+        b = "+".join(args.get('b', [])) or None
+        phrase = '\n'.join(args.get('phrase', [])) or None
+        formatted_d20 = '1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')
+        
+        if b is not None:
+            check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
+        else:
+            check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]), adv=adv, inline=True)
+        
+        embed.title = '{} makes {} check!'.format(monster_name,
+                                                  a_or_an(skill.title()))
+        embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+        
+        if args.get('image') is not None:
+            embed.set_thumbnail(url=args.get('image'))
+        await self.bot.say(embed=embed)
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+    
+    @commands.command(pass_context=True, aliases=['ms'])
+    async def monster_save(self, ctx, monster_name, save, *args):
+        """Rolls a check for a monster.
+        Args: adv/dis
+              -b [conditional bonus]
+              -phrase [flavor text]
+              -title [title] *note: [mname] and [cname] will be replaced automatically*"""
+        
+        monster = searchMonster(monster_name, return_monster=True, visible=True)
+        self.bot.botStats["monsters_looked_up_session"] += 1
+        self.bot.db.incr('monsters_looked_up_life')
+        if monster['monster'] is None:
+            return await self.bot.say(monster['string'][0], delete_after=15)
+        monster = monster['monster']
+        monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
+        
+        saves = {'strengthSave': floor((int(monster['str'])-10)/2),
+                 'dexteritySave': floor((int(monster['dex'])-10)/2),
+                 'constitutionSave': floor((int(monster['con'])-10)/2),
+                 'intelligenceSave': floor((int(monster['int'])-10)/2),
+                 'wisdomSave': floor((int(monster['wis'])-10)/2),
+                 'charismaSave': floor((int(monster['cha'])-10)/2)}
+        save_overrides = monster.get('save', '').split(', ')
+        for s in save_overrides:
+            try:
+                _type = next(sa for sa in ('strengthSave',
+                                           'dexteritySave',
+                                           'constitutionSave',
+                                           'intelligenceSave',
+                                           'wisdomSave',
+                                           'charismaSave') if s.split(' ')[0].lower() in sa.lower())
+                mod = int(s.split(' ')[1])
+                saves[_type] = mod
+            except:
+                pass
+        
+        
+        try:
+            save = next(a for a in saves.keys() if save.lower() == a.lower())
+        except StopIteration:
+            try:
+                save = next(a for a in saves.keys() if save.lower() in a.lower())
+            except StopIteration:
+                return await self.bot.say('That\'s not a valid save.')
             
+        embed = discord.Embed()
+        embed.colour = random.randint(0, 0xffffff)
+        
+        args = parse_args_3(args)
+        adv = 0 if args.get('adv', []) and args.get('dis', []) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
+        b = "+".join(args.get('b', [])) or None
+        phrase = '\n'.join(args.get('phrase', [])) or None
+        
+        if b is not None:
+            save_roll = roll('1d20' + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
+        else:
+            save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
+            
+        embed.title = '{} makes {}!'.format(monster_name,
+                                            a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()))
+            
+        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+        
+        if args.get('image') is not None:
+            embed.set_thumbnail(url=args.get('image'))
+        
+        await self.bot.say(embed=embed)
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass

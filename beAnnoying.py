@@ -29,13 +29,14 @@ SHARDS = int(os.environ.get('SHARDS', 1))
 CLUSTER = int(sys.argv[-1])
 CLUSTER_START = 3 * CLUSTER
 CLUSTER_END = 3 * (CLUSTER + 1)
+ROLLING_TIMER = 1 # seconds between each shard start
 bot = Overseer()
 
 def init():
     signal.signal(signal.SIGTERM, sigterm_handler)
     if CLUSTER == 0:
         launch_web() # I mean okay
-    time.sleep(10 * CLUSTER_START) # rolling restart
+    # time.sleep(ROLLING_TIMER * CLUSTER_START) # rolling restart
     launch_shards()
     if CLUSTER == 0:
         clean_shard_servers()
@@ -62,7 +63,7 @@ def launch_shards():
         else:
             print("o.{}: Launching shard production {}".format(CLUSTER, shard))
             bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard)])
-        time.sleep(10)
+        time.sleep(ROLLING_TIMER)
     print("o.{}: Shards launched: {}".format(CLUSTER, {shard: process.pid for shard, process in bot.shards.items()}))
     
 def check_shards():

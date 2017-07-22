@@ -135,7 +135,7 @@ class REPL:
         try:
             exec(to_compile, env)
         except Exception as e:
-            return await ctx.send('```py\n{}: {}\n```'.format(e.__class__.__name__, e))
+            return await self.bot.say('```py\n{}: {}\n```'.format(e.__class__.__name__, e))
 
         func = env['func']
         try:
@@ -143,18 +143,18 @@ class REPL:
                 ret = await func()
         except Exception as e:
             value = stdout.getvalue()
-            await ctx.send('```py\n{}{}\n```'.format(value, traceback.format_exc()))
+            await self.bot.say('```py\n{}{}\n```'.format(value, traceback.format_exc()))
         else:
             value = stdout.getvalue()
             try:
-                await ctx.message.add_reaction('\u2705')
+                await self.bot.add_reaction(ctx.message, '\u2705')
             except:
                 pass
 
             if ret is None:
                 if value:
-                    await ctx.send('```py\n{}\n```'.format(value))
+                    await self.bot.say('```py\n{}\n```'.format(value))
             else:
                 self._last_result = ret
-                await ctx.send('```py\n{}{}\n```'.format(value, ret))
+                await self.bot.say('```py\n{}{}\n```'.format(value, ret))
     

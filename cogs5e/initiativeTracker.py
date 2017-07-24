@@ -1365,7 +1365,7 @@ class InitTracker:
                     outargs['resist'] = '|'.join(args.get('resist', [])) or '|'.join(target.resist)
                     outargs['immune'] = '|'.join(args.get('immune', [])) or '|'.join(target.immune)
                     outargs['vuln'] = '|'.join(args.get('vuln', [])) or '|'.join(target.vuln)
-                    outargs['d'] = "+".join(args.get('d', []))
+                    outargs['d'] = "+".join(args.get('d', [])) or None
                     for _arg, _value in outargs.items():
                         if isinstance(_value, list):
                             outargs[_arg] = _value[-1]

@@ -14,6 +14,7 @@ from requests_oauthlib.oauth2_session import OAuth2Session
 
 import credentials
 from utils.dataIO import DataIO
+from jinja2.exceptions import TemplateNotFound
 
 
 TESTING = True if os.environ.get("TESTING") else False
@@ -35,18 +36,24 @@ if 'http://' in OAUTH2_REDIRECT_URI:
 
 @app.route('/')
 def home():
-    return app.send_static_file('index.html')
+    return render_template('index.html')
 
 @app.route('/<route>')
 def send_static_route(route):
     file_dot_text = route + '.html'
-    return app.send_static_file(file_dot_text)
+    try:
+        return render_template(file_dot_text)
+    except TemplateNotFound:
+        return page_not_found(None)
 
 @app.route('/<file_name>.html')
 def send_static(file_name):
     """Send your static html file."""
     file_dot_text = file_name + '.html'
-    return app.send_static_file(file_dot_text)
+    try:
+        return render_template(file_dot_text)
+    except TemplateNotFound:
+        return page_not_found(None)
 
 def token_updater(token):
     session['oauth2_token'] = token

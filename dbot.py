@@ -35,6 +35,7 @@ from utils.dataIO import DataIO
 from utils.functions import make_sure_path_exists, discord_trim, get_positivity, \
     list_get
 from utils.help import Help
+from cogs5e.spellbook import Spellbook
 
 
 INITIALIZING = True
@@ -129,7 +130,8 @@ cogs = [diceCog,
         sheetCog,
         customizationCog,
         REPL(bot),
-        Stats(bot)]
+        Stats(bot),
+        Spellbook(bot)]
 
 @bot.event
 async def on_ready():

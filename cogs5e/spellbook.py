@@ -87,10 +87,10 @@ class Spellbook:
             dc = args.get('dc', [None])[-1] or calculated_dc
             if dc is None:
                 return await self.bot.say(embed=discord.Embed(title="Error: Save DC not set.",
-                                                          description="Your spell save DC is not set. You can set it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`.\nRemember to run `!i update [NAME]` for the a changed cvar to take effect."))
+                                                          description="Your spell save DC is not set. You can set it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`."))
             try: dc = int(dc)
             except: return await self.bot.say(embed=discord.Embed(title="Error: Save DC malformed.",
-                                                                  description="Your spell save DC is malformed. You can reset it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`.\nRemember to run `!i update [NAME]` for the a changed cvar to take effect."))
+                                                                  description="Your spell save DC is malformed. You can reset it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`."))
 
             save_skill = args.get('save', [None])[-1] or spell.get('save', {}).get('save')
             try:
@@ -134,7 +134,7 @@ class Spellbook:
             attack = spell['atk']
             if not 'SPELL' in character.get('cvars', {}):
                 return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not set.",
-                                                              description="Your casting ability is not set. You can set it for this character by running `!cvar SPELL [ABILITY]`, where `[ABILITY]` is your spellcasting modifier.\nFor example, a sorcerer (CHA caster) with 20 CHA would use `!cvar SPELL 5.`\nRemember to run `!i update [NAME]` for the changes to take effect."))
+                                                              description="Your casting ability is not set. You can set it for this character by running `!cvar SPELL [ABILITY]`, where `[ABILITY]` is your spellcasting modifier.\nFor example, a sorcerer (CHA caster) with 20 CHA would use `!cvar SPELL 5.`"))
             attack['attackBonus'] = str(evaluate_cvar(attack['attackBonus'], character))
             
             if spell['level'] == '0' and spell.get('scales', True):

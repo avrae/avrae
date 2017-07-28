@@ -16,8 +16,8 @@ from discord.ext import commands
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchSpell
 from cogs5e.funcs.sheetFuncs import sheet_attack
-from utils.functions import parse_cvars, parse_args_3, fuzzy_search, \
-    evaluate_cvar
+from utils.functions import parse_cvars, parse_args_3, \
+    evaluate_cvar, fuzzywuzzy_search_all_2
 
 
 log = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class Spellbook:
         
         with open('./res/auto_spells.json', 'r') as f:
             spells = json.load(f)
-        spell = fuzzy_search(spells, 'name', spell_name)
+        spell = fuzzywuzzy_search_all_2(spells, 'name', spell_name, 60)
         if spell is None: return await self._old_cast(ctx, spell_name + " " + " ".join(args), fallback=True) #fall back to old cast
         
         
@@ -121,7 +121,7 @@ class Spellbook:
                     
                 dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
                 embed.add_field(name="Damage/DC", value=dmgroll.result + "\n**DC**: {}".format(str(dc)))
-        else: # attack spell            
+        elif spell['type'] == 'attack': # attack spell            
             outargs = copy.copy(args)
             outargs['d'] = "+".join(args.get('d', [])) or None
             for _arg, _value in outargs.items():
@@ -146,7 +146,18 @@ class Spellbook:
             result = sheet_attack(attack, outargs)
             for f in result['embed'].fields:
                 embed.add_field(name=f.name, value=f.value, inline=f.inline)
-
+        else: # special spell (MM)
+            outargs = copy.copy(args) # just make an attack for it
+            outargs['d'] = "+".join(args.get('d', [])) or None
+            for _arg, _value in outargs.items():
+                if isinstance(_value, list):
+                    outargs[_arg] = _value[-1]
+            attack = {"name": spell['name'],
+                      "damage": spell.get("damage", "0"),
+                      "attackBonus": None}
+            result = sheet_attack(attack, outargs)
+            for f in result['embed'].fields:
+                embed.add_field(name=f.name, value=f.value, inline=f.inline)
     
         if spell['type'] == 'save': # context!
             if isinstance(spell['text'], list):

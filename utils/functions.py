@@ -77,10 +77,10 @@ def fuzzy_search(list_to_search:list, key, value):
             return None
     return result 
 
-def fuzzywuzzy_search(list_to_search:list, key, value):
+def fuzzywuzzy_search(list_to_search:list, key, value, cutoff=5):
     """Fuzzy searches a list for a dict with a key "key" of value "value" """
     names = [d[key] for d in list_to_search]
-    result = process.extractOne(value, names, score_cutoff=5)
+    result = process.extractOne(value, names, score_cutoff=cutoff)
     if result is None: return None
     else: return next(a for a in list_to_search if result[0] == a.get(key, ''))
     
@@ -104,6 +104,21 @@ def fuzzywuzzy_search_all(list_to_search:list, key, value):
             if len(result) is 0: return None
             else: return result
     return [(result[key], 99)]
+
+def fuzzywuzzy_search_all_2(list_to_search:list, key, value, cutoff=60):
+    """Fuzzy searches a list for a dict with all keys "key" of value "value" """
+    try:
+        result = next(a for a in list_to_search if value.lower() == a.get(key, '').lower())
+    except StopIteration:
+        try:
+            result = next(a for a in list_to_search if value.lower() in a.get(key, '').lower())
+        except StopIteration:
+            names = [d[key] for d in list_to_search]
+            result = process.extract(value, names, scorer=fuzz.ratio)
+            result = [r for r in result if r[1] >= cutoff]
+            if len(result) is 0: return None
+            else: return next(a for a in list_to_search if result[0][0] == a.get(key, ''))
+    return result
 
 def parse_args(args):
     out = {}

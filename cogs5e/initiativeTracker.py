@@ -27,7 +27,8 @@ from cogs5e.funcs.lookupFuncs import searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
-    parse_args_3, parse_cvars, evaluate_cvar, parse_resistances
+    parse_args_3, parse_cvars, evaluate_cvar, parse_resistances,\
+    fuzzywuzzy_search, fuzzywuzzy_search_all_2
 
 
 log = logging.getLogger(__name__)
@@ -1248,7 +1249,7 @@ class InitTracker:
             embed.description = '~~' + ' '*500 + '~~'
         
         
-        spell = fuzzy_search(spells, 'name', spell_name)
+        spell = fuzzywuzzy_search_all_2(spells, 'name', spell_name, 60)
         if spell is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
                                                                         description="The spell was not found or is not supported."))
         
@@ -1355,7 +1356,7 @@ class InitTracker:
                                     pass
                         else:
                             embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
-                else: # attack spell
+                elif spell['type'] == 'attack': # attack spell
                     if not is_character: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
                                                                         description="Attack spells are only supported for combatants added with `cadd`."))
                     
@@ -1385,6 +1386,32 @@ class InitTracker:
                             return levelDice + 'd' + matchobj.group(2)
                         attack['damage'] = re.sub(r'(\d+)d(\d+)', lsub, attack['damage'])
                     
+                    result = sheet_attack(attack, outargs)
+                    out = ""
+                    for f in result['embed'].fields:
+                        out += "**__{0.name}__**\n{0.value}\n".format(f)
+                    
+                    embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
+                        
+                    if target.hp is not None:
+                        target.hp -= result['total_damage']
+                        embed_footer += "{}: {}\n".format(target.name, target.get_hp())
+                        if target.private:
+                            try:
+                                await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                            except:
+                                pass
+                    else:
+                        embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
+                else: # special spell (MM)
+                    outargs = copy.copy(args) # just make an attack for it
+                    outargs['d'] = "+".join(args.get('d', [])) or None
+                    for _arg, _value in outargs.items():
+                        if isinstance(_value, list):
+                            outargs[_arg] = _value[-1]
+                    attack = {"name": spell['name'],
+                              "damage": spell.get("damage", "0"),
+                              "attackBonus": None}
                     result = sheet_attack(attack, outargs)
                     out = ""
                     for f in result['embed'].fields:

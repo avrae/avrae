@@ -325,7 +325,7 @@ class Dice:
         if monster['monster'] is None:
             return await self.bot.say(monster['string'][0], delete_after=15)
         monster = monster['monster']
-        _skills = monster.get('skill').split(', ')
+        _skills = monster.get('skill', "").split(', ')
         monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
         skills = {}
         for s in _skills:

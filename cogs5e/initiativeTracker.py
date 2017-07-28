@@ -27,7 +27,8 @@ from cogs5e.funcs.lookupFuncs import searchMonster
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
-    parse_args_3, parse_cvars, evaluate_cvar, parse_resistances
+    parse_args_3, parse_cvars, evaluate_cvar, parse_resistances,\
+    fuzzywuzzy_search, fuzzywuzzy_search_all_2
 
 
 log = logging.getLogger(__name__)
@@ -1086,6 +1087,15 @@ class InitTracker:
     async def attack(self, ctx, target_name, atk_name, *, args=''):
         """Rolls an attack against another combatant.
         Valid Arguments: see !a and !ma."""
+        return await self._attack(ctx, None, target_name, atk_name, args)
+        
+    @init.command(pass_context=True)
+    async def aoo(self, ctx, combatant_name, target_name, atk_name, *, args=''):
+        """Rolls an attack of opportunity against another combatant.
+        Valid Arguments: see !a and !ma."""
+        return await self._attack(ctx, combatant_name, target_name, atk_name, args)
+        
+    async def _attack(self, ctx, combatant_name, target_name, atk_name, args):
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -1095,9 +1105,14 @@ class InitTracker:
         if target is None:
             await self.bot.say("Target not found.")
             return
-        combatant = combat.currentCombatant
-        if combatant is None:
-            return await self.bot.say("You must begin combat with !init next first.")
+        if combatant_name is None:
+            combatant = combat.currentCombatant
+            if combatant is None:
+                return await self.bot.say("You must start combat with `!init next` first.")
+        else:
+            combatant = combat.get_combatant(combatant_name)
+            if combatant is None:
+                return await self.bot.say("Combatant not found.")
         
         if not isinstance(combatant, CombatantGroup):
             for eff in combatant.effects:
@@ -1248,7 +1263,7 @@ class InitTracker:
             embed.description = '~~' + ' '*500 + '~~'
         
         
-        spell = fuzzy_search(spells, 'name', spell_name)
+        spell = fuzzywuzzy_search_all_2(spells, 'name', spell_name, 60)
         if spell is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
                                                                         description="The spell was not found or is not supported."))
         
@@ -1355,7 +1370,7 @@ class InitTracker:
                                     pass
                         else:
                             embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
-                else: # attack spell
+                elif spell['type'] == 'attack': # attack spell
                     if not is_character: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
                                                                         description="Attack spells are only supported for combatants added with `cadd`."))
                     
@@ -1386,7 +1401,35 @@ class InitTracker:
                         attack['damage'] = re.sub(r'(\d+)d(\d+)', lsub, attack['damage'])
                     
                     result = sheet_attack(attack, outargs)
-                    out = result['embed'].fields[0].value
+                    out = ""
+                    for f in result['embed'].fields:
+                        out += "**__{0.name}__**\n{0.value}\n".format(f)
+                    
+                    embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
+                        
+                    if target.hp is not None:
+                        target.hp -= result['total_damage']
+                        embed_footer += "{}: {}\n".format(target.name, target.get_hp())
+                        if target.private:
+                            try:
+                                await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                            except:
+                                pass
+                    else:
+                        embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
+                else: # special spell (MM)
+                    outargs = copy.copy(args) # just make an attack for it
+                    outargs['d'] = "+".join(args.get('d', [])) or None
+                    for _arg, _value in outargs.items():
+                        if isinstance(_value, list):
+                            outargs[_arg] = _value[-1]
+                    attack = {"name": spell['name'],
+                              "damage": spell.get("damage", "0"),
+                              "attackBonus": None}
+                    result = sheet_attack(attack, outargs)
+                    out = ""
+                    for f in result['embed'].fields:
+                        out += "**__{0.name}__**\n{0.value}\n".format(f)
                     
                     embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
                         
@@ -1401,7 +1444,7 @@ class InitTracker:
                     else:
                         embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
         
-        if spell['type'] == 'save':
+        if spell['type'] == 'save': # context!
             if isinstance(spell['text'], list):
                 text = '\n'.join(spell['text'])
             else:
@@ -1411,11 +1454,34 @@ class InitTracker:
             for i, s in enumerate(sentences):
                 if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
                     if i + 2 < len(sentences):
-                        context += s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
+                        _ctx = s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
+                        context += _ctx.strip()
                     elif i + 1 < len(sentences):
-                        context += s + '. ' + sentences[i+1] + '. '
+                        _ctx = s + '. ' + sentences[i+1] + '. '
+                        context += _ctx.strip()
                     else:
-                        context += s + '. '
+                        _ctx = s + '. '
+                        context += _ctx.strip()
+                    context += '\n'
+            embed.add_field(name="Effect", value=context)
+        elif spell['type'] == 'attack':
+            if isinstance(spell['text'], list):
+                text = '\n'.join(spell['text'])
+            else:
+                text = spell['text']
+            sentences = text.split('.')
+            context = ""
+            for i, s in enumerate(sentences):
+                if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
+                    if i + 2 < len(sentences):
+                        _ctx = s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
+                        context += _ctx.strip()
+                    elif i + 1 < len(sentences):
+                        _ctx = s + '. ' + sentences[i+1] + '. '
+                        context += _ctx.strip()
+                    else:
+                        _ctx = s + '. '
+                        context += _ctx.strip()
                     context += '\n'
             embed.add_field(name="Effect", value=context)
         

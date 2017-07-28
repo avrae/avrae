@@ -45,10 +45,6 @@ class Dice:
                 pass
             await self.bot.send_message(message.channel, message.author.mention + '  :game_die:\n' + out)
             
-    def parse_roll_args(self, args, character):
-        user_cvars = character.get('cvars', {})
-        return args.replace('SPELL', str(user_cvars.get('SPELL', 'SPELL')).strip('+')).replace('PROF', str(character.get('stats', {}).get('proficiencyBonus', "0")))
-            
     @commands.command(name='2', hidden=True, pass_context=True)
     async def quick_roll(self, ctx, *, mod:str='0'):
         """Quickly rolls a d20."""
@@ -197,72 +193,6 @@ class Dice:
         except:
             pass
         await self.bot.say(ctx.message.author.mention + '\n' + outStr)
-        
-    @commands.command(pass_context=True)
-    async def cast(self, ctx, *, args : str):
-        """Casts a spell (i.e. rolls all the dice and displays a summary [auto-deleted after 15 sec]).
-        Valid Arguments: -r <Some Dice> - Instead of rolling the default dice, rolls this instead."""
-        
-        try:
-            guild_id = ctx.message.server.id 
-            pm = self.bot.db.not_json_get("lookup_settings", {}).get(guild_id, {}).get("pm_result", False)
-               
-        except:
-            pm = False
-        
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            pass
-        
-        args = args.split('-r')
-        args = [re.sub('^\s+|\s+$', '', a) for a in args]
-        spellName = args[0]
-        
-        spell = searchSpell(spellName, return_spell=True)
-        self.bot.botStats["spells_looked_up_session"] += 1
-        self.bot.db.incr('spells_looked_up_life')
-        if spell['spell'] is None:
-            return await self.bot.say(spell['string'][0], delete_after=15)
-        result = spell['string']
-        spell = spell['spell']
-        
-        if len(args) == 1:
-            rolls = spell.get('roll', None)
-            if isinstance(rolls, list):
-                active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
-                if active_character is not None:
-                    user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
-                    character = user_characters[active_character] # get Sheet of character
-                    rolls = self.parse_roll_args('\n'.join(rolls), character)
-                    rolls = rolls.split('\n')
-                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(roll(r, inline=True).skeleton for r in rolls)
-            elif rolls is not None:
-                active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
-                if active_character is not None:
-                    user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
-                    character = user_characters[active_character] # get Sheet of character
-                    rolls = self.parse_roll_args(rolls, character)
-                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls, inline=True).skeleton
-            else:
-                out = "**{} casts {}!** ".format(ctx.message.author.mention, spell['name'])
-        else:
-            rolls = args[1:]
-            roll_results = ""
-            for r in rolls:
-                res = roll(r, inline=True)
-                if res.total is not None:
-                    roll_results += res.result + '\n'
-                else:
-                    roll_results += "**Effect:** " + r
-            out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
-            
-        await self.bot.say(out)
-        for r in result:
-            if pm:
-                await self.bot.send_message(ctx.message.author, r)
-            else:
-                await self.bot.say(r, delete_after=15)
                 
     @commands.command(pass_context=True, aliases=['ma', 'monster_attack'])
     async def monster_atk(self, ctx, monster_name, atk_name='list', *, args=''):

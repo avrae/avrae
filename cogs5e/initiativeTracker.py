@@ -1087,6 +1087,15 @@ class InitTracker:
     async def attack(self, ctx, target_name, atk_name, *, args=''):
         """Rolls an attack against another combatant.
         Valid Arguments: see !a and !ma."""
+        return await self._attack(ctx, None, target_name, atk_name, args)
+        
+    @init.command(pass_context=True)
+    async def aoo(self, ctx, combatant_name, target_name, atk_name, *, args=''):
+        """Rolls an attack of opportunity against another combatant.
+        Valid Arguments: see !a and !ma."""
+        return await self._attack(ctx, combatant_name, target_name, atk_name, args)
+        
+    async def _attack(self, ctx, combatant_name, target_name, atk_name, args):
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -1096,9 +1105,14 @@ class InitTracker:
         if target is None:
             await self.bot.say("Target not found.")
             return
-        combatant = combat.currentCombatant
-        if combatant is None:
-            return await self.bot.say("You must begin combat with !init next first.")
+        if combatant_name is None:
+            combatant = combat.currentCombatant
+            if combatant is None:
+                return await self.bot.say("You must start combat with `!init next` first.")
+        else:
+            combatant = combat.get_combatant(combatant_name)
+            if combatant is None:
+                return await self.bot.say("Combatant not found.")
         
         if not isinstance(combatant, CombatantGroup):
             for eff in combatant.effects:

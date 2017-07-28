@@ -169,11 +169,34 @@ class Spellbook:
             for i, s in enumerate(sentences):
                 if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
                     if i + 2 < len(sentences):
-                        context += s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
+                        _ctx = s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
+                        context += _ctx.strip()
                     elif i + 1 < len(sentences):
-                        context += s + '. ' + sentences[i+1] + '. '
+                        _ctx = s + '. ' + sentences[i+1] + '. '
+                        context += _ctx.strip()
                     else:
-                        context += s + '. '
+                        _ctx = s + '. '
+                        context += _ctx.strip()
+                    context += '\n'
+            embed.add_field(name="Effect", value=context)
+        elif spell['type'] == 'attack':
+            if isinstance(spell['text'], list):
+                text = '\n'.join(spell['text'])
+            else:
+                text = spell['text']
+            sentences = text.split('.')
+            context = ""
+            for i, s in enumerate(sentences):
+                if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
+                    if i + 2 < len(sentences):
+                        _ctx = s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
+                        context += _ctx.strip()
+                    elif i + 1 < len(sentences):
+                        _ctx = s + '. ' + sentences[i+1] + '. '
+                        context += _ctx.strip()
+                    else:
+                        _ctx = s + '. '
+                        context += _ctx.strip()
                     context += '\n'
             embed.add_field(name="Effect", value=context)
         

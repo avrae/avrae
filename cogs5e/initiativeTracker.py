@@ -1472,7 +1472,7 @@ class InitTracker:
             sentences = text.split('.')
             context = ""
             for i, s in enumerate(sentences):
-                if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
+                if " spell attack" in s.lower():
                     if i + 2 < len(sentences):
                         _ctx = s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
                         context += _ctx.strip()

@@ -106,7 +106,7 @@ class Spellbook:
             save = spell['save']
             
             if save['damage'] is None: # save against effect
-                embed.add_field(name="DC", value=str(dc))
+                embed.add_field(name="DC", value=str(dc) + "\n{} Save".format(spell['save']['save']))
             else: # damage spell
                 dmg = save['damage']
                 
@@ -124,7 +124,7 @@ class Spellbook:
                     dmg = dmg + '+' + "+".join(args.get('d', []))
                     
                 dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
-                embed.add_field(name="Damage/DC", value=dmgroll.result + "\n**DC**: {}".format(str(dc)))
+                embed.add_field(name="Damage/DC", value=dmgroll.result + "\n**DC**: {}\n{} Save".format(str(dc), spell['save']['save']))
         elif spell['type'] == 'attack': # attack spell            
             outargs = copy.copy(args)
             outargs['d'] = "+".join(args.get('d', [])) or None

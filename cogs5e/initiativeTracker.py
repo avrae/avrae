@@ -1386,7 +1386,9 @@ class InitTracker:
                         attack['damage'] = re.sub(r'(\d+)d(\d+)', lsub, attack['damage'])
                     
                     result = sheet_attack(attack, outargs)
-                    out = result['embed'].fields[0].value
+                    out = ""
+                    for f in result['embed'].fields:
+                        out += "**__{0.name}__**\n{0.value}\n".format(f)
                     
                     embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
                         

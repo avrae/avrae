@@ -39,6 +39,10 @@ class Spellbook:
         See `!a`.
         **__All Spells__**
         -phrase [phrase] - adds flavor text."""
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
         
         with open('./res/auto_spells.json', 'r') as f:
             spells = json.load(f)
@@ -219,11 +223,6 @@ class Spellbook:
                
         except:
             pm = False
-        
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            pass
         
         args = args.split('-r')
         args = [a.strip() for a in args]

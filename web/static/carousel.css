@@ -40,7 +40,7 @@ body {
 /* Carousel base class */
 .carousel {
   height: 500px;
-  margin-bottom: 60px;
+  margin-bottom: 20px;
 }
 /* Since positioning the image, we need to help out the caption */
 .carousel-caption {
@@ -50,14 +50,15 @@ body {
 /* Declare heights because of positioning of img element */
 .carousel .item {
   height: 500px;
-  background-color: #777;
+  background-color: #2c2f33;
 }
 .carousel-inner > .item > img {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   min-width: 100%;
-  height: 500px;
+  min-height: 500px;
   max-width: none;
 }
 
@@ -83,7 +84,7 @@ body {
 ------------------------- */
 
 .featurette-divider {
-  margin: 80px 0; /* Space out the Bootstrap <hr> more */
+  margin: 20px 0; /* Space out the Bootstrap <hr> more */
 }
 
 /* Thin out the marketing headings */

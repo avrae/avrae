@@ -32,7 +32,12 @@ class Help:
     @commands.command(name='help', aliases=['commands'], pass_context=True)
     @commands.cooldown(1, 2, BucketType.user)
     async def _default_help_command(self, ctx, *commands : str):
-        """Shows this message."""
+        """Shows this message.
+        <argument> - This means the argument is __**required**__.
+        [argument] - This means the argument is __**optional**__.
+        [A|B] - This means the it can be __**either A or B**__.
+        [argument...] - This means you can have multiple arguments.
+        Now that you know the basics, it should be noted that __**you do not type in the brackets!**__"""
         bot = ctx.bot
         destination = ctx.message.author if bot.pm_help else ctx.message.channel
     

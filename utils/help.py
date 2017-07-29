@@ -3,17 +3,17 @@ Created on Jan 17, 2017
 
 @author: andrew
 '''
-import asyncio
 import inspect
 import itertools
 import re
+from math import floor
 
 import discord
+from discord.errors import Forbidden
 from discord.ext import commands
+from discord.ext.commands.cooldowns import BucketType
 from discord.ext.commands.core import Command
 from discord.ext.commands.formatter import HelpFormatter
-from discord.errors import Forbidden
-from discord.ext.commands.cooldowns import BucketType
 
 
 class Help:
@@ -99,7 +99,7 @@ class Help:
 class CustomHelpFormatter(HelpFormatter):
     
     def _get_subcommands(self, commands):
-        out = ''
+        out = []
         for name, command in commands:
             if name in command.aliases:
                 # skip aliases
@@ -107,8 +107,8 @@ class CustomHelpFormatter(HelpFormatter):
 
             entry = '**{0}** - {1}\n'.format(name, command.short_doc)
             shortened = self.shorten(entry)
-            out += shortened
-        return out
+            out.append(shortened)
+        return ''.join(sorted(out))
     
     def get_ending_note(self):
         command_name = self.context.invoked_with
@@ -190,9 +190,23 @@ class CustomHelpFormatter(HelpFormatter):
         else:
             title = 'Commands'
             value = self._get_subcommands(self.filter_command_list())
-            current_embed.add_field(name=title, value=value, inline=False)
+            _v = []
+            l = ""
+            for val in value.split('\n'):
+                val = f"\n{val}"
+                if len(l) + len(val) > 1020:
+                    _v.append(l)
+                    l = ""
+                l += val
+            if l:
+                _v.append(l)
+            for i, v in enumerate(_v):
+                if i == 0:
+                    current_embed.add_field(name=title, value=v, inline=False)
+                else:
+                    current_embed.add_field(name="con't", value=v, inline=False)
         
-        if length > 3500:
+        if length > 5500:
             current_embed = discord.Embed()
             self.embeds.append(current_embed)
             length = 0

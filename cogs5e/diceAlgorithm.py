@@ -259,9 +259,10 @@ class Dice:
         monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
         skills = {}
         for s in _skills:
-            _name = ' '.join(s.split(' ')[:-1]).lower()
-            _value = int(s.split(' ')[-1])
-            skills[_name] = _value
+            if s:
+                _name = ' '.join(s.split(' ')[:-1]).lower()
+                _value = int(s.split(' ')[-1])
+                skills[_name] = _value
         
         skillslist = ['acrobatics', 'animal handling', 'arcana', 'athletics',
                       'deception', 'history', 'initiative', 'insight',

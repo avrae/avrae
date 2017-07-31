@@ -14,11 +14,10 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import searchSpell
+from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils.functions import parse_cvars, parse_args_3, \
-    evaluate_cvar, fuzzywuzzy_search_all_2
-
+    evaluate_cvar, strict_search
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +25,8 @@ class Spellbook:
     """Commands to help track spellcasting."""
     def __init__(self, bot):
         self.bot = bot
+        with open('./res/auto_spells.json', 'r') as f:
+            self.autospells = json.load(f)
     
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *args):
@@ -44,9 +45,11 @@ class Spellbook:
         except:
             pass
         
-        with open('./res/auto_spells.json', 'r') as f:
-            spells = json.load(f)
-        spell = fuzzywuzzy_search_all_2(spells, 'name', spell_name, 60)
+        spell_name = await searchSpellNameFull(spell_name, ctx)
+
+        if spell_name is None: return
+
+        spell = strict_search(self.autospells, 'name', spell_name)
         if spell is None: return await self._old_cast(ctx, spell_name + " " + " ".join(args), fallback=True) #fall back to old cast
         
         
@@ -228,7 +231,7 @@ class Spellbook:
         args = [a.strip() for a in args]
         spellName = args[0]
         
-        spell = searchSpell(spellName, return_spell=True)
+        spell = getSpell(spellName, return_spell=True)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
         if spell['spell'] is None:

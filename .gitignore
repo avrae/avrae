@@ -12,6 +12,7 @@
 *.ini
 /tests/
 /venv/
+/.idea/
 
 cmd_aliases-backup.json
 
@@ -19,3 +20,7 @@ char_vars-backup.json
 
 damage_snippets-backup.json
 /dicecloud.txt
+
+.idea/vcs.xml
+
+.idea/inspectionProfiles/Project_Default.xml

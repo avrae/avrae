@@ -1,21 +1,15 @@
-import asyncio
-from datetime import timedelta, datetime, tzinfo
-import json
 import logging
-from math import floor
+import logging
 import os
-import pickle
 import random
 import signal
 import sys
-import time
 import traceback
 
 import discord
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
-import psutil
 
 from cogs5e.charGen import CharGenerator
 from cogs5e.diceAlgorithm import Dice
@@ -23,6 +17,7 @@ from cogs5e.initiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
 from cogs5e.pbpUtils import PBPUtils
 from cogs5e.sheetManager import SheetManager
+from cogs5e.spellbook import Spellbook
 from cogsmisc.adminUtils import AdminUtils
 from cogsmisc.core import Core
 from cogsmisc.customization import Customization
@@ -30,13 +25,10 @@ from cogsmisc.permissions import Permissions
 from cogsmisc.publicity import Publicity
 from cogsmisc.repl import REPL
 from cogsmisc.stats import Stats
-from utils import checks
 from utils.dataIO import DataIO
-from utils.functions import make_sure_path_exists, discord_trim, get_positivity, \
+from utils.functions import discord_trim, get_positivity, \
     list_get
 from utils.help import Help
-from cogs5e.spellbook import Spellbook
-
 
 INITIALIZING = True
 TESTING = get_positivity(os.environ.get("TESTING", False))

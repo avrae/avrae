@@ -65,7 +65,15 @@ def get_positivity(string):
         return False
     else:
         return None
-    
+
+def strict_search(list_to_search:list, key, value):
+    """Fuzzy searches a list for a dict with a key "key" of value "value" """
+    try:
+        result = next(a for a in list_to_search if value.lower() == a.get(key, '').lower())
+    except StopIteration:
+        return None
+    return result
+
 def fuzzy_search(list_to_search:list, key, value):
     """Fuzzy searches a list for a dict with a key "key" of value "value" """
     try:
@@ -119,6 +127,28 @@ def fuzzywuzzy_search_all_2(list_to_search:list, key, value, cutoff=60):
             if len(result) is 0: return None
             else: return next(a for a in list_to_search if result[0][0] == a.get(key, ''))
     return result
+
+def fuzzywuzzy_search_all_3(list_to_search:list, key, value, cutoff=5, return_key=False):
+    """Fuzzy searches a list for a dict with all keys "key" of value "value"
+    result can be either an object or list of objects
+    :returns: A two-tuple (result, strict) or None"""
+    try:
+        result = next(a for a in list_to_search if value.lower() == a.get(key, '').lower())
+    except StopIteration:
+        result = [a for a in list_to_search if value.lower() in a.get(key, '').lower()]
+        if len(result) is 0:
+            names = [d[key] for d in list_to_search]
+            result = process.extract(value, names, scorer=fuzz.ratio)
+            result = [r for r in result if r[1] >= cutoff]
+            if len(result) is 0: return None
+            else:
+                if return_key: return [r[0] for r in result], False
+                else: return [a for a in list_to_search if a.get(key, '') in [r[0] for r in result]], False
+        else:
+            if return_key: return [r[key] for r in result], False
+            else: return result, False
+    if return_key: return result[key], True
+    else: return result, True
 
 def parse_args(args):
     out = {}

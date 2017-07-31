@@ -1,22 +1,18 @@
-import asyncio
-import copy
-import json
-import os
+import random
 import random
 import re
 import shlex
+from math import floor
 
 import discord
 from discord.ext import commands
-import numexpr
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup, Constant, Operator
-from cogs5e.funcs.lookupFuncs import searchSpell, searchMonster
+from cogs5e.funcs.lookupFuncs import searchMonsterFull
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils import checks
 from utils.functions import fuzzy_search, a_or_an, discord_trim, \
     parse_args_2, parse_args_3
-from math import floor
 
 
 class Dice:
@@ -213,7 +209,7 @@ class Dice:
         except:
             pass
         
-        monster = searchMonster(monster_name, return_monster=True, visible=True)
+        monster = await searchMonsterFull(monster_name, ctx)
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr('monsters_looked_up_life')
         if monster['monster'] is None:
@@ -249,19 +245,20 @@ class Dice:
               -phrase [flavor text]
               -title [title] *note: [mname] and [cname] will be replaced automatically*"""
         
-        monster = searchMonster(monster_name, return_monster=True, visible=True)
+        monster = await searchMonsterFull(monster_name, ctx)
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr('monsters_looked_up_life')
         if monster['monster'] is None:
             return await self.bot.say(monster['string'][0], delete_after=15)
         monster = monster['monster']
-        _skills = monster.get('skill').split(', ')
+        _skills = monster.get('skill', "").split(', ')
         monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
         skills = {}
         for s in _skills:
-            _name = ' '.join(s.split(' ')[:-1]).lower()
-            _value = int(s.split(' ')[-1])
-            skills[_name] = _value
+            if s:
+                _name = ' '.join(s.split(' ')[:-1]).lower()
+                _value = int(s.split(' ')[-1])
+                skills[_name] = _value
         
         skillslist = ['acrobatics', 'animal handling', 'arcana', 'athletics',
                       'deception', 'history', 'initiative', 'insight',
@@ -324,7 +321,7 @@ class Dice:
               -phrase [flavor text]
               -title [title] *note: [mname] and [cname] will be replaced automatically*"""
         
-        monster = searchMonster(monster_name, return_monster=True, visible=True)
+        monster = await searchMonsterFull(monster_name, ctx)
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr('monsters_looked_up_life')
         if monster['monster'] is None:

@@ -1,16 +1,20 @@
-'''
+"""
 Created on Jan 13, 2017
 
 @author: andrew
-'''
+"""
 import json
+import random
 from math import floor
-import math
 
-from utils.functions import print_table, discord_trim, fuzzy_search, \
-    fuzzywuzzy_search, fuzzywuzzy_search_all
+import copy
 
-class Compendium: # TODO: move more things to this
+import discord
+
+from utils.functions import discord_trim, fuzzywuzzy_search_all, strict_search, fuzzywuzzy_search_all_3
+
+
+class Compendium:
     def __init__(self):
         with open('./res/conditions.json', 'r') as f:
             self.conditions = json.load(f)
@@ -35,76 +39,126 @@ class Compendium: # TODO: move more things to this
                     for cfeat in clevel.get('feature', []):
                         cfeat['name'] = "{}: {}".format(_class['name'], cfeat['name'])
                         self.cfeats.append(cfeat)
-            
+        with open('./res/bestiary.json', 'r') as f:
+            self.monsters = json.load(f)
+        with open('./res/spells.json', 'r') as f:
+            self.spells = json.load(f)
+        with open('./res/items.json', 'r') as f:
+            self.items = json.load(f)
+        with open('./res/auto_spells.json', 'r') as f:
+            self.autospells = json.load(f)
+
 
 c = Compendium()
 
-def searchCondition(condition, search=fuzzywuzzy_search):
-    return search(c.conditions, 'name', condition)
+def searchCondition(condition):
+    return fuzzywuzzy_search_all_3(c.conditions, 'name', condition)
 
-def searchRule(rule, search=fuzzywuzzy_search):
-    return search(c.rules, 'name', rule)
+def getCondition(condition):
+    return strict_search(c.conditions, 'name', condition)
 
-def searchFeat(feat, search=fuzzywuzzy_search):
-    return search(c.feats, 'name', feat)
+def searchRule(rule):
+    return fuzzywuzzy_search_all_3(c.rules, 'name', rule)
 
-def searchRacialFeat(feat, search=fuzzywuzzy_search):
-    return search(c.rfeats, 'name', feat)
+def getRule(rule):
+    return strict_search(c.rules, 'name', rule)
 
-def searchClassFeat(feat, search=fuzzywuzzy_search):
-    return search(c.cfeats, 'name', feat)
+def searchFeat(name):
+    return fuzzywuzzy_search_all_3(c.feats, 'name', name)
 
-def searchMonster(monstername, visible=True, return_monster=False, search=fuzzywuzzy_search):
-    with open('./res/bestiary.json', 'r') as f:
-        monsters = json.load(f)
-    
+def getFeat(feat):
+    return strict_search(c.feats, 'name', feat)
+
+def searchRacialFeat(name):
+    return fuzzywuzzy_search_all_3(c.rfeats, 'name', name)
+
+def getRacialFeat(feat):
+    return strict_search(c.rfeats, 'name', feat)
+
+def searchClassFeat(name):
+    return fuzzywuzzy_search_all_3(c.cfeats, 'name', name)
+
+def getClassFeat(feat):
+    return strict_search(c.cfeats, 'name', feat)
+
+# ----- Monster stuff
+
+async def get_selection(results, ctx, pm=False, name_key=None):
+    results = results[:10] # sanity
+    if name_key:
+        names = [r[name_key] for r in results]
+    else:
+        names = results
+    embed = discord.Embed()
+    embed.title = "Multiple Matches Found"
+    selectStr = " Which one were you looking for? (Type the number, or \"c\" to cancel)\n"
+    for i, r in enumerate(names):
+        selectStr += f"**[{i+1}]** - {r}\n"
+    embed.description = selectStr
+    embed.color = random.randint(0, 0xffffff)
+    if not pm:
+        selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
+    else:
+        embed.add_field(name="Instructions", value="Type your response in the channel you called the command. This message was PMed to you to hide the monster name.")
+        selectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
+
+    def chk(msg):
+        valid = [str(v) for v in range(1, len(results) + 1)] + ["c"]
+        return msg.content in valid
+
+    m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel,
+                                       check=chk)
+
+    if not pm: await ctx.bot.delete_message(selectMsg)
+    if m is None: return None
+    try: await ctx.bot.delete_message(m)
+    except: pass
+    if m.content == "c": return None
+    return results[int(m.content) - 1]
+
+def searchMonster(name):
+    return fuzzywuzzy_search_all_3(c.monsters, 'name', name, return_key=True)
+
+async def searchMonsterFull(name, ctx, pm=False):
+    result = searchMonster(name)
+    if result is None:
+        return {'monster': None, 'string': ["Monster does not exist or is misspelled."]}
+    strict = result[1]
+    results = result[0]
+    bot = ctx.bot
+
+    if strict:
+        result = results
+    else:
+        if len(results) == 1:
+            result = results[0]
+        else:
+            result = await get_selection(results, ctx, pm=pm)
+            if result is None:
+                return {'monster': None, 'string': ["Selection timed out or was cancelled."]}
+
+    result = getMonster(result, visible=True, return_monster=True)
+    return result
+
+def getMonster(monstername, visible=True, return_monster=False):
     monsterDesc = []
-    
-    monster = search(monsters, 'name', monstername)
+    monster = strict_search(c.monsters, 'name', monstername)
+    monster = copy.copy(monster)
     if monster is None:
         monsterDesc.append("Monster does not exist or is misspelled.")
         if return_monster: return {'monster': None, 'string': monsterDesc}
         return monsterDesc
-    if search is fuzzywuzzy_search_all:
-        return monster
-        
-    def parsesource (src):
-        source = src
-        if (source == " monster manual"): source = "MM";
-        if (source == " Volo's Guide"): source = "VGM";
-        if (source == " elemental evil"): source = "PotA";
-        if (source == " storm kings thunder"): source = "SKT";
-        if (source == " tyranny of dragons"): source = "ToD";
-        if (source == " out of the abyss"): source = "OotA";
-        if (source == " curse of strahd"): source = "CoS";
-        if (source == " lost mine of phandelver"): source = "LMoP";
-        if (source == " tome of beasts"): source = "ToB 3pp";
-        return source;
-    
-    def parsesourcename (src):
-        source = src;
-        if (source == " monster manual"): source = "Monster Manual";
-        if (source == " Volo's Guide"): source = "Volo's Guide to Monsters";
-        if (source == " elemental evil"): source = "Princes of the Apocalypse";
-        if (source == " storm kings thunder"): source = "Storm King's Thunder";
-        if (source == " tyranny of dragons"): source = "Tyranny of Dragons";
-        if (source == " out of the abyss"): source = "Out of the Abyss";
-        if (source == " curse of strahd"): source = "Curse of Strahd";
-        if (source == " lost mine of phandelver"): source = "Lost Mine of Phandelver";
-        if (source == " tome of beasts"): source = "Tome of Beasts (3pp)";
-        return source;
-    
+
     def parsesize (size):
-        if (size == "T"): size = "Tiny";
-        if (size == "S"): size = "Small";
-        if (size == "M"): size = "Medium";
-        if (size == "L"): size = "Large";
-        if (size == "H"): size = "Huge";
-        if (size == "G"): size = "Gargantuan";
-        return size;
-    
+        if size == "T": size = "Tiny";
+        if size == "S": size = "Small";
+        if size == "M": size = "Medium";
+        if size == "L": size = "Large";
+        if size == "H": size = "Huge";
+        if size == "G": size = "Gargantuan";
+        return size
+
     if visible:
-            
         monster['size'] = parsesize(monster['size'])
         monster['type'] = ','.join(monster['type'].split(',')[:-1])
         for stat in ['str', 'dex', 'con', 'wis', 'int', 'cha']:
@@ -115,7 +169,7 @@ def searchMonster(monstername, visible=True, return_monster=False, search=fuzzyw
             monster['senses'] = "passive Perception {}".format(monster['passive'])
         else:
             monster['senses'] = monster.get('senses') + ", passive Perception {}".format(monster['passive'])
-        
+
         monsterDesc.append("{name}, {size} {type}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n".format(**monster))
         monsterDesc.append("**STR:** {strStr} **DEX:** {dexStr} **CON:** {conStr} **WIS:** {wisStr} **INT:** {intStr} **CHA:** {chaStr}\n".format(**monster))
         if monster.get('save') is not None:
@@ -136,7 +190,7 @@ def searchMonster(monstername, visible=True, return_monster=False, search=fuzzyw
         else:
             monsterDesc.append("**Languages:** --\n".format(**monster))
         monsterDesc.append("**CR:** {cr}\n".format(**monster))
-        
+
         attacks = []  # setup things
         if "trait" in monster:
             monsterDesc.append("\n**__Special Abilities:__**\n")
@@ -148,22 +202,22 @@ def searchMonster(monstername, visible=True, return_monster=False, search=fuzzyw
                     attacks.append(a)
         if "action" in monster:
             monsterDesc.append("\n**__Actions:__**\n")
-            for a in monster["action"]:      
+            for a in monster["action"]:
                 if isinstance(a['text'], list):
                     a['text'] = '\n'.join(t for t in a['text'] if t is not None)
                 monsterDesc.append("**{name}:** {text}\n".format(**a))
                 if 'attack' in a:
                     attacks.append(a)
-            
+
         if "reaction" in monster:
             monsterDesc.append("\n**__Reactions:__**\n")
-            a = monster["reaction"] 
+            a = monster["reaction"]
             if isinstance(a['text'], list):
                 a['text'] = '\n'.join(t for t in a['text'] if t is not None)
             monsterDesc.append("**{name}:** {text}\n".format(**a))
             if 'attack' in a:
                 attacks.append(a)
-            
+
         if "legendary" in monster:
             monsterDesc.append("\n**__Legendary Actions:__**\n")
             for a in monster["legendary"]:
@@ -175,24 +229,7 @@ def searchMonster(monstername, visible=True, return_monster=False, search=fuzzyw
                     monsterDesc.append("{text}\n".format(**a))
                 if 'attack' in a:
                     attacks.append(a)
-                    
-        # fix list of attack dicts
-#         tempAttacks = []
-#         for a in attacks:
-#             desc = a['text']
-#             parentName = a['name']
-#             for atk in a['attack']:
-#                 if atk is None: continue
-#                 data = atk.split('|')
-#                 name = data[0] if not data[0] == '' else parentName
-#                 toHit = data[1] if not data[1] == '' else None
-#                 damage = data[2] if not data[2] == '' else None
-#                 atkObj = {'name': name,
-#                           'desc': desc,
-#                           'attackBonus': toHit,
-#                           'damage': damage}
-#                 tempAttacks.append(atkObj)
-#         monster['attacks'] = tempAttacks
+
     else:
         monster['hp'] = int(monster['hp'].split(' (')[0])
         monster['ac'] = int(monster['ac'].split(' (')[0])
@@ -210,7 +247,7 @@ def searchMonster(monstername, visible=True, return_monster=False, search=fuzzyw
             monster["hp"] = "Very High"
         elif 400 <= monster["hp"]:
             monster["hp"] = "Godly"
-            
+
         if monster["ac"] < 6:
             monster["ac"] = "Very Low"
         elif 6 <= monster["ac"] < 9:
@@ -223,7 +260,7 @@ def searchMonster(monstername, visible=True, return_monster=False, search=fuzzyw
             monster["ac"] = "Very High"
         elif 22 <= monster["ac"]:
             monster["ac"] = "Godly"
-            
+
         for stat in ["str", "dex", "con", "wis", "int", "cha"]:
             monster[stat] = int(monster[stat])
             if monster[stat] <= 3:
@@ -238,177 +275,191 @@ def searchMonster(monstername, visible=True, return_monster=False, search=fuzzyw
                 monster[stat] = "Very High"
             elif 25 < monster[stat]:
                 monster[stat] = "Godly"
-                
+
         if monster.get("languages"):
             monster["languages"] = len(monster["languages"].split(", "))
         else:
             monster["languages"] = 0
-        
+
         monsterDesc.append("{name}, {size} {type}.\n" \
         "**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n" \
         "**STR:** {str} **DEX:** {dex} **CON:** {con} **WIS:** {wis} **INT:** {int} **CHA:** {cha}\n" \
         "**Languages:** {languages}\n".format(**monster))
-        
+
         if "trait" in monster:
             monsterDesc.append("**__Special Abilities:__** " + str(len(monster["trait"])) + "\n")
-        
+
         if "action" in monster:
             monsterDesc.append("**__Actions:__** " + str(len(monster["action"])) + "\n")
-        
+
         if "reaction" in monster:
             monsterDesc.append("**__Reactions:__** " + str(len(monster["reaction"])) + "\n")
-            
+
         if "legendary" in monster:
             monsterDesc.append("**__Legendary Actions:__** " + str(len(monster["legendary"])) + "\n")
-    
+
     if return_monster:
         return {'monster': monster, 'string': discord_trim(''.join(monsterDesc))}
     else:
         return discord_trim(''.join(monsterDesc))
 
-def searchSpell(spellname, serv_id='', return_spell=False, search=fuzzywuzzy_search):
+def searchSpell(name):
+    return fuzzywuzzy_search_all_3(c.spells, 'name', name, return_key=True)
+
+async def searchSpellNameFull(name, ctx):
+    result = searchSpell(name)
+    if result is None:
+        return None
+    strict = result[1]
+    results = result[0]
+    bot = ctx.bot
+
+    if strict:
+        result = results
+    else:
+        if len(results) == 1:
+            result = results[0]
+        else:
+            result = await get_selection(results, ctx)
+            if result is None:
+                await bot.send_message(ctx.message.channel, 'Selection timed out or was cancelled.')
+                return None
+    return result
+
+def searchAutoSpell(name):
+    return fuzzywuzzy_search_all_3(c.autospells, 'name', name)
+
+async def searchAutoSpellFull(name, ctx):
+    result = searchAutoSpell(name)
+    if result is None:
+        return None
+    strict = result[1]
+    results = result[0]
+    bot = ctx.bot
+
+    if strict:
+        result = results
+    else:
+        if len(results) == 1:
+            result = results[0]
+        else:
+            result = await get_selection(results, ctx, name_key='name')
+            if result is None:
+                await bot.send_message(ctx.message.channel, 'Selection timed out or was cancelled.')
+                return None
+    return result
+
+def getSpell(spellname, return_spell=False):
     spellDesc = []
-    with open('./res/spells.json', 'r') as f:
-        contextualSpells = json.load(f)
-    
-    spell = search(contextualSpells, 'name', spellname)
+
+    spell = strict_search(c.spells, 'name', spellname)
     if spell is None:
         spellDesc.append("Spell does not exist or is misspelled (ha).")
         if return_spell: return {'spell': None, 'string': spellDesc}
         return spellDesc
-    if search is fuzzywuzzy_search_all:
-        return spell
-    
+
     def parseschool(school):
-        if (school == "A"): return "abjuration"
-        if (school == "EV"): return "evocation"
-        if (school == "EN"): return "enchantment"
-        if (school == "I"): return "illusion"
-        if (school == "D"): return "divination"
-        if (school == "N"): return "necromancy"
-        if (school == "T"): return "transmutation"
-        if (school == "C"): return "conjuration"
+        if school == "A": return "abjuration"
+        if school == "EV": return "evocation"
+        if school == "EN": return "enchantment"
+        if school == "I": return "illusion"
+        if school == "D": return "divination"
+        if school == "N": return "necromancy"
+        if school == "T": return "transmutation"
+        if school == "C": return "conjuration"
         return school
-    
-    
+
+
     def parsespelllevel(level):
-        if (level == "0"): return "cantrip"
-        if (level == "2"): return level + "nd level"
-        if (level == "3"): return level + "rd level"
-        if (level == "1"): return level + "st level"
+        if level == "0": return "cantrip"
+        if level == "2": return level + "nd level"
+        if level == "3": return level + "rd level"
+        if level == "1": return level + "st level"
         return level + "th level"
-    
+
     spell['school'] = parseschool(spell.get('school'))
     spell['ritual'] = spell.get('ritual', 'no').lower()
-    
+
     if spell.get("source") == "UAMystic":
         spellDesc.append("{name}, {level} Mystic Talent. ({classes})\n".format(**spell))
     else:
         spell['level'] = parsespelllevel(spell['level'])
-        spellDesc.append("{name}, {level} {school}. ({classes})\n**Casting Time:** {time}\n**Range:** {range}\n**Components:** {components}\n**Duration:** {duration}\n**Ritual:** {ritual}".format(**spell))    
-    
+        spellDesc.append("{name}, {level} {school}. ({classes})\n**Casting Time:** {time}\n**Range:** {range}\n**Components:** {components}\n**Duration:** {duration}\n**Ritual:** {ritual}".format(**spell))
+
     if isinstance(spell['text'], list):
         for a in spell["text"]:
             if a is '': continue
             spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion", ""))
     else:
         spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion", ""))
-  
+
     tempStr = '\n'.join(spellDesc)
-    
+
     if return_spell:
         return {'spell': spell, 'string': discord_trim(tempStr)}
     else:
         return discord_trim(tempStr)
-    
-def searchItem(itemname, return_item=False, search=fuzzywuzzy_search):
-    with open('./res/items.json', 'r') as f:
-        items = json.load(f)
+
+def searchItem(name):
+    return fuzzywuzzy_search_all_3(c.items, 'name', name, return_key=True)
+
+def getItem(itemname, return_item=False):
     itemDesc = []
-    item = search(items, 'name', itemname)
+    item = strict_search(c.items, 'name', itemname)
     if item is None:
         itemDesc.append("Item does not exist or is misspelled.")
-        if return_item: return {'spell': None, 'string': itemDesc}
+        if return_item: return {'item': None, 'string': itemDesc}
         return itemDesc
-    
-    if search is fuzzywuzzy_search_all:
-        return item
-    
-    def parsesource(src):
-        source = src
-        if (source == " monster manual"): source = "MM";
-        if (source == " Player's Handbook"): source = "PHB";
-        if (source == " Dungeon Master's Guide"): source = "DMG";
-        if (source == " Volo's Guide"): source = "VGM";
-        if (source == " Volo's Guide to Monsters"): source = "VGM";
-        if (source == " Princes of the Apocalypse"): source = "PotA";
-        if (source == " Elemental Evil PDF supplement"): source = "EEPC";
-        if (source == " elemental evil"): source = "PotA";
-        if (source == " Storm King's Thunder"): source = "SKT";
-        if (source == " storm kings thunder"): source = "SKT";
-        if (source == " The Rise of Tiamat"): source = "RoT";
-        if (source == " Rise of Tiamat Online Supplement"): source = "RoT";
-        if (source == " Hoard of the Dragon Queen"): source = "HotDQ";
-        if (source == " tyranny of dragons"): source = "ToD";
-        if (source == " Out of the Abyss"): source = "OotA";
-        if (source == " out of the abyss"): source = "OotA";
-        if (source == " Curse of Strahd"): source = "CoS";
-        if (source == " curse of strahd"): source = "CoS";
-        if (source == " Sword Coast Adventurer's Guide"): source = "SCAG";
-        if (source == " Lost Mines of Phandelver"): source = "LMoP";
-        if (source == " lost mine of phandelver"): source = "LMoP";
-        if (source == " Modern Magic Unearthed Arcana"): source = "UA";
-        return source;
-    
+
     def parsetype (_type):
-        if (_type == "G"): return "Adventuring Gear"
-        if (_type == "SCF"): return "Spellcasting Focus"
-        if (_type == "AT"): return "Artisan Tool"
-        if (_type == "T"): return "Tool"
-        if (_type == "GS"): return "Gaming Set"
-        if (_type == "INS"): return "Instrument"
-        if (_type == "A"): return "Ammunition"
-        if (_type == "M"): return "Melee Weapon"
-        if (_type == "R"): return "Ranged Weapon"
-        if (_type == "LA"): return "Light Armor"
-        if (_type == "MA"): return "Medium Armor"
-        if (_type == "HA"): return "Heavy Armor"
-        if (_type == "S"): return "Shield"
-        if (_type == "W"): return "Wondrous Item"
-        if (_type == "P"): return "Potion"
-        if (_type == "ST"): return "Staff"
-        if (_type == "RD"): return "Rod"
-        if (_type == "RG"): return "Ring"
-        if (_type == "WD"): return "Wand"
-        if (_type == "SC"): return "Scroll"
-        if (_type == "EXP"): return "Explosive"
-        if (_type == "GUN"): return "Firearm"
-        if (_type == "SIMW"): return "Simple Weapon"
-        if (_type == "MARW"): return "Martial Weapon"
-        if (_type == "$"): return "Valuable Object"
+        if _type == "G": return "Adventuring Gear"
+        if _type == "SCF": return "Spellcasting Focus"
+        if _type == "AT": return "Artisan Tool"
+        if _type == "T": return "Tool"
+        if _type == "GS": return "Gaming Set"
+        if _type == "INS": return "Instrument"
+        if _type == "A": return "Ammunition"
+        if _type == "M": return "Melee Weapon"
+        if _type == "R": return "Ranged Weapon"
+        if _type == "LA": return "Light Armor"
+        if _type == "MA": return "Medium Armor"
+        if _type == "HA": return "Heavy Armor"
+        if _type == "S": return "Shield"
+        if _type == "W": return "Wondrous Item"
+        if _type == "P": return "Potion"
+        if _type == "ST": return "Staff"
+        if _type == "RD": return "Rod"
+        if _type == "RG": return "Ring"
+        if _type == "WD": return "Wand"
+        if _type == "SC": return "Scroll"
+        if _type == "EXP": return "Explosive"
+        if _type == "GUN": return "Firearm"
+        if _type == "SIMW": return "Simple Weapon"
+        if _type == "MARW": return "Martial Weapon"
+        if _type == "$": return "Valuable Object"
         return "n/a"
-    
-    def parsedamagetype (damagetype): 
-        if (damagetype == "B"): return "bludgeoning"
-        if (damagetype == "P"): return "piercing"
-        if (damagetype == "S"): return "slashing"
-        if (damagetype == "N"): return "necrotic"
-        if (damagetype == "R"): return "radiant"
+
+    def parsedamagetype (damagetype):
+        if damagetype == "B": return "bludgeoning"
+        if damagetype == "P": return "piercing"
+        if damagetype == "S": return "slashing"
+        if damagetype == "N": return "necrotic"
+        if damagetype == "R": return "radiant"
         return 'n/a'
-    
+
     def parseproperty (_property):
-        if (_property == "A"): return "ammunition"
-        if (_property == "LD"): return "loading"
-        if (_property == "L"): return "light"
-        if (_property == "F"): return "finesse"
-        if (_property == "T"): return "thrown"
-        if (_property == "H"): return "heavy"
-        if (_property == "R"): return "reach"
-        if (_property == "2H"): return "two-handed"
-        if (_property == "V"): return "versatile"
-        if (_property == "S"): return "special"
-        if (_property == "RLD"): return "reload"
-        if (_property == "BF"): return "burst fire"
+        if _property == "A": return "ammunition"
+        if _property == "LD": return "loading"
+        if _property == "L": return "light"
+        if _property == "F": return "finesse"
+        if _property == "T": return "thrown"
+        if _property == "H": return "heavy"
+        if _property == "R": return "reach"
+        if _property == "2H": return "two-handed"
+        if _property == "V": return "versatile"
+        if _property == "S": return "special"
+        if _property == "RLD": return "reload"
+        if _property == "BF": return "burst fire"
         return "n/a"
     itemDict = {}
     itemDict['name'] = item['name']
@@ -438,17 +489,17 @@ def searchItem(itemname, return_item=False, search=fuzzywuzzy_search):
         itemDict['properties'] += a
     itemDict['damage_and_properties'] = (itemDict['damage'] + ' - ' + itemDict['properties']) if itemDict['properties'] is not '' else itemDict['damage']
     itemDict['damage_and_properties'] = (' --- ' + itemDict['damage_and_properties']) if itemDict['weight_and_value'] is not '' and itemDict['damage_and_properties'] is not '' else itemDict['damage_and_properties']
-    
+
     itemDesc.append("**{name}**\n*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n".format(**itemDict))
     itemDesc.append('\n'.join(a for a in item['text'] if a is not None and 'Rarity:' not in a and 'Source:' not in a))
-    
+
     tempStr = '\n'.join(itemDesc)
     if return_item:
         return {'item': item, 'string': discord_trim(tempStr)}
     else:
         return tempStr
-    
-    
-    
-    
-    
+
+
+
+
+

@@ -6,30 +6,26 @@ Created on Sep 18, 2016
 import asyncio
 import copy
 import datetime
-import json
 import logging
-from math import floor
-from os.path import isfile
 import pickle
 import random
 import re
 import shlex
-import signal
-from string import capwords
 import traceback
+from math import floor
+from string import capwords
 
 import discord
 from discord.errors import NotFound, Forbidden
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
-from cogs5e.funcs.lookupFuncs import searchMonster
+from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchAutoSpellFull
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
-    parse_args_3, parse_cvars, evaluate_cvar, parse_resistances,\
-    fuzzywuzzy_search, fuzzywuzzy_search_all_2
-
+    parse_args_3, parse_cvars, evaluate_cvar, parse_resistances, \
+    fuzzywuzzy_search_all_2
 
 log = logging.getLogger(__name__)
 
@@ -620,7 +616,7 @@ class InitTracker:
               --group (same as !init add)
               -npr (removes physical resistances when added)"""
         
-        monster = searchMonster(monster_name, return_monster=True, visible=True)
+        monster = await searchMonsterFull(monster_name, ctx, pm=True)
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr("monsters_looked_up_life")
         if monster['monster'] is None:
@@ -1252,18 +1248,14 @@ class InitTracker:
         if not args.get('t'):
             return await self.bot.say("You must pass in targets with `-t target`.", delete_after=15)
         
-        with open('./res/auto_spells.json', 'r') as f:
-            spells = json.load(f)
-        
         embed = discord.Embed()
         embed_footer = ''
         if args.get('phrase') is not None: # parse phrase
             embed.description = '*' + '\n'.join(args.get('phrase')) + '*'
         else:
             embed.description = '~~' + ' '*500 + '~~'
-        
-        
-        spell = fuzzywuzzy_search_all_2(spells, 'name', spell_name, 60)
+
+        spell = await searchAutoSpellFull(spell_name, ctx)
         if spell is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
                                                                         description="The spell was not found or is not supported."))
         

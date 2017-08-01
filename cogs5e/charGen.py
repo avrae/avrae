@@ -1,10 +1,7 @@
-import asyncio
 import json
-from math import *
 import random
 from string import capwords
 
-import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
@@ -16,6 +13,12 @@ class CharGenerator:
     def __init__(self, bot):
         self.bot = bot
         self.makingChar = []
+        with open('./res/raceTraits.json', 'r') as t:
+            self.raceTraits = json.load(t)
+        with open('./res/classTraits.json', 'r') as t:
+            self.classTraits = json.load(t)
+        with open('./res/backgroundTraits.json', 'r') as t:
+            self.bgTraits = json.load(t)
     
     @commands.command(pass_context=True, name='randchar')
     async def randChar(self, ctx, level="0"):
@@ -27,8 +30,8 @@ class CharGenerator:
             return
         
         if level == 0:
-            stats = self.genStats()
-            await self.bot.say(stats)
+            stats = '\n'.join(roll("4d6kh3", inline=True).skeleton for _ in range(6))
+            await self.bot.say(f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}")
             return
         
         if level > 20 or level < 1:
@@ -36,6 +39,11 @@ class CharGenerator:
             return
         
         await self.genChar(ctx, level)
+
+    @commands.command(pass_context=True, name="randname")
+    async def randname(self, ctx):
+        """Generates a random name, as per DMG rules."""
+        await self.bot.say(f"Your random name: {self.nameGen()}")
         
     @commands.command(pass_context=True, name='makechar')
     async def char(self, ctx, level):
@@ -242,22 +250,16 @@ class CharGenerator:
         return stats
     
     def getRaceTraits(self, race, level):
-        with open('./res/raceTraits.json', 'r') as t:
-            allTraits = json.load(t)
-        traits = [t for t in allTraits if t["race"].upper()==race.upper() and t["level"]<=level]
+        traits = [t for t in self.raceTraits if t["race"].upper()==race.upper() and t["level"]<=level]
 #         print(traits)
         return traits
     
     def getClassTraits(self, classVar, level):
-        with open('./res/classTraits.json', 'r') as t:
-            allTraits = json.load(t)
-        traits = [t for t in allTraits if t["class"].upper()==classVar.upper() and t["level"]<=level]
+        traits = [t for t in self.classTraits if t["class"].upper()==classVar.upper() and t["level"]<=level]
         return traits
     
     def getBackgroundTraits(self, background):
-        with open('./res/backgroundTraits.json', 'r') as t:
-            allTraits = json.load(t)
-        rawTraits = next(t for t in allTraits if t["background"].upper()==background.upper())
+        rawTraits = next(t for t in self.bgTraits if t["background"].upper()==background.upper())
         persTrait1 = ""
         persTrait2 = ""
         while persTrait1 == persTrait2:

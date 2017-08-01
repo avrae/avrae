@@ -39,7 +39,9 @@ class AdminUtils:
         
         self.bot.loop.create_task(self.handle_pubsub())
         self.bot.db.pubsub.subscribe('server-info-requests', 'server-info-response', # all-shard communication
-                                     'admin-commands') # 1-shard communication
+                                     'admin-commands', # 1-shard communication
+                                     'asdc' # assume direct control
+                                     )
         self.requests = {}
         
     
@@ -65,11 +67,7 @@ class AdminUtils:
     @checks.is_owner()
     async def chanSay(self, ctx, channel : str, * , message : str):
         """Like .say, but works across servers. Requires channel id."""
-        channel = self.bot.get_channel(channel)
-        try:
-            await self.bot.send_message(channel, message)
-        except Exception as e:
-            await self.bot.say('Failed to send message: ' + e)
+        await self.admin_command(ctx, "chanSay", message=message, channel=channel)
             
         
     @commands.command(hidden=True)
@@ -359,6 +357,25 @@ class AdminUtils:
         r = json.dumps(request.to_dict())
         self.bot.db.publish('admin-commands', r)
         return request.uuid
+
+    async def admin_command(self, ctx, cmd, **kwargs):
+        request = CommandRequest(ctx.bot, cmd, **kwargs)
+        self.requests[request.uuid] = {}
+        r = json.dumps(request.to_dict())
+        self.bot.db.publish('admin-commands', r)
+        for _ in range(300):  # timeout after 30 sec
+            if len(self.requests[request.uuid]) >= 1:
+                break
+            else:
+                await asyncio.sleep(0.1)
+
+        out = ''
+        data = self.requests[request.uuid]
+        del self.requests[request.uuid]
+
+        for shard, response in data.items():
+            out += 'Shard {}: {}\n'.format(shard, response['response'])
+        await self.bot.send_message(ctx.message.channel, out)
     
     async def handle_pubsub(self):
         try:
@@ -404,7 +421,8 @@ class AdminUtils:
         _data = json.loads(message['data'])
         _commands = {'leave': self.__handle_leave_command,
                      'loglevel': self.__handle_log_level_command,
-                     'reply': self.__handle_command_reply}
+                     'reply': self.__handle_command_reply,
+                     'chanSay': self.__handle_chan_say_command}
         await _commands.get(_data['command'])(_data) #... don't question this.
         
     async def __handle_leave_command(self, data):
@@ -435,6 +453,22 @@ class AdminUtils:
         if not reply_to in self.requests: return
         else:
             self.requests[reply_to][str(shard_id)] = _data
+
+    async def __handle_chan_say_command(self, data):
+        _data = data['data']
+        reply_to = data['uuid']
+        channel = _data['channel']
+        msg = _data['message']
+        channel = self.bot.get_channel(channel)
+        if channel is not None:
+            try:
+                await self.bot.send_message(channel, msg)
+            except Exception as e:
+                repsonse = CommandResponse(self.bot, reply_to, 'Failed to send message: ' + e)
+            else:
+                response = CommandResponse(self.bot, reply_to, "Sent message.")
+            r = json.dumps(response.to_dict())
+            self.bot.db.publish('admin-commands', r)
         
 class PubSubMessage(object):
     def __init__(self, bot):

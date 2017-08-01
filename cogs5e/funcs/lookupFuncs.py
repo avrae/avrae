@@ -353,6 +353,7 @@ def getSpell(spellname, return_spell=False):
     spellDesc = []
 
     spell = strict_search(c.spells, 'name', spellname)
+    spell = copy.copy(spell)
     if spell is None:
         spellDesc.append("Spell does not exist or is misspelled (ha).")
         if return_spell: return {'spell': None, 'string': spellDesc}

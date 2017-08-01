@@ -749,7 +749,7 @@ class InitTracker:
             outStr = outStr.format(combat.current,
                                    combat.round,
                                    nextCombatant.name,
-                                   nextCombatant.author.mention,
+                                   ", ".join({c.author.mention for c in thisTurn}),
                                    '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```') 
         else:
             thisTurn = [nextCombatant]
@@ -854,12 +854,8 @@ class InitTracker:
                 a = ctx.message.server.get_member(controllerEscaped)
                 b = ctx.message.server.get_member_named(controllerStr)
                 cont = a if a is not None else b if b is not None else controller
-                if combatant.group:
-                    combat.get_combatant_group(combatant.group).author = cont
-                    out += "\u2705 Combatant group controller set to {}.\n".format(combatant.group.author.mention)
-                else:
-                    combatant.author = cont
-                    out += "\u2705 Combatant controller set to {}.\n".format(combatant.author.mention)
+                combatant.author = cont
+                out += "\u2705 Combatant controller set to {}.\n".format(combatant.author.mention)
             except IndexError:
                 out += "\u274c You must pass in a controller with the --controller tag.\n"
         if 'ac' in args:

@@ -22,6 +22,7 @@ class GoogleSheet(SheetParser):
         self.client = client
 
     def _gchar(self):
+        self.client.login()
         sheet = self.client.open_by_key(self.url).sheet1
         self.character = sheet
         return sheet

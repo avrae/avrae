@@ -8,27 +8,22 @@ import random
 import re
 
 import discord
-import gspread
-from gspread.utils import extract_id_from_url
-import numexpr
-from oauth2client.service_account import ServiceAccountCredentials
 
+from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.sheetParser import SheetParser
-from cogs5e.funcs.dice import get_roll_comment
 
 
 class GoogleSheet(SheetParser):
     
-    def __init__(self, url):
+    def __init__(self, url, client):
         self.url = url
         self.character = None
+        assert client is not None
+        self.client = client
     
     def _gchar(self):
-        scope = ['https://spreadsheets.google.com/feeds']
-        credentials = ServiceAccountCredentials.from_json_keyfile_name('avrae-0b82f09d7ab3.json', scope)
-        gc = gspread.authorize(credentials)
-        sheet = gc.open_by_key(self.url).sheet1
+        sheet = self.client.open_by_key(self.url).sheet1
         self.character = sheet
         return sheet
     

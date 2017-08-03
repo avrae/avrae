@@ -4,23 +4,22 @@ Created on Jan 19, 2017
 @author: andrew
 '''
 import asyncio
-import copy
-from datetime import datetime
-import json
 import logging
 import random
 import re
 import shlex
-from socket import timeout
 import sys
 import traceback
+from socket import timeout
 
 import discord
+import gspread
+import numexpr
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 from gspread.utils import extract_id_from_url
-import numexpr
+from oauth2client.service_account import ServiceAccountCredentials
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
@@ -28,10 +27,9 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import list_get, embed_trim, get_positivity, a_or_an, \
+from utils.functions import list_get, get_positivity, a_or_an, \
     parse_cvars
 from utils.loggers import TextLogger
-
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +43,16 @@ class SheetManager:
         #self.cvars = self.bot.db.not_json_get('char_vars', {})
         self.bot.loop.create_task(self.backup_user_data())
         self.logger = TextLogger('dicecloud.txt')
+
+        self.gsheet_client = None
+        self.bot.loop.create_task(self.init_gsheet_client())
+
+    async def init_gsheet_client(self):
+        def _():
+            scope = ['https://spreadsheets.google.com/feeds']
+            credentials = ServiceAccountCredentials.from_json_keyfile_name('avrae-0b82f09d7ab3.json', scope)
+            return gspread.authorize(credentials)
+        self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
         
     async def backup_user_data(self):
         try:
@@ -476,7 +484,10 @@ class SheetManager:
             loading = await self.bot.say('Updating character data from PDF...')
             parser = PDFSheetParser(file)
         elif sheet_type == 'google':
-            parser = GoogleSheet(url)
+            try:
+                parser = GoogleSheet(url, self.gsheet_client)
+            except AssertionError:
+                return await self.bot.say("I am still connecting to Google. Try again in 15-30 seconds.")
             loading = await self.bot.say('Updating character data from Google...')
         else:
             return await self.bot.say("Error: Unknown sheet type.")
@@ -801,7 +812,10 @@ class SheetManager:
             url = extract_id_from_url(url)
         except NoValidUrlKeyFound:
             return await self.bot.edit_message(loading, "This is not a Google Sheets link.")
-        parser = GoogleSheet(url)
+        try:
+            parser = GoogleSheet(url, self.gsheet_client)
+        except AssertionError:
+            return await self.bot.edit_message(loading, "I am still connecting to Google. Try again in 15-30 seconds.")
         
         try:
             character = await parser.get_character()

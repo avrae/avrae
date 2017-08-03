@@ -309,6 +309,20 @@ def aliases_new():
         db.jset(user_id + '.characters', chars)
     return "Alias created"
 
+# -----Cheatsheets-----
+
+@app.route('/cheatsheets/')
+def cheatsheets():
+    return render_template('cheatsheets/index.html')
+
+@app.route('/cheatsheets/<name>')
+def cheatsheets_child(name):
+    file_dot_text = 'cheatsheets/' + name + '.html'
+    try:
+        return render_template(file_dot_text)
+    except TemplateNotFound:
+        abort(404)
+
 # -----Tests-----
 
 @app.route('/test/test')

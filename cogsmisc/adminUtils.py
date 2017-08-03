@@ -45,7 +45,7 @@ class AdminUtils:
         self.requests = {}
 
         loglevels = self.bot.db.jget('loglevels', {})
-        for logger, level in loglevels:
+        for logger, level in loglevels.items():
             try:
                 logging.getLogger(logger).setLevel(level)
             except:

@@ -43,6 +43,13 @@ class AdminUtils:
                                      'asdc' # assume direct control
                                      )
         self.requests = {}
+
+        loglevels = self.bot.db.jget('loglevels', {})
+        for logger, level in loglevels:
+            try:
+                logging.getLogger(logger).setLevel(level)
+            except:
+                log.warning(f"Failed to reset loglevel of {logger}")
         
     
     @commands.command(hidden=True)
@@ -266,6 +273,9 @@ class AdminUtils:
     @checks.is_owner()
     async def loglevel(self, level:int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
+        loglevels = self.bot.db.jget('loglevels', {})
+        loglevels[logger] = level
+        self.bot.db.jset('loglevels', loglevels)
         req = self.request_log_level(level, logger)
         for _ in range(300): # timeout after 30 sec
             if len(self.requests[req]) >= self.bot.shard_count: break

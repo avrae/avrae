@@ -6,16 +6,16 @@ Created on May 16, 2017
 
 import json
 import os
+from functools import wraps
 
-from flask import Flask, session, redirect, request, url_for, jsonify
-from flask.templating import render_template
 import markdown2
+from flask import Flask, session, redirect, request, url_for, jsonify, abort
+from flask.templating import render_template
+from jinja2.exceptions import TemplateNotFound
 from requests_oauthlib.oauth2_session import OAuth2Session
 
 import credentials
 from utils.dataIO import DataIO
-from jinja2.exceptions import TemplateNotFound
-
 
 TESTING = True if os.environ.get("TESTING") else False
 
@@ -34,6 +34,21 @@ db = DataIO(TESTING, credentials.test_database_url)
 if 'http://' in OAUTH2_REDIRECT_URI:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = 'true'
 
+def requires_auth(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        _next = f".{f.__name__}" if not (args or kwargs) else ".dashboard"
+        if not 'oauth2_token' in session:
+            session['original_page'] = _next
+            return redirect(url_for('.auth'))
+        discord = make_session(token=session.get('oauth2_token'))
+        resp = discord.get(API_BASE_URL + '/users/@me')
+        if resp.status_code == 401:
+            session['original_page'] = _next
+            return redirect(url_for('.auth'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -44,7 +59,7 @@ def send_static_route(route):
     try:
         return render_template(file_dot_text)
     except TemplateNotFound:
-        return page_not_found(None)
+        abort(404)
 
 @app.route('/<file_name>.html')
 def send_static(file_name):
@@ -53,7 +68,7 @@ def send_static(file_name):
     try:
         return render_template(file_dot_text)
     except TemplateNotFound:
-        return page_not_found(None)
+        abort(404)
 
 def token_updater(token):
     session['oauth2_token'] = token
@@ -105,15 +120,10 @@ def logout():
 # -----Dashboard----
 
 @app.route('/dashboard')
+@requires_auth
 def dashboard():
-    if not 'oauth2_token' in session:
-        session['original_page'] = ".dashboard"
-        return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
-    if resp.status_code == 401:
-        session['original_page'] = ".dashboard"
-        return redirect(url_for(".auth"))
     user_info = resp.json()
     user_id = user_info.get('id')
     if user_info.get('avatar'):
@@ -134,15 +144,10 @@ def dashboard():
 # -----Character-----
 
 @app.route('/character/<cid>')
+@requires_auth
 def character(cid):
-    if not 'oauth2_token' in session:
-        session['original_page'] = ".dashboard"
-        return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
-    if resp.status_code == 401:
-        session['original_page'] = ".dashboard"
-        return redirect(url_for(".auth"))
     user_info = resp.json()
     user_id = user_info.get('id')
     character = db.jget(user_id + '.characters', {}).get(cid)
@@ -172,15 +177,10 @@ def character(cid):
 # -----Web Alias Things-----
 
 @app.route('/aliases/list')
+@requires_auth
 def aliases_list():
-    if not 'oauth2_token' in session:
-        session['original_page'] = ".aliases_list"
-        return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
-    if resp.status_code == 401:
-        session['original_page'] = ".aliases_list"
-        return redirect(url_for(".auth"))
     user_id = resp.json().get('id')
     aliases = db.jget('cmd_aliases', {}).get(user_id, {})
     snippets = db.jget('damage_snippets', {}).get(user_id, {})
@@ -194,15 +194,10 @@ def aliases_list():
     return render_template('aliases/list.html', aliases=aliases, snippets=snippets, cvars=cvars, chars=chars)
 
 @app.route('/aliases/delete', methods=['POST'])
+@requires_auth
 def aliases_delete():
-    if not 'oauth2_token' in session:
-        session['original_page'] = ".aliases_list"
-        return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
-    if resp.status_code == 401:
-        session['original_page'] = ".aliases_list"
-        return redirect(url_for(".auth"))
     user_id = resp.json().get('id')
     alias_type = request.values.get('type')
     alias_name = request.values.get('name')
@@ -237,15 +232,10 @@ def aliases_delete():
     return "Alias deleted"
 
 @app.route('/aliases/edit', methods=['POST'])
+@requires_auth
 def aliases_edit():
-    if not 'oauth2_token' in session:
-        session['original_page'] = ".aliases_list"
-        return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
-    if resp.status_code == 401:
-        session['original_page'] = ".aliases_list"
-        return redirect(url_for(".auth"))
     user_id = resp.json().get('id')
     alias_type = request.values.get('type')
     old_alias_name = request.values.get('target')
@@ -285,15 +275,10 @@ def aliases_edit():
     return "Alias edited"
 
 @app.route('/aliases/new', methods=['POST'])
+@requires_auth
 def aliases_new():
-    if not 'oauth2_token' in session:
-        session['original_page'] = ".aliases_list"
-        return redirect(url_for(".auth"))
     discord = make_session(token=session.get('oauth2_token'))
     resp = discord.get(API_BASE_URL + '/users/@me')
-    if resp.status_code == 401:
-        session['original_page'] = ".aliases_list"
-        return redirect(url_for(".auth"))
     user_id = resp.json().get('id')
     alias_type = request.values.get('type')
     new_alias_name = request.values.get('name')
@@ -323,6 +308,20 @@ def aliases_new():
         chars[cid]['cvars'] = char_cvars
         db.jset(user_id + '.characters', chars)
     return "Alias created"
+
+# -----Cheatsheets-----
+
+@app.route('/cheatsheets/')
+def cheatsheets():
+    return render_template('cheatsheets/index.html')
+
+@app.route('/cheatsheets/<name>')
+def cheatsheets_child(name):
+    file_dot_text = 'cheatsheets/' + name + '.html'
+    try:
+        return render_template(file_dot_text)
+    except TemplateNotFound:
+        abort(404)
 
 # -----Tests-----
 

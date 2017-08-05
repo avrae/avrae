@@ -1,0 +1,68 @@
+{% extends "baseSimple.html" %}
+{% block title %}Avrae - Player Cheatsheet{% endblock %}
+{% block css %}
+
+{% endblock %}
+{% block main %}
+<div class="container">
+  <h1>Player Combat Guide</h1>
+  <p>Remember, arguments surrounded like &lt;this&gt; are required, and arguments in [brackets] are optional.</p>
+  <p>Don't include the brackets when typing your command, and remember to put quotes around arguments with spaces in them!</p>
+  <p>This guide will move roughly in chronological order, meaning commands near the top should be run first.</p>
+  
+  <hr>
+  
+  <h2>Joining Combat</h2>
+  <p>To join a combat, your DM must first start it. Once they have, proceed to the commands below.</p>
+  
+  <h4>!init cadd [arguments]</h4>
+  <p>This command adds your current active character in SheetManager to combat. Common arguments are <kbd>-h</kbd>, which hides your AC/HP, and <kbd>adv/dis</kbd>, which give advantage/disadvantage on the roll.</p>
+  
+  <h4>!init add &lt;initiative modifier&gt; &lt;name&gt; [arguments]</h4>
+  <p>If you're adding a character that is not tracked in the bot, but still want to use the integrated tracker, you'll have to use this command.</p>
+  <p>Generally, as a player, the arguments you'll want to supply are <kbd>-hp &lt;max HP&gt;</kbd> to set max HP and <kbd>-ac &lt;AC&gt;</kbd> to set AC.</p>
+  
+  <h3>What now?</h3>
+  <p>You're all set up! Just wait for your turn to come up in combat.</p>
+  
+  <hr>
+  
+  <h2>Your Turn</h2>
+  <p>Now that it's your turn, you probably want to do something. The most common actions are attacking or casting a spell, as detailed below.</p>
+  
+  <h4>!init attack &lt;target name&gt; &lt;weapon name&gt; [arguments]</h4>
+  <small>Related: <code>!init aoo &lt;combatant name&gt; &lt;target name&gt; &lt;weapon name&gt; [arguments]</code></small>
+  <p>This command attacks another combatant, using the attacks of whoever's turn it is (or the supplied name, if using aoo). If applicable, AC comparison and HP will be done automatically.</p>
+  <p>To see valid arguments, see the documentation for <code>!attack</code> and <code>!monster_atk</code>.</p>
+  <p>To see a list of a character's attacks, run <code>!a</code>.</p>
+  
+  <h4>!init cast &lt;spell name&gt; -t &lt;target name&gt; [-t [target name]...] [arguments]</h4>
+  <p>The syntax for this command is a little daunting. Then again, magic is in general.</p>
+  <p>This command casts a spell at another combatant. At least one <kbd>-t &lt;target name&gt;</kbd> is required, but as many can be supplied as needed (for multi-target/AoE spells). Saving throws, attack rolls, or any other applicable roll will be done automatically.</p>
+  
+  <h4>!init next</h4>
+  <p>This command moves combat to the next turn in order, and prints out a summary of whose turn it is. You should run this at the end of your turn.</p>
+  
+  <hr>
+
+  <h3>Helper Commands</h3>
+
+  <h4>!init hp &lt;combatant name&gt; [operator] &lt;value&gt;</h4>
+  <p>This command modifies a combatant's HP by <code>value</code> if operator is not passed. The operator can be <code>set</code> to set HP to <code>value</code>, or <code>max</code> to set the max HP to <code>value</code>.</p>
+
+  <h4>!init opt &lt;combatant name&gt; &lt;arguments&gt;</h4>
+  <p>This command modifies the general attributes of a combatant. Most commonly used are <kbd>-ac &lt;AC&gt;</kbd>, which sets the combatant's AC to <code>AC</code>, <kbd>-resist/immune/vuln &lt;damage type&gt;</kbd>, which gives the combatant resistance/immunity/vulnerability to the passed type, and <kbd>-h</kbd>, which toggles whether the combatant's AC and HP are hidden.</p>
+
+  <h4>!init effect &lt;combatant name&gt; &lt;duration&gt; &lt;effect name&gt; [roll arguments]</h4>
+  <p>This command adds an effect to a combatant for <code>duration</code> rounds (pass -1 for infinite). If roll arguments are passed, they will be appended to any calls of <code>!init attack</code> that the combatant makes while the effect is active.</p>
+
+  <h4>!init re &lt;combatant name&gt; [effect name]</h4>
+  <p>This command removes an effect from a combatant, or all of them if the name is not passed.</p>
+  
+  <h4>!init remove &lt;combatant name&gt;</h4>
+  <p>This command removes a combatant from combat.</p>
+</div>
+{% endblock %}
+{% block js %}
+
+{% endblock %}

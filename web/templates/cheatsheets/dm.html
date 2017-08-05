@@ -1,0 +1,72 @@
+{% extends "baseSimple.html" %}
+{% block title %}Avrae - DM Cheatsheet{% endblock %}
+{% block css %}
+
+{% endblock %}
+{% block main %}
+<div class="container">
+  <h1>DM Combat Guide</h1>
+  <p>Remember, arguments surrounded like &lt;this&gt; are required, and arguments in [brackets] are optional.</p>
+  <p>Don't include the brackets when typing your command, and remember to put quotes around arguments with spaces in them!</p>
+  <p>This guide will move roughly in chronological order, meaning commands near the top should be run first.</p>
+
+  <hr>
+
+  <h2>Starting Combat</h2>
+  <p>First, combat must be started in a channel. All <kbd>!init</kbd> commands must be called in the same channel as combat is started in. Then, all the combatants must be added.</p>
+
+  <h4>!init begin</h4>
+  <p>Run this command to start combat. Avrae will output the summary message and pin it, then a quick reminder on how to add yourself to combat.</p>
+
+  <h4>!init madd &lt;monster name&gt; [arguments]</h4>
+  <p>After combat has started, you'll want to add your monsters. If the monsters can be looked up with <code>!monster</code>, they can be added with this command.</p>
+  <p>Common arguments include <kbd>-n &lt;number of monsters&gt;</kbd> (ex. <code>-n 5</code>) to add N number of the same monster, and <kbd>-name &lt;monster name scheme&gt;</kbd> to rename the monster(s). Any <code>#</code> in the name scheme will be replaced with a number, if <code>-n</code> is used (ex. <code>-name "Orc#" -n 2</code> adds Orc1 and Orc2).</p>
+
+  <h4>!init add &lt;initiative modifier&gt; &lt;name&gt; [arguments]</h4>
+  <p>If you're adding a homebrew monster, but still want to use the integrated tracker, you'll have to use this command.</p>
+  <p>Generally, as a DM, the arguments you'll want to supply are <kbd>-h</kbd> to hide HP and AC, <kbd>-hp &lt;max HP&gt;</kbd> to set max HP, and <kbd>-ac &lt;AC&gt;</kbd> to set AC.</p>
+
+  <hr>
+
+  <h2>Running Combat</h2>
+  <p>Once you've finished setting up your combat (added all monsters, and players have added themselves), run <kbd>!init next</kbd> to move to the first turn and begin combat.</p>
+
+  <h4>!init next</h4>
+  <p>This command moves combat to the next turn in order, and prints out a summary of whose turn it is.</p>
+
+  <h4>!init attack &lt;target name&gt; &lt;weapon name&gt; [arguments]</h4>
+  <small>Related: <code>!init aoo &lt;combatant name&gt; &lt;target name&gt; &lt;weapon name&gt; [arguments]</code></small>
+  <p>This command attacks another combatant, using the attacks of whoever's turn it is (or the supplied name, if using aoo). If applicable, AC comparison and HP will be done automatically.</p>
+  <p>To see valid arguments, see the documentation for <code>!attack</code> and <code>!monster_atk</code>.</p>
+  <p>To see a list of a monster's attacks, run <code>!ma &lt;monster name&gt;</code>.</p>
+
+  <hr>
+
+  <h3>Helper Commands</h3>
+
+  <h4>!init hp &lt;combatant name&gt; [operator] &lt;value&gt;</h4>
+  <p>This command modifies a combatant's HP by <code>value</code> if operator is not passed. The operator can be <code>set</code> to set HP to <code>value</code>, or <code>max</code> to set the max HP to <code>value</code>.</p>
+
+  <h4>!init opt &lt;combatant name&gt; &lt;arguments&gt;</h4>
+  <p>This command modifies the general attributes of a combatant. Most commonly used are <kbd>-ac &lt;AC&gt;</kbd>, which sets the combatant's AC to <code>AC</code>, <kbd>-resist/immune/vuln &lt;damage type&gt;</kbd>, which gives the combatant resistance/immunity/vulnerability to the passed type, and <kbd>-h</kbd>, which toggles whether the combatant's AC and HP are hidden.</p>
+
+  <h4>!init effect &lt;combatant name&gt; &lt;duration&gt; &lt;effect name&gt; [roll arguments]</h4>
+  <p>This command adds an effect to a combatant for <code>duration</code> rounds (pass -1 for infinite). If roll arguments are passed, they will be appended to any calls of <code>!init attack</code> that the combatant makes while the effect is active.</p>
+
+  <h4>!init re &lt;combatant name&gt; [effect name]</h4>
+  <p>This command removes an effect from a combatant, or all of them if the name is not passed.</p>
+  
+  <h4>!init remove &lt;combatant name&gt;</h4>
+  <p>This command removes a combatant from combat.</p>
+    
+  <hr>
+
+  <h2>Ending Combat</h2>
+
+  <h4>!init end</h4>
+  <p>To end combat, just run this command and reply "yes".</p>
+</div>
+{% endblock %}
+{% block js %}
+
+{% endblock %}

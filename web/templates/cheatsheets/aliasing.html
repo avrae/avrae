@@ -1,0 +1,164 @@
+{% extends "baseSimple.html" %}
+{% block title %}Avrae - Aliasing Cheatsheet{% endblock %}
+{% block css %}
+
+{% endblock %}
+{% block main %}
+<div class="container">
+  <h1>Aliasing</h1>
+  <p>So you want to write aliases for your commonly used commands - cool! This cheatsheet details some of the nitty-gritty syntactical shenanigans that you can use to make your aliases very powerful.</p>
+  <p>When placed inline in an alias, any syntax in the syntax table will have the listed effect. For a list of built-in cvars, see the cvar table.</p>
+  
+  <h3>Syntax Table</h3>
+  <table class="table table-striped table-bordered">
+    <thead>
+      <tr>
+        <th>Syntax</th>
+        <th>Description</th>
+        <th>Example</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>{CVAR/roll}</code></td>
+        <td>Evaluates the cvar/rolls the input.</td>
+        <td>
+          Input: <code>echo Rolling 1d20: {1d20}</code><br>
+          Output: <code>Rolling 1d20: 7</code>
+        </td>
+      </tr>
+      <tr>
+        <td><code>&lt;CVAR&gt;</code></td>
+        <td>Prints the value of the cvar.</td>
+        <td>
+          Input: <code>echo My strength modifier is: &lt;strengthMod&gt;</code><br>
+          Output: <code>My strength modifier is: 2</code>
+        </td>
+      </tr>
+      <tr>
+        <td><code>%1%</code>, <code>%2%</code>, etc.</td>
+        <td>Replaced with the value of the nth argument passed to the alias.</td>
+        <td>
+          Input: <code>echo %2% %1%</code><br>
+          Output (when called as <code>!(name) first second</code>): <code>second first</code>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <h3>Cvar Table</h3>
+  <table class="table table-striped table-bordered">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>armor</code></td>
+        <td>Armor Class.</td>
+      </tr>
+      <tr>
+        <td><code>charisma</code></td>
+        <td>Charisma score.</td>
+      </tr>
+      <tr>
+        <td><code>charismaMod</code></td>
+        <td>Charisma modifier.</td>
+      </tr>
+      <tr>
+        <td><code>charismaSave</code></td>
+        <td>Charisma saving throw modifier.</td>
+      </tr>
+      <tr>
+        <td><code>constitution</code></td>
+        <td>Constitution score.</td>
+      </tr>
+      <tr>
+        <td><code>constitutionMod</code></td>
+        <td>Constitution modifier.</td>
+      </tr>
+      <tr>
+        <td><code>constitutionSave</code></td>
+        <td>Constitution saving throw modifier.</td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td>Full character description.</td>
+      </tr>
+      <tr>
+        <td><code>dexterity</code></td>
+        <td>Dexterity score.</td>
+      </tr>
+      <tr>
+        <td><code>dexterityMod</code></td>
+        <td>Dexterity modifier.</td>
+      </tr>
+      <tr>
+        <td><code>dexteritySave</code></td>
+        <td>Dexterity saving throw modifier.</td>
+      </tr>
+      <tr>
+        <td><code>hp</code></td>
+        <td>Maximum hit points.</td>
+      </tr>
+      <tr>
+        <td><code>image</code></td>
+        <td>Character image URL.</td>
+      </tr>
+      <tr>
+        <td><code>intelligence</code></td>
+        <td>Intelligence score.</td>
+      </tr>
+      <tr>
+        <td><code>intelligenceMod</code></td>
+        <td>Intelligence modifier.</td>
+      </tr>
+      <tr>
+        <td><code>intelligenceSave</code></td>
+        <td>Intelligence saving throw modifier.</td>
+      </tr>
+      <tr>
+        <td><code>level</code></td>
+        <td>Character level.</td>
+      </tr>
+      <tr>
+        <td><code>proficiencyBonus</code></td>
+        <td>Proficiency bonus.</td>
+      </tr>
+      <tr>
+        <td><code>strength</code></td>
+        <td>Strength score.</td>
+      </tr>
+      <tr>
+        <td><code>strengthMod</code></td>
+        <td>Strength modifier.</td>
+      </tr>
+      <tr>
+        <td><code>strengthSave</code></td>
+        <td>Strength saving throw modifier.</td>
+      </tr>
+      <tr>
+        <td><code>wisdom</code></td>
+        <td>Wisdom score.</td>
+      </tr>
+      <tr>
+        <td><code>wisdomMod</code></td>
+        <td>Wisdom modifier.</td>
+      </tr>
+      <tr>
+        <td><code>wisdomSave</code></td>
+        <td>Wisdom saving throw modifier.</td>
+      </tr>
+      <tr>
+        <td><code>XLevel</code></td>
+        <td>(Dicecloud sheets only) How many levels a character has in class X.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block js %}
+
+{% endblock %}

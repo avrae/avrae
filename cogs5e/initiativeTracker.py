@@ -1254,7 +1254,7 @@ class InitTracker:
         spell = await searchAutoSpellFull(spell_name, ctx)
         if spell is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
                                                                         description="The spell was not found or is not supported."))
-        
+
         if args.get('title') is not None:
             embed.title = args.get('title')[-1].replace('[charname]', args.get('name')).replace('[sname]', spell['name']).replace('[target]', args.get('t', ''))
         else:
@@ -1372,7 +1372,7 @@ class InitTracker:
                     for _arg, _value in outargs.items():
                         if isinstance(_value, list):
                             outargs[_arg] = _value[-1]
-                    attack = spell['atk']
+                    attack = copy.copy(spell['atk'])
                     if not 'SPELL' in combatant.sheet.get('cvars', {}):
                         return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not set.",
                                                                       description="Your casting ability is not set. You can set it for this character by running `!cvar SPELL [ABILITY]`, where `[ABILITY]` is your spellcasting modifier.\nFor example, a sorcerer (CHA caster) with 20 CHA would use `!cvar SPELL 5.`\nRemember to run `!i update [NAME]` for the changes to take effect."))

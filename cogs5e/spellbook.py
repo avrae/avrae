@@ -52,14 +52,13 @@ class Spellbook:
         spell = strict_search(self.autospells, 'name', spell_name)
         if spell is None: return await self._old_cast(ctx, spell_name + " " + " ".join(args), fallback=True) #fall back to old cast
         
-        
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character] # get Sheet of character
         
-        tempargs = args
+        tempargs = list(args)
         user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
         for index, arg in enumerate(tempargs): # parse snippets
             snippet_value = user_snippets.get(arg)
@@ -134,7 +133,7 @@ class Spellbook:
             for _arg, _value in outargs.items():
                 if isinstance(_value, list):
                     outargs[_arg] = _value[-1]
-            attack = spell['atk']
+            attack = copy.copy(spell['atk'])
             if not 'SPELL' in character.get('cvars', {}):
                 return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not set.",
                                                               description="Your casting ability is not set. You can set it for this character by running `!cvar SPELL [ABILITY]`, where `[ABILITY]` is your spellcasting modifier.\nFor example, a sorcerer (CHA caster) with 20 CHA would use `!cvar SPELL 5.`"))

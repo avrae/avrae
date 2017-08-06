@@ -685,8 +685,12 @@ class SheetManager:
             cvar = character.get('cvars', {}).get(name)
             if cvar is None: cvar = 'Not defined.'
             return await self.bot.say('**' + name + '**:\n' + cvar)
-        
-        if name in character.get('stat_cvars', {}): return await self.bot.say("This is already a built-in cvar!")
+
+        try:
+            assert not name in character.get('stat_cvars', {})
+            assert not '/' in name
+        except AssertionError:
+            return await self.bot.say("Could not create cvar: already builtin, or contains invalid character!")
         
         character['cvars'] = character.get('cvars', {}) # set value
         character['cvars'][name] = value

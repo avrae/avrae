@@ -251,6 +251,15 @@ def parse_cvars(cstr, character):
         tempout = ''
         for substr in re.split(ops, varstr):
             temp = substr.strip()
+            if temp.startswith('/'):
+                _last = character
+                for path in out.split('/'):
+                    if path:
+                        try:
+                            _last = _last.get(path, {})
+                        except AttributeError:
+                            break
+                temp = str(_last)
             tempout += str(cvars.get(temp, temp)) + " "
         for substr in re.split(ops, tempout):
             temp = substr.strip()
@@ -259,6 +268,15 @@ def parse_cvars(cstr, character):
     for var in re.finditer(r'<([^<>]+)>', cstr):
         raw = var.group(0)
         out = var.group(1)
+        if out.startswith('/'):
+            _last = character
+            for path in out.split('/'):
+                if path:
+                    try:
+                        _last = _last.get(path, {})
+                    except AttributeError:
+                        break
+            out = str(_last)
         out = str(cvars.get(out, out))
         out = str(stat_vars.get(out, out))
         cstr = cstr.replace(raw, out, 1)
@@ -272,6 +290,15 @@ def evaluate_cvar(varstr, character):
     tempout = ''
     for substr in re.split(ops, varstr):
         temp = substr.strip()
+        if temp.startswith('/'):
+            _last = character
+            for path in out.split('/'):
+                if path:
+                    try:
+                        _last = _last.get(path, {})
+                    except AttributeError:
+                        break
+            temp = str(_last)
         tempout += str(cvars.get(temp, temp)) + " "
     for substr in re.split(ops, tempout):
         temp = substr.strip()

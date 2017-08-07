@@ -35,9 +35,10 @@ saves = {'dexteritySave': 0} # etc
 
 stat_vars = {}
 
-consumables = {'hp': 0,
-               'deathsaves': {'fail': 0, 'success': 0},
-               'spellslots': {"1": 0, "2": 0} # etc
+# reset: can be long, short, hp, None
+consumables = {'hp': {'value': 0, 'reset': 'long'},
+               'deathsaves': {'fail': {'value': 0, 'reset': 'hp'}, 'success': {'value': 0, 'reset': 'hp'}},
+               'spellslots': {"1": {'value': 0, 'reset': 'long'}, "2": {'value': 0, 'reset': 'long'}} # etc
                }
 
 character = {'type': 'dicecloud',

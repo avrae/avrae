@@ -209,12 +209,6 @@ class GameTrack:
         embed.colour = character.get('settings', {}).get('color') or random.randint(0, 0xffffff)
         await self.bot.say(embed=embed)
     
-    @commands.command(pass_context=True, name="oldcast", aliases=['oc'], hidden=True)
-    async def old_cast(self, ctx, *, args : str):
-        """Casts a spell (i.e. rolls all the dice and displays a summary [auto-deleted after 15 sec]).
-        Valid Arguments: -r <Some Dice> - Instead of rolling the default dice, rolls this instead."""
-        return await self._old_cast(ctx, args)
-    
     def parse_roll_args(self, args, character):
         return args.replace('SPELL', str(parse_cvars("SPELL", character)).replace('PROF', str(character.get('stats', {}).get('proficiencyBonus', "0"))))
     

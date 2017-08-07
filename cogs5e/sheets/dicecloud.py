@@ -79,8 +79,9 @@ class DicecloudParser(SheetParser):
         stat_vars.update(saves)
         
         sheet = {'type': 'dicecloud',
-                 'version': 7, #v6: added stat cvars
+                 'version': 8, #v6: added stat cvars
                                #v7: added check effects (adv/dis)
+                               #v8: consumables
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -92,7 +93,8 @@ class DicecloudParser(SheetParser):
                  'vuln': vulnerabilities,
                  'saves': saves,
                  'stat_cvars': stat_vars,
-                 'skill_effects': skill_effects}
+                 'skill_effects': skill_effects,
+                 'consumables': {}}
                 
         embed = self.get_embed(sheet)
         

@@ -35,10 +35,14 @@ saves = {'dexteritySave': 0} # etc
 
 stat_vars = {}
 
-# reset: can be long, short, hp, None
-consumables = {'hp': {'value': 0, 'reset': 'long'},
-               'deathsaves': {'fail': {'value': 0, 'reset': 'hp'}, 'success': {'value': 0, 'reset': 'hp'}},
-               'spellslots': {"1": {'value': 0, 'reset': 'long'}, "2": {'value': 0, 'reset': 'long'}} # etc
+# reset: can be long, short, hp, None, reset
+consumables = {'hp': {'value': 0, 'reset': 'long', 'max': 100}, # optional: max, min, reset
+               'deathsaves': {'fail': {'value': 0, 'reset': 'hp'},
+                              'success': {'value': 0, 'reset': 'hp'}},
+               'spellslots': {"1": {'value': 0, 'reset': 'long'},
+                              "2": {'value': 0, 'reset': 'long'}}, # etc
+               'custom': {'NAME': {'value': 0, 'reset': 'long'},
+                          'NAME2': {'value': 0, 'reset': 'long'}} # etc
                }
 
 character = {'type': 'dicecloud',
@@ -55,5 +59,7 @@ character = {'type': 'dicecloud',
              'saves': saves,
              'stat_cvars': stat_vars,
              'overrides': {}, # optional
-             'cvars': {} # optional
+             'cvars': {}, # optional
+             'skill_effects': {}, # v7dc
+             'consumables': {} #v3gsht, v3pdf, v8dc
              }

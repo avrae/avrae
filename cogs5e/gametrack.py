@@ -27,7 +27,11 @@ class GameTrack:
         self.bot = bot
         with open('./res/auto_spells.json', 'r') as f:
             self.autospells = json.load(f)
-    
+
+    @commands.group(pass_context=True, invoke_without_command=True, name='cc')
+    async def customcounter(self, ctx, name, modifier=None):
+        """Commands to implement custom counters."""
+
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *args):
         """Casts a spell.

@@ -65,7 +65,8 @@ class GoogleSheet(SheetParser):
         stat_vars.update(saves)
 
         sheet = {'type': 'google',
-                 'version': 3,  # v3: added stat cvars
+                 'version': 4,  # v3: added stat cvars
+                                # v4: consumables
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': hp,
@@ -76,7 +77,8 @@ class GoogleSheet(SheetParser):
                  'immune': [],
                  'vuln': [],
                  'saves': saves,
-                 'stat_cvars': stat_vars}
+                 'stat_cvars': stat_vars,
+                 'consumables': {}}
 
         embed = self.get_embed(sheet)
 

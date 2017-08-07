@@ -66,7 +66,7 @@ class Publicity:
     
     async def backup(self):
         backup_chan = self.bot.get_channel('298542945479557120')
-        if backup_chan is None: return
+        if backup_chan is None or self.bot.testing: return
         await self.bot.send_message(backup_chan, '{0} - {1}'.format(time.time(), sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values())))
 #         backup_keys = ['cmd_aliases', 'damage_snippets', 'char_vars']
 #         for k in backup_keys:

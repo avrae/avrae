@@ -24,3 +24,5 @@ damage_snippets-backup.json
 .idea/vcs.xml
 
 .idea/inspectionProfiles/Project_Default.xml
+
+test/output/dicecloud-test.json

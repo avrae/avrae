@@ -4,16 +4,18 @@ Created on Jan 19, 2017
 @author: andrew
 '''
 import asyncio
-from math import *
+import logging
 import random
 import re
+from math import *
 
-from DDPClient import DDPClient
 import discord
 import numexpr
+from DDPClient import DDPClient
 
 from cogs5e.sheets.sheetParser import SheetParser
 
+log = logging.getLogger(__name__)
 
 class DicecloudParser(SheetParser):
     
@@ -60,6 +62,7 @@ class DicecloudParser(SheetParser):
             resistances = temp_resist['resist']
             immunities = temp_resist['immune']
             vulnerabilities = temp_resist['vuln']
+            skill_effects = self.get_skill_effects()
         except:
             raise
         
@@ -76,7 +79,8 @@ class DicecloudParser(SheetParser):
         stat_vars.update(saves)
         
         sheet = {'type': 'dicecloud',
-                 'version': 6, #v6: added stat cvars
+                 'version': 7, #v6: added stat cvars
+                               #v7: added check effects (adv/dis)
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -87,7 +91,8 @@ class DicecloudParser(SheetParser):
                  'immune': immunities,
                  'vuln': vulnerabilities,
                  'saves': saves,
-                 'stat_cvars': stat_vars}
+                 'stat_cvars': stat_vars,
+                 'skill_effects': skill_effects}
                 
         embed = self.get_embed(sheet)
         
@@ -104,6 +109,7 @@ class DicecloudParser(SheetParser):
         resist= sheet['resist']
         immune= sheet['immune']
         vuln  = sheet['vuln']
+        skill_effects = sheet['skill_effects']
         resistStr = ''
         if len(resist) > 0:
             resistStr += "\nResistances: " + ', '.join(resist).title()
@@ -129,12 +135,19 @@ class DicecloudParser(SheetParser):
                                             "**INT:** {intelligenceSave:+}\n" \
                                             "**WIS:** {wisdomSave:+}\n" \
                                             "**CHA:** {charismaSave:+}".format(**saves))
-        
+
+        def cc_to_normal(string):
+            return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string)
+
         skillsStr = ''
         tempSkills = {}
         for skill, mod in sorted(skills.items()):
             if 'Save' not in skill:
-                skillsStr += '**{}**: {:+}\n'.format(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill), mod)
+                if skill_effects.get(skill):
+                    skill_effect = f"({skill_effects.get(skill)})"
+                else:
+                    skill_effect = ''
+                skillsStr += '**{}**: {:+} {}\n'.format(cc_to_normal(skill), mod, skill_effect)
                 tempSkills[skill] = mod
         sheet['skills'] = tempSkills
                 
@@ -307,15 +320,38 @@ class DicecloudParser(SheetParser):
         if self.character is None: raise Exception('You must call get_character() first.')
         replacements = self.get_stats()
         replacements.update(self.get_levels())
-        attack = {'attackBonus': '0', 'damage':'0', 'name': atkIn.get('name'), 'details': atkIn.get('details')}
-        
-        #make a list of safe functions
+
+        log.debug(f"Processing attack {atkIn.get('name')}")
+
+        # make a list of safe functions
         safe_list = ['ceil', 'floor']
-        #use the list to filter the local namespace
+        # use the list to filter the local namespace
         safe_dict = dict([(k, locals().get(k, None)) for k in safe_list])
         safe_dict['max'] = max
         safe_dict['min'] = min
         safe_dict.update(replacements)
+
+        if atkIn.get('parent', {}).get('collection') == 'Spells':
+            spellParentID = atkIn.get('parent', {}).get('id')
+            try:
+                spellObj = next(s for s in self.character.get('spells', {}) if s.get('id') == spellParentID)
+            except StopIteration:
+                pass
+            else:
+                spellListParentID = spellObj.get('parent', {}).get('id')
+                try:
+                    spellListObj = next(s for s in self.character.get('spellLists', {}) if s.get('id') == spellListParentID)
+                except StopIteration:
+                    pass
+                else:
+                    try:
+                        replacements['attackBonus'] = str(eval(spellListObj.get('attackBonus'), {"__builtins__": None}, safe_dict))
+                        replacements['DC'] = str(eval(spellListObj.get('saveDC'), {"__builtins__": None}, safe_dict))
+                    except Exception as e:
+                        log.debug(f"Exception parsing spellvars: {e}")
+
+        safe_dict.update(replacements)
+        attack = {'attackBonus': '0', 'damage':'0', 'name': atkIn.get('name'), 'details': None}
         
         attackBonus = re.split('([-+*/^().<>= ])', atkIn.get('attackBonus', '').replace('{', '').replace('}', ''))
         attack['attackBonus'] = ''.join(str(replacements.get(word, word)) for word in attackBonus)
@@ -330,16 +366,24 @@ class DicecloudParser(SheetParser):
         def damage_sub(match):
             out = match.group(1)
             try:
+                log.debug(f"damage_sub: evaluating {out}")
                 return str(eval(out, {"__builtins__": None}, safe_dict))
-            except:
+            except Exception as ex:
+                log.debug(f"exception in damage_sub: {ex}")
                 return out
         
         damage = re.sub(r'{(.*)}', damage_sub, atkIn.get('damage', ''))
         damage = re.split('([-+*/^().<>= ])', damage.replace('{', '').replace('}', ''))
         attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage) + ' [{}]'.format(atkIn.get('damageType'))
-        if ''.join(str(replacements.get(word, word)) for word in damage) == '':
+        if not attack['damage']:
             attack['damage'] = None
-        
+
+        details = atkIn.get('details', None)
+
+        if details:
+            details = re.sub(r'{([^{}]*)}', damage_sub, details)
+            attack['details'] = details
+
         return attack
         
     def get_attacks(self):
@@ -394,6 +438,40 @@ class DicecloudParser(SheetParser):
             skills[stat] = stats.get(stat + 'Mod')
         
         return skills
+
+    def get_skill_effects(self):
+        if self.character is None: raise Exception('You must call get_character() first.')
+
+        skillslist = ['acrobatics', 'animalHandling',
+                      'arcana', 'athletics',
+                      'charismaSave', 'constitutionSave',
+                      'deception', 'dexteritySave',
+                      'history', 'initiative',
+                      'insight', 'intelligenceSave',
+                      'intimidation', 'investigation',
+                      'medicine', 'nature',
+                      'perception', 'performance',
+                      'persuasion', 'religion',
+                      'sleightOfHand', 'stealth',
+                      'strengthSave', 'survival',
+                      'wisdomSave']
+
+        _effects = {}
+
+        effects = self.character.get('effects', [])
+        for effect in effects:
+            if effect.get('stat') in skillslist and effect.get('enabled', True) and not effect.get('removed', False):
+                statname = effect.get('stat')
+                if not statname in _effects: _effects[statname] = []
+                if effect.get('operation') == 'disadvantage':
+                    _effects[statname].append('dis')
+                if effect.get('operation') == 'advantage':
+                    _effects[statname].append('adv')
+
+        for k, v in _effects.items():
+            _effects[k] = ' '.join(v)
+
+        return _effects
         
     def get_resistances(self):
         if self.character is None: raise Exception('You must call get_character() first.')

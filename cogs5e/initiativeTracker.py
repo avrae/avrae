@@ -539,7 +539,10 @@ class InitTracker:
         
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
-        
+
+        skill_effects = character.get('skill_effects', {})
+        args += ' ' + skill_effects.get(skill, '')  # dicecloud v7 - autoadv
+
         args = shlex.split(args)
         args = parse_args(args)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0

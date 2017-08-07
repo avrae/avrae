@@ -259,7 +259,10 @@ class SheetManager:
         
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
-        
+
+        skill_effects = character.get('skill_effects', {})
+        args += ' ' + skill_effects.get(skill, '') # dicecloud v7 - autoadv
+
         args = self.arg_stuff(args, ctx, character)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
@@ -510,7 +513,7 @@ class SheetManager:
                 sheet = await parser.get_sheet()
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
         except TypeError as e:
-            #traceback.print_exc()
+            log.debug(f"Exception in parser.get_sheet: {e}")
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))

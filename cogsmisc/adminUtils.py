@@ -60,7 +60,7 @@ class AdminUtils:
         self.bot.db.not_json_set('blacklist', self.blacklisted_serv_ids)
         await self.bot.say(':ok_hand:')
     
-    @commands.command(hidden=True, aliases=['kill'])
+    @commands.command(hidden=True)
     @checks.is_owner()
     async def restart(self):
         """Restarts Avrae. May fail sometimes due to bad programming on zhu.exe's end.
@@ -69,6 +69,11 @@ class AdminUtils:
         await self.bot.say("Byeeeeeee!")
         await self.bot.logout()
         sys.exit()
+
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def kill(self):
+        await self.bot.say("I'm afraid I can't let you do that, Zhu.")
             
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()

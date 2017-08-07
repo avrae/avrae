@@ -21,8 +21,8 @@ from utils.functions import parse_cvars, parse_args_3, \
 
 log = logging.getLogger(__name__)
 
-class Spellbook:
-    """Commands to help track spellcasting."""
+class GameTrack:
+    """Commands to help track game resources."""
     def __init__(self, bot):
         self.bot = bot
         with open('./res/auto_spells.json', 'r') as f:

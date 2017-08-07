@@ -732,14 +732,28 @@ class SheetManager:
         cvars = character.get('cvars', {})
         
         await self.bot.say('Your variables:\n{}'.format(', '.join([name for name in cvars.keys()])))
-        
+
+    async def _confirm_overwrite(self, ctx, id):
+        """Prompts the user if command would overwrite another character.
+        Returns True to overwrite, False or None otherwise."""
+        active_characters = self.bot.db.not_json_get('active_characters', {})
+        if id in active_characters.get(ctx.message.author.id, {}):
+            await ctx.bot.send_message(ctx.message.channel, "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+                                                            "If you only wanted to update your character, run `!update` instead.")
+            reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
+            replyBool = get_positivity(reply.content) if reply is not None else None
+            return replyBool
+        return True
     
     @commands.command(pass_context=True)
     async def dicecloud(self, ctx, url:str):
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings."""
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
-        
+
+        override = await self._confirm_overwrite(ctx, url)
+        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
+
         self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(url))
         
         loading = await self.bot.say('Loading character data from Dicecloud...')
@@ -780,6 +794,9 @@ class SheetManager:
             return await self.bot.say('You must call this command in the same message you upload the sheet.')
         
         file = ctx.message.attachments[0]
+
+        override = await self._confirm_overwrite(ctx, file['filename'])
+        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
         
         loading = await self.bot.say('Loading character data from PDF...')
         parser = PDFSheetParser(file)
@@ -819,6 +836,10 @@ class SheetManager:
             url = extract_id_from_url(url)
         except NoValidUrlKeyFound:
             return await self.bot.edit_message(loading, "This is not a Google Sheets link.")
+
+        override = await self._confirm_overwrite(ctx, url)
+        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
+
         try:
             parser = GoogleSheet(url, self.gsheet_client)
         except AssertionError:

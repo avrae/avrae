@@ -228,7 +228,7 @@ class Spellbook:
         
         args = args.split('-r')
         args = [a.strip() for a in args]
-        spellName = args[0]
+        spellName = args[0].strip()
         
         spell = getSpell(spellName, return_spell=True)
         self.bot.botStats["spells_looked_up_session"] += 1

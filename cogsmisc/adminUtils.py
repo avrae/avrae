@@ -209,6 +209,16 @@ class AdminUtils:
                 num_cvars += 1
             self.bot.db.not_json_set(user_id + '.characters', user_chars)
         await self.bot.say("Migrated {} cvars for {} users".format(num_cvars, num_users))
+
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def backup_key(self, key):
+        data = self.bot.db.get(key)
+        if data:
+            self.bot.db.set(f"{key}-backup", data)
+            await self.bot.say('done')
+        else:
+            await self.bot.say('fail')
         
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
@@ -233,7 +243,7 @@ class AdminUtils:
     @commands.command(hidden=True)
     @checks.is_owner()
     async def mute(self, target):
-        """Mutes a person."""
+        """Mutes a person by ID."""
         self.muted = self.bot.db.not_json_get('muted', [])
         try:
             target_user = await self.bot.get_user_info(target)

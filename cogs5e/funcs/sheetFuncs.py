@@ -3,11 +3,9 @@ Created on Feb 27, 2017
 
 @author: andrew
 '''
-import json
 import re
 
 import discord
-import numexpr
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from utils.functions import a_or_an, parse_resistances
@@ -134,7 +132,5 @@ def sheet_attack(attack, args):
         embed.set_thumbnail(url=args.get('image'))
         
     return {'embed': embed, 'total_damage': total_damage}
-
-
 
 

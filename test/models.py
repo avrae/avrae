@@ -36,6 +36,8 @@ saves = {'dexteritySave': 0} # etc
 stat_vars = {}
 
 # reset: can be long, short, hp, None, reset
+# Counter object - fields= value, reset, max, min
+# value: int; reset: long, short, None, hp, 'none'
 consumables = {'hp': {'value': 0, 'reset': 'long', 'max': 100}, # optional: max, min, reset
                'deathsaves': {'fail': {'value': 0, 'reset': 'hp'},
                               'success': {'value': 0, 'reset': 'hp'}},

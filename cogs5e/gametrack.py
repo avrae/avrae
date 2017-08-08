@@ -180,8 +180,7 @@ class GameTrack:
         if spell_name is None: return
 
         spell = strict_search(self.autospells, 'name', spell_name)
-        if spell is None: return await self._old_cast(ctx, spell_name + " " + " ".join(args),
-                                                      fallback=True)  # fall back to old cast
+        if spell is None: return await self._old_cast(ctx, spell_name, fallback=True)  # fall back to old cast
 
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})  # grab user's characters
         active_character = self.bot.db.not_json_get('active_characters', {}).get(

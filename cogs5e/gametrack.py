@@ -1,6 +1,8 @@
 '''
 Created on Jul 28, 2017
 
+Most of this module was coded 5 miles in the air. (Aug 8, 2017)
+
 @author: andrew
 '''
 import copy
@@ -17,8 +19,8 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException
+from cogs5e.models.embeds import EmbedWithCharacter
+from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, AvraeException
 from utils.functions import parse_cvars, parse_args_3, \
     evaluate_cvar, strict_search
 
@@ -33,17 +35,24 @@ class GameTrack:
         with open('./res/auto_spells.json', 'r') as f:
             self.autospells = json.load(f)
 
+    async def on_command_error(self, error, ctx):
+        if isinstance(error, AvraeException):
+            await self.bot.send_message(ctx.message.channel, f"{type(error)}: {str(error)}")
+        else: raise error # not my problem
+
     @commands.group(pass_context=True, invoke_without_command=True, name='cc')
     async def customcounter(self, ctx, name, modifier=None):
-        """Commands to implement custom counters."""
-        character = Character(ctx)  # TODO: NoCharacter error handler
-        counter = character.get_consumable(name)  # TODO: ConsumableNotFound error handler
+        """Commands to implement custom counters.
+        When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
+        If modifier is not supplied, prints the value and metadata of the counter *name*."""
+        character = Character(ctx)
+        counter = character.get_consumable(name)
 
         assert character is not None
         assert counter is not None
 
         if modifier is None:  # display value
-            counterDisplayEmbed = EmbedWithAuthor(ctx)
+            counterDisplayEmbed = EmbedWithCharacter(character)
             counterDisplayEmbed.title = name
             counterDisplayEmbed.description = f"**Current Value**: {counter.get('value', 0)}"
             if any(r in counter for r in ('max', 'min')):
@@ -52,10 +61,11 @@ class GameTrack:
                 counterDisplayEmbed.add_field(name="Range",
                                               value=f"{_min} - {_max}")
 
-                _resetMap = {'short': "Short Rest completed (`!shortrest`)",  # TODO: this
+                _resetMap = {'short': "Short Rest completed (`!shortrest`)",  # TODO
                              'long': "Long Rest completed (`!longrest`)", # TODO
-                             'reset': "`!cc reset` is called", # TODO
+                             'reset': "`!cc reset` is called",
                              'hp': "Character has >0 HP", # TODO
+                             'none': "Does not reset",
                              None: "Unknown Reset"}
 
                 _reset = _resetMap.get(counter.get('reset', 'reset'), _resetMap[None])
@@ -68,7 +78,7 @@ class GameTrack:
             modifier = int(modifier)
         except ValueError:
             return await self.bot.say(f"Could not modify counter: {modifier} is not a number")
-        resultEmbed = EmbedWithAuthor(ctx)
+        resultEmbed = EmbedWithCharacter(character)
         consValue = counter.get('value', 0)
         newValue = consValue + modifier
         try:
@@ -102,12 +112,31 @@ class GameTrack:
     @customcounter.command(pass_context=True, name='delete')
     async def customcounter_delete(self, ctx, name):
         """Deletes a custom counter."""
-        pass # TODO
+        character = Character(ctx)
+        character.delete_consumable(name).commit(ctx)
+        await self.bot.say(f"Deleted counter {name}.")
 
     @customcounter.command(pass_context=True, name='summary', aliases=['list'])
     async def customcounter_summary(self, ctx):
         """Prints a summary of all custom counters."""
-        pass  # TODO
+        character = Character(ctx)
+        embed = EmbedWithCharacter(character)
+        for name, counter in character.get_all_consumables().items():
+            val = f"**Current Value**: {counter.get('value', 0)}\n"
+            if any(r in counter for r in ('max', 'min')):
+                _min = counter.get('min', 'N/A')
+                _max = counter.get('max', 'N/A')
+                val += f"**Range**: {_min} - {_max}"
+                if not counter.get('reset') == 'none':
+                    _resetMap = {'short': "Short Rest completed (`!shortrest`)",
+                                 'long': "Long Rest completed (`!longrest`)",
+                                 'reset': "`!cc reset` is called",
+                                 'hp': "Character has >0 HP",
+                                 None: "Unknown Reset"}
+                    _reset = _resetMap.get(counter.get('reset', 'reset'), _resetMap[None])
+                    val += f"**Resets When**: {_resetMap.get(_reset)}\n"
+            embed.add_field(name=name, value=val)
+        await self.bot.say(embed=embed)
 
     @customcounter.command(pass_context=True, name='reset')
     async def customcounter_reset(self, ctx, name=None):

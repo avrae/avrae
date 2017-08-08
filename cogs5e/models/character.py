@@ -16,6 +16,8 @@
  'overrides': {},
  'cvars': {}}
 """
+import random
+
 from discord import InvalidArgument
 
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset
@@ -30,6 +32,15 @@ class Character: # TODO: refactor old commands to use this
         character = user_characters[active_character]
         self.character = character
         self.id = active_character
+
+    def get_name(self):
+        return self.character.get('stats', {}).get('name', "Unnamed")
+
+    def get_image(self):
+        return self.character.get('stats', {}).get('image')
+
+    def get_color(self):
+        return self.character.get('settings', {}).get('color') or random.randint(0, 0xffffff)
 
     def commit(self, ctx):
         """Writes a character object to the database, under the contextual author."""
@@ -97,6 +108,19 @@ class Character: # TODO: refactor old commands to use this
         counter = custom_counters.get(name)
         if counter is None: raise ConsumableNotFound()
         return counter
+
+    def get_all_consumables(self):
+        """Returns the dict object of all custom counters."""
+        custom_counters = self.character.get('consumables', {}).get('custom', {})
+        return custom_counters
+
+    def delete_consumable(self, name):
+        """Deletes a consumable. Returns the Character object."""
+        custom_counters = self.character.get('consumables', {}).get('custom', {})
+        try: del custom_counters[name]
+        except KeyError: raise ConsumableNotFound()
+        self.character['consumables']['custom'] = custom_counters
+        return self
 
     def reset_consumable(self, name):
         """Resets a consumable to its maximum value, if applicable.

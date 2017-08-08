@@ -5,11 +5,8 @@
 
 *.ragnarok
 
-/venv/*
-
 *.avrae
 
-*.ini
 /tests/
 /venv/
 /.idea/
@@ -28,3 +25,5 @@ damage_snippets-backup.json
 test/output/dicecloud-test.json
 /stdout.txt
 /resources.txt
+/raspi.md
+/saves/

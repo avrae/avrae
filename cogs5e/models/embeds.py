@@ -11,7 +11,7 @@ class EmbedWithAuthor(discord.Embed):
         self.colour = random.randint(0, 0xffffff)
 
 class EmbedWithCharacter(discord.Embed):
-    """An embed with author image and nickname set."""
+    """An embed with character image and name set."""
     def __init__(self, character, **kwargs):
         super(EmbedWithCharacter, self).__init__(**kwargs)
         self.set_author(name=character.get_name(), icon_url=character.get_image())

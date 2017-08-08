@@ -59,13 +59,6 @@ bot.prefix = prefix
 bot.remove_command('help')
 bot.testing = TESTING
 
-if os.path.isfile('./resources.txt'):
-    with open('./resources.txt', 'r') as f:  # this is really inefficient
-        resource = list(f)
-        bot.mask = int(resource[0], base=2)
-else:
-    bot.mask = 0x00
-
 class Credentials():
     pass
 
@@ -175,17 +168,14 @@ async def on_command_error(error, ctx):
                 return await bot.send_message(ctx.message.channel, "Error: Message is too long, malformed, or empty.")
             if original.response.status == 500:
                 return await bot.send_message(ctx.message.channel, "Error: Internal server error on Discord's end. Please try again.")
-            
-    if bot.mask & coreCog.debug_mask:
-        await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
-        try:
-            await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}), shard {}: {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, getattr(bot, 'shard_id', 0), repr(error), ctx.message.content))
-        except AttributeError:
-            await bot.send_message(bot.owner, "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
-        for o in discord_trim(tb):
-            await bot.send_message(bot.owner, o)
-    else:
-        await bot.send_message(ctx.message.channel, "Error: " + str(error))
+
+    await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
+    try:
+        await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}), shard {}: {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, getattr(bot, 'shard_id', 0), repr(error), ctx.message.content))
+    except AttributeError:
+        await bot.send_message(bot.owner, "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
+    for o in discord_trim(tb):
+        await bot.send_message(bot.owner, o)
     log.error("Error caused by message: `{}`".format(ctx.message.content))
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
                 
@@ -195,8 +185,6 @@ async def on_message(message):
         return
     if message.content.startswith('avraepls'):
         log.info("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))
-        if coreCog.verbose_mask & bot.mask:
-            await bot.send_message(message.channel, "`Reseeding RNG...`")
         random.seed()
     if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
         return

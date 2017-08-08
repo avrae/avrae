@@ -83,7 +83,7 @@ class GameTrack:
         newValue = consValue + modifier
         try:
             character.set_consumable(name, newValue).commit(ctx) #  I really love this
-            resultEmbed.description = f"Modified counter: new value = {newValue}"
+            resultEmbed.description = f"Modified counter: {name} = {newValue}"
         except CounterOutOfBounds:
             resultEmbed.description = f"Could not modify counter: new value out of bounds"
         await self.bot.say(embed=resultEmbed)

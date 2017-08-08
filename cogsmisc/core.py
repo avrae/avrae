@@ -24,42 +24,7 @@ class Core:
     
     def __init__(self, bot):
         self.bot = bot
-        self.quiet_mask = 0x01
-        self.verbose_mask = 0x02
-        self.debug_mask = 0x04
-        self.monitor_mask = 0x08
         self.start_time = time.monotonic()
-        
-    @commands.command(pass_context=True, hidden=True)
-    @checks.is_owner()
-    async def bitmask(self, ctx, *args):
-        """Edits/shows the bitmask.
-        Requires: Owner"""
-        if args:
-            self.bot.mask = int(args[0], base=2)
-            if not len(args[0]) == 8:
-                await self.bot.say("Invalid bitmask!")
-            else:
-                with open('./resources.txt', 'w') as f:
-                    f.write("{0:0>8b}".format(self.bot.mask))
-        await self.bot.say("```Bitmask: {0:0>8b}```".format(self.bot.mask))
-        
-    @commands.command(pass_context=True, hidden=True)
-    @checks.is_owner()
-    async def toggle_flag(self, ctx, flag : str):
-        """Toggles a bitmask flag.
-        Requires: Owner"""
-        if flag.lower() == 'verbose':
-            self.bot.mask = self.bot.mask ^ self.verbose_mask
-        elif flag.lower() == 'quiet':
-            self.bot.mask = self.bot.mask ^ self.quiet_mask
-        elif flag.lower() == 'debug':
-            self.bot.mask = self.bot.mask ^ self.debug_mask
-        elif flag.lower() == 'monitor':
-            self.bot.mask = self.bot.mask ^ self.monitor_mask
-        with open('./resources.txt', 'w') as f:
-            f.write("{0:0>8b}".format(self.bot.mask))
-        await self.bot.say('Toggled flag ' + flag + "```Bitmask: {0:0>8b}```".format(self.bot.mask))
         
     @commands.command(pass_context=True, aliases=['feedback'])
     async def bug(self, ctx, *, report:str):
@@ -123,7 +88,8 @@ class Core:
         embed.add_field(name='Shard Channels', value='{} total\n{} text\n{} voice'.format(text + voice, text, voice))
         embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
         motd = random.choice(["May the RNG be with you", "May your rolls be high",
-                              "Will give higher rolls for cookies", ">:3"])
+                              "Will give higher rolls for cookies", ">:3",
+                              "Does anyone even read these?"])
         embed.set_footer(text='{} | Build {} | Cluster {} | Shard {}'.format(motd, self.bot.db.get('build_num'), floor(int(getattr(self.bot, 'shard_id', 0)) / 3) + 1, getattr(self.bot, 'shard_id', 0)))
         commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n{items_looked_up_life} items looked up\n{rounds_init_tracked_life} rounds of initiative tracked ({turns_init_tracked_life} turns)".format(**self.bot.botStats)
         embed.add_field(name="Commands Run", value=commands_run)

@@ -16,12 +16,14 @@
  'overrides': {},
  'cvars': {}}
 """
+import logging
 import random
+import re
 
-from discord import InvalidArgument
+from cogs5e.funcs.dice import roll
+from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument
 
-from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset
-
+log = logging.getLogger(__name__)
 
 class Character: # TODO: refactor old commands to use this
     def __init__(self, ctx):
@@ -42,11 +44,36 @@ class Character: # TODO: refactor old commands to use this
     def get_color(self):
         return self.character.get('settings', {}).get('color') or random.randint(0, 0xffffff)
 
+    def evaluate_cvar(self, varstr):
+        ops = r"([-+*/().<>=])"
+        varstr = varstr.strip('<>{}')
+        cvars = self.character.get('cvars', {})
+        stat_vars = self.character.get('stat_cvars', {})
+        out = ""
+        tempout = ''
+        for substr in re.split(ops, varstr):
+            temp = substr.strip()
+            if temp.startswith('/'):
+                _last = self.character
+                for path in out.split('/'):
+                    if path:
+                        try:
+                            _last = _last.get(path, {})
+                        except AttributeError:
+                            break
+                temp = str(_last)
+            tempout += str(cvars.get(temp, temp)) + " "
+        for substr in re.split(ops, tempout):
+            temp = substr.strip()
+            out += str(stat_vars.get(temp, temp)) + " "
+        return roll(out).total
+
     def commit(self, ctx):
         """Writes a character object to the database, under the contextual author."""
         user_characters = ctx.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[self.id] = self.character  # commit
         return ctx.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+
 
     def _initialize_custom_counters(self):
         try:
@@ -61,13 +88,13 @@ class Character: # TODO: refactor old commands to use this
     def create_consumable(self, name, **kwargs):
         """Creates a custom consumable, returning the character object."""
         self._initialize_custom_counters()
-        _max = kwargs.pop('maxValue')
-        _min = kwargs.pop('minValue')
-        _reset = kwargs.pop('reset')
+        _max = kwargs.get('maxValue')
+        _min = kwargs.get('minValue')
+        _reset = kwargs.get('reset')
         try:
             assert _reset in ('short', 'long', 'none') or _reset is None
-            assert _max.isnumber() or _max is None
-            assert _min.isnumber() or _min is None
+            assert isinstance(_max, int) or _max is None
+            assert isinstance(_min, int) or _min is None
         except AssertionError:
             raise InvalidArgument("Invalid reset, max, or min.")
         if _max is not None and _min is not None:
@@ -77,9 +104,10 @@ class Character: # TODO: refactor old commands to use this
                 raise InvalidArgument("Max value is less than min value.")
         if _reset and _max is None: raise InvalidArgument("Reset passed but no maximum passed.")
         newCounter = {'value': _max or 0}
-        if _max: newCounter['max'] = _max
-        if _min: newCounter['min'] = _min
-        if _reset and _max: newCounter['reset'] = _reset
+        if _max is not None: newCounter['max'] = _max
+        if _min is not None: newCounter['min'] = _min
+        if _reset and _max is not None: newCounter['reset'] = _reset
+        log.debug(f"Creating new counter {newCounter}")
 
         self.character['consumables']['custom'][name] = newCounter # TODO: integrate with cvar sys
 
@@ -94,7 +122,7 @@ class Character: # TODO: refactor old commands to use this
         except AssertionError:
             raise ConsumableNotFound()
         try:
-            assert self.character['consumables']['custom'][name].get('min', -(2 ** 64)) < newValue < \
+            assert self.character['consumables']['custom'][name].get('min', -(2 ** 64)) <= newValue <= \
                    self.character['consumables']['custom'][name].get('max', 2 ** 64 - 1)
         except:
             raise CounterOutOfBounds()

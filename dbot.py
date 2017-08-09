@@ -15,6 +15,7 @@ from cogs5e.charGen import CharGenerator
 from cogs5e.dice import Dice
 from cogs5e.initiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
+from cogs5e.models.errors import AvraeException
 from cogs5e.pbpUtils import PBPUtils
 from cogs5e.sheetManager import SheetManager
 from cogs5e.gametrack import GameTrack
@@ -144,6 +145,8 @@ async def enter():
 async def on_command_error(error, ctx):
     if isinstance(error, commands.CommandNotFound):
         return
+    if isinstance(error, AvraeException):
+        return await bot.send_message(ctx.message.channel, f"{type(error)}: {str(error)}")
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if isinstance(error, commands.CheckFailure):
         await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command, the command is disabled, or something went wrong internally.")
@@ -154,6 +157,8 @@ async def on_command_error(error, ctx):
         return await bot.send_message(ctx.message.channel, "This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
     elif isinstance(error, CommandInvokeError):
         original = error.original
+        if isinstance(original, AvraeException):
+            return await bot.send_message(ctx.message.channel, f"{str(original)}")
         if isinstance(original, Forbidden):
             try:
                 return await bot.send_message(ctx.message.author, "Error: I am missing permissions to run this command. Please make sure I have permission to send messages to <#{}>.".format(ctx.message.channel.id))

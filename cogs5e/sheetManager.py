@@ -523,6 +523,7 @@ class SheetManager:
         sheet['settings'] = old_character.get('settings', {})
         sheet['overrides'] = old_character.get('overrides', {})
         sheet['cvars'] = old_character.get('cvars', {})
+        sheet['consumables'] = old_character.get('consumables', {})
         
         overrides = old_character.get('overrides', {})
         sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description", "No description available.")
@@ -733,11 +734,11 @@ class SheetManager:
         
         await self.bot.say('Your variables:\n{}'.format(', '.join([name for name in cvars.keys()])))
 
-    async def _confirm_overwrite(self, ctx, id):
+    async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.
         Returns True to overwrite, False or None otherwise."""
-        active_characters = self.bot.db.not_json_get('active_characters', {})
-        if id in active_characters.get(ctx.message.author.id, {}):
+        user_characters = self.bot.db.not_json_get(f'{ctx.message.author.id}.characters', {})
+        if _id in user_characters:
             await ctx.bot.send_message(ctx.message.channel, "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
                                                             "If you only wanted to update your character, run `!update` instead.")
             reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)

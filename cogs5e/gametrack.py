@@ -35,11 +35,6 @@ class GameTrack:
         with open('./res/auto_spells.json', 'r') as f:
             self.autospells = json.load(f)
 
-    async def on_command_error(self, error, ctx):
-        if isinstance(error, AvraeException):
-            await self.bot.send_message(ctx.message.channel, f"{type(error)}: {str(error)}")
-        else: raise error # not my problem
-
     @commands.group(pass_context=True, invoke_without_command=True, name='cc')
     async def customcounter(self, ctx, name, modifier=None):
         """Commands to implement custom counters.
@@ -100,8 +95,8 @@ class GameTrack:
         _reset = args.get('reset', [None])[-1]
         _max = args.get('max', [None])[-1]
         _min = args.get('min', [None])[-1]
-        _max = evaluate_cvar(_max, character) if _max else None
-        _min = evaluate_cvar(_min, character) if _min else None
+        _max = character.evaluate_cvar(_max) if _max else None
+        _min = character.evaluate_cvar(_min) if _min else None
         try:
             character.create_consumable(name, maxValue=_max, minValue=_min, reset=_reset).commit(ctx)
         except InvalidArgument as e:
@@ -126,7 +121,7 @@ class GameTrack:
             if any(r in counter for r in ('max', 'min')):
                 _min = counter.get('min', 'N/A')
                 _max = counter.get('max', 'N/A')
-                val += f"**Range**: {_min} - {_max}"
+                val += f"**Range**: {_min} - {_max}\n"
                 if not counter.get('reset') == 'none':
                     _resetMap = {'short': "Short Rest completed (`!shortrest`)",
                                  'long': "Long Rest completed (`!longrest`)",
@@ -134,7 +129,7 @@ class GameTrack:
                                  'hp': "Character has >0 HP",
                                  None: "Unknown Reset"}
                     _reset = _resetMap.get(counter.get('reset', 'reset'), _resetMap[None])
-                    val += f"**Resets When**: {_resetMap.get(_reset)}\n"
+                    val += f"**Resets When**: {_reset}\n"
             embed.add_field(name=name, value=val)
         await self.bot.say(embed=embed)
 

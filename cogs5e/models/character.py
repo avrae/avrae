@@ -103,6 +103,30 @@ class Character: # TODO: refactor old commands to use this
         except AssertionError:
             self.character['consumables']['hp'] = {'value': self.get_max_hp(), 'reset': 'long', 'max': self.get_max_hp(), 'min': 0}
 
+    def get_hp(self):
+        """Returns the Counter dictionary."""
+        self._initialize_hp()
+        return self.character['consumables']['hp']
+
+    def get_current_hp(self):
+        """Returns the integer value of the remaining HP."""
+        return self.get_hp()['value']
+
+    def set_hp(self, newValue):
+        """Sets the character's hit points. Returns the Character object."""
+        self._initialize_hp()
+        hp = self.get_hp()
+        self.character['consumables']['hp']['value'] = max(hp['min'], min(hp['max'], newValue)) # bounding
+
+        self.on_hp()
+
+        return self
+
+    def reset_hp(self):
+        """Resets the character's HP to max. Returns the Character object."""
+        self.set_hp(self.get_max_hp())
+        return self
+
     def _initialize_deathsaves(self):
         try:
             assert self.character['consumables'].get('deathsaves') is not None
@@ -127,6 +151,13 @@ class Character: # TODO: refactor old commands to use this
         self._initialize_deathsaves()
         self.character['consumables']['deathsaves']['fail']['value'] += 1
         return self.character['consumables']['deathsaves']['fail']['value'] == 3
+
+    def reset_death_saves(self):
+        """Resets successful and failed death saves to 0. Returns the Character object."""
+        self._initialize_deathsaves()
+        self.character['consumables']['deathsaves']['success']['value'] = 0
+        self.character['consumables']['deathsaves']['fail']['value'] = 0
+        return self
 
     def _initialize_custom_counters(self):
         try:
@@ -212,19 +243,53 @@ class Character: # TODO: refactor old commands to use this
 
         return self
 
-    def reset_all_consumables(self):
-        """Resets all applicable consumables.
-        Returns a list of the names of all reset counters."""
+    def _reset_custom(self, scope):
+        """Resets custom counters with given scope."""
         reset = []
-        reset.extend(self.on_hp()) # TODO
-        reset.extend(self.short_rest()) # TODO
-        reset.extend(self.long_rest()) # TODO
         for name, value in self.character.get('consumables', {}).get('custom', {}).items():
-            if value.get('reset') is None:
+            if value.get('reset') == scope:
                 try:
                     self.reset_consumable(name)
                 except NoReset:
                     pass
                 else:
                     reset.append(name)
+        return reset
+
+    def on_hp(self):
+        """Resets all applicable consumables.
+        Returns a list of the names of all reset counters."""
+        reset = []
+        reset.extend(self._reset_custom('hp'))
+        self.reset_death_saves()
+        reset.append("Death Saves")
+        return reset
+
+    def short_rest(self):
+        """Resets all applicable consumables.
+        Returns a list of the names of all reset counters."""
+        reset = []
+        reset.extend(self.on_hp())
+        reset.extend(self._reset_custom('short'))
+        return reset
+
+    def long_rest(self):
+        """Resets all applicable consumables.
+        Returns a list of the names of all reset counters."""
+        reset = []
+        reset.extend(self.on_hp())
+        reset.extend(self.short_rest())
+        reset.extend(self._reset_custom('long'))
+        self.reset_hp()
+        reset.append("HP")
+        return reset
+
+    def reset_all_consumables(self):
+        """Resets all applicable consumables.
+        Returns a list of the names of all reset counters."""
+        reset = []
+        reset.extend(self.on_hp())
+        reset.extend(self.short_rest())
+        reset.extend(self.long_rest())
+        reset.extend(self._reset_custom(None))
         return reset

@@ -29,7 +29,7 @@ from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import list_get, get_positivity, a_or_an, \
-    parse_cvars, get_selection
+    parse_cvars, get_selection, parse_args_3
 from utils.loggers import TextLogger
 
 log = logging.getLogger(__name__)
@@ -191,8 +191,11 @@ class SheetManager:
               -phrase [flavor text]
               -title [title] *note: [charname] and [sname] will be replaced automatically*
               -image [image URL]"""
-        if skill == 'death': return await self.bot.say("Run `!game deathsave` instead.")
-
+        if skill == 'death':
+            ds_cmd = self.bot.get_command('game deathsave')
+            if ds_cmd is None:
+                return await self.bot.say("Error: GameTrack cog not loaded.")
+            return await ctx.invoke(ds_cmd, *shlex.split(args))
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -208,26 +211,26 @@ class SheetManager:
                 save = next(a for a in saves.keys() if skill.lower() in a.lower())
             except StopIteration:
                 return await self.bot.say('That\'s not a valid save.')
-        
+
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
-        
+
         args = self.arg_stuff(args, ctx, character)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
         phrase = args.get('phrase', None)
-        
+
         if b is not None:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
         else:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
-            
+
         embed.title = args.get('title', '').replace('[charname]', character.get('stats', {}).get('name')).replace('[sname]', re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) \
                       or '{} makes {}!'.format(character.get('stats', {}).get('name'),
                                                a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()))
-            
+
         embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
-        
+
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
         

@@ -41,6 +41,28 @@ class GameTrack:
         if ctx.invoked_subcommand is None:
             await self.bot.say("Incorrect usage. Use !help game for help.")
 
+    @game.command(pass_context=True, name='longrest', aliases=['lr'])
+    async def game_longrest(self, ctx):
+        """Performs a long rest, resetting applicable counters."""
+        character = Character.from_ctx(ctx)
+        reset = character.long_rest()
+        embed = EmbedWithCharacter(character, name=False)
+        embed.title = f"{character.get_name()} took a Long Rest!"
+        embed.add_field(name="Reset Values", value=', '.join(set(reset)))
+        character.commit(ctx)
+        await self.bot.say(embed=embed)
+
+    @game.command(pass_context=True, name='shortrest', aliases=['sr'])
+    async def game_shortrest(self, ctx):
+        """Performs a short rest, resetting applicable counters."""
+        character = Character.from_ctx(ctx)
+        reset = character.short_rest()
+        embed = EmbedWithCharacter(character, name=False)
+        embed.title = f"{character.get_name()} took a Short Rest!"
+        embed.add_field(name="Reset Values", value=', '.join(set(reset)))
+        character.commit(ctx)
+        await self.bot.say(embed=embed)
+
     @game.command(pass_context=True, name='deathsave', aliases=['ds'])
     async def game_deathsave(self, ctx, *args):
         """Rolls a death save.
@@ -69,16 +91,17 @@ class GameTrack:
             # TODO: set hp to 1
             pass
         elif save_roll.crit == 2:
-            if character.add_failed_ds(): death_phrase = f"**{character.get_name()} is DEAD!**"
+            if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
             else:
-                if character.add_failed_ds(): death_phrase = f"**{character.get_name()} is DEAD!**"
+                if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
         elif save_roll.total >= 10:
-            if character.add_successful_ds(): death_phrase = f"**{character.get_name()} is STABLE!**"
+            if character.add_successful_ds(): death_phrase = f"{character.get_name()} is STABLE!"
         else:
-            if character.add_failed_ds(): death_phrase = f"**{character.get_name()} is DEAD!**"
+            if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
 
         character.commit(ctx)
-        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase else '') + "\n" + death_phrase
+        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase else '')
+        if death_phrase: embed.set_footer(text=death_phrase)
 
         saves = character.get_deathsaves()
         embed.add_field(name="Successes", value=str(saves['success']['value']))
@@ -120,8 +143,8 @@ class GameTrack:
                 counterDisplayEmbed.add_field(name="Range",
                                               value=f"{_min} - {_max}")
 
-                _resetMap = {'short': "Short Rest completed (`!shortrest`)",  # TODO
-                             'long': "Long Rest completed (`!longrest`)", # TODO
+                _resetMap = {'short': "Short Rest completed (`!game shortrest`)",  # TODO
+                             'long': "Long Rest completed (`!game longrest`)", # TODO
                              'reset': "`!cc reset` is called",
                              'hp': "Character has >0 HP", # TODO
                              'none': "Does not reset",
@@ -191,8 +214,8 @@ class GameTrack:
                 else: _max = "N/A"
                 val += f"**Range**: {_min} - {_max}\n"
                 if not counter.get('reset') == 'none':
-                    _resetMap = {'short': "Short Rest completed (`!shortrest`)",
-                                 'long': "Long Rest completed (`!longrest`)",
+                    _resetMap = {'short': "Short Rest completed (`!game shortrest`)",
+                                 'long': "Long Rest completed (`!game longrest`)",
                                  'reset': "`!cc reset` is called",
                                  'hp': "Character has >0 HP",
                                  None: "Unknown Reset"}
@@ -203,7 +226,7 @@ class GameTrack:
 
     @customcounter.command(pass_context=True, name='reset')
     async def customcounter_reset(self, ctx, name=None):
-        """Resets custom counters.
+        """Resets custom counters, hp, death saves, and spell slots.
         Will reset all if name is not passed, otherwise the specific passed one.
         A counter can only be reset if it has a maximum value.
         Reset hierarchy: short < long < default < none"""
@@ -218,7 +241,7 @@ class GameTrack:
         else:
             reset_consumables = character.reset_all_consumables()
             character.commit(ctx)
-            await self.bot.say(f"Reset counters: {', '.join(reset_consumables) or 'none'}")
+            await self.bot.say(f"Reset counters: {', '.join(set(reset_consumables)) or 'none'}")
 
 
     @commands.command(pass_context=True)

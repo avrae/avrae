@@ -5,8 +5,10 @@ Created on Oct 29, 2016
 '''
 import errno
 import os
+import random
 import re
 
+import discord
 from fuzzywuzzy import process, fuzz
 
 from cogs5e.funcs.dice import roll
@@ -355,4 +357,26 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
     
     return damage
     
-    
+async def get_selection(ctx, choices):
+    """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice)."""
+    choices = choices[:10] # sanity
+    names = [o[0] for o in choices]
+    results = [o[1] for o in choices]
+    embed = discord.Embed()
+    embed.title = "Multiple Matches Found"
+    selectStr = " Which one were you looking for? (Type the number, or \"c\" to cancel)\n"
+    for i, r in enumerate(names):
+        selectStr += f"**[{i+1}]** - {r}\n"
+    embed.description = selectStr
+    embed.colour = random.randint(0, 0xffffff)
+    selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
+
+    def chk(msg):
+        valid = [str(v) for v in range(1, len(choices) + 1)] + ["c"]
+        return msg.content in valid
+
+    m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=selectMsg.channel,
+                                       check=chk)
+
+    if m is None or m.content == "c": return None
+    return results[int(m.content) - 1]

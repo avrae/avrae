@@ -28,7 +28,7 @@ from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import list_get, get_positivity, a_or_an, \
-    parse_cvars
+    parse_cvars, get_selection
 from utils.loggers import TextLogger
 
 log = logging.getLogger(__name__)
@@ -419,22 +419,29 @@ class SheetManager:
         if name == 'list':
             return await self.bot.say('Your characters:\n{}'.format(', '.join([user_characters[c].get('stats', {}).get('name', '') for c in user_characters])))
         args = shlex.split(args)
-        
-        char_url = None
-        char_name = None
+
+        choices = []
         for url, character in user_characters.items():
             if character.get('stats', {}).get('name', '').lower() == name.lower():
-                char_url = url
-                char_name = character.get('stats').get('name')
-                break
-            
-            if name.lower() in character.get('stats', {}).get('name', '').lower():
-                char_url = url
-                char_name = character.get('stats').get('name')
-        
-        if char_url is None:
+                choices.append((character, url))
+            elif name.lower() in character.get('stats', {}).get('name', '').lower():
+                choices.append((character, url))
+
+        if len(choices) > 1:
+            choiceList = [(f"{c[0].get('stats', {}).get('name', 'Unnamed')} (`{c[1]})`", c) for c in choices]
+
+            char = await get_selection(ctx, choiceList)
+            if char is None:
+                return await self.bot.say('Selection timed out or was cancelled.')
+
+            char_name = char[0].get('stats', {}).get('name', 'Unnamed')
+            char_url = char[1]
+        elif len(choices) == 0:
             return await self.bot.say('Character not found.')
-        
+        else:
+            char_name = choices[0][0].get('stats', {}).get('name', 'Unnamed')
+            char_url = choices[0][1]
+
         name = char_name
         
         if 'delete' in args:

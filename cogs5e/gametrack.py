@@ -35,12 +35,70 @@ class GameTrack:
         with open('./res/auto_spells.json', 'r') as f:
             self.autospells = json.load(f)
 
-    @commands.group(pass_context=True, invoke_without_command=True, name='cc')
+    @commands.group(pass_context=True, name='game', aliases=['g'])
+    async def game(self, ctx):
+        """Commands to help track character information in a game. Use `!help game` to view subcommands."""
+        if ctx.invoked_subcommand is None:
+            await self.bot.say("Incorrect usage. Use !help game for help.")
+
+    @game.command(pass_context=True, name='deathsave', aliases=['ds'])
+    async def game_deathsave(self, ctx, *args):
+        """Rolls a death save.
+        __Valid Arguments__
+        See `!help save`."""
+        character = Character.from_ctx(ctx)
+        args = parse_args_3(args)
+        adv = 0 if args.get('adv', [False])[-1] and args.get('dis', [False])[-1] else \
+              1 if args.get('adv', [False])[-1] else \
+              -1 if args.get('dis', [False])[-1] else 0
+        b = '+'.join(args.get('b', []))
+        phrase = '\n'.join(args.get('phrase', []))
+
+        if b:
+            save_roll = roll('1d20+' + b, adv=adv, inline=True)
+        else:
+            save_roll = roll('1d20', adv=adv, inline=True)
+
+        embed = discord.Embed()
+        embed.title = args.get('title', '').replace('[charname]', character.get_name()).replace(
+            '[sname]', 'Death') or '{} makes {}!'.format(character.get_name(), "a Death Save")
+        embed.colour = character.get_color()
+
+        death_phrase = ''
+        if save_roll.crit == 1:
+            # TODO: set hp to 1
+            pass
+        elif save_roll.crit == 2:
+            if character.add_failed_ds(): death_phrase = f"**{character.get_name()} is DEAD!**"
+            else:
+                if character.add_failed_ds(): death_phrase = f"**{character.get_name()} is DEAD!**"
+        elif save_roll.total >= 10:
+            if character.add_successful_ds(): death_phrase = f"**{character.get_name()} is STABLE!**"
+        else:
+            if character.add_failed_ds(): death_phrase = f"**{character.get_name()} is DEAD!**"
+
+        character.commit(ctx)
+        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase else '') + "\n" + death_phrase
+
+        saves = character.get_deathsaves()
+        embed.add_field(name="Successes", value=str(saves['success']['value']))
+        embed.add_field(name="Failures", value=str(saves['fail']['value']))
+
+        if args.get('image') is not None:
+            embed.set_thumbnail(url=args.get('image'))
+
+        await self.bot.say(embed=embed)
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+
+    @commands.group(pass_context=True, invoke_without_command=True, name='customcounter', aliases=['cc'])
     async def customcounter(self, ctx, name, modifier=None):
         """Commands to implement custom counters.
         When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
         If modifier is not supplied, prints the value and metadata of the counter *name*."""
-        character = Character(ctx)
+        character = Character.from_ctx(ctx)
         counter = character.get_consumable(name)
 
         assert character is not None
@@ -52,7 +110,13 @@ class GameTrack:
             counterDisplayEmbed.description = f"**Current Value**: {counter.get('value', 0)}"
             if any(r in counter for r in ('max', 'min')):
                 _min = counter.get('min', 'N/A')
-                _max = counter.get('max', 'N/A')
+                if _min is not None:
+                    _min = character.evaluate_cvar(_min)
+                else: _min = "N/A"
+                _max = counter.get('max')
+                if _max is not None:
+                    _max = character.evaluate_cvar(_max)
+                else: _max = "N/A"
                 counterDisplayEmbed.add_field(name="Range",
                                               value=f"{_min} - {_max}")
 
@@ -90,13 +154,11 @@ class GameTrack:
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.
         `-min <min value>` - The minimum value of the counter."""
-        character = Character(ctx)
+        character = Character.from_ctx(ctx)
         args = parse_args_3(args)
         _reset = args.get('reset', [None])[-1]
         _max = args.get('max', [None])[-1]
         _min = args.get('min', [None])[-1]
-        _max = character.evaluate_cvar(_max) if _max else None
-        _min = character.evaluate_cvar(_min) if _min else None
         try:
             character.create_consumable(name, maxValue=_max, minValue=_min, reset=_reset).commit(ctx)
         except InvalidArgument as e:
@@ -107,20 +169,26 @@ class GameTrack:
     @customcounter.command(pass_context=True, name='delete')
     async def customcounter_delete(self, ctx, name):
         """Deletes a custom counter."""
-        character = Character(ctx)
+        character = Character.from_ctx(ctx)
         character.delete_consumable(name).commit(ctx)
         await self.bot.say(f"Deleted counter {name}.")
 
     @customcounter.command(pass_context=True, name='summary', aliases=['list'])
     async def customcounter_summary(self, ctx):
         """Prints a summary of all custom counters."""
-        character = Character(ctx)
+        character = Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         for name, counter in character.get_all_consumables().items():
             val = f"**Current Value**: {counter.get('value', 0)}\n"
             if any(r in counter for r in ('max', 'min')):
-                _min = counter.get('min', 'N/A')
-                _max = counter.get('max', 'N/A')
+                _min = counter.get('min')
+                if _min is not None:
+                    _min = character.evaluate_cvar(_min)
+                else: _min = "N/A"
+                _max = counter.get('max')
+                if _max is not None:
+                    _max = character.evaluate_cvar(_max)
+                else: _max = "N/A"
                 val += f"**Range**: {_min} - {_max}\n"
                 if not counter.get('reset') == 'none':
                     _resetMap = {'short': "Short Rest completed (`!shortrest`)",
@@ -139,7 +207,7 @@ class GameTrack:
         Will reset all if name is not passed, otherwise the specific passed one.
         A counter can only be reset if it has a maximum value.
         Reset hierarchy: short < long < default < none"""
-        character = Character(ctx)
+        character = Character.from_ctx(ctx)
         if name:
             try:
                 character.reset_consumable(name).commit(ctx)

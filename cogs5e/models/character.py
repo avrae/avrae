@@ -26,14 +26,18 @@ from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBo
 log = logging.getLogger(__name__)
 
 class Character: # TODO: refactor old commands to use this
-    def __init__(self, ctx):
+    def __init__(self, _dict, _id):
+        self.character = _dict
+        self.id = _id
+
+    @classmethod
+    def from_ctx(cls, ctx):
         user_characters = ctx.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = ctx.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             raise NoCharacter()
         character = user_characters[active_character]
-        self.character = character
-        self.id = active_character
+        return cls(character, active_character)
 
     def get_name(self):
         return self.character.get('stats', {}).get('name', "Unnamed")
@@ -44,9 +48,12 @@ class Character: # TODO: refactor old commands to use this
     def get_color(self):
         return self.character.get('settings', {}).get('color') or random.randint(0, 0xffffff)
 
+    def get_max_hp(self):
+        return self.character.get('hp', 0)
+
     def evaluate_cvar(self, varstr):
         ops = r"([-+*/().<>=])"
-        varstr = varstr.strip('<>{}')
+        varstr = str(varstr).strip('<>{}')
         cvars = self.character.get('cvars', {})
         stat_vars = self.character.get('stat_cvars', {})
         out = ""
@@ -69,11 +76,57 @@ class Character: # TODO: refactor old commands to use this
         return roll(out).total
 
     def commit(self, ctx):
-        """Writes a character object to the database, under the contextual author."""
+        """Writes a character object to the database, under the contextual author. Returns self."""
         user_characters = ctx.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[self.id] = self.character  # commit
-        return ctx.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        ctx.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        return self
 
+    def set_active(self, ctx):
+        """Sets the character as active. Returns self."""
+        active_characters = ctx.bot.db.not_json_get('active_characters', {})
+        active_characters[ctx.message.author.id] = self.id
+        ctx.bot.db.not_json_set('active_characters', active_characters)
+        return self
+
+    def initialize_consumables(self):
+        try:
+            assert self.character.get('consumables') is not None
+        except AssertionError:
+            self.character['consumables'] = {}
+        self._initialize_hp()
+        self._initialize_deathsaves()
+
+    def _initialize_hp(self):
+        try:
+            assert self.character['consumables'].get('hp') is not None
+        except AssertionError:
+            self.character['consumables']['hp'] = {'value': self.get_max_hp(), 'reset': 'long', 'max': self.get_max_hp(), 'min': 0}
+
+    def _initialize_deathsaves(self):
+        try:
+            assert self.character['consumables'].get('deathsaves') is not None
+        except AssertionError:
+            self.character['consumables']['deathsaves'] = {'fail': {'value': 0, 'reset': 'hp', 'max': 3, 'min': 0},
+                                                           'success': {'value': 0, 'reset': 'hp', 'max': 3, 'min': 0}}
+
+    def get_deathsaves(self):
+        self._initialize_deathsaves()
+        return self.character['consumables']['deathsaves']
+
+    def add_successful_ds(self):
+        """Adds a successful death save to the character.
+        Returns True if the character is stable."""
+        self._initialize_deathsaves()
+        self.character['consumables']['deathsaves']['success']['value'] += 1
+        return self.character['consumables']['deathsaves']['success']['value'] == 3
+
+    def add_failed_ds(self):
+        """Adds a failed death save to the character.
+        Returns True if the character is dead."""
+        self._initialize_deathsaves()
+        self.character['consumables']['deathsaves']['fail']['value'] += 1
+        return self.character['consumables']['deathsaves']['fail']['value'] == 3
 
     def _initialize_custom_counters(self):
         try:
@@ -93,17 +146,15 @@ class Character: # TODO: refactor old commands to use this
         _reset = kwargs.get('reset')
         try:
             assert _reset in ('short', 'long', 'none') or _reset is None
-            assert isinstance(_max, int) or _max is None
-            assert isinstance(_min, int) or _min is None
         except AssertionError:
-            raise InvalidArgument("Invalid reset, max, or min.")
+            raise InvalidArgument("Invalid reset.")
         if _max is not None and _min is not None:
             try:
-                assert _max >= _min
+                assert self.evaluate_cvar(_max) >= self.evaluate_cvar(_min)
             except AssertionError:
                 raise InvalidArgument("Max value is less than min value.")
         if _reset and _max is None: raise InvalidArgument("Reset passed but no maximum passed.")
-        newCounter = {'value': _max or 0}
+        newCounter = {'value': self.evaluate_cvar(_max) or 0}
         if _max is not None: newCounter['max'] = _max
         if _min is not None: newCounter['min'] = _min
         if _reset and _max is not None: newCounter['reset'] = _reset
@@ -122,8 +173,8 @@ class Character: # TODO: refactor old commands to use this
         except AssertionError:
             raise ConsumableNotFound()
         try:
-            assert self.character['consumables']['custom'][name].get('min', -(2 ** 64)) <= newValue <= \
-                   self.character['consumables']['custom'][name].get('max', 2 ** 64 - 1)
+            assert self.evaluate_cvar(self.character['consumables']['custom'][name].get('min', -(2 ** 64))) <= newValue <= \
+                   self.evaluate_cvar(self.character['consumables']['custom'][name].get('max', 2 ** 64 - 1))
         except:
             raise CounterOutOfBounds()
         self.character['consumables']['custom'][name]['value'] = newValue
@@ -165,11 +216,15 @@ class Character: # TODO: refactor old commands to use this
         """Resets all applicable consumables.
         Returns a list of the names of all reset counters."""
         reset = []
-        for name in self.character.get('consumables', {}).get('custom', {}):
-            try:
-                self.reset_consumable(name)
-            except NoReset:
-                pass
-            else:
-                reset.append(name)
+        reset.extend(self.on_hp()) # TODO
+        reset.extend(self.short_rest()) # TODO
+        reset.extend(self.long_rest()) # TODO
+        for name, value in self.character.get('consumables', {}).get('custom', {}).items():
+            if value.get('reset') is None:
+                try:
+                    self.reset_consumable(name)
+                except NoReset:
+                    pass
+                else:
+                    reset.append(name)
         return reset

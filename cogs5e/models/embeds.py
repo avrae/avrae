@@ -14,5 +14,6 @@ class EmbedWithCharacter(discord.Embed):
     """An embed with character image and name set."""
     def __init__(self, character, **kwargs):
         super(EmbedWithCharacter, self).__init__(**kwargs)
-        self.set_author(name=character.get_name(), icon_url=character.get_image())
+        self.set_author(name=character.get_name())
+        self.set_image(url=character.get_image())
         self.colour = character.get_color()

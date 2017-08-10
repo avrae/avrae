@@ -23,6 +23,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models.character import Character
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
@@ -188,7 +189,10 @@ class SheetManager:
         Args: adv/dis
               -b [conditional bonus]
               -phrase [flavor text]
-              -title [title] *note: [charname] and [sname] will be replaced automatically*"""
+              -title [title] *note: [charname] and [sname] will be replaced automatically*
+              -image [image URL]"""
+        if skill == 'death': return await self.bot.say("Run `!game deathsave` instead.")
+
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -780,13 +784,8 @@ class SheetManager:
         except Exception as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet. Capitalization matters!\n' + str(e))
-        
-        self.active_characters = self.bot.db.not_json_get('active_characters', {})
-        self.active_characters[ctx.message.author.id] = url
-        self.bot.db.not_json_set('active_characters', self.active_characters)
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        user_characters[url] = sheet['sheet']
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+
+        Character(sheet['sheet'], url).initialize_consumables().commit(ctx).set_active(ctx)
         
         embed = sheet['embed']
         try:
@@ -822,17 +821,11 @@ class SheetManager:
             log.error("Error loading PDFChar sheet:")
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
-        
-        self.active_characters = self.bot.db.not_json_get('active_characters', {})
-        self.active_characters[ctx.message.author.id] = file['filename']
-        self.bot.db.not_json_set('active_characters', self.active_characters)
-        
+
+        Character(sheet['sheet'], file['filename']).initialize_consumables().commit(ctx).set_active(ctx)
+
         embed = sheet['embed']
         await self.bot.say(embed=embed)
-        
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        user_characters[file['filename']] = sheet['sheet']
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         
     @commands.command(pass_context=True)
     async def gsheet(self, ctx, url:str):
@@ -869,12 +862,8 @@ class SheetManager:
         except TypeError:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
-        self.active_characters = self.bot.db.not_json_get('active_characters', {})
-        self.active_characters[ctx.message.author.id] = url
-        self.bot.db.not_json_set('active_characters', self.active_characters)
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        user_characters[url] = sheet['sheet']
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+
+        Character(sheet['sheet'], url).initialize_consumables().commit(ctx).set_active(ctx)
         
         embed = sheet['embed']
         try:

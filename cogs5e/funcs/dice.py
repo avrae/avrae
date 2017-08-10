@@ -61,7 +61,7 @@ class Roll(object):
         self.parts = parts
         
     def get_crit(self):
-        """Returns: int"""
+        """Returns: 0 for no crit, 1 for 20, 2 for 1."""
         try:
             crit = next(p.get_crit() for p in self.parts if isinstance(p, SingleDiceGroup))
         except StopIteration:

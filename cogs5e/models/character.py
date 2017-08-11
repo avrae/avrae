@@ -122,6 +122,11 @@ class Character: # TODO: refactor old commands to use this
 
         return self
 
+    def modify_hp(self, value):
+        """Modifies the character's hit points. Returns the Character object."""
+        self.set_hp(self.get_current_hp() + value)
+        return self
+
     def reset_hp(self):
         """Resets the character's HP to max. Returns the Character object."""
         self.set_hp(self.get_max_hp())

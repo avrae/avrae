@@ -63,6 +63,37 @@ class GameTrack:
         character.commit(ctx)
         await self.bot.say(embed=embed)
 
+    @game.command(pass_context=True, name='hp')
+    async def game_hp(self, ctx, operator = '', *, hp = ''):
+        """Modifies the HP of a the current active character.
+        If operator is not passed, assumes `mod`.
+        Operators: `mod`, `set`."""
+        character = Character.from_ctx(ctx)
+
+        if not operator == '':
+            hp_roll = roll(hp, inline=True, show_blurbs=False)
+
+            if 'mod' in operator.lower():
+                character.modify_hp(hp_roll.total)
+            elif 'set' in operator.lower():
+                character.set_hp(hp_roll.total)
+            elif hp == '':
+                hp_roll = roll(operator, inline=True, show_blurbs=False)
+                hp = operator
+                character.modify_hp(hp_roll.total)
+            else:
+                await self.bot.say("Incorrect operator. Use mod or set.")
+                return
+
+            character.commit(ctx)
+            out = "{}: {}/{}".format(character.get_name(), character.get_current_hp(), character.get_max_hp())
+            if 'd' in hp: out += '\n' + hp_roll.skeleton
+        else:
+            out = "{}: {}/{}".format(character.get_name(), character.get_current_hp(), character.get_max_hp())
+
+
+        await self.bot.say(out)
+
     @game.command(pass_context=True, name='deathsave', aliases=['ds'])
     async def game_deathsave(self, ctx, *args):
         """Rolls a death save.
@@ -88,8 +119,8 @@ class GameTrack:
 
         death_phrase = ''
         if save_roll.crit == 1:
-            # TODO: set hp to 1
-            pass
+            character.set_hp(1)
+            death_phrase = f"{character.get_name()} is UP with 1 HP!"
         elif save_roll.crit == 2:
             if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
             else:

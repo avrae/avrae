@@ -89,6 +89,7 @@ class PDFSheetParser(SheetParser):
         sheet = {'type': 'pdf',
                  'version': 4, #v3: added stat cvars
                                #v4: consumables
+                               #v5: spellbook
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': int(hp),
@@ -100,7 +101,8 @@ class PDFSheetParser(SheetParser):
                  'vuln': [],
                  'saves': saves,
                  'stat_cvars': stat_vars,
-                 'consumables': {}}
+                 'consumables': {},
+                 'spellbook': spellbook}
                 
         embed = self.get_embed(sheet)
         

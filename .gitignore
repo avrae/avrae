@@ -27,3 +27,4 @@ test/output/dicecloud-test.json
 /resources.txt
 /raspi.md
 /saves/
+/test/output/*

@@ -41,11 +41,15 @@ stat_vars = {}
 consumables = {'hp': {'value': 0, 'reset': 'long', 'max': 100}, # optional: max, min, reset
                'deathsaves': {'fail': {'value': 0, 'reset': 'hp'},
                               'success': {'value': 0, 'reset': 'hp'}},
-               'spellslots': {"1": {'value': 0, 'reset': 'long'},
-                              "2": {'value': 0, 'reset': 'long'}}, # etc
+               'spellslots': {'1': {'value': 0, 'reset': 'long'},
+                              '2': {'value': 0, 'reset': 'long'}}, # etc
                'custom': {'NAME': {'value': 0, 'reset': 'long'},
                           'NAME2': {'value': 0, 'reset': 'long'}} # etc
                }
+
+spellbook = {'spellslots': {"1": 4,
+                            "2": 3}, # etc, max only
+             'spells': ['Fireball', 'Fire Bolt']} # etc
 
 character = {'type': 'dicecloud',
              'version': 6,
@@ -63,5 +67,6 @@ character = {'type': 'dicecloud',
              'overrides': {}, # optional
              'cvars': {}, # optional
              'skill_effects': {}, # v7dc
-             'consumables': {} #v3gsht, v3pdf, v8dc
+             'consumables': {}, #v3gsht, v3pdf, v8dc
+             'spellbook': spellbook # v4gsht, v4pdf, v9dc
              }

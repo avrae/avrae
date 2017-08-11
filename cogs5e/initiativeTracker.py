@@ -22,6 +22,7 @@ from discord.ext import commands
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchAutoSpellFull
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models.character import Character
 from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
     parse_args_3, parse_cvars, evaluate_cvar, parse_resistances, \
@@ -253,14 +254,14 @@ class Combatant(object):
         return status
     
 class DicecloudCombatant(Combatant):
-    def __init__(self, init:int=0, author:discord.User=None, notes:str='', effects=[], private:bool=False, group:str=None, sheet=None):
+    def __init__(self, init:int=0, author:discord.User=None, notes:str='', effects=[], private:bool=False, group:str=None, sheet=None, character=None):
         self.init = init
         self.name = sheet.get('stats', {}).get('name', 'Unknown')
         self.author = author
         self.mod = sheet.get('skills', {}).get('initiative', 0)
         self.notes = notes
         self.effects = effects
-        self.hp = sheet.get('hp')
+        self.hp = character.get_current_hp()
         self.max_hp = sheet.get('hp')
         self.ac = sheet.get('armor')
         self.private = private
@@ -270,6 +271,8 @@ class DicecloudCombatant(Combatant):
         self.vuln = sheet.get('vuln', [])
         self.saves = sheet.get('saves', {})
         self.sheet = sheet
+        self.id = character.id
+
         
     def __str__(self):
         return self.name
@@ -518,11 +521,8 @@ class InitTracker:
               -p [init value]
               -h (same as !init add)
               --group (same as !init add)"""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no characters loaded.')
-        character = user_characters[active_character]
+        char = Character.from_ctx(ctx)
+        character = char.character
         skills = character.get('skills')
         if skills is None:
             return await self.bot.say('You must update your character sheet first.')
@@ -568,7 +568,7 @@ class InitTracker:
         group = args.get('group')
         controller = ctx.message.author
         
-        me = DicecloudCombatant(init=init, author=ctx.message.author, effects=[], notes='', private=args.get('h', False), group=args.get('group', None), sheet=character)
+        me = DicecloudCombatant(init=init, author=ctx.message.author, effects=[], notes='', private=args.get('h', False), group=args.get('group', None), sheet=character, character=char)
         if group is None:
             combat.combatants.append(me)
             embed.set_footer(text="Added to combat!")
@@ -1629,7 +1629,8 @@ class InitTracker:
     @init.command(pass_context=True)
     async def end(self, ctx):
         """Ends combat in the channel.
-        Usage: !init end"""
+        Usage: !init end
+        Syncronises final HP."""
         try:
             combat = next(c for c in self.combats if c.channel is ctx.message.channel)
         except StopIteration:
@@ -1653,6 +1654,11 @@ class InitTracker:
             
         for c in combat.combatants:
             if isinstance(c, DicecloudCombatant):
+                try:
+                    character = Character.from_bot_and_ids(self.bot, c.author.id, c.id)
+                    character.set_hp(c.hp).manual_commit(self.bot, c.author.id)
+                except:
+                    pass
                 try:
                     await self.bot.send_message(c.author, "{}'s final HP: {}".format(c.name, c.get_hp(True)))
                 except:

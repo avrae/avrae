@@ -22,6 +22,7 @@ from discord.ext import commands
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchAutoSpellFull
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models.character import Character
 from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
     parse_args_3, parse_cvars, evaluate_cvar, parse_resistances, \
@@ -45,7 +46,7 @@ class Combat(object):
         self.stats = {}
         self.lastmodified = datetime.datetime.now()
         
-    def get_combatant(self, name, precise=False):
+    def get_combatant(self, name, ctx, precise=False):
         combatant = None
         allCombatants = []
         for c in self.combatants:
@@ -62,7 +63,8 @@ class Combat(object):
                     combatant = next(c for c in allCombatants if name.lower() in c.name.lower() and isinstance(c, Combatant))
             except StopIteration:
                 pass
-            
+        if isinstance(combatant, DicecloudCombatant):
+            combatant._ctx = ctx
         return combatant
     
     def get_combatant_group(self, name):
@@ -81,6 +83,7 @@ class Combat(object):
             if isinstance(c, CombatantGroup):
                 if len(c.combatants) == 0:
                     self.combatants.remove(c)
+
     
     def getSummary(self):
         combatants = sorted(self.combatants, key=lambda k: (k.init, k.mod), reverse=True)
@@ -196,8 +199,8 @@ class Combatant(object):
             out.append(self.notes)
         out = ', '.join(out)
         return out
-    
-    def get_hp(self, private:bool=False):
+
+    def get_hp_str(self, private:bool=False):
         hpStr = ''
         if not self.private or private:
             hpStr = '<{}/{} HP>'.format(self.hp, self.max_hp) if self.max_hp is not None else '<{} HP>'.format(self.hp) if self.hp is not None else ''
@@ -209,7 +212,7 @@ class Combatant(object):
                 hpStr = "<Injured>"
             elif 0.15 < ratio <= 0.5:
                 hpStr = "<Bloodied>"
-            elif 0 < ratio <= 0.15:
+            elif 0.0 < ratio <= 0.15:
                 hpStr = "<Critical>"
             elif ratio <= 0:
                 hpStr = "<Dead>"
@@ -217,7 +220,7 @@ class Combatant(object):
     
     def get_hp_and_ac(self, private:bool=False):
         out = []
-        out.append(self.get_hp(private))
+        out.append(self.get_hp_str(private))
         if self.ac is not None and (not self.private or private):
             out.append("(AC {})".format(self.ac))
         return ' '.join(out)
@@ -247,20 +250,21 @@ class Combatant(object):
     
     def get_short_status(self):
         status = "{}: {} {}({})".format(self.init,
-                                          self.name,
-                                          self.get_hp() + ' ' if self.get_hp() is not '' else '',
-                                          self.get_effects_and_notes())
+                                        self.name,
+                                        self.get_hp_str() + ' ' if self.get_hp_str() is not '' else '',
+                                        self.get_effects_and_notes())
         return status
     
 class DicecloudCombatant(Combatant):
-    def __init__(self, init:int=0, author:discord.User=None, notes:str='', effects=[], private:bool=False, group:str=None, sheet=None):
+    def __init__(self, init:int=0, author:discord.User=None, notes:str='', effects=[], private:bool=False, group:str=None, sheet=None, id=None):
         self.init = init
         self.name = sheet.get('stats', {}).get('name', 'Unknown')
         self.author = author
+        self.original_author = author
         self.mod = sheet.get('skills', {}).get('initiative', 0)
         self.notes = notes
         self.effects = effects
-        self.hp = sheet.get('hp')
+        self.hp = sheet.get('hp') # deprecated
         self.max_hp = sheet.get('hp')
         self.ac = sheet.get('armor')
         self.private = private
@@ -270,9 +274,41 @@ class DicecloudCombatant(Combatant):
         self.vuln = sheet.get('vuln', [])
         self.saves = sheet.get('saves', {})
         self.sheet = sheet
-        
+        self.id = id
+        self.deathsaves = {'fail': {'value': 0, 'reset': 'hp'},
+                           'success': {'value': 0, 'reset': 'hp'}}
+
     def __str__(self):
         return self.name
+
+    def get_hp_str(self, private: bool = False):
+        hpStr = ''
+        ratio = self.hp / self.max_hp  # less db calls
+        if ratio <= 0:
+            ds = self.deathsaves
+            successes = ds['success']['value']
+            failures = ds['fail']['value']
+            if failures >= 3:
+                hpStr = "<Dead>"
+            elif successes >= 3:
+                hpStr = "<Unconscious, stable>"
+            else:
+                hpStr = "<Unconscious, unstable>"
+        elif not self.private or private:
+            hpStr = '<{}/{} HP>'.format(self.hp, self.max_hp) if self.max_hp is not None else '<{} HP>'.format(
+                self.hp) if self.hp is not None else ''
+        elif self.max_hp is not None and self.max_hp > 0:
+            if ratio >= 1:
+                hpStr = "<Healthy>"
+            elif 0.5 < ratio < 1:
+                hpStr = "<Injured>"
+            elif 0.15 < ratio <= 0.5:
+                hpStr = "<Bloodied>"
+            elif 0.0 < ratio <= 0.15:
+                hpStr = "<Critical>"
+            elif ratio <= 0:
+                hpStr = "<Dead>"
+        return hpStr
     
 class MonsterCombatant(Combatant):
     def __init__(self, name:str='', init:int=0, author:discord.User=None, notes:str='', effects=[], private:bool=True, group:str=None, modifier:int=0, monster=None, opts={}):
@@ -368,6 +404,22 @@ class InitTracker:
         self.bot = bot
         self.combats = []  # structure: array of dicts with structure {channel (Channel/Member), combatants (list of dict, [{init, name, author, mod, notes, effects}]), current (int), round (int)}
         self.bot.loop.create_task(self.panic_load())
+
+    # Annoying helper funcs
+
+    def _get_hp(self, combatant):
+        if isinstance(combatant, DicecloudCombatant):
+            character = Character.from_bot_and_ids(self.bot, combatant.original_author.id, combatant.id)
+            return character.get_current_hp()
+        else:
+            return combatant.hp
+
+    def _set_hp(self, combatant, value):
+        if isinstance(combatant, DicecloudCombatant):
+            character = Character.from_bot_and_ids(self.bot, combatant.original_author.id, combatant.id)
+            character.set_hp(value).manual_commit(self.bot, combatant.original_author.id)
+            combatant.deathsaves = character.get_deathsaves()
+        combatant.hp = value
         
     @commands.group(pass_context=True, aliases=['i'], no_pm=True)
     async def init(self, ctx):
@@ -476,7 +528,7 @@ class InitTracker:
             await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
             return
         
-        if combat.get_combatant(name, True) is not None:
+        if combat.get_combatant(name, ctx, True) is not None:
             await self.bot.say("Combatant already exists.")
             return
         
@@ -518,11 +570,8 @@ class InitTracker:
               -p [init value]
               -h (same as !init add)
               --group (same as !init add)"""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no characters loaded.')
-        character = user_characters[active_character]
+        char = Character.from_ctx(ctx)
+        character = char.character
         skills = character.get('skills')
         if skills is None:
             return await self.bot.say('You must update your character sheet first.')
@@ -533,7 +582,7 @@ class InitTracker:
             await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
             return
         
-        if combat.get_combatant(character.get('stats', {}).get('name'), True) is not None:
+        if combat.get_combatant(char.get_name(), ctx, True) is not None:
             await self.bot.say("Combatant already exists.")
             return
         
@@ -556,19 +605,19 @@ class InitTracker:
             else:
                 check_roll = roll('1d20' + '{:+}'.format(skills[skill]), adv=adv, inline=True)
             
-            embed.title = '{} makes an {} check!'.format(character.get('stats', {}).get('name'),
+            embed.title = '{} makes an {} check!'.format(char.get_name(),
                                                         re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title())
             embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
             init = check_roll.total
         else:
             init = int(p)
-            embed.title = "{} already rolled initiative!".format(character.get('stats', {}).get('name'))
+            embed.title = "{} already rolled initiative!".format(char.get_name())
             embed.description = "Placed at initiative `{}`.".format(init)
         
         group = args.get('group')
         controller = ctx.message.author
         
-        me = DicecloudCombatant(init=init, author=ctx.message.author, effects=[], notes='', private=args.get('h', False), group=args.get('group', None), sheet=character)
+        me = DicecloudCombatant(init=init, author=ctx.message.author, effects=[], notes='', private=args.get('h', False), group=args.get('group', None), sheet=character, id=char.id)
         if group is None:
             combat.combatants.append(me)
             embed.set_footer(text="Added to combat!")
@@ -598,7 +647,7 @@ class InitTracker:
         except StopIteration:
             await self.bot.say("You are not in combat. Please start combat with \"!init begin\".")
             return
-        combatant = combat.get_combatant(combatant)
+        combatant = combat.get_combatant(combatant, ctx)
         if combatant is None:
             return await self.bot.say('Combatant not found.', delete_after=10)
         elif not isinstance(combatant, DicecloudCombatant):
@@ -654,7 +703,7 @@ class InitTracker:
         
         for i in range(recursion):
             name = args.get('name', monster['name'][:2].upper() + '#').replace('#', str(i + 1))
-            if combat.get_combatant(name, True) is not None:
+            if combat.get_combatant(name, ctx, True) is not None:
                 out += "{} already exists.\n".format(name)
                 continue
             
@@ -804,7 +853,7 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(combatant)
+        combatant = combat.get_combatant(combatant, ctx)
         if combatant is None:
             await self.bot.say("Combatant not found.")
             return
@@ -835,7 +884,7 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(combatant)
+        combatant = combat.get_combatant(combatant, ctx)
         if combatant is None:
             await self.bot.say("Combatant not found.")
             return
@@ -909,7 +958,7 @@ class InitTracker:
                     out += "\u274c New group not found.\n"
         if 'name' in args:
             name = args.get('name')
-            if combat.get_combatant(name, True) is not None:
+            if combat.get_combatant(name, ctx, True) is not None:
                 out += "\u274c There is already another combatant with that name.\n"
             elif name:
                 combatant.name = name
@@ -961,7 +1010,7 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(combatant) or combat.get_combatant_group(combatant)
+        combatant = combat.get_combatant(combatant, ctx) or combat.get_combatant_group(combatant)
         if combatant is None:
             await self.bot.say("Combatant or group not found.")
             return
@@ -986,7 +1035,7 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(combatant)
+        combatant = combat.get_combatant(combatant, ctx)
         if combatant is None:
             await self.bot.say("Combatant not found.")
             return
@@ -994,35 +1043,31 @@ class InitTracker:
         hp_roll = roll(hp, inline=True, show_blurbs=False)
         
         if 'mod' in operator.lower():
-            if combatant.hp is None:
-                combatant.hp = 0
-            combatant.hp += hp_roll.total
+            self._set_hp(combatant, self._get_hp(combatant) + hp_roll.total)
         elif 'set' in operator.lower():
-            combatant.hp = hp_roll.total
+            self._set_hp(combatant, hp_roll.total)
         elif 'max' in operator.lower():
             if hp_roll.total < 1:
                 await self.bot.say("You can't have a negative max HP!")
-            elif combatant.hp is None:
-                combatant.hp = hp_roll.total
+            elif self._get_hp(combatant) is None:
+                self._set_hp(combatant, hp_roll.total)
                 combatant.max_hp = hp_roll.total
             else:
                 combatant.max_hp = hp_roll.total
         elif hp == '':
             hp_roll = roll(operator, inline=True, show_blurbs=False)
-            if combatant.hp is None:
-                combatant.hp = 0
-            combatant.hp += hp_roll.total
+            self._set_hp(combatant, self._get_hp(combatant) + hp_roll.total)
         else:
             await self.bot.say("Incorrect operator. Use mod, set, or max.")
             return
         
-        out = "{}: {}".format(combatant.name, combatant.get_hp())
+        out = "{}: {}".format(combatant.name, self._get_hp_str(combatant))
         if 'd' in hp: out += '\n' + hp_roll.skeleton
         
         await self.bot.say(out, delete_after=10)
         if combatant.private:
             try:
-                await self.bot.send_message(combatant.author, "{}'s HP: {}/{}".format(combatant.name, combatant.hp, combatant.max_hp))
+                await self.bot.send_message(combatant.author, "{}'s HP: {}/{}".format(combatant.name, self._get_hp_str(combatant, True), combatant.max_hp))
             except:
                 pass
         await combat.update_summary(self.bot)
@@ -1038,7 +1083,7 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(combatant)
+        combatant = combat.get_combatant(combatant, ctx)
         if combatant is None:
             await self.bot.say("Combatant not found.")
             return
@@ -1061,7 +1106,7 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(combatant)
+        combatant = combat.get_combatant(combatant, ctx)
         if combatant is None:
             await self.bot.say("Combatant not found.")
             return
@@ -1096,7 +1141,7 @@ class InitTracker:
         except StopIteration:
             await self.bot.say("You are not in combat.")
             return
-        target = combat.get_combatant(target_name)
+        target = combat.get_combatant(target_name, ctx)
         if target is None:
             await self.bot.say("Target not found.")
             return
@@ -1105,7 +1150,7 @@ class InitTracker:
             if combatant is None:
                 return await self.bot.say("You must start combat with `!init next` first.")
         else:
-            combatant = combat.get_combatant(combatant_name)
+            combatant = combat.get_combatant(combatant_name, ctx)
             if combatant is None:
                 return await self.bot.say("Combatant not found.")
         
@@ -1150,7 +1195,7 @@ class InitTracker:
             args['hocrit'] = combatant.sheet.get('settings', {}).get('hocrit') or False
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get('color') is None else combatant.sheet.get('settings', {}).get('color')
-            if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
+            if target.ac is not None and self._get_hp(target) is not None: self._set_hp(target, self._get_hp(target) - result['total_damage'])
         elif isinstance(combatant, MonsterCombatant):
             attacks = combatant.monster.get('attacks') # get attacks
             attack = fuzzy_search(attacks, 'name', atk_name)
@@ -1168,7 +1213,7 @@ class InitTracker:
             args['vuln'] = args.get('vuln') or '|'.join(target.vuln)
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff)
-            if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
+            if target.ac is not None and self._get_hp(target) is not None: self._set_hp(target, self._get_hp(target) - result['total_damage'])
         elif isinstance(combatant, CombatantGroup):
             attacks = []
             for c in combatant.combatants:
@@ -1187,16 +1232,16 @@ class InitTracker:
             args['t'] = target.name
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff)
-            if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
+            if target.ac is not None and self._get_hp(target) is not None: self._set_hp(target, self._get_hp(target) - result['total_damage'])
         else:
             return await self.bot.say('Integrated attacks are only supported for combatants added via `madd` or `dcadd`.', delete_after=15)
         embed = result['embed']
         if target.ac is not None:
-            if target.hp is not None:
-                embed.set_footer(text="{}: {}".format(target.name, target.get_hp()))
+            if self._get_hp(target) is not None:
+                embed.set_footer(text="{}: {}".format(target.name, self._get_hp_str(target)))
                 if target.private:
                     try:
-                        await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                        await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, self._get_hp(target), target.max_hp))
                     except:
                         pass
             else:
@@ -1265,7 +1310,7 @@ class InitTracker:
         
         damage_save = None
         for i, t in enumerate(args.get('t', [])):
-            target = combat.get_combatant(t)
+            target = combat.get_combatant(t, ctx)
             if target is None:
                 embed.add_field(name="{} not found!".format(t), value="Target not found.")
             elif not isinstance(target, (DicecloudCombatant, MonsterCombatant)):
@@ -1351,12 +1396,12 @@ class InitTracker:
                         
                         embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
                         
-                        if target.hp is not None:
-                            target.hp -= dmgroll.total
-                            embed_footer += "{}: {}\n".format(target.name, target.get_hp())
+                        if self._get_hp(target) is not None:
+                            self._set_hp(target, self._get_hp(target) - dmgroll.total)
+                            embed_footer += "{}: {}\n".format(target.name, self._get_hp_str(target))
                             if target.private:
                                 try:
-                                    await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                                    await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, self._get_hp(target), target.max_hp))
                                 except:
                                     pass
                         else:
@@ -1398,12 +1443,12 @@ class InitTracker:
                     
                     embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
                         
-                    if target.hp is not None:
-                        target.hp -= result['total_damage']
-                        embed_footer += "{}: {}\n".format(target.name, target.get_hp())
+                    if self._get_hp(target) is not None:
+                        self._set_hp(target, self._get_hp(target) - result['total_damage'])
+                        embed_footer += "{}: {}\n".format(target.name, self._get_hp_str(target))
                         if target.private:
                             try:
-                                await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                                await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, self._get_hp(target), target.max_hp))
                             except:
                                 pass
                     else:
@@ -1424,12 +1469,12 @@ class InitTracker:
                     
                     embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
                         
-                    if target.hp is not None:
-                        target.hp -= result['total_damage']
-                        embed_footer += "{}: {}\n".format(target.name, target.get_hp())
+                    if self._get_hp(target) is not None:
+                        self._set_hp(target, self._get_hp(target) - result['total_damage'])
+                        embed_footer += "{}: {}\n".format(target.name, self._get_hp_str(target))
                         if target.private:
                             try:
-                                await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                                await self.bot.send_message(target.author, "{}'s HP: {}/{}".format(target.name, self._get_hp(target), target.max_hp))
                             except:
                                 pass
                     else:
@@ -1501,7 +1546,7 @@ class InitTracker:
         args = parse_args(shlex.split(args))
         supplied_target = None
         if 't' in args:
-            supplied_target = combat.get_combatant(args.get('t'))
+            supplied_target = combat.get_combatant(args.get('t'), ctx)
             if supplied_target is None:
                 await self.bot.say("Target not found.")
                 return
@@ -1561,7 +1606,7 @@ class InitTracker:
                 args['t'] = target.name
                 result = sheet_attack(a, args)
                 if target.ac is not None:
-                    if target.hp is not None: target.hp -= result['total_damage']
+                    if self._get_hp(target) is not None: self._set_hp(target, self._get_hp(target) - result['total_damage'])
                 
                 if isinstance(current, DicecloudCombatant):
                     result['embed'].colour = random.randint(0, 0xffffff) if current.sheet.get('settings', {}).get('color') is None else current.sheet.get('settings', {}).get('color')
@@ -1571,13 +1616,13 @@ class InitTracker:
                     return await self.bot.say('Integrated attacks are only supported for combatants added via `madd` or `dcadd`.', delete_after=15)
                 embed = result['embed']
                 if target.ac is not None:
-                    if target.hp is not None: embed.set_footer(text="{}: {}".format(target.name, target.get_hp()))
+                    if self._get_hp(target) is not None: embed.set_footer(text="{}: {}".format(target.name, self._get_hp(target)))
                     else: embed.set_footer(text="Target HP not set.")
                 else: embed.set_footer(text="Target AC not set.")
                 killed = ""
-                if target.hp is not None:
-                    killed = "\n- Killed {}!".format(target.name) if target.hp <= 0 else ""
-#                     if target.hp <= 0:
+                if self._get_hp(target) is not None:
+                    killed = "\n- Killed {}!".format(target.name) if self._get_hp(target) <= 0 else ""
+#                     if self._get_hp(target <= 0:
 #                         if target.group is None:
 #                             combat.combatants.remove(target)
 #                         else:
@@ -1599,7 +1644,7 @@ class InitTracker:
             await self.bot.say("You are not in combat.")
             return
         
-        combatant = combat.get_combatant(name) or combat.get_combatant_group(name)
+        combatant = combat.get_combatant(name, ctx) or combat.get_combatant_group(name)
         if combatant is None:
             await self.bot.say("Combatant or group not found.")
             return
@@ -1654,7 +1699,7 @@ class InitTracker:
         for c in combat.combatants:
             if isinstance(c, DicecloudCombatant):
                 try:
-                    await self.bot.send_message(c.author, "{}'s final HP: {}".format(c.name, c.get_hp(True)))
+                    await self.bot.send_message(c.author, "{}'s final HP: {}".format(c.name, self._get_hp_str(c, True)))
                 except:
                     pass
         
@@ -1674,7 +1719,7 @@ class InitTracker:
     def __unload(self):
         self.panic_save()
             
-    def panic_save(self):
+    def panic_save(self): # TODO: make this better
         temp_key = []
         for combat in self.combats:
             combat.combatantGenerator = None

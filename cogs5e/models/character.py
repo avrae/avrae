@@ -39,6 +39,13 @@ class Character: # TODO: refactor old commands to use this
         character = user_characters[active_character]
         return cls(character, active_character)
 
+    @classmethod
+    def from_bot_and_ids(cls, bot, author_id, character_id):
+        user_characters = bot.db.not_json_get(author_id + '.characters', {})
+        character = user_characters.get(character_id)
+        if character is None: raise NoCharacter()
+        return cls(character, character_id)
+
     def get_name(self):
         return self.character.get('stats', {}).get('name', "Unnamed")
 
@@ -80,6 +87,12 @@ class Character: # TODO: refactor old commands to use this
         user_characters = ctx.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[self.id] = self.character  # commit
         ctx.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        return self
+
+    def manual_commit(self, bot, author_id):
+        user_characters = bot.db.not_json_get(author_id + '.characters', {})
+        user_characters[self.id] = self.character  # commit
+        bot.db.not_json_set(author_id + '.characters', user_characters)
         return self
 
     def set_active(self, ctx):
@@ -266,8 +279,9 @@ class Character: # TODO: refactor old commands to use this
         Returns a list of the names of all reset counters."""
         reset = []
         reset.extend(self._reset_custom('hp'))
-        self.reset_death_saves()
-        reset.append("Death Saves")
+        if self.get_current_hp() > 0: # lel
+            self.reset_death_saves()
+            reset.append("Death Saves")
         return reset
 
     def short_rest(self):

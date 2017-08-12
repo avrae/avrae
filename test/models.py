@@ -49,7 +49,9 @@ consumables = {'hp': {'value': 0, 'reset': 'long', 'max': 100}, # optional: max,
 
 spellbook = {'spellslots': {"1": 4,
                             "2": 3}, # etc, max only
-             'spells': ['Fireball', 'Fire Bolt']} # etc
+             'spells': ['Fireball', 'Fire Bolt'],
+             'dc': 10,
+             'attackBonus': 3} # etc
 
 character = {'type': 'dicecloud',
              'version': 6,

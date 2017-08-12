@@ -103,12 +103,14 @@ class Character: # TODO: refactor old commands to use this
         return self
 
     def initialize_consumables(self):
+        """Initializes a character's consumable counters. Returns self."""
         try:
             assert self.character.get('consumables') is not None
         except AssertionError:
             self.character['consumables'] = {}
         self._initialize_hp()
         self._initialize_deathsaves()
+        return self
 
     def _initialize_hp(self):
         try:

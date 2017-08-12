@@ -22,9 +22,11 @@ damage_snippets-backup.json
 
 .idea/inspectionProfiles/Project_Default.xml
 
-test/output/dicecloud-test.json
 /stdout.txt
 /resources.txt
 /raspi.md
 /saves/
 /test/output/*
+
+
+test/test.pdf

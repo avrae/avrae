@@ -41,9 +41,45 @@ class GameTrack:
         if ctx.invoked_subcommand is None:
             await self.bot.say("Incorrect usage. Use !help game for help.")
 
+    @game.command(pass_context=True, name='status', aliases=['summary'])
+    async def game_status(self, ctx):
+        """Prints the status of the current active character."""
+        character = Character.from_ctx(ctx)
+        embed = EmbedWithCharacter(character)
+        embed.add_field(name="Hit Points", value=f"{character.get_current_hp()}/{character.get_max_hp()}")
+        embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str())
+        for name, counter in character.get_all_consumables().items():
+            val = self._get_cc_value(character, counter)
+            embed.add_field(name=name, value=val)
+        await self.bot.say(embed=embed)
+
+    @game.command(pass_context=True, name='spellslot', aliases=['ss'])
+    async def game_spellslot(self, ctx, level:int=None, value:int=None):
+        """Views or sets your remaining spell slots."""
+        if level is not None:
+            try:
+                assert 0 < level < 10
+            except AssertionError:
+                return await self.bot.say("Invalid spell level.")
+        character = Character.from_ctx(ctx)
+        embed = EmbedWithCharacter(character)
+        embed.set_footer(text="\u25c9 = Available / \u3007 = Used")
+        if level is None and value is None: # show remaining
+            embed.description = f"__**Remaining Spell Slots**__\n{character.get_remaining_slots_str()}"
+        elif value is None:
+            embed.description = f"__**Remaining Level {level} Spell Slots**__\n{character.get_remaining_slots_str(level)}"
+        else:
+            try: assert 0 <= value <= character.get_max_spellslots(level)
+            except AssertionError: raise CounterOutOfBounds()
+            character.set_remaining_slots(level, value).commit(ctx)
+            embed.description = f"__**Remaining Level {level} Spell Slots**__\n{character.get_remaining_slots_str(level)}"
+        await self.bot.say(embed=embed)
+
     @game.command(pass_context=True, name='longrest', aliases=['lr'])
-    async def game_longrest(self, ctx):
-        """Performs a long rest, resetting applicable counters."""
+    async def game_longrest(self, ctx, *args):
+        """Performs a long rest, resetting applicable counters.
+        __Valid Arguments__
+        -h - Hides the character summary output."""
         character = Character.from_ctx(ctx)
         reset = character.long_rest()
         embed = EmbedWithCharacter(character, name=False)
@@ -51,10 +87,14 @@ class GameTrack:
         embed.add_field(name="Reset Values", value=', '.join(set(reset)))
         character.commit(ctx)
         await self.bot.say(embed=embed)
+        if not '-h' in args:
+            await ctx.invoke(self.game_status)
 
     @game.command(pass_context=True, name='shortrest', aliases=['sr'])
-    async def game_shortrest(self, ctx):
-        """Performs a short rest, resetting applicable counters."""
+    async def game_shortrest(self, ctx, *args):
+        """Performs a short rest, resetting applicable counters.
+        __Valid Arguments__
+        -h - Hides the character summary output."""
         character = Character.from_ctx(ctx)
         reset = character.short_rest()
         embed = EmbedWithCharacter(character, name=False)
@@ -62,6 +102,8 @@ class GameTrack:
         embed.add_field(name="Reset Values", value=', '.join(set(reset)))
         character.commit(ctx)
         await self.bot.say(embed=embed)
+        if not '-h' in args:
+            await ctx.invoke(self.game_status)
 
     @game.command(pass_context=True, name='hp')
     async def game_hp(self, ctx, operator = '', *, hp = ''):
@@ -233,35 +275,25 @@ class GameTrack:
         character = Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         for name, counter in character.get_all_consumables().items():
-            val = f"**Current Value**: {counter.get('value', 0)}\n"
-            if any(r in counter for r in ('max', 'min')):
-                _min = counter.get('min')
-                if _min is not None:
-                    _min = character.evaluate_cvar(_min)
-                else: _min = "N/A"
-                _max = counter.get('max')
-                if _max is not None:
-                    _max = character.evaluate_cvar(_max)
-                else: _max = "N/A"
-                val += f"**Range**: {_min} - {_max}\n"
-                if not counter.get('reset') == 'none':
-                    _resetMap = {'short': "Short Rest completed (`!game shortrest`)",
-                                 'long': "Long Rest completed (`!game longrest`)",
-                                 'reset': "`!cc reset` is called",
-                                 'hp': "Character has >0 HP",
-                                 None: "Unknown Reset"}
-                    _reset = _resetMap.get(counter.get('reset', 'reset'), _resetMap[None])
-                    val += f"**Resets When**: {_reset}\n"
+            val = self._get_cc_value(character, counter)
             embed.add_field(name=name, value=val)
         await self.bot.say(embed=embed)
 
     @customcounter.command(pass_context=True, name='reset')
-    async def customcounter_reset(self, ctx, name=None):
+    async def customcounter_reset(self, ctx, *args):
         """Resets custom counters, hp, death saves, and spell slots.
         Will reset all if name is not passed, otherwise the specific passed one.
         A counter can only be reset if it has a maximum value.
-        Reset hierarchy: short < long < default < none"""
+        Reset hierarchy: short < long < default < none
+        __Valid Arguments__
+        -h - Hides the character summary output."""
         character = Character.from_ctx(ctx)
+        try:
+            name = args[0]
+        except IndexError:
+            name = None
+        else:
+            if name == '-h': name = None
         if name:
             try:
                 character.reset_consumable(name).commit(ctx)
@@ -273,6 +305,33 @@ class GameTrack:
             reset_consumables = character.reset_all_consumables()
             character.commit(ctx)
             await self.bot.say(f"Reset counters: {', '.join(set(reset_consumables)) or 'none'}")
+        if not '-h' in args:
+            await ctx.invoke(self.game_status)
+
+
+    def _get_cc_value(self, character, counter):
+        val = f"**Current Value**: {counter.get('value', 0)}\n"
+        if any(r in counter for r in ('max', 'min')):
+            _min = counter.get('min')
+            if _min is not None:
+                _min = character.evaluate_cvar(_min)
+            else:
+                _min = "N/A"
+            _max = counter.get('max')
+            if _max is not None:
+                _max = character.evaluate_cvar(_max)
+            else:
+                _max = "N/A"
+            val += f"**Range**: {_min} - {_max}\n"
+            if not counter.get('reset') == 'none':
+                _resetMap = {'short': "Short Rest completed (`!game shortrest`)",
+                             'long': "Long Rest completed (`!game longrest`)",
+                             'reset': "`!cc reset` is called",
+                             'hp': "Character has >0 HP",
+                             None: "Unknown Reset"}
+                _reset = _resetMap.get(counter.get('reset', 'reset'), _resetMap[None])
+                val += f"**Resets When**: {_reset}\n"
+        return val
 
 
     @commands.command(pass_context=True)

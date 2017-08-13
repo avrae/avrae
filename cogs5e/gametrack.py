@@ -303,20 +303,6 @@ class GameTrack:
 
         char = Character.from_ctx(ctx)
 
-        can_cast = True
-        spell_level = int(spell.get('level', 0))
-
-        # make sure we can cast it
-        try:
-            assert char.get_remaining_slots(spell_level) > 0
-            assert spell_name in char.get_spell_list()
-        except AssertionError:
-            can_cast = False
-        else:
-            # use a spell slot
-            char.use_slot(spell_level)
-
-
         tempargs = list(args)
         user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
         for index, arg in enumerate(tempargs):  # parse snippets
@@ -330,6 +316,19 @@ class GameTrack:
         args = char.parse_cvars(args)
         args = shlex.split(args)
         args = parse_args_3(args)
+
+        can_cast = True
+        spell_level = int(spell.get('level', 0))
+
+        # make sure we can cast it
+        try:
+            assert char.get_remaining_slots(spell_level) > 0
+            assert spell_name in char.get_spell_list()
+        except AssertionError:
+            can_cast = False
+        else:
+            # use a spell slot
+            char.use_slot(spell_level)
 
         if args.get('i'):
             can_cast = True

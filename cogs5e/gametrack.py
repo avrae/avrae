@@ -319,16 +319,22 @@ class GameTrack:
 
         can_cast = True
         spell_level = int(spell.get('level', 0))
+        try:
+            cast_level = int(args.get('l', [spell_level])[-1])
+            assert spell_level <= cast_level <= 9
+        except (AssertionError, ValueError):
+            return await self.bot.say("Invalid spell level.")
 
         # make sure we can cast it
         try:
-            assert char.get_remaining_slots(spell_level) > 0
+            assert char.get_remaining_slots(cast_level) > 0
             assert spell_name in char.get_spell_list()
         except AssertionError:
             can_cast = False
         else:
             # use a spell slot
-            char.use_slot(spell_level)
+            if not args.get('i'):
+                char.use_slot(cast_level)
 
         if args.get('i'):
             can_cast = True
@@ -337,10 +343,17 @@ class GameTrack:
             embed = EmbedWithCharacter(char)
             embed.title = "Cannot cast spell!"
             embed.description = "Not enough spell slots remaining, or spell not in known spell list!"
-            # TODO: add footer with remaining spell slots
+            embed.set_footer(text=f"L{cast_level} slots: {char.get_remaining_slots(cast_level)}/{char.get_max_spellslots(cast_level)}")
             return await self.bot.say(embed=embed)
 
+        upcast_dmg = None
+        if not cast_level == spell_level:
+            upcast_dmg = spell.get('higher_levels', {}).get(str(cast_level))
+
         embed = discord.Embed()
+        if cast_level > 0:
+            embed.set_footer(
+                text=f"L{cast_level} Slots: {char.get_remaining_slots(cast_level)}/{char.get_max_spellslots(cast_level)}")
         if args.get('phrase') is not None:  # parse phrase
             embed.description = '*' + '\n'.join(args.get('phrase')) + '*'
         else:
@@ -399,6 +412,9 @@ class GameTrack:
 
                     dmg = re.sub(r'(\d+)d(\d+)', lsub, dmg)
 
+                if upcast_dmg:
+                    dmg = dmg + '+' + upcast_dmg
+
                 if args.get('d') is not None:
                     dmg = dmg + '+' + "+".join(args.get('d', []))
 
@@ -412,7 +428,7 @@ class GameTrack:
                 if isinstance(_value, list):
                     outargs[_arg] = _value[-1]
             attack = copy.copy(spell['atk'])
-            attack['attackBonus'] = str(char.evaluate_cvar(attack['attackBonus'])) or char.get_spell_ab()
+            attack['attackBonus'] = str(char.evaluate_cvar(attack['attackBonus']) or char.get_spell_ab())
 
             if not attack['attackBonus']:
                 return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not found.",
@@ -433,6 +449,11 @@ class GameTrack:
 
                 attack['damage'] = re.sub(r'(\d+)d(\d+)', lsub, attack['damage'])
 
+            if upcast_dmg:
+                attack['damage'] = attack['damage'] + '+' + upcast_dmg
+
+            attack['damage'] = attack['damage'].replace("SPELL", str(char.get_spell_ab()))
+
             result = sheet_attack(attack, outargs)
             for f in result['embed'].fields:
                 embed.add_field(name=f.name, value=f.value, inline=f.inline)
@@ -445,6 +466,8 @@ class GameTrack:
             attack = {"name": spell['name'],
                       "damage": spell.get("damage", "0"),
                       "attackBonus": None}
+            if upcast_dmg:
+                attack['damage'] = attack['damage'] + '+' + upcast_dmg
             result = sheet_attack(attack, outargs)
             for f in result['embed'].fields:
                 embed.add_field(name=f.name, value=f.value, inline=f.inline)

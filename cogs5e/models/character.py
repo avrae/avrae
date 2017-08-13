@@ -310,6 +310,8 @@ class Character: # TODO: refactor old commands to use this
         """Uses one spell slot of level level.
         @:returns self
         @:raises CounterOutOfBounds if there are no remaining slots of the requested level."""
+        assert 0 <= level < 10
+        if level == 0: return self
         ss = self.get_spellslots()
         val = ss[str(level)]['value'] - 1
         if val < ss[str(level)]['min']: raise CounterOutOfBounds()

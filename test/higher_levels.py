@@ -32,7 +32,7 @@ def main():
                     annotation = re.search(r'(\[[^[\]]+\])', spell['atk']['damage']).group(1) or ''
 
                 for lvl in range(spell_level+1, 10):
-                    ld = re.search(r'(\d+)(d\d+)', dice) 
+                    ld = re.search(r'(\d+)(d\d+)', dice)
                     lvlDiceNum = int(ld.group(1))
                     lvlDiceVal = ld.group(2)
                     lvlDiff = lvl - spell_level

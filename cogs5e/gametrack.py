@@ -8,7 +8,6 @@ Most of this module was coded 5 miles in the air. (Aug 8, 2017)
 import copy
 import json
 import logging
-import random
 import re
 import shlex
 
@@ -16,13 +15,13 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull
+from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, AvraeException
+from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException
 from utils.functions import parse_cvars, parse_args_3, \
-    evaluate_cvar, strict_search
+    strict_search
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +50,28 @@ class GameTrack:
         for name, counter in character.get_all_consumables().items():
             val = self._get_cc_value(character, counter)
             embed.add_field(name=name, value=val)
+        await self.bot.say(embed=embed)
+
+    @game.command(pass_context=True, name='spellbook', aliases=['sb'])
+    async def game_spellbook(self, ctx):
+        """Displays your character's known spells and spell metdata."""
+        character = Character.from_ctx(ctx)
+        embed = EmbedWithCharacter(character)
+        embed.description = f"{character.get_name()} knows {len(character.get_spell_list())} spells."
+        embed.add_field(name="DC", value=str(character.get_save_dc()))
+        embed.add_field(name="Spell Attack Bonus", value=str(character.get_spell_ab()))
+        embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
+        spells_known = {}
+        for spell_name in character.get_spell_list():
+            spell = strict_search(c.spells, 'name', spell_name)
+            spells_known[spell['level']] = spells_known.get(spell['level'], []) + [spell_name]
+
+        level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
+                      '4': '4th Level', '5': '5th Level', '6': '6th Level',
+                      '7': '7th Level', '8': '8th Level', '9': '9th Level'}
+        for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
+            if spells:
+                embed.add_field(name=level_name.get(level, "Unknown Level"), value=', '.join(spells))
         await self.bot.say(embed=embed)
 
     @game.command(pass_context=True, name='spellslot', aliases=['ss'])
@@ -509,7 +530,7 @@ class GameTrack:
             if upcast_dmg:
                 attack['damage'] = attack['damage'] + '+' + upcast_dmg
 
-            attack['damage'] = attack['damage'].replace("SPELL", str(char.get_spell_ab()))
+            attack['damage'] = attack['damage'].replace("SPELL", str(char.get_spell_ab() - char.get_prof_bonus()))
 
             result = sheet_attack(attack, outargs)
             for f in result['embed'].fields:

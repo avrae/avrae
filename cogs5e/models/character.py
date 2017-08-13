@@ -63,6 +63,10 @@ class Character: # TODO: refactor old commands to use this
         """@:returns int - the character's total level."""
         return self.character.get('levels', {}).get('level', 0)
 
+    def get_prof_bonus(self):
+        """@:returns int - the character's proficiency bonus."""
+        return self.character.get('stats', {}).get('proficiencyBonus', 0)
+
     def get_max_spellslots(self, level:int):
         """@:returns the maximum number of spellslots of level level a character has.
         @:returns 0 if none.

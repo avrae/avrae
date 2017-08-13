@@ -99,7 +99,9 @@ class Character: # TODO: refactor old commands to use this
     def get_setting(self, setting, default=None):
         """Gets the value of a csetting.
         @:returns the csetting's value, or default."""
-        return self.character.get('settings', {}).get(setting, default)
+        setting = self.character.get('settings', {}).get(setting)
+        if setting is None: return default
+        return setting
 
     def parse_cvars(self, cstr):
         """Parses cvars.
@@ -295,6 +297,31 @@ class Character: # TODO: refactor old commands to use this
         assert 0 <= level < 10
         if level == 0: return 1 # cantrips
         return self.get_spellslots()[str(level)]['value']
+
+    def get_remaining_slots_str(self, level:int=None):
+        """@:param level: The level of spell slot to return.
+        @:returns A string representing the character's remaining spell slots.
+        @:returns An empty string if the character cannot cast."""
+        out = ''
+        if level:
+            assert 0 < level < 10
+            _max = self.get_max_spellslots(level)
+            remaining = self.get_remaining_slots(level)
+            if _max:
+                numEmpty = _max - remaining
+                filled = '\u25c9' * remaining
+                empty = '\u3007' * numEmpty
+                out += f"`{level}` {filled}{empty}\n"
+        else:
+            for level in range(1, 10):
+                _max = self.get_max_spellslots(level)
+                remaining = self.get_remaining_slots(level)
+                if _max:
+                    numEmpty = _max - remaining
+                    filled = '\u25c9' * remaining
+                    empty = '\u3007' * numEmpty
+                    out += f"`{level}` {filled}{empty}\n"
+        return out
 
     def set_remaining_slots(self, level:int, value:int):
         """Sets the character's remaining spell slots of level level.

@@ -23,6 +23,7 @@ from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchAutoSpellFull
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
+from cogs5e.models.embeds import EmbedWithCharacter
 from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
     parse_args_3, parse_cvars, evaluate_cvar, parse_resistances, \
@@ -272,6 +273,7 @@ class DicecloudCombatant(Combatant):
         self.saves = sheet.get('saves', {})
         self.sheet = sheet
         self.id = character.id
+        self.auth_id = author.id
 
         
     def __str__(self):
@@ -1208,7 +1210,10 @@ class InitTracker:
     @init.command(pass_context=True)
     async def cast(self, ctx, spell_name, *, args):
         """Casts a spell against another combatant.
-        Valid Arguments: -t [target (chainable)] - Required
+        __Valid Arguments__
+        -t [target (chainable)] - Required
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
+        -l [level] - Specifies the level to cast the spell at.
         **__Save Spells__**
         -dc [Save DC] - Default: Pulls a cvar called `dc`.
         -save [Save type] - Default: The spell's default save.
@@ -1227,6 +1232,11 @@ class InitTracker:
         combatant = combat.currentCombatant
         if combatant is None:
             return await self.bot.say("You must begin combat with !init next first.")
+
+        is_character = isinstance(combatant, DicecloudCombatant)
+        if not is_character: return await self.bot.say("This command requires a SHeetManager integrated combatant.")
+
+        character = Character.from_bot_and_ids(self.bot, combatant.auth_id, combatant.id)
         
         tempargs = shlex.split(args)
         user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
@@ -1237,10 +1247,8 @@ class InitTracker:
             elif ' ' in arg:
                 tempargs[index] = shlex.quote(arg)
         
-        is_character = isinstance(combatant, DicecloudCombatant)
-        
         args = " ".join(tempargs)
-        if is_character: args = parse_cvars(args, combatant.sheet)
+        args = character.parse_cvars(args)
         args = shlex.split(args)
         args = parse_args_3(args)
         
@@ -1258,6 +1266,40 @@ class InitTracker:
         if spell is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
                                                                         description="The spell was not found or is not supported."))
 
+        can_cast = True
+        spell_level = int(spell.get('level', 0))
+        try:
+            cast_level = int(args.get('l', [spell_level])[-1])
+            assert spell_level <= cast_level <= 9
+        except (AssertionError, ValueError):
+            return await self.bot.say("Invalid spell level.")
+
+        # make sure we can cast it
+        try:
+            assert character.get_remaining_slots(cast_level) > 0
+            assert spell['name'] in character.get_spell_list()
+        except AssertionError:
+            can_cast = False
+        else:
+            # use a spell slot
+            if not args.get('i'):
+                character.use_slot(cast_level)
+
+        if args.get('i'):
+            can_cast = True
+
+        if not can_cast:
+            embed = EmbedWithCharacter(character)
+            embed.title = "Cannot cast spell!"
+            embed.description = "Not enough spell slots remaining, or spell not in known spell list!"
+            if cast_level > 0:
+                embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str(cast_level))
+            return await self.bot.say(embed=embed)
+
+        upcast_dmg = None
+        if not cast_level == spell_level:
+            upcast_dmg = spell.get('higher_levels', {}).get(str(cast_level))
+
         if args.get('title') is not None:
             embed.title = args.get('title')[-1].replace('[charname]', args.get('name')).replace('[sname]', spell['name']).replace('[target]', args.get('t', ''))
         else:
@@ -1274,17 +1316,14 @@ class InitTracker:
                 spell_type = spell.get('type')
                 if spell_type == 'save': # save spell
                     out = ''
-                    if is_character:
-                        calculated_dc = evaluate_cvar(combatant.sheet.get('cvars', {}).get('dc', ''), combatant.sheet) or None
-                    else:
-                        calculated_dc = None
+                    calculated_dc = character.evaluate_cvar('dc') or character.get_save_dc()
                     dc = args.get('dc', [None])[-1] or calculated_dc
-                    if dc is None:
-                        return await self.bot.say(embed=discord.Embed(title="Error: Save DC not set.",
-                                                                  description="Your spell save DC is not set. You can set it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`.\nRemember to run `!i update [NAME]` for the a changed cvar to take effect."))
+                    if not dc:
+                        return await self.bot.say(embed=discord.Embed(title="Error: Save DC not found.",
+                                                                      description="Your spell save DC is not found. Most likely cause is that you do not have spells."))
                     try: dc = int(dc)
-                    except: return await self.bot.say(embed=discord.Embed(title="Error: Save DC not set.",
-                                                                          description="Your spell save DC is not set. You can set it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`.\nRemember to run `!i update [NAME]` for the a changed cvar to take effect."))
+                    except: return await self.bot.say(embed=discord.Embed(title="Error: Save DC malformed.",
+                                                              description="Your spell save DC is malformed."))
 
                     save_skill = args.get('save', [None])[-1] or spell.get('save', {}).get('save')
                     try:
@@ -1323,7 +1362,10 @@ class InitTracker:
                                     else: levelDice = "4"
                                     return levelDice + 'd' + matchobj.group(2)
                                 dmg = re.sub(r'(\d+)d(\d+)', lsub, dmg)
-                            
+
+                            if upcast_dmg:
+                                dmg = dmg + '+' + upcast_dmg
+
                             if args.get('d') is not None:
                                 dmg = dmg + '+' + "+".join(args.get('d', []))
                                 
@@ -1376,10 +1418,11 @@ class InitTracker:
                         if isinstance(_value, list):
                             outargs[_arg] = _value[-1]
                     attack = copy.copy(spell['atk'])
-                    if not 'SPELL' in combatant.sheet.get('cvars', {}):
-                        return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not set.",
-                                                                      description="Your casting ability is not set. You can set it for this character by running `!cvar SPELL [ABILITY]`, where `[ABILITY]` is your spellcasting modifier.\nFor example, a sorcerer (CHA caster) with 20 CHA would use `!cvar SPELL 5.`\nRemember to run `!i update [NAME]` for the changes to take effect."))
-                    attack['attackBonus'] = str(evaluate_cvar(attack['attackBonus'], combatant.sheet))
+                    attack['attackBonus'] = str(character.evaluate_cvar(attack['attackBonus']) or character.get_spell_ab())
+
+                    if not attack['attackBonus']:
+                        return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not found.",
+                                                                      description="Your casting ability is not found. Most likely cause is that you do not have spells."))
                     
                     if is_character and spell['level'] == '0' and spell.get('scales', True):
                         def lsub(matchobj):
@@ -1390,7 +1433,10 @@ class InitTracker:
                             else: levelDice = "4"
                             return levelDice + 'd' + matchobj.group(2)
                         attack['damage'] = re.sub(r'(\d+)d(\d+)', lsub, attack['damage'])
-                    
+
+                    if upcast_dmg:
+                        attack['damage'] = attack['damage'] + '+' + upcast_dmg
+
                     result = sheet_attack(attack, outargs)
                     out = ""
                     for f in result['embed'].fields:
@@ -1475,9 +1521,13 @@ class InitTracker:
                         context += _ctx.strip()
                     context += '\n'
             embed.add_field(name="Effect", value=context)
-        
+
+        if cast_level > 0:
+            embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str(cast_level))
+
         embed.colour = getattr(combatant, 'sheet', {}).get('settings', {}).get('color') or random.randint(0, 0xffffff)
         embed.set_footer(text=embed_footer)
+        character.manual_commit(self.bot, combatant.auth_id)
         await self.bot.say(embed=embed)
     
     @init.command(pass_context=True)

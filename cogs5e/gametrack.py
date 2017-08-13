@@ -280,7 +280,7 @@ class GameTrack:
         """Casts a spell.
         __Valid Arguments:__
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
-        -l - Specifies the level to cast the spell at.
+        -l [level] - Specifies the level to cast the spell at.
         **__Save Spells__**
         -dc [Save DC] - Default: Pulls a cvar called `dc`.
         -save [Save type] - Default: The spell's default save.
@@ -343,7 +343,8 @@ class GameTrack:
             embed = EmbedWithCharacter(char)
             embed.title = "Cannot cast spell!"
             embed.description = "Not enough spell slots remaining, or spell not in known spell list!"
-            embed.set_footer(text=f"L{cast_level} slots: {char.get_remaining_slots(cast_level)}/{char.get_max_spellslots(cast_level)}")
+            if cast_level > 0:
+                embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
             return await self.bot.say(embed=embed)
 
         upcast_dmg = None
@@ -351,9 +352,6 @@ class GameTrack:
             upcast_dmg = spell.get('higher_levels', {}).get(str(cast_level))
 
         embed = discord.Embed()
-        if cast_level > 0:
-            embed.set_footer(
-                text=f"L{cast_level} Slots: {char.get_remaining_slots(cast_level)}/{char.get_max_spellslots(cast_level)}")
         if args.get('phrase') is not None:  # parse phrase
             embed.description = '*' + '\n'.join(args.get('phrase')) + '*'
         else:
@@ -377,7 +375,7 @@ class GameTrack:
                 dc = int(dc)
             except:
                 return await self.bot.say(embed=discord.Embed(title="Error: Save DC malformed.",
-                                                              description="Your spell save DC is malformed. You can reset it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`."))
+                                                              description="Your spell save DC is malformed."))
 
             save_skill = args.get('save', [None])[-1] or spell.get('save', {}).get('save')
             try:
@@ -512,6 +510,9 @@ class GameTrack:
                         context += _ctx.strip()
                     context += '\n'
             embed.add_field(name="Effect", value=context)
+
+        if cast_level > 0:
+            embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
 
         embed.colour = char.get_color()
         char.commit(ctx) # make sure we save changes

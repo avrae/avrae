@@ -13,6 +13,12 @@ class InvalidArgument(AvraeException):
     """Raised when an argument is invalid."""
     pass
 
+
+class OutdatedSheet(AvraeException):
+    """Raised when a feature is used that requires an updated sheet."""
+    def __init__(self, msg=None):
+        super().__init__(msg or "This command requires an updated character sheet. Try running `!update`.")
+
 class ConsumableException(AvraeException):
     """A base exception for consumable exceptions to stem from."""
     pass

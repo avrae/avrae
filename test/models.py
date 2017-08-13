@@ -41,8 +41,8 @@ stat_vars = {}
 consumables = {'hp': {'value': 0, 'reset': 'long', 'max': 100}, # optional: max, min, reset
                'deathsaves': {'fail': {'value': 0, 'reset': 'hp'},
                               'success': {'value': 0, 'reset': 'hp'}},
-               'spellslots': {'1': {'value': 0, 'reset': 'long'},
-                              '2': {'value': 0, 'reset': 'long'}}, # etc
+               'spellslots': {'1': {'value': 0, 'reset': 'long', 'max': 4, 'min': 0},
+                              '2': {'value': 0, 'reset': 'long', 'max': 3, 'min': 0}}, # etc
                'custom': {'NAME': {'value': 0, 'reset': 'long'},
                           'NAME2': {'value': 0, 'reset': 'long'}} # etc
                }

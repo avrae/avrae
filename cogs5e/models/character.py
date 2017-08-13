@@ -21,7 +21,8 @@ import random
 import re
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument
+from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
+    OutdatedSheet
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +59,98 @@ class Character: # TODO: refactor old commands to use this
     def get_max_hp(self):
         return self.character.get('hp', 0)
 
+    def get_level(self):
+        """@:returns int - the character's total level."""
+        return self.character.get('levels', {}).get('level', 0)
+
+    def get_max_spellslots(self, level:int):
+        """@:returns the maximum number of spellslots of level level a character has.
+        @:returns 0 if none.
+        @:raises OutdatedSheet if character does not have spellbook."""
+        try: assert 'spellbook' in self.character
+        except AssertionError: raise OutdatedSheet()
+
+        return self.character.get('spellbook', {}).get('spellslots', {}).get(str(level), 0)
+
+    def get_spell_list(self):
+        """@:returns list - a list of the names of all spells the character can cast.
+        @:raises OutdatedSheet if character does not have spellbook."""
+        try: assert 'spellbook' in self.character
+        except AssertionError: raise OutdatedSheet()
+
+        return self.character.get('spellbook', {}).get('spells', [])
+
+    def get_save_dc(self):
+        """@:returns int - the character's spell save DC.
+        @:raises OutdatedSheet if character does not have spellbook."""
+        try: assert 'spellbook' in self.character
+        except AssertionError: raise OutdatedSheet()
+
+        return self.character.get('spellbook', {}).get('dc', 0)
+
+    def get_spell_ab(self):
+        """@:returns int - the character's spell attack bonus.
+        @:raises OutdatedSheet if character does not have spellbook."""
+        try: assert 'spellbook' in self.character
+        except AssertionError: raise OutdatedSheet()
+
+        return self.character.get('spellbook', {}).get('attackBonus', 0)
+
+    def get_setting(self, setting, default=None):
+        """Gets the value of a csetting.
+        @:returns the csetting's value, or default."""
+        return self.character.get('settings', {}).get(setting, default)
+
+    def parse_cvars(self, cstr):
+        """Parses cvars.
+        @:param cstr - The string to parse.
+        @:returns string - the parsed string."""
+        character = self.character
+        ops = r"([-+*/().<>=])"
+        cvars = character.get('cvars', {})
+        stat_vars = character.get('stat_cvars', {})
+        for var in re.finditer(r'{([^{}]+)}', cstr):
+            raw = var.group(0)
+            varstr = var.group(1)
+            out = ""
+            tempout = ''
+            for substr in re.split(ops, varstr):
+                temp = substr.strip()
+                if temp.startswith('/'):
+                    _last = character
+                    for path in out.split('/'):
+                        if path:
+                            try:
+                                _last = _last.get(path, {})
+                            except AttributeError:
+                                break
+                    temp = str(_last)
+                tempout += str(cvars.get(temp, temp)) + " "
+            for substr in re.split(ops, tempout):
+                temp = substr.strip()
+                out += str(stat_vars.get(temp, temp)) + " "
+            cstr = cstr.replace(raw, str(roll(out).total), 1)
+        for var in re.finditer(r'<([^<>]+)>', cstr):
+            raw = var.group(0)
+            out = var.group(1)
+            if out.startswith('/'):
+                _last = character
+                for path in out.split('/'):
+                    if path:
+                        try:
+                            _last = _last.get(path, {})
+                        except AttributeError:
+                            break
+                out = str(_last)
+            out = str(cvars.get(out, out))
+            out = str(stat_vars.get(out, out))
+            cstr = cstr.replace(raw, out, 1)
+        return cstr
+
     def evaluate_cvar(self, varstr):
+        """Evaluates a cvar.
+        @:param varstr - the name of the cvar to parse.
+        @:returns int - the value of the cvar, or 0 if evaluation failed."""
         ops = r"([-+*/().<>=])"
         varstr = str(varstr).strip('<>{}')
         cvars = self.character.get('cvars', {})
@@ -110,6 +202,7 @@ class Character: # TODO: refactor old commands to use this
             self.character['consumables'] = {}
         self._initialize_hp()
         self._initialize_deathsaves()
+        self._initialize_spellslots()
         return self
 
     def _initialize_hp(self):
@@ -131,7 +224,7 @@ class Character: # TODO: refactor old commands to use this
         """Sets the character's hit points. Returns the Character object."""
         self._initialize_hp()
         hp = self.get_hp()
-        self.character['consumables']['hp']['value'] = max(hp['min'], min(hp['max'], newValue)) # bounding
+        self.character['consumables']['hp']['value'] = max(hp['min'], newValue) # bounding
 
         self.on_hp()
 
@@ -178,6 +271,56 @@ class Character: # TODO: refactor old commands to use this
         self.character['consumables']['deathsaves']['success']['value'] = 0
         self.character['consumables']['deathsaves']['fail']['value'] = 0
         return self
+
+    def _initialize_spellslots(self):
+        """Sets up a character's spellslot consumables.
+        @:raises OutdatedSheet if sheet does not have spellbook."""
+        try:
+            assert self.character['consumables'].get('spellslots') is not None
+        except AssertionError:
+            ss = {}
+            for lvl in range(1, 10):
+                m = self.get_max_spellslots(lvl)
+                ss[str(lvl)] = {'value': m, 'reset': 'long', 'max': m, 'min': 0}
+            self.character['consumables']['spellslots'] = ss
+
+    def get_spellslots(self):
+        """Returns the Counter dictionary."""
+        self._initialize_spellslots()
+        return self.character['consumables']['spellslots']
+
+    def get_remaining_slots(self, level:int):
+        """@:param level - The spell level.
+        @:returns the integer value representing the number of spellslots remaining."""
+        assert 0 <= level < 10
+        if level == 0: return 1 # cantrips
+        return self.get_spellslots()[str(level)]['value']
+
+    def set_remaining_slots(self, level:int, value:int):
+        """Sets the character's remaining spell slots of level level.
+        @:param level - The spell level.
+        @:param value - The number of remaining spell slots.
+        @:returns self"""
+        self._initialize_spellslots()
+        self.character['consumables']['spellslots'][str(level)]['value'] = value
+
+        return self
+
+    def use_slot(self, level:int):
+        """Uses one spell slot of level level.
+        @:returns self
+        @:raises CounterOutOfBounds if there are no remaining slots of the requested level."""
+        ss = self.get_spellslots()
+        val = ss[str(level)]['value'] - 1
+        if val < ss[str(level)]['min']: raise CounterOutOfBounds()
+        self.set_remaining_slots(level, val)
+        return self
+
+    def reset_spellslots(self):
+        """Resets all spellslots to their max value.
+        @:returns self"""
+        for level in range(1, 10):
+            self.set_remaining_slots(level, self.get_max_spellslots(level))
 
     def _initialize_custom_counters(self):
         try:
@@ -303,6 +446,8 @@ class Character: # TODO: refactor old commands to use this
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
         reset.append("HP")
+        self.reset_spellslots()
+        reset.append("Spell Slots")
         return reset
 
     def reset_all_consumables(self):

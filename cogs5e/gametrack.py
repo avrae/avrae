@@ -174,10 +174,10 @@ class GameTrack:
                 counterDisplayEmbed.add_field(name="Range",
                                               value=f"{_min} - {_max}")
 
-                _resetMap = {'short': "Short Rest completed (`!game shortrest`)",  # TODO
-                             'long': "Long Rest completed (`!game longrest`)", # TODO
+                _resetMap = {'short': "Short Rest completed (`!game shortrest`)",
+                             'long': "Long Rest completed (`!game longrest`)",
                              'reset': "`!cc reset` is called",
-                             'hp': "Character has >0 HP", # TODO
+                             'hp': "Character has >0 HP",
                              'none': "Does not reset",
                              None: "Unknown Reset"}
 
@@ -278,7 +278,9 @@ class GameTrack:
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *args):
         """Casts a spell.
-        Valid Arguments:
+        __Valid Arguments:__
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
+        -l - Specifies the level to cast the spell at.
         **__Save Spells__**
         -dc [Save DC] - Default: Pulls a cvar called `dc`.
         -save [Save type] - Default: The spell's default save.
@@ -299,12 +301,21 @@ class GameTrack:
         spell = strict_search(self.autospells, 'name', spell_name)
         if spell is None: return await self._old_cast(ctx, spell_name, fallback=True)  # fall back to old cast
 
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})  # grab user's characters
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(
-            ctx.message.author.id)  # get user's active
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]  # get Sheet of character
+        char = Character.from_ctx(ctx)
+
+        can_cast = True
+        spell_level = int(spell.get('level', 0))
+
+        # make sure we can cast it
+        try:
+            assert char.get_remaining_slots(spell_level) > 0
+            assert spell_name in char.get_spell_list()
+        except AssertionError:
+            can_cast = False
+        else:
+            # use a spell slot
+            char.use_slot(spell_level)
+
 
         tempargs = list(args)
         user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
@@ -316,9 +327,19 @@ class GameTrack:
                 tempargs[index] = shlex.quote(arg)
 
         args = " ".join(tempargs)
-        args = parse_cvars(args, character)
+        args = char.parse_cvars(args)
         args = shlex.split(args)
         args = parse_args_3(args)
+
+        if args.get('i'):
+            can_cast = True
+
+        if not can_cast:
+            embed = EmbedWithCharacter(char)
+            embed.title = "Cannot cast spell!"
+            embed.description = "Not enough spell slots remaining, or spell not in known spell list!"
+            # TODO: add footer with remaining spell slots
+            return await self.bot.say(embed=embed)
 
         embed = discord.Embed()
         if args.get('phrase') is not None:  # parse phrase
@@ -331,15 +352,15 @@ class GameTrack:
                                                                                                 spell['name']).replace(
                 '[target]', args.get('t', ''))
         else:
-            embed.title = '{} casts {}!'.format(character.get('stats', {}).get('name', "NONAME"), spell['name'])
+            embed.title = '{} casts {}!'.format(char.get_name(), spell['name'])
 
         spell_type = spell.get('type')
         if spell_type == 'save':  # save spell
-            calculated_dc = evaluate_cvar(character.get('cvars', {}).get('dc', ''), character) or None
+            calculated_dc = char.evaluate_cvar('dc') or char.get_save_dc()
             dc = args.get('dc', [None])[-1] or calculated_dc
-            if dc is None:
-                return await self.bot.say(embed=discord.Embed(title="Error: Save DC not set.",
-                                                              description="Your spell save DC is not set. You can set it for this character by running `!cvar dc [DC]`, where `[DC]` is your spell save DC, or by passing in `-dc [DC]`."))
+            if not dc:
+                return await self.bot.say(embed=discord.Embed(title="Error: Save DC not found.",
+                                                              description="Your spell save DC is not found. Most likely cause is that you do not have spells."))
             try:
                 dc = int(dc)
             except:
@@ -366,7 +387,7 @@ class GameTrack:
 
                 if spell['level'] == '0' and spell.get('scales', True):
                     def lsub(matchobj):
-                        level = character.get('levels', {}).get('level', 0)
+                        level = char.get_level()
                         if level < 5:
                             levelDice = "1"
                         elif level < 11:
@@ -392,14 +413,15 @@ class GameTrack:
                 if isinstance(_value, list):
                     outargs[_arg] = _value[-1]
             attack = copy.copy(spell['atk'])
-            if not 'SPELL' in character.get('cvars', {}):
-                return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not set.",
-                                                              description="Your casting ability is not set. You can set it for this character by running `!cvar SPELL [ABILITY]`, where `[ABILITY]` is your spellcasting modifier.\nFor example, a sorcerer (CHA caster) with 20 CHA would use `!cvar SPELL 5.`"))
-            attack['attackBonus'] = str(evaluate_cvar(attack['attackBonus'], character))
+            attack['attackBonus'] = str(char.evaluate_cvar(attack['attackBonus'])) or char.get_spell_ab()
+
+            if not attack['attackBonus']:
+                return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not found.",
+                                                              description="Your casting ability is not found. Most likely cause is that you do not have spells."))
 
             if spell['level'] == '0' and spell.get('scales', True):
                 def lsub(matchobj):
-                    level = character.get('levels', {}).get('level', 0)
+                    level = char.get_level()
                     if level < 5:
                         levelDice = "1"
                     elif level < 11:
@@ -469,7 +491,8 @@ class GameTrack:
                     context += '\n'
             embed.add_field(name="Effect", value=context)
 
-        embed.colour = character.get('settings', {}).get('color') or random.randint(0, 0xffffff)
+        embed.colour = char.get_color()
+        char.commit(ctx) # make sure we save changes
         await self.bot.say(embed=embed)
 
     def parse_roll_args(self, args, character):

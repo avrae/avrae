@@ -107,6 +107,14 @@ class Character: # TODO: refactor old commands to use this
         if setting is None: return default
         return setting
 
+    def set_setting(self, setting, value):
+        """Sets the value of a csetting.
+                @:returns self"""
+        if self.character.get('settings') is None:
+            self.character['settings'] = {}
+        self.character['settings'][setting] = value
+        return self
+
     def parse_cvars(self, cstr):
         """Parses cvars.
         @:param cstr - The string to parse.
@@ -468,6 +476,9 @@ class Character: # TODO: refactor old commands to use this
         reset = []
         reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
+        if self.get_setting('srslots', False):
+            self.reset_spellslots()
+            reset.append("Spell Slots")
         return reset
 
     def long_rest(self):
@@ -479,8 +490,9 @@ class Character: # TODO: refactor old commands to use this
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
         reset.append("HP")
-        self.reset_spellslots()
-        reset.append("Spell Slots")
+        if not self.get_setting('srslots', False):
+            self.reset_spellslots()
+            reset.append("Spell Slots")
         return reset
 
     def reset_all_consumables(self):

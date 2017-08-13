@@ -556,7 +556,9 @@ class SheetManager:
         `color <hex color>` - Colors all embeds this color.
         `criton <number>` - Makes attacks crit on something other than a 20.
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
-        `hocrit true/false` - Enables/disables a half-orc's Brutal Critical."""
+        `hocrit true/false` - Enables/disables a half-orc's Brutal Critical.
+        `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
+        `embedimage true/false` - Enables/disables whether a character's image is automatically embedded."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -652,6 +654,28 @@ class SheetManager:
                     else:
                         character['settings']['hocrit'] = hocrit
                         out += "\u2705 Half-orc crits {}.\n".format("enabled" if character['settings'].get('hocrit') else "disabled")
+            if arg == 'srslots':
+                srslots = list_get(index + 1, None, args)
+                if srslots is None:
+                    out += '\u2139 Short rest slots are currently {}.\n' \
+                    .format("enabled" if character['settings'].get('srslots') else "disabled")
+                else:
+                    try: srslots = get_positivity(srslots)
+                    except AttributeError: out += '\u274c Invalid input. Use "!csettings srslots false" to reset it.\n'
+                    else:
+                        character['settings']['srslots'] = srslots
+                        out += "\u2705 Short Rest slots {}.\n".format("enabled" if character['settings'].get('srslots') else "disabled")
+            if arg == 'embedimage':
+                embedimage = list_get(index + 1, None, args)
+                if embedimage is None:
+                    out += '\u2139 Embed Image is currently {}.\n' \
+                    .format("enabled" if character['settings'].get('embedimage') else "disabled")
+                else:
+                    try: embedimage = get_positivity(embedimage)
+                    except AttributeError: out += '\u274c Invalid input. Use "!csettings embedimage true" to reset it.\n'
+                    else:
+                        character['settings']['embedimage'] = embedimage
+                        out += "\u2705 Embed Image {}.\n".format("enabled" if character['settings'].get('embedimage') else "disabled")
             index += 1
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)

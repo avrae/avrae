@@ -313,25 +313,22 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
     
     comments = re.findall(COMMENT_REGEX, damage)
     roll_strings = re.split(ROLL_STRING_REGEX, damage)
-    
-    index = 0
+
     formatted_comments = []
     formatted_roll_strings = []
-    
-    t = 0
-    for comment in comments:
+
+    for t, _ in enumerate(comments):
         if not roll_strings[t].replace(' ', '') == '':
             formatted_roll_strings.append(roll_strings[t])
             formatted_comments.append(comments[t])
         else:
             formatted_comments[-1] += ' ' + comments[t]
-        t += 1
     
     if not roll_strings[-1].replace(' ', '') == '':
         formatted_roll_strings.append(roll_strings[-1])
-        formatted_comments.append("")
+        formatted_comments.append(formatted_comments[-1]) # carry over thingies
     
-    for comment in formatted_comments:
+    for index, comment in enumerate(formatted_comments):
         roll_string = formatted_roll_strings[index].replace(' ', '')
                 
         preop = ''
@@ -351,7 +348,6 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
                 roll_string = '({0}) * 2'.format(roll_string)
                 break
         formatted_roll_strings[index] = '{0}{1}{2}'.format(preop, roll_string, "[{}]".format(comment) if comment is not '' else "")
-        index = index + 1
     if formatted_roll_strings:
         damage = ''.join(formatted_roll_strings)
     

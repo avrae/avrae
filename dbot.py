@@ -72,6 +72,8 @@ try:
     bot.credentials.discord_bots_key = credentials.discord_bots_key
     bot.credentials.carbon_key = credentials.carbon_key
     bot.credentials.test_database_url = credentials.test_database_url
+    if 'ALPHA_TOKEN' in os.environ:
+        bot.credentials.testToken = os.environ.get("ALPHA_TOKEN")
 except ImportError:
     bot.credentials = Credentials()
     bot.credentials.testToken = os.environ.get('TEST_TOKEN')

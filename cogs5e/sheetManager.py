@@ -499,7 +499,7 @@ class SheetManager:
     @commands.cooldown(1, 15, BucketType.user)
     async def update(self, ctx, *, args=''):
         """Updates the current character sheet, preserving all settings.
-        Valid Arguments: -h - Hides character sheet after update is complete."""
+        Valid Arguments: -v - Shows character sheet after update is complete."""
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         if active_character is None:
@@ -565,7 +565,7 @@ class SheetManager:
         #print(sheet)
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
-        if not '-h' in args:
+        if '-v' in args:
             await self.bot.say(embed=embed)
     
     @commands.command(pass_context=True)

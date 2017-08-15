@@ -5,12 +5,14 @@ Created on Nov 29, 2016
 '''
 import random
 import shlex
+import textwrap
 
 import discord
 from discord.ext import commands
 
 from cogs5e.funcs.lookupFuncs import searchCondition, searchRule, searchRacialFeat, searchFeat, \
-    searchClassFeat, searchMonster, getMonster, searchSpell, getSpell, searchItem, getItem
+    searchClassFeat, searchMonster, getMonster, searchSpell, getSpell, searchItem, getItem, searchBackground
+from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
 from utils.functions import discord_trim, get_positivity
 
@@ -220,6 +222,48 @@ class Lookup:
                 await self.bot.send_message(ctx.message.author, r)
             else:
                 await self.bot.say(r)
+
+    @commands.command(pass_context=True)
+    async def background(self, ctx, *, name: str):
+        """Looks up a background."""
+        try:
+            guild_id = ctx.message.server.id
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)
+        except:
+            pm = False
+
+        result = searchBackground(name)
+        if result is None:
+            return await self.bot.say('Background not found.')
+        strict = result[1]
+        results = result[0]
+
+        if strict:
+            result = results
+        else:
+            if len(results) == 1:
+                result = results[0]
+            else:
+                result = await self.get_selection(results, ctx)
+                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+        embed.description = f"*Source: {result.get('source', 'Unknown')}*"
+
+        ignored_fields = ['suggested characteristics', 'personality trait', 'ideal', 'bond', 'flaw', 'specialty',
+                          'harrowing event']
+        for trait in result['trait']:
+            if trait['name'].lower() in ignored_fields: continue
+            text = '\n'.join(t for t in trait['text'] if t)
+            text = textwrap.shorten(text, width=1020, placeholder="...")
+            embed.add_field(name=trait['name'], value=text)
+
+        # do stuff here
+        if pm:
+            await self.bot.send_message(ctx.message.author, embed=embed)
+        else:
+            await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)

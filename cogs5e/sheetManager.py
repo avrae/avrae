@@ -190,7 +190,8 @@ class SheetManager:
               -b [conditional bonus]
               -phrase [flavor text]
               -title [title] *note: [charname] and [sname] will be replaced automatically*
-              -image [image URL]"""
+              -image [image URL]
+              -dc [dc] (does not apply to Death Saves)"""
         if skill == 'death':
             ds_cmd = self.bot.get_command('game deathsave')
             if ds_cmd is None:
@@ -229,7 +230,15 @@ class SheetManager:
                       or '{} makes {}!'.format(character.get('stats', {}).get('name'),
                                                a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()))
 
-        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+        try:
+            dc = int(args.get('dc', None))
+        except (ValueError, TypeError): dc = None
+        dc_phrase = None
+        if dc:
+            dc_phrase = f"**DC {dc}**"
+            embed.set_footer(text="Success!" if save_roll.total >= dc else "Failure!")
+
+        embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
@@ -247,7 +256,8 @@ class SheetManager:
               -b [conditional bonus]
               -mc [minimum roll]
               -phrase [flavor text]
-              -title [title] *note: [charname] and [cname] will be replaced automatically*"""
+              -title [title] *note: [charname] and [cname] will be replaced automatically*
+              -dc [dc]"""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -288,7 +298,16 @@ class SheetManager:
         embed.title = args.get('title', '').replace('[charname]', character.get('stats', {}).get('name')).replace('[cname]', re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()) \
                       or '{} makes {} check!'.format(character.get('stats', {}).get('name'),
                                                      a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()))
-        embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+
+        try:
+            dc = int(args.get('dc', None))
+        except (ValueError, TypeError): dc = None
+        dc_phrase = None
+        if dc:
+            dc_phrase = f"**DC {dc}**"
+            embed.set_footer(text="Success!" if check_roll.total >= dc else "Failure!")
+
+        embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
         await self.bot.say(embed=embed)

@@ -356,8 +356,9 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
     
     return damage
     
-async def get_selection(ctx, choices):
-    """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice)."""
+async def get_selection(ctx, choices, delete=False):
+    """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
+    If delete is True, will delete the selection message and the response."""
     choices = choices[:10] # sanity
     names = [o[0] for o in choices]
     results = [o[1] for o in choices]
@@ -376,6 +377,10 @@ async def get_selection(ctx, choices):
 
     m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=selectMsg.channel,
                                        check=chk)
-
+    if delete:
+        try:
+            await ctx.bot.delete_message(selectMsg)
+            await ctx.bot.delete_message(m)
+        except: pass
     if m is None or m.content == "c": return None
     return results[int(m.content) - 1]

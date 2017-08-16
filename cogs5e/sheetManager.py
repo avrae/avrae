@@ -451,7 +451,7 @@ class SheetManager:
         if len(choices) > 1:
             choiceList = [(f"{c[0].get('stats', {}).get('name', 'Unnamed')} (`{c[1]})`", c) for c in choices]
 
-            char = await get_selection(ctx, choiceList)
+            char = await get_selection(ctx, choiceList, delete=True)
             if char is None:
                 return await self.bot.say('Selection timed out or was cancelled.')
 

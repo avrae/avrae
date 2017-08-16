@@ -118,6 +118,7 @@ class AdminUtils:
                 for s in _data:
                     s['shard'] = _shard
                 all_servers += _data
+            out += f"I am in {len(all_servers)} servers, with {sum(s['members'] for s in all_servers)} members."
             for s in sorted(all_servers, key=lambda k: k['members'], reverse=True):
                 out += "\n{} ({}, {} members, {} bot, shard {})".format(s['name'], s['id'], s['members'], s['bots'], s['shard'])
         else: # grab one server info

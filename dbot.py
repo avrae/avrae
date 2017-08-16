@@ -147,6 +147,8 @@ async def enter():
 async def on_command_error(error, ctx):
     if isinstance(error, commands.CommandNotFound):
         return
+    log.debug("Error caused by message: `{}`".format(ctx.message.content))
+    log.debug('\n'.join(traceback.format_exception(type(error), error, error.__traceback__)))
     if isinstance(error, AvraeException):
         return await bot.send_message(ctx.message.channel, f"{type(error)}: {str(error)}")
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))

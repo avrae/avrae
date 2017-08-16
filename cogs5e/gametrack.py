@@ -431,7 +431,7 @@ class GameTrack:
         if not cast_level == spell_level:
             upcast_dmg = spell.get('higher_levels', {}).get(str(cast_level))
 
-        embed = discord.Embed()
+        embed = EmbedWithCharacter(char, name=False)
         if args.get('phrase') is not None:  # parse phrase
             embed.description = '*' + '\n'.join(args.get('phrase')) + '*'
         else:
@@ -594,7 +594,6 @@ class GameTrack:
         if cast_level > 0:
             embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
 
-        embed.colour = char.get_color()
         char.commit(ctx) # make sure we save changes
         await self.bot.say(embed=embed)
 

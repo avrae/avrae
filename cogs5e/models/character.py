@@ -51,7 +51,7 @@ class Character: # TODO: refactor old commands to use this
         return self.character.get('stats', {}).get('name', "Unnamed")
 
     def get_image(self):
-        return self.character.get('stats', {}).get('image')
+        return self.character.get('stats', {}).get('image', '')
 
     def get_color(self):
         return self.character.get('settings', {}).get('color') or random.randint(0, 0xffffff)
@@ -66,6 +66,22 @@ class Character: # TODO: refactor old commands to use this
     def get_prof_bonus(self):
         """@:returns int - the character's proficiency bonus."""
         return self.character.get('stats', {}).get('proficiencyBonus', 0)
+
+    def get_saves(self):
+        """@:returns dict - the character's saves and modifiers."""
+        return self.character.get('saves', {})
+
+    def get_skills(self):
+        """@:returns dict - the character's skills and modifiers."""
+        return self.character.get('skills', {})
+
+    def get_skill_effects(self):
+        """@:returns dict - the character's skill effects and modifiers."""
+        return self.character.get('skill_effects', {})
+
+    def get_attacks(self):
+        """@:returns list - the character's list of attack dicts."""
+        return self.character.get('attacks', [])
 
     def get_max_spellslots(self, level:int):
         """@:returns the maximum number of spellslots of level level a character has.
@@ -312,18 +328,16 @@ class Character: # TODO: refactor old commands to use this
 
     def get_remaining_slots_str(self, level:int=None):
         """@:param level: The level of spell slot to return.
-        @:returns A string representing the character's remaining spell slots.
-        @:returns An empty string if the character cannot cast."""
+        @:returns A string representing the character's remaining spell slots."""
         out = ''
         if level:
             assert 0 < level < 10
             _max = self.get_max_spellslots(level)
             remaining = self.get_remaining_slots(level)
-            if _max:
-                numEmpty = _max - remaining
-                filled = '\u25c9' * remaining
-                empty = '\u3007' * numEmpty
-                out += f"`{level}` {filled}{empty}\n"
+            numEmpty = _max - remaining
+            filled = '\u25c9' * remaining
+            empty = '\u3007' * numEmpty
+            out += f"`{level}` {filled}{empty}\n"
         else:
             for level in range(1, 10):
                 _max = self.get_max_spellslots(level)

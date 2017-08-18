@@ -237,6 +237,10 @@ class Character: # TODO: refactor old commands to use this
 
     def _initialize_hp(self):
         try:
+            assert self.character.get('consumables') is not None
+        except AssertionError:
+            self.character['consumables'] = {}
+        try:
             assert self.character['consumables'].get('hp') is not None
         except AssertionError:
             self.character['consumables']['hp'] = {'value': self.get_max_hp(), 'reset': 'long', 'max': self.get_max_hp(), 'min': 0}

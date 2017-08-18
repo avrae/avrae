@@ -88,7 +88,7 @@ class PBPUtils:
         except:
             pass
         
-        await self.bot.say("```" + '-' * 50 + "```")
+        await self.bot.say("``` ```")
         
     @commands.command()
     async def pythag(self, num1:int, num2:int):

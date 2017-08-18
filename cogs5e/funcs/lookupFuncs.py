@@ -47,6 +47,8 @@ class Compendium:
             self.items = json.load(f)
         with open('./res/auto_spells.json', 'r') as f:
             self.autospells = json.load(f)
+        with open('./res/backgrounds.json', 'r') as f:
+            self.backgrounds = json.load(f)
 
 
 c = Compendium()
@@ -80,6 +82,12 @@ def searchClassFeat(name):
 
 def getClassFeat(feat):
     return strict_search(c.cfeats, 'name', feat)
+
+def searchBackground(name):
+    return fuzzywuzzy_search_all_3(c.backgrounds, 'name', name)
+
+def getBackground(name):
+    return strict_search(c.backgrounds, 'name', name)
 
 # ----- Monster stuff
 

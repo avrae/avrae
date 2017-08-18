@@ -23,6 +23,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models.character import Character
+from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
@@ -68,6 +70,13 @@ class SheetManager:
     def arg_stuff(self, args, ctx, character):
         args = self.parse_snippets(args, ctx.message.author.id)
         args = parse_cvars(args, character)
+        args = shlex.split(args)
+        args = self.parse_args(args)
+        return args
+
+    def new_arg_stuff(self, args, ctx, character):
+        args = self.parse_snippets(args, ctx.message.author.id)
+        args = character.parse_cvars(args)
         args = shlex.split(args)
         args = self.parse_args(args)
         return args
@@ -128,12 +137,9 @@ class SheetManager:
                          -vuln [damage vulnerability]
                          crit (automatically crit)
                          [user snippet]"""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {}) # grab user's characters
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id) # get user's active
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character] # get Sheet of character
-        attacks = character.get('attacks') # get attacks
+        char = Character.from_ctx(ctx)
+
+        attacks = char.get_attacks()
         
         if atk_name == 'list':
             tempAttacks = []
@@ -156,7 +162,7 @@ class SheetManager:
                 a = ', '.join(atk['name'] for atk in attacks)
             if len(a) > 2000:
                 a = "Too many attacks, values hidden!"
-            return await self.bot.say("{}'s attacks:\n{}".format(character.get('stats', {}).get('name', "NONAME"), a))
+            return await self.bot.say("{}'s attacks:\n{}".format(char.get_name(), a))
         
         try: #fuzzy search for atk_name
             attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
@@ -166,16 +172,15 @@ class SheetManager:
             except StopIteration:
                 return await self.bot.say('No attack with that name found.')
                 
-        args = self.arg_stuff(args, ctx, character)
-        args['name'] = character.get('stats', {}).get('name', "NONAME")
-        args['criton'] = character.get('settings', {}).get('criton', 20) or 20
-        args['hocrit'] = character.get('settings', {}).get('hocrit') or False
+        args = self.new_arg_stuff(args, ctx, char)
+        args['name'] = char.get_name()
+        args['criton'] = char.get_setting('criton', 20)
+        args['hocrit'] = char.get_setting('hocrit', False)
         if attack.get('details') is not None:
-            attack['details'] = parse_cvars(attack['details'], character)
-        
-        result = sheet_attack(attack, args)
+            attack['details'] = char.parse_cvars(attack['details'])
+
+        result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
         embed = result['embed']
-        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
         await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)
@@ -188,14 +193,18 @@ class SheetManager:
         Args: adv/dis
               -b [conditional bonus]
               -phrase [flavor text]
-              -title [title] *note: [charname] and [sname] will be replaced automatically*"""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
-        saves = character.get('saves')
-        if saves is None:
+              -title [title] *note: [charname] and [sname] will be replaced automatically*
+              -image [image URL]
+              -dc [dc] (does not apply to Death Saves)"""
+        if skill == 'death':
+            ds_cmd = self.bot.get_command('game deathsave')
+            if ds_cmd is None:
+                return await self.bot.say("Error: GameTrack cog not loaded.")
+            return await ctx.invoke(ds_cmd, *shlex.split(args))
+
+        char = Character.from_ctx(ctx)
+        saves = char.get_saves()
+        if not saves:
             return await self.bot.say('You must update your character sheet first.')
         try:
             save = next(a for a in saves.keys() if skill.lower() == a.lower())
@@ -204,26 +213,33 @@ class SheetManager:
                 save = next(a for a in saves.keys() if skill.lower() in a.lower())
             except StopIteration:
                 return await self.bot.say('That\'s not a valid save.')
-        
-        embed = discord.Embed()
-        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
-        
-        args = self.arg_stuff(args, ctx, character)
+
+        embed = EmbedWithCharacter(char, name=False)
+
+        args = self.new_arg_stuff(args, ctx, char)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
         phrase = args.get('phrase', None)
-        
+
         if b is not None:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
         else:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
-            
-        embed.title = args.get('title', '').replace('[charname]', character.get('stats', {}).get('name')).replace('[sname]', re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) \
-                      or '{} makes {}!'.format(character.get('stats', {}).get('name'),
+
+        embed.title = args.get('title', '').replace('[charname]', char.get_name()).replace('[sname]', re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) \
+                      or '{} makes {}!'.format(char.get_name(),
                                                a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()))
-            
-        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
-        
+
+        try:
+            dc = int(args.get('dc', None))
+        except (ValueError, TypeError): dc = None
+        dc_phrase = None
+        if dc:
+            dc_phrase = f"**DC {dc}**"
+            embed.set_footer(text="Success!" if save_roll.total >= dc else "Failure!")
+
+        embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
         
@@ -240,14 +256,11 @@ class SheetManager:
               -b [conditional bonus]
               -mc [minimum roll]
               -phrase [flavor text]
-              -title [title] *note: [charname] and [cname] will be replaced automatically*"""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
-        skills = character.get('skills')
-        if skills is None:
+              -title [title] *note: [charname] and [cname] will be replaced automatically*
+              -dc [dc]"""
+        char = Character.from_ctx(ctx)
+        skills = char.get_skills()
+        if not skills:
             return await self.bot.say('You must update your character sheet first.')
         try:
             skill = next(a for a in skills.keys() if check.lower() == a.lower())
@@ -257,20 +270,19 @@ class SheetManager:
             except StopIteration:
                 return await self.bot.say('That\'s not a valid check.')
         
-        embed = discord.Embed()
-        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get('color') is None else character.get('settings', {}).get('color')
+        embed = EmbedWithCharacter(char, False)
 
-        skill_effects = character.get('skill_effects', {})
+        skill_effects = char.get_skill_effects()
         args += ' ' + skill_effects.get(skill, '') # dicecloud v7 - autoadv
 
-        args = self.arg_stuff(args, ctx, character)
+        args = self.new_arg_stuff(args, ctx, char)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv', False) else -1 if args.get('dis', False) else 0
         b = args.get('b', None)
         mc = args.get('mc', None)
         phrase = args.get('phrase', None)
         formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
-                        + ('ro{}'.format(character.get('settings', {}).get('reroll', 0)) 
-                        if not character.get('settings', {}).get('reroll', '0') == '0' else '') \
+                        + ('ro{}'.format(char.get_setting('reroll', 0))
+                        if not char.get_setting('reroll', '0') == '0' else '') \
                         + ('mi{}'.format(mc) if mc is not None else '')
         
         if b is not None:
@@ -278,10 +290,19 @@ class SheetManager:
         else:
             check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]), adv=adv, inline=True)
         
-        embed.title = args.get('title', '').replace('[charname]', character.get('stats', {}).get('name')).replace('[cname]', re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()) \
-                      or '{} makes {} check!'.format(character.get('stats', {}).get('name'),
+        embed.title = args.get('title', '').replace('[charname]', char.get_name()).replace('[cname]', re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()) \
+                      or '{} makes {} check!'.format(char.get_name(),
                                                      a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()))
-        embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+
+        try:
+            dc = int(args.get('dc', None))
+        except (ValueError, TypeError): dc = None
+        dc_phrase = None
+        if dc:
+            dc_phrase = f"**DC {dc}**"
+            embed.set_footer(text="Success!" if check_roll.total >= dc else "Failure!")
+
+        embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
         await self.bot.say(embed=embed)
@@ -430,7 +451,7 @@ class SheetManager:
         if len(choices) > 1:
             choiceList = [(f"{c[0].get('stats', {}).get('name', 'Unnamed')} (`{c[1]})`", c) for c in choices]
 
-            char = await get_selection(ctx, choiceList)
+            char = await get_selection(ctx, choiceList, delete=True)
             if char is None:
                 return await self.bot.say('Selection timed out or was cancelled.')
 
@@ -473,7 +494,7 @@ class SheetManager:
     @commands.cooldown(1, 15, BucketType.user)
     async def update(self, ctx, *, args=''):
         """Updates the current character sheet, preserving all settings.
-        Valid Arguments: -h - Hides character sheet after update is complete."""
+        Valid Arguments: -v - Shows character sheet after update is complete."""
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         if active_character is None:
@@ -530,6 +551,7 @@ class SheetManager:
         sheet['settings'] = old_character.get('settings', {})
         sheet['overrides'] = old_character.get('overrides', {})
         sheet['cvars'] = old_character.get('cvars', {})
+        sheet['consumables'] = old_character.get('consumables', {})
         
         overrides = old_character.get('overrides', {})
         sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description", "No description available.")
@@ -538,7 +560,7 @@ class SheetManager:
         #print(sheet)
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
-        if not '-h' in args:
+        if '-v' in args:
             await self.bot.say(embed=embed)
     
     @commands.command(pass_context=True)
@@ -548,7 +570,9 @@ class SheetManager:
         `color <hex color>` - Colors all embeds this color.
         `criton <number>` - Makes attacks crit on something other than a 20.
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
-        `hocrit true/false` - Enables/disables a half-orc's Brutal Critical."""
+        `hocrit true/false` - Enables/disables a half-orc's Brutal Critical.
+        `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
+        `embedimage true/false` - Enables/disables whether a character's image is automatically embedded."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -644,6 +668,28 @@ class SheetManager:
                     else:
                         character['settings']['hocrit'] = hocrit
                         out += "\u2705 Half-orc crits {}.\n".format("enabled" if character['settings'].get('hocrit') else "disabled")
+            if arg == 'srslots':
+                srslots = list_get(index + 1, None, args)
+                if srslots is None:
+                    out += '\u2139 Short rest slots are currently {}.\n' \
+                    .format("enabled" if character['settings'].get('srslots') else "disabled")
+                else:
+                    try: srslots = get_positivity(srslots)
+                    except AttributeError: out += '\u274c Invalid input. Use "!csettings srslots false" to reset it.\n'
+                    else:
+                        character['settings']['srslots'] = srslots
+                        out += "\u2705 Short Rest slots {}.\n".format("enabled" if character['settings'].get('srslots') else "disabled")
+            if arg == 'embedimage':
+                embedimage = list_get(index + 1, None, args)
+                if embedimage is None:
+                    out += '\u2139 Embed Image is currently {}.\n' \
+                    .format("enabled" if character['settings'].get('embedimage') else "disabled")
+                else:
+                    try: embedimage = get_positivity(embedimage)
+                    except AttributeError: out += '\u274c Invalid input. Use "!csettings embedimage true" to reset it.\n'
+                    else:
+                        character['settings']['embedimage'] = embedimage
+                        out += "\u2705 Embed Image {}.\n".format("enabled" if character['settings'].get('embedimage') else "disabled")
             index += 1
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
@@ -695,8 +741,12 @@ class SheetManager:
             cvar = character.get('cvars', {}).get(name)
             if cvar is None: cvar = 'Not defined.'
             return await self.bot.say('**' + name + '**:\n' + cvar)
-        
-        if name in character.get('stat_cvars', {}): return await self.bot.say("This is already a built-in cvar!")
+
+        try:
+            assert not name in character.get('stat_cvars', {})
+            assert not '/' in name
+        except AssertionError:
+            return await self.bot.say("Could not create cvar: already builtin, or contains invalid character!")
         
         character['cvars'] = character.get('cvars', {}) # set value
         character['cvars'][name] = value
@@ -735,14 +785,28 @@ class SheetManager:
         cvars = character.get('cvars', {})
         
         await self.bot.say('Your variables:\n{}'.format(', '.join([name for name in cvars.keys()])))
-        
+
+    async def _confirm_overwrite(self, ctx, _id):
+        """Prompts the user if command would overwrite another character.
+        Returns True to overwrite, False or None otherwise."""
+        user_characters = self.bot.db.not_json_get(f'{ctx.message.author.id}.characters', {})
+        if _id in user_characters:
+            await ctx.bot.send_message(ctx.message.channel, "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+                                                            "If you only wanted to update your character, run `!update` instead.")
+            reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
+            replyBool = get_positivity(reply.content) if reply is not None else None
+            return replyBool
+        return True
     
     @commands.command(pass_context=True)
     async def dicecloud(self, ctx, url:str):
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings."""
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
-        
+
+        override = await self._confirm_overwrite(ctx, url)
+        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
+
         self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(url))
         
         loading = await self.bot.say('Loading character data from Dicecloud...')
@@ -761,13 +825,8 @@ class SheetManager:
         except Exception as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet. Capitalization matters!\n' + str(e))
-        
-        self.active_characters = self.bot.db.not_json_get('active_characters', {})
-        self.active_characters[ctx.message.author.id] = url
-        self.bot.db.not_json_set('active_characters', self.active_characters)
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        user_characters[url] = sheet['sheet']
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+
+        Character(sheet['sheet'], url).initialize_consumables().commit(ctx).set_active(ctx)
         
         embed = sheet['embed']
         try:
@@ -783,6 +842,9 @@ class SheetManager:
             return await self.bot.say('You must call this command in the same message you upload the sheet.')
         
         file = ctx.message.attachments[0]
+
+        override = await self._confirm_overwrite(ctx, file['filename'])
+        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
         
         loading = await self.bot.say('Loading character data from PDF...')
         parser = PDFSheetParser(file)
@@ -800,17 +862,11 @@ class SheetManager:
             log.error("Error loading PDFChar sheet:")
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
-        
-        self.active_characters = self.bot.db.not_json_get('active_characters', {})
-        self.active_characters[ctx.message.author.id] = file['filename']
-        self.bot.db.not_json_set('active_characters', self.active_characters)
-        
+
+        Character(sheet['sheet'], file['filename']).initialize_consumables().commit(ctx).set_active(ctx)
+
         embed = sheet['embed']
         await self.bot.say(embed=embed)
-        
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        user_characters[file['filename']] = sheet['sheet']
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         
     @commands.command(pass_context=True)
     async def gsheet(self, ctx, url:str):
@@ -822,6 +878,10 @@ class SheetManager:
             url = extract_id_from_url(url)
         except NoValidUrlKeyFound:
             return await self.bot.edit_message(loading, "This is not a Google Sheets link.")
+
+        override = await self._confirm_overwrite(ctx, url)
+        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
+
         try:
             parser = GoogleSheet(url, self.gsheet_client)
         except AssertionError:
@@ -843,12 +903,8 @@ class SheetManager:
         except TypeError:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
-        self.active_characters = self.bot.db.not_json_get('active_characters', {})
-        self.active_characters[ctx.message.author.id] = url
-        self.bot.db.not_json_set('active_characters', self.active_characters)
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        user_characters[url] = sheet['sheet']
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+
+        Character(sheet['sheet'], url).initialize_consumables().commit(ctx).set_active(ctx)
         
         embed = sheet['embed']
         try:

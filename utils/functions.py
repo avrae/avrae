@@ -253,6 +253,15 @@ def parse_cvars(cstr, character):
         tempout = ''
         for substr in re.split(ops, varstr):
             temp = substr.strip()
+            if temp.startswith('/'):
+                _last = character
+                for path in out.split('/'):
+                    if path:
+                        try:
+                            _last = _last.get(path, {})
+                        except AttributeError:
+                            break
+                temp = str(_last)
             tempout += str(cvars.get(temp, temp)) + " "
         for substr in re.split(ops, tempout):
             temp = substr.strip()
@@ -261,6 +270,15 @@ def parse_cvars(cstr, character):
     for var in re.finditer(r'<([^<>]+)>', cstr):
         raw = var.group(0)
         out = var.group(1)
+        if out.startswith('/'):
+            _last = character
+            for path in out.split('/'):
+                if path:
+                    try:
+                        _last = _last.get(path, {})
+                    except AttributeError:
+                        break
+            out = str(_last)
         out = str(cvars.get(out, out))
         out = str(stat_vars.get(out, out))
         cstr = cstr.replace(raw, out, 1)
@@ -274,6 +292,15 @@ def evaluate_cvar(varstr, character):
     tempout = ''
     for substr in re.split(ops, varstr):
         temp = substr.strip()
+        if temp.startswith('/'):
+            _last = character
+            for path in out.split('/'):
+                if path:
+                    try:
+                        _last = _last.get(path, {})
+                    except AttributeError:
+                        break
+            temp = str(_last)
         tempout += str(cvars.get(temp, temp)) + " "
     for substr in re.split(ops, tempout):
         temp = substr.strip()
@@ -286,25 +313,25 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
     
     comments = re.findall(COMMENT_REGEX, damage)
     roll_strings = re.split(ROLL_STRING_REGEX, damage)
-    
-    index = 0
+
     formatted_comments = []
     formatted_roll_strings = []
-    
-    t = 0
-    for comment in comments:
+
+    for t, _ in enumerate(comments):
         if not roll_strings[t].replace(' ', '') == '':
             formatted_roll_strings.append(roll_strings[t])
             formatted_comments.append(comments[t])
         else:
             formatted_comments[-1] += ' ' + comments[t]
-        t += 1
     
     if not roll_strings[-1].replace(' ', '') == '':
         formatted_roll_strings.append(roll_strings[-1])
-        formatted_comments.append("")
+        if formatted_comments:
+            formatted_comments.append(formatted_comments[-1]) # carry over thingies
+        else:
+            formatted_comments.append('')
     
-    for comment in formatted_comments:
+    for index, comment in enumerate(formatted_comments):
         roll_string = formatted_roll_strings[index].replace(' ', '')
                 
         preop = ''
@@ -324,14 +351,14 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
                 roll_string = '({0}) * 2'.format(roll_string)
                 break
         formatted_roll_strings[index] = '{0}{1}{2}'.format(preop, roll_string, "[{}]".format(comment) if comment is not '' else "")
-        index = index + 1
     if formatted_roll_strings:
         damage = ''.join(formatted_roll_strings)
     
     return damage
     
-async def get_selection(ctx, choices):
-    """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice)."""
+async def get_selection(ctx, choices, delete=False):
+    """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
+    If delete is True, will delete the selection message and the response."""
     choices = choices[:10] # sanity
     names = [o[0] for o in choices]
     results = [o[1] for o in choices]
@@ -350,6 +377,10 @@ async def get_selection(ctx, choices):
 
     m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=selectMsg.channel,
                                        check=chk)
-
+    if delete:
+        try:
+            await ctx.bot.delete_message(selectMsg)
+            await ctx.bot.delete_message(m)
+        except: pass
     if m is None or m.content == "c": return None
     return results[int(m.content) - 1]

@@ -11,4 +11,4 @@ _term() {
 
 trap _term SIGTERM
 
-python3 beAnnoying.py $1 $2 # don't fall asleep
+python3 overseer.py $1 $2 # don't fall asleep

@@ -7,6 +7,7 @@ Created on Feb 14, 2017
 
 import asyncio
 import io
+import logging
 import random
 import re
 
@@ -18,9 +19,12 @@ from pdfminer.pdftypes import resolve1
 from pdfminer.psparser import PSLiteral
 
 from cogs5e.funcs.dice import get_roll_comment
+from cogs5e.funcs.lookupFuncs import c
 from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.sheetParser import SheetParser
+from utils.functions import strict_search
 
+log = logging.getLogger(__name__)
 
 class PDFSheetParser(SheetParser):
     
@@ -71,6 +75,7 @@ class PDFSheetParser(SheetParser):
             attacks = self.get_attacks()
             skills = self.get_skills()
             level = self.get_level()
+            spellbook = self.get_spellbook()
         except:
             raise
         
@@ -87,7 +92,9 @@ class PDFSheetParser(SheetParser):
         stat_vars.update(saves)
         
         sheet = {'type': 'pdf',
-                 'version': 3, #v3: added stat cvars
+                 'version': 5, #v3: added stat cvars
+                               #v4: consumables
+                               #v5: spellbook
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': int(hp),
@@ -98,7 +105,9 @@ class PDFSheetParser(SheetParser):
                  'immune': [],
                  'vuln': [],
                  'saves': saves,
-                 'stat_cvars': stat_vars}
+                 'stat_cvars': stat_vars,
+                 'consumables': {},
+                 'spellbook': spellbook}
                 
         embed = self.get_embed(sheet)
         
@@ -251,3 +260,37 @@ class PDFSheetParser(SheetParser):
         for l in re.finditer(r'\d+', classlevel):
             level += int(l.group(0))
         return level
+
+    def get_spellbook(self):
+        if self.character is None: raise Exception('You must call get_character() first.')
+        spellbook = {'spellslots': {},
+                     'spells': [],
+                     'dc': 0,
+                     'attackBonus': 0}
+
+        for lvl in range(1, 10):
+            try:
+                numSlots = int(self.character.get(f"SlotsTot{lvl}") or 0)
+            except ValueError:
+                numSlots = 0
+            spellbook['spellslots'][str(lvl)] = numSlots
+
+        spellnames = set([self.character.get(f"Spells{n}") for n in range(1, 101) if self.character.get(f"Spells{n}")])
+
+        for spell in spellnames:
+            s = strict_search(c.spells, 'name', spell)
+            if s:
+                spellbook['spells'].append(s.get('name'))
+
+        try:
+            spellbook['dc'] = int(self.character.get('SpellSaveDC', 0) or 0)
+        except ValueError:
+            pass
+
+        try:
+            spellbook['attackBonus'] = int(self.character.get('SAB', 0) or 0)
+        except ValueError:
+            pass
+
+        log.debug(f"Completed parsing spellbook: {spellbook}")
+        return spellbook

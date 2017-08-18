@@ -12,12 +12,13 @@ from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.charGen import CharGenerator
-from cogs5e.diceAlgorithm import Dice
+from cogs5e.dice import Dice
 from cogs5e.initiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
+from cogs5e.models.errors import AvraeException
 from cogs5e.pbpUtils import PBPUtils
 from cogs5e.sheetManager import SheetManager
-from cogs5e.spellbook import Spellbook
+from cogs5e.gametrack import GameTrack
 from cogsmisc.adminUtils import AdminUtils
 from cogsmisc.core import Core
 from cogsmisc.customization import Customization
@@ -59,13 +60,6 @@ bot.prefix = prefix
 bot.remove_command('help')
 bot.testing = TESTING
 
-if os.path.isfile('./resources.txt'):
-    with open('./resources.txt', 'r') as f:  # this is really inefficient
-        resource = list(f)
-        bot.mask = int(resource[0], base=2)
-else:
-    bot.mask = 0x00
-
 class Credentials():
     pass
 
@@ -78,6 +72,8 @@ try:
     bot.credentials.discord_bots_key = credentials.discord_bots_key
     bot.credentials.carbon_key = credentials.carbon_key
     bot.credentials.test_database_url = credentials.test_database_url
+    if 'ALPHA_TOKEN' in os.environ:
+        bot.credentials.testToken = os.environ.get("ALPHA_TOKEN")
 except ImportError:
     bot.credentials = Credentials()
     bot.credentials.testToken = os.environ.get('TEST_TOKEN')
@@ -123,7 +119,7 @@ cogs = [diceCog,
         customizationCog,
         REPL(bot),
         Stats(bot),
-        Spellbook(bot)]
+        GameTrack(bot)]
 
 @bot.event
 async def on_ready():
@@ -151,6 +147,10 @@ async def enter():
 async def on_command_error(error, ctx):
     if isinstance(error, commands.CommandNotFound):
         return
+    log.debug("Error caused by message: `{}`".format(ctx.message.content))
+    log.debug('\n'.join(traceback.format_exception(type(error), error, error.__traceback__)))
+    if isinstance(error, AvraeException):
+        return await bot.send_message(ctx.message.channel, f"{type(error)}: {str(error)}")
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if isinstance(error, commands.CheckFailure):
         await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command, the command is disabled, or something went wrong internally.")
@@ -161,6 +161,8 @@ async def on_command_error(error, ctx):
         return await bot.send_message(ctx.message.channel, "This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
     elif isinstance(error, CommandInvokeError):
         original = error.original
+        if isinstance(original, AvraeException):
+            return await bot.send_message(ctx.message.channel, f"{str(original)}")
         if isinstance(original, Forbidden):
             try:
                 return await bot.send_message(ctx.message.author, "Error: I am missing permissions to run this command. Please make sure I have permission to send messages to <#{}>.".format(ctx.message.channel.id))
@@ -175,17 +177,14 @@ async def on_command_error(error, ctx):
                 return await bot.send_message(ctx.message.channel, "Error: Message is too long, malformed, or empty.")
             if original.response.status == 500:
                 return await bot.send_message(ctx.message.channel, "Error: Internal server error on Discord's end. Please try again.")
-            
-    if bot.mask & coreCog.debug_mask:
-        await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
-        try:
-            await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}), shard {}: {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, getattr(bot, 'shard_id', 0), repr(error), ctx.message.content))
-        except AttributeError:
-            await bot.send_message(bot.owner, "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
-        for o in discord_trim(tb):
-            await bot.send_message(bot.owner, o)
-    else:
-        await bot.send_message(ctx.message.channel, "Error: " + str(error))
+
+    await bot.send_message(ctx.message.channel, "Error: " + str(error) + "\nThis incident has been reported to the developer.")
+    try:
+        await bot.send_message(bot.owner, "Error in channel {} ({}), server {} ({}), shard {}: {}\nCaused by message: `{}`".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, getattr(bot, 'shard_id', 0), repr(error), ctx.message.content))
+    except AttributeError:
+        await bot.send_message(bot.owner, "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
+    for o in discord_trim(tb):
+        await bot.send_message(bot.owner, o)
     log.error("Error caused by message: `{}`".format(ctx.message.content))
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
                 
@@ -195,8 +194,6 @@ async def on_message(message):
         return
     if message.content.startswith('avraepls'):
         log.info("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))
-        if coreCog.verbose_mask & bot.mask:
-            await bot.send_message(message.channel, "`Reseeding RNG...`")
         random.seed()
     if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
         return

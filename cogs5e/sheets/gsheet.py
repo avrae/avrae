@@ -4,6 +4,7 @@ Created on May 8, 2017
 @author: andrew
 '''
 import asyncio
+import logging
 import random
 import re
 
@@ -12,7 +13,10 @@ import discord
 from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.sheetParser import SheetParser
+from utils.functions import strict_search
+from cogs5e.funcs.lookupFuncs import c
 
+log = logging.getLogger(__name__)
 
 class GoogleSheet(SheetParser):
     def __init__(self, url, client):
@@ -47,6 +51,7 @@ class GoogleSheet(SheetParser):
             skills = self.get_skills()
             level = self.get_level()
             stats['description'] = self.get_description()
+            spellbook = self.get_spellbook()
         except ValueError:
             raise MissingAttribute("Max HP")
         except:
@@ -65,7 +70,9 @@ class GoogleSheet(SheetParser):
         stat_vars.update(saves)
 
         sheet = {'type': 'google',
-                 'version': 3,  # v3: added stat cvars
+                 'version': 5,  # v3: added stat cvars
+                                # v4: consumables
+                                # v5: spellbook
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': hp,
@@ -76,7 +83,9 @@ class GoogleSheet(SheetParser):
                  'immune': [],
                  'vuln': [],
                  'saves': saves,
-                 'stat_cvars': stat_vars}
+                 'stat_cvars': stat_vars,
+                 'consumables': {},
+                 'spellbook': spellbook}
 
         embed = self.get_embed(sheet)
 
@@ -260,3 +269,45 @@ class GoogleSheet(SheetParser):
                            character.acell("I150").value.lower() or "unknown",
                            character.acell("L150").value.lower() or "unknown")
         return desc
+
+    def get_spellbook(self):
+        if self.character is None: raise Exception('You must call get_character() first.')
+        spellbook = {'spellslots': {},
+                     'spells': [], # C96:AH143 - gah.
+                     'dc': 0,
+                     'attackBonus': 0}
+
+        spellslots = {'1': int(self.character.acell('AK101').value or 0),
+                      '2': int(self.character.acell('E107').value or 0),
+                      '3': int(self.character.acell('AK113').value or 0),
+                      '4': int(self.character.acell('E119').value or 0),
+                      '5': int(self.character.acell('AK124').value or 0),
+                      '6': int(self.character.acell('E129').value or 0),
+                      '7': int(self.character.acell('AK134').value or 0),
+                      '8': int(self.character.acell('E138').value or 0),
+                      '9': int(self.character.acell('AK142').value or 0)}
+        spellbook['spellslots'] = spellslots
+
+        potential_spells = self.character.range('C96:AH143')
+        spells = set()
+
+        for cell in potential_spells:
+            if cell.value:
+                s = strict_search(c.spells, 'name', cell.value)
+                if s:
+                    spells.add(s.get('name'))
+
+        spellbook['spells'] = list(spells)
+
+        try:
+            spellbook['dc'] = int(self.character.acell('AB91').value or 0)
+        except ValueError:
+            pass
+
+        try:
+            spellbook['attackBonus'] = int(self.character.acell('AI91').value or 0)
+        except ValueError:
+            pass
+
+        log.debug(f"Completed parsing spellbook: {spellbook}")
+        return spellbook

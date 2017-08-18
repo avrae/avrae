@@ -60,7 +60,7 @@ class AdminUtils:
         self.bot.db.not_json_set('blacklist', self.blacklisted_serv_ids)
         await self.bot.say(':ok_hand:')
     
-    @commands.command(hidden=True, aliases=['kill'])
+    @commands.command(hidden=True)
     @checks.is_owner()
     async def restart(self):
         """Restarts Avrae. May fail sometimes due to bad programming on zhu.exe's end.
@@ -69,6 +69,11 @@ class AdminUtils:
         await self.bot.say("Byeeeeeee!")
         await self.bot.logout()
         sys.exit()
+
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def kill(self):
+        await self.bot.say("I'm afraid I can't let you do that, Zhu.")
             
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
@@ -113,6 +118,7 @@ class AdminUtils:
                 for s in _data:
                     s['shard'] = _shard
                 all_servers += _data
+            out += f"I am in {len(all_servers)} servers, with {sum(s['members'] for s in all_servers)} members."
             for s in sorted(all_servers, key=lambda k: k['members'], reverse=True):
                 out += "\n{} ({}, {} members, {} bot, shard {})".format(s['name'], s['id'], s['members'], s['bots'], s['shard'])
         else: # grab one server info
@@ -204,6 +210,16 @@ class AdminUtils:
                 num_cvars += 1
             self.bot.db.not_json_set(user_id + '.characters', user_chars)
         await self.bot.say("Migrated {} cvars for {} users".format(num_cvars, num_users))
+
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def backup_key(self, key):
+        data = self.bot.db.get(key)
+        if data:
+            self.bot.db.set(f"{key}-backup", data)
+            await self.bot.say('done')
+        else:
+            await self.bot.say('fail')
         
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
@@ -228,7 +244,7 @@ class AdminUtils:
     @commands.command(hidden=True)
     @checks.is_owner()
     async def mute(self, target):
-        """Mutes a person."""
+        """Mutes a person by ID."""
         self.muted = self.bot.db.not_json_get('muted', [])
         try:
             target_user = await self.bot.get_user_info(target)

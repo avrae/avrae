@@ -3,20 +3,20 @@ Created on Feb 27, 2017
 
 @author: andrew
 '''
-import json
 import re
 
 import discord
-import numexpr
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from utils.functions import a_or_an, parse_resistances
 
 
-def sheet_attack(attack, args):
-    """Returns: a dict with structure {"embed": discord.Embed(), "result": {metadata}}"""
+def sheet_attack(attack, args, embed=None):
+    """@:param embed (discord.Embed) if supplied, will use as base. If None, will create one.
+    @:returns a dict with structure {"embed": discord.Embed(), "result": {metadata}}"""
     #print(args)
-    embed = discord.Embed()
+    if embed is None:
+        embed = discord.Embed()
     total_damage = 0
     dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)] # ['d1', 'd2'...]
     dnum = {}
@@ -25,7 +25,6 @@ def sheet_attack(attack, args):
             try:
                 dnum[dmg] = int(k.split('d')[-1])
             except ValueError:
-                embed = discord.Embed()
                 embed.title = "Error"
                 embed.colour = 0xff0000
                 embed.description = "Malformed tag: {}".format(k)
@@ -134,7 +133,5 @@ def sheet_attack(attack, args):
         embed.set_thumbnail(url=args.get('image'))
         
     return {'embed': embed, 'total_damage': total_damage}
-
-
 
 

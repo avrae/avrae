@@ -14,6 +14,8 @@ import numexpr
 from DDPClient import DDPClient
 
 from cogs5e.sheets.sheetParser import SheetParser
+from cogs5e.funcs.lookupFuncs import c
+from utils.functions import strict_search
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +65,7 @@ class DicecloudParser(SheetParser):
             immunities = temp_resist['immune']
             vulnerabilities = temp_resist['vuln']
             skill_effects = self.get_skill_effects()
+            spellbook = self.get_spellbook()
         except:
             raise
         
@@ -79,8 +82,10 @@ class DicecloudParser(SheetParser):
         stat_vars.update(saves)
         
         sheet = {'type': 'dicecloud',
-                 'version': 7, #v6: added stat cvars
+                 'version': 9, #v6: added stat cvars
                                #v7: added check effects (adv/dis)
+                               #v8: consumables
+                               #v9: spellbook
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -92,7 +97,9 @@ class DicecloudParser(SheetParser):
                  'vuln': vulnerabilities,
                  'saves': saves,
                  'stat_cvars': stat_vars,
-                 'skill_effects': skill_effects}
+                 'skill_effects': skill_effects,
+                 'consumables': {},
+                 'spellbook': spellbook}
                 
         embed = self.get_embed(sheet)
         
@@ -488,6 +495,50 @@ class DicecloudParser(SheetParser):
                 out['vuln'].append(dmgType)
         return out
         
-        
-        
+    def get_spellbook(self):
+        if self.character is None: raise Exception('You must call get_character() first.')
+        spellbook = {'spellslots': {},
+                     'spells': [],
+                     'dc': 0,
+                     'attackBonus': 0}
+
+        spells = self.character.get('spells', [])
+        spellnames = [s.get('name', '') for s in spells]
+
+
+        for lvl in range(1, 10):
+            numSlots = self.calculate_stat(f"level{lvl}SpellSlots")
+            spellbook['spellslots'][str(lvl)] = numSlots
+
+        for spell in spellnames:
+            s = strict_search(c.spells, 'name', spell)
+            if s:
+                spellbook['spells'].append(s.get('name'))
+
+        replacements = self.get_stats()
+        replacements.update(self.get_levels())
+
+        # make a list of safe functions
+        safe_list = ['ceil', 'floor']
+        # use the list to filter the local namespace
+        safe_dict = dict([(k, locals().get(k, None)) for k in safe_list])
+        safe_dict['max'] = max
+        safe_dict['min'] = min
+        safe_dict.update(replacements)
+
+        sls = [(0, 0)] # ab, dc
+        for sl in self.character.get('spellLists', []):
+            try:
+                ab = int(eval(sl.get('attackBonus'), {"__builtins__": None}, safe_dict))
+                dc = int(eval(sl.get('saveDC'), {"__builtins__": None}, safe_dict))
+                sls.append((ab, dc))
+            except:
+                pass
+        sl = sorted(sls, key=lambda k: k[0], reverse=True)[0]
+        spellbook['attackBonus'] = sl[0]
+        spellbook['dc'] = sl[1]
+
+        log.debug(f"Completed parsing spellbook: {spellbook}")
+
+        return spellbook
         

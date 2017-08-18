@@ -272,6 +272,10 @@ class Character: # TODO: refactor old commands to use this
 
     def _initialize_deathsaves(self):
         try:
+            assert self.character.get('consumables') is not None
+        except AssertionError:
+            self.character['consumables'] = {}
+        try:
             assert self.character['consumables'].get('deathsaves') is not None
         except AssertionError:
             self.character['consumables']['deathsaves'] = {'fail': {'value': 0, 'reset': 'hp', 'max': 3, 'min': 0},
@@ -305,6 +309,10 @@ class Character: # TODO: refactor old commands to use this
     def _initialize_spellslots(self):
         """Sets up a character's spellslot consumables.
         @:raises OutdatedSheet if sheet does not have spellbook."""
+        try:
+            assert self.character.get('consumables') is not None
+        except AssertionError:
+            self.character['consumables'] = {}
         try:
             assert self.character['consumables'].get('spellslots') is not None
         except AssertionError:

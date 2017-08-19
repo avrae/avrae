@@ -357,28 +357,28 @@ class AdminUtils:
         except asyncio.CancelledError:
             pass
 
-    async def on_command(self, command, ctx):
-        if self.mem_debug:
-            mem = psutil.Process().memory_full_info().uss
-            if len(self.command_mem) > 30: self.command_mem = {} # let's not overflow
-            self.command_mem[ctx.message.id] = mem # store mem usage before
-            memlog.debug(f"Memory usage before processing command {command.qualified_name}: {mem}B")
-
-    async def on_command_completion(self, command, ctx):
-        if self.mem_debug:
-            mem_before = self.command_mem[ctx.message.id]
-            del self.command_mem[ctx.message.id]
-            mem = psutil.Process().memory_full_info().uss
-            mem_usage = mem - mem_before
-            memlog.info(f"Total memory usage processing command {command.qualified_name}: {mem_usage}B")
-
-    async def on_command_error(self, error, ctx):
-        if self.mem_debug:
-            mem_before = self.command_mem[ctx.message.id]
-            del self.command_mem[ctx.message.id]
-            mem = psutil.Process().memory_full_info().uss
-            mem_usage = mem - mem_before
-            memlog.info(f"Total memory usage processing command {ctx.command.qualified_name} (error): {mem_usage}B")
+    # async def on_command(self, command, ctx):
+    #     if self.mem_debug:
+    #         mem = psutil.Process().memory_full_info().uss
+    #         if len(self.command_mem) > 30: self.command_mem = {} # let's not overflow
+    #         self.command_mem[ctx.message.id] = mem # store mem usage before
+    #         memlog.debug(f"Memory usage before processing command {command.qualified_name}: {mem}B")
+    #
+    # async def on_command_completion(self, command, ctx):
+    #     if self.mem_debug:
+    #         mem_before = self.command_mem[ctx.message.id]
+    #         del self.command_mem[ctx.message.id]
+    #         mem = psutil.Process().memory_full_info().uss
+    #         mem_usage = mem - mem_before
+    #         memlog.info(f"Total memory usage processing command {command.qualified_name}: {mem_usage}B")
+    #
+    # async def on_command_error(self, error, ctx):
+    #     if self.mem_debug:
+    #         mem_before = self.command_mem[ctx.message.id]
+    #         del self.command_mem[ctx.message.id]
+    #         mem = psutil.Process().memory_full_info().uss
+    #         mem_usage = mem - mem_before
+    #         memlog.info(f"Total memory usage processing command {ctx.command.qualified_name} (error): {mem_usage}B")
     
     def msg(self, dest, out):
         coro = self.bot.send_message(dest, out)

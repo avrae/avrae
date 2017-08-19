@@ -359,6 +359,8 @@ class Character: # TODO: refactor old commands to use this
                     filled = '\u25c9' * remaining
                     empty = '\u3007' * numEmpty
                     out += f"`{level}` {filled}{empty}\n"
+        if out == '':
+            out = "No spell slots."
         return out
 
     def set_remaining_slots(self, level:int, value:int):

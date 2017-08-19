@@ -4,16 +4,15 @@ Created on Sep 23, 2016
 @author: andrew
 '''
 import asyncio
-import copy
+import gc
 import json
 import logging
-import os
 import re
 import sys
 import traceback
 import uuid
 
-import discord
+import psutil
 from discord.channel import PrivateChannel
 from discord.enums import ChannelType
 from discord.errors import NotFound
@@ -21,8 +20,8 @@ from discord.ext import commands
 
 from utils import checks
 
-
 log = logging.getLogger(__name__)
+memlog = logging.getLogger("memory")
 
 class AdminUtils:
     '''
@@ -43,6 +42,10 @@ class AdminUtils:
                                      'asdc' # assume direct control
                                      )
         self.requests = {}
+        self.command_mem = {}
+        self.mem_debug = self.bot.db.get("mem_debug", False)
+        self.bot.loop.create_task(self.update_mem_state())
+        self.bot.loop.create_task(self.collect_garbage())
 
         loglevels = self.bot.db.jget('loglevels', {})
         for logger, level in loglevels.items():
@@ -51,7 +54,15 @@ class AdminUtils:
             except:
                 log.warning(f"Failed to reset loglevel of {logger}")
         
-    
+    async def update_mem_state(self):
+        try:
+            await self.bot.wait_until_ready()
+            while not self.bot.is_closed:
+                await asyncio.sleep(10)
+                self.mem_debug = self.bot.db.get("mem_debug", False)
+        except asyncio.CancelledError:
+            pass
+
     @commands.command(hidden=True)
     @checks.is_owner()
     async def blacklist(self, _id):
@@ -304,6 +315,13 @@ class AdminUtils:
         for shard, response in data.items():
             out += 'Shard {}: {}\n'.format(shard, response['response'])
         await self.bot.say(out)
+
+    @commands.command(hidden=True, name="mem_debug")
+    @checks.is_owner()
+    async def _mem_debug(self):
+        """Toggles global memory debug."""
+        self.bot.db.set("mem_debug", not self.bot.db.get("mem_debug", False))
+        await self.bot.say('done.')
             
     async def on_message(self, message):
         if message.author.id in self.muted:
@@ -329,6 +347,38 @@ class AdminUtils:
             except: pass
             await asyncio.sleep(members/200)
             await self.bot.leave_server(server)
+
+    async def collect_garbage(self):
+        try:
+            await self.bot.wait_until_ready()
+            while not self.bot.is_closed:
+                await asyncio.sleep(3600)
+                gc.collect()
+        except asyncio.CancelledError:
+            pass
+
+    async def on_command(self, command, ctx):
+        if self.mem_debug:
+            mem = psutil.Process().memory_full_info().uss
+            if len(self.command_mem) > 30: self.command_mem = {} # let's not overflow
+            self.command_mem[ctx.message.id] = mem # store mem usage before
+            memlog.debug(f"Memory usage before processing command {command.qualified_name}: {mem}B")
+
+    async def on_command_completion(self, command, ctx):
+        if self.mem_debug:
+            mem_before = self.command_mem[ctx.message.id]
+            del self.command_mem[ctx.message.id]
+            mem = psutil.Process().memory_full_info().uss
+            mem_usage = mem - mem_before
+            memlog.info(f"Total memory usage processing command {command.qualified_name}: {mem_usage}B")
+
+    async def on_command_error(self, error, ctx):
+        if self.mem_debug:
+            mem_before = self.command_mem[ctx.message.id]
+            del self.command_mem[ctx.message.id]
+            mem = psutil.Process().memory_full_info().uss
+            mem_usage = mem - mem_before
+            memlog.info(f"Total memory usage processing command {ctx.command.qualified_name} (error): {mem_usage}B")
     
     def msg(self, dest, out):
         coro = self.bot.send_message(dest, out)

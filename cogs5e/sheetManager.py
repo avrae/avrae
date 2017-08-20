@@ -60,7 +60,7 @@ class SheetManager:
         try:
             await self.bot.wait_until_ready()
             while not self.bot.is_closed:
-                await asyncio.sleep(1800)  # every half hour
+                await asyncio.sleep(7200)  # every 2 hours
                 self.bot.db.jset('active_characters_backup', self.bot.db.jget('active_characters', {}))
                 self.bot.db.jset('damage_snippets_backup', self.bot.db.jget('damage_snippets', {}))
                 #self.bot.db.jset('char_vars_backup', self.bot.db.jget('char_vars', {}))
@@ -541,7 +541,7 @@ class SheetManager:
                 sheet = await parser.get_sheet()
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
         except TypeError as e:
-            log.debug(f"Exception in parser.get_sheet: {e}")
+            log.info(f"Exception in parser.get_sheet: {e}")
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
@@ -560,6 +560,7 @@ class SheetManager:
         #print(sheet)
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        del user_characters, character, parser, old_character # pls don't freak out avrae
         if '-v' in args:
             await self.bot.say(embed=embed)
     

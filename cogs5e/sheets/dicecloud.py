@@ -306,6 +306,7 @@ class DicecloudParser(SheetParser):
                         safe_dict = dict([(k, locals().get(k, None)) for k in safe_list])
                         safe_dict['max'] = max
                         safe_dict['min'] = min
+                        safe_dict['round'] = round
                         safe_dict.update(replacements)
                         value = eval(calculation, {"__builtins__": None}, safe_dict)
                     except SyntaxError:

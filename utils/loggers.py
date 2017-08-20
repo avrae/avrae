@@ -19,6 +19,6 @@ class TextLogger:
             log = "channel {} ({}), server {} ({})\nmessage: {}\n----------\n".format(ctx.message.channel, ctx.message.channel.id, ctx.message.server, ctx.message.server.id, ctx.message.content)
         except AttributeError:
             log = "PM with {} ({})\nmessage: {}\n----------\n".format(ctx.message.author, ctx.message.author.id, ctx.message.content)
-        with open(self.file, mode='a', encoding='utf-8') as f:
-            f.write(timestamp + message + log)
-            self.log.info(message + log)
+        # with open(self.file, mode='a', encoding='utf-8') as f:
+        #     f.write(timestamp + message + log)
+        self.log.info(message + log)

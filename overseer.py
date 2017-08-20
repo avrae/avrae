@@ -57,7 +57,7 @@ def launch_web():
         bot.web = subprocess.Popen(["gunicorn", "-w", "2", "-b", "0.0.0.0:{}".format(os.environ.get("PORT")), "--max-requests", "1000", "--max-requests-jitter", "50", "web.web:app"])
     
 def launch_shards():
-    for shard in range(CLUSTER_START, CLUSTER_END):
+    for shard in range(CLUSTER_START, CLUSTER_END+1):
         if TESTING:
             print("o.{}: Launching shard test {}".format(CLUSTER, shard))
             bot.shards[shard] = subprocess.Popen(['python3', 'dbot.py', '-s', str(shard), 'test'])

@@ -300,15 +300,9 @@ class DicecloudParser(SheetParser):
                     calculation = effect.get('calculation', '').replace('{', '').replace('}', '').lower()
                     if calculation == '': continue
                     try:
-                        # make a list of safe functions
-                        safe_list = ['ceil', 'floor']
-                        # use the list to filter the local namespace
-                        safe_dict = dict([(k, locals().get(k, None)) for k in safe_list])
-                        safe_dict['max'] = max
-                        safe_dict['min'] = min
-                        safe_dict['round'] = round
+                        safe_dict = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round}
                         safe_dict.update(replacements)
-                        value = eval(calculation, {"__builtins__": None}, safe_dict)
+                        value = eval(calculation.lower(), {"__builtins__": None}, safe_dict)
                     except SyntaxError:
                         continue
                     except KeyError:

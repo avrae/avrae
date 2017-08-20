@@ -75,7 +75,7 @@ class GameTrack:
         await self.bot.say(embed=embed)
 
     @game.command(pass_context=True, name='spellslot', aliases=['ss'])
-    async def game_spellslot(self, ctx, level:int=None, value:int=None):
+    async def game_spellslot(self, ctx, level:int=None, value:str=None):
         """Views or sets your remaining spell slots."""
         if level is not None:
             try:
@@ -90,6 +90,13 @@ class GameTrack:
         elif value is None:
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n{character.get_remaining_slots_str(level)}"
         else:
+            try:
+                if value.startswith(('+', '-')):
+                    value = character.get_remaining_slots(level) + int(value)
+                else:
+                    value = int(value)
+            except ValueError:
+                return await self.bot.say(f"{value} is not a valid integer.")
             try: assert 0 <= value <= character.get_max_spellslots(level)
             except AssertionError: raise CounterOutOfBounds()
             character.set_remaining_slots(level, value).commit(ctx)

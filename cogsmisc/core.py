@@ -90,8 +90,8 @@ class Core:
         motd = random.choice(["May the RNG be with you", "May your rolls be high",
                               "Will give higher rolls for cookies", ">:3",
                               "Does anyone even read these?"])
-        CLUSTER_MAP = {0: (0, 1),
-                       1: (2, 6),
+        CLUSTER_MAP = {0: (0, 2),
+                       1: (3, 6),
                        2: (7, 10)}
         cluster_num = next((i for i, v in CLUSTER_MAP.items() if v[0] <= self.bot.shard_id <= v[1]), "Unknown")
         embed.set_footer(text='{} | Build {} | Cluster {} | Shard {}'.format(motd, self.bot.db.get('build_num'), cluster_num, getattr(self.bot, 'shard_id', 0)))

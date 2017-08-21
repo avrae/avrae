@@ -27,8 +27,8 @@ if "test" in sys.argv:
 
 # SHARDS = int(os.environ.get('SHARDS', 1))
 CLUSTER = int(sys.argv[-1])
-CLUSTER_MAP = {0: (0, 1),
-               1: (2, 6),
+CLUSTER_MAP = {0: (0, 2),
+               1: (3, 6),
                2: (7, 10)}
 CLUSTER_START = CLUSTER_MAP[CLUSTER][0]
 CLUSTER_END = CLUSTER_MAP[CLUSTER][1]

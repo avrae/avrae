@@ -27,8 +27,8 @@ if "test" in sys.argv:
 
 # SHARDS = int(os.environ.get('SHARDS', 1))
 CLUSTER = int(sys.argv[-1])
-CLUSTER_MAP = {0: (0, 2),
-               1: (3, 6),
+CLUSTER_MAP = {0: (0, 1),
+               1: (2, 6),
                2: (7, 10)}
 CLUSTER_START = CLUSTER_MAP[CLUSTER][0]
 CLUSTER_END = CLUSTER_MAP[CLUSTER][1]
@@ -54,7 +54,7 @@ def launch_web():
     if TESTING:
         bot.web = subprocess.Popen(["gunicorn", "-w", "2", "web.web:app"])
     else:
-        bot.web = subprocess.Popen(["gunicorn", "-w", "2", "-b", "0.0.0.0:{}".format(os.environ.get("PORT")), "--max-requests", "1000", "--max-requests-jitter", "50", "web.web:app"])
+        bot.web = subprocess.Popen(["gunicorn", "-w", "1", "-b", "0.0.0.0:{}".format(os.environ.get("PORT")), "web.web:app"])
     
 def launch_shards():
     for shard in range(CLUSTER_START, CLUSTER_END+1):

@@ -5,10 +5,9 @@ Created on Dec 28, 2016
 '''
 
 import json
-import os
 
 import redis
-
+from redis import Redis
 
 
 class DataIO:
@@ -18,7 +17,7 @@ class DataIO:
 
     def __init__(self, testing=False, test_database_url=''):
         if not testing:
-            self._db = redis.from_url(os.environ.get("REDIS_URL"))
+            self._db = Redis(host="redis", db=0, socket_connect_timeout=2, socket_timeout=2)
         else:
             self._db = redis.from_url(test_database_url)
         self.pubsub = self._db.pubsub(ignore_subscribe_messages=True)

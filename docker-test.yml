@@ -1,0 +1,27 @@
+version: "3"
+services:
+  test:
+    image: zhuexe/avrtest:latest
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+    networks:
+      - webnet
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data:/data
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - webnet
+networks:
+  webnet:

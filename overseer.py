@@ -25,23 +25,16 @@ RUNNING = True
 if "test" in sys.argv:
     TESTING = True
 
-# SHARDS = int(os.environ.get('SHARDS', 1))
-CLUSTER = int(sys.argv[-1])
-CLUSTER_MAP = {0: (0, 2),
-               1: (3, 6),
-               2: (7, 10)}
-CLUSTER_START = CLUSTER_MAP[CLUSTER][0]
-CLUSTER_END = CLUSTER_MAP[CLUSTER][1]
+CLUSTER = int(sys.argv[-2])
+CLUSTER_START = int(sys.argv[-2])
+CLUSTER_END = int(sys.argv[-1])
 ROLLING_TIMER = 0.25 # seconds between each shard start
 bot = Overseer()
 
 def init():
     signal.signal(signal.SIGTERM, sigterm_handler)
-    if CLUSTER == 0:
-        launch_web() # I mean okay
-    # time.sleep(ROLLING_TIMER * CLUSTER_START) # rolling restart
     launch_shards()
-    if CLUSTER == 0:
+    if CLUSTER_START == 0:
         clean_shard_servers()
 
 def loop():

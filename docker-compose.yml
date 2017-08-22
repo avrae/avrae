@@ -10,6 +10,8 @@ services:
           memory: 1900M
       restart_policy:
         condition: on-failure
+      placement:
+        constraints: [node.role == manager]
     networks:
       - webnet
   web:

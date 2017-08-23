@@ -317,22 +317,6 @@ class AdminUtils:
             out += 'Shard {}: {}\n'.format(shard, response['response'])
         await self.bot.say(out)
 
-    @commands.command(hidden=True, name="migrate_db")
-    @checks.is_owner()
-    async def migrate_db(self):
-        """Migrates entire db."""
-        def _():
-            old_db = DataIO(testing=True, test_database_url=credentials.old_database_url)
-            for key in old_db._db.keys():
-                try:
-                    key = key.decode()
-                    self.bot.db.set(key, old_db.get(key))
-                    print(f"Migrated {key}")
-                except Exception as e:
-                    print(f"Error migrating {key}: {e}")
-        await self.bot.loop.run_in_executor(None, _)
-        await self.bot.say('done.')
-
     @commands.command(hidden=True, name="mem_debug")
     @checks.is_owner()
     async def _mem_debug(self):

@@ -88,8 +88,8 @@ def clean_shard_servers():
 def sigterm_handler(_signum, _frame):
     global RUNNING
     RUNNING = False
-    print("o.{}: Overseer caught SIGTERM, sleeping for 15!".format(CLUSTER))
-    time.sleep(15)
+    print("o.{}: Overseer caught SIGTERM, sleeping for 9!".format(CLUSTER))
+    time.sleep(9)
     sys.exit(0)
     
 if __name__ == '__main__':

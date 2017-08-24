@@ -14,6 +14,8 @@ services:
         constraints: [node.role == manager]
     networks:
       - webnet
+    depends_on:
+      - redis
   web:
     image: zhuexe/avraeweb:latest
     deploy:
@@ -26,6 +28,8 @@ services:
         condition: on-failure
     networks:
       - webnet
+    depends_on:
+      - redis
   redis:
     image: redis
     ports:

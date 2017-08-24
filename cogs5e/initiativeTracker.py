@@ -882,6 +882,7 @@ class InitTracker:
                 except:
                     out += "\u274c You must pass in a number with the -p tag.\n"
         if 'group' in args:
+
             if combatant == combat.currentCombatant:
                 out += "\u274c You cannot change a combatant's group on their own turn.\n"
             else:

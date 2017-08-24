@@ -31,8 +31,6 @@ class GameTrack:
 
     def __init__(self, bot):
         self.bot = bot
-        with open('./res/auto_spells.json', 'r') as f:
-            self.autospells = json.load(f)
 
     @commands.group(pass_context=True, name='game', aliases=['g'])
     async def game(self, ctx):
@@ -385,8 +383,8 @@ class GameTrack:
 
         if spell_name is None: return
 
-        spell = strict_search(self.autospells, 'name', spell_name)
-        if spell is None: return await self._old_cast(ctx, spell_name, fallback=True)  # fall back to old cast
+        spell = strict_search(c.autospells, 'name', spell_name)
+        if spell is None: return await self._old_cast(ctx, spell_name, *args)  # fall back to old cast
 
         char = Character.from_ctx(ctx)
 
@@ -429,7 +427,8 @@ class GameTrack:
         if not can_cast:
             embed = EmbedWithCharacter(char)
             embed.title = "Cannot cast spell!"
-            embed.description = "Not enough spell slots remaining, or spell not in known spell list!"
+            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
+                                "Use `!game longrest` to restore all spell slots, or pass `-i` to ignore restrictions."
             if cast_level > 0:
                 embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
             return await self.bot.say(embed=embed)
@@ -608,7 +607,7 @@ class GameTrack:
         return args.replace('SPELL', str(parse_cvars("SPELL", character)).replace('PROF', str(
             character.get('stats', {}).get('proficiencyBonus', "0"))))
 
-    async def _old_cast(self, ctx, args, fallback=False):
+    async def _old_cast(self, ctx, spell_name, *args): # TODO
         try:
             guild_id = ctx.message.server.id
             pm = self.bot.db.not_json_get("lookup_settings", {}).get(guild_id, {}).get("pm_result", False)
@@ -616,11 +615,7 @@ class GameTrack:
         except:
             pm = False
 
-        args = args.split('-r')
-        args = [a.strip() for a in args]
-        spellName = args[0].strip()
-
-        spell = getSpell(spellName, return_spell=True)
+        spell = getSpell(spell_name, return_spell=True)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
         if spell['spell'] is None:
@@ -628,7 +623,54 @@ class GameTrack:
         result = spell['string']
         spell = spell['spell']
 
-        if len(args) == 1:
+        char = Character.from_ctx(ctx)
+
+        tempargs = list(args)
+        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
+        for index, arg in enumerate(tempargs):  # parse snippets
+            snippet_value = user_snippets.get(arg)
+            if snippet_value:
+                tempargs[index] = snippet_value
+            elif ' ' in arg:
+                tempargs[index] = shlex.quote(arg)
+
+        args = " ".join(tempargs)
+        args = char.parse_cvars(args)
+        args = shlex.split(args)
+        args = parse_args_3(args)
+
+        can_cast = True
+        spell_level = int(spell.get('level', 0))
+        try:
+            cast_level = int(args.get('l', [spell_level])[-1])
+            assert spell_level <= cast_level <= 9
+        except (AssertionError, ValueError):
+            return await self.bot.say("Invalid spell level.")
+
+        # make sure we can cast it
+        try:
+            assert char.get_remaining_slots(cast_level) > 0
+            assert spell_name in char.get_spell_list()
+        except AssertionError:
+            can_cast = False
+        else:
+            # use a spell slot
+            if not args.get('i'):
+                char.use_slot(cast_level)
+
+        if args.get('i'):
+            can_cast = True
+
+        if not can_cast:
+            embed = EmbedWithCharacter(char)
+            embed.title = "Cannot cast spell!"
+            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
+                                "Use `!game longrest` to restore all spell slots, or pass `-i` to ignore restrictions."
+            if cast_level > 0:
+                embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
+            return await self.bot.say(embed=embed)
+
+        if len(args) == 0:
             rolls = spell.get('roll', None)
             if isinstance(rolls, list):
                 active_character = self.bot.db.not_json_get('active_characters', {}).get(
@@ -654,7 +696,7 @@ class GameTrack:
             else:
                 out = "**{} casts {}!** ".format(ctx.message.author.mention, spell['name'])
         else:
-            rolls = args[1:]
+            rolls = args.get('r', [])
             roll_results = ""
             for r in rolls:
                 res = roll(r, inline=True)
@@ -664,7 +706,10 @@ class GameTrack:
                     roll_results += "**Effect:** " + r
             out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
 
-        if fallback: out = "Spell not supported by new cast, falling back to old cast.\n" + out
+        if cast_level > 0:
+            out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"
+
+        out = "Spell not supported by new cast, falling back to old cast.\n" + out
         await self.bot.say(out)
         for r in result:
             if pm:

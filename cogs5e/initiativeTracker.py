@@ -1291,7 +1291,8 @@ class InitTracker:
         if not can_cast:
             embed = EmbedWithCharacter(character)
             embed.title = "Cannot cast spell!"
-            embed.description = "Not enough spell slots remaining, or spell not in known spell list!"
+            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
+                                "Use `!game longrest` to restore all spell slots, or pass `-i` to ignore restrictions."
             if cast_level > 0:
                 embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str(cast_level))
             return await self.bot.say(embed=embed)

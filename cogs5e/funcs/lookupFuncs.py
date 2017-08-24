@@ -361,6 +361,7 @@ def getSpell(spellname, return_spell=False):
     spellDesc = []
 
     spell = strict_search(c.spells, 'name', spellname)
+    original_spell = copy.copy(spell)
     spell = copy.copy(spell)
     if spell is None:
         spellDesc.append("Spell does not exist or is misspelled (ha).")
@@ -405,7 +406,7 @@ def getSpell(spellname, return_spell=False):
     tempStr = '\n'.join(spellDesc)
 
     if return_spell:
-        return {'spell': spell, 'string': discord_trim(tempStr)}
+        return {'spell': original_spell, 'string': discord_trim(tempStr)}
     else:
         return discord_trim(tempStr)
 

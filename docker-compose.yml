@@ -24,10 +24,6 @@ services:
           memory: 100M
       restart_policy:
         condition: on-failure
-    volumes:
-      - ~/cert:/cert
-    ports:
-      - "80:80"
     networks:
       - webnet
   redis:
@@ -39,6 +35,8 @@ services:
     deploy:
       placement:
         constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
     networks:
       - webnet
 networks:

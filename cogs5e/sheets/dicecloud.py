@@ -505,7 +505,7 @@ class DicecloudParser(SheetParser):
                      'attackBonus': 0}
 
         spells = self.character.get('spells', [])
-        spellnames = [s.get('name', '') for s in spells]
+        spellnames = [s.get('name', '') for s in spells if not s.get('removed', False)]
 
 
         for lvl in range(1, 10):

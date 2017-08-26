@@ -7,6 +7,7 @@ import asyncio
 import copy
 import datetime
 import logging
+import os
 import pickle
 import random
 import re
@@ -26,8 +27,8 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
-    parse_args_3, parse_cvars, evaluate_cvar, parse_resistances, \
-    fuzzywuzzy_search_all_2
+    parse_args_3, parse_cvars, parse_resistances, \
+    make_sure_path_exists
 
 log = logging.getLogger(__name__)
 
@@ -1733,29 +1734,47 @@ class InitTracker:
         self.panic_save()
             
     def panic_save(self):
+        make_sure_path_exists('temp/')
         temp_key = []
         for combat in self.combats:
             combat.combatantGenerator = None
-            path = '{}.avrae'.format(combat.channel.id)
-            self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
+            path = 'temp/{}.avrae'.format(combat.channel.id)
+            with open(path, mode='wb') as f:
+                pickle.dump(combat, f, pickle.HIGHEST_PROTOCOL)
+            # self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
             log.info("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
             temp_key.append(combat.channel.id)
-        self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 120) # timeout in 2 minutes
+        with open(f'temp/combats-{self.bot.shard_id}.avrae', mode='w') as f:
+            f.write('\n'.join(temp_key))
+        # self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 120) # timeout in 2 minutes
         
     async def panic_load(self):
+        make_sure_path_exists('temp/')
         await self.bot.wait_until_ready()
-        combats = self.bot.db.jget('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), [])
+        try:
+            with open(f'temp/combats-{self.bot.shard_id}.avrae', mode='r') as f:
+                combats = f.readlines()
+        except:
+            combats = []
+        # combats = self.bot.db.jget('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), [])
         temp_msgs = []
         for c in combats:
             if self.bot.get_channel(c) is None:
                 log.warning('Shard check for {} failed, aborting.'.format(c))
                 continue
-            path = '{}.avrae'.format(c)
-            combat = self.bot.db.get(path, None)
-            if combat is None:
+            path = 'temp/{}.avrae'.format(c)
+            try:
+                with open(path, mode='rb') as f:
+                    combat = pickle.load(f)
+                os.remove(path)
+            except:
                 log.warning('Combat not found reloading {}, aborting'.format(c))
                 continue
-            combat = pickle.loads(combat.encode('cp437'))
+            # combat = self.bot.db.get(path, None)
+            # if combat is None:
+            #     log.warning('Combat not found reloading {}, aborting'.format(c))
+            #     continue
+            # combat = pickle.loads(combat.encode('cp437'))
             if combat.lastmodified + datetime.timedelta(weeks=1) < datetime.datetime.now():
                 log.warning('Combat not modified for over 1w reloading {}, aborting'.format(c))
                 continue

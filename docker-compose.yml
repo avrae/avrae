@@ -2,6 +2,8 @@ version: "3"
 services:
   bot:
     image: zhuexe/avrae:latest
+    volumes:
+      - ~/temp:/temp
     deploy:
       replicas: 1
       resources:

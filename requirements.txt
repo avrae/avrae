@@ -5,7 +5,7 @@ cffi==1.9.1
 chardet==2.3.0
 click==6.7
 decorator==4.0.11
-discord.py==0.16.9
+discord.py==0.16.10
 Flask==0.12.2
 fuzzywuzzy==0.15.0
 google-api-python-client==1.6.2

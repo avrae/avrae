@@ -540,14 +540,14 @@ class GameTrack:
             result = sheet_attack(attack, outargs)
             for f in result['embed'].fields:
                 embed.add_field(name=f.name, value=f.value, inline=f.inline)
-        else:  # special spell (MM)
+        else:  # special spell (MM/heal)
             outargs = copy.copy(args)  # just make an attack for it
             outargs['d'] = "+".join(args.get('d', [])) or None
             for _arg, _value in outargs.items():
                 if isinstance(_value, list):
                     outargs[_arg] = _value[-1]
             attack = {"name": spell['name'],
-                      "damage": spell.get("damage", "0"),
+                      "damage": spell.get("damage", "0").replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())),
                       "attackBonus": None}
             if upcast_dmg:
                 attack['damage'] = attack['damage'] + '+' + upcast_dmg

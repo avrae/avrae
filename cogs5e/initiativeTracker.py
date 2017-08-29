@@ -1464,7 +1464,7 @@ class InitTracker:
                         if isinstance(_value, list):
                             outargs[_arg] = _value[-1]
                     attack = {"name": spell['name'],
-                              "damage": spell.get("damage", "0"),
+                              "damage": spell.get("damage", "0").replace('SPELL', str(character.get_spell_ab() - character.get_prof_bonus())),
                               "attackBonus": None}
                     result = sheet_attack(attack, outargs)
                     out = ""

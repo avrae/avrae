@@ -164,7 +164,7 @@ def spell_context(spell):
         sentences = text.split('.')
 
         for i, s in enumerate(sentences):
-            if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
+            if " spell attack" in s.lower():
                 _sent = []
                 for sentence in sentences[i:i+3]:
                     if not '\n\n' in sentence:

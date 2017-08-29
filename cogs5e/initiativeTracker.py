@@ -22,7 +22,7 @@ from discord.ext import commands
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchAutoSpellFull
-from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from utils.functions import parse_args, \
@@ -1483,47 +1483,10 @@ class InitTracker:
                                 pass
                     else:
                         embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
-        
-        if spell['type'] == 'save': # context!
-            if isinstance(spell['text'], list):
-                text = '\n'.join(spell['text'])
-            else:
-                text = spell['text']
-            sentences = text.split('.')
-            context = ""
-            for i, s in enumerate(sentences):
-                if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
-                    if i + 2 < len(sentences):
-                        _ctx = s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
-                        context += _ctx.strip()
-                    elif i + 1 < len(sentences):
-                        _ctx = s + '. ' + sentences[i+1] + '. '
-                        context += _ctx.strip()
-                    else:
-                        _ctx = s + '. '
-                        context += _ctx.strip()
-                    context += '\n'
-            embed.add_field(name="Effect", value=context)
-        elif spell['type'] == 'attack':
-            if isinstance(spell['text'], list):
-                text = '\n'.join(spell['text'])
-            else:
-                text = spell['text']
-            sentences = text.split('.')
-            context = ""
-            for i, s in enumerate(sentences):
-                if " spell attack" in s.lower():
-                    if i + 2 < len(sentences):
-                        _ctx = s + '. ' + sentences[i+1] + '. ' + sentences[i+2] + '. '
-                        context += _ctx.strip()
-                    elif i + 1 < len(sentences):
-                        _ctx = s + '. ' + sentences[i+1] + '. '
-                        context += _ctx.strip()
-                    else:
-                        _ctx = s + '. '
-                        context += _ctx.strip()
-                    context += '\n'
-            embed.add_field(name="Effect", value=context)
+
+        spell_ctx = spell_context(spell)
+        if spell_ctx:
+            embed.add_field(name='Effect', value=spell_ctx)
 
         if cast_level > 0:
             embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str(cast_level))

@@ -134,4 +134,48 @@ def sheet_attack(attack, args, embed=None):
         
     return {'embed': embed, 'total_damage': total_damage}
 
+def spell_context(spell):
+    """:returns str - Spell context."""
+    context = ""
 
+    if spell['type'] == 'save':  # context!
+        if isinstance(spell['text'], list):
+            text = '\n'.join(spell['text'])
+        else:
+            text = spell['text']
+        sentences = text.split('.')
+
+        for i, s in enumerate(sentences):
+            if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
+                _sent = []
+                for sentence in sentences[i:i+3]:
+                    if not '\n\n' in sentence:
+                        _sent.append(sentence)
+                    else:
+                        break
+                _ctx = '. '.join(_sent)
+                if not _ctx.strip() in context:
+                    context += f'{_ctx.strip()}.\n'
+    elif spell['type'] == 'attack':
+        if isinstance(spell['text'], list):
+            text = '\n'.join(spell['text'])
+        else:
+            text = spell['text']
+        sentences = text.split('.')
+
+        for i, s in enumerate(sentences):
+            if spell.get('save', {}).get('save').lower() + " saving throw" in s.lower():
+                _sent = []
+                for sentence in sentences[i:i+3]:
+                    if not '\n\n' in sentence:
+                        _sent.append(sentence)
+                    else:
+                        break
+                _ctx = '. '.join(_sent)
+                if not _ctx.strip() in context:
+                    context += f'{_ctx.strip()}.\n'
+    else:
+        if 'short' in spell:
+            context = spell['short']
+
+    return context

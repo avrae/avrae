@@ -260,7 +260,7 @@ class GameTrack:
         except ValueError:
             return await self.bot.say(f"Could not modify counter: {modifier} is not a number")
         resultEmbed = EmbedWithCharacter(character)
-        consValue = counter.get('value', 0)
+        consValue = int(counter.get('value', 0))
         newValue = consValue + modifier
         try:
             character.set_consumable(name, newValue).commit(ctx) #  I really love this

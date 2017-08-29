@@ -440,7 +440,7 @@ class Character: # TODO: refactor old commands to use this
                    self.evaluate_cvar(self.character['consumables']['custom'][name].get('max', str(2 ** 64 - 1)))
         except:
             raise CounterOutOfBounds()
-        self.character['consumables']['custom'][name]['value'] = newValue
+        self.character['consumables']['custom'][name]['value'] = int(newValue)
 
         return self
 

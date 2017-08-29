@@ -3,7 +3,7 @@ services:
   bot:
     image: zhuexe/avrae:latest
     volumes:
-      - ~/temp:/temp
+      - ~/temp:/app/temp
     deploy:
       replicas: 1
       resources:

@@ -59,7 +59,7 @@ def main():
         print(spell)
 
     with open('output/auto_spells.json', mode='w') as f:
-        json.dump(spells, f, sort_keys=True, indent=2)
+        json.dump(auto_spells, f, sort_keys=True, indent=2)
     # print(auto_spells)
 
 if __name__ == '__main__':

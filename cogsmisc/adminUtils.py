@@ -296,6 +296,26 @@ class AdminUtils:
                 return
             else:
                 await self.bot.send_message(self.assume_dir_control_chan, cleaned)
+
+    @commands.command(hidden=True, name="migrate_db", pass_context=True)
+    @checks.is_owner()
+    async def migrate_db(self, ctx):
+        """Migrates entire db."""
+        await self.bot.say("Are you absolutely, 100% sure you want to do this? **This will overwrite existing keys**.")
+        msg = await self.bot.wait_for_message(author=ctx.message.author)
+        if not msg.content == 'yes': return await self.bot.say("Aborting.")
+        def _():
+            old_db = DataIO(testing=True, test_database_url=credentials.old_database_url)
+            for key in old_db._db.keys():
+                try:
+                    key = key.decode()
+                    self.bot.db.set(key, old_db.get(key))
+                    print(f"Migrated {key}")
+                except Exception as e:
+                    print(f"Error migrating {key}: {e}")
+
+        await self.bot.loop.run_in_executor(None, _)
+        await self.bot.say('done.')
                 
     @commands.command(hidden=True)
     @checks.is_owner()

@@ -35,9 +35,7 @@ services:
     depends_on:
       - redis
   redis:
-    image: redis
-    ports:
-      - "6379:6379"
+    image: zhuexe/avrae-redis:latest
     volumes:
       - ~/data:/data
     deploy:

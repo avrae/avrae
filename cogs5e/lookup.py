@@ -34,7 +34,7 @@ class Lookup:
         for i, r in enumerate(names):
             selectStr += f"**[{i+1}]** - {r}\n"
         embed.description = selectStr
-        embed.color = random.randint(0, 0xffffff)
+        embed.colour = random.randint(0, 0xffffff)
         selectMsg = await self.bot.send_message(ctx.message.channel, embed=embed)
 
         def chk(msg):
@@ -71,15 +71,12 @@ class Lookup:
             else:
                 result = await self.get_selection(results, ctx)
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
-        
-        conName = result['name']
-        conHeader = '-' * len(conName)
-        conDesc = result['desc']
-        out = "```markdown\n{0}\n{1}\n{2}```".format(conName, conHeader, conDesc)
 
-        # do stuff here
-        for r in discord_trim(out):
-            await self.bot.send_message(destination, r)
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+        embed.description = result['desc']
+
+        await self.bot.send_message(destination, embed=embed)
                 
     @commands.command(pass_context=True)
     async def rule(self, ctx, *, name : str):
@@ -89,6 +86,7 @@ class Lookup:
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
         except:
             pm = False
+        destination = ctx.message.author if pm else ctx.message.channel
 
         result = searchRule(name)
         if result is None:
@@ -105,17 +103,15 @@ class Lookup:
                 result = await self.get_selection(results, ctx)
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
-        conName = result['name']
-        conHeader = '-' * len(conName)
-        conDesc = result['desc']
-        out = "```markdown\n{0}\n{1}\n{2}```".format(conName, conHeader, conDesc)
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+        desc = result['desc']
+        desc = [desc[i:i+1024] for i in range(0, len(desc), 1024)]
+        embed.description = ''.join(desc[:2])
+        for piece in desc[2:]:
+            embed.add_field(name="con't", value=piece)
 
-        # do stuff here
-        for r in discord_trim(out):
-            if pm:
-                await self.bot.send_message(ctx.message.author, r)
-            else:
-                await self.bot.say(r)
+        await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
     async def feat(self, ctx, *, name : str):
@@ -125,6 +121,7 @@ class Lookup:
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
         except:
             pm = False
+        destination = ctx.message.author if pm else ctx.message.channel
 
         result = searchFeat(name)
         if result is None:
@@ -144,14 +141,14 @@ class Lookup:
         if isinstance(result['text'], list):
             result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None and not t.startswith('Source:'))
         result['prerequisite'] = result.get('prerequisite') or "None"
-        out = "**{name}**\n**Source**: {source}\n*Prerequisite: {prerequisite}*\n\n{text}".format(**result)
 
-        # do stuff here
-        for r in discord_trim(out):
-            if pm:
-                await self.bot.send_message(ctx.message.author, r)
-            else:
-                await self.bot.say(r)
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+        embed.add_field(name="Prerequisite", value=result['prerequisite'])
+        embed.add_field(name="Source", value=result['source'])
+        for piece in [result['text'][i:i+1024] for i in range(0, len(result['text']), 1024)]:
+            embed.add_field(name="Description", value=piece)
+        await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
     async def racefeat(self, ctx, *, name : str):
@@ -161,6 +158,7 @@ class Lookup:
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
         except:
             pm = False
+        destination = ctx.message.author if pm else ctx.message.channel
 
         result = searchRacialFeat(name)
         if result is None:
@@ -179,14 +177,16 @@ class Lookup:
 
         if isinstance(result['text'], list):
             result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None)
-        out = "**{name}**\n{text}".format(**result)
 
-        # do stuff here
-        for r in discord_trim(out):
-            if pm:
-                await self.bot.send_message(ctx.message.author, r)
-            else:
-                await self.bot.say(r)
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+        desc = result['text']
+        desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
+        embed.description = ''.join(desc[:2])
+        for piece in desc[2:]:
+            embed.add_field(name="con't", value=piece)
+
+        await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
     async def classfeat(self, ctx, *, name : str):
@@ -196,6 +196,7 @@ class Lookup:
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
         except:
             pm = False
+        destination = ctx.message.author if pm else ctx.message.channel
 
         result = searchClassFeat(name)
         if result is None:
@@ -214,14 +215,16 @@ class Lookup:
 
         if isinstance(result['text'], list):
             result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None)
-        out = "**{name}**\n{text}".format(**result)
 
-        # do stuff here
-        for r in discord_trim(out):
-            if pm:
-                await self.bot.send_message(ctx.message.author, r)
-            else:
-                await self.bot.say(r)
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+        desc = result['text']
+        desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
+        embed.description = ''.join(desc[:2])
+        for piece in desc[2:]:
+            embed.add_field(name="con't", value=piece)
+
+        await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
     async def background(self, ctx, *, name: str):

@@ -15,3 +15,4 @@ ENV SHARDS 7
 
 # Run app.py when the container launches
 CMD ["python3.6", "overseer.py", "production", "0", "6"]
+# CMD ["python3.6", "dbot.py", "test"]

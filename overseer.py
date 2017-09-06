@@ -88,8 +88,10 @@ def clean_shard_servers():
 def sigterm_handler(_signum, _frame):
     global RUNNING
     RUNNING = False
-    print("o.{}: Overseer caught SIGTERM, sleeping for 9!".format(CLUSTER))
-    time.sleep(9)
+    print("o.{}: Overseer caught SIGTERM, terminating children!".format(CLUSTER))
+    for shard_id, process in bot.shards.items():
+        process.terminate()
+        print(f"Terminated shard {shard_id}")
     sys.exit(0)
     
 if __name__ == '__main__':

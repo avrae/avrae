@@ -584,6 +584,8 @@ class GameTrack:
             return await self.bot.say(spell['string'][0], delete_after=15)
         result = spell['string']
         spell = spell['spell']
+        if spell.get('source') == "UAMystic":
+            return await self.bot.say("Mystic talents are not supported.")
 
         char = Character.from_ctx(ctx)
 

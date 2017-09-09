@@ -222,7 +222,6 @@ def sigterm_handler(_signum, _frame):
         log.info("Attempting to save combats...")
         bot.get_cog("InitTracker").panic_save()
     except: pass
-    bot.loop.run_until_complete(bot.logout())
     bot.loop.close()
     sys.exit(0)
     

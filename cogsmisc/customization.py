@@ -4,14 +4,11 @@ Created on Jan 30, 2017
 @author: andrew
 '''
 import asyncio
-import copy
-import re
 import shlex
 
 from discord.ext import commands
 
-from cogs5e.funcs.dice import roll
-from utils.functions import parse_cvars
+from cogs5e.models.character import Character
 
 
 class Customization:
@@ -84,7 +81,7 @@ class Customization:
                 if len(user_characters) > 0:
                     active_character = self.bot.db.not_json_get('active_characters', {}).get(message.author.id) # get user's active
                     if active_character is not None:
-                        message.content = parse_cvars(message.content, user_characters[active_character])
+                        message.content = Character.from_bot_and_ids(self.bot, message.author.id, active_character).parse_cvars(message.content)
                 await self.bot.process_commands(message)
                 
     def handle_alias_arguments(self, command, message):

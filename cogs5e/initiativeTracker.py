@@ -27,7 +27,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from utils.functions import parse_args, \
     fuzzy_search, get_positivity, parse_args_2, \
-    parse_args_3, parse_cvars, parse_resistances, \
+    parse_args_3, parse_resistances, \
     make_sure_path_exists
 
 log = logging.getLogger(__name__)
@@ -1138,11 +1138,12 @@ class InitTracker:
                     tempargs[index] = shlex.quote(arg)
                 
             args = " ".join(tempargs)
-            args = parse_cvars(args, combatant.sheet)
+            tempchar = Character(combatant.sheet, combatant.id)
+            args = tempchar.parse_cvars(args)
             args = shlex.split(args)
             args = parse_args_2(args)
             if attack.get('details') is not None:
-                attack['details'] = parse_cvars(attack['details'], combatant.sheet)
+                attack['details'] = tempchar.parse_cvars(attack['details'])
             args['name'] = combatant.name #combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name

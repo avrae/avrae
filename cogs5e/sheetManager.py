@@ -29,8 +29,7 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import list_get, get_positivity, a_or_an, \
-    parse_cvars, get_selection
+from utils.functions import list_get, get_positivity, a_or_an, get_selection
 from utils.loggers import TextLogger
 
 log = logging.getLogger(__name__)
@@ -66,13 +65,6 @@ class SheetManager:
                 #self.bot.db.jset('char_vars_backup', self.bot.db.jget('char_vars', {}))
         except asyncio.CancelledError:
             pass
-        
-    def arg_stuff(self, args, ctx, character):
-        args = self.parse_snippets(args, ctx.message.author.id)
-        args = parse_cvars(args, character)
-        args = shlex.split(args)
-        args = self.parse_args(args)
-        return args
 
     def new_arg_stuff(self, args, ctx, character):
         args = self.parse_snippets(args, ctx.message.author.id)

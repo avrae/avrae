@@ -19,7 +19,7 @@ from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException
-from utils.functions import parse_cvars, parse_args_3, \
+from utils.functions import parse_args_3, \
     strict_search
 
 log = logging.getLogger(__name__)
@@ -565,10 +565,6 @@ class GameTrack:
         char.commit(ctx) # make sure we save changes
         await self.bot.say(embed=embed)
 
-    def parse_roll_args(self, args, character):
-        return args.replace('SPELL', str(parse_cvars("SPELL", character)).replace('PROF', str(
-            character.get('stats', {}).get('proficiencyBonus', "0"))))
-
     async def _old_cast(self, ctx, spell_name, *args): # TODO
         try:
             guild_id = ctx.message.server.id
@@ -640,10 +636,8 @@ class GameTrack:
                 active_character = self.bot.db.not_json_get('active_characters', {}).get(
                     ctx.message.author.id)  # get user's active
                 if active_character is not None:
-                    user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters',
-                                                               {})  # grab user's characters
-                    character = user_characters[active_character]  # get Sheet of character
-                    rolls = self.parse_roll_args('\n'.join(rolls), character)
+                    rolls = '\n'.join(rolls).replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                            .replace('PROF', str(char.get_prof_bonus()))
                     rolls = rolls.split('\n')
                 out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(
                     roll(r, inline=True).skeleton for r in rolls)
@@ -651,10 +645,8 @@ class GameTrack:
                 active_character = self.bot.db.not_json_get('active_characters', {}).get(
                     ctx.message.author.id)  # get user's active
                 if active_character is not None:
-                    user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters',
-                                                               {})  # grab user's characters
-                    character = user_characters[active_character]  # get Sheet of character
-                    rolls = self.parse_roll_args(rolls, character)
+                    rolls = rolls.replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                        .replace('PROF', str(char.get_prof_bonus()))
                 out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls,
                                                                                                    inline=True).skeleton
             else:

@@ -25,6 +25,7 @@ class Compendium:
         with open('./res/races.json', 'r') as f:
             _raw = json.load(f)
             self.rfeats = []
+            self.races = copy.deepcopy(_raw)
             for race in _raw:
                 one_rfeats = race.get('trait', [])
                 for i, rfeat in enumerate(one_rfeats):
@@ -33,6 +34,7 @@ class Compendium:
         with open('./res/classes.json', 'r') as f:
             _raw = json.load(f)
             self.cfeats = []
+            self.classes = copy.deepcopy(_raw)
             for _class in _raw:
                 one_clevels = [f for f in _class.get('autolevel', []) if 'feature' in f]
                 for i, clevel in enumerate(one_clevels):
@@ -76,6 +78,12 @@ def searchRacialFeat(name):
 
 def getRacialFeat(feat):
     return strict_search(c.rfeats, 'name', feat)
+
+def searchRace(name):
+    return fuzzywuzzy_search_all_3(c.races, 'name', name)
+
+def getRace(name):
+    return strict_search(c.races, 'name', name)
 
 def searchClassFeat(name):
     return fuzzywuzzy_search_all_3(c.cfeats, 'name', name)

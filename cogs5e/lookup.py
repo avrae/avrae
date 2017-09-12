@@ -11,7 +11,7 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.lookupFuncs import searchCondition, searchRule, searchRacialFeat, searchFeat, \
-    searchClassFeat, searchMonster, getMonster, searchSpell, getSpell, searchItem, getItem, searchBackground
+    searchClassFeat, searchMonster, getMonster, searchSpell, getSpell, searchItem, getItem, searchBackground, searchRace
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
 from utils.functions import discord_trim, get_positivity
@@ -162,7 +162,7 @@ class Lookup:
 
         result = searchRacialFeat(name)
         if result is None:
-            return await self.bot.say('Condition not found.')
+            return await self.bot.say('Race feature not found.')
         strict = result[1]
         results = result[0]
 
@@ -185,6 +185,47 @@ class Lookup:
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
             embed.add_field(name="con't", value=piece)
+
+        await self.bot.send_message(destination, embed=embed)
+
+    @commands.command(pass_context=True)
+    async def race(self, ctx, *, name: str):
+        """Looks up a race."""
+        try:
+            guild_id = ctx.message.server.id
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)
+        except:
+            pm = False
+        destination = ctx.message.author if pm else ctx.message.channel
+
+        result = searchRace(name)
+        if result is None:
+            return await self.bot.say('Race not found.')
+        strict = result[1]
+        results = result[0]
+
+        if strict:
+            result = results
+        else:
+            if len(results) == 1:
+                result = results[0]
+            else:
+                result = await self.get_selection(results, ctx)
+                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        _sizes = {'T': "Tiny", 'S': "Small",
+                  'M': "Medium", 'L': "Large", 'H': "Huge"}
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+        embed.description = f"Source: {result.get('source', 'unknown')}"
+        embed.add_field(name="Speed", value=f"{result.get('speed', 'unknown')} ft.")
+        embed.add_field(name="Size", value=_sizes.get(result.get('size'), 'unknown'))
+        embed.add_field(name="Ability Bonuses", value=result.get('ability', 'none'))
+        if result.get('proficiency'):
+            embed.add_field(name="Proficiencies", value=result.get('proficiency', 'none'))
+        trait_str = ', '.join(t['name'] for t in result.get('trait', []))
+        embed.add_field(name="Traits", value=trait_str, inline=False)
+        embed.set_footer(text="Use !racefeat to look up a trait.")
 
         await self.bot.send_message(destination, embed=embed)
 

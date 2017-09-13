@@ -1706,7 +1706,7 @@ class InitTracker:
             with open(path, mode='wb') as f:
                 pickle.dump(combat, f, pickle.HIGHEST_PROTOCOL)
             # self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
-            log.info("PANIC BEFORE EXIT - Saved combat for {}!".format(combat.channel.id))
+            log.info("Saved combat for {}!".format(combat.channel.id))
             temp_key.append(combat.channel.id)
         with open(f'temp/combats-{self.bot.shard_id}.avrae', mode='w') as f:
             f.write('\n'.join(temp_key))
@@ -1776,8 +1776,13 @@ class InitTracker:
         except StopIteration:
             await self.bot.say("You are not in combat.")
             return
-        path = '{}.avrae'.format(ctx.message.channel.id)
-        self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
+        # path = '{}.avrae'.format(ctx.message.channel.id)
+        # self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
+        combat.combatantGenerator = None
+        path = 'temp/{}.avrae'.format(combat.channel.id)
+        with open(path, mode='wb') as f:
+            pickle.dump(combat, f, pickle.HIGHEST_PROTOCOL)
+        log.info("Saved combat for {}!".format(combat.channel.id))
         await self.bot.say("Combat saved.")
         
     @init.command(pass_context=True, hidden=True)
@@ -1787,11 +1792,18 @@ class InitTracker:
         if [c for c in self.combats if c.channel is ctx.message.channel]:
             await self.bot.say("You are already in combat. To end combat, use \"!init end\".")
             return
-        path = '{}.avrae'.format(ctx.message.channel.id)
-        combat = self.bot.db.get(path, None)
+        path = 'temp/{}.avrae'.format(ctx.message.channel.id)
+        try:
+            with open(path, mode='rb') as f:
+                combat = pickle.load(f)
+            os.remove(path)
+        except:
+            combat = None
+        # path = '{}.avrae'.format(ctx.message.channel.id)
+        # combat = self.bot.db.get(path, None)
         if combat is None:
             return await self.bot.say("No combat saved.")
-        combat = pickle.loads(combat.encode('cp437'))
+        # combat = pickle.loads(combat.encode('cp437'))
         combat.channel = ctx.message.channel
         self.combats.append(combat)
         summaryMsg = await self.bot.say(combat.getSummary())

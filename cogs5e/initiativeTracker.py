@@ -12,6 +12,7 @@ import pickle
 import random
 import re
 import shlex
+import time
 import traceback
 from math import floor
 from string import capwords
@@ -113,6 +114,18 @@ class Combat(object):
         except:
             return
         self.summary_message = msg
+
+    def _save(self):
+        before = time.time()
+        self.combatantGenerator = None
+        path = 'temp/{}.avrae'.format(self.channel.id)
+        with open(path, mode='wb') as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+        after = time.time()
+        log.info("Saved combat for {} in {} sec!".format(self.channel.id, after-before))
+
+    async def save(self):
+        await asyncio.get_event_loop().run_in_executor(None, self._save)
         
 class CombatantGroup(object):
     def __init__(self, init:int=0, name:str='', author:discord.User=None, notes:str=''):
@@ -782,6 +795,7 @@ class InitTracker:
             combat.checkGroups()
         await self.bot.say(outStr)
         await combat.update_summary(self.bot)
+        await combat.save()
         
     @init.command(pass_context=True, name="list", aliases=['summary'])
     async def listInits(self, ctx):

@@ -1737,6 +1737,7 @@ class InitTracker:
         # combats = self.bot.db.jget('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), [])
         temp_msgs = []
         for c in combats:
+            c = c.strip()
             if self.bot.get_channel(c) is None:
                 log.warning('Shard check for {} failed, aborting.'.format(c))
                 continue

@@ -11,7 +11,8 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.lookupFuncs import searchCondition, searchRule, searchRacialFeat, searchFeat, \
-    searchClassFeat, searchMonster, getMonster, searchSpell, getSpell, searchItem, getItem, searchBackground, searchRace
+    searchClassFeat, searchMonster, getMonster, searchSpell, getSpell, searchItem, getItem, searchBackground, \
+    searchRace, searchClass
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
 from utils.functions import discord_trim, get_positivity
@@ -264,6 +265,66 @@ class Lookup:
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
             embed.add_field(name="con't", value=piece)
+
+        await self.bot.send_message(destination, embed=embed)
+
+    @commands.command(pass_context=True, name='class')
+    async def _class(self, ctx, *, name: str):
+        """Looks up a class."""
+        try:
+            guild_id = ctx.message.server.id
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)
+        except:
+            pm = False
+        destination = ctx.message.author if pm else ctx.message.channel
+
+        result = searchClass(name)
+        if result is None:
+            return await self.bot.say('Class not found.')
+        strict = result[1]
+        results = result[0]
+
+        if strict:
+            result = results
+        else:
+            if len(results) == 1:
+                result = results[0]
+            else:
+                result = await self.get_selection(results, ctx)
+                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+        embed.add_field(name="Hit Die", value=f"1d{result['hd']}")
+        embed.add_field(name="Saving Throws", value=result['proficiency'])
+
+        levels = []
+        starting_profs = "None"
+        starting_items = "None"
+        for level in range(1, 21):
+            level_str = []
+            level_features = [f for f in result['autolevel'] if f['_level'] == str(level)]
+            for feature in level_features:
+                for f in feature.get('feature', []):
+                    if not f.get('_optional') and not (f['name'] in ("Starting Proficiencies", "Starting Equipment")):
+                        level_str.append(f['name'])
+                    elif f['name'] == "Starting Proficiencies":
+                        starting_profs = '\n'.join(t for t in f['text'] if t)
+                    elif f['name'] == "Starting Equipment":
+                        starting_items = '\n'.join(t for t in f['text'] if t)
+                if not 'feature' in feature:
+                    pass
+            levels.append(', '.join(level_str))
+
+        embed.add_field(name="Starting Proficiencies", value=starting_profs)
+        embed.add_field(name="Starting Equipment", value=starting_items)
+
+        level_features_str = ""
+        for i, l in enumerate(levels):
+            level_features_str += f"`{i+1}` {l}\n"
+        embed.description = level_features_str
+
+        embed.set_footer(text="Use !classfeat to look up a feature.")
 
         await self.bot.send_message(destination, embed=embed)
 

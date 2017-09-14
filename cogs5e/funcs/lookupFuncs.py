@@ -91,6 +91,12 @@ def searchClassFeat(name):
 def getClassFeat(feat):
     return strict_search(c.cfeats, 'name', feat)
 
+def searchClass(name):
+    return fuzzywuzzy_search_all_3(c.classes, 'name', name)
+
+def getClass(name):
+    return strict_search(c.classes, 'name', name)
+
 def searchBackground(name):
     return fuzzywuzzy_search_all_3(c.backgrounds, 'name', name)
 

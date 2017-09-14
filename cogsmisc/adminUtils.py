@@ -94,14 +94,11 @@ class AdminUtils:
         await self.admin_command(ctx, "chanSay", message=message, channel=channel)
             
         
-    @commands.command(hidden=True)
+    @commands.command(hidden=True, pass_context=True)
     @checks.is_owner()
-    async def announce(self, *, msg : str):
-        for s in [se for se in self.bot.servers]:
-            try:
-                await self.bot.send_message(s, msg)
-            except:
-                pass
+    async def shardping(self, ctx):
+        """Pings all shards."""
+        await self.admin_command(ctx, "ping")
         
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -519,7 +516,8 @@ class AdminUtils:
         _commands = {'leave': self.__handle_leave_command,
                      'loglevel': self.__handle_log_level_command,
                      'reply': self.__handle_command_reply,
-                     'chanSay': self.__handle_chan_say_command}
+                     'chanSay': self.__handle_chan_say_command,
+                     'ping': self.__handle_ping_command}
         await _commands.get(_data['command'])(_data) #... don't question this.
         
     async def __handle_leave_command(self, data):
@@ -566,6 +564,12 @@ class AdminUtils:
                 response = CommandResponse(self.bot, reply_to, "Sent message.")
             r = json.dumps(response.to_dict())
             self.bot.db.publish('admin-commands', r)
+
+    async def __handle_ping_command(self, data):
+        reply_to = data['uuid']
+        response = CommandResponse(self.bot, reply_to, "Pong.")
+        r = json.dumps(response.to_dict())
+        self.bot.db.publish('admin-commands', r)
         
 class PubSubMessage(object):
     def __init__(self, bot):

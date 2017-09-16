@@ -98,7 +98,7 @@ class AdminUtils:
     @checks.is_owner()
     async def shardping(self, ctx):
         """Pings all shards."""
-        await self.admin_command(ctx, "ping")
+        await self.admin_command(ctx, "ping", _expected_responses=self.bot.shard_count)
         
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -453,12 +453,13 @@ class AdminUtils:
         return request.uuid
 
     async def admin_command(self, ctx, cmd, **kwargs):
+        expected_responses = kwargs.pop('_expected_responses', 1)
         request = CommandRequest(ctx.bot, cmd, **kwargs)
         self.requests[request.uuid] = {}
         r = json.dumps(request.to_dict())
         self.bot.db.publish('admin-commands', r)
         for _ in range(300):  # timeout after 30 sec
-            if len(self.requests[request.uuid]) >= 1:
+            if len(self.requests[request.uuid]) >= expected_responses:
                 break
             else:
                 await asyncio.sleep(0.1)

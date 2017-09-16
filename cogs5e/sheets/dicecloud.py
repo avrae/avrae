@@ -332,12 +332,7 @@ class DicecloudParser(SheetParser):
 
         log.debug(f"Processing attack {atkIn.get('name')}")
 
-        # make a list of safe functions
-        safe_list = ['ceil', 'floor']
-        # use the list to filter the local namespace
-        safe_dict = dict([(k, locals().get(k, None)) for k in safe_list])
-        safe_dict['max'] = max
-        safe_dict['min'] = min
+        safe_dict = {'ceil': ceil, 'floor': floor, 'round': round, 'max': max, 'min': min}
         safe_dict.update(replacements)
 
         if atkIn.get('parent', {}).get('collection') == 'Spells':
@@ -375,8 +370,8 @@ class DicecloudParser(SheetParser):
         def damage_sub(match):
             out = match.group(1)
             try:
-                log.debug(f"damage_sub: evaluating {out}")
-                return str(eval(out, {"__builtins__": None}, safe_dict))
+                log.debug(f"damage_sub: evaluating {out.lower()}")
+                return str(eval(out.lower(), {"__builtins__": None}, {k.lower(): v for k, v in safe_dict.items()}))
             except Exception as ex:
                 log.debug(f"exception in damage_sub: {ex}")
                 return out

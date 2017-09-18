@@ -819,7 +819,7 @@ class SheetManager:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet. Capitalization matters!\n' + str(e))
 
-        Character(sheet['sheet'], url).initialize_consumables().commit(ctx).set_active(ctx)
+        Character(sheet['sheet'], f"dicecloud-{url}").initialize_consumables().commit(ctx).set_active(ctx)
         
         embed = sheet['embed']
         try:
@@ -856,7 +856,7 @@ class SheetManager:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
-        Character(sheet['sheet'], file['filename']).initialize_consumables().commit(ctx).set_active(ctx)
+        Character(sheet['sheet'], f"pdf-{file['filename']}").initialize_consumables().commit(ctx).set_active(ctx)
 
         embed = sheet['embed']
         await self.bot.say(embed=embed)
@@ -897,7 +897,7 @@ class SheetManager:
             return await self.bot.edit_message(loading, 'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
         
 
-        Character(sheet['sheet'], url).initialize_consumables().commit(ctx).set_active(ctx)
+        Character(sheet['sheet'], f"google-{url}").initialize_consumables().commit(ctx).set_active(ctx)
         
         embed = sheet['embed']
         try:

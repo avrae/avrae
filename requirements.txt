@@ -44,6 +44,7 @@ redis==2.10.5
 requests==2.13.0
 requests-oauthlib==0.8.0
 rsa==3.4.2
+simpleeval==0.9.5
 six==1.10.0
 traitlets==4.3.2
 uritemplate==3.0.0

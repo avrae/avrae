@@ -1,3 +1,4 @@
+import asyncio
 import json
 import random
 from string import capwords
@@ -12,7 +13,7 @@ class CharGenerator:
     
     def __init__(self, bot):
         self.bot = bot
-        self.makingChar = []
+        self.makingChar = set()
         with open('./res/raceTraits.json', 'r') as t:
             self.raceTraits = json.load(t)
         with open('./res/classTraits.json', 'r') as t:
@@ -57,7 +58,8 @@ class CharGenerator:
             await self.bot.say("Invalid level (must be 1-20).")
             return
         if ctx.message.author not in self.makingChar:
-            self.makingChar.append(ctx.message.author)
+            self.makingChar.add(ctx.message.author)
+            self.bot.loop.create_task(self._time_making(ctx.message.author))
         else:
             await self.bot.say("You are already making a character!")
             return
@@ -135,9 +137,21 @@ class CharGenerator:
                 await self.bot.say(author.mention + " No class found. Make sure you are using a class from the 5e PHB, and include the archetype, even at low levels.")
         else:
             await self.bot.say(author.mention + " No race found. Make sure you are using a race from the 5e PHB, and use \"Drow\" instead of Dark Elf.")
-        
-        self.makingChar.remove(author)
-    
+
+        try:
+            self.makingChar.remove(author)
+        except ValueError:
+            pass
+
+    async def _time_making(self, author):
+        try:
+            await asyncio.sleep(180)
+            try:
+                self.makingChar.remove(author)
+            except ValueError:
+                pass
+        except asyncio.CancelledError:
+            pass
     
     async def genChar(self, ctx, level):
         loadingMessage = await self.bot.send_message(ctx.message.channel, "Generating character, please wait...")

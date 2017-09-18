@@ -13,6 +13,11 @@ class InvalidArgument(AvraeException):
     """Raised when an argument is invalid."""
     pass
 
+class EvaluationError(AvraeException):
+    """Raised when a cvar evaluation causes an error."""
+    def __init__(self, original):
+        super().__init__(f"Error evaluating expression: {original}")
+        self.original = original
 
 class OutdatedSheet(AvraeException):
     """Raised when a feature is used that requires an updated sheet."""

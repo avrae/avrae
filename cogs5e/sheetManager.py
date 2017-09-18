@@ -723,7 +723,9 @@ class SheetManager:
     async def cvar(self, ctx, name, *, value=None):
         """Commands to manage character variables for use in snippets and aliases.
         Character variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
-        Dicecloud `statMod` and `statScore` variables are also available."""
+        Arguments surrounded with `{{}}` will be evaluated as a custom script.
+        See http://avrae.io/cheatsheets/aliasing for more help.
+        Dicecloud `statMod` and `stat` variables are also available."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:

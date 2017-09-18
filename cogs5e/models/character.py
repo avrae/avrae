@@ -16,17 +16,23 @@
  'overrides': {},
  'cvars': {}}
 """
+import ast
+import copy
 import logging
 import random
 import re
+from math import *
+
+import simpleeval
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
-    OutdatedSheet
+    OutdatedSheet, EvaluationError
 
 log = logging.getLogger(__name__)
 
 class Character: # TODO: refactor old commands to use this
+
     def __init__(self, _dict, _id):
         self.character = _dict
         self.id = _id
@@ -139,6 +145,46 @@ class Character: # TODO: refactor old commands to use this
         ops = r"([-+*/().<>=])"
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
+
+        _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
+        _funcs['roll'] = simple_roll
+        _funcs.update(floor=floor, ceil=ceil, round=round)
+        _ops = simpleeval.DEFAULT_OPERATORS.copy()
+        _ops.pop(ast.Pow)  # no exponents pls
+        _names = copy.copy(cvars)
+        _names.update(stat_vars)
+        evaluator = simpleeval.SimpleEval(functions=_funcs, operators=_ops, names=_names)
+
+        def set_value(name, value):
+            evaluator.names[name] = value
+            return ''
+        evaluator.functions['set'] = set_value
+
+        for var in re.finditer(r'{{([^{}]+)}}', cstr):
+            raw = var.group(0)
+            varstr = var.group(1)
+            out = ""
+            tempout = ''
+            for substr in re.split(ops, varstr):
+                temp = substr.strip()
+                if temp.startswith('/'):
+                    _last = character
+                    for path in out.split('/'):
+                        if path:
+                            try:
+                                _last = _last.get(path, {})
+                            except AttributeError:
+                                break
+                    temp = str(_last)
+                tempout += str(cvars.get(temp, temp)) + " "
+            for substr in re.split(ops, tempout):
+                temp = substr.strip()
+                out += str(stat_vars.get(temp, temp)) + " "
+            try:
+                cstr = cstr.replace(raw, str(evaluator.eval(out)), 1)
+            except Exception as e:
+                raise EvaluationError(e)
+
         for var in re.finditer(r'{([^{}]+)}', cstr):
             raw = var.group(0)
             varstr = var.group(1)
@@ -532,3 +578,7 @@ class Character: # TODO: refactor old commands to use this
         reset.extend(self.long_rest())
         reset.extend(self._reset_custom(None))
         return reset
+
+# helper methods
+def simple_roll(rollStr):
+    return roll(rollStr).total

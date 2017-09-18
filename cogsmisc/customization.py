@@ -81,7 +81,10 @@ class Customization:
                 if len(user_characters) > 0:
                     active_character = self.bot.db.not_json_get('active_characters', {}).get(message.author.id) # get user's active
                     if active_character is not None:
-                        message.content = Character.from_bot_and_ids(self.bot, message.author.id, active_character).parse_cvars(message.content)
+                        try:
+                            message.content = Character.from_bot_and_ids(self.bot, message.author.id, active_character).parse_cvars(message.content)
+                        except Exception as e:
+                            return await self.bot.send_message(message.channel, e)
                 await self.bot.process_commands(message)
                 
     def handle_alias_arguments(self, command, message):
@@ -136,7 +139,11 @@ class Customization:
         
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)
-        
-        
+
+    @commands.command(pass_context=True)
+    async def test(self, ctx, *, str):
+        """Parses `str` as if it were in an alias, for testing."""
+        char = Character.from_ctx(ctx)
+        await self.bot.say(f"{ctx.message.author.display_name}: {char.parse_cvars(str)}")
         
         

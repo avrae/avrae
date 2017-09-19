@@ -373,9 +373,9 @@ class SheetManager:
         
         await self.bot.say("Description override removed! Use `!update` to return to the old description.")
         
-    @commands.command(pass_context=True)
+    @commands.group(pass_context=True, invoke_without_command=True)
     async def portrait(self, ctx):
-        """Shows the image of your currently active character."""
+        """Shows or edits the image of your currently active character."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -394,6 +394,46 @@ class SheetManager:
             await self.bot.delete_message(ctx.message)
         except:
             pass
+
+    @portrait.command(pass_context=True, name='update', aliases=['edit'])
+    async def edit_portrait(self, ctx, *, url):
+        """Updates the character portrait."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        character = user_characters[active_character]
+
+        overrides = character.get('overrides', {})
+        overrides['image'] = url
+        character['stats']['image'] = url
+
+        character['overrides'] = overrides
+        user_characters[active_character] = character
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+
+        await self.bot.say("Portrait updated!")
+
+    @portrait.command(pass_context=True, name='remove', aliases=['delete'])
+    async def remove_portrait(self, ctx):
+        """Removes the character portrait, returning to the default."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        character = user_characters[active_character]
+
+        overrides = character.get('overrides', {})
+        if not 'image' in overrides:
+            return await self.bot.say("There is no custom portrait set.")
+        else:
+            del overrides['image']
+
+        character['overrides'] = overrides
+        user_characters[active_character] = character
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+
+        await self.bot.say("Portrait override removed! Use `!update` to return to the old portrait.")
         
     @commands.command(pass_context=True)
     async def sheet(self, ctx):
@@ -547,7 +587,8 @@ class SheetManager:
         
         overrides = old_character.get('overrides', {})
         sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description", "No description available.")
-        
+        sheet['stats']['image'] = overrides.get('image') or sheet.get('stats', {}).get('image', '')
+
         user_characters[url] = sheet
         #print(sheet)
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')

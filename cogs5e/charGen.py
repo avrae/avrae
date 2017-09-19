@@ -140,7 +140,7 @@ class CharGenerator:
 
         try:
             self.makingChar.remove(author)
-        except ValueError:
+        except (ValueError, KeyError):
             pass
 
     async def _time_making(self, author):
@@ -148,7 +148,7 @@ class CharGenerator:
             await asyncio.sleep(180)
             try:
                 self.makingChar.remove(author)
-            except ValueError:
+            except (ValueError, KeyError):
                 pass
         except asyncio.CancelledError:
             pass

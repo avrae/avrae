@@ -153,6 +153,7 @@ class Character: # TODO: refactor old commands to use this
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(cvars)
         _names.update(stat_vars)
+        _names.update({"True": True, "False": False})
         evaluator = simpleeval.SimpleEval(functions=_funcs, operators=_ops, names=_names)
 
         def set_value(name, value):
@@ -160,28 +161,18 @@ class Character: # TODO: refactor old commands to use this
             return ''
         evaluator.functions['set'] = set_value
 
+        def cvarrepl(match):
+            return f"{match.group(1)}{cvars.get(match.group(2), match.group(2))}"
+
         for var in re.finditer(r'{{([^{}]+)}}', cstr):
             raw = var.group(0)
             varstr = var.group(1)
-            out = ""
-            tempout = ''
-            for substr in re.split(ops, varstr):
-                temp = substr.strip()
-                if temp.startswith('/'):
-                    _last = character
-                    for path in out.split('/'):
-                        if path:
-                            try:
-                                _last = _last.get(path, {})
-                            except AttributeError:
-                                break
-                    temp = str(_last)
-                tempout += str(cvars.get(temp, temp)) + " "
-            for substr in re.split(ops, tempout):
-                temp = substr.strip()
-                out += str(stat_vars.get(temp, temp)) + " "
+
+            for cvar, value in cvars.items():
+                varstr = re.sub(r'(^|\s)(' + cvar + r')(?=\s|$)', cvarrepl, varstr)
+
             try:
-                cstr = cstr.replace(raw, str(evaluator.eval(out)), 1)
+                cstr = cstr.replace(raw, str(evaluator.eval(varstr)), 1)
             except Exception as e:
                 raise EvaluationError(e)
 
@@ -190,17 +181,7 @@ class Character: # TODO: refactor old commands to use this
             varstr = var.group(1)
             out = ""
             tempout = ''
-            for substr in re.split(ops, varstr):
-                temp = substr.strip()
-                if temp.startswith('/'):
-                    _last = character
-                    for path in out.split('/'):
-                        if path:
-                            try:
-                                _last = _last.get(path, {})
-                            except AttributeError:
-                                break
-                    temp = str(_last)
+            for _ in re.split(ops, varstr):
                 tempout += str(cvars.get(temp, temp)) + " "
             for substr in re.split(ops, tempout):
                 temp = substr.strip()

@@ -4,6 +4,7 @@ Created on Jan 19, 2017
 @author: andrew
 '''
 import asyncio
+import copy
 import logging
 import random
 import re
@@ -533,11 +534,16 @@ class SheetManager:
             return await self.bot.say('You have no character active.')
         url = active_character
         old_character = user_characters[url]
+        prefixes = 'dicecloud-', 'pdf-', 'google-'
+        _id = copy.copy(url)
+        for p in prefixes:
+            if url.startswith(p):
+                _id = url[len(p):]
         sheet_type = old_character.get('type', 'dicecloud')
         if sheet_type == 'dicecloud':
-            parser = DicecloudParser(url)
+            parser = DicecloudParser(_id)
             loading = await self.bot.say('Updating character data from Dicecloud...')
-            self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(url))
+            self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(_id))
         elif sheet_type == 'pdf':
             if not 0 < len(ctx.message.attachments) < 2:
                 return await self.bot.say('You must call this command in the same message you upload a PDF sheet.')
@@ -548,7 +554,7 @@ class SheetManager:
             parser = PDFSheetParser(file)
         elif sheet_type == 'google':
             try:
-                parser = GoogleSheet(url, self.gsheet_client)
+                parser = GoogleSheet(_id, self.gsheet_client)
             except AssertionError:
                 return await self.bot.say("I am still connecting to Google. Try again in 15-30 seconds.")
             loading = await self.bot.say('Updating character data from Google...')

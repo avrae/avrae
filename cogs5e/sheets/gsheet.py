@@ -247,7 +247,10 @@ class GoogleSheet(SheetParser):
     def get_level(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        level = int(character.acell("AL6").value)
+        try:
+            level = int(character.acell("AL6").value)
+        except ValueError:
+            raise MissingAttribute("Character level")
         return level
 
     def get_description(self):

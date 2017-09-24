@@ -539,6 +539,7 @@ class SheetManager:
         for p in prefixes:
             if url.startswith(p):
                 _id = url[len(p):]
+                break
         sheet_type = old_character.get('type', 'dicecloud')
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(_id)

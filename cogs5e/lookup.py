@@ -17,18 +17,28 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
 from utils.functions import discord_trim, get_positivity
 
+CLASS_RESOURCE_MAP = {'slots': "Spell Slots", # a weird one - see fighter
+                      'spellsknown': "Spells Known",
+                      'rages': "Rages", 'ragedamage': "Rage Damage",
+                      'martialarts': "Martial Arts", 'kipoints': "Ki", 'unarmoredmovement': "Unarmored Movement",
+                      'sorcerypoints': "Sorcery Points",
+                      'invocationsknown': "Invocations Known", 'spellslots': "Spell Slots", 'slotlevel': "Slot Level",
+                      'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
+                      'psipoints': "Psi Points", 'psilimit': "Psi Limit"}
 
 class Lookup:
     """Commands to help look up items (WIP), status effects, rules, etc."""
-    
+
     def __init__(self, bot):
         self.bot = bot
         self.settings = self.bot.db.not_json_get("lookup_settings", {}) if bot is not None else {}
 
     async def get_selection(self, results, ctx, returns_object=True):
-        results = results[:10] # sanity
-        if returns_object: names = [r['name'] for r in results]
-        else: names = results
+        results = results[:10]  # sanity
+        if returns_object:
+            names = [r['name'] for r in results]
+        else:
+            names = results
         embed = discord.Embed()
         embed.title = "Multiple Matches Found"
         selectStr = " Which one were you looking for? (Type the number, or \"c\" to cancel)\n"
@@ -47,23 +57,23 @@ class Lookup:
 
         if m is None or m.content == "c": return None
         return results[int(m.content) - 1]
-            
+
     @commands.command(pass_context=True, aliases=['status'])
-    async def condition(self, ctx, *, name : str):
+    async def condition(self, ctx, *, name: str):
         """Looks up a condition."""
         try:
-            guild_id = ctx.message.server.id 
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)    
+            guild_id = ctx.message.server.id
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)
         except:
             pm = False
         destination = ctx.message.author if pm else ctx.message.channel
-        
+
         result = searchCondition(name)
         if result is None:
             return await self.bot.say('Condition not found.')
         strict = result[1]
         results = result[0]
-        
+
         if strict:
             result = results
         else:
@@ -78,9 +88,9 @@ class Lookup:
         embed.description = result['desc']
 
         await self.bot.send_message(destination, embed=embed)
-                
+
     @commands.command(pass_context=True)
-    async def rule(self, ctx, *, name : str):
+    async def rule(self, ctx, *, name: str):
         """Looks up a rule."""
         try:
             guild_id = ctx.message.server.id
@@ -107,7 +117,7 @@ class Lookup:
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         desc = result['desc']
-        desc = [desc[i:i+1024] for i in range(0, len(desc), 1024)]
+        desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
             embed.add_field(name="con't", value=piece)
@@ -115,7 +125,7 @@ class Lookup:
         await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
-    async def feat(self, ctx, *, name : str):
+    async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
         try:
             guild_id = ctx.message.server.id
@@ -140,19 +150,20 @@ class Lookup:
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         if isinstance(result['text'], list):
-            result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None and not t.startswith('Source:'))
+            result['text'] = '\n'.join(
+                t for t in result.get('text', []) if t is not None and not t.startswith('Source:'))
         result['prerequisite'] = result.get('prerequisite') or "None"
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         embed.add_field(name="Prerequisite", value=result['prerequisite'])
         embed.add_field(name="Source", value=result['source'])
-        for piece in [result['text'][i:i+1024] for i in range(0, len(result['text']), 1024)]:
+        for piece in [result['text'][i:i + 1024] for i in range(0, len(result['text']), 1024)]:
             embed.add_field(name="Description", value=piece)
         await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
-    async def racefeat(self, ctx, *, name : str):
+    async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
         try:
             guild_id = ctx.message.server.id
@@ -231,7 +242,7 @@ class Lookup:
         await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
-    async def classfeat(self, ctx, *, name : str):
+    async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
         try:
             guild_id = ctx.message.server.id
@@ -269,14 +280,17 @@ class Lookup:
         await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True, name='class')
-    async def _class(self, ctx, *, name: str):
-        """Looks up a class."""
+    async def _class(self, ctx, name: str, level: int = None):
+        """Looks up a class, or all features of a certain level."""
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
         except:
             pm = False
         destination = ctx.message.author if pm else ctx.message.channel
+
+        if level is not None and not 0 < level < 21:
+            return await self.bot.say("Invalid level.")
 
         result = searchClass(name)
         if result is None:
@@ -294,37 +308,76 @@ class Lookup:
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        embed.add_field(name="Hit Die", value=f"1d{result['hd']}")
-        embed.add_field(name="Saving Throws", value=result['proficiency'])
+        if level is None:
+            embed.title = result['name']
+            embed.add_field(name="Hit Die", value=f"1d{result['hd']}")
+            embed.add_field(name="Saving Throws", value=result['proficiency'])
 
-        levels = []
-        starting_profs = "None"
-        starting_items = "None"
-        for level in range(1, 21):
-            level_str = []
-            level_features = [f for f in result['autolevel'] if f['_level'] == str(level)]
-            for feature in level_features:
-                for f in feature.get('feature', []):
+            levels = []
+            starting_profs = "None"
+            starting_items = "None"
+            for level in range(1, 21):
+                level_str = []
+                level_features = [f for f in result['autolevel'] if f['_level'] == str(level)]
+                for feature in level_features:
+                    for f in feature.get('feature', []):
+                        if not f.get('_optional') and not (f['name'] in ("Starting Proficiencies", "Starting Equipment")):
+                            level_str.append(f['name'])
+                        elif f['name'] == "Starting Proficiencies":
+                            starting_profs = '\n'.join(t for t in f['text'] if t)
+                        elif f['name'] == "Starting Equipment":
+                            starting_items = '\n'.join(t for t in f['text'] if t)
+                    if not 'feature' in feature:
+                        pass
+                levels.append(', '.join(level_str))
+
+            embed.add_field(name="Starting Proficiencies", value=starting_profs)
+            embed.add_field(name="Starting Equipment", value=starting_items)
+
+            level_features_str = ""
+            for i, l in enumerate(levels):
+                level_features_str += f"`{i+1}` {l}\n"
+            embed.description = level_features_str
+
+            embed.set_footer(text="Use !classfeat to look up a feature.")
+        else:
+            embed.title = f"{result['name']}, Level {level}"
+
+            level_features = []
+            level_resources = {}
+            level_features_objs = [f for f in result['autolevel'] if f['_level'] == str(level)]
+            for obj in level_features_objs:
+                for f in obj.get('feature', []):
                     if not f.get('_optional') and not (f['name'] in ("Starting Proficiencies", "Starting Equipment")):
-                        level_str.append(f['name'])
-                    elif f['name'] == "Starting Proficiencies":
-                        starting_profs = '\n'.join(t for t in f['text'] if t)
-                    elif f['name'] == "Starting Equipment":
-                        starting_items = '\n'.join(t for t in f['text'] if t)
-                if not 'feature' in feature:
-                    pass
-            levels.append(', '.join(level_str))
+                        level_features.append(f)
+                if not 'feature' in obj:
+                    for k, v in obj.items():
+                        if not k.startswith('_'):
+                            level_resources[k] = v
 
-        embed.add_field(name="Starting Proficiencies", value=starting_profs)
-        embed.add_field(name="Starting Equipment", value=starting_items)
+            for res, val in level_resources.items():
+                value = val
+                if res == 'slots':
+                    if isinstance(val, dict): # EK/AT/Art
+                        continue
+                    if result['name'] == 'Warlock': # Warlock
+                        res = 'Cantrips Known'
+                        value = val.split(',')[0]
+                    else:
+                        slots = val.split(',')
+                        value = f"`Cantrips` - {slots[0]}"
+                        for i, l in enumerate(slots[1:]):
+                            value += f"`; L{i+1}` - {l}"
+                if res == 'spellsknown' and isinstance(level_resources.get('slots'), dict): # EK/AT/Art
+                    continue
 
-        level_features_str = ""
-        for i, l in enumerate(levels):
-            level_features_str += f"`{i+1}` {l}\n"
-        embed.description = level_features_str
+                embed.add_field(name=CLASS_RESOURCE_MAP.get(res, res), value=value)
 
-        embed.set_footer(text="Use !classfeat to look up a feature.")
+            for f in level_features:
+                text = '\n'.join(t for t in f['text'] if t)
+                embed.add_field(name=f['name'], value=(text[:1019] + "...") if len(text) > 1023 else text)
+
+            embed.set_footer(text="Use !classfeat to look up a feature if it is cut off.")
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -372,7 +425,7 @@ class Lookup:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
-    async def lookup_settings(self, ctx, *, args:str):
+    async def lookup_settings(self, ctx, *, args: str):
         """Changes settings for the lookup module.
         Usage: !lookup_settings -req_dm_monster True
         Current settings are: -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
@@ -404,7 +457,7 @@ class Lookup:
         await self.bot.say("Lookup settings set:\n" + out)
 
     @commands.command(pass_context=True)
-    async def monster(self, ctx, *, monstername : str):
+    async def monster(self, ctx, *, monstername: str):
         """Looks up a monster.
         Generally requires a Game Master role to show full stat block.
         Game Master Roles: GM, DM, Game Master, Dungeon Master"""
@@ -452,7 +505,7 @@ class Lookup:
                 await self.bot.say(r)
 
     @commands.command(pass_context=True)
-    async def spell(self, ctx, *, name : str):
+    async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
 
         try:
@@ -521,7 +574,3 @@ class Lookup:
                 await self.bot.send_message(ctx.message.author, r)
             else:
                 await self.bot.say(r)
-
-
-
-    

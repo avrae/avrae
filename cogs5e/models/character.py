@@ -473,8 +473,10 @@ class Character: # TODO: refactor old commands to use this
         except AssertionError:
             raise ConsumableNotFound()
         try:
-            assert self.evaluate_cvar(self.character['consumables']['custom'][name].get('min', str(-(2 ** 64)))) <= int(newValue) <= \
-                   self.evaluate_cvar(self.character['consumables']['custom'][name].get('max', str(2 ** 64 - 1)))
+            _min = self.evaluate_cvar(self.character['consumables']['custom'][name].get('min', str(-(2 ** 32))))
+            _max = self.evaluate_cvar(self.character['consumables']['custom'][name].get('max', str(2 ** 32 - 1)))
+            assert _min <= int(newValue) <= _max
+
         except:
             raise CounterOutOfBounds()
         self.character['consumables']['custom'][name]['value'] = int(newValue)

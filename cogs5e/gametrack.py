@@ -287,7 +287,7 @@ class GameTrack:
         else:
             await self.bot.say(f"Custom counter created.")
 
-    @customcounter.command(pass_context=True, name='delete')
+    @customcounter.command(pass_context=True, name='delete', aliases=['remove'])
     async def customcounter_delete(self, ctx, name):
         """Deletes a custom counter."""
         character = Character.from_ctx(ctx)

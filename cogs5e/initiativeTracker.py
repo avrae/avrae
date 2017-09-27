@@ -1353,7 +1353,7 @@ class InitTracker:
                         if i == 0:
                             embed.add_field(name="DC", value=str(dc))
                         embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
-                    else: # damage spell
+                    else: # save against damage spell
                         if damage_save is None:
                             dmg = save['damage']
                             
@@ -1383,14 +1383,14 @@ class InitTracker:
                                     d += str(p)
                             damage_save = d
                         dmg = damage_save
-                        
-                        if is_success:
-                            if save['success'] == 'half': dmg = "({})/2".format(dmg)
-                            else: dmg = "0"
-                        
+
                         dmg = parse_resistances(dmg, args.get('resist', []) or target.resist,
                                                 args.get('immune', []) or target.immune,
                                                 args.get('vuln', []) or target.vuln)
+
+                        if is_success:
+                            if save['success'] == 'half': dmg = "({})/2".format(dmg)
+                            else: dmg = "0"
                         
                         dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
                         out += dmgroll.result + '\n'

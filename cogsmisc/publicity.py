@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 29, 2016
 
 @author: andrew
-'''
+"""
 import asyncio
 import json
 import logging
@@ -17,9 +17,9 @@ DISCORD_BOTS_API =       'https://bots.discord.pw/api'
 CARBONITEX_API_BOTDATA = 'https://www.carbonitex.net/discord/data/botdata.php'
 
 class Publicity:
-    '''
+    """
     Sends updates to bot repos.
-    '''
+    """
     
     def __init__(self, bot):
         self.bot = bot

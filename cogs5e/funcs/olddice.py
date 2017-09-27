@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 25, 2016
 
 @author: andrew
-'''
+"""
 from heapq import nlargest, nsmallest
 from math import floor
 import random

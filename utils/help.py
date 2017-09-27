@@ -1,8 +1,8 @@
-'''
+"""
 Created on Jan 17, 2017
 
 @author: andrew
-'''
+"""
 import inspect
 import itertools
 import re

@@ -1,8 +1,8 @@
-'''
+"""
 Created on Jan 13, 2017
 
 @author: andrew
-'''
+"""
 import shlex
 
 import discord

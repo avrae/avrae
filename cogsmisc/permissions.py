@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 29, 2016
 
 @author: andrew
-'''
+"""
 
 from discord.ext import commands
 

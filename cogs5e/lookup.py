@@ -1,18 +1,14 @@
-'''
+"""
 Created on Nov 29, 2016
 
 @author: andrew
-'''
-import random
+"""
 import shlex
 import textwrap
 
-import discord
 from discord.ext import commands
 
-from cogs5e.funcs.lookupFuncs import searchCondition, searchRule, searchRacialFeat, searchFeat, \
-    searchClassFeat, searchMonster, getMonster, searchSpell, getSpell, searchItem, getItem, searchBackground, \
-    searchRace, searchClass
+from cogs5e.funcs.lookupFuncs import *
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
 from utils.functions import discord_trim, get_positivity
@@ -21,7 +17,7 @@ CLASS_RESOURCE_MAP = {'slots': "Spell Slots", # a weird one - see fighter
                       'spellsknown': "Spells Known",
                       'rages': "Rages", 'ragedamage': "Rage Damage",
                       'martialarts': "Martial Arts", 'kipoints': "Ki", 'unarmoredmovement': "Unarmored Movement",
-                      'sorcerypoints': "Sorcery Points",
+                      'sorcerypoints': "Sorcery Points", 'sneakattack': "Sneak Attack",
                       'invocationsknown': "Invocations Known", 'spellslots': "Spell Slots", 'slotlevel': "Slot Level",
                       'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
                       'psipoints': "Psi Points", 'psilimit': "Psi Limit"}

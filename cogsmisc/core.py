@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 26, 2016
 
 @author: andrew
-'''
+"""
 from datetime import timedelta, datetime
 from math import floor
 import os
@@ -18,9 +18,9 @@ import random
 
 
 class Core:
-    '''
+    """
     Core utilty and general commands.
-    '''
+    """
     
     def __init__(self, bot):
         self.bot = bot

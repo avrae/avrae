@@ -1,8 +1,8 @@
-'''
+"""
 Created on May 6, 2017
 
 @author: mommo
-'''
+"""
 
 class MissingAttribute(Exception):
     

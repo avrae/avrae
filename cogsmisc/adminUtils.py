@@ -1,8 +1,8 @@
-'''
+"""
 Created on Sep 23, 2016
 
 @author: andrew
-'''
+"""
 import asyncio
 import gc
 import json
@@ -25,9 +25,9 @@ log = logging.getLogger(__name__)
 memlog = logging.getLogger("memory")
 
 class AdminUtils:
-    '''
+    """
     Administrative Utilities.
-    '''
+    """
 
 
     def __init__(self, bot):

@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 28, 2016
 
 @author: andrew
-'''
+"""
 
 import json
 
@@ -13,9 +13,9 @@ import credentials
 
 
 class DataIO:
-    '''
+    """
     A simple class to interface with the redis database.
-    '''
+    """
 
     def __init__(self, testing=False, test_database_url=''):
         if not testing:

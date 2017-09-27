@@ -1,8 +1,8 @@
-'''
+"""
 Created on Dec 25, 2016
 
 @author: andrew
-'''
+"""
 
 from copy import copy
 from heapq import nlargest, nsmallest

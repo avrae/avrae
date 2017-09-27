@@ -1,8 +1,8 @@
-'''
+"""
 Created on Feb 27, 2017
 
 @author: andrew
-'''
+"""
 import re
 
 import discord

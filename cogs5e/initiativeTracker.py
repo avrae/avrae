@@ -1,8 +1,8 @@
-'''
+"""
 Created on Sep 18, 2016
 
 @author: andrew
-'''
+"""
 import asyncio
 import copy
 import datetime
@@ -219,8 +219,7 @@ class Combatant(object):
         return hpStr
     
     def get_hp_and_ac(self, private:bool=False):
-        out = []
-        out.append(self.get_hp(private))
+        out = [self.get_hp(private)]
         if self.ac is not None and (not self.private or private):
             out.append("(AC {})".format(self.ac))
         return ' '.join(out)
@@ -359,7 +358,7 @@ class Effect(object):
         return "<initiativeTracker.Effect object name={} duration={} remaining={} effect={}>".format(self.name, self.duration, self.remaining, self.effect)
 
 class InitTracker:
-    '''
+    """
     Initiative tracking commands. Use !help init for more details.
     To use, first start combat in a channel by saying "!init begin".
     Then, each combatant should add themselves to the combat with "!init add <MOD> <NAME>".
@@ -368,7 +367,7 @@ class InitTracker:
     Then, you can proceed through combat with "!init next".
     Once combat ends, end combat with "!init end".
     For more help, the !help command shows applicable arguments for each command.
-    '''
+    """
 
     def __init__(self, bot):
         self.bot = bot

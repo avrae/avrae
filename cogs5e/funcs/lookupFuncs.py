@@ -425,103 +425,11 @@ def getSpell(spellname, return_spell=False):
         return discord_trim(tempStr)
 
 def searchItem(name):
-    return fuzzywuzzy_search_all_3(c.items, 'name', name, return_key=True)
+    return fuzzywuzzy_search_all_3(c.items, 'name', name)
 
-def getItem(itemname, return_item=False):
-    itemDesc = []
-    item = strict_search(c.items, 'name', itemname)
-    if item is None:
-        itemDesc.append("Item does not exist or is misspelled.")
-        if return_item: return {'item': None, 'string': itemDesc}
-        return itemDesc
+def getItem(itemname):
+    return strict_search(c.items, 'name', itemname)
 
-    def parsetype (_type):
-        if _type == "G": return "Adventuring Gear"
-        if _type == "SCF": return "Spellcasting Focus"
-        if _type == "AT": return "Artisan Tool"
-        if _type == "T": return "Tool"
-        if _type == "GS": return "Gaming Set"
-        if _type == "INS": return "Instrument"
-        if _type == "A": return "Ammunition"
-        if _type == "M": return "Melee Weapon"
-        if _type == "R": return "Ranged Weapon"
-        if _type == "LA": return "Light Armor"
-        if _type == "MA": return "Medium Armor"
-        if _type == "HA": return "Heavy Armor"
-        if _type == "S": return "Shield"
-        if _type == "W": return "Wondrous Item"
-        if _type == "P": return "Potion"
-        if _type == "ST": return "Staff"
-        if _type == "RD": return "Rod"
-        if _type == "RG": return "Ring"
-        if _type == "WD": return "Wand"
-        if _type == "SC": return "Scroll"
-        if _type == "EXP": return "Explosive"
-        if _type == "GUN": return "Firearm"
-        if _type == "SIMW": return "Simple Weapon"
-        if _type == "MARW": return "Martial Weapon"
-        if _type == "$": return "Valuable Object"
-        return "n/a"
-
-    def parsedamagetype (damagetype):
-        if damagetype == "B": return "bludgeoning"
-        if damagetype == "P": return "piercing"
-        if damagetype == "S": return "slashing"
-        if damagetype == "N": return "necrotic"
-        if damagetype == "R": return "radiant"
-        return 'n/a'
-
-    def parseproperty (_property):
-        if _property == "A": return "ammunition"
-        if _property == "LD": return "loading"
-        if _property == "L": return "light"
-        if _property == "F": return "finesse"
-        if _property == "T": return "thrown"
-        if _property == "H": return "heavy"
-        if _property == "R": return "reach"
-        if _property == "2H": return "two-handed"
-        if _property == "V": return "versatile"
-        if _property == "S": return "special"
-        if _property == "RLD": return "reload"
-        if _property == "BF": return "burst fire"
-        return "n/a"
-    itemDict = {}
-    itemDict['name'] = item['name']
-    itemDict['type'] = ', '.join(parsetype(t) for t in item['type'].split(','))
-    itemDict['rarity'] = item.get('rarity')
-    itemDict['type_and_rarity'] = itemDict['type'] + ((', ' + itemDict['rarity']) if itemDict['rarity'] is not None else '')
-    itemDict['value'] = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
-    itemDict['weight'] = (item.get('weight', 'n/a') + (' lb.' if item.get('weight', 'n/a') == '1' else ' lbs.')) if 'weight' in item else ''
-    itemDict['weight_and_value'] = itemDict['value'] + itemDict['weight']
-    itemDict['damage'] = ''
-    for iType in item['type'].split(','):
-        if iType in ('M', 'R', 'GUN'):
-            itemDict['damage'] = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(item.get('dmgType', 'n/a'))) if 'dmg1' in item and 'dmgType' in item else ''
-        if iType == 'S': itemDict['damage'] = "AC +" + item.get('ac', 'n/a')
-        if iType == 'LA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX'
-        if iType == 'MA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX (Max 2)'
-        if iType == 'HA': itemDict['damage'] = "AC " + item.get('ac', 'n/a')
-    itemDict['properties'] = ""
-    for prop in item.get('property', '').split(','):
-        if prop == '': continue
-        a = b = prop
-        a = parseproperty(a)
-        if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
-        if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
-        if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
-        if len(itemDict['properties']): a = ', ' + a
-        itemDict['properties'] += a
-    itemDict['damage_and_properties'] = (itemDict['damage'] + ' - ' + itemDict['properties']) if itemDict['properties'] is not '' else itemDict['damage']
-    itemDict['damage_and_properties'] = (' --- ' + itemDict['damage_and_properties']) if itemDict['weight_and_value'] is not '' and itemDict['damage_and_properties'] is not '' else itemDict['damage_and_properties']
-
-    itemDesc.append("**{name}**\n*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n".format(**itemDict))
-    itemDesc.append('\n'.join(a for a in item['text'] if a is not None and 'Rarity:' not in a and 'Source:' not in a))
-
-    tempStr = '\n'.join(itemDesc)
-    if return_item:
-        return {'item': item, 'string': discord_trim(tempStr)}
-    else:
-        return tempStr
 
 
 

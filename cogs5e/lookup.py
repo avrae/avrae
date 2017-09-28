@@ -13,7 +13,7 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
 from utils.functions import discord_trim, get_positivity
 
-CLASS_RESOURCE_MAP = {'slots': "Spell Slots", # a weird one - see fighter
+CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'spellsknown': "Spells Known",
                       'rages': "Rages", 'ragedamage': "Rage Damage",
                       'martialarts': "Martial Arts", 'kipoints': "Ki", 'unarmoredmovement': "Unarmored Movement",
@@ -22,8 +22,9 @@ CLASS_RESOURCE_MAP = {'slots': "Spell Slots", # a weird one - see fighter
                       'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
                       'psipoints': "Psi Points", 'psilimit': "Psi Limit"}
 
+
 class Lookup:
-    """Commands to help look up items (WIP), status effects, rules, etc."""
+    """Commands to help look up items, status effects, rules, etc."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -37,7 +38,7 @@ class Lookup:
             names = results
         embed = discord.Embed()
         embed.title = "Multiple Matches Found"
-        selectStr = " Which one were you looking for? (Type the number, or \"c\" to cancel)\n"
+        selectStr = "Which one were you looking for? (Type the number, or \"c\" to cancel)\n"
         for i, r in enumerate(names):
             selectStr += f"**[{i+1}]** - {r}\n"
         embed.description = selectStr
@@ -317,7 +318,8 @@ class Lookup:
                 level_features = [f for f in result['autolevel'] if f['_level'] == str(level)]
                 for feature in level_features:
                     for f in feature.get('feature', []):
-                        if not f.get('_optional') and not (f['name'] in ("Starting Proficiencies", "Starting Equipment")):
+                        if not f.get('_optional') and not (
+                            f['name'] in ("Starting Proficiencies", "Starting Equipment")):
                             level_str.append(f['name'])
                         elif f['name'] == "Starting Proficiencies":
                             starting_profs = '\n'.join(t for t in f['text'] if t)
@@ -354,9 +356,9 @@ class Lookup:
             for res, val in level_resources.items():
                 value = val
                 if res == 'slots':
-                    if isinstance(val, dict): # EK/AT/Art
+                    if isinstance(val, dict):  # EK/AT/Art
                         continue
-                    if result['name'] == 'Warlock': # Warlock
+                    if result['name'] == 'Warlock':  # Warlock
                         res = 'Cantrips Known'
                         value = val.split(',')[0]
                     else:
@@ -364,7 +366,7 @@ class Lookup:
                         value = f"`Cantrips` - {slots[0]}"
                         for i, l in enumerate(slots[1:]):
                             value += f"`; L{i+1}` - {l}"
-                if res == 'spellsknown' and isinstance(level_resources.get('slots'), dict): # EK/AT/Art
+                if res == 'spellsknown' and isinstance(level_resources.get('slots'), dict):  # EK/AT/Art
                     continue
 
                 embed.add_field(name=CLASS_RESOURCE_MAP.get(res, res), value=value)
@@ -560,13 +562,114 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx, returns_object=False)
+                result = await self.get_selection(results, ctx)
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
-        result = getItem(result)
+        embed = EmbedWithAuthor(ctx)
+        item = result
 
-        for r in discord_trim(result):
-            if pm:
-                await self.bot.send_message(ctx.message.author, r)
-            else:
-                await self.bot.say(r)
+        def parsetype(_type):
+            if _type == "G": return "Adventuring Gear"
+            if _type == "SCF": return "Spellcasting Focus"
+            if _type == "AT": return "Artisan Tool"
+            if _type == "T": return "Tool"
+            if _type == "GS": return "Gaming Set"
+            if _type == "INS": return "Instrument"
+            if _type == "A": return "Ammunition"
+            if _type == "M": return "Melee Weapon"
+            if _type == "R": return "Ranged Weapon"
+            if _type == "LA": return "Light Armor"
+            if _type == "MA": return "Medium Armor"
+            if _type == "HA": return "Heavy Armor"
+            if _type == "S": return "Shield"
+            if _type == "W": return "Wondrous Item"
+            if _type == "P": return "Potion"
+            if _type == "ST": return "Staff"
+            if _type == "RD": return "Rod"
+            if _type == "RG": return "Ring"
+            if _type == "WD": return "Wand"
+            if _type == "SC": return "Scroll"
+            if _type == "EXP": return "Explosive"
+            if _type == "GUN": return "Firearm"
+            if _type == "SIMW": return "Simple Weapon"
+            if _type == "MARW": return "Martial Weapon"
+            if _type == "$": return "Valuable Object"
+            return "n/a"
+
+        def parsedamagetype(damagetype):
+            if damagetype == "B": return "bludgeoning"
+            if damagetype == "P": return "piercing"
+            if damagetype == "S": return "slashing"
+            if damagetype == "N": return "necrotic"
+            if damagetype == "R": return "radiant"
+            return 'n/a'
+
+        def parseproperty(_property):
+            if _property == "A": return "ammunition"
+            if _property == "LD": return "loading"
+            if _property == "L": return "light"
+            if _property == "F": return "finesse"
+            if _property == "T": return "thrown"
+            if _property == "H": return "heavy"
+            if _property == "R": return "reach"
+            if _property == "2H": return "two-handed"
+            if _property == "V": return "versatile"
+            if _property == "S": return "special"
+            if _property == "RLD": return "reload"
+            if _property == "BF": return "burst fire"
+            return "n/a"
+
+        itemDict = {}
+        itemDict['name'] = item['name']
+        itemDict['type'] = ', '.join(parsetype(t) for t in item['type'].split(','))
+        itemDict['rarity'] = item.get('rarity')
+        itemDict['type_and_rarity'] = itemDict['type'] + (
+            (', ' + itemDict['rarity']) if itemDict['rarity'] is not None else '')
+        itemDict['value'] = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
+        itemDict['weight'] = (item.get('weight', 'n/a') + (
+            ' lb.' if item.get('weight', 'n/a') == '1' else ' lbs.')) if 'weight' in item else ''
+        itemDict['weight_and_value'] = itemDict['value'] + itemDict['weight']
+        itemDict['damage'] = ''
+        for iType in item['type'].split(','):
+            if iType in ('M', 'R', 'GUN'):
+                itemDict['damage'] = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(
+                    item.get('dmgType', 'n/a'))) if 'dmg1' in item and 'dmgType' in item else ''
+            if iType == 'S': itemDict['damage'] = "AC +" + item.get('ac', 'n/a')
+            if iType == 'LA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX'
+            if iType == 'MA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX (Max 2)'
+            if iType == 'HA': itemDict['damage'] = "AC " + item.get('ac', 'n/a')
+        itemDict['properties'] = ""
+        for prop in item.get('property', '').split(','):
+            if prop == '': continue
+            a = b = prop
+            a = parseproperty(a)
+            if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
+            if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
+            if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
+            if len(itemDict['properties']): a = ', ' + a
+            itemDict['properties'] += a
+        itemDict['damage_and_properties'] = (itemDict['damage'] + ' - ' + itemDict['properties']) if itemDict[
+                                                                                                         'properties'] is not '' else \
+            itemDict['damage']
+        itemDict['damage_and_properties'] = (' --- ' + itemDict['damage_and_properties']) if itemDict[
+                                                                                                 'weight_and_value'] is not '' and \
+                                                                                             itemDict[
+                                                                                                 'damage_and_properties'] is not '' else \
+            itemDict['damage_and_properties']
+
+        embed.title = itemDict['name']
+        embed.description = f"*{itemDict['type_and_rarity']}*\n{itemDict['weight_and_value']}{itemDict['damage_and_properties']}"
+
+        text = '\n'.join(a for a in item['text'] if a is not None and 'Rarity:' not in a and 'Source:' not in a)
+        if len(text) > 5500:
+            text = text[:5500] + "..."
+
+        field_name = "Description"
+        for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
+            embed.add_field(name=field_name, value=piece)
+            field_name = "con't"
+
+        if pm:
+            await self.bot.send_message(ctx.message.author, embed=embed)
+        else:
+            await self.bot.say(embed=embed)

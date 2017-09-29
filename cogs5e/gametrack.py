@@ -566,20 +566,11 @@ class GameTrack:
         await self.bot.say(embed=embed)
 
     async def _old_cast(self, ctx, spell_name, *args): # TODO
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.bot.db.not_json_get("lookup_settings", {}).get(guild_id, {}).get("pm_result", False)
-
-        except:
-            pm = False
-
-        spell = getSpell(spell_name, return_spell=True)
+        spell = getSpell(spell_name)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
-        if spell['spell'] is None:
-            return await self.bot.say(spell['string'][0], delete_after=15)
-        result = spell['string']
-        spell = spell['spell']
+        if spell is None:
+            return await self.bot.say("Spell not found.", delete_after=15)
         if spell.get('source') == "UAMystic":
             return await self.bot.say("Mystic talents are not supported.")
 
@@ -668,8 +659,6 @@ class GameTrack:
         out = "Spell not supported by new cast, falling back to old cast.\n" + out
         char.commit(ctx)  # make sure we save changes
         await self.bot.say(out)
-        for r in result:
-            if pm:
-                await self.bot.send_message(ctx.message.author, r)
-            else:
-                await self.bot.say(r, delete_after=15)
+        spell_cmd = self.bot.get_command('spell')
+        if spell_cmd is None: return await self.bot.say("Lookup cog not loaded.")
+        await ctx.invoke(spell_cmd, name=spell['name'])

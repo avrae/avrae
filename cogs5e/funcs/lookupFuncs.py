@@ -371,58 +371,8 @@ async def searchAutoSpellFull(name, ctx):
                 return None
     return result
 
-def getSpell(spellname, return_spell=False):
-    spellDesc = []
-
-    spell = strict_search(c.spells, 'name', spellname)
-    original_spell = copy.copy(spell)
-    spell = copy.copy(spell)
-    if spell is None:
-        spellDesc.append("Spell does not exist or is misspelled (ha).")
-        if return_spell: return {'spell': None, 'string': spellDesc}
-        return spellDesc
-
-    def parseschool(school):
-        if school == "A": return "abjuration"
-        if school == "EV": return "evocation"
-        if school == "EN": return "enchantment"
-        if school == "I": return "illusion"
-        if school == "D": return "divination"
-        if school == "N": return "necromancy"
-        if school == "T": return "transmutation"
-        if school == "C": return "conjuration"
-        return school
-
-
-    def parsespelllevel(level):
-        if level == "0": return "cantrip"
-        if level == "2": return level + "nd level"
-        if level == "3": return level + "rd level"
-        if level == "1": return level + "st level"
-        return level + "th level"
-
-    spell['school'] = parseschool(spell.get('school'))
-    spell['ritual'] = spell.get('ritual', 'no').lower()
-
-    if spell.get("source") == "UAMystic":
-        spellDesc.append("{name}, {level} Mystic Talent. ({classes})\n".format(**spell))
-    else:
-        spell['level'] = parsespelllevel(spell['level'])
-        spellDesc.append("{name}, {level} {school}. ({classes})\n**Casting Time:** {time}\n**Range:** {range}\n**Components:** {components}\n**Duration:** {duration}\n**Ritual:** {ritual}".format(**spell))
-
-    if isinstance(spell['text'], list):
-        for a in spell["text"]:
-            if a is '': continue
-            spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion", ""))
-    else:
-        spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace("This spell can be found in the Elemental Evil Player's Companion", ""))
-
-    tempStr = '\n'.join(spellDesc)
-
-    if return_spell:
-        return {'spell': original_spell, 'string': discord_trim(tempStr)}
-    else:
-        return discord_trim(tempStr)
+def getSpell(spellname):
+    return strict_search(c.spells, 'name', spellname)
 
 def searchItem(name):
     return fuzzywuzzy_search_all_3(c.items, 'name', name)

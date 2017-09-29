@@ -319,7 +319,7 @@ class Lookup:
                 for feature in level_features:
                     for f in feature.get('feature', []):
                         if not f.get('_optional') and not (
-                            f['name'] in ("Starting Proficiencies", "Starting Equipment")):
+                                    f['name'] in ("Starting Proficiencies", "Starting Equipment")):
                             level_str.append(f['name'])
                         elif f['name'] == "Starting Proficiencies":
                             starting_profs = '\n'.join(t for t in f['text'] if t)
@@ -529,14 +529,85 @@ class Lookup:
             else:
                 result = await self.get_selection(results, ctx, returns_object=False)
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
-
         result = getSpell(result)
 
-        for r in result:
+        spellDesc = []
+        embed = EmbedWithAuthor(ctx)
+        color = embed.colour
+        spell = copy.copy(result)
+
+        def parseschool(school):
+            if school == "A": return "abjuration"
+            if school == "EV": return "evocation"
+            if school == "EN": return "enchantment"
+            if school == "I": return "illusion"
+            if school == "D": return "divination"
+            if school == "N": return "necromancy"
+            if school == "T": return "transmutation"
+            if school == "C": return "conjuration"
+            return school
+
+        def parsespelllevel(level):
+            if level == "0": return "cantrip"
+            if level == "2": return level + "nd level"
+            if level == "3": return level + "rd level"
+            if level == "1": return level + "st level"
+            return level + "th level"
+
+        spell['school'] = parseschool(spell.get('school'))
+        spell['ritual'] = spell.get('ritual', 'no').lower()
+
+        embed.title = spell['name']
+
+        if spell.get("source") == "UAMystic":
+            embed.description = "*{level} Mystic Talent. ({classes})*".format(**spell)
+        else:
+            spell['level'] = parsespelllevel(spell['level'])
+            embed.description = "*{level} {school}. ({classes})*".format(**spell)
+            embed.add_field(name="Casting Time", value=spell['time'])
+            embed.add_field(name="Range", value=spell['range'])
+            embed.add_field(name="Components", value=spell['components'])
+            embed.add_field(name="Duration", value=spell['duration'])
+            embed.add_field(name="Ritual", value=spell['ritual'])
+
+        if isinstance(spell['text'], list):
+            for a in spell["text"]:
+                if a is '': continue
+                spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
+                    "This spell can be found in the Elemental Evil Player's Companion", ""))
+        else:
+            spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
+                "This spell can be found in the Elemental Evil Player's Companion", ""))
+
+        text = '\n'.join(spellDesc)
+        if "**At Higher Levels:** " in text:
+            text, higher_levels = text.split("**At Higher Levels:** ", 1)
+        else:
+            higher_levels = None
+
+        if len(text) > 1020:
+            pieces = [text[:1020]] + [text[1020:i + 2040] for i in range(1020, len(text), 2040)]
+        else:
+            pieces = [text]
+
+        embed.add_field(name="Description", value=pieces[0])
+
+        embed_queue = [embed]
+        if len(pieces) > 1:
+            for piece in pieces[1:]:
+                temp_embed = discord.Embed()
+                temp_embed.colour = color
+                temp_embed.description = piece
+                embed_queue.append(temp_embed)
+
+        if higher_levels:
+            embed_queue[-1].add_field(name="At Higher Levels", value=higher_levels)
+
+        for embed in embed_queue:
             if pm:
-                await self.bot.send_message(ctx.message.author, r)
+                await self.bot.send_message(ctx.message.author, embed=embed)
             else:
-                await self.bot.say(r)
+                await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True, name='item')
     async def item_lookup(self, ctx, *, name):

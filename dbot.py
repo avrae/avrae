@@ -1,5 +1,4 @@
 import logging
-import logging
 import os
 import random
 import signal
@@ -13,12 +12,12 @@ from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.charGen import CharGenerator
 from cogs5e.dice import Dice
+from cogs5e.gametrack import GameTrack
 from cogs5e.initiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
 from cogs5e.models.errors import AvraeException
 from cogs5e.pbpUtils import PBPUtils
 from cogs5e.sheetManager import SheetManager
-from cogs5e.gametrack import GameTrack
 from cogsmisc.adminUtils import AdminUtils
 from cogsmisc.core import Core
 from cogsmisc.customization import Customization

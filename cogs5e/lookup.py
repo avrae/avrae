@@ -465,10 +465,8 @@ class Lookup:
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
             visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
             if self.settings.get(guild_id, {}).get("req_dm_monster", True):
-                visible = 0
-                for ro in visible_roles:
-                    visible = visible + 1 if ro in [str(r).lower() for r in ctx.message.author.roles] else visible
-                visible = True if visible > 0 else False
+                visible = True if any(
+                    ro in [str(r).lower() for r in ctx.message.author.roles] for ro in visible_roles) else False
             else:
                 visible = True
         except:

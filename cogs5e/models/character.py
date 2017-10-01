@@ -148,7 +148,7 @@ class Character: # TODO: refactor old commands to use this
 
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
-        _funcs.update(floor=floor, ceil=ceil, round=round, len=len)
+        _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(cvars)

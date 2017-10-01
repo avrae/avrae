@@ -1562,7 +1562,7 @@ class InitTracker:
             for a in attacks:
                 if supplied_target is None:
                     if isMonster:
-                        targets = [c for c in combat.combatants if not isinstance(c, MonsterCombatant)]
+                        targets = [c for c in combat.combatants if not (isinstance(c, MonsterCombatant) or isinstance(c, CombatantGroup))]
                     else:
                         targets = [c for c in combat.combatants if isinstance(c, MonsterCombatant)]
                     if len(targets) == 0:

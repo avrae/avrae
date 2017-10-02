@@ -153,7 +153,7 @@ class Character: # TODO: refactor old commands to use this
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(cvars)
         _names.update(stat_vars)
-        _names.update({"True": True, "False": False})
+        _names.update({"True": True, "False": False, "currentHp": self.get_current_hp()})
         evaluator = simpleeval.SimpleEval(functions=_funcs, operators=_ops, names=_names)
 
         def set_value(name, value):

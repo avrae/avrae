@@ -1759,7 +1759,7 @@ class InitTracker:
                 temp_msgs.append(await self.bot.send_message(combat.channel, "Combat automatically reloaded after bot restart!"))
             except Forbidden:
                 log.warning('No permission to post in {}'.format(c))
-        self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
+        # self.bot.db.delete('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)))
         await asyncio.sleep(30)
         for msg in temp_msgs:
             try:

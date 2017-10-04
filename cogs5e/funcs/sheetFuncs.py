@@ -95,12 +95,17 @@ def sheet_attack(attack, args, embed=None):
             
             rollFor = "Damage"
             if itercrit == 1:
-                def critSub(matchobj):
-                    hocrit = 1 if args.get('hocrit') else 0
-                    return str(int(matchobj.group(1)) * 2 + hocrit) + 'd' + matchobj.group(2)
-                critDice = re.sub(r'(\d+)d(\d+)', critSub, damage)
-                if args.get('c') is not None:
-                    critDice += '+' + args.get('c', '')
+                if args.get('crittype') == '2x':
+                    critDice = f"({damage})*2"
+                    if args.get('c') is not None:
+                        critDice += '+' + args.get('c', '')
+                else:
+                    def critSub(matchobj):
+                        hocrit = 1 if args.get('hocrit') else 0
+                        return str(int(matchobj.group(1)) * 2 + hocrit) + 'd' + matchobj.group(2)
+                    critDice = re.sub(r'(\d+)d(\d+)', critSub, damage)
+                    if args.get('c') is not None:
+                        critDice += '+' + args.get('c', '')
                 damage = critDice
                 rollFor = "Damage (CRIT!)"
             

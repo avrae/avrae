@@ -169,6 +169,7 @@ class SheetManager:
         args['name'] = char.get_name()
         args['criton'] = char.get_setting('criton', 20)
         args['hocrit'] = char.get_setting('hocrit', False)
+        args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
             attack['details'] = char.parse_cvars(attack['details'])
 
@@ -615,7 +616,8 @@ class SheetManager:
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `hocrit true/false` - Enables/disables a half-orc's Brutal Critical.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
-        `embedimage true/false` - Enables/disables whether a character's image is automatically embedded."""
+        `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
+        `crittype 2x/default` - Sets whether crits double damage or dice."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -733,6 +735,17 @@ class SheetManager:
                     else:
                         character['settings']['embedimage'] = embedimage
                         out += "\u2705 Embed Image {}.\n".format("enabled" if character['settings'].get('embedimage') else "disabled")
+            if arg == 'crittype':
+                crittype = list_get(index + 1, None, args)
+                if crittype is None:
+                    out += '\u2139 Crit type is currently {}.\n' \
+                    .format(character['settings'].get('crittype', 'default'))
+                else:
+                    try: assert crittype in ('2x', 'default')
+                    except AssertionError: out += '\u274c Invalid input. Use "!csettings crittype default" to reset it.\n'
+                    else:
+                        character['settings']['crittype'] = crittype
+                        out += "\u2705 Crit type set to {}.\n".format(character['settings'].get('crittype'))
             index += 1
         user_characters[active_character] = character
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)

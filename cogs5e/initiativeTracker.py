@@ -1190,6 +1190,7 @@ class InitTracker:
             args['criton'] = combatant.sheet.get('settings', {}).get('criton', 20) or 20
             args['c'] = combatant.sheet.get('settings', {}).get('critdmg') or args.get('c')
             args['hocrit'] = combatant.sheet.get('settings', {}).get('hocrit') or False
+            args['crittype'] = combatant.sheet.get('settings', {}).get('crittype') or 'default'
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get(
                 'color') is None else combatant.sheet.get('settings', {}).get('color')
@@ -1477,6 +1478,7 @@ class InitTracker:
                     outargs['immune'] = '|'.join(args.get('immune', [])) or '|'.join(target.immune)
                     outargs['vuln'] = '|'.join(args.get('vuln', [])) or '|'.join(target.vuln)
                     outargs['d'] = "+".join(args.get('d', [])) or None
+                    outargs['crittype'] = character.get_setting('crittype', 'default')
                     for _arg, _value in outargs.items():
                         if isinstance(_value, list):
                             outargs[_arg] = _value[-1]

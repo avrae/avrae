@@ -506,6 +506,7 @@ class GameTrack:
                                 value=dmgroll.result + "\n**DC**: {}\n{} Save".format(str(dc), spell['save']['save']))
         elif spell['type'] == 'attack':  # attack spell
             outargs = copy.copy(args)
+            outargs['crittype'] = char.get_setting('crittype', 'default')
             outargs['d'] = "+".join(args.get('d', [])) or None
             for _arg, _value in outargs.items():
                 if isinstance(_value, list):

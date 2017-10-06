@@ -117,7 +117,7 @@ async def get_selection(results, ctx, pm=False, name_key=None):
     for i, r in enumerate(names):
         selectStr += f"**[{i+1}]** - {r}\n"
     embed.description = selectStr
-    embed.color = random.randint(0, 0xffffff)
+    embed.colour = random.randint(0, 0xffffff)
     if not pm:
         selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
     else:
@@ -138,11 +138,17 @@ async def get_selection(results, ctx, pm=False, name_key=None):
     if m.content == "c": return None
     return results[int(m.content) - 1]
 
-def searchMonster(name):
+def old_searchMonster(name):
     return fuzzywuzzy_search_all_3(c.monsters, 'name', name, return_key=True)
 
+def searchMonster(name):
+    return fuzzywuzzy_search_all_3(c.monsters, 'name', name)
+
+def getMonster(name):
+    return strict_search(c.monsters, 'name', name)
+
 async def searchMonsterFull(name, ctx, pm=False):
-    result = searchMonster(name)
+    result = old_searchMonster(name)
     if result is None:
         return {'monster': None, 'string': ["Monster does not exist or is misspelled."]}
     strict = result[1]
@@ -159,171 +165,21 @@ async def searchMonsterFull(name, ctx, pm=False):
             if result is None:
                 return {'monster': None, 'string': ["Selection timed out or was cancelled."]}
 
-    result = getMonster(result, visible=True, return_monster=True)
+    result = old_getMonster(result, visible=True, return_monster=True)
     return result
 
-def getMonster(monstername, visible=True, return_monster=False):
+def old_getMonster(monstername, visible=True, return_monster=False):
     monsterDesc = []
     monster = strict_search(c.monsters, 'name', monstername)
-    monster = copy.copy(monster)
     if monster is None:
         monsterDesc.append("Monster does not exist or is misspelled.")
         if return_monster: return {'monster': None, 'string': monsterDesc}
         return monsterDesc
 
-    def parsesize (size):
-        if size == "T": size = "Tiny";
-        if size == "S": size = "Small";
-        if size == "M": size = "Medium";
-        if size == "L": size = "Large";
-        if size == "H": size = "Huge";
-        if size == "G": size = "Gargantuan";
-        return size
-
-    if visible:
-        monster['size'] = parsesize(monster['size'])
-        monster['type'] = ','.join(monster['type'].split(',')[:-1])
-        for stat in ['str', 'dex', 'con', 'wis', 'int', 'cha']:
-            monster[stat + 'Str'] = monster[stat] + " ({:+})".format(floor((int(monster[stat]) - 10) / 2))
-        if monster.get('skill') is not None:
-            monster['skill'] = monster['skill'][0]
-        if monster.get('senses') is None:
-            monster['senses'] = "passive Perception {}".format(monster['passive'])
-        else:
-            monster['senses'] = monster.get('senses') + ", passive Perception {}".format(monster['passive'])
-
-        monsterDesc.append("{name}, {size} {type}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n".format(**monster))
-        monsterDesc.append("**STR:** {strStr} **DEX:** {dexStr} **CON:** {conStr} **WIS:** {wisStr} **INT:** {intStr} **CHA:** {chaStr}\n".format(**monster))
-        if monster.get('save') is not None:
-            monsterDesc.append("**Saving Throws:** {save}\n".format(**monster))
-        if monster.get('skill') is not None:
-            monsterDesc.append("**Skills:** {skill}\n".format(**monster))
-        monsterDesc.append("**Senses:** {senses}.\n".format(**monster))
-        if monster.get('vulnerable', '') is not '':
-            monsterDesc.append("**Vulnerabilities:** {vulnerable}\n".format(**monster))
-        if monster.get('resist', '') is not '':
-            monsterDesc.append("**Resistances:** {resist}\n".format(**monster))
-        if monster.get('immune', '') is not '':
-            monsterDesc.append("**Damage Immunities:** {immune}\n".format(**monster))
-        if monster.get('conditionImmune', '') is not '':
-            monsterDesc.append("**Condition Immunities:** {conditionImmune}\n".format(**monster))
-        if monster.get('languages', '') is not '':
-            monsterDesc.append("**Languages:** {languages}\n".format(**monster))
-        else:
-            monsterDesc.append("**Languages:** --\n".format(**monster))
-        monsterDesc.append("**CR:** {cr}\n".format(**monster))
-
-        attacks = []  # setup things
-        if "trait" in monster:
-            monsterDesc.append("\n**__Special Abilities:__**\n")
-            for a in monster["trait"]:
-                if isinstance(a['text'], list):
-                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-                monsterDesc.append("**{name}:** {text}\n".format(**a))
-                if 'attack' in a:
-                    attacks.append(a)
-        if "action" in monster:
-            monsterDesc.append("\n**__Actions:__**\n")
-            for a in monster["action"]:
-                if isinstance(a['text'], list):
-                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-                monsterDesc.append("**{name}:** {text}\n".format(**a))
-                if 'attack' in a:
-                    attacks.append(a)
-
-        if "reaction" in monster:
-            monsterDesc.append("\n**__Reactions:__**\n")
-            a = monster["reaction"]
-            if isinstance(a['text'], list):
-                a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-            monsterDesc.append("**{name}:** {text}\n".format(**a))
-            if 'attack' in a:
-                attacks.append(a)
-
-        if "legendary" in monster:
-            monsterDesc.append("\n**__Legendary Actions:__**\n")
-            for a in monster["legendary"]:
-                if isinstance(a['text'], list):
-                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-                if a['name'] is not '':
-                    monsterDesc.append("**{name}:** {text}\n".format(**a))
-                else:
-                    monsterDesc.append("{text}\n".format(**a))
-                if 'attack' in a:
-                    attacks.append(a)
-
-    else:
-        monster['hp'] = int(monster['hp'].split(' (')[0])
-        monster['ac'] = int(monster['ac'].split(' (')[0])
-        monster['size'] = parsesize(monster['size'])
-        monster['type'] = ','.join(monster['type'].split(',')[:-1])
-        if monster["hp"] < 10:
-            monster["hp"] = "Very Low"
-        elif 10 <= monster["hp"] < 50:
-            monster["hp"] = "Low"
-        elif 50 <= monster["hp"] < 100:
-            monster["hp"] = "Medium"
-        elif 100 <= monster["hp"] < 200:
-            monster["hp"] = "High"
-        elif 200 <= monster["hp"] < 400:
-            monster["hp"] = "Very High"
-        elif 400 <= monster["hp"]:
-            monster["hp"] = "Godly"
-
-        if monster["ac"] < 6:
-            monster["ac"] = "Very Low"
-        elif 6 <= monster["ac"] < 9:
-            monster["ac"] = "Low"
-        elif 9 <= monster["ac"] < 15:
-            monster["ac"] = "Medium"
-        elif 15 <= monster["ac"] < 17:
-            monster["ac"] = "High"
-        elif 17 <= monster["ac"] < 22:
-            monster["ac"] = "Very High"
-        elif 22 <= monster["ac"]:
-            monster["ac"] = "Godly"
-
-        for stat in ["str", "dex", "con", "wis", "int", "cha"]:
-            monster[stat] = int(monster[stat])
-            if monster[stat] <= 3:
-                monster[stat] = "Very Low"
-            elif 3 < monster[stat] <= 7:
-                monster[stat] = "Low"
-            elif 7 < monster[stat] <= 15:
-                monster[stat] = "Medium"
-            elif 15 < monster[stat] <= 21:
-                monster[stat] = "High"
-            elif 21 < monster[stat] <= 25:
-                monster[stat] = "Very High"
-            elif 25 < monster[stat]:
-                monster[stat] = "Godly"
-
-        if monster.get("languages"):
-            monster["languages"] = len(monster["languages"].split(", "))
-        else:
-            monster["languages"] = 0
-
-        monsterDesc.append("{name}, {size} {type}.\n" \
-        "**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n" \
-        "**STR:** {str} **DEX:** {dex} **CON:** {con} **WIS:** {wis} **INT:** {int} **CHA:** {cha}\n" \
-        "**Languages:** {languages}\n".format(**monster))
-
-        if "trait" in monster:
-            monsterDesc.append("**__Special Abilities:__** " + str(len(monster["trait"])) + "\n")
-
-        if "action" in monster:
-            monsterDesc.append("**__Actions:__** " + str(len(monster["action"])) + "\n")
-
-        if "reaction" in monster:
-            monsterDesc.append("**__Reactions:__** " + str(len(monster["reaction"])) + "\n")
-
-        if "legendary" in monster:
-            monsterDesc.append("**__Legendary Actions:__** " + str(len(monster["legendary"])) + "\n")
-
     if return_monster:
-        return {'monster': monster, 'string': discord_trim(''.join(monsterDesc))}
+        return {'monster': monster, 'string': 'deprecated'}
     else:
-        return discord_trim(''.join(monsterDesc))
+        return discord_trim('deprecated')
 
 def searchSpell(name):
     return fuzzywuzzy_search_all_3(c.spells, 'name', name, return_key=True)

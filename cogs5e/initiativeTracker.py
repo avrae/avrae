@@ -1279,7 +1279,7 @@ class InitTracker:
             return await self.bot.say("You must begin combat with !init next first.")
 
         is_character = isinstance(combatant, DicecloudCombatant)
-        if not is_character: return await self.bot.say("This command requires a SHeetManager integrated combatant.")
+        if not is_character: return await self.bot.say("This command requires a SheetManager integrated combatant.")
 
         character = Character.from_bot_and_ids(self.bot, combatant.auth_id, combatant.id)
 

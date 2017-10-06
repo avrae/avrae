@@ -5,13 +5,14 @@ Created on Nov 29, 2016
 """
 import shlex
 import textwrap
+from urllib import parse
 
 from discord.ext import commands
 
 from cogs5e.funcs.lookupFuncs import *
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
-from utils.functions import discord_trim, get_positivity
+from utils.functions import get_positivity
 
 CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'spellsknown': "Spells Known",
@@ -455,7 +456,36 @@ class Lookup:
         await self.bot.say("Lookup settings set:\n" + out)
 
     @commands.command(pass_context=True)
-    async def monster(self, ctx, *, monstername: str):
+    async def token(self, ctx, *, name):
+        """Shows a token for a monster. May not support all monsters."""
+        result = searchMonster(name)
+        if result is None:
+            return await self.bot.say('Monster not found.')
+        strict = result[1]
+        results = result[0]
+
+        if strict:
+            result = results
+        else:
+            if len(results) == 1:
+                result = results[0]
+            else:
+                result = await self.get_selection(results, ctx)
+                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        src = parse.quote(parsesource(result.get('type', '').split(',')[-1]))
+        url = f"https://astranauta.github.io/img/{src}/{parse.quote(result['name'])}.png"
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+        embed.description = f"{parsesize(result['size'])} monster."
+        embed.set_image(url=url)
+        embed.set_footer(text="This command may not support all monsters.")
+
+        await self.bot.say(embed=embed)
+
+    @commands.command(pass_context=True)
+    async def monster(self, ctx, *, name: str):
         """Looks up a monster.
         Generally requires a Game Master role to show full stat block.
         Game Master Roles: GM, DM, Game Master, Dungeon Master"""
@@ -476,7 +506,7 @@ class Lookup:
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr('monsters_looked_up_life')
 
-        result = searchMonster(monstername)
+        result = searchMonster(name)
         if result is None:
             return await self.bot.say('Monster not found.')
         strict = result[1]
@@ -488,17 +518,182 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx, returns_object=False)
+                result = await self.get_selection(results, ctx)
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
-        result = getMonster(result, visible=visible)
+        embed_queue = [EmbedWithAuthor(ctx)]
+        color = embed_queue[-1].colour
+        monster = copy.copy(result)
 
-        # do stuff here
-        for r in result:
-            if pm:
-                await self.bot.send_message(ctx.message.author, r)
+        embed_queue[-1].title = monster['name']
+
+        src = parse.quote(parsesource(monster.get('type', '').split(',')[-1]))
+
+        if visible:
+            monster['size'] = parsesize(monster['size'])
+            monster['type'] = ','.join(monster['type'].split(',')[:-1])
+            for stat in ['str', 'dex', 'con', 'wis', 'int', 'cha']:
+                monster[stat + 'Str'] = monster[stat] + " ({:+})".format(floor((int(monster[stat]) - 10) / 2))
+            if monster.get('skill') is not None:
+                monster['skill'] = monster['skill'][0]
+            if monster.get('senses') is None:
+                monster['senses'] = "passive Perception {}".format(monster['passive'])
             else:
-                await self.bot.say(r)
+                monster['senses'] = monster.get('senses') + ", passive Perception {}".format(monster['passive'])
+
+            desc = "{size} {type}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n".format(
+                **monster)
+            desc += "**STR:** {strStr} **DEX:** {dexStr} **CON:** {conStr}\n**WIS:** {wisStr} **INT:** {intStr} **CHA:** {chaStr}\n".format(
+                **monster)
+
+            if monster.get('save') is not None:
+                desc += "**Saving Throws:** {save}\n".format(**monster)
+            if monster.get('skill') is not None:
+                desc += "**Skills:** {skill}\n".format(**monster)
+            desc += "**Senses:** {senses}.\n".format(**monster)
+            if monster.get('vulnerable', '') is not '':
+                desc += "**Vulnerabilities:** {vulnerable}\n".format(**monster)
+            if monster.get('resist', '') is not '':
+                desc += "**Resistances:** {resist}\n".format(**monster)
+            if monster.get('immune', '') is not '':
+                desc += "**Damage Immunities:** {immune}\n".format(**monster)
+            if monster.get('conditionImmune', '') is not '':
+                desc += "**Condition Immunities:** {conditionImmune}\n".format(**monster)
+            if monster.get('languages', '') is not '':
+                desc += "**Languages:** {languages}\n".format(**monster)
+            else:
+                desc += "**Languages:** --\n".format(**monster)
+            desc += "**CR:** {cr}\n".format(**monster)
+
+            embed_queue[-1].description = desc
+
+            if "trait" in monster:
+                trait = ""
+                for a in monster["trait"]:
+                    if isinstance(a['text'], list):
+                        a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+                    trait += "**{name}:** {text}\n".format(**a)
+                if len(trait) < 1024:
+                    embed_queue[-1].add_field(name="Special Abilites", value=trait)
+                else:
+                    embed_queue.append(discord.Embed(colour=color, description=trait, title="Special Abilities"))
+
+            if "action" in monster:
+                action = ""
+                for a in monster["action"]:
+                    if isinstance(a['text'], list):
+                        a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+                    action += "**{name}:** {text}\n".format(**a)
+                if len(action) < 1024:
+                    embed_queue[-1].add_field(name="Actions", value=action)
+                elif len(action) < 2048:
+                    embed_queue.append(discord.Embed(colour=color, description=action, title="Actions"))
+                else:
+                    embed_queue.append(discord.Embed(colour=color, title="Actions"))
+                    action_all = [action[i:i+2040] for i in range(0, len(action), 2040)]
+                    embed_queue[-1].description = action_all[0]
+                    for a in action_all[1:]:
+                        embed_queue.append(discord.Embed(colour=color, description=a))
+
+            if "reaction" in monster:
+                reaction = ""
+                a = monster["reaction"]
+                if isinstance(a['text'], list):
+                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+                if len(reaction) < 1024:
+                    embed_queue[-1].add_field(name="Reactions", value=reaction)
+                else:
+                    embed_queue.append(discord.Embed(colour=color, description=reaction, title="Reactions"))
+
+            if "legendary" in monster:
+                legendary = ""
+                for a in monster["legendary"]:
+                    if isinstance(a['text'], list):
+                        a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+                    if a['name'] is not '':
+                        legendary += "**{name}:** {text}\n".format(**a)
+                    else:
+                        legendary += "{text}\n".format(**a)
+                if len(legendary) < 1024:
+                    embed_queue[-1].add_field(name="Legendary Actions", value=legendary)
+                else:
+                    embed_queue.append(discord.Embed(colour=color, description=legendary, title="Legendary Actions"))
+
+        else:
+            monster['hp'] = int(monster['hp'].split(' (')[0])
+            monster['ac'] = int(monster['ac'].split(' (')[0])
+            monster['size'] = parsesize(monster['size'])
+            monster['type'] = ','.join(monster['type'].split(',')[:-1])
+            if monster["hp"] < 10:
+                monster["hp"] = "Very Low"
+            elif 10 <= monster["hp"] < 50:
+                monster["hp"] = "Low"
+            elif 50 <= monster["hp"] < 100:
+                monster["hp"] = "Medium"
+            elif 100 <= monster["hp"] < 200:
+                monster["hp"] = "High"
+            elif 200 <= monster["hp"] < 400:
+                monster["hp"] = "Very High"
+            elif 400 <= monster["hp"]:
+                monster["hp"] = "Godly"
+
+            if monster["ac"] < 6:
+                monster["ac"] = "Very Low"
+            elif 6 <= monster["ac"] < 9:
+                monster["ac"] = "Low"
+            elif 9 <= monster["ac"] < 15:
+                monster["ac"] = "Medium"
+            elif 15 <= monster["ac"] < 17:
+                monster["ac"] = "High"
+            elif 17 <= monster["ac"] < 22:
+                monster["ac"] = "Very High"
+            elif 22 <= monster["ac"]:
+                monster["ac"] = "Godly"
+
+            for stat in ["str", "dex", "con", "wis", "int", "cha"]:
+                monster[stat] = int(monster[stat])
+                if monster[stat] <= 3:
+                    monster[stat] = "Very Low"
+                elif 3 < monster[stat] <= 7:
+                    monster[stat] = "Low"
+                elif 7 < monster[stat] <= 15:
+                    monster[stat] = "Medium"
+                elif 15 < monster[stat] <= 21:
+                    monster[stat] = "High"
+                elif 21 < monster[stat] <= 25:
+                    monster[stat] = "Very High"
+                elif 25 < monster[stat]:
+                    monster[stat] = "Godly"
+
+            if monster.get("languages"):
+                monster["languages"] = len(monster["languages"].split(", "))
+            else:
+                monster["languages"] = 0
+
+            embed_queue[-1].description = "{size} {type}.\n" \
+                                "**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n" \
+                                "**STR:** {str} **DEX:** {dex} **CON:** {con}\n**WIS:** {wis} **INT:** {int} **CHA:** {cha}\n" \
+                                "**Languages:** {languages}\n".format(**monster)
+
+            if "trait" in monster:
+                embed_queue[-1].add_field(name="Special Abilities", value=str(len(monster["trait"])))
+
+            if "action" in monster:
+                embed_queue[-1].add_field(name="Actions", value=str(len(monster["action"])))
+
+            if "reaction" in monster:
+                embed_queue[-1].add_field(name="Reactions", value=str(len(monster["reaction"])))
+
+            if "legendary" in monster:
+                embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster["legendary"])))
+
+        embed_queue[0].set_thumbnail(url=f"https://astranauta.github.io/img/{src}/{parse.quote(monster['name'])}.png")
+
+        for embed in embed_queue:
+            if pm:
+                await self.bot.send_message(ctx.message.author, embed=embed)
+            else:
+                await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True)
     async def spell(self, ctx, *, name: str):
@@ -742,3 +937,32 @@ class Lookup:
             await self.bot.send_message(ctx.message.author, embed=embed)
         else:
             await self.bot.say(embed=embed)
+
+def parsesize(size):
+    if size == "T": size = "Tiny";
+    if size == "S": size = "Small";
+    if size == "M": size = "Medium";
+    if size == "L": size = "Large";
+    if size == "H": size = "Huge";
+    if size == "G": size = "Gargantuan";
+    return size
+
+def parsesource(src):
+    source = src.strip()
+    if source == "monster manual": source = "MM";
+    if source == "Volo's Guide": source = "VGM";
+    if source == "elemental evil": source = "PotA";
+    if source == "storm kings thunder": source = "SKT";
+    if source == "tyranny of dragons": source = "ToD";
+    if source == "out of the abyss": source = "OotA";
+    if source == "curse of strahd": source = "CoS";
+    if source == "lost mine of phandelver": source = "LMoP";
+    if source == "Tales from the Yawning Portal": source = "TYP";
+    if source == "tome of beasts": source = "ToB 3pp";
+    if source == "Plane Shift Amonkhet": source = "PSA";
+    if source == "Plane Shift Innistrad": source = "PSI";
+    if source == "Plane Shift Kaladesh": source = "PSK";
+    if source == "Plane Shift Zendikar": source = "PSZ";
+    if source == "Tomb of Annihilation": source = "ToA";
+    if source == "The Tortle Package": source = "TTP";
+    return source

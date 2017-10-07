@@ -1537,6 +1537,8 @@ class InitTracker:
                               "damage": spell.get("damage", "0").replace('SPELL', str(
                                   character.get_spell_ab() - character.get_prof_bonus())),
                               "attackBonus": None}
+                    if upcast_dmg:
+                        attack['damage'] = attack['damage'] + '+' + upcast_dmg
                     result = sheet_attack(attack, outargs)
                     out = ""
                     for f in result['embed'].fields:

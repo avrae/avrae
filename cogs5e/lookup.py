@@ -797,7 +797,7 @@ class Lookup:
             higher_levels = None
 
         if len(text) > 1020:
-            pieces = [text[:1020]] + [text[1020:i + 2040] for i in range(1020, len(text), 2040)]
+            pieces = [text[:1020]] + [text[i:i + 2040] for i in range(1020, len(text), 2040)]
         else:
             pieces = [text]
 

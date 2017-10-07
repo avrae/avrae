@@ -574,9 +574,15 @@ class Lookup:
                         a['text'] = '\n'.join(t for t in a['text'] if t is not None)
                     trait += "**{name}:** {text}\n".format(**a)
                 if len(trait) < 1024:
-                    embed_queue[-1].add_field(name="Special Abilites", value=trait)
-                else:
+                    embed_queue[-1].add_field(name="Special Abilities", value=trait)
+                elif len(trait) < 2048:
                     embed_queue.append(discord.Embed(colour=color, description=trait, title="Special Abilities"))
+                else:
+                    embed_queue.append(discord.Embed(colour=color, title="Special Abilities"))
+                    trait_all = [trait[i:i+2040] for i in range(0, len(trait), 2040)]
+                    embed_queue[-1].description = trait_all[0]
+                    for a in trait_all[1:]:
+                        embed_queue.append(discord.Embed(colour=color, description=a))
 
             if "action" in monster:
                 action = ""

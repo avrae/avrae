@@ -573,16 +573,17 @@ class Lookup:
                     if isinstance(a['text'], list):
                         a['text'] = '\n'.join(t for t in a['text'] if t is not None)
                     trait += "**{name}:** {text}\n".format(**a)
-                if len(trait) < 1024:
-                    embed_queue[-1].add_field(name="Special Abilities", value=trait)
-                elif len(trait) < 2048:
-                    embed_queue.append(discord.Embed(colour=color, description=trait, title="Special Abilities"))
-                else:
-                    embed_queue.append(discord.Embed(colour=color, title="Special Abilities"))
-                    trait_all = [trait[i:i+2040] for i in range(0, len(trait), 2040)]
-                    embed_queue[-1].description = trait_all[0]
-                    for a in trait_all[1:]:
-                        embed_queue.append(discord.Embed(colour=color, description=a))
+                if trait:
+                    if len(trait) < 1024:
+                        embed_queue[-1].add_field(name="Special Abilities", value=trait)
+                    elif len(trait) < 2048:
+                        embed_queue.append(discord.Embed(colour=color, description=trait, title="Special Abilities"))
+                    else:
+                        embed_queue.append(discord.Embed(colour=color, title="Special Abilities"))
+                        trait_all = [trait[i:i+2040] for i in range(0, len(trait), 2040)]
+                        embed_queue[-1].description = trait_all[0]
+                        for a in trait_all[1:]:
+                            embed_queue.append(discord.Embed(colour=color, description=a))
 
             if "action" in monster:
                 action = ""
@@ -590,32 +591,34 @@ class Lookup:
                     if isinstance(a['text'], list):
                         a['text'] = '\n'.join(t for t in a['text'] if t is not None)
                     action += "**{name}:** {text}\n".format(**a)
-                if len(action) < 1024:
-                    embed_queue[-1].add_field(name="Actions", value=action)
-                elif len(action) < 2048:
-                    embed_queue.append(discord.Embed(colour=color, description=action, title="Actions"))
-                else:
-                    embed_queue.append(discord.Embed(colour=color, title="Actions"))
-                    action_all = [action[i:i+2040] for i in range(0, len(action), 2040)]
-                    embed_queue[-1].description = action_all[0]
-                    for a in action_all[1:]:
-                        embed_queue.append(discord.Embed(colour=color, description=a))
+                if action:
+                    if len(action) < 1024:
+                        embed_queue[-1].add_field(name="Actions", value=action)
+                    elif len(action) < 2048:
+                        embed_queue.append(discord.Embed(colour=color, description=action, title="Actions"))
+                    else:
+                        embed_queue.append(discord.Embed(colour=color, title="Actions"))
+                        action_all = [action[i:i+2040] for i in range(0, len(action), 2040)]
+                        embed_queue[-1].description = action_all[0]
+                        for a in action_all[1:]:
+                            embed_queue.append(discord.Embed(colour=color, description=a))
 
             if "reaction" in monster:
                 reaction = ""
                 a = monster["reaction"]
                 if isinstance(a['text'], list):
                     a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-                if len(reaction) < 1024:
-                    embed_queue[-1].add_field(name="Reactions", value=reaction)
-                elif len(reaction) < 2048:
-                    embed_queue.append(discord.Embed(colour=color, description=reaction, title="Reactions"))
-                else:
-                    embed_queue.append(discord.Embed(colour=color, title="Reactions"))
-                    reaction_all = [reaction[i:i+2040] for i in range(0, len(reaction), 2040)]
-                    embed_queue[-1].description = reaction_all[0]
-                    for a in reaction_all[1:]:
-                        embed_queue.append(discord.Embed(colour=color, description=a))
+                if reaction:
+                    if len(reaction) < 1024:
+                        embed_queue[-1].add_field(name="Reactions", value=reaction)
+                    elif len(reaction) < 2048:
+                        embed_queue.append(discord.Embed(colour=color, description=reaction, title="Reactions"))
+                    else:
+                        embed_queue.append(discord.Embed(colour=color, title="Reactions"))
+                        reaction_all = [reaction[i:i+2040] for i in range(0, len(reaction), 2040)]
+                        embed_queue[-1].description = reaction_all[0]
+                        for a in reaction_all[1:]:
+                            embed_queue.append(discord.Embed(colour=color, description=a))
 
             if "legendary" in monster:
                 legendary = ""
@@ -626,16 +629,17 @@ class Lookup:
                         legendary += "**{name}:** {text}\n".format(**a)
                     else:
                         legendary += "{text}\n".format(**a)
-                if len(legendary) < 1024:
-                    embed_queue[-1].add_field(name="Legendary Actions", value=legendary)
-                elif len(legendary) < 2048:
-                    embed_queue.append(discord.Embed(colour=color, description=legendary, title="Legendary Actions"))
-                else:
-                    embed_queue.append(discord.Embed(colour=color, title="Legendary Actions"))
-                    legendary_all = [legendary[i:i+2040] for i in range(0, len(legendary), 2040)]
-                    embed_queue[-1].description = legendary_all[0]
-                    for a in legendary_all[1:]:
-                        embed_queue.append(discord.Embed(colour=color, description=a))
+                if legendary:
+                    if len(legendary) < 1024:
+                        embed_queue[-1].add_field(name="Legendary Actions", value=legendary)
+                    elif len(legendary) < 2048:
+                        embed_queue.append(discord.Embed(colour=color, description=legendary, title="Legendary Actions"))
+                    else:
+                        embed_queue.append(discord.Embed(colour=color, title="Legendary Actions"))
+                        legendary_all = [legendary[i:i+2040] for i in range(0, len(legendary), 2040)]
+                        embed_queue[-1].description = legendary_all[0]
+                        for a in legendary_all[1:]:
+                            embed_queue.append(discord.Embed(colour=color, description=a))
 
         else:
             monster['hp'] = int(monster['hp'].split(' (')[0])

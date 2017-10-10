@@ -254,7 +254,10 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
             formatted_roll_strings.append(roll_strings[t])
             formatted_comments.append(comments[t])
         else:
-            formatted_comments[-1] += ' ' + comments[t]
+            if len(formatted_comments) > 0:
+                formatted_comments[-1] += ' ' + comments[t]
+            else:
+                pass # eh, it'll error anyway
     
     if not roll_strings[-1].replace(' ', '') == '':
         formatted_roll_strings.append(roll_strings[-1])

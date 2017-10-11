@@ -1784,7 +1784,9 @@ class InitTracker:
 
     def panic_save(self):
         make_sure_path_exists('temp/')
-        temp_key = []
+        with open(f'temp/combats-{self.bot.shard_id}.avrae', mode='w') as f:
+            f.write('\n'.join(c.channel.id for c in self.combats))
+            # self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 120) # timeout in 2 minutes
         for combat in self.combats:
             combat.combatantGenerator = None
             path = 'temp/{}.avrae'.format(combat.channel.id)
@@ -1792,10 +1794,7 @@ class InitTracker:
                 pickle.dump(combat, f, pickle.HIGHEST_PROTOCOL)
             # self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
             log.info("Saved combat for {}!".format(combat.channel.id))
-            temp_key.append(combat.channel.id)
-        with open(f'temp/combats-{self.bot.shard_id}.avrae', mode='w') as f:
-            f.write('\n'.join(temp_key))
-            # self.bot.db.jsetex('temp_combatpanic.{}'.format(getattr(self.bot, 'shard_id', 0)), temp_key, 120) # timeout in 2 minutes
+
 
     async def panic_load(self):
         make_sure_path_exists('temp/')

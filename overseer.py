@@ -92,6 +92,7 @@ def sigterm_handler(_signum, _frame):
     for shard_id, process in bot.shards.items():
         process.terminate()
         print(f"Terminated shard {shard_id}")
+    time.sleep(5) # sleep a little to let processes exit
     sys.exit(0)
     
 if __name__ == '__main__':

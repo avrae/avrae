@@ -11,8 +11,8 @@ ADD . /app
 RUN pip3.6 install -r requirements.txt
 
 # Define environment variable
-ENV SHARDS 1
+ENV SHARDS 2
 
 # Run app.py when the container launches
 # CMD ["python3.6", "overseer.py", "production", "0", "6"]
-CMD ["python3.6", "dbot.py", "test"]
+CMD ["python3.6", "overseer.py", "test", "0", "1"]

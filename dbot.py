@@ -6,6 +6,7 @@ import sys
 import traceback
 
 import discord
+import time
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
@@ -125,6 +126,7 @@ async def on_ready():
     print('Logged in as')
     print(bot.user.name)
     print(bot.user.id)
+    print('Shard ' + str(getattr(bot, 'shard_id', 0)))
     print('------')
     await enter()
 
@@ -141,6 +143,10 @@ async def enter():
     if not bot.db.exists('build_num'): bot.db.set('build_num', 114) # this was added in build 114
     if getattr(bot, "shard_id", 0) == 0: bot.db.incr('build_num')
     await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
+
+@bot.event
+async def on_resumed():
+    log.info('resumed.')
     
 @bot.event
 async def on_command_error(error, ctx):
@@ -221,6 +227,7 @@ def sigterm_handler(_signum, _frame):
         log.info("Attempting to save combats...")
         bot.get_cog("InitTracker").panic_save()
     except: pass
+    time.sleep(0.1) # maybe?
     sys.exit(0)
     
 signal.signal(signal.SIGTERM, sigterm_handler)

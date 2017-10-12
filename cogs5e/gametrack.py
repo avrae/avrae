@@ -227,31 +227,8 @@ class GameTrack:
 
         if modifier is None:  # display value
             counterDisplayEmbed = EmbedWithCharacter(character)
-            counterDisplayEmbed.title = name
-            counterDisplayEmbed.description = f"**Current Value**: {counter.get('value', 0)}"
-            if any(r in counter for r in ('max', 'min')):
-                _min = counter.get('min', 'N/A')
-                if _min is not None:
-                    _min = character.evaluate_cvar(_min)
-                else: _min = "N/A"
-                _max = counter.get('max')
-                if _max is not None:
-                    _max = character.evaluate_cvar(_max)
-                else: _max = "N/A"
-                counterDisplayEmbed.add_field(name="Range",
-                                              value=f"{_min} - {_max}")
-
-                _resetMap = {'short': "Short Rest completed (`!game shortrest`)",
-                             'long': "Long Rest completed (`!game longrest`)",
-                             'reset': "`!cc reset` is called",
-                             'hp': "Character has >0 HP",
-                             'none': "Does not reset",
-                             None: "Unknown Reset"}
-
-                _reset = _resetMap.get(counter.get('reset', 'reset'), _resetMap[None])
-                counterDisplayEmbed.add_field(name="Resets When",
-                                              value=_reset)
-
+            val = self._get_cc_value(character, counter)
+            counterDisplayEmbed.add_field(name=name, value=val)
             return await self.bot.say(embed=counterDisplayEmbed)
 
         try:
@@ -262,8 +239,21 @@ class GameTrack:
         consValue = int(counter.get('value', 0))
         newValue = consValue + modifier
         try:
-            character.set_consumable(name, newValue).commit(ctx) #  I really love this
-            resultEmbed.description = f"Modified counter: {name} = {newValue}"
+            character.set_consumable(name, newValue).commit(ctx)
+            _max = self._get_cc_max(character, counter)
+
+            if counter.get('type') == 'bubble':
+                assert _max not in ('N/A', None)
+                numEmpty = _max - counter.get('value', 0)
+                filled = '\u25c9' * counter.get('value', 0)
+                empty = '\u3007' * numEmpty
+                out = f"{filled}{empty}"
+            else:
+                out = f"{counter.get('value', 0)}"
+            if (not _max in (None, 'N/A')) and not counter.get('type') == 'bubble':
+                resultEmbed.description = f"**__{name}__**\n{out}/{_max}"
+            else:
+                resultEmbed.description = f"**__{name}__**\n{out}"
         except CounterOutOfBounds:
             resultEmbed.description = f"Could not modify counter: new value out of bounds"
         await self.bot.say(embed=resultEmbed)
@@ -274,14 +264,16 @@ class GameTrack:
         __Valid Arguments__
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.
-        `-min <min value>` - The minimum value of the counter."""
+        `-min <min value>` - The minimum value of the counter.
+        `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers."""
         character = Character.from_ctx(ctx)
         args = parse_args_3(args)
         _reset = args.get('reset', [None])[-1]
         _max = args.get('max', [None])[-1]
         _min = args.get('min', [None])[-1]
+        _type = args.get('type', [None])[-1]
         try:
-            character.create_consumable(name, maxValue=_max, minValue=_min, reset=_reset).commit(ctx)
+            character.create_consumable(name, maxValue=_max, minValue=_min, reset=_reset, displayType=_type).commit(ctx)
         except InvalidArgument as e:
             return await self.bot.say(f"Failed to create counter: {e}")
         else:
@@ -335,19 +327,46 @@ class GameTrack:
 
 
     def _get_cc_value(self, character, counter):
-        val = f"**Current Value**: {counter.get('value', 0)}\n"
+        _min = self._get_cc_min(character, counter)
+        _max = self._get_cc_max(character, counter)
+        _reset = self._get_cc_reset(character, counter)
+
+        if counter.get('type') == 'bubble':
+            assert _max not in ('N/A', None)
+            numEmpty = _max - counter.get('value', 0)
+            filled = '\u25c9' * counter.get('value', 0)
+            empty = '\u3007' * numEmpty
+            val = f"{filled}{empty}\n"
+        else:
+            val = f"**Current Value**: {counter.get('value', 0)}\n"
+            val += f"**Range**: {_min} - {_max}\n"
+        if _reset:
+            val += f"**Resets When**: {_reset}\n"
+        return val
+
+    def _get_cc_max(self, character, counter):
+        _max = None
+        if any(r in counter for r in ('max', 'min')):
+            _max = counter.get('max')
+            if _max is not None:
+                _max = character.evaluate_cvar(_max)
+            else:
+                _max = "N/A"
+        return _max
+
+    def _get_cc_min(self, character, counter):
+        _min = None
         if any(r in counter for r in ('max', 'min')):
             _min = counter.get('min')
             if _min is not None:
                 _min = character.evaluate_cvar(_min)
             else:
                 _min = "N/A"
-            _max = counter.get('max')
-            if _max is not None:
-                _max = character.evaluate_cvar(_max)
-            else:
-                _max = "N/A"
-            val += f"**Range**: {_min} - {_max}\n"
+        return _min
+
+    def _get_cc_reset(self, character, counter):
+        _reset = None
+        if any(r in counter for r in ('max', 'min')):
             if not counter.get('reset') == 'none':
                 _resetMap = {'short': "Short Rest completed (`!game shortrest`)",
                              'long': "Long Rest completed (`!game longrest`)",
@@ -355,9 +374,7 @@ class GameTrack:
                              'hp': "Character has >0 HP",
                              None: "Unknown Reset"}
                 _reset = _resetMap.get(counter.get('reset', 'reset'), _resetMap[None])
-                val += f"**Resets When**: {_reset}\n"
-        return val
-
+        return _reset
 
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *args):

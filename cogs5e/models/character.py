@@ -444,6 +444,7 @@ class Character: # TODO: refactor old commands to use this
         _max = kwargs.get('maxValue')
         _min = kwargs.get('minValue')
         _reset = kwargs.get('reset')
+        _type = kwargs.get('displayType')
         try:
             assert _reset in ('short', 'long', 'none') or _reset is None
         except AssertionError:
@@ -454,10 +455,12 @@ class Character: # TODO: refactor old commands to use this
             except AssertionError:
                 raise InvalidArgument("Max value is less than min value.")
         if _reset and _max is None: raise InvalidArgument("Reset passed but no maximum passed.")
+        if _type == 'bubble' and (_max is None or _min is None): raise InvalidArgument("Bubble display requires a max and min value.")
         newCounter = {'value': self.evaluate_cvar(_max) or 0}
         if _max is not None: newCounter['max'] = _max
         if _min is not None: newCounter['min'] = _min
         if _reset and _max is not None: newCounter['reset'] = _reset
+        newCounter['type'] = _type
         log.debug(f"Creating new counter {newCounter}")
 
         self.character['consumables']['custom'][name] = newCounter # TODO: integrate with cvar sys

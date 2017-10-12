@@ -1122,13 +1122,15 @@ class InitTracker:
     @init.command(pass_context=True, aliases=['a'])
     async def attack(self, ctx, target_name, atk_name, *, args=''):
         """Rolls an attack against another combatant.
-        Valid Arguments: see !a and !ma."""
+        Valid Arguments: see !a and !ma.
+        `-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit."""
         return await self._attack(ctx, None, target_name, atk_name, args)
 
     @init.command(pass_context=True)
     async def aoo(self, ctx, combatant_name, target_name, atk_name, *, args=''):
         """Rolls an attack of opportunity against another combatant.
-        Valid Arguments: see !a and !ma."""
+        Valid Arguments: see !a and !ma.
+        `-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit."""
         return await self._attack(ctx, combatant_name, target_name, atk_name, args)
 
     async def _attack(self, ctx, combatant_name, target_name, atk_name, args):

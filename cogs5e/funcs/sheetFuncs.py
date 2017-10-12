@@ -53,6 +53,8 @@ def sheet_attack(attack, args, embed=None):
     for r in range(args.get('rr', 1) or 1): # start rolling attacks
         out = ''
         itercrit = 0
+        if attack.get('attackBonus') is None and args.get('b') is not None:
+            attack['attackBonus'] = '0'
         if attack.get('attackBonus') is not None:
             if args.get('b') is not None:
                 toHit = roll('1d20+' + attack.get('attackBonus') + '+' + args.get('b'), adv=args.get('adv'), rollFor='To Hit', inline=True, show_blurbs=False)
@@ -81,7 +83,9 @@ def sheet_attack(attack, args, embed=None):
                         itercrit = 2 # miss!
             else: # output wherever was there if error
                 out += "**To Hit**: " + attack.get('attackBonus') + '\n'
-            
+
+        if attack.get('damage') is None and args.get('d') is not None:
+            attack['damage'] = '0'
         if attack.get('damage') is not None:
             if args.get('d') is not None:
                 damage = attack.get('damage') + '+' + args.get('d')

@@ -1156,14 +1156,17 @@ class InitTracker:
                     args += " " + eff.effect if eff.effect is not None else ""
 
         if isinstance(combatant, DicecloudCombatant):
-            attacks = combatant.sheet.get('attacks')  # get attacks
-            try:  # fuzzy search for atk_name
-                attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
-            except StopIteration:
-                try:
-                    attack = next(a for a in attacks if atk_name.lower() in a.get('name').lower())
+            if not '-custom' in args:
+                attacks = combatant.sheet.get('attacks')  # get attacks
+                try:  # fuzzy search for atk_name
+                    attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
                 except StopIteration:
-                    return await self.bot.say('No attack with that name found.')
+                    try:
+                        attack = next(a for a in attacks if atk_name.lower() in a.get('name').lower())
+                    except StopIteration:
+                        return await self.bot.say('No attack with that name found.')
+            else:
+                attack = {'attackBonus': None, 'damage': None, 'name': atk_name}
 
             tempargs = shlex.split(args)
             user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
@@ -1196,11 +1199,14 @@ class InitTracker:
                 'color') is None else combatant.sheet.get('settings', {}).get('color')
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
         elif isinstance(combatant, MonsterCombatant):
-            attacks = combatant.monster.get('attacks')  # get attacks
-            attack = fuzzy_search(attacks, 'name', atk_name)
-            if attack is None:
-                return await self.bot.say("No attack with that name found.", delete_after=15)
-            attack['details'] = attack.get('desc')
+            if not '-custom' in args:
+                attacks = combatant.monster.get('attacks')  # get attacks
+                attack = fuzzy_search(attacks, 'name', atk_name)
+                if attack is None:
+                    return await self.bot.say("No attack with that name found.", delete_after=15)
+                attack['details'] = attack.get('desc')
+            else:
+                attack = {'attackBonus': None, 'damage': None, 'name': atk_name}
 
             args = shlex.split(args)
             args = parse_args_2(args)
@@ -1214,15 +1220,18 @@ class InitTracker:
             result['embed'].colour = random.randint(0, 0xffffff)
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
         elif isinstance(combatant, CombatantGroup):
-            attacks = []
-            for c in combatant.combatants:
-                if isinstance(c, DicecloudCombatant):
-                    attacks += c.sheet.get('attacks', [])
-                elif isinstance(c, MonsterCombatant):
-                    attacks += c.monster.get('attacks', [])
-            attack = fuzzy_search(attacks, 'name', atk_name)
-            if attack is None:
-                return await self.bot.say("No attack with that name found.", delete_after=15)
+            if not '-custom' in args:
+                attacks = []
+                for c in combatant.combatants:
+                    if isinstance(c, DicecloudCombatant):
+                        attacks += c.sheet.get('attacks', [])
+                    elif isinstance(c, MonsterCombatant):
+                        attacks += c.monster.get('attacks', [])
+                attack = fuzzy_search(attacks, 'name', atk_name)
+                if attack is None:
+                    return await self.bot.say("No attack with that name found.", delete_after=15)
+            else:
+                attack = {'attackBonus': None, 'damage': None, 'name': atk_name}
             attack['details'] = attack.get('desc') if attack.get('details') is None else attack['details']
             args = shlex.split(args)
             args = parse_args_2(args)
@@ -1233,8 +1242,21 @@ class InitTracker:
             result['embed'].colour = random.randint(0, 0xffffff)
             if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
         else:
-            return await self.bot.say(
-                'Integrated attacks are only supported for combatants added via `madd` or `dcadd`.', delete_after=15)
+            if not '-custom' in args:
+                return await self.bot.say("Integrated attacks must be custom for nonintegrated combatants.")
+            else:
+                attack = {'attackBonus': None, 'damage': None, 'name': atk_name}
+            args = shlex.split(args)
+            args = parse_args_2(args)
+            args['name'] = combatant.name
+            if target.ac is not None: args['ac'] = target.ac
+            args['t'] = target.name
+            args['resist'] = args.get('resist') or '|'.join(target.resist)
+            args['immune'] = args.get('immune') or '|'.join(target.immune)
+            args['vuln'] = args.get('vuln') or '|'.join(target.vuln)
+            result = sheet_attack(attack, args)
+            result['embed'].colour = random.randint(0, 0xffffff)
+            if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
         embed = result['embed']
         if target.ac is not None:
             if target.hp is not None:

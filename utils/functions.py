@@ -11,7 +11,7 @@ import re
 import discord
 from fuzzywuzzy import process, fuzz
 
-from cogs5e.funcs.dice import roll
+from cogs5e.models.errors import SelectionCancelled, NoSelectionElements
 
 
 def print_table(table):
@@ -294,12 +294,14 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
 async def get_selection(ctx, choices, delete=False, return_name=False):
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
     If delete is True, will delete the selection message and the response.
-    If length of choices is 1, will return the only choice."""
+    If length of choices is 1, will return the only choice.
+    @:raises NoSelectionElements if len(choices) is 0.
+    @:raises SelectionCancelled if selection is cancelled."""
     if len(choices) < 2:
         if len(choices):
             return choices[0][1] if not return_name else choices[0]
         else:
-            return None
+            raise NoSelectionElements()
     choices = choices[:10] # sanity
     names = [o[0] for o in choices]
     results = [o[1] for o in choices]
@@ -323,7 +325,7 @@ async def get_selection(ctx, choices, delete=False, return_name=False):
             await ctx.bot.delete_message(selectMsg)
             await ctx.bot.delete_message(m)
         except: pass
-    if m is None or m.content.lower() == "c": return None
+    if m is None or m.content.lower() == "c": raise SelectionCancelled()
     if return_name:
         return choices[int(m.content) - 1]
     return results[int(m.content) - 1]

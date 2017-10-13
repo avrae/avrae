@@ -19,6 +19,12 @@ from utils.functions import strict_search
 
 log = logging.getLogger(__name__)
 
+CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiorityDice")
+CLASS_RESOURCE_NAMES = {"expertiseDice": "Expertise Dice", "ki": "Ki", "rages": "Rages",
+                        "sorceryPoints": "Sorcery Points", "superiorityDice": "Superiority Dice"}
+CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long',
+                         "sorceryPoints": 'long', "superiorityDice": 'short'}
+
 class DicecloudParser(SheetParser):
     
     def __init__(self, url):
@@ -539,3 +545,26 @@ class DicecloudParser(SheetParser):
 
         return spellbook
         
+
+    def get_custom_counters(self):
+        counters = []
+        for res in CLASS_RESOURCES:
+            resValue = self.calculate_stat(res)
+            if resValue > 0:
+                c = {'name': CLASS_RESOURCE_NAMES.get(res, 'Unknown'), 'max': resValue, 'min': 0,
+                     'reset': CLASS_RESOURCE_RESETS.get(res)}
+                counters.append(c)
+        for f in self.character.get('features', []):
+            if not f.get('enabled'): continue
+            if not 'uses' in f: continue
+            reset = None
+            desc = f.get('description', '').lower()
+            if 'short rest' in desc or 'short or long rest' in desc:
+                reset = 'short'
+            elif 'long rest' in desc:
+                reset = 'long'
+            c = {'name': f['name'], 'max': f['uses'], 'min': 0,
+                 'reset': reset}
+            counters.append(c)
+        return counters
+

@@ -26,6 +26,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
+from cogs5e.models.errors import InvalidArgument
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
@@ -530,7 +531,8 @@ class SheetManager:
     @commands.cooldown(1, 15, BucketType.user)
     async def update(self, ctx, *, args=''):
         """Updates the current character sheet, preserving all settings.
-        Valid Arguments: -v - Shows character sheet after update is complete."""
+        Valid Arguments: `-v` - Shows character sheet after update is complete.
+        `-cc` - Updates custom counters from Dicecloud."""
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         if active_character is None:
@@ -575,6 +577,8 @@ class SheetManager:
             if sheet_type == 'dicecloud':
                 fmt = character.get('characters')[0].get('name')
                 sheet = parser.get_sheet()
+                if '-cc' in args:
+                    counters = parser.get_custom_counters()
             elif sheet_type == 'pdf':
                 fmt = character.get('CharacterName')
                 sheet = parser.get_sheet()
@@ -599,10 +603,21 @@ class SheetManager:
         sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description", "No description available.")
         sheet['stats']['image'] = overrides.get('image') or sheet.get('stats', {}).get('image', '')
 
-        user_characters[url] = sheet
+        c = Character(sheet, url).initialize_consumables()
+
+        if '-cc' in args and sheet_type == 'dicecloud':
+            for counter in counters:
+                displayType = 'bubble' if c.evaluate_cvar(counter['max']) < 6 else None
+                try:
+                    c.create_consumable(counter['name'], maxValue=str(counter['max']),
+                                        minValue=str(counter['min']),
+                                        reset=counter['reset'], displayType=displayType)
+                except InvalidArgument:
+                    pass
+
         #print(sheet)
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings', {}).get('color')
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        c.commit(ctx).set_active(ctx)
         del user_characters, character, parser, old_character # pls don't freak out avrae
         if '-v' in args:
             await self.bot.say(embed=embed)
@@ -857,8 +872,10 @@ class SheetManager:
         return True
     
     @commands.command(pass_context=True)
-    async def dicecloud(self, ctx, url:str):
-        """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings."""
+    async def dicecloud(self, ctx, url:str, *, args=""):
+        """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
+        __Valid Arguments__
+        `-cc` - Will automatically create custom counters for class resources and features."""
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
 
@@ -884,8 +901,18 @@ class SheetManager:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet. Capitalization matters!\n' + str(e))
 
-        Character(sheet['sheet'], f"dicecloud-{url}").initialize_consumables().commit(ctx).set_active(ctx)
-        
+        c = Character(sheet['sheet'], f"dicecloud-{url}").initialize_consumables()
+
+        if '-cc' in args:
+            for counter in parser.get_custom_counters():
+                displayType = 'bubble' if c.evaluate_cvar(counter['max']) < 6 else None
+                try:
+                    c.create_consumable(counter['name'], maxValue=str(counter['max']), minValue=str(counter['min']),
+                                        reset=counter['reset'], displayType=displayType)
+                except InvalidArgument:
+                    pass
+
+        c.commit(ctx).set_active(ctx)
         embed = sheet['embed']
         try:
             await self.bot.say(embed=embed)

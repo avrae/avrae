@@ -464,7 +464,7 @@ class Character: # TODO: refactor old commands to use this
         newCounter['type'] = _type
         log.debug(f"Creating new counter {newCounter}")
 
-        self.character['consumables']['custom'][name] = newCounter # TODO: integrate with cvar sys
+        self.character['consumables']['custom'][name] = newCounter
 
         return self
 

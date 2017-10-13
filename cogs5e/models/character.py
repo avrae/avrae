@@ -28,6 +28,7 @@ import simpleeval
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError
+from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
 
@@ -492,6 +493,20 @@ class Character: # TODO: refactor old commands to use this
         counter = custom_counters.get(name)
         if counter is None: raise ConsumableNotFound()
         return counter
+
+    async def select_consumable(self, ctx, name):
+        """@:param name (str): The name of the consumable to search for.
+        @:returns dict - the consumable.
+        @:raises ConsumableNotFound if the consumable does not exist."""
+        custom_counters = self.character.get('consumables', {}).get('custom', {})
+        choices = [(cname, counter) for cname, counter in custom_counters.items() if cname.lower() == name.lower()]
+        if not choices:
+            choices = [(cname, counter) for cname, counter in custom_counters.items() if name.lower() in cname.lower()]
+        if not choices:
+            raise ConsumableNotFound()
+        else:
+            return await get_selection(ctx, choices, return_name=True)
+
 
     def get_all_consumables(self):
         """Returns the dict object of all custom counters."""

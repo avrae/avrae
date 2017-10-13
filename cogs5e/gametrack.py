@@ -18,7 +18,7 @@ from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException
+from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
 from utils.functions import parse_args_3, \
     strict_search
 
@@ -220,7 +220,12 @@ class GameTrack:
         When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
         If modifier is not supplied, prints the value and metadata of the counter *name*."""
         character = Character.from_ctx(ctx)
-        counter = character.get_consumable(name)
+        sel = await character.select_consumable(ctx, name)
+        if sel is None:
+            return await self.bot.say("Selection timed out or was cancelled.")
+
+        name = sel[0]
+        counter = sel[1]
 
         assert character is not None
         assert counter is not None
@@ -283,7 +288,10 @@ class GameTrack:
     async def customcounter_delete(self, ctx, name):
         """Deletes a custom counter."""
         character = Character.from_ctx(ctx)
-        character.delete_consumable(name).commit(ctx)
+        try:
+            character.delete_consumable(name).commit(ctx)
+        except ConsumableNotFound:
+            return await self.bot.say("Counter not found. Make sure you're using the full name, case-sensitive.")
         await self.bot.say(f"Deleted counter {name}.")
 
     @customcounter.command(pass_context=True, name='summary', aliases=['list'])

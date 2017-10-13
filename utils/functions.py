@@ -291,9 +291,15 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
     
     return damage
     
-async def get_selection(ctx, choices, delete=False):
+async def get_selection(ctx, choices, delete=False, return_name=False):
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
-    If delete is True, will delete the selection message and the response."""
+    If delete is True, will delete the selection message and the response.
+    If length of choices is 1, will return the only choice."""
+    if len(choices) < 2:
+        if len(choices):
+            return choices[0][1] if not return_name else choices[0]
+        else:
+            return None
     choices = choices[:10] # sanity
     names = [o[0] for o in choices]
     results = [o[1] for o in choices]
@@ -308,7 +314,7 @@ async def get_selection(ctx, choices, delete=False):
 
     def chk(msg):
         valid = [str(v) for v in range(1, len(choices) + 1)] + ["c"]
-        return msg.content in valid
+        return msg.content.lower() in valid
 
     m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=selectMsg.channel,
                                        check=chk)
@@ -317,5 +323,7 @@ async def get_selection(ctx, choices, delete=False):
             await ctx.bot.delete_message(selectMsg)
             await ctx.bot.delete_message(m)
         except: pass
-    if m is None or m.content == "c": return None
+    if m is None or m.content.lower() == "c": return None
+    if return_name:
+        return choices[int(m.content) - 1]
     return results[int(m.content) - 1]

@@ -1532,6 +1532,10 @@ class InitTracker:
                     if upcast_dmg:
                         attack['damage'] = attack['damage'] + '+' + upcast_dmg
 
+                    attack['damage'] = attack['damage'].replace("SPELL",
+                                                                str(
+                                                                    character.get_spell_ab() - character.get_prof_bonus()))
+
                     result = sheet_attack(attack, outargs)
                     out = ""
                     for f in result['embed'].fields:
@@ -1700,7 +1704,7 @@ class InitTracker:
                 killed = ""
                 if target.hp is not None:
                     killed = "\n- Killed {}!".format(target.name) if target.hp <= 0 else ""
-                #                     if target.hp <= 0:
+                # if target.hp <= 0:
                 #                         if target.group is None:
                 #                             combat.combatants.remove(target)
                 #                         else:
@@ -1818,7 +1822,6 @@ class InitTracker:
                 pickle.dump(combat, f, pickle.HIGHEST_PROTOCOL)
             # self.bot.db.setex(path, pickle.dumps(combat, pickle.HIGHEST_PROTOCOL).decode('cp437'), 604800) # ttl 1 wk
             log.info("Saved combat for {}!".format(combat.channel.id))
-
 
     async def panic_load(self):
         make_sure_path_exists('temp/')

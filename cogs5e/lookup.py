@@ -31,31 +31,6 @@ class Lookup:
         self.bot = bot
         self.settings = self.bot.db.not_json_get("lookup_settings", {}) if bot is not None else {}
 
-    async def get_selection(self, results, ctx, returns_object=True):
-        results = results[:10]  # sanity
-        if returns_object:
-            names = [r['name'] for r in results]
-        else:
-            names = results
-        embed = discord.Embed()
-        embed.title = "Multiple Matches Found"
-        selectStr = "Which one were you looking for? (Type the number, or \"c\" to cancel)\n"
-        for i, r in enumerate(names):
-            selectStr += f"**[{i+1}]** - {r}\n"
-        embed.description = selectStr
-        embed.colour = random.randint(0, 0xffffff)
-        selectMsg = await self.bot.send_message(ctx.message.channel, embed=embed)
-
-        def chk(msg):
-            valid = [str(v) for v in range(1, len(results) + 1)] + ["c"]
-            return msg.content in valid
-
-        m = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=selectMsg.channel,
-                                            check=chk)
-
-        if m is None or m.content == "c": return None
-        return results[int(m.content) - 1]
-
     @commands.command(pass_context=True, aliases=['status'])
     async def condition(self, ctx, *, name: str):
         """Looks up a condition."""
@@ -78,7 +53,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         embed = EmbedWithAuthor(ctx)
@@ -109,7 +84,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         embed = EmbedWithAuthor(ctx)
@@ -144,7 +119,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         if isinstance(result['text'], list):
@@ -182,7 +157,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         if isinstance(result['text'], list):
@@ -220,7 +195,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         _sizes = {'T': "Tiny", 'S': "Small",
@@ -261,7 +236,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         if isinstance(result['text'], list):
@@ -302,7 +277,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         embed = EmbedWithAuthor(ctx)
@@ -401,7 +376,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         embed = EmbedWithAuthor(ctx)
@@ -470,7 +445,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         src = parse.quote(parsesource(result.get('type', '').split(',')[-1]))
@@ -518,7 +493,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         embed_queue = [EmbedWithAuthor(ctx)]
@@ -742,7 +717,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx, returns_object=False)
+                result = await get_selection(ctx, [(r, r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
         result = getSpell(result)
 
@@ -848,7 +823,7 @@ class Lookup:
             if len(results) == 1:
                 result = results[0]
             else:
-                result = await self.get_selection(results, ctx)
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         embed = EmbedWithAuthor(ctx)

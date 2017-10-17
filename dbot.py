@@ -3,10 +3,10 @@ import os
 import random
 import signal
 import sys
+import time
 import traceback
 
 import discord
-import time
 from discord.errors import Forbidden, NotFound, HTTPException
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
@@ -167,7 +167,7 @@ async def on_command_error(error, ctx):
     elif isinstance(error, CommandInvokeError):
         original = error.original
         if isinstance(original, AvraeException):
-            return await bot.send_message(ctx.message.channel, f"{str(original)}")
+            return await bot.send_message(ctx.message.channel, f"{type(original)}: {str(original)}")
         if isinstance(original, Forbidden):
             try:
                 return await bot.send_message(ctx.message.author, "Error: I am missing permissions to run this command. Please make sure I have permission to send messages to <#{}>.".format(ctx.message.channel.id))

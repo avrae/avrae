@@ -291,7 +291,7 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
     
     return damage
     
-async def get_selection(ctx, choices, delete=False, return_name=False):
+async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
     If delete is True, will delete the selection message and the response.
     If length of choices is 1, will return the only choice.
@@ -312,15 +312,19 @@ async def get_selection(ctx, choices, delete=False, return_name=False):
         selectStr += f"**[{i+1}]** - {r}\n"
     embed.description = selectStr
     embed.colour = random.randint(0, 0xffffff)
-    selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
+    if not pm:
+        selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
+    else:
+        embed.add_field(name="Instructions", value="Type your response in the channel you called the command. This message was PMed to you to hide the monster name.")
+        selectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
 
     def chk(msg):
         valid = [str(v) for v in range(1, len(choices) + 1)] + ["c"]
         return msg.content.lower() in valid
 
-    m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=selectMsg.channel,
+    m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel,
                                        check=chk)
-    if delete:
+    if delete and not pm:
         try:
             await ctx.bot.delete_message(selectMsg)
             await ctx.bot.delete_message(m)

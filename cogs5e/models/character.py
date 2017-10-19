@@ -200,6 +200,7 @@ class Character: # TODO: refactor old commands to use this
             cstr = cstr.replace(raw, str(roll(out).total), 1)
         for var in re.finditer(r'<([^<>]+)>', cstr):
             raw = var.group(0)
+            if re.match(r'<([@#]|:.+:)[&!]{0,2}\d+>', raw): continue # ignore mentions, channels, emotes
             out = var.group(1)
             if out.startswith('/'):
                 _last = character

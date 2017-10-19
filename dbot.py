@@ -155,7 +155,7 @@ async def on_command_error(error, ctx):
     log.debug("Error caused by message: `{}`".format(ctx.message.content))
     log.debug('\n'.join(traceback.format_exception(type(error), error, error.__traceback__)))
     if isinstance(error, AvraeException):
-        return await bot.send_message(ctx.message.channel, f"{type(error)}: {str(error)}")
+        return await bot.send_message(ctx.message.channel, str(error))
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if isinstance(error, commands.CheckFailure):
         await bot.send_message(ctx.message.channel, "Error: Either you do not have the permissions to run this command, the command is disabled, or something went wrong internally.")
@@ -167,7 +167,7 @@ async def on_command_error(error, ctx):
     elif isinstance(error, CommandInvokeError):
         original = error.original
         if isinstance(original, AvraeException):
-            return await bot.send_message(ctx.message.channel, f"{type(original)}: {str(original)}")
+            return await bot.send_message(ctx.message.channel, str(original))
         if isinstance(original, Forbidden):
             try:
                 return await bot.send_message(ctx.message.author, "Error: I am missing permissions to run this command. Please make sure I have permission to send messages to <#{}>.".format(ctx.message.channel.id))

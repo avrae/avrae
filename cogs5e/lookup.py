@@ -208,9 +208,13 @@ class Lookup:
         embed.add_field(name="Ability Bonuses", value=result.get('ability', 'none'))
         if result.get('proficiency'):
             embed.add_field(name="Proficiencies", value=result.get('proficiency', 'none'))
-        trait_str = ', '.join(t['name'] for t in result.get('trait', []))
-        embed.add_field(name="Traits", value=trait_str, inline=False)
-        embed.set_footer(text="Use !racefeat to look up a trait.")
+        for t in result.get('trait', []):
+            embed.add_field(name=t['name'],
+                            value='\n'.join(txt for txt in t['text'] if txt) if isinstance(t['text'], list) else t[
+                                'text'])
+        # trait_str = ', '.join(t['name'] for t in result.get('trait', []))
+        # embed.add_field(name="Traits", value=trait_str, inline=False)
+        # embed.set_footer(text="Use !racefeat to look up a trait.")
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -555,7 +559,7 @@ class Lookup:
                         embed_queue.append(discord.Embed(colour=color, description=trait, title="Special Abilities"))
                     else:
                         embed_queue.append(discord.Embed(colour=color, title="Special Abilities"))
-                        trait_all = [trait[i:i+2040] for i in range(0, len(trait), 2040)]
+                        trait_all = [trait[i:i + 2040] for i in range(0, len(trait), 2040)]
                         embed_queue[-1].description = trait_all[0]
                         for a in trait_all[1:]:
                             embed_queue.append(discord.Embed(colour=color, description=a))
@@ -573,7 +577,7 @@ class Lookup:
                         embed_queue.append(discord.Embed(colour=color, description=action, title="Actions"))
                     else:
                         embed_queue.append(discord.Embed(colour=color, title="Actions"))
-                        action_all = [action[i:i+2040] for i in range(0, len(action), 2040)]
+                        action_all = [action[i:i + 2040] for i in range(0, len(action), 2040)]
                         embed_queue[-1].description = action_all[0]
                         for a in action_all[1:]:
                             embed_queue.append(discord.Embed(colour=color, description=a))
@@ -590,7 +594,7 @@ class Lookup:
                         embed_queue.append(discord.Embed(colour=color, description=reaction, title="Reactions"))
                     else:
                         embed_queue.append(discord.Embed(colour=color, title="Reactions"))
-                        reaction_all = [reaction[i:i+2040] for i in range(0, len(reaction), 2040)]
+                        reaction_all = [reaction[i:i + 2040] for i in range(0, len(reaction), 2040)]
                         embed_queue[-1].description = reaction_all[0]
                         for a in reaction_all[1:]:
                             embed_queue.append(discord.Embed(colour=color, description=a))
@@ -608,10 +612,11 @@ class Lookup:
                     if len(legendary) < 1024:
                         embed_queue[-1].add_field(name="Legendary Actions", value=legendary)
                     elif len(legendary) < 2048:
-                        embed_queue.append(discord.Embed(colour=color, description=legendary, title="Legendary Actions"))
+                        embed_queue.append(
+                            discord.Embed(colour=color, description=legendary, title="Legendary Actions"))
                     else:
                         embed_queue.append(discord.Embed(colour=color, title="Legendary Actions"))
-                        legendary_all = [legendary[i:i+2040] for i in range(0, len(legendary), 2040)]
+                        legendary_all = [legendary[i:i + 2040] for i in range(0, len(legendary), 2040)]
                         embed_queue[-1].description = legendary_all[0]
                         for a in legendary_all[1:]:
                             embed_queue.append(discord.Embed(colour=color, description=a))
@@ -668,9 +673,9 @@ class Lookup:
                 monster["languages"] = 0
 
             embed_queue[-1].description = "{size} {type}.\n" \
-                                "**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n" \
-                                "**STR:** {str} **DEX:** {dex} **CON:** {con}\n**WIS:** {wis} **INT:** {int} **CHA:** {cha}\n" \
-                                "**Languages:** {languages}\n".format(**monster)
+                                          "**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n" \
+                                          "**STR:** {str} **DEX:** {dex} **CON:** {con}\n**WIS:** {wis} **INT:** {int} **CHA:** {cha}\n" \
+                                          "**Languages:** {languages}\n".format(**monster)
 
             if "trait" in monster:
                 embed_queue[-1].add_field(name="Special Abilities", value=str(len(monster["trait"])))
@@ -935,6 +940,7 @@ class Lookup:
         else:
             await self.bot.say(embed=embed)
 
+
 def parsesize(size):
     if size == "T": size = "Tiny";
     if size == "S": size = "Small";
@@ -943,6 +949,7 @@ def parsesize(size):
     if size == "H": size = "Huge";
     if size == "G": size = "Gargantuan";
     return size
+
 
 def parsesource(src):
     source = src.strip()

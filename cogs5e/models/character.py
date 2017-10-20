@@ -27,7 +27,7 @@ import simpleeval
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
-    OutdatedSheet, EvaluationError
+    OutdatedSheet, EvaluationError, InvalidSpellLevel
 from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
@@ -138,26 +138,48 @@ class Character: # TODO: refactor old commands to use this
         self.character['settings'][setting] = value
         return self
 
-    def parse_cvars(self, cstr):
+    def parse_cvars(self, cstr, ctx=None):
         """Parses cvars.
-        @:param cstr - The string to parse.
-        @:returns string - the parsed string."""
+        :param cstr - The string to parse.
+        :returns string - the parsed string."""
         character = self.character
         ops = r"([-+*/().<>=])"
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
 
+        changed = False
 
         # define our weird functions here
         def get_cc(name):
-            return self.get_consumable(name)
+            return self.get_consumable_value(name)
+        def set_cc(name, value: int, strict=False):
+            self.set_consumable(name, value, strict)
+            nonlocal changed
+            changed = True
+            return ''
         def get_slots(level: int):
             return self.get_remaining_slots(level)
+        def set_slots(level: int, value: int):
+            self.set_remaining_slots(level, value)
+            nonlocal changed
+            changed = True
+            return ''
+        def use_slot(level: int):
+            self.use_slot(level)
+            nonlocal changed
+            changed = True
+            return ''
+        def set_hp(val: int):
+            self.set_hp(val)
+            nonlocal changed
+            changed = True
+            return ''
 
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
         _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
-                      get_cc=get_cc, get_slots=get_slots)
+                      get_cc=get_cc, set_cc=set_cc, get_slots=get_slots, set_slots=set_slots, use_slot=use_slot,
+                      set_hp=set_hp)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(cvars)
@@ -222,6 +244,8 @@ class Character: # TODO: refactor old commands to use this
             out = str(cvars.get(out, out))
             out = str(stat_vars.get(out, out))
             cstr = cstr.replace(raw, out, 1)
+        if changed and ctx:
+            self.commit(ctx)
         return cstr
 
     def evaluate_cvar(self, varstr):
@@ -305,7 +329,7 @@ class Character: # TODO: refactor old commands to use this
         """Sets the character's hit points. Returns the Character object."""
         self._initialize_hp()
         hp = self.get_hp()
-        self.character['consumables']['hp']['value'] = max(hp['min'], newValue) # bounding
+        self.character['consumables']['hp']['value'] = max(hp['min'], int(newValue)) # bounding
 
         self.on_hp()
 
@@ -381,7 +405,8 @@ class Character: # TODO: refactor old commands to use this
     def get_remaining_slots(self, level:int):
         """@:param level - The spell level.
         @:returns the integer value representing the number of spellslots remaining."""
-        assert 0 <= level < 10
+        try: assert 0 <= level < 10
+        except AssertionError: raise InvalidSpellLevel()
         if level == 0: return 1 # cantrips
         return self.get_spellslots()[str(level)]['value']
 
@@ -415,8 +440,10 @@ class Character: # TODO: refactor old commands to use this
         @:param level - The spell level.
         @:param value - The number of remaining spell slots.
         @:returns self"""
-        assert 0 < level < 9
-        assert 0 <= value <= self.get_max_spellslots(level)
+        try: assert 0 < level < 10
+        except AssertionError: raise InvalidSpellLevel()
+        try: assert 0 <= value <= self.get_max_spellslots(level)
+        except AssertionError: raise CounterOutOfBounds()
 
         self._initialize_spellslots()
         self.character['consumables']['spellslots'][str(level)]['value'] = value
@@ -427,7 +454,8 @@ class Character: # TODO: refactor old commands to use this
         """Uses one spell slot of level level.
         @:returns self
         @:raises CounterOutOfBounds if there are no remaining slots of the requested level."""
-        assert 0 <= level < 10
+        try: assert 0 <= level < 10
+        except AssertionError: raise InvalidSpellLevel()
         if level == 0: return self
         ss = self.get_spellslots()
         val = ss[str(level)]['value'] - 1
@@ -494,7 +522,7 @@ class Character: # TODO: refactor old commands to use this
             if strict:
                 assert _min <= int(newValue) <= _max
             else:
-                newValue = min(max(_min, newValue), _max)
+                newValue = min(max(_min, int(newValue)), _max)
 
         except AssertionError:
             raise CounterOutOfBounds()

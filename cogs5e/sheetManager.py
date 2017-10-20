@@ -70,7 +70,7 @@ class SheetManager:
 
     def new_arg_stuff(self, args, ctx, character):
         args = self.parse_snippets(args, ctx.message.author.id)
-        args = character.parse_cvars(args)
+        args = character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = self.parse_args(args)
         return args
@@ -172,7 +172,7 @@ class SheetManager:
         args['hocrit'] = char.get_setting('hocrit', False)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
-            attack['details'] = char.parse_cvars(attack['details'])
+            attack['details'] = char.parse_cvars(attack['details'], ctx)
 
         result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
         embed = result['embed']

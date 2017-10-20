@@ -426,7 +426,7 @@ class GameTrack:
                 tempargs[index] = shlex.quote(arg)
 
         args = " ".join(tempargs)
-        args = char.parse_cvars(args)
+        args = char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)
 
@@ -616,7 +616,7 @@ class GameTrack:
                 tempargs[index] = shlex.quote(arg)
 
         args = " ".join(tempargs)
-        args = char.parse_cvars(args)
+        args = char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)
 

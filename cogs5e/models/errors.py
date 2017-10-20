@@ -43,6 +43,11 @@ class NoReset(ConsumableException):
     def __init__(self):
         super().__init__("The counter does not have a reset value.")
 
+class InvalidSpellLevel(ConsumableException):
+    """Raised when a spell level is invalid."""
+    def __init__(self):
+        super().__init__("The spell level is invalid.")
+
 class SelectionException(AvraeException):
     """A base exception for message awaiting exceptions to stem from."""
     pass

@@ -1181,11 +1181,11 @@ class InitTracker:
 
             args = " ".join(tempargs)
             tempchar = Character(combatant.sheet, combatant.id)
-            args = tempchar.parse_cvars(args)
+            args = tempchar.parse_cvars(args, ctx)
             args = shlex.split(args)
             args = parse_args_2(args)
             if attack.get('details') is not None:
-                attack['details'] = tempchar.parse_cvars(attack['details'])
+                attack['details'] = tempchar.parse_cvars(attack['details'], ctx)
             args['name'] = combatant.name  # combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
@@ -1317,7 +1317,7 @@ class InitTracker:
                 tempargs[index] = shlex.quote(arg)
 
         args = " ".join(tempargs)
-        args = character.parse_cvars(args)
+        args = character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)
 

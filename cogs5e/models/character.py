@@ -469,7 +469,7 @@ class Character: # TODO: refactor old commands to use this
 
         return self
 
-    def set_consumable(self, name, newValue:int):
+    def set_consumable(self, name, newValue:int, strict=False):
         """Sets the value of a character's consumable, returning the Character object.
         Raises CounterOutOfBounds if newValue is out of bounds."""
         self._initialize_custom_counters()
@@ -480,9 +480,12 @@ class Character: # TODO: refactor old commands to use this
         try:
             _min = self.evaluate_cvar(self.character['consumables']['custom'][name].get('min', str(-(2 ** 32))))
             _max = self.evaluate_cvar(self.character['consumables']['custom'][name].get('max', str(2 ** 32 - 1)))
-            assert _min <= int(newValue) <= _max
+            if strict:
+                assert _min <= int(newValue) <= _max
+            else:
+                newValue = min(max(_min, newValue), _max)
 
-        except:
+        except AssertionError:
             raise CounterOutOfBounds()
         self.character['consumables']['custom'][name]['value'] = int(newValue)
 

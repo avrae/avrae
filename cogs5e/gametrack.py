@@ -246,6 +246,7 @@ class GameTrack:
         try:
             character.set_consumable(name, newValue).commit(ctx)
             _max = self._get_cc_max(character, counter)
+            actualValue = int(character.get_consumable(name).get('value', 0))
 
             if counter.get('type') == 'bubble':
                 assert _max not in ('N/A', None)
@@ -259,6 +260,9 @@ class GameTrack:
                 resultEmbed.description = f"**__{name}__**\n{out}/{_max}"
             else:
                 resultEmbed.description = f"**__{name}__**\n{out}"
+
+            if newValue - actualValue:
+                resultEmbed.description += f"\n({abs(newValue - actualValue)} overflow)"
         except CounterOutOfBounds:
             resultEmbed.description = f"Could not modify counter: new value out of bounds"
         await self.bot.say(embed=resultEmbed)

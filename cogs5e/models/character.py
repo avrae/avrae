@@ -147,9 +147,17 @@ class Character: # TODO: refactor old commands to use this
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
 
+
+        # define our weird functions here
+        def get_cc(name):
+            return self.get_consumable(name)
+        def get_slots(level: int):
+            return self.get_remaining_slots(level)
+
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
-        _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min)
+        _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
+                      get_cc=get_cc, get_slots=get_slots)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(cvars)
@@ -407,6 +415,9 @@ class Character: # TODO: refactor old commands to use this
         @:param level - The spell level.
         @:param value - The number of remaining spell slots.
         @:returns self"""
+        assert 0 < level < 9
+        assert 0 <= value <= self.get_max_spellslots(level)
+
         self._initialize_spellslots()
         self.character['consumables']['spellslots'][str(level)]['value'] = value
 
@@ -497,6 +508,10 @@ class Character: # TODO: refactor old commands to use this
         counter = custom_counters.get(name)
         if counter is None: raise ConsumableNotFound()
         return counter
+
+    def get_consumable_value(self, name):
+        """@:returns int - the integer value of the consumable."""
+        return int(self.get_consumable(name).get('value', 0))
 
     async def select_consumable(self, ctx, name):
         """@:param name (str): The name of the consumable to search for.

@@ -76,7 +76,7 @@ class CharGenerator:
         race = await self.bot.wait_for_message(timeout=90, author=author, channel=channel, check=raceCheck)
         if race:
             def classCheck(msg):
-                return capwords(msg.content) in ["Totem Warrior Barbarian", "Beserker Barbarian",
+                return capwords(msg.content) in ["Totem Warrior Barbarian", "Berserker Barbarian",
                    "Lore Bard", "Valor Bard",
                    "Knowledge Cleric", "Life Cleric", "Light Cleric", "Nature Cleric", "Tempest Cleric", "Trickery Cleric", "War Cleric",
                    "Land Druid", "Moon Druid",
@@ -226,7 +226,7 @@ class CharGenerator:
         return [race, raceTraitsArray]
     
     def classGen(self, ctx, level):
-        classes = [["Totem Warrior Barbarian", "Beserker Barbarian"],
+        classes = [["Totem Warrior Barbarian", "Berserker Barbarian"],
                    ["Lore Bard", "Valor Bard"],
                    ["Knowledge Cleric", "Life Cleric", "Light Cleric", "Nature Cleric", "Tempest Cleric", "Trickery Cleric", "War Cleric"],
                    ["Land Druid", "Moon Druid"],

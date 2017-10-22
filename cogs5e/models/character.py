@@ -1,4 +1,3 @@
-
 """
 {'type': 'dicecloud',
  'version': 6, #v6: added stat cvars
@@ -32,7 +31,8 @@ from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
 
-class Character: # TODO: refactor old commands to use this
+
+class Character:  # TODO: refactor old commands to use this
 
     def __init__(self, _dict, _id):
         self.character = _dict
@@ -90,36 +90,44 @@ class Character: # TODO: refactor old commands to use this
         """@:returns list - the character's list of attack dicts."""
         return self.character.get('attacks', [])
 
-    def get_max_spellslots(self, level:int):
+    def get_max_spellslots(self, level: int):
         """@:returns the maximum number of spellslots of level level a character has.
         @:returns 0 if none.
         @:raises OutdatedSheet if character does not have spellbook."""
-        try: assert 'spellbook' in self.character
-        except AssertionError: raise OutdatedSheet()
+        try:
+            assert 'spellbook' in self.character
+        except AssertionError:
+            raise OutdatedSheet()
 
         return self.character.get('spellbook', {}).get('spellslots', {}).get(str(level), 0)
 
     def get_spell_list(self):
         """@:returns list - a list of the names of all spells the character can cast.
         @:raises OutdatedSheet if character does not have spellbook."""
-        try: assert 'spellbook' in self.character
-        except AssertionError: raise OutdatedSheet()
+        try:
+            assert 'spellbook' in self.character
+        except AssertionError:
+            raise OutdatedSheet()
 
         return self.character.get('spellbook', {}).get('spells', [])
 
     def get_save_dc(self):
         """@:returns int - the character's spell save DC.
         @:raises OutdatedSheet if character does not have spellbook."""
-        try: assert 'spellbook' in self.character
-        except AssertionError: raise OutdatedSheet()
+        try:
+            assert 'spellbook' in self.character
+        except AssertionError:
+            raise OutdatedSheet()
 
         return self.character.get('spellbook', {}).get('dc', 0)
 
     def get_spell_ab(self):
         """@:returns int - the character's spell attack bonus.
         @:raises OutdatedSheet if character does not have spellbook."""
-        try: assert 'spellbook' in self.character
-        except AssertionError: raise OutdatedSheet()
+        try:
+            assert 'spellbook' in self.character
+        except AssertionError:
+            raise OutdatedSheet()
 
         return self.character.get('spellbook', {}).get('attackBonus', 0)
 
@@ -152,28 +160,45 @@ class Character: # TODO: refactor old commands to use this
         # define our weird functions here
         def get_cc(name):
             return self.get_consumable_value(name)
+
+        def get_cc_max(name):
+            return self.evaluate_cvar(self.get_consumable(name).get('max', str(2 ** 32 - 1)))
+
+        def get_cc_min(name):
+            return self.evaluate_cvar(self.get_consumable(name).get('min', str(-(2 ** 32))))
+
         def set_cc(name, value: int, strict=False):
             self.set_consumable(name, value, strict)
             nonlocal changed
             changed = True
             return ''
+
+        def mod_cc(name, val: int, strict=False):
+            return set_cc(name, get_cc(name) + val, strict)
+
         def get_slots(level: int):
             return self.get_remaining_slots(level)
+
         def set_slots(level: int, value: int):
             self.set_remaining_slots(level, value)
             nonlocal changed
             changed = True
             return ''
+
         def use_slot(level: int):
             self.use_slot(level)
             nonlocal changed
             changed = True
             return ''
+
         def set_hp(val: int):
             self.set_hp(val)
             nonlocal changed
             changed = True
             return ''
+
+        def mod_hp(val: int):
+            return set_hp(self.get_current_hp() + val)
 
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
@@ -190,6 +215,7 @@ class Character: # TODO: refactor old commands to use this
         def set_value(name, value):
             evaluator.names[name] = value
             return ''
+
         evaluator.functions['set'] = set_value
 
         def cvarrepl(match):
@@ -230,7 +256,7 @@ class Character: # TODO: refactor old commands to use this
             cstr = cstr.replace(raw, str(roll(out).total), 1)
         for var in re.finditer(r'<([^<>]+)>', cstr):
             raw = var.group(0)
-            if re.match(r'<([@#]|:.+:)[&!]{0,2}\d+>', raw): continue # ignore mentions, channels, emotes
+            if re.match(r'<([@#]|:.+:)[&!]{0,2}\d+>', raw): continue  # ignore mentions, channels, emotes
             out = var.group(1)
             if out.startswith('/'):
                 _last = character
@@ -314,7 +340,8 @@ class Character: # TODO: refactor old commands to use this
         try:
             assert self.character['consumables'].get('hp') is not None
         except AssertionError:
-            self.character['consumables']['hp'] = {'value': self.get_max_hp(), 'reset': 'long', 'max': self.get_max_hp(), 'min': 0}
+            self.character['consumables']['hp'] = {'value': self.get_max_hp(), 'reset': 'long',
+                                                   'max': self.get_max_hp(), 'min': 0}
 
     def get_hp(self):
         """Returns the Counter dictionary."""
@@ -329,7 +356,7 @@ class Character: # TODO: refactor old commands to use this
         """Sets the character's hit points. Returns the Character object."""
         self._initialize_hp()
         hp = self.get_hp()
-        self.character['consumables']['hp']['value'] = max(hp['min'], int(newValue)) # bounding
+        self.character['consumables']['hp']['value'] = max(hp['min'], int(newValue))  # bounding
 
         self.on_hp()
 
@@ -402,15 +429,17 @@ class Character: # TODO: refactor old commands to use this
         self._initialize_spellslots()
         return self.character['consumables']['spellslots']
 
-    def get_remaining_slots(self, level:int):
+    def get_remaining_slots(self, level: int):
         """@:param level - The spell level.
         @:returns the integer value representing the number of spellslots remaining."""
-        try: assert 0 <= level < 10
-        except AssertionError: raise InvalidSpellLevel()
-        if level == 0: return 1 # cantrips
+        try:
+            assert 0 <= level < 10
+        except AssertionError:
+            raise InvalidSpellLevel()
+        if level == 0: return 1  # cantrips
         return self.get_spellslots()[str(level)]['value']
 
-    def get_remaining_slots_str(self, level:int=None):
+    def get_remaining_slots_str(self, level: int = None):
         """@:param level: The level of spell slot to return.
         @:returns A string representing the character's remaining spell slots."""
         out = ''
@@ -435,27 +464,33 @@ class Character: # TODO: refactor old commands to use this
             out = "No spell slots."
         return out
 
-    def set_remaining_slots(self, level:int, value:int):
+    def set_remaining_slots(self, level: int, value: int):
         """Sets the character's remaining spell slots of level level.
         @:param level - The spell level.
         @:param value - The number of remaining spell slots.
         @:returns self"""
-        try: assert 0 < level < 10
-        except AssertionError: raise InvalidSpellLevel()
-        try: assert 0 <= value <= self.get_max_spellslots(level)
-        except AssertionError: raise CounterOutOfBounds()
+        try:
+            assert 0 < level < 10
+        except AssertionError:
+            raise InvalidSpellLevel()
+        try:
+            assert 0 <= value <= self.get_max_spellslots(level)
+        except AssertionError:
+            raise CounterOutOfBounds()
 
         self._initialize_spellslots()
         self.character['consumables']['spellslots'][str(level)]['value'] = value
 
         return self
 
-    def use_slot(self, level:int):
+    def use_slot(self, level: int):
         """Uses one spell slot of level level.
         @:returns self
         @:raises CounterOutOfBounds if there are no remaining slots of the requested level."""
-        try: assert 0 <= level < 10
-        except AssertionError: raise InvalidSpellLevel()
+        try:
+            assert 0 <= level < 10
+        except AssertionError:
+            raise InvalidSpellLevel()
         if level == 0: return self
         ss = self.get_spellslots()
         val = ss[str(level)]['value'] - 1
@@ -496,7 +531,8 @@ class Character: # TODO: refactor old commands to use this
             except AssertionError:
                 raise InvalidArgument("Max value is less than min value.")
         if _reset and _max is None: raise InvalidArgument("Reset passed but no maximum passed.")
-        if _type == 'bubble' and (_max is None or _min is None): raise InvalidArgument("Bubble display requires a max and min value.")
+        if _type == 'bubble' and (_max is None or _min is None): raise InvalidArgument(
+            "Bubble display requires a max and min value.")
         newCounter = {'value': self.evaluate_cvar(_max) or 0}
         if _max is not None: newCounter['max'] = _max
         if _min is not None: newCounter['min'] = _min
@@ -508,7 +544,7 @@ class Character: # TODO: refactor old commands to use this
 
         return self
 
-    def set_consumable(self, name, newValue:int, strict=False):
+    def set_consumable(self, name, newValue: int, strict=False):
         """Sets the value of a character's consumable, returning the Character object.
         Raises CounterOutOfBounds if newValue is out of bounds."""
         self._initialize_custom_counters()
@@ -554,7 +590,6 @@ class Character: # TODO: refactor old commands to use this
         else:
             return await get_selection(ctx, choices, return_name=True)
 
-
     def get_all_consumables(self):
         """Returns the dict object of all custom counters."""
         custom_counters = self.character.get('consumables', {}).get('custom', {})
@@ -563,8 +598,10 @@ class Character: # TODO: refactor old commands to use this
     def delete_consumable(self, name):
         """Deletes a consumable. Returns the Character object."""
         custom_counters = self.character.get('consumables', {}).get('custom', {})
-        try: del custom_counters[name]
-        except KeyError: raise ConsumableNotFound()
+        try:
+            del custom_counters[name]
+        except KeyError:
+            raise ConsumableNotFound()
         self.character['consumables']['custom'] = custom_counters
         return self
 
@@ -597,7 +634,7 @@ class Character: # TODO: refactor old commands to use this
         Returns a list of the names of all reset counters."""
         reset = []
         reset.extend(self._reset_custom('hp'))
-        if self.get_current_hp() > 0: # lel
+        if self.get_current_hp() > 0:  # lel
             self.reset_death_saves()
             reset.append("Death Saves")
         return reset
@@ -636,6 +673,7 @@ class Character: # TODO: refactor old commands to use this
         reset.extend(self.long_rest())
         reset.extend(self._reset_custom(None))
         return reset
+
 
 # helper methods
 def simple_roll(rollStr):

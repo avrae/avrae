@@ -27,8 +27,7 @@ from cogsmisc.publicity import Publicity
 from cogsmisc.repl import REPL
 from cogsmisc.stats import Stats
 from utils.dataIO import DataIO
-from utils.functions import discord_trim, get_positivity, \
-    list_get
+from utils.functions import discord_trim, get_positivity, list_get
 from utils.help import Help
 
 INITIALIZING = True

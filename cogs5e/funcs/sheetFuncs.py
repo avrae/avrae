@@ -87,38 +87,47 @@ def sheet_attack(attack, args, embed=None):
         if attack.get('damage') is None and args.get('d') is not None:
             attack['damage'] = '0'
         if attack.get('damage') is not None:
+
+            def parsecrit(damage_str, wep=False):
+                if itercrit == 1:
+                    if args.get('crittype') == '2x':
+                        critDice = f"({damage_str})*2"
+                        if args.get('c') is not None:
+                            critDice += '+' + args.get('c', '')
+                    else:
+                        def critSub(matchobj):
+                            hocrit = 1 if args.get('hocrit') and wep else 0
+                            return str(int(matchobj.group(1)) * 2 + hocrit) + 'd' + matchobj.group(2)
+                        critDice = re.sub(r'(\d+)d(\d+)', critSub, damage_str)
+                else: critDice = damage_str
+                return critDice
+
+            # -d, -d# parsing
             if args.get('d') is not None:
-                damage = attack.get('damage') + '+' + args.get('d')
+                damage = parsecrit(attack.get('damage'), wep=True) + '+' + parsecrit(args.get('d'))
             else:
-                damage = attack.get('damage')
-                
+                damage = parsecrit(attack.get('damage'), wep=True)
+
             for dice, numHits in dnum.items():
                 if not itercrit == 2 and numHits > 0:
-                    damage += '+' + dice
+                    damage += '+' + parsecrit(dice)
                     dnum[dice] -= 1
-            
+
+            # crit parsing
             rollFor = "Damage"
             if itercrit == 1:
-                if args.get('crittype') == '2x':
-                    critDice = f"({damage})*2"
-                    if args.get('c') is not None:
-                        critDice += '+' + args.get('c', '')
-                else:
-                    def critSub(matchobj):
-                        hocrit = 1 if args.get('hocrit') else 0
-                        return str(int(matchobj.group(1)) * 2 + hocrit) + 'd' + matchobj.group(2)
-                    critDice = re.sub(r'(\d+)d(\d+)', critSub, damage)
-                    if args.get('c') is not None:
-                        critDice += '+' + args.get('c', '')
-                damage = critDice
+                if args.get('c') is not None:
+                    damage += '+' + args.get('c', '')
                 rollFor = "Damage (CRIT!)"
-            
+
+            # resist parsing
             if 'resist' in args or 'immune' in args or 'vuln' in args:
                 resistances = args.get('resist', '').split('|')
                 immunities = args.get('immune', '').split('|')
                 vulnerabilities = args.get('vuln', '').split('|')
                 damage = parse_resistances(damage, resistances, immunities, vulnerabilities)
-            
+
+            # actual roll
             if itercrit == 2:
                 out += '**Miss!**\n'
             else:

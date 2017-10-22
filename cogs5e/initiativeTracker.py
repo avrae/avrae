@@ -341,7 +341,9 @@ class MonsterCombatant(Combatant):
             for e in t:
                 for d in ('bludgeoning', 'piercing', 'slashing'):
                     if d in e and not d.lower() == e.lower():
-                        t.remove(e)
+                        try:
+                            t.remove(e)
+                        except ValueError: pass
                         t.append(d)
 
     def get_status(self, private: bool = False):
@@ -723,7 +725,7 @@ class InitTracker:
                     temp_group.combatants.append(me)
                     out += "{} was added to combat as part of group {}.\n".format(name, temp_group.name)
             except Exception as e:
-                traceback.print_exc()
+                log.error('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
                 out += "Error adding combatant: {}\n".format(e)
 
         await self.bot.say(out, delete_after=15)

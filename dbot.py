@@ -27,7 +27,7 @@ from cogsmisc.publicity import Publicity
 from cogsmisc.repl import REPL
 from cogsmisc.stats import Stats
 from utils.dataIO import DataIO
-from utils.functions import discord_trim, get_positivity, list_get
+from utils.functions import discord_trim, get_positivity, list_get, gen_error_message
 from utils.help import Help
 
 INITIALIZING = True
@@ -150,7 +150,7 @@ async def enter():
         bot.botStats[k] = int(bot.db.get(k, 0))
     bot.botStats["items_looked_up_session"] = bot.botStats["items_looked_up_session"] = bot.botStats[
         "dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = \
-    bot.botStats["commands_used_session"] = 0
+        bot.botStats["commands_used_session"] = 0
     if not bot.db.exists('build_num'): bot.db.set('build_num', 114)  # this was added in build 114
     if getattr(bot, "shard_id", 0) == 0: bot.db.incr('build_num')
     await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
@@ -204,11 +204,15 @@ async def on_command_error(error, ctx):
                 return await bot.send_message(ctx.message.channel,
                                               "Error: Internal server error on Discord's end. Please try again.")
 
+    error_msg = gen_error_message()
+
     await bot.send_message(ctx.message.channel,
-                           "Error: " + str(error) + "\nThis incident has been reported to the developer.")
+                           f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
+                           f"Please join <https://support.avrae.io> and tell the developer that {error_msg}!")
     try:
         await bot.send_message(bot.owner,
-                               "Error in channel {} ({}), server {} ({}), shard {}: {}\nCaused by message: `{}`".format(
+                               f"**{error_msg}**\n" \
+                               + "Error in channel {} ({}), server {} ({}), shard {}: {}\nCaused by message: `{}`".format(
                                    ctx.message.channel, ctx.message.channel.id, ctx.message.server,
                                    ctx.message.server.id, getattr(bot, 'shard_id', 0), repr(error),
                                    ctx.message.content))

@@ -330,3 +330,10 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
     if return_name:
         return choices[int(m.content) - 1]
     return results[int(m.content) - 1]
+
+def gen_error_message():
+    subject = random.choice(['a kobold', 'the green dragon', 'the Frost Mage', 'Avrae', 'the wizard',
+                             'an iron golem'])
+    verb = random.choice(['must be', 'should be', 'has been', 'will be'])
+    thing_to_do = random.choice(['stopped', 'killed', 'talked to', 'found', 'destroyed', 'fought'])
+    return f"{subject} {verb} {thing_to_do}"

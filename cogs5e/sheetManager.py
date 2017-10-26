@@ -778,7 +778,7 @@ class SheetManager:
         user_snippets = self.snippets.get(user_id, {})
         
         if snipname == 'list':
-            return await self.bot.say('Your snippets:\n{}'.format(', '.join([name for name in user_snippets.keys()])))
+            return await self.bot.say('Your snippets:\n{}'.format(', '.join(sorted([name for name in user_snippets.keys()]))))
         
         if snippet is None:
             return await self.bot.say('**' + snipname + '**:\n```md\n' + user_snippets.get(snipname, 'Not defined.') + '\n```')

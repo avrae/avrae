@@ -125,7 +125,9 @@ class Customization:
             return await self.bot.say('There is already a built-in command with that name!')
 
         if alias_name == 'list':
-            return await self.bot.say('Your aliases:\n{}'.format(', '.join([name for name in user_aliases.keys()])))
+            aliases = [name for name in user_aliases.keys()]
+            sorted_aliases = sorted(aliases)
+            return await self.bot.say('Your aliases:\n{}'.format(', '.join(sorted_aliases)))
 
         if commands is None:
             alias = user_aliases.get(alias_name)

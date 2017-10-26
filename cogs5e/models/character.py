@@ -612,7 +612,7 @@ class Character:  # TODO: refactor old commands to use this
         if counter.get('reset') == 'none': raise NoReset()
         if counter.get('max') is None: raise NoReset()
 
-        self.set_consumable(name, counter.get('max'))
+        self.set_consumable(name, self.evaluate_cvar(counter.get('max')))
 
         return self
 

@@ -217,7 +217,8 @@ async def on_command_error(error, ctx):
                                    ctx.message.server.id, getattr(bot, 'shard_id', 0), repr(error),
                                    ctx.message.content))
     except AttributeError:
-        await bot.send_message(bot.owner, "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
+        await bot.send_message(bot.owner, f"**{error_msg}**\n" \
+                                          + "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
             ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
     for o in discord_trim(tb):
         await bot.send_message(bot.owner, o)

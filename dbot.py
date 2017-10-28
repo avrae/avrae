@@ -191,7 +191,10 @@ async def on_command_error(error, ctx):
                                               "Error: I am missing permissions to run this command. Please make sure I have permission to send messages to <#{}>.".format(
                                                   ctx.message.channel.id))
             except:
-                pass
+                try:
+                    return await bot.send_message(ctx.message.channel, f"Error: I cannot send messages to this user.")
+                except:
+                    return 
         if isinstance(original, NotFound):
             return await bot.send_message(ctx.message.channel,
                                           "Error: I tried to edit or delete a message that no longer exists.")

@@ -149,6 +149,25 @@ def fuzzywuzzy_search_all_3(list_to_search:list, key, value, cutoff=5, return_ke
     if return_key: return result[key], True
     else: return result, True
 
+def fuzzywuzzy_search_all_3_list(list_to_search:list, value, cutoff=5):
+    """Fuzzy searches a list for a value.
+    result can be either an object or list of objects
+    :returns: A two-tuple (result, strict) or None"""
+    try:
+        result = next(a for a in list_to_search if value.lower() == a.lower())
+    except StopIteration:
+        result = [a for a in list_to_search if value.lower() in a.lower()]
+        if len(result) is 0:
+            names = list_to_search
+            result = process.extract(value, names, scorer=fuzz.ratio)
+            result = [r for r in result if r[1] >= cutoff]
+            if len(result) is 0: return None
+            else:
+                return [r[0] for r in result], False
+        else:
+            return result, False
+    return result, True
+
 def parse_args(args):
     out = {}
     index = 0

@@ -3,15 +3,11 @@ Created on Jan 13, 2017
 
 @author: andrew
 """
-import json
-import random
-from math import floor
-
 import copy
+import json
 
-import discord
-
-from utils.functions import discord_trim, fuzzywuzzy_search_all, strict_search, fuzzywuzzy_search_all_3, get_selection
+from utils.functions import discord_trim, strict_search, fuzzywuzzy_search_all_3, get_selection, \
+    fuzzywuzzy_search_all_3_list
 
 
 class Compendium:
@@ -152,6 +148,26 @@ def searchSpell(name):
 
 async def searchSpellNameFull(name, ctx):
     result = searchSpell(name)
+    if result is None:
+        return None
+    strict = result[1]
+    results = result[0]
+    bot = ctx.bot
+
+    if strict:
+        result = results
+    else:
+        if len(results) == 1:
+            result = results[0]
+        else:
+            result = await get_selection(ctx, [(r, r) for r in results])
+            if result is None:
+                await bot.send_message(ctx.message.channel, 'Selection timed out or was cancelled.')
+                return None
+    return result
+
+async def searchCharacterSpellName(name, ctx, char):
+    result = fuzzywuzzy_search_all_3_list(char.get_spell_list(), name)
     if result is None:
         return None
     strict = result[1]

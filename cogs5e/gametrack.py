@@ -14,7 +14,7 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c
+from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
@@ -408,14 +408,19 @@ class GameTrack:
         except:
             pass
 
-        spell_name = await searchSpellNameFull(spell_name, ctx)
+        char = None
+        if not '-i' in args:
+            char = Character.from_ctx(ctx)
+            spell_name = await searchCharacterSpellName(spell_name, ctx, char)
+        else:
+            spell_name = await searchSpellNameFull(spell_name, ctx)
 
         if spell_name is None: return
 
         spell = strict_search(c.autospells, 'name', spell_name)
         if spell is None: return await self._old_cast(ctx, spell_name, *args)  # fall back to old cast
 
-        char = Character.from_ctx(ctx)
+        if not char: char = Character.from_ctx(ctx)
 
         tempargs = list(args)
         user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})

@@ -21,7 +21,8 @@ from discord.errors import NotFound, Forbidden
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
-from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchAutoSpellFull
+from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchAutoSpellFull, searchCharacterSpellName, \
+    searchSpellNameFull
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
@@ -343,7 +344,8 @@ class MonsterCombatant(Combatant):
                     if d in e and not d.lower() == e.lower():
                         try:
                             t.remove(e)
-                        except ValueError: pass
+                        except ValueError:
+                            pass
                         t.append(d)
 
     def get_status(self, private: bool = False):
@@ -1333,9 +1335,15 @@ class InitTracker:
         else:
             embed.description = '~~' + ' ' * 500 + '~~'
 
+        if not args.get('i'):
+            spell_name = await searchCharacterSpellName(spell_name, ctx, character)
+        else:
+            spell_name = await searchSpellNameFull(spell_name, ctx)
+
+        if spell_name is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
+                                                                             description="The spell was not found or is not supported."))
+
         spell = await searchAutoSpellFull(spell_name, ctx)
-        if spell is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
-                                                                        description="The spell was not found or is not supported."))
 
         can_cast = True
         spell_level = int(spell.get('level', 0))

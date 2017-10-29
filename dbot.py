@@ -194,7 +194,7 @@ async def on_command_error(error, ctx):
                 try:
                     return await bot.send_message(ctx.message.channel, f"Error: I cannot send messages to this user.")
                 except:
-                    return 
+                    return
         if isinstance(original, NotFound):
             return await bot.send_message(ctx.message.channel,
                                           "Error: I tried to edit or delete a message that no longer exists.")

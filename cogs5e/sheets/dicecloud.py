@@ -380,13 +380,15 @@ class DicecloudParser(SheetParser):
                 return str(eval(out.lower(), {"__builtins__": None}, {k.lower(): v for k, v in safe_dict.items()}))
             except Exception as ex:
                 log.debug(f"exception in damage_sub: {ex}")
-                return out
+                return match.group(0)
         
         damage = re.sub(r'{(.*)}', damage_sub, atkIn.get('damage', ''))
         damage = re.split('([-+*/^().<>= ])', damage.replace('{', '').replace('}', ''))
-        attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage) + ' [{}]'.format(atkIn.get('damageType'))
+        attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage)
         if not attack['damage']:
             attack['damage'] = None
+        else:
+            attack['damage'] += ' [{}]'.format(atkIn.get('damageType'))
 
         details = atkIn.get('details', None)
 

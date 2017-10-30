@@ -5,8 +5,10 @@ Created on Nov 29, 2016
 """
 import shlex
 import textwrap
+from math import floor
 from urllib import parse
 
+import discord
 from discord.ext import commands
 
 from cogs5e.funcs.lookupFuncs import *

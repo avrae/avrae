@@ -99,7 +99,7 @@ class Character:  # TODO: refactor old commands to use this
         except AssertionError:
             raise OutdatedSheet()
 
-        return self.character.get('spellbook', {}).get('spellslots', {}).get(str(level), 0)
+        return int(self.character.get('spellbook', {}).get('spellslots', {}).get(str(level), 0))
 
     def get_spell_list(self):
         """@:returns list - a list of the names of all spells the character can cast.
@@ -438,7 +438,7 @@ class Character:  # TODO: refactor old commands to use this
         except AssertionError:
             raise InvalidSpellLevel()
         if level == 0: return 1  # cantrips
-        return self.get_spellslots()[str(level)]['value']
+        return int(self.get_spellslots()[str(level)]['value'])
 
     def get_remaining_slots_str(self, level: int = None):
         """@:param level: The level of spell slot to return.
@@ -480,7 +480,7 @@ class Character:  # TODO: refactor old commands to use this
             raise CounterOutOfBounds()
 
         self._initialize_spellslots()
-        self.character['consumables']['spellslots'][str(level)]['value'] = value
+        self.character['consumables']['spellslots'][str(level)]['value'] = int(value)
 
         return self
 

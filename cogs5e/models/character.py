@@ -179,6 +179,9 @@ class Character:  # TODO: refactor old commands to use this
         def get_slots(level: int):
             return self.get_remaining_slots(level)
 
+        def get_slots_max(level: int):
+            return self.get_max_spellslots(level)
+
         def set_slots(level: int, value: int):
             self.set_remaining_slots(level, value)
             nonlocal changed
@@ -204,7 +207,7 @@ class Character:  # TODO: refactor old commands to use this
         _funcs['roll'] = simple_roll
         _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
-                      get_slots=get_slots, set_slots=set_slots, use_slot=use_slot,
+                      get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                       set_hp=set_hp, mod_hp=mod_hp)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls

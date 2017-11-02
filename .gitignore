@@ -27,6 +27,7 @@ damage_snippets-backup.json
 /raspi.md
 /saves/
 /test/output/*
+/test/input/*
 
 
 test/test.pdf

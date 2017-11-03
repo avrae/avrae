@@ -24,11 +24,11 @@ def main():
                 value = value.name
             elif value is not None:
                 try:
-                    value = value.decode('iso-8859-1')
+                    value = value.decode('iso-8859-1').strip()
                 except:
                     pass
 
-            character[name.decode('iso-8859-1').strip()] = value.strip()
+            character[name.decode('iso-8859-1').strip()] = value
 
         print(character)
     with open('./output/pdfsheet-test.json', mode='w') as f:

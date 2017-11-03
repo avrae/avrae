@@ -13,7 +13,8 @@ def main():
         parser = PDFParser(f)
         doc = PDFDocument(parser)
         try:
-            fields = resolve1(doc.catalog['AcroForm'])['Fields']
+            fields = resolve1(doc.catalog['AcroForm'])
+            fields = resolve1(fields['Fields'])
         except:
             raise Exception('This is not a form-fillable character sheet!')
         for i in fields:
@@ -23,11 +24,11 @@ def main():
                 value = value.name
             elif value is not None:
                 try:
-                    value = value.decode('iso-8859-1')
+                    value = value.decode('iso-8859-1').strip()
                 except:
                     pass
 
-            character[name.decode('iso-8859-1')] = value
+            character[name.decode('iso-8859-1').strip()] = value
 
         print(character)
     with open('./output/pdfsheet-test.json', mode='w') as f:

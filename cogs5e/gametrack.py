@@ -19,8 +19,7 @@ from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
-from utils.functions import parse_args_3, \
-    strict_search
+from utils.functions import parse_args_3, strict_search
 
 log = logging.getLogger(__name__)
 

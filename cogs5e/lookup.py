@@ -211,9 +211,12 @@ class Lookup:
         if result.get('proficiency'):
             embed.add_field(name="Proficiencies", value=result.get('proficiency', 'none'))
         for t in result.get('trait', []):
-            embed.add_field(name=t['name'],
-                            value='\n'.join(txt for txt in t['text'] if txt) if isinstance(t['text'], list) else t[
-                                'text'])
+            f_text = '\n'.join(txt for txt in t['text'] if txt) if isinstance(t['text'], list) else t['text']
+            f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
+            embed.add_field(name=t['name'], value=f_text[0])
+            for piece in f_text[1:]:
+                embed.add_field(name="con't", value=piece)
+
         # trait_str = ', '.join(t['name'] for t in result.get('trait', []))
         # embed.add_field(name="Traits", value=trait_str, inline=False)
         # embed.set_footer(text="Use !racefeat to look up a trait.")

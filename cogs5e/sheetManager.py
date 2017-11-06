@@ -922,7 +922,7 @@ class SheetManager:
         character = user_characters[active_character]
         cvars = character.get('cvars', {})
 
-        await self.bot.say('Your variables:\n{}'.format(', '.join([name for name in cvars.keys()])))
+        await self.bot.say('Your variables:\n{}'.format(', '.join(sorted([name for name in cvars.keys()]))))
 
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.

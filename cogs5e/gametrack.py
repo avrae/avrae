@@ -350,7 +350,7 @@ class GameTrack:
             val = f"{filled}{empty}\n"
         else:
             val = f"**Current Value**: {counter.get('value', 0)}\n"
-            if _min and _max:
+            if _min is not None and _max is not None:
                 val += f"**Range**: {_min} - {_max}\n"
         if _reset:
             val += f"**Resets When**: {_reset}\n"

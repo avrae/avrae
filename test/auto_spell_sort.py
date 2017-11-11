@@ -48,6 +48,10 @@ for spell in spells:
         damages = spell.get("roll", [])
         if not isinstance(damages, list):
             damages = [damages]
+
+        if not damages:
+            for d in re.finditer(r"tak[esing]+ (.*?) (\w*?) damage", text):
+                damages.append(d.group(1))
         
         for i, damage in enumerate(damages):
             occ = []
@@ -62,8 +66,14 @@ for spell in spells:
                 occ.append(oldDamage)
             damages[i] = damage
         if len(damages):
-            print("Damage: " + str(damages))
-            save_obj['damage'] = damages[0]
+            print('\n'.join("[{}]: {}".format(i, d) for i, d in enumerate(damages)))
+            try:
+                a = input("Select damage: ")
+                d = damages[int(a)]
+            except:
+                d = a
+            print("Damage: " + str(d))
+            save_obj['damage'] = d
         else:
             print("Effect spell")
             save_obj['damage'] = None

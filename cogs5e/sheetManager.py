@@ -671,6 +671,25 @@ class SheetManager:
             await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True)
+    async def transferchar(self, ctx, user: discord.Member):
+        """Gives a copy of the active character to another user."""
+        character = Character.from_ctx(ctx)
+        overwrite = ''
+
+        user_characters = self.bot.db.not_json_get(f'{user.id}.characters', {})
+        if character.id in user_characters:
+            overwrite = "**WARNING**: This will overwrite an existing character."
+
+        await self.bot.say(f"{user.mention}, accept a copy of {character.get_name()}? (Type yes/no)\n{overwrite}")
+        m = await self.bot.wait_for_message(timeout=300, author=user, channel=ctx.message.channel,
+                                            check=lambda m: get_positivity(m.content) is not None)
+
+        if m is None or not get_positivity(m.content): return await self.bot.say("Transfer not confirmed, aborting.")
+
+        character.manual_commit(self.bot, user.id)
+        await self.bot.say(f"Copied {character.get_name()} to {user.display_name}'s storage.")
+
+    @commands.command(pass_context=True)
     async def csettings(self, ctx, *, args):
         """Updates personalization settings for the currently active character.
         Valid Arguments:
@@ -945,7 +964,7 @@ class SheetManager:
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
 
-        override = await self._confirm_overwrite(ctx, url)
+        override = await self._confirm_overwrite(ctx, f"dicecloud-{url}")
         if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
 
         self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(url))

@@ -782,6 +782,10 @@ class Lookup:
         text = '\n'.join(spellDesc)
         if "**At Higher Levels:** " in text:
             text, higher_levels = text.split("**At Higher Levels:** ", 1)
+        elif "At Higher Levels" in text:
+            text, higher_levels = text.split("At Higher Levels", 1)
+            text = text.strip('*\n')
+            higher_levels = higher_levels.strip('* \n.:')
         else:
             higher_levels = None
 

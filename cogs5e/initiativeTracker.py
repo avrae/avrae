@@ -1544,7 +1544,8 @@ class InitTracker:
 
                     attack['damage'] = attack['damage'].replace("SPELL",
                                                                 str(
-                                                                    character.get_spell_ab() - character.get_prof_bonus()))
+                                                                    character.evaluate_cvar(
+                                                                        "SPELL") or character.get_spell_ab() - character.get_prof_bonus()))
 
                     result = sheet_attack(attack, outargs)
                     out = ""
@@ -1573,7 +1574,8 @@ class InitTracker:
                             outargs[_arg] = _value[-1]
                     attack = {"name": spell['name'],
                               "damage": spell.get("damage", "0").replace('SPELL', str(
-                                  character.get_spell_ab() - character.get_prof_bonus())),
+                                  character.evaluate_cvar(
+                                      "SPELL") or character.get_spell_ab() - character.get_prof_bonus())),
                               "attackBonus": None}
                     if upcast_dmg:
                         attack['damage'] = attack['damage'] + '+' + upcast_dmg

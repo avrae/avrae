@@ -71,7 +71,7 @@ class GameTrack:
         await self.bot.say(embed=embed)
 
     @game.command(pass_context=True, name='spellslot', aliases=['ss'])
-    async def game_spellslot(self, ctx, level:int=None, value:str=None):
+    async def game_spellslot(self, ctx, level: int = None, value: str = None):
         """Views or sets your remaining spell slots."""
         if level is not None:
             try:
@@ -81,7 +81,7 @@ class GameTrack:
         character = Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.set_footer(text="\u25c9 = Available / \u3007 = Used")
-        if level is None and value is None: # show remaining
+        if level is None and value is None:  # show remaining
             embed.description = f"__**Remaining Spell Slots**__\n{character.get_remaining_slots_str()}"
         elif value is None:
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n{character.get_remaining_slots_str(level)}"
@@ -93,8 +93,10 @@ class GameTrack:
                     value = int(value)
             except ValueError:
                 return await self.bot.say(f"{value} is not a valid integer.")
-            try: assert 0 <= value <= character.get_max_spellslots(level)
-            except AssertionError: raise CounterOutOfBounds()
+            try:
+                assert 0 <= value <= character.get_max_spellslots(level)
+            except AssertionError:
+                raise CounterOutOfBounds()
             character.set_remaining_slots(level, value).commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n{character.get_remaining_slots_str(level)}"
         await self.bot.say(embed=embed)
@@ -130,7 +132,7 @@ class GameTrack:
             await ctx.invoke(self.game_status)
 
     @game.command(pass_context=True, name='hp')
-    async def game_hp(self, ctx, operator = '', *, hp = ''):
+    async def game_hp(self, ctx, operator='', *, hp=''):
         """Modifies the HP of a the current active character.
         If operator is not passed, assumes `mod`.
         Operators: `mod`, `set`."""
@@ -157,7 +159,6 @@ class GameTrack:
         else:
             out = "{}: {}/{}".format(character.get_name(), character.get_current_hp(), character.get_max_hp())
 
-
         await self.bot.say(out)
 
     @game.command(pass_context=True, name='deathsave', aliases=['ds'])
@@ -168,8 +169,8 @@ class GameTrack:
         character = Character.from_ctx(ctx)
         args = parse_args_3(args)
         adv = 0 if args.get('adv', [False])[-1] and args.get('dis', [False])[-1] else \
-              1 if args.get('adv', [False])[-1] else \
-              -1 if args.get('dis', [False])[-1] else 0
+            1 if args.get('adv', [False])[-1] else \
+                -1 if args.get('dis', [False])[-1] else 0
         b = '+'.join(args.get('b', []))
         phrase = '\n'.join(args.get('phrase', []))
 
@@ -188,7 +189,8 @@ class GameTrack:
             character.set_hp(1)
             death_phrase = f"{character.get_name()} is UP with 1 HP!"
         elif save_roll.crit == 2:
-            if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
+            if character.add_failed_ds():
+                death_phrase = f"{character.get_name()} is DEAD!"
             else:
                 if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
         elif save_roll.total >= 10:
@@ -335,7 +337,6 @@ class GameTrack:
             await self.bot.say(f"Reset counters: {', '.join(set(reset_consumables)) or 'none'}")
         if not '-h' in args:
             await ctx.invoke(self.game_status)
-
 
     def _get_cc_value(self, character, counter):
         _min = self._get_cc_min(character, counter)
@@ -570,7 +571,8 @@ class GameTrack:
             if upcast_dmg:
                 attack['damage'] = attack['damage'] + '+' + upcast_dmg
 
-            attack['damage'] = attack['damage'].replace("SPELL", str(char.get_spell_ab() - char.get_prof_bonus()))
+            attack['damage'] = attack['damage'].replace("SPELL", str(
+                char.evaluate_cvar("SPELL") or char.get_spell_ab() - char.get_prof_bonus()))
 
             result = sheet_attack(attack, outargs)
             for f in result['embed'].fields:
@@ -582,7 +584,10 @@ class GameTrack:
                 if isinstance(_value, list):
                     outargs[_arg] = _value[-1]
             attack = {"name": spell['name'],
-                      "damage": spell.get("damage", "0").replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())),
+                      "damage": spell.get("damage", "0").replace('SPELL',
+                                                                 str(
+                                                                     char.evaluate_cvar(
+                                                                         "SPELL") or char.get_spell_ab() - char.get_prof_bonus())),
                       "attackBonus": None}
             if upcast_dmg:
                 attack['damage'] = attack['damage'] + '+' + upcast_dmg
@@ -597,10 +602,10 @@ class GameTrack:
         if cast_level > 0:
             embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
 
-        char.commit(ctx) # make sure we save changes
+        char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)
 
-    async def _old_cast(self, ctx, spell_name, *args): # TODO
+    async def _old_cast(self, ctx, spell_name, *args):  # TODO
         spell = getSpell(spell_name)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
@@ -663,7 +668,7 @@ class GameTrack:
                     ctx.message.author.id)  # get user's active
                 if active_character is not None:
                     rolls = '\n'.join(rolls).replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
-                            .replace('PROF', str(char.get_prof_bonus()))
+                        .replace('PROF', str(char.get_prof_bonus()))
                     rolls = rolls.split('\n')
                 out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(
                     roll(r, inline=True).skeleton for r in rolls)

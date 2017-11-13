@@ -317,7 +317,7 @@ class Dice:
     
     @commands.command(pass_context=True, aliases=['ms'])
     async def monster_save(self, ctx, monster_name, save, *args):
-        """Rolls a check for a monster.
+        """Rolls a save for a monster.
         Args: adv/dis
               -b [conditional bonus]
               -phrase [flavor text]

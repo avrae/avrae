@@ -35,6 +35,10 @@ class GameTrack:
         """Commands to help track character information in a game. Use `!help game` to view subcommands."""
         if ctx.invoked_subcommand is None:
             await self.bot.say("Incorrect usage. Use !help game for help.")
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
 
     @game.command(pass_context=True, name='status', aliases=['summary'])
     async def game_status(self, ctx):

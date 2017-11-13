@@ -896,7 +896,22 @@ class Lookup:
 
         itemDict = {}
         itemDict['name'] = item['name']
-        itemDict['type'] = ', '.join(parsetype(t) for t in item['type'].split(','))
+        itemDict['damage'] = ''
+        if 'type' in item:
+            itemDict['type'] = ', '.join(i for i in (
+                [parsetype(t) for t in item['type'].split(',')] + ["Wondrous Item" if item.get('wondrous') else '']) if
+                                         i)
+            for iType in item['type'].split(','):
+                if iType in ('M', 'R', 'GUN'):
+                    itemDict['damage'] = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(
+                        item.get('dmgType', 'n/a'))) if 'dmg1' in item and 'dmgType' in item else ''
+                if iType == 'S': itemDict['damage'] = "AC +" + item.get('ac', 'n/a')
+                if iType == 'LA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX'
+                if iType == 'MA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX (Max 2)'
+                if iType == 'HA': itemDict['damage'] = "AC " + item.get('ac', 'n/a')
+        else:
+            itemDict['type'] = ', '.join(
+                i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)
         itemDict['rarity'] = item.get('rarity')
         itemDict['type_and_rarity'] = itemDict['type'] + (
             (', ' + itemDict['rarity']) if itemDict['rarity'] is not None else '')
@@ -904,15 +919,6 @@ class Lookup:
         itemDict['weight'] = (item.get('weight', 'n/a') + (
             ' lb.' if item.get('weight', 'n/a') == '1' else ' lbs.')) if 'weight' in item else ''
         itemDict['weight_and_value'] = itemDict['value'] + itemDict['weight']
-        itemDict['damage'] = ''
-        for iType in item['type'].split(','):
-            if iType in ('M', 'R', 'GUN'):
-                itemDict['damage'] = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(
-                    item.get('dmgType', 'n/a'))) if 'dmg1' in item and 'dmgType' in item else ''
-            if iType == 'S': itemDict['damage'] = "AC +" + item.get('ac', 'n/a')
-            if iType == 'LA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX'
-            if iType == 'MA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX (Max 2)'
-            if iType == 'HA': itemDict['damage'] = "AC " + item.get('ac', 'n/a')
         itemDict['properties'] = ""
         for prop in item.get('property', '').split(','):
             if prop == '': continue
@@ -935,6 +941,9 @@ class Lookup:
         embed.title = itemDict['name']
         embed.description = f"*{itemDict['type_and_rarity']}*\n{itemDict['weight_and_value']}{itemDict['damage_and_properties']}"
 
+        if 'reqAttune' in item:
+            embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune'].replace('YES', '')}")
+
         text = '\n'.join(a for a in item['text'] if a is not None and 'Rarity:' not in a and 'Source:' not in a)
         if len(text) > 5500:
             text = text[:5500] + "..."
@@ -943,6 +952,8 @@ class Lookup:
         for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
             embed.add_field(name=field_name, value=piece)
             field_name = "con't"
+
+        # embed.set_footer(text=f"Source: {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
 
         if pm:
             await self.bot.send_message(ctx.message.author, embed=embed)

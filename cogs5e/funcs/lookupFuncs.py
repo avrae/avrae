@@ -42,7 +42,8 @@ class Compendium:
         with open('./res/spells.json', 'r') as f:
             self.spells = json.load(f)
         with open('./res/items.json', 'r') as f:
-            self.items = json.load(f)
+            _items = json.load(f)
+            self.items = [i for i in _items if i.get('type') is not '$']
         with open('./res/auto_spells.json', 'r') as f:
             self.autospells = json.load(f)
         with open('./res/backgrounds.json', 'r') as f:

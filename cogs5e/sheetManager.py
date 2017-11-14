@@ -499,8 +499,7 @@ class SheetManager:
             if active_character is None:
                 return await self.bot.say('You have no character active.')
             return await self.bot.say(
-                'Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')),
-                delete_after=20)
+                'Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')))
 
         if name == 'list':
             return await self.bot.say('Your characters:\n{}'.format(

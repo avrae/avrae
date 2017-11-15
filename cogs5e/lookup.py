@@ -250,7 +250,7 @@ class Lookup:
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
-        desc = parse_data_entry(result['entries'])
+        desc = result['text']
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:

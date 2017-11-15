@@ -5,9 +5,12 @@ Created on Jan 13, 2017
 """
 import copy
 import json
+import logging
 
 from utils.functions import discord_trim, strict_search, fuzzywuzzy_search_all_3, get_selection, \
-    fuzzywuzzy_search_all_3_list
+    fuzzywuzzy_search_all_3_list, parse_data_entry
+
+log = logging.getLogger(__name__)
 
 
 class Compendium:
@@ -34,22 +37,43 @@ class Compendium:
             for _class in _raw:
                 for level in _class.get('classFeatures', []):
                     for feature in level:
-                        feature['name'] = f"{_class['name']}: {feature['name']}"
-                        self.cfeats.append(feature)
+                        fe = {'name': f"{_class['name']}: {feature['name']}",
+                              'text': parse_data_entry(feature['entries'])}
+                        self.cfeats.append(fe)
+                        options = [e for e in feature['entries'] if
+                                   isinstance(e, dict) and e['type'] == 'options']
+                        for option in options:
+                            for opt_entry in option.get('entries', []):
+                                fe = {'name': f"{_class['name']}: {feature['name']}: {_resolve_name(opt_entry)}",
+                                      'text': parse_data_entry(opt_entry['entries'])}
+                                self.cfeats.append(fe)
                 for subclass in _class.get('subclasses', []):
                     for level in subclass.get('subclassFeatures', []):
                         for feature in level:
+                            options = [f for f in feature.get('entries', []) if
+                                       isinstance(f, dict) and f['type'] == 'options'] # battlemaster only
+                            for option in options:
+                                for opt_entry in option.get('entries', []):
+                                    fe = {'name': f"{_class['name']}: {option['name']}: "
+                                                  f"{_resolve_name(opt_entry)}",
+                                          'text': parse_data_entry(opt_entry['entries'])}
+                                    self.cfeats.append(fe)
                             for entry in feature.get('entries', []):
                                 if not isinstance(entry, dict): continue
                                 if not entry.get('type') == 'entries': continue
-                                entry['name'] = f"{_class['name']}: {subclass['name']}: {entry['name']}"
-                                self.cfeats.append(entry)
-                                # options = [e for e in entry['entries'] if
-                                #            isinstance(e, dict) and e['type'] == 'options']
-                                # for option in options:
-                                #     for opt_entry in option.get('entries'):
-                                #         opt_entry['name'] = f"{entry['name']}: {opt_entry['name']}"
-                                #         self.cfeats.append(opt_entry)
+                                fe = {'name': f"{_class['name']}: {subclass['name']}: {entry['name']}",
+                                      'text': parse_data_entry(entry['entries'])}
+                                self.cfeats.append(fe)
+                                options = [e for e in entry['entries'] if
+                                           isinstance(e, dict) and e['type'] == 'options']
+                                for option in options:
+                                    for opt_entry in option.get('entries', []):
+                                        fe = {'name': f"{_class['name']}: {subclass['name']}: {entry['name']}: "
+                                                      f"{_resolve_name(opt_entry)}",
+                                              'text': parse_data_entry(opt_entry['entries'])}
+                                        self.cfeats.append(fe)
+        with open('test/output/classfeats.json', 'w') as f:
+            json.dump(self.cfeats, f, indent=2)
         with open('./res/bestiary.json', 'r') as f:
             self.monsters = json.load(f)
         with open('./res/spells.json', 'r') as f:
@@ -61,6 +85,18 @@ class Compendium:
             self.autospells = json.load(f)
         with open('./res/backgrounds.json', 'r') as f:
             self.backgrounds = json.load(f)
+
+
+def _resolve_name(entry):
+    """Resolves the next name of an astranauta entry.
+    :param entry (dict) - the entry.
+    :returns str - The next found name, or None."""
+    if 'entries' in entry and 'name' in entry['entries'][0]:
+        return _resolve_name(entry['entries'][0])
+    elif 'name' in entry:
+        return entry['name']
+    else:
+        log.warning(f"No name found for {entry}")
 
 
 c = Compendium()

@@ -14,7 +14,7 @@ from discord.ext import commands
 from cogs5e.funcs.lookupFuncs import *
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
-from utils.functions import get_positivity
+from utils.functions import get_positivity, parse_data_entry
 
 CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'spellsknown': "Spells Known",
@@ -235,7 +235,7 @@ class Lookup:
 
         result = searchClassFeat(name)
         if result is None:
-            return await self.bot.say('Condition not found.')
+            return await self.bot.say('Class feature not found.')
         strict = result[1]
         results = result[0]
 
@@ -248,12 +248,9 @@ class Lookup:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
-        if isinstance(result['text'], list):
-            result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None)
-
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
-        desc = result['text']
+        desc = parse_data_entry(result['entries'])
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:

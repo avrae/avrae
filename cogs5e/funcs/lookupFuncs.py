@@ -27,16 +27,29 @@ class Compendium:
                 for i, rfeat in enumerate(one_rfeats):
                     one_rfeats[i]['name'] = "{}: {}".format(race['name'], rfeat['name'])
                 self.rfeats += one_rfeats
-        with open('./res/classes.json', 'r') as f:
+        with open('./res/classes.json', 'r', encoding='utf-8-sig') as f:
             _raw = json.load(f)
             self.cfeats = []
             self.classes = copy.deepcopy(_raw)
             for _class in _raw:
-                one_clevels = [f for f in _class.get('autolevel', []) if 'feature' in f]
-                for i, clevel in enumerate(one_clevels):
-                    for cfeat in clevel.get('feature', []):
-                        cfeat['name'] = "{}: {}".format(_class['name'], cfeat['name'])
-                        self.cfeats.append(cfeat)
+                for level in _class.get('classFeatures', []):
+                    for feature in level:
+                        feature['name'] = f"{_class['name']}: {feature['name']}"
+                        self.cfeats.append(feature)
+                for subclass in _class.get('subclasses', []):
+                    for level in subclass.get('subclassFeatures', []):
+                        for feature in level:
+                            for entry in feature.get('entries', []):
+                                if not isinstance(entry, dict): continue
+                                if not entry.get('type') == 'entries': continue
+                                entry['name'] = f"{_class['name']}: {subclass['name']}: {entry['name']}"
+                                self.cfeats.append(entry)
+                                # options = [e for e in entry['entries'] if
+                                #            isinstance(e, dict) and e['type'] == 'options']
+                                # for option in options:
+                                #     for opt_entry in option.get('entries'):
+                                #         opt_entry['name'] = f"{entry['name']}: {opt_entry['name']}"
+                                #         self.cfeats.append(opt_entry)
         with open('./res/bestiary.json', 'r') as f:
             self.monsters = json.load(f)
         with open('./res/spells.json', 'r') as f:
@@ -52,64 +65,84 @@ class Compendium:
 
 c = Compendium()
 
+
 def searchCondition(condition):
     return fuzzywuzzy_search_all_3(c.conditions, 'name', condition)
+
 
 def getCondition(condition):
     return strict_search(c.conditions, 'name', condition)
 
+
 def searchRule(rule):
     return fuzzywuzzy_search_all_3(c.rules, 'name', rule)
+
 
 def getRule(rule):
     return strict_search(c.rules, 'name', rule)
 
+
 def searchFeat(name):
     return fuzzywuzzy_search_all_3(c.feats, 'name', name)
+
 
 def getFeat(feat):
     return strict_search(c.feats, 'name', feat)
 
+
 def searchRacialFeat(name):
     return fuzzywuzzy_search_all_3(c.rfeats, 'name', name)
+
 
 def getRacialFeat(feat):
     return strict_search(c.rfeats, 'name', feat)
 
+
 def searchRace(name):
     return fuzzywuzzy_search_all_3(c.races, 'name', name)
+
 
 def getRace(name):
     return strict_search(c.races, 'name', name)
 
+
 def searchClassFeat(name):
     return fuzzywuzzy_search_all_3(c.cfeats, 'name', name)
+
 
 def getClassFeat(feat):
     return strict_search(c.cfeats, 'name', feat)
 
+
 def searchClass(name):
     return fuzzywuzzy_search_all_3(c.classes, 'name', name)
+
 
 def getClass(name):
     return strict_search(c.classes, 'name', name)
 
+
 def searchBackground(name):
     return fuzzywuzzy_search_all_3(c.backgrounds, 'name', name)
 
+
 def getBackground(name):
     return strict_search(c.backgrounds, 'name', name)
+
 
 # ----- Monster stuff
 
 def old_searchMonster(name):
     return fuzzywuzzy_search_all_3(c.monsters, 'name', name, return_key=True)
 
+
 def searchMonster(name):
     return fuzzywuzzy_search_all_3(c.monsters, 'name', name)
 
+
 def getMonster(name):
     return strict_search(c.monsters, 'name', name)
+
 
 async def searchMonsterFull(name, ctx, pm=False):
     result = old_searchMonster(name)
@@ -131,6 +164,7 @@ async def searchMonsterFull(name, ctx, pm=False):
     result = old_getMonster(result, visible=True, return_monster=True)
     return result
 
+
 def old_getMonster(monstername, visible=True, return_monster=False):
     monsterDesc = []
     monster = strict_search(c.monsters, 'name', monstername)
@@ -144,8 +178,10 @@ def old_getMonster(monstername, visible=True, return_monster=False):
     else:
         return discord_trim('deprecated')
 
+
 def searchSpell(name):
     return fuzzywuzzy_search_all_3(c.spells, 'name', name, return_key=True)
+
 
 async def searchSpellNameFull(name, ctx):
     result = searchSpell(name)
@@ -167,6 +203,7 @@ async def searchSpellNameFull(name, ctx):
                 return None
     return result
 
+
 async def searchCharacterSpellName(name, ctx, char):
     result = fuzzywuzzy_search_all_3_list(char.get_spell_list(), name)
     if result is None:
@@ -187,8 +224,10 @@ async def searchCharacterSpellName(name, ctx, char):
                 return None
     return result
 
+
 def searchAutoSpell(name):
     return fuzzywuzzy_search_all_3(c.autospells, 'name', name)
+
 
 async def searchAutoSpellFull(name, ctx):
     result = searchAutoSpell(name)
@@ -210,17 +249,14 @@ async def searchAutoSpellFull(name, ctx):
                 return None
     return result
 
+
 def getSpell(spellname):
     return strict_search(c.spells, 'name', spellname)
+
 
 def searchItem(name):
     return fuzzywuzzy_search_all_3(c.items, 'name', name)
 
+
 def getItem(itemname):
     return strict_search(c.items, 'name', itemname)
-
-
-
-
-
-

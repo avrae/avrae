@@ -54,7 +54,7 @@ class GameTrack:
 
     @game.command(pass_context=True, name='spellbook', aliases=['sb'])
     async def game_spellbook(self, ctx):
-        """Displays your character's known spells and spell metdata."""
+        """Displays your character's known spells and spell metadata."""
         character = Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.description = f"{character.get_name()} knows {len(character.get_spell_list())} spells."

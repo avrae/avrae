@@ -45,7 +45,7 @@ class Compendium:
                         for option in options:
                             for opt_entry in option.get('entries', []):
                                 fe = {'name': f"{_class['name']}: {feature['name']}: {_resolve_name(opt_entry)}",
-                                      'text': parse_data_entry(opt_entry['entries'])}
+                                      'text': f"{_parse_prereqs(opt_entry)}{parse_data_entry(opt_entry['entries'])}"}
                                 self.cfeats.append(fe)
                 for subclass in _class.get('subclasses', []):
                     for level in subclass.get('subclassFeatures', []):
@@ -72,8 +72,6 @@ class Compendium:
                                                       f"{_resolve_name(opt_entry)}",
                                               'text': parse_data_entry(opt_entry['entries'])}
                                         self.cfeats.append(fe)
-        with open('test/output/classfeats.json', 'w') as f:
-            json.dump(self.cfeats, f, indent=2)
         with open('./res/bestiary.json', 'r') as f:
             self.monsters = json.load(f)
         with open('./res/spells.json', 'r') as f:
@@ -97,6 +95,12 @@ def _resolve_name(entry):
         return entry['name']
     else:
         log.warning(f"No name found for {entry}")
+
+def _parse_prereqs(entry):
+    if 'prerequisite' in entry:
+        return f"*Prerequisite: {entry['prerequisite']}*\n"
+    else:
+        return ''
 
 
 c = Compendium()

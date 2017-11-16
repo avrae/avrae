@@ -412,6 +412,8 @@ def gen_error_message():
     thing_to_do = random.choice(['stopped', 'killed', 'talked to', 'found', 'destroyed', 'fought'])
     return f"{subject} {verb} {thing_to_do}"
 
+ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
+               'int': 'Intelligence', 'wis': 'Wisdom', 'cha': 'Charisma'}
 
 def parse_data_entry(text):
     """Parses a list or string from astranauta data.
@@ -431,14 +433,25 @@ def parse_data_entry(text):
                 out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
                     entry['entries']))  # oh gods here we goooooooo
             elif entry['type'] == 'options':
-                # out.append(parse_data_entry(entry['entries'])) # moar.
-                pass # also no.
+                pass # parsed separately in classfeat
             elif entry['type'] == 'list':
                 out.append('\n'.join(f"- {t}" for t in entry['items']))
             elif entry['type'] == 'table':
-                pass # TODO
+                temp = f"**{entry['caption']}**\n" if 'caption' in entry else ''
+                temp += ' - '.join(f"**{cl}**" for cl in entry['colLabels']) + '\n'
+                for row in entry['rows']:
+                    temp += ' - '.join(f"{col}" for col in row) + '\n'
+                out.append(temp.strip())
             elif entry['type'] == 'invocation':
-                pass # no.
+                pass # this is only found in options
+            elif entry['type'] == 'abilityAttackMod':
+                out.append(f"`{entry['name']} Attack Bonus = "
+                           f"{' or '.join(ABILITY_MAP.get(a) for a in entry['attributes'])}"
+                           f" modifier + Proficiency Bonus`")
+            elif entry['type'] == 'abilityDc':
+                out.append(f"`{entry['name']} Save DC = 8 + "
+                           f"{' or '.join(ABILITY_MAP.get(a) for a in entry['attributes'])}"
+                           f" modifier + Proficiency Bonus`")
             else:
                 log.warning(f"Missing astranauta entry type parse: {entry}")
 

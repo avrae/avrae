@@ -326,38 +326,19 @@ class Lookup:
         else:
             embed.title = f"{result['name']}, Level {level}"
 
-            level_features = []
             level_resources = {}
-            level_features_objs = [f for f in result['autolevel'] if f['_level'] == str(level)]
-            for obj in level_features_objs:
-                for f in obj.get('feature', []):
-                    if not f.get('_optional') and not (f['name'] in ("Starting Proficiencies", "Starting Equipment")):
-                        level_features.append(f)
-                if not 'feature' in obj:
-                    for k, v in obj.items():
-                        if not k.startswith('_'):
-                            level_resources[k] = v
+            level_features = result['classFeatures'][level - 1]
 
-            for res, val in level_resources.items():
-                value = val
-                if res == 'slots':
-                    if isinstance(val, dict):  # EK/AT/Art
-                        continue
-                    if result['name'] == 'Warlock':  # Warlock
-                        res = 'Cantrips Known'
-                        value = val.split(',')[0]
-                    else:
-                        slots = val.split(',')
-                        value = f"`Cantrips` - {slots[0]}"
-                        for i, l in enumerate(slots[1:]):
-                            value += f"`; L{i+1}` - {l}"
-                if res == 'spellsknown' and isinstance(level_resources.get('slots'), dict):  # EK/AT/Art
-                    continue
+            for table in result['classTableGroups']:
+                relevant_row = table['rows'][level - 1]
+                for i, col in enumerate(relevant_row):
+                    level_resources[table['colLabels'][i]] = parse_data_entry([col])
 
-                embed.add_field(name=CLASS_RESOURCE_MAP.get(res, res), value=value)
+            for res_name, res_value in level_resources.items():
+                embed.add_field(name=res_name, value=res_value)
 
             for f in level_features:
-                text = '\n'.join(t for t in f['text'] if t)
+                text = parse_data_entry(f['entries'])
                 embed.add_field(name=f['name'], value=(text[:1019] + "...") if len(text) > 1023 else text)
 
             embed.set_footer(text="Use !classfeat to look up a feature if it is cut off.")

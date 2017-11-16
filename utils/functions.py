@@ -418,13 +418,13 @@ ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
 def parse_data_entry(text):
     """Parses a list or string from astranauta data.
     :returns str - The final text."""
-    if isinstance(text, str): return text
+    if not isinstance(text, list): return str(text)
 
     out = []
 
     for entry in text:
-        if isinstance(entry, str):
-            out.append(entry)
+        if not isinstance(entry, dict):
+            out.append(str(entry))
         elif isinstance(entry, dict):
             if not 'type' in entry:
                 log.warning(f"Unknown astranauta entry type: {entry}")
@@ -452,6 +452,12 @@ def parse_data_entry(text):
                 out.append(f"`{entry['name']} Save DC = 8 + "
                            f"{' or '.join(ABILITY_MAP.get(a) for a in entry['attributes'])}"
                            f" modifier + Proficiency Bonus`")
+            elif entry['type'] == 'bonus':
+                out.append("{:+}".format(entry['value']))
+            elif entry['type'] == 'dice':
+                out.append(f"{entry['number']}d{entry['faces']}")
+            elif entry['type'] == 'bonusSpeed':
+                out.append(f"{entry['value']} feet")
             else:
                 log.warning(f"Missing astranauta entry type parse: {entry}")
 

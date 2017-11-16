@@ -14,7 +14,7 @@ from discord.ext import commands
 from cogs5e.funcs.lookupFuncs import *
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
-from utils.functions import get_positivity, parse_data_entry
+from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP
 
 CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'spellsknown': "Spells Known",
@@ -289,26 +289,29 @@ class Lookup:
         embed = EmbedWithAuthor(ctx)
         if level is None:
             embed.title = result['name']
-            embed.add_field(name="Hit Die", value=f"1d{result['hd']}")
-            embed.add_field(name="Saving Throws", value=result['proficiency'])
+            embed.add_field(name="Hit Die", value=f"1d{result['hd']['faces']}")
+            embed.add_field(name="Saving Throws", value=', '.join(ABILITY_MAP.get(p) for p in result['proficiency']))
 
             levels = []
-            starting_profs = "None"
-            starting_items = "None"
+            starting_profs = f"You are proficient with the following items, " \
+                             f"in addition to any proficiencies provided by your race or background.\n" \
+                             f"Armor: {', '.join(result['startingProficiencies'].get('armor', ['None']))}\n" \
+                             f"Weapons: {', '.join(result['startingProficiencies'].get('weapons', ['None']))}\n" \
+                             f"Tools: {', '.join(result['startingProficiencies'].get('tools', ['None']))}\n" \
+                             f"Skills: Choose {result['startingProficiencies']['skills']['choose']} from " \
+                             f"{', '.join(result['startingProficiencies']['skills']['from'])}"
+
+            equip_choices = '\n'.join(f"• {i}" for i in result['startingEquipment']['default'])
+            gold_alt = f"Alternatively, you may start with {result['startingEquipment']['goldAlternative']} gp " \
+                       f"to buy your own equipment." if 'goldAlternative' in result['startingEquipment'] else ''
+            starting_items = f"You start with the following items, plus anything provided by your background.\n" \
+                             f"{equip_choices}\n" \
+                             f"{gold_alt}"
             for level in range(1, 21):
                 level_str = []
-                level_features = [f for f in result['autolevel'] if f['_level'] == str(level)]
+                level_features = result['classFeatures'][level - 1]
                 for feature in level_features:
-                    for f in feature.get('feature', []):
-                        if not f.get('_optional') and not (
-                                    f['name'] in ("Starting Proficiencies", "Starting Equipment")):
-                            level_str.append(f['name'])
-                        elif f['name'] == "Starting Proficiencies":
-                            starting_profs = '\n'.join(t for t in f['text'] if t)
-                        elif f['name'] == "Starting Equipment":
-                            starting_items = '\n'.join(t for t in f['text'] if t)
-                    if not 'feature' in feature:
-                        pass
+                    level_str.append(feature.get('name'))
                 levels.append(', '.join(level_str))
 
             embed.add_field(name="Starting Proficiencies", value=starting_profs)

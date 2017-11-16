@@ -14,7 +14,7 @@ from discord.ext import commands
 from cogs5e.funcs.lookupFuncs import *
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
-from utils.functions import get_positivity
+from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP
 
 CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'spellsknown': "Spells Known",
@@ -235,7 +235,7 @@ class Lookup:
 
         result = searchClassFeat(name)
         if result is None:
-            return await self.bot.say('Condition not found.')
+            return await self.bot.say('Class feature not found.')
         strict = result[1]
         results = result[0]
 
@@ -247,9 +247,6 @@ class Lookup:
             else:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
-
-        if isinstance(result['text'], list):
-            result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -292,26 +289,29 @@ class Lookup:
         embed = EmbedWithAuthor(ctx)
         if level is None:
             embed.title = result['name']
-            embed.add_field(name="Hit Die", value=f"1d{result['hd']}")
-            embed.add_field(name="Saving Throws", value=result['proficiency'])
+            embed.add_field(name="Hit Die", value=f"1d{result['hd']['faces']}")
+            embed.add_field(name="Saving Throws", value=', '.join(ABILITY_MAP.get(p) for p in result['proficiency']))
 
             levels = []
-            starting_profs = "None"
-            starting_items = "None"
+            starting_profs = f"You are proficient with the following items, " \
+                             f"in addition to any proficiencies provided by your race or background.\n" \
+                             f"Armor: {', '.join(result['startingProficiencies'].get('armor', ['None']))}\n" \
+                             f"Weapons: {', '.join(result['startingProficiencies'].get('weapons', ['None']))}\n" \
+                             f"Tools: {', '.join(result['startingProficiencies'].get('tools', ['None']))}\n" \
+                             f"Skills: Choose {result['startingProficiencies']['skills']['choose']} from " \
+                             f"{', '.join(result['startingProficiencies']['skills']['from'])}"
+
+            equip_choices = '\n'.join(f"• {i}" for i in result['startingEquipment']['default'])
+            gold_alt = f"Alternatively, you may start with {result['startingEquipment']['goldAlternative']} gp " \
+                       f"to buy your own equipment." if 'goldAlternative' in result['startingEquipment'] else ''
+            starting_items = f"You start with the following items, plus anything provided by your background.\n" \
+                             f"{equip_choices}\n" \
+                             f"{gold_alt}"
             for level in range(1, 21):
                 level_str = []
-                level_features = [f for f in result['autolevel'] if f['_level'] == str(level)]
+                level_features = result['classFeatures'][level - 1]
                 for feature in level_features:
-                    for f in feature.get('feature', []):
-                        if not f.get('_optional') and not (
-                                    f['name'] in ("Starting Proficiencies", "Starting Equipment")):
-                            level_str.append(f['name'])
-                        elif f['name'] == "Starting Proficiencies":
-                            starting_profs = '\n'.join(t for t in f['text'] if t)
-                        elif f['name'] == "Starting Equipment":
-                            starting_items = '\n'.join(t for t in f['text'] if t)
-                    if not 'feature' in feature:
-                        pass
+                    level_str.append(feature.get('name'))
                 levels.append(', '.join(level_str))
 
             embed.add_field(name="Starting Proficiencies", value=starting_profs)
@@ -326,38 +326,19 @@ class Lookup:
         else:
             embed.title = f"{result['name']}, Level {level}"
 
-            level_features = []
             level_resources = {}
-            level_features_objs = [f for f in result['autolevel'] if f['_level'] == str(level)]
-            for obj in level_features_objs:
-                for f in obj.get('feature', []):
-                    if not f.get('_optional') and not (f['name'] in ("Starting Proficiencies", "Starting Equipment")):
-                        level_features.append(f)
-                if not 'feature' in obj:
-                    for k, v in obj.items():
-                        if not k.startswith('_'):
-                            level_resources[k] = v
+            level_features = result['classFeatures'][level - 1]
 
-            for res, val in level_resources.items():
-                value = val
-                if res == 'slots':
-                    if isinstance(val, dict):  # EK/AT/Art
-                        continue
-                    if result['name'] == 'Warlock':  # Warlock
-                        res = 'Cantrips Known'
-                        value = val.split(',')[0]
-                    else:
-                        slots = val.split(',')
-                        value = f"`Cantrips` - {slots[0]}"
-                        for i, l in enumerate(slots[1:]):
-                            value += f"`; L{i+1}` - {l}"
-                if res == 'spellsknown' and isinstance(level_resources.get('slots'), dict):  # EK/AT/Art
-                    continue
+            for table in result['classTableGroups']:
+                relevant_row = table['rows'][level - 1]
+                for i, col in enumerate(relevant_row):
+                    level_resources[table['colLabels'][i]] = parse_data_entry([col])
 
-                embed.add_field(name=CLASS_RESOURCE_MAP.get(res, res), value=value)
+            for res_name, res_value in level_resources.items():
+                embed.add_field(name=res_name, value=res_value)
 
             for f in level_features:
-                text = '\n'.join(t for t in f['text'] if t)
+                text = parse_data_entry(f['entries'])
                 embed.add_field(name=f['name'], value=(text[:1019] + "...") if len(text) > 1023 else text)
 
             embed.set_footer(text="Use !classfeat to look up a feature if it is cut off.")

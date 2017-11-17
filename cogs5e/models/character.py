@@ -205,6 +205,7 @@ class Character:  # TODO: refactor old commands to use this
 
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
+        _funcs['vroll'] = verbose_roll
         _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
@@ -682,3 +683,18 @@ class Character:  # TODO: refactor old commands to use this
 # helper methods
 def simple_roll(rollStr):
     return roll(rollStr).total
+
+class SimpleRollResult:
+
+    def __init__(self, dice, total, full):
+        self.dice = dice.strip()
+        self.total = total
+        self.full = full.strip()
+
+    def __str__(self):
+        return self.full
+
+def verbose_roll(rollStr):
+    rolled = roll(rollStr, inline=True)
+    return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton)
+

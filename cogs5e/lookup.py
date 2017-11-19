@@ -133,7 +133,10 @@ class Lookup:
                     prereq = ' or '.join(
                         f"{r['name']}" + (f" ({r['subrace']})" if 'subrace' in r else '') for r in entry['race'])
                 if 'ability' in entry:
-                    prereq = ' or '.join(f"{ABILITY_MAP.get(a)} {s}" for a, s in (e.items() for e in entry['ability']))
+                    abilities = []
+                    for ab in entry['ability']:
+                        abilities.extend(f"{ABILITY_MAP.get(a)} {s}" for a, s in ab.items())
+                    prereq = ' or '.join(abilities)
                 if 'spellcasting' in entry:
                     prereq = "The ability to cast at least one spell"
                 if 'proficiency' in entry:

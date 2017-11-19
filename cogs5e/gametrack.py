@@ -270,6 +270,10 @@ class GameTrack:
                 resultEmbed.description += f"\n({abs(newValue - actualValue)} overflow)"
         except CounterOutOfBounds:
             resultEmbed.description = f"Could not modify counter: new value out of bounds"
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
         await self.bot.say(embed=resultEmbed)
 
     @customcounter.command(pass_context=True, name='create')

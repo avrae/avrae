@@ -124,16 +124,26 @@ class Lookup:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
-        if isinstance(result['text'], list):
-            result['text'] = '\n'.join(
-                t for t in result.get('text', []) if t is not None and not t.startswith('Source:'))
-        result['prerequisite'] = result.get('prerequisite') or "None"
+        text = parse_data_entry(result['entries'])
+        prereq = "None"
+
+        if 'prerequisite' in result:
+            for entry in result['prerequisite']:
+                if 'race' in entry:
+                    prereq = ' or '.join(
+                        f"{r['name']}" + (f" ({r['subrace']})" if 'subrace' in r else '') for r in entry['race'])
+                if 'ability' in entry:
+                    prereq = ' or '.join(f"{ABILITY_MAP.get(a)} {s}" for a, s in (e.items() for e in entry['ability']))
+                if 'spellcasting' in entry:
+                    prereq = "The ability to cast at least one spell"
+                if 'proficiency' in entry:
+                    prereq = f"Proficiency with {entry['proficiency'][0]['armor']} armor"
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
-        embed.add_field(name="Prerequisite", value=result['prerequisite'])
+        embed.add_field(name="Prerequisite", value=prereq)
         embed.add_field(name="Source", value=result['source'])
-        for piece in [result['text'][i:i + 1024] for i in range(0, len(result['text']), 1024)]:
+        for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
             embed.add_field(name="Description", value=piece)
         await self.bot.send_message(destination, embed=embed)
 

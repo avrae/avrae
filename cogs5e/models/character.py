@@ -206,13 +206,21 @@ class Character:  # TODO: refactor old commands to use this
         def mod_hp(val: int):
             return set_hp(self.get_current_hp() + val)
 
+        def set_cvar(name, val: str):
+            self.set_cvar(name, val)
+            _names[name] = str(val)
+            nonlocal changed
+            changed = True
+            return ''
+
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
         _funcs['vroll'] = verbose_roll
         _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
-                      get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp)
+                      get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
+                      set_cvar=set_cvar)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(cvars)
@@ -308,6 +316,12 @@ class Character:  # TODO: refactor old commands to use this
             temp = substr.strip()
             out += str(stat_vars.get(temp, temp)) + " "
         return roll(out).total
+
+    def set_cvar(self, name, val: str):
+        """Sets a cvar to a string value."""
+        self.character['cvars'] = self.character.get('cvars', {})  # set value
+        self.character['cvars'][name] = str(val)
+        return self
 
     def commit(self, ctx):
         """Writes a character object to the database, under the contextual author. Returns self."""

@@ -426,10 +426,12 @@ def parse_data_entry(text):
         if not isinstance(entry, dict):
             out.append(str(entry))
         elif isinstance(entry, dict):
-            if not 'type' in entry:
+            if not 'type' in entry and not 'title' in entry:
                 log.warning(f"Unknown astranauta entry type: {entry}")
 
-            if entry['type'] == 'entries':
+            if not 'type' in entry and 'title' in entry:
+                out.append(f"**{entry['title']}**: {parse_data_entry(entry['text'])}")
+            elif entry['type'] == 'entries':
                 out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
                     entry['entries']))  # oh gods here we goooooooo
             elif entry['type'] == 'options':

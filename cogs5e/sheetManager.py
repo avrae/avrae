@@ -887,28 +887,20 @@ class SheetManager:
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
         See http://avrae.io/cheatsheets/aliasing for more help.
         Dicecloud `statMod` and `stat` variables are also available."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
+        character = Character.from_ctx(ctx)
 
         if value is None:  # display value
-            cvar = character.get('cvars', {}).get(name)
+            cvar = character.get_cvar(name)
             if cvar is None: cvar = 'Not defined.'
             return await self.bot.say('**' + name + '**:\n' + cvar)
 
         try:
-            assert not name in character.get('stat_cvars', {})
-            assert not '/' in name
+            assert not name in character.get_stat_vars()
+            assert not any(c in name for c in '/()[]\\.^$*+?|{}')
         except AssertionError:
             return await self.bot.say("Could not create cvar: already builtin, or contains invalid character!")
 
-        character['cvars'] = character.get('cvars', {})  # set value
-        character['cvars'][name] = value
-
-        user_characters[active_character] = character  # commit
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        character.set_cvar(name, value).commit(ctx)
         await self.bot.say('Variable `{}` set to: `{}`'.format(name, value))
 
     @cvar.command(pass_context=True, name='remove', aliases=['delete'])

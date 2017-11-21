@@ -317,11 +317,19 @@ class Character:  # TODO: refactor old commands to use this
             out += str(stat_vars.get(temp, temp)) + " "
         return roll(out).total
 
+    def get_cvar(self, name):
+        return self.character.get('cvars', {}).get(name)
+
     def set_cvar(self, name, val: str):
         """Sets a cvar to a string value."""
+        if any(c in name for c in '/()[]\\.^$*+?|{}'):
+            raise InvalidArgument("Cvar contains invalid character.")
         self.character['cvars'] = self.character.get('cvars', {})  # set value
         self.character['cvars'][name] = str(val)
         return self
+
+    def get_stat_vars(self):
+        return self.character.get('stat_cvars', {})
 
     def commit(self, ctx):
         """Writes a character object to the database, under the contextual author. Returns self."""

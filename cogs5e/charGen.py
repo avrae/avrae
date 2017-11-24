@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+import textwrap
 from string import capwords
 
 from MeteorClient import MeteorClient
@@ -312,6 +313,7 @@ class CharGenerator:
         num_subclass_features = 0
         num_fields = 0
         char_count = 0
+
         def inc_fields(text):
             nonlocal num_fields
             nonlocal char_count
@@ -325,6 +327,7 @@ class CharGenerator:
                 embed_queue.append(EmbedWithAuthor(ctx))
                 num_fields = 0
                 char_count = 0
+
         for level in range(1, final_level + 1):
             level_features = _class['classFeatures'][level - 1]
             for f in level_features:
@@ -357,19 +360,25 @@ class CharGenerator:
 
         # Background Gen
         #    Inventory/Trait Gen
-        background = self.backgroundGen(ctx)
-        backgroundTraits = background[1]
-        background = background[0]
-        backgroundTraitStr = ''
-        for t in backgroundTraits:
-            backgroundTraitStr += "\n**{0}**: {1}".format(t['trait'], t['desc'].replace('<br>', '\n'))
-        backgroundTraitStr = "**Background Traits ({0}):** {1}".format(background, backgroundTraitStr)
-        result = self.discord_trim(backgroundTraitStr)
-        for r in result:
-            await self.bot.send_message(ctx.message.author, r)
+        background = random.choice(c.backgrounds)
+        embed = EmbedWithAuthor(ctx)
+        embed.title = background['name']
+        embed.description = f"*Source: {background.get('source', 'Unknown')}*"
 
-        out = "{6}\n{0}, {1} {2} {3}. {4} Background.\nStat Array: `{5}`\nI have PM'd you full character details.".format(
-            name, race, classVar, level, background, stats, ctx.message.author.mention)
+        ignored_fields = ['suggested characteristics', 'specialty',
+                          'harrowing event']
+        for trait in background['trait']:
+            if trait['name'].lower() in ignored_fields: continue
+            text = '\n'.join(t for t in trait['text'] if t)
+            text = [text[i:i + 1024] for i in range(0, len(text), 1024)]
+            embed.add_field(name=trait['name'], value=text[0])
+            for piece in text[1:]:
+                embed.add_field(name="con't", value=piece)
+        await self.bot.send_message(ctx.message.author, embed=embed)
+
+        out = "{6}\n{0}, {1} {7} {2} {3}. {4} Background.\nStat Array: `{5}`\nI have PM'd you full character details.".format(
+            name, race['name'], _class['name'], final_level, background['name'], stats, ctx.message.author.mention,
+            subclass['name'])
 
         await self.bot.edit_message(loadingMessage, out)
 

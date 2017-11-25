@@ -950,6 +950,7 @@ class SheetManager:
     @commands.command(pass_context=True)
     async def dicecloud(self, ctx, url: str, *, args=""):
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
+        Share your character with `avrae` on Dicecloud (edit perms) for live updates.
         __Valid Arguments__
         `-cc` - Will automatically create custom counters for class resources and features."""
         if 'dicecloud.com' in url:

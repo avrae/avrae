@@ -603,11 +603,11 @@ class GameTrack:
         if spell_ctx:
             embed.add_field(name='Effect', value=spell_ctx)
 
+        if not args.get('i'):
+            char.use_slot(cast_level)
         if cast_level > 0:
             embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
 
-        if not args.get('i'):
-            char.use_slot(cast_level)
         char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)
 
@@ -695,12 +695,12 @@ class GameTrack:
                     roll_results += "**Effect:** " + r
             out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
 
+        if not args.get('i'):
+            char.use_slot(cast_level)
         if cast_level > 0:
             out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"
 
         out = "Spell not supported by new cast, falling back to old cast.\n" + out
-        if not args.get('i'):
-            char.use_slot(cast_level)
         char.commit(ctx)  # make sure we save changes
         await self.bot.say(out)
         spell_cmd = self.bot.get_command('spell')

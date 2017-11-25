@@ -401,7 +401,7 @@ class Character:  # TODO: refactor old commands to use this
         def update_callback(error, data):
             if error:
                 log.warning(error)
-                if error.get('error') == 403: # character no longer shared
+                if error.get('error') == 403:  # character no longer shared
                     self.character['live'] = False
                     self._live = False
             else:
@@ -534,7 +534,7 @@ class Character:  # TODO: refactor old commands to use this
             self._sync_slots()
 
         return self
-    
+
     def _sync_slots(self):
         def update_callback(error, data):
             if error:
@@ -545,8 +545,12 @@ class Character:  # TODO: refactor old commands to use this
             else:
                 log.debug(data)
 
+        spell_dict = {}
+        for lvl in range(1, 10):
+            spell_dict[f'level{lvl}SpellSlots.adjustment'] = self.get_remaining_slots(lvl) - self.get_max_spellslots(
+                lvl)
         dicecloud_client.update('characters', {'_id': self.id[10:]},
-                                {'$set': {"hitPoints.adjustment": self.get_current_hp() - self.get_max_hp()}},
+                                {'$set': spell_dict},
                                 callback=update_callback)
 
     def use_slot(self, level: int):

@@ -458,10 +458,6 @@ class GameTrack:
             assert spell_name in char.get_spell_list()
         except AssertionError:
             can_cast = False
-        else:
-            # use a spell slot
-            if not args.get('i'):
-                char.use_slot(cast_level)
 
         if args.get('i'):
             can_cast = True
@@ -610,6 +606,8 @@ class GameTrack:
         if cast_level > 0:
             embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
 
+        if not args.get('i'):
+            char.use_slot(cast_level)
         char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)
 
@@ -652,10 +650,6 @@ class GameTrack:
             assert spell_name in char.get_spell_list()
         except AssertionError:
             can_cast = False
-        else:
-            # use a spell slot
-            if not args.get('i'):
-                char.use_slot(cast_level)
 
         if args.get('i'):
             can_cast = True
@@ -705,6 +699,8 @@ class GameTrack:
             out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"
 
         out = "Spell not supported by new cast, falling back to old cast.\n" + out
+        if not args.get('i'):
+            char.use_slot(cast_level)
         char.commit(ctx)  # make sure we save changes
         await self.bot.say(out)
         spell_cmd = self.bot.get_command('spell')

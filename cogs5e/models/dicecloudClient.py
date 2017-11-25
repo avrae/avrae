@@ -37,5 +37,5 @@ class DicecloudClient(MeteorClient):
         log.info(f"Logged in as {self.user_id}")
 
 
-dicecloud_client = DicecloudClient('ws://dicecloud.com/websocket', debug=True) # turn debug off later
+dicecloud_client = DicecloudClient('ws://dicecloud.com/websocket', debug=False) # turn debug off later
 dicecloud_client.initialize()

@@ -137,7 +137,7 @@ class GameTrack:
 
     @game.command(pass_context=True, name='hp')
     async def game_hp(self, ctx, operator='', *, hp=''):
-        """Modifies the HP of a the current active character.
+        """Modifies the HP of a the current active character. Synchronizes live with Dicecloud.
         If operator is not passed, assumes `mod`.
         Operators: `mod`, `set`."""
         character = Character.from_ctx(ctx)

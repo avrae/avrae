@@ -61,3 +61,12 @@ class SelectionCancelled(SelectionException):
     """Raised when get_selection() is cancelled or times out."""
     def __init__(self):
         super().__init__("Selection timed out or was cancelled.")
+
+class MeteorClientException(AvraeException):
+    """A base exception for exceptions relating to the Dicecloud Meteor client to stem from."""
+    pass
+
+class LoginFailure(MeteorClientException):
+    """Raised when a login fails."""
+    def __init__(self):
+        super().__init__("Failed to login.")

@@ -25,6 +25,7 @@ from math import *
 import simpleeval
 
 from cogs5e.funcs.dice import roll
+from cogs5e.models.dicecloudClient import dicecloud_client
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError, InvalidSpellLevel
 from utils.functions import get_selection
@@ -37,6 +38,7 @@ class Character:  # TODO: refactor old commands to use this
     def __init__(self, _dict, _id):
         self.character = _dict
         self.id = _id
+        self._live = self.character.get('live') and self.character.get('type') == 'dicecloud'
 
     @classmethod
     def from_ctx(cls, ctx):
@@ -390,7 +392,24 @@ class Character:  # TODO: refactor old commands to use this
 
         self.on_hp()
 
+        if self._live:
+            self._sync_hp()
+
         return self
+
+    def _sync_hp(self):
+        def update_callback(error, data):
+            if error:
+                log.warning(error)
+                if error.get('error') == 403:  # character no longer shared
+                    self.character['live'] = False
+                    self._live = False
+            else:
+                log.debug(data)
+
+        dicecloud_client.update('characters', {'_id': self.id[10:]},
+                                {'$set': {"hitPoints.adjustment": self.get_current_hp() - self.get_max_hp()}},
+                                callback=update_callback)
 
     def modify_hp(self, value):
         """Modifies the character's hit points. Returns the Character object."""
@@ -511,7 +530,28 @@ class Character:  # TODO: refactor old commands to use this
         self._initialize_spellslots()
         self.character['consumables']['spellslots'][str(level)]['value'] = int(value)
 
+        if self._live:
+            self._sync_slots()
+
         return self
+
+    def _sync_slots(self):
+        def update_callback(error, data):
+            if error:
+                log.warning(error)
+                if error.get('error') == 403:  # character no longer shared
+                    self.character['live'] = False
+                    self._live = False
+            else:
+                log.debug(data)
+
+        spell_dict = {}
+        for lvl in range(1, 10):
+            spell_dict[f'level{lvl}SpellSlots.adjustment'] = self.get_remaining_slots(lvl) - self.get_max_spellslots(
+                lvl)
+        dicecloud_client.update('characters', {'_id': self.id[10:]},
+                                {'$set': spell_dict},
+                                callback=update_callback)
 
     def use_slot(self, level: int):
         """Uses one spell slot of level level.
@@ -709,8 +749,8 @@ class Character:  # TODO: refactor old commands to use this
 def simple_roll(rollStr):
     return roll(rollStr).total
 
-class SimpleRollResult:
 
+class SimpleRollResult:
     def __init__(self, dice, total, full):
         self.dice = dice.strip()
         self.total = total
@@ -719,7 +759,7 @@ class SimpleRollResult:
     def __str__(self):
         return self.full
 
+
 def verbose_roll(rollStr):
     rolled = roll(rollStr, inline=True)
     return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton)
-

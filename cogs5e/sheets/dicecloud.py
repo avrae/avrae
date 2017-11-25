@@ -13,8 +13,9 @@ import discord
 import numexpr
 from DDPClient import DDPClient
 
-from cogs5e.sheets.sheetParser import SheetParser
 from cogs5e.funcs.lookupFuncs import c
+from cogs5e.models.dicecloudClient import dicecloud_client
+from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import strict_search
 
 log = logging.getLogger(__name__)
@@ -25,36 +26,40 @@ CLASS_RESOURCE_NAMES = {"expertiseDice": "Expertise Dice", "ki": "Ki", "rages": 
 CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long',
                          "sorceryPoints": 'long', "superiorityDice": 'short'}
 
+
 class DicecloudParser(SheetParser):
-    
     def __init__(self, url):
         self.url = url
         self.character = None
-    
+
     async def get_character(self):
         url = self.url
         character = {}
         client = DDPClient('ws://dicecloud.com/websocket', auto_reconnect=False)
         client.is_connected = False
         client.connect()
+
         def connected():
             client.is_connected = True
+
         client.on('connected', connected)
         while not client.is_connected:
             await asyncio.sleep(1)
         client.subscribe('singleCharacter', [url])
+
         def update_character(collection, _id, fields):
             if character.get(collection) is None:
                 character[collection] = []
             fields['id'] = _id
             character.get(collection).append(fields)
+
         client.on('added', update_character)
         await asyncio.sleep(10)
         client.close()
         character['id'] = url
         self.character = character
         return character
-            
+
     def get_sheet(self):
         """Returns a dict with character sheet data."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -63,7 +68,7 @@ class DicecloudParser(SheetParser):
             levels = self.get_levels()
             hp = self.calculate_stat('hitPoints')
             dexArmor = self.calculate_stat('dexterityArmor', base=stats['dexterityMod'])
-            armor = self.calculate_stat('armor', replacements={'dexterityArmor':dexArmor})
+            armor = self.calculate_stat('armor', replacements={'dexterityArmor': dexArmor})
             attacks = self.get_attacks()
             skills = self.get_skills()
             temp_resist = self.get_resistances()
@@ -74,24 +79,25 @@ class DicecloudParser(SheetParser):
             spellbook = self.get_spellbook()
         except:
             raise
-        
+
         saves = {}
         for key in skills:
             if 'Save' in key:
                 saves[key] = skills[key]
-        
+
         stat_vars = {}
         stat_vars.update(stats)
         stat_vars.update(levels)
         stat_vars['hp'] = int(hp)
         stat_vars['armor'] = int(armor)
         stat_vars.update(saves)
-        
+
         sheet = {'type': 'dicecloud',
-                 'version': 9, #v6: added stat cvars
-                               #v7: added check effects (adv/dis)
-                               #v8: consumables
-                               #v9: spellbook
+                 'version': 10,  # v6: added stat cvars
+                 # v7: added check effects (adv/dis)
+                 # v8: consumables
+                 # v9: spellbook
+                 # v10: live tracking
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -105,12 +111,13 @@ class DicecloudParser(SheetParser):
                  'stat_cvars': stat_vars,
                  'skill_effects': skill_effects,
                  'consumables': {},
-                 'spellbook': spellbook}
-                
+                 'spellbook': spellbook,
+                 'live': dicecloud_client.user_id in self.character['characters'][0]['writers']}
+
         embed = self.get_embed(sheet)
-        
+
         return {'embed': embed, 'sheet': sheet}
-    
+
     def get_embed(self, sheet):
         stats = sheet['stats']
         hp = sheet['hp']
@@ -119,9 +126,9 @@ class DicecloudParser(SheetParser):
         attacks = sheet['attacks']
         saves = sheet['saves']
         armor = sheet['armor']
-        resist= sheet['resist']
-        immune= sheet['immune']
-        vuln  = sheet['vuln']
+        resist = sheet['resist']
+        immune = sheet['immune']
+        vuln = sheet['vuln']
         skill_effects = sheet['skill_effects']
         resistStr = ''
         if len(resist) > 0:
@@ -163,9 +170,9 @@ class DicecloudParser(SheetParser):
                 skillsStr += '**{}**: {:+} {}\n'.format(cc_to_normal(skill), mod, skill_effect)
                 tempSkills[skill] = mod
         sheet['skills'] = tempSkills
-                
+
         embed.add_field(name="Skills", value=skillsStr.title())
-        
+
         tempAttacks = []
         for a in attacks:
             if a['attackBonus'] is not None:
@@ -175,7 +182,8 @@ class DicecloudParser(SheetParser):
                     bonus = a['attackBonus']
                 tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
                                                                               bonus,
-                                                                              a['damage'] if a['damage'] is not None else 'no'))
+                                                                              a['damage'] if a[
+                                                                                                 'damage'] is not None else 'no'))
             else:
                 tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                  a['damage'] if a['damage'] is not None else 'no'))
@@ -187,9 +195,9 @@ class DicecloudParser(SheetParser):
         if len(a) > 1023:
             a = "Too many attacks, values hidden!"
         embed.add_field(name="Attacks", value=a)
-        
+
         return embed
-        
+
     def get_stat(self, stat, base=0):
         """Returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -219,7 +227,7 @@ class DicecloudParser(SheetParser):
         if maxV is not None:
             out = min(out, maxV)
         return out
-    
+
     def get_stat_float(self, stat, base=0):
         """Returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -249,32 +257,33 @@ class DicecloudParser(SheetParser):
         if maxV is not None:
             out = min(out, maxV)
         return out
-        
+
     def get_stats(self):
         """Returns a dict of stats."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        stats = {"name":"", "image":"", "description":"",
-                 "strength":10, "dexterity":10, "constitution":10, "wisdom":10, "intelligence":10, "charisma":10,
-                 "strengthMod":0, "dexterityMod":0, "constitutionMod":0, "wisdomMod":0, "intelligenceMod":0, "charismaMod":0,
-                 "proficiencyBonus":0}
+        stats = {"name": "", "image": "", "description": "",
+                 "strength": 10, "dexterity": 10, "constitution": 10, "wisdom": 10, "intelligence": 10, "charisma": 10,
+                 "strengthMod": 0, "dexterityMod": 0, "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0,
+                 "charismaMod": 0,
+                 "proficiencyBonus": 0}
         stats['name'] = character.get('characters')[0].get('name')
         stats['description'] = character.get('characters')[0].get('description')
         stats['image'] = character.get('characters')[0].get('picture', '')
         profByLevel = floor(self.get_levels()['level'] / 4 + 1.75)
         stats['proficiencyBonus'] = profByLevel + self.get_stat('proficiencyBonus', base=0)
-        
+
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             stats[stat] = self.get_stat(stat)
             stats[stat + 'Mod'] = floor((int(stats[stat]) - 10) / 2)
-        
+
         return stats
-            
+
     def get_levels(self):
         """Returns a dict with the character's level and class levels."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        levels = {"level":0}
+        levels = {"level": 0}
         for level in character.get('classes', []):
             if level.get('removed', False): continue
             levels['level'] += level.get('level')
@@ -284,14 +293,14 @@ class DicecloudParser(SheetParser):
             else:
                 levels[levelName] += level.get('level')
         return levels
-            
-    def calculate_stat(self, stat, base=0, replacements:dict={}):
+
+    def calculate_stat(self, stat, base=0, replacements: dict = {}):
         """Calculates and returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
         replacements.update(self.get_stats())
         replacements.update(self.get_levels())
-        replacements = dict((k.lower(), v) for k,v in replacements.items())
+        replacements = dict((k.lower(), v) for k, v in replacements.items())
         effects = character.get('effects', [])
         add = 0
         mult = 1
@@ -329,7 +338,7 @@ class DicecloudParser(SheetParser):
         if maxV is not None:
             out = min(out, maxV)
         return out
-    
+
     def get_attack(self, atkIn):
         """Calculates and returns a dict."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -350,19 +359,21 @@ class DicecloudParser(SheetParser):
             else:
                 spellListParentID = spellObj.get('parent', {}).get('id')
                 try:
-                    spellListObj = next(s for s in self.character.get('spellLists', {}) if s.get('id') == spellListParentID)
+                    spellListObj = next(
+                        s for s in self.character.get('spellLists', {}) if s.get('id') == spellListParentID)
                 except StopIteration:
                     pass
                 else:
                     try:
-                        replacements['attackBonus'] = str(eval(spellListObj.get('attackBonus'), {"__builtins__": None}, safe_dict))
+                        replacements['attackBonus'] = str(
+                            eval(spellListObj.get('attackBonus'), {"__builtins__": None}, safe_dict))
                         replacements['DC'] = str(eval(spellListObj.get('saveDC'), {"__builtins__": None}, safe_dict))
                     except Exception as e:
                         log.debug(f"Exception parsing spellvars: {e}")
 
         safe_dict.update(replacements)
-        attack = {'attackBonus': '0', 'damage':'0', 'name': atkIn.get('name'), 'details': None}
-        
+        attack = {'attackBonus': '0', 'damage': '0', 'name': atkIn.get('name'), 'details': None}
+
         attackBonus = re.split('([-+*/^().<>= ])', atkIn.get('attackBonus', '').replace('{', '').replace('}', ''))
         attack['attackBonus'] = ''.join(str(replacements.get(word, word)) for word in attackBonus)
         if attack['attackBonus'] == '':
@@ -372,7 +383,7 @@ class DicecloudParser(SheetParser):
                 attack['attackBonus'] = str(eval(attack['attackBonus'], {"__builtins__": None}, safe_dict))
             except:
                 pass
-        
+
         def damage_sub(match):
             out = match.group(1)
             try:
@@ -381,7 +392,7 @@ class DicecloudParser(SheetParser):
             except Exception as ex:
                 log.debug(f"exception in damage_sub: {ex}")
                 return match.group(0)
-        
+
         damage = re.sub(r'{(.*)}', damage_sub, atkIn.get('damage', ''))
         damage = re.split('([-+*/^().<>= ])', damage.replace('{', '').replace('}', ''))
         attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage)
@@ -397,7 +408,7 @@ class DicecloudParser(SheetParser):
             attack['details'] = details
 
         return attack
-        
+
     def get_attacks(self):
         """Returns a list of dicts of all of the character's attacks."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -413,7 +424,7 @@ class DicecloudParser(SheetParser):
                     atkDict['name'] = atkDict['name'] + str(atkNum)
                 attacks.append(atkDict)
         return attacks
-            
+
     def get_skills(self):
         """Returns a dict of all the character's skills."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -439,16 +450,16 @@ class DicecloudParser(SheetParser):
         for prof in character.get('proficiencies', []):
             if prof.get('enabled', False) and not prof.get('removed', False):
                 profs[prof.get('name')] = prof.get('value') \
-                                          if prof.get('value') > profs.get(prof.get('name', 'None'), 0) \
-                                          else profs[prof.get('name')]
-            
+                    if prof.get('value') > profs.get(prof.get('name', 'None'), 0) \
+                    else profs[prof.get('name')]
+
         for skill in skills:
             skills[skill] = floor(skills[skill] + stats.get('proficiencyBonus') * profs.get(skill, 0))
             skills[skill] = int(self.calculate_stat(skill, base=skills[skill]))
-            
+
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             skills[stat] = stats.get(stat + 'Mod')
-        
+
         return skills
 
     def get_skill_effects(self):
@@ -484,7 +495,7 @@ class DicecloudParser(SheetParser):
             _effects[k] = ' '.join(v)
 
         return _effects
-        
+
     def get_resistances(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         out = {'resist': [], 'immune': [], 'vuln': []}
@@ -499,7 +510,7 @@ class DicecloudParser(SheetParser):
             elif mult > 1:
                 out['vuln'].append(dmgType)
         return out
-        
+
     def get_spellbook(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         spellbook = {'spellslots': {},
@@ -509,7 +520,6 @@ class DicecloudParser(SheetParser):
 
         spells = self.character.get('spells', [])
         spellnames = [s.get('name', '') for s in spells if not s.get('removed', False)]
-
 
         for lvl in range(1, 10):
             numSlots = self.calculate_stat(f"level{lvl}SpellSlots")
@@ -531,7 +541,7 @@ class DicecloudParser(SheetParser):
         safe_dict['min'] = min
         safe_dict.update(replacements)
 
-        sls = [(0, 0)] # ab, dc
+        sls = [(0, 0)]  # ab, dc
         for sl in self.character.get('spellLists', []):
             try:
                 ab = int(eval(sl.get('attackBonus'), {"__builtins__": None}, safe_dict))
@@ -546,7 +556,6 @@ class DicecloudParser(SheetParser):
         log.debug(f"Completed parsing spellbook: {spellbook}")
 
         return spellbook
-        
 
     def get_custom_counters(self):
         counters = []
@@ -569,4 +578,3 @@ class DicecloudParser(SheetParser):
                  'reset': reset}
             counters.append(c)
         return counters
-

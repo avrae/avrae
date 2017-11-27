@@ -16,7 +16,7 @@ from DDPClient import DDPClient
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import dicecloud_client
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import strict_search
+from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)
 
@@ -526,7 +526,7 @@ class DicecloudParser(SheetParser):
             spellbook['spellslots'][str(lvl)] = numSlots
 
         for spell in spellnames:
-            s = strict_search(c.spells, 'name', spell)
+            s = fuzzy_search(c.spells, 'name', spell)
             if s:
                 spellbook['spells'].append(s.get('name'))
 

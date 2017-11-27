@@ -28,6 +28,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.models.dicecloudClient import dicecloud_client
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError, InvalidSpellLevel
+from cogs5e.sheets.dicecloud import CLASS_RESOURCES
 from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
@@ -513,7 +514,7 @@ class Character:  # TODO: refactor old commands to use this
             out = "No spell slots."
         return out
 
-    def set_remaining_slots(self, level: int, value: int):
+    def set_remaining_slots(self, level: int, value: int, sync: bool = True):
         """Sets the character's remaining spell slots of level level.
         @:param level - The spell level.
         @:param value - The number of remaining spell slots.
@@ -530,7 +531,7 @@ class Character:  # TODO: refactor old commands to use this
         self._initialize_spellslots()
         self.character['consumables']['spellslots'][str(level)]['value'] = int(value)
 
-        if self._live:
+        if self._live and sync:
             self._sync_slots()
 
         return self
@@ -572,7 +573,9 @@ class Character:  # TODO: refactor old commands to use this
         """Resets all spellslots to their max value.
         @:returns self"""
         for level in range(1, 10):
-            self.set_remaining_slots(level, self.get_max_spellslots(level))
+            self.set_remaining_slots(level, self.get_max_spellslots(level), False)
+        self._sync_slots()
+        return self
 
     def _initialize_custom_counters(self):
         try:
@@ -591,6 +594,7 @@ class Character:  # TODO: refactor old commands to use this
         _min = kwargs.get('minValue')
         _reset = kwargs.get('reset')
         _type = kwargs.get('displayType')
+        _live_id = kwargs.get('live')
         try:
             assert _reset in ('short', 'long', 'none') or _reset is None
         except AssertionError:
@@ -608,6 +612,7 @@ class Character:  # TODO: refactor old commands to use this
         if _min is not None: newCounter['min'] = _min
         if _reset and _max is not None: newCounter['reset'] = _reset
         newCounter['type'] = _type
+        newCounter['live'] = _live_id
         log.debug(f"Creating new counter {newCounter}")
 
         self.character['consumables']['custom'][name] = newCounter
@@ -634,7 +639,32 @@ class Character:  # TODO: refactor old commands to use this
             raise CounterOutOfBounds()
         self.character['consumables']['custom'][name]['value'] = int(newValue)
 
+        if self.character['consumables']['custom'][name].get('live') and self._live:
+            used = _max - newValue
+            self._sync_consumable(self.character['consumables']['custom'][name], used)
+
         return self
+
+    def _sync_consumable(self, counter, used):
+        """Syncs a consumable's uses with dicecloud."""
+
+        def update_callback(error, data):
+            if error:
+                log.warning(error)
+                if error.get('error') == 403:  # character no longer shared
+                    self.character['live'] = False  # this'll be committed since we're modifying something to sync
+                    self._live = False
+            else:
+                log.debug(data)
+
+        if counter['live'] in CLASS_RESOURCES:
+            dicecloud_client.update('characters', {'_id': self.id[10:]},
+                                    {'$set': {f"{counter['live']}.adjustment": -used}},
+                                    callback=update_callback)
+        else:
+            dicecloud_client.update('features', {'_id': counter['live']},
+                                    {'$set': {"used": used}},
+                                    callback=update_callback)
 
     def get_consumable(self, name):
         """Returns the dict object of the consumable, or raises NoConsumable."""

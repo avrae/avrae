@@ -657,7 +657,7 @@ class SheetManager:
                 try:
                     c.create_consumable(counter['name'], maxValue=str(counter['max']),
                                         minValue=str(counter['min']),
-                                        reset=counter['reset'], displayType=displayType)
+                                        reset=counter['reset'], displayType=displayType, live=counter['live'])
                 except InvalidArgument:
                     pass
 
@@ -989,7 +989,7 @@ class SheetManager:
                 displayType = 'bubble' if c.evaluate_cvar(counter['max']) < 6 else None
                 try:
                     c.create_consumable(counter['name'], maxValue=str(counter['max']), minValue=str(counter['min']),
-                                        reset=counter['reset'], displayType=displayType)
+                                        reset=counter['reset'], displayType=displayType, live=counter['live'])
                 except InvalidArgument:
                     pass
 

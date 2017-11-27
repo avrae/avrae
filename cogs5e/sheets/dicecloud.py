@@ -563,7 +563,7 @@ class DicecloudParser(SheetParser):
             resValue = self.calculate_stat(res)
             if resValue > 0:
                 c = {'name': CLASS_RESOURCE_NAMES.get(res, 'Unknown'), 'max': resValue, 'min': 0,
-                     'reset': CLASS_RESOURCE_RESETS.get(res)}
+                     'reset': CLASS_RESOURCE_RESETS.get(res), 'live': res}
                 counters.append(c)
         for f in self.character.get('features', []):
             if not f.get('enabled'): continue
@@ -575,6 +575,6 @@ class DicecloudParser(SheetParser):
             elif 'long rest' in desc:
                 reset = 'long'
             c = {'name': f['name'], 'max': f['uses'], 'min': 0,
-                 'reset': reset}
+                 'reset': reset, 'live': f['id']}
             counters.append(c)
         return counters

@@ -142,10 +142,20 @@ class Lookup:
                 if 'proficiency' in entry:
                     prereq = f"Proficiency with {entry['proficiency'][0]['armor']} armor"
 
+        ability = None
+        if 'ability' in result:
+            if 'choose' in result['ability']:
+                ability = ' or '.join(ABILITY_MAP.get(a) for a in result['ability']['choose'][0]['from'])
+            else:
+                ability = ' or '.join(ABILITY_MAP.get(a) for a in result['ability'].keys())
+
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         embed.add_field(name="Prerequisite", value=prereq)
         embed.add_field(name="Source", value=result['source'])
+        if ability:
+            embed.add_field(name="Ability Improvement",
+                            value=f"Increase your {ability} score by 1, up to a maximum of 20.")
         for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
             embed.add_field(name="Description", value=piece)
         await self.bot.send_message(destination, embed=embed)

@@ -567,6 +567,7 @@ class DicecloudParser(SheetParser):
                 counters.append(c)
         for f in self.character.get('features', []):
             if not f.get('enabled'): continue
+            if f.get('removed'): continue
             if not 'uses' in f: continue
             reset = None
             desc = f.get('description', '').lower()

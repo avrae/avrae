@@ -22,7 +22,7 @@ from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import strict_search
+from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)
 
@@ -278,7 +278,7 @@ class PDFSheetParser(SheetParser):
         spellnames = set([self.character.get(f"Spells{n}") for n in range(1, 101) if self.character.get(f"Spells{n}")])
 
         for spell in spellnames:
-            s = strict_search(c.spells, 'name', spell)
+            s = fuzzy_search(c.spells, 'name', spell.strip())
             if s:
                 spellbook['spells'].append(s.get('name'))
 

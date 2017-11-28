@@ -526,7 +526,7 @@ class DicecloudParser(SheetParser):
             spellbook['spellslots'][str(lvl)] = numSlots
 
         for spell in spellnames:
-            s = fuzzy_search(c.spells, 'name', spell)
+            s = fuzzy_search(c.spells, 'name', spell.strip())
             if s:
                 spellbook['spells'].append(s.get('name'))
 

@@ -11,10 +11,10 @@ import re
 import discord
 
 from cogs5e.funcs.dice import get_roll_comment
+from cogs5e.funcs.lookupFuncs import c
 from cogs5e.sheets.errors import MissingAttribute
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import strict_search
-from cogs5e.funcs.lookupFuncs import c
+from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)
 
@@ -296,7 +296,7 @@ class GoogleSheet(SheetParser):
 
         for cell in potential_spells:
             if cell.value:
-                s = strict_search(c.spells, 'name', cell.value)
+                s = fuzzy_search(c.spells, 'name', cell.value.strip())
                 if s:
                     spells.add(s.get('name'))
 

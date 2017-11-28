@@ -52,9 +52,9 @@ class GameTrack:
             embed.add_field(name=name, value=val)
         await self.bot.say(embed=embed)
 
-    @game.command(pass_context=True, name='spellbook', aliases=['sb'])
+    @game.command(pass_context=True, name='spellbook', aliases=['sb'], hidden=True)
     async def game_spellbook(self, ctx):
-        """Displays your character's known spells and spell metadata."""
+        """**DEPRECATED** - use `!spellbook` instead."""
         character = Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.description = f"{character.get_name()} knows {len(character.get_spell_list())} spells."

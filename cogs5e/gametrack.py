@@ -14,12 +14,13 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName
+from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName, searchSpell
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
+from cogs5e.models.dicecloudClient import dicecloud_client
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
-from utils.functions import parse_args_3, strict_search
+from utils.functions import parse_args_3, strict_search, get_selection, dicecloud_parse
 
 log = logging.getLogger(__name__)
 
@@ -55,24 +56,7 @@ class GameTrack:
     @game.command(pass_context=True, name='spellbook', aliases=['sb'], hidden=True)
     async def game_spellbook(self, ctx):
         """**DEPRECATED** - use `!spellbook` instead."""
-        character = Character.from_ctx(ctx)
-        embed = EmbedWithCharacter(character)
-        embed.description = f"{character.get_name()} knows {len(character.get_spell_list())} spells."
-        embed.add_field(name="DC", value=str(character.get_save_dc()))
-        embed.add_field(name="Spell Attack Bonus", value=str(character.get_spell_ab()))
-        embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
-        spells_known = {}
-        for spell_name in character.get_spell_list():
-            spell = strict_search(c.spells, 'name', spell_name)
-            spells_known[spell['level']] = spells_known.get(spell['level'], []) + [spell_name]
-
-        level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
-                      '4': '4th Level', '5': '5th Level', '6': '6th Level',
-                      '7': '7th Level', '8': '8th Level', '9': '9th Level'}
-        for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
-            if spells:
-                embed.add_field(name=level_name.get(level, "Unknown Level"), value=', '.join(spells))
-        await self.bot.say(embed=embed)
+        await ctx.invoke(self.bot.get_command('spellbook'))
 
     @game.command(pass_context=True, name='spellslot', aliases=['ss'])
     async def game_spellslot(self, ctx, level: int = None, value: str = None):
@@ -218,6 +202,53 @@ class GameTrack:
             await self.bot.delete_message(ctx.message)
         except:
             pass
+
+    @commands.group(pass_context=True, invoke_without_command=True, name='spellbook', aliases=['sb'])
+    async def spellbook(self, ctx):
+        """Commands to display a character's known spells and metadata."""
+        character = Character.from_ctx(ctx)
+        embed = EmbedWithCharacter(character)
+        embed.description = f"{character.get_name()} knows {len(character.get_spell_list())} spells."
+        embed.add_field(name="DC", value=str(character.get_save_dc()))
+        embed.add_field(name="Spell Attack Bonus", value=str(character.get_spell_ab()))
+        embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
+        spells_known = {}
+        for spell_name in character.get_spell_list():
+            spell = strict_search(c.spells, 'name', spell_name)
+            spells_known[spell['level']] = spells_known.get(spell['level'], []) + [spell_name]
+
+        level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
+                      '4': '4th Level', '5': '5th Level', '6': '6th Level',
+                      '7': '7th Level', '8': '8th Level', '9': '9th Level'}
+        for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
+            if spells:
+                embed.add_field(name=level_name.get(level, "Unknown Level"), value=', '.join(spells))
+        await self.bot.say(embed=embed)
+
+    @spellbook.command(pass_context=True, name='add')
+    async def spellbook_add(self, ctx, *, spell_name):
+        """Adds a spell to the spellbook override. If character is live, will add to sheet as well."""
+        result = searchSpell(spell_name)
+        if result is None:
+            return await self.bot.say('Spell not found.')
+        strict = result[1]
+        results = result[0]
+
+        if strict:
+            result = results
+        else:
+            if len(results) == 1:
+                result = results[0]
+            else:
+                result = await get_selection(ctx, [(r, r) for r in results])
+                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        spell = getSpell(result)
+        character = Character.from_ctx(ctx)
+        if character.live:
+            await dicecloud_client.sync_add_spell(character, dicecloud_parse(spell))
+        character.add_known_spell(spell).commit(ctx)
+        live = "Spell added to Dicecloud!" if character.live else ''
+        await self.bot.say(f"{spell['name']} added to known spell list!\n{live}")
 
     @commands.group(pass_context=True, invoke_without_command=True, name='customcounter', aliases=['cc'])
     async def customcounter(self, ctx, name, modifier=None):

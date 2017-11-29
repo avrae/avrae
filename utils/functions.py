@@ -16,6 +16,7 @@ from cogs5e.models.errors import SelectionCancelled, NoSelectionElements
 
 log = logging.getLogger(__name__)
 
+
 def print_table(table):
     tableStr = ''
     col_width = [max(len(x) for x in col) for col in zip(*table)]
@@ -412,8 +413,10 @@ def gen_error_message():
     thing_to_do = random.choice(['stopped', 'killed', 'talked to', 'found', 'destroyed', 'fought'])
     return f"{subject} {verb} {thing_to_do}"
 
+
 ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
                'int': 'Intelligence', 'wis': 'Wisdom', 'cha': 'Charisma'}
+
 
 def parse_data_entry(text):
     """Parses a list or string from astranauta data.
@@ -435,7 +438,7 @@ def parse_data_entry(text):
                 out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
                     entry['entries']))  # oh gods here we goooooooo
             elif entry['type'] == 'options':
-                pass # parsed separately in classfeat
+                pass  # parsed separately in classfeat
             elif entry['type'] == 'list':
                 out.append('\n'.join(f"- {t}" for t in entry['items']))
             elif entry['type'] == 'table':
@@ -445,7 +448,7 @@ def parse_data_entry(text):
                     temp += ' - '.join(f"{col}" for col in row) + '\n'
                 out.append(temp.strip())
             elif entry['type'] == 'invocation':
-                pass # this is only found in options
+                pass  # this is only found in options
             elif entry['type'] == 'abilityAttackMod':
                 out.append(f"`{entry['name']} Attack Bonus = "
                            f"{' or '.join(ABILITY_MAP.get(a) for a in entry['attributes'])}"
@@ -467,3 +470,46 @@ def parse_data_entry(text):
             log.warning(f"Unknown astranauta entry: {entry}")
 
     return '\n'.join(out)
+
+
+def dicecloud_parse(spell):
+    """
+    :param spell: The spell to parse.
+    :return: (dict) A dictionary with all the keys necessary for dicecloud exporting.
+    """
+    mat = re.search(r'\(([^()]+)\)', spell['components'])
+    schools = {
+        "A": "Abjuration",
+        "EV": "Evocation",
+        "EN": "Enchantment",
+        "I": "Illusion",
+        "D": "Divination",
+        "N": "Necromancy",
+        "T": "Transmutation",
+        "C": "Conjuration"
+    }
+    spellDesc = []
+    if isinstance(spell['text'], list):
+        for a in spell["text"]:
+            if a is '': continue
+            spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
+                "This spell can be found in the Elemental Evil Player's Companion", ""))
+    else:
+        spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
+            "This spell can be found in the Elemental Evil Player's Companion", ""))
+
+    text = '\n  '.join(spellDesc)
+    return {
+        'name': spell['name'],
+        'description': text,
+        'castingTime': spell['time'],
+        'range': spell['range'],
+        'duration': spell['duration'],
+        'components.verbal': 'V' in spell['components'],
+        'components.somatic': 'S' in spell['components'],
+        'components.concentration': 'Concentration' in spell['duration'],
+        'components.material': mat.group(1) if mat else None,
+        'ritual': 'ritual' in spell,
+        'level': int(spell['level']),
+        'school': schools.get(spell.get('school', 'A'))
+    }

@@ -34,12 +34,11 @@ from utils.functions import get_selection
 log = logging.getLogger(__name__)
 
 
-class Character:  # TODO: refactor old commands to use this
-
+class Character:
     def __init__(self, _dict, _id):
         self.character = _dict
         self.id = _id
-        self._live = self.character.get('live') and self.character.get('type') == 'dicecloud'
+        self.live = self.character.get('live') and self.character.get('type') == 'dicecloud'
 
     @classmethod
     def from_ctx(cls, ctx):
@@ -393,7 +392,7 @@ class Character:  # TODO: refactor old commands to use this
 
         self.on_hp()
 
-        if self._live:
+        if self.live:
             self._sync_hp()
 
         return self
@@ -404,7 +403,7 @@ class Character:  # TODO: refactor old commands to use this
                 log.warning(error)
                 if error.get('error') == 403:  # character no longer shared
                     self.character['live'] = False
-                    self._live = False
+                    self.live = False
             else:
                 log.debug(data)
 
@@ -531,7 +530,7 @@ class Character:  # TODO: refactor old commands to use this
         self._initialize_spellslots()
         self.character['consumables']['spellslots'][str(level)]['value'] = int(value)
 
-        if self._live and sync:
+        if self.live and sync:
             self._sync_slots()
 
         return self
@@ -542,7 +541,7 @@ class Character:  # TODO: refactor old commands to use this
                 log.warning(error)
                 if error.get('error') == 403:  # character no longer shared
                     self.character['live'] = False
-                    self._live = False
+                    self.live = False
             else:
                 log.debug(data)
 
@@ -575,6 +574,40 @@ class Character:  # TODO: refactor old commands to use this
         for level in range(1, 10):
             self.set_remaining_slots(level, self.get_max_spellslots(level), False)
         self._sync_slots()
+        return self
+
+    def _initialize_spellbook(self):
+        """Sets up a character's spellbook override.
+        @:raises OutdatedSheet if sheet does not have spellbook."""
+        try:
+            assert self.character.get('spellbook') is not None
+        except AssertionError:
+            raise OutdatedSheet()
+
+    def _initialize_spell_overrides(self):
+        """Sets up a character's spell overrides."""
+        try:
+            assert self.character.get('overrides') is not None
+        except AssertionError:
+            self.character['overrides'] = {}
+        if not 'spells' in self.character['overrides']:
+            self.character['overrides']['spells'] = []
+
+    def add_known_spell(self, spell, sync=True):
+        """Adds a spell to the character's known spell list.
+        :param spell (dict) - the Spell dictionary.
+        :param sync (book) - Whether to try to push the change to Dicecloud.
+        :returns self"""
+        self._initialize_spellbook()
+        spells = set(self.character['spellbook']['spells'])
+        spells.add(spell['name'])
+        self.character['spellbook']['spells'] = list(spells)
+
+        if not self.live:
+            self._initialize_spell_overrides()
+            overrides = set(self.character['overrides']['spells'])
+            overrides.add(spell['name'])
+            self.character['overrides']['spells'] = list(overrides)
         return self
 
     def _initialize_custom_counters(self):
@@ -639,7 +672,7 @@ class Character:  # TODO: refactor old commands to use this
             raise CounterOutOfBounds()
         self.character['consumables']['custom'][name]['value'] = int(newValue)
 
-        if self.character['consumables']['custom'][name].get('live') and self._live:
+        if self.character['consumables']['custom'][name].get('live') and self.live:
             used = _max - newValue
             self._sync_consumable(self.character['consumables']['custom'][name], used)
 
@@ -653,7 +686,7 @@ class Character:  # TODO: refactor old commands to use this
                 log.warning(error)
                 if error.get('error') == 403:  # character no longer shared
                     self.character['live'] = False  # this'll be committed since we're modifying something to sync
-                    self._live = False
+                    self.live = False
             else:
                 log.debug(data)
 

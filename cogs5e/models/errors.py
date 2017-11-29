@@ -70,3 +70,8 @@ class LoginFailure(MeteorClientException):
     """Raised when a login fails."""
     def __init__(self):
         super().__init__("Failed to login.")
+
+class InsertFailure(MeteorClientException):
+    """Raised when an insertion fails."""
+    def __init__(self, error):
+        super().__init__(f"Failed to insert: {error}")

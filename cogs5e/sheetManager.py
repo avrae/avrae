@@ -648,6 +648,9 @@ class SheetManager:
         sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description",
                                                                                             "No description available.")
         sheet['stats']['image'] = overrides.get('image') or sheet.get('stats', {}).get('image', '')
+        spells = set(sheet['spellbook']['spells'])
+        spells.update(overrides.get('spells', []))
+        sheet['spellbook']['spells'] = list(spells)
 
         c = Character(sheet, url).initialize_consumables()
 

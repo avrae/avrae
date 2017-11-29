@@ -159,7 +159,7 @@ class SheetManager:
                 else:
                     tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                      a['damage'] if a['damage'] is not None else 'no'))
-            if tempAttacks == []:
+            if not tempAttacks:
                 tempAttacks = ['No attacks.']
             a = '\n'.join(tempAttacks)
             if len(a) > 2000:
@@ -178,7 +178,7 @@ class SheetManager:
 
         args = self.new_arg_stuff(args, ctx, char)
         args['name'] = char.get_name()
-        args['criton'] = char.get_setting('criton', 20)
+        args['criton'] = args.get('criton') or char.get_setting('criton', 20)
         args['hocrit'] = char.get_setting('hocrit', False)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:

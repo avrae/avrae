@@ -251,8 +251,9 @@ class GameTrack:
         await self.bot.say(f"{spell['name']} added to known spell list!\n{live}")
 
     @spellbook.command(pass_context=True, name='addall')
-    async def spellbook_addall(self, ctx, _class, level: int):
-        """Adds all spells of a given level from a given class list to the spellbook override. Requires live sheet."""
+    async def spellbook_addall(self, ctx, _class, level: int, spell_list=None):
+        """Adds all spells of a given level from a given class list to the spellbook override. Requires live sheet.
+        If `spell_list` is passed, will add these spells to the list named so in Dicecloud."""
         character = Character.from_ctx(ctx)
         if not character.live:
             return await self.bot.say("This command requires a live Dicecloud sheet. To set up, share your Dicecloud "
@@ -263,7 +264,7 @@ class GameTrack:
         if len(class_spells) == 0:
             return await self.bot.say("No spells for that class found.")
         level_spells = [s for s in class_spells if str(level) == s['level']]
-        await dicecloud_client.sync_add_mass_spells(character, [dicecloud_parse(s) for s in level_spells])
+        await dicecloud_client.sync_add_mass_spells(character, [dicecloud_parse(s) for s in level_spells], spell_list)
         await self.bot.say(f"{len(level_spells)} spells added to {character.get_name()}'s spell list on Dicecloud.")
 
     @spellbook.command(pass_context=True, name='remove')

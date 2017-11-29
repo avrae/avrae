@@ -37,9 +37,10 @@ class DicecloudClient(MeteorClient):
             time.sleep(0.1)
         log.info(f"Logged in as {self.user_id}")
 
-    async def _get_list_id(self, character):
+    async def _get_list_id(self, character, list_name=None):
         """
         :param character: (dict) the character to get the spell list ID of.
+        :param list_name: (str) The name of the spell list to look for. Returns default if not passed.
         :return: (str) The default list id.
         """
         list_id = None
@@ -47,7 +48,11 @@ class DicecloudClient(MeteorClient):
         def on_add(collection, _id, fields):
             nonlocal list_id
             if collection == 'spellLists' and fields['charId'] == character.id[10:] and not fields.get('removed'):
-                list_id = _id
+                if list_name:
+                    if fields.get('name').lower() == list_name.lower():
+                        list_id = _id
+                else:
+                    list_id = _id
 
         self.on('added', on_add)
         self.subscribe('singleCharacter', [character.id[10:]])
@@ -97,13 +102,14 @@ class DicecloudClient(MeteorClient):
         }
         self.insert('spells', spellData, insert_callback)
 
-    async def sync_add_mass_spells(self, character, spells):
+    async def sync_add_mass_spells(self, character, spells, spell_list=None):
         """
         :param character: (Character) The character to add spells for.
         :param spells: (list) The list of spells to add
+        :param spell_list: (str) The spell list name to search for in Dicecloud.
         """
         assert character.live
-        list_id = await self._get_list_id(character)
+        list_id = await self._get_list_id(character, spell_list)
         log.info(list_id)
         if not list_id:  # still
             raise InsertFailure("No spell lists on origin sheet.")

@@ -95,9 +95,49 @@ class DicecloudClient(MeteorClient):
             },
             'prepared': "prepared",
         }
-        print(spellData)
         self.insert('spells', spellData, insert_callback)
 
+    async def sync_add_mass_spells(self, character, spells):
+        """
+        :param character: (Character) The character to add spells for.
+        :param spells: (list) The list of spells to add
+        """
+        assert character.live
+        list_id = await self._get_list_id(character)
+        log.info(list_id)
+        if not list_id:  # still
+            raise InsertFailure("No spell lists on origin sheet.")
+        for spell in spells:
+            def insert_callback(error, data):
+                if error:
+                    log.warning(str(error))
+                else:
+                    log.debug(data)
 
-dicecloud_client = DicecloudClient('ws://dicecloud.com/websocket', debug=True)  # turn debug off later
+            spellData = {
+                'name': spell['name'],
+                'description': spell['description'],
+                'castingTime': spell['castingTime'],
+                'range': spell['range'],
+                'duration': spell['duration'],
+                'components': {
+                    'verbal': spell['components.verbal'],
+                    'somatic': spell['components.somatic'],
+                    'concentration': spell['components.concentration'],
+                    'material': spell['components.material']
+                },
+                'ritual': spell['ritual'],
+                'level': spell['level'],
+                'school': spell['school'],
+                'charId': character.id[10:],
+                'parent': {
+                    'id': list_id,
+                    'collection': "SpellLists",
+                },
+                'prepared': "prepared",
+            }
+            self.insert('spells', spellData, insert_callback)
+
+
+dicecloud_client = DicecloudClient('ws://dicecloud.com/websocket', debug=False)  # turn debug off later
 dicecloud_client.initialize()

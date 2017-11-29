@@ -250,6 +250,39 @@ class GameTrack:
         live = "Spell added to Dicecloud!" if character.live else ''
         await self.bot.say(f"{spell['name']} added to known spell list!\n{live}")
 
+    @spellbook.command(pass_context=True, name='addall')
+    async def spellbook_addall(self, ctx, _class, level: int):
+        """Adds all spells of a given level from a given class list to the spellbook override. Requires live sheet."""
+        character = Character.from_ctx(ctx)
+        if not character.live:
+            return await self.bot.say("This command requires a live Dicecloud sheet. To set up, share your Dicecloud "
+                                      "sheet with `avrae` with edit permissions, then `!update`.")
+        if not 0 <= level < 10:
+            return await self.bot.say("Invalid spell level.")
+        class_spells = [sp for sp in c.spells if _class.lower() in sp['classes'].lower()]
+        if len(class_spells) == 0:
+            return await self.bot.say("No spells for that class found.")
+        level_spells = [s for s in class_spells if str(level) == s['level']]
+        await dicecloud_client.sync_add_mass_spells(character, [dicecloud_parse(s) for s in level_spells])
+        await self.bot.say(f"{len(level_spells)} spells added to {character.get_name()}'s spell list on Dicecloud.")
+
+    @spellbook.command(pass_context=True, name='remove')
+    async def spellbook_remove(self, ctx, *, spell_name):
+        """
+        Removes a spell from the spellbook override. Must type in full name.
+        """
+        character = Character.from_ctx(ctx)
+        if character.live:
+            return await self.bot.say("Just delete the spell from your character sheet!")
+        spell = character.remove_known_spell(spell_name)
+        if spell:
+            character.commit(ctx)
+            await self.bot.say(f"{spell} removed from spellbook override.")
+        else:
+            await self.bot.say(
+                f"Spell not in spellbook override. To remove a spell on your sheet, just delete it from "
+                f"your sheet.")
+
     @commands.group(pass_context=True, invoke_without_command=True, name='customcounter', aliases=['cc'])
     async def customcounter(self, ctx, name, modifier=None):
         """Commands to implement custom counters.

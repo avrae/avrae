@@ -593,10 +593,9 @@ class Character:
         if not 'spells' in self.character['overrides']:
             self.character['overrides']['spells'] = []
 
-    def add_known_spell(self, spell, sync=True):
+    def add_known_spell(self, spell):
         """Adds a spell to the character's known spell list.
         :param spell (dict) - the Spell dictionary.
-        :param sync (book) - Whether to try to push the change to Dicecloud.
         :returns self"""
         self._initialize_spellbook()
         spells = set(self.character['spellbook']['spells'])
@@ -609,6 +608,24 @@ class Character:
             overrides.add(spell['name'])
             self.character['overrides']['spells'] = list(overrides)
         return self
+
+    def remove_known_spell(self, spell_name):
+        """
+        Removes a spell from the character's spellbook override.
+        :param spell_name: (str) The name of the spell to remove.
+        :return: (str) The name of the removed spell.
+        """
+        assert not self.live
+        self._initialize_spellbook()
+        overrides = set(self.character['overrides']['spells'])
+        spell_name = next((s for s in overrides if spell_name.lower() == s.lower()), None)
+        if spell_name:
+            overrides.remove(spell_name)
+            self.character['overrides']['spells'] = list(overrides)
+            spells = set(self.character['spellbook']['spells'])
+            spells.remove(spell_name)
+            self.character['spellbook']['spells'] = list(spells)
+        return spell_name
 
     def _initialize_custom_counters(self):
         try:

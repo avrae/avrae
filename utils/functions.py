@@ -498,7 +498,7 @@ def dicecloud_parse(spell):
         spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
             "This spell can be found in the Elemental Evil Player's Companion", ""))
 
-    text = '\n  '.join(spellDesc)
+    text = '\n\n'.join(spellDesc)
     return {
         'name': spell['name'],
         'description': text,

@@ -93,11 +93,12 @@ class DicecloudParser(SheetParser):
         stat_vars.update(saves)
 
         sheet = {'type': 'dicecloud',
-                 'version': 10,  # v6: added stat cvars
+                 'version': 11,  # v6: added stat cvars
                  # v7: added check effects (adv/dis)
                  # v8: consumables
                  # v9: spellbook
                  # v10: live tracking
+                 # v11: save effects (adv/dis)
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -149,12 +150,16 @@ class DicecloudParser(SheetParser):
                                             "**INT:** {intelligence} ({intelligenceMod:+})\n" \
                                             "**WIS:** {wisdom} ({wisdomMod:+})\n" \
                                             "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
-        embed.add_field(name="Saves", value="**STR:** {strengthSave:+}\n" \
-                                            "**DEX:** {dexteritySave:+}\n" \
-                                            "**CON:** {constitutionSave:+}\n" \
-                                            "**INT:** {intelligenceSave:+}\n" \
-                                            "**WIS:** {wisdomSave:+}\n" \
-                                            "**CHA:** {charismaSave:+}".format(**saves))
+
+        savesStr = ''
+        for save, mod in sorted(saves.items()):
+            if skill_effects.get(save):
+                skill_effect = f"({skill_effects.get(save)})"
+            else:
+                skill_effect = ''
+            savesStr += '**{}**: {:+} {}\n'.format(save[:3].upper(), mod, skill_effect)
+
+        embed.add_field(name="Saves", value=savesStr)
 
         def cc_to_normal(string):
             return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string)

@@ -221,6 +221,9 @@ class SheetManager:
 
         embed = EmbedWithCharacter(char, name=False)
 
+        skill_effects = char.get_skill_effects()
+        args += ' ' + skill_effects.get(save, '')  # dicecloud v11 - autoadv
+
         args = self.new_arg_stuff(args, ctx, char)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
                                                                                         False) else -1 if args.get(

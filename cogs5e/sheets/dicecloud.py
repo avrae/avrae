@@ -152,12 +152,13 @@ class DicecloudParser(SheetParser):
                                             "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
 
         savesStr = ''
-        for save, mod in sorted(saves.items()):
+        for save in (
+        'strengthSave', 'dexteritySave', 'constitutionSave', 'intelligenceSave', 'wisdomSave', 'charismaSave'):
             if skill_effects.get(save):
                 skill_effect = f"({skill_effects.get(save)})"
             else:
                 skill_effect = ''
-            savesStr += '**{}**: {:+} {}\n'.format(save[:3].upper(), mod, skill_effect)
+            savesStr += '**{}**: {:+} {}\n'.format(save[:3].upper(), saves.get(save), skill_effect)
 
         embed.add_field(name="Saves", value=savesStr)
 

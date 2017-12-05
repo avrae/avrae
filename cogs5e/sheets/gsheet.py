@@ -295,7 +295,7 @@ class GoogleSheet(SheetParser):
         spells = set()
 
         for cell in potential_spells:
-            if cell.value:
+            if cell.value and not cell.value in ('MAX', 'SLOTS'):
                 s = fuzzy_search(c.spells, 'name', cell.value.strip())
                 if s:
                     spells.add(s.get('name'))

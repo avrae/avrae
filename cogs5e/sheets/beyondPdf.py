@@ -328,7 +328,7 @@ class BeyondPDFSheetParser(SheetParser):
             if s: spellnames.add(s)
 
         for spell in spellnames:
-            s = fuzzy_search(c.spells, 'name', spell.strip())
+            s = fuzzy_search(c.spells, 'name', spell.split('(')[0].strip())
             if s:
                 spellbook['spells'].append(s.get('name'))
 

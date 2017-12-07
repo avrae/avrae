@@ -617,7 +617,7 @@ class Character:
         """
         assert not self.live
         self._initialize_spellbook()
-        overrides = set(self.character['overrides']['spells'])
+        overrides = set(self.character['overrides'].get('spells', []))
         spell_name = next((s for s in overrides if spell_name.lower() == s.lower()), None)
         if spell_name:
             overrides.remove(spell_name)

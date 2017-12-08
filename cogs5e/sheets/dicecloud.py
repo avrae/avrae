@@ -399,7 +399,7 @@ class DicecloudParser(SheetParser):
                 log.debug(f"exception in damage_sub: {ex}")
                 return match.group(0)
 
-        damage = re.sub(r'{(.*)}', damage_sub, atkIn.get('damage', ''))
+        damage = re.sub(r'{(.*?)}', damage_sub, atkIn.get('damage', ''))
         damage = re.split('([-+*/^().<>= ])', damage.replace('{', '').replace('}', ''))
         attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage)
         if not attack['damage']:

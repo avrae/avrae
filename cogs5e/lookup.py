@@ -24,6 +24,7 @@ CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'invocationsknown': "Invocations Known", 'spellslots': "Spell Slots", 'slotlevel': "Slot Level",
                       'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
                       'psipoints': "Psi Points", 'psilimit': "Psi Limit"}
+IMG_BASE_URL = "5etools.com"
 
 
 class Lookup:
@@ -462,7 +463,7 @@ class Lookup:
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         src = parse.quote(parsesource(result.get('type', '').split(',')[-1]))
-        url = f"https://astranauta.github.io/img/{src}/{parse.quote(result['name'])}.png"
+        url = f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(result['name'])}.png"
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -698,7 +699,7 @@ class Lookup:
             if "legendary" in monster:
                 embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster["legendary"])))
 
-        embed_queue[0].set_thumbnail(url=f"https://astranauta.github.io/img/{src}/{parse.quote(monster['name'])}.png")
+        embed_queue[0].set_thumbnail(url=f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(monster['name'])}.png")
 
         for embed in embed_queue:
             if pm:

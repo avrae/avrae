@@ -149,9 +149,9 @@ class GameTrack:
 
         await self.bot.say(out)
 
-    @game.command(pass_context=True, name='deathsave', aliases=['ds'])
+    @game.group(pass_context=True, name='deathsave', aliases=['ds'], invoke_without_command=True)
     async def game_deathsave(self, ctx, *args):
-        """Rolls a death save.
+        """Commands to manage character death saves.
         __Valid Arguments__
         See `!help save`."""
         character = Character.from_ctx(ctx)
@@ -190,18 +190,64 @@ class GameTrack:
         embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase else '')
         if death_phrase: embed.set_footer(text=death_phrase)
 
-        saves = character.get_deathsaves()
-        embed.add_field(name="Successes", value=str(saves['success']['value']))
-        embed.add_field(name="Failures", value=str(saves['fail']['value']))
+        embed.add_field(name="Death Saves", value=character.get_ds_str())
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
 
         await self.bot.say(embed=embed)
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            pass
+
+    @game_deathsave.command(pass_context=True, name='success', aliases=['s', 'save'])
+    async def game_deathsave_save(self, ctx):
+        """Adds a successful death save."""
+        character = Character.from_ctx(ctx)
+
+        embed = EmbedWithCharacter(character)
+        embed.title = f'{character.get_name()} succeeds a Death Save!'
+
+        death_phrase = ''
+        if character.add_successful_ds(): death_phrase = f"{character.get_name()} is STABLE!"
+
+        character.commit(ctx)
+        embed.description = "Added 1 successful death save."
+        if death_phrase: embed.set_footer(text=death_phrase)
+
+        embed.add_field(name="Death Saves", value=character.get_ds_str())
+
+        await self.bot.say(embed=embed)
+
+    @game_deathsave.command(pass_context=True, name='fail', aliases=['f'])
+    async def game_deathsave_fail(self, ctx):
+        """Adds a failed death save."""
+        character = Character.from_ctx(ctx)
+
+        embed = EmbedWithCharacter(character)
+        embed.title = f'{character.get_name()} succeeds a Death Save!'
+
+        death_phrase = ''
+        if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
+
+        character.commit(ctx)
+        embed.description = "Added 1 failed death save."
+        if death_phrase: embed.set_footer(text=death_phrase)
+
+        embed.add_field(name="Death Saves", value=character.get_ds_str())
+
+        await self.bot.say(embed=embed)
+
+    @game_deathsave.command(pass_context=True, name='reset')
+    async def game_deathsave_reset(self, ctx):
+        """Resets all death saves."""
+        character = Character.from_ctx(ctx)
+        character.reset_death_saves()
+        embed = EmbedWithCharacter(character)
+        embed.title = f'{character.get_name()} reset Death Saves!'
+
+        character.commit(ctx)
+
+        embed.add_field(name="Death Saves", value=character.get_ds_str())
+
+        await self.bot.say(embed=embed)
 
     @commands.group(pass_context=True, invoke_without_command=True, name='spellbook', aliases=['sb'])
     async def spellbook(self, ctx):

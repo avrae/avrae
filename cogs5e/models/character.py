@@ -436,18 +436,30 @@ class Character:
         self._initialize_deathsaves()
         return self.character['consumables']['deathsaves']
 
+    def get_ds_str(self):
+        """
+        :rtype: str
+        :return: A bubble representation of a character's death saves.
+        """
+        ds = self.get_deathsaves()
+        successes = '\u25c9' * ds['success']['value'] + '\u3007' * (3 - ds['success']['value'])
+        fails = '\u25c9' * ds['fail']['value'] + '\u3007' * (3 - ds['fail']['value'])
+        return f"S {successes} | {fails} F"
+
     def add_successful_ds(self):
         """Adds a successful death save to the character.
         Returns True if the character is stable."""
         self._initialize_deathsaves()
-        self.character['consumables']['deathsaves']['success']['value'] += 1
+        self.character['consumables']['deathsaves']['success']['value'] = min(3, self.character['consumables'][
+            'deathsaves']['success']['value'] + 1)
         return self.character['consumables']['deathsaves']['success']['value'] == 3
 
     def add_failed_ds(self):
         """Adds a failed death save to the character.
         Returns True if the character is dead."""
         self._initialize_deathsaves()
-        self.character['consumables']['deathsaves']['fail']['value'] += 1
+        self.character['consumables']['deathsaves']['fail']['value'] = min(3, self.character['consumables'][
+            'deathsaves']['fail']['value'] + 1)
         return self.character['consumables']['deathsaves']['fail']['value'] == 3
 
     def reset_death_saves(self):

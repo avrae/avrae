@@ -662,10 +662,13 @@ class Character:
         except AssertionError:
             raise InvalidArgument("Invalid reset.")
         if _max is not None and _min is not None:
+            maxV = self.evaluate_cvar(_max)
             try:
-                assert self.evaluate_cvar(_max) >= self.evaluate_cvar(_min)
+                assert maxV >= self.evaluate_cvar(_min)
             except AssertionError:
                 raise InvalidArgument("Max value is less than min value.")
+            if maxV == 0:
+                raise InvalidArgument("Max value cannot be 0.")
         if _reset and _max is None: raise InvalidArgument("Reset passed but no maximum passed.")
         if _type == 'bubble' and (_max is None or _min is None): raise InvalidArgument(
             "Bubble display requires a max and min value.")

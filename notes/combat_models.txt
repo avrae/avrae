@@ -1,0 +1,17 @@
+each command should grab relevant combat from context
+    throws error if channel not in combat
+
+combat:
+    class to hold stuff
+    internally tracks round, combatants, etc
+    discord interface should just get stuff from this
+
+combatant:
+    one class that rest extends from
+    holds hp, ac, stuff
+
+    subclasses:
+        PlayerCombatant
+            live integration w/ GameTrack
+        MonsterCombatant
+            integration with EncounterBuilder (eventually?)

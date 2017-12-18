@@ -26,7 +26,7 @@ class GoogleSheet(SheetParser):
         self.client = client
 
     def _gchar(self):
-        self.client.login()
+        # self.client.login()
         sheet = self.client.open_by_key(self.url).sheet1
         self.character = sheet
         return sheet
@@ -45,8 +45,8 @@ class GoogleSheet(SheetParser):
         character = self.character
         try:
             stats = self.get_stats()
-            hp = int(character.acell("U16").value)
-            armor = character.acell("R12").value
+            hp = int(character.cell("U16").value)
+            armor = character.cell("R12").value
             attacks = self.get_attacks()
             skills = self.get_skills()
             level = self.get_level()
@@ -156,19 +156,19 @@ class GoogleSheet(SheetParser):
                  "strengthMod": 0, "dexterityMod": 0, "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0,
                  "charismaMod": 0,
                  "proficiencyBonus": 0}
-        stats['name'] = character.acell("C6").value or "Unnamed"
+        stats['name'] = character.cell("C6").value or "Unnamed"
         stats['description'] = "The Google sheet does not have a description field."
         try:
-            stats['proficiencyBonus'] = int(character.acell("H14").value)
+            stats['proficiencyBonus'] = int(character.cell("H14").value)
         except (TypeError, ValueError):
             raise MissingAttribute("Proficiency Bonus")
-        stats['image'] = character.acell("C176").value
+        stats['image'] = character.cell("C176").value
 
         index = 15
         for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
             try:
-                stats[stat] = int(character.acell("C" + str(index)).value)
-                stats[stat + 'Mod'] = int(character.acell("C" + str(index - 2)).value)
+                stats[stat] = int(character.cell("C" + str(index)).value)
+                stats[stat + 'Mod'] = int(character.cell("C" + str(index - 2)).value)
                 index += 5
             except (TypeError, ValueError):
                 raise MissingAttribute(stat)
@@ -184,9 +184,9 @@ class GoogleSheet(SheetParser):
         bonus_index = "Y" + str(32 + atkIn)
         damage_index = "AC" + str(32 + atkIn)
 
-        attack['name'] = character.acell(name_index).value
-        attack['attackBonus'] = character.acell(bonus_index).value
-        attack['damage'] = character.acell(damage_index).value
+        attack['name'] = character.cell(name_index).value
+        attack['attackBonus'] = character.cell(bonus_index).value
+        attack['damage'] = character.cell(damage_index).value
 
         if attack['name'] is "":
             return None
@@ -238,7 +238,7 @@ class GoogleSheet(SheetParser):
         skills = {}
         for index, skill in enumerate(skillslist):
             try:
-                skills[skillsMap[index]] = int(character.acell(skill).value)
+                skills[skillsMap[index]] = int(character.cell(skill).value)
             except (TypeError, ValueError):
                 raise MissingAttribute(skillsMap[index])
 
@@ -248,7 +248,7 @@ class GoogleSheet(SheetParser):
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
         try:
-            level = int(character.acell("AL6").value)
+            level = int(character.cell("AL6").value)
         except ValueError:
             raise MissingAttribute("Character level")
         return level
@@ -256,21 +256,21 @@ class GoogleSheet(SheetParser):
     def get_description(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        g = character.acell("C150").value.lower()
-        n = character.acell("C6").value
+        g = character.cell("C150").value.lower()
+        n = character.cell("C6").value
         pronoun = "She" if g == "female" else "He" if g == "male" else n
         desc = "{0} is a level {1} {2} {3}. {4} is {5} years old, {6} tall, and appears to weigh about {7}. {4} has {8} eyes, {9} hair, and {10} skin."
         desc = desc.format(n,
-                           character.acell("AL6").value,
-                           character.acell("T7").value,
-                           character.acell("T5").value,
+                           character.cell("AL6").value,
+                           character.cell("T7").value,
+                           character.cell("T5").value,
                            pronoun,
-                           character.acell("C148").value or "unknown",
-                           character.acell("F148").value or "unknown",
-                           character.acell("I148").value or "unknown",
-                           character.acell("F150").value.lower() or "unknown",
-                           character.acell("I150").value.lower() or "unknown",
-                           character.acell("L150").value.lower() or "unknown")
+                           character.cell("C148").value or "unknown",
+                           character.cell("F148").value or "unknown",
+                           character.cell("I148").value or "unknown",
+                           character.cell("F150").value.lower() or "unknown",
+                           character.cell("I150").value.lower() or "unknown",
+                           character.cell("L150").value.lower() or "unknown")
         return desc
 
     def get_spellbook(self):
@@ -280,35 +280,36 @@ class GoogleSheet(SheetParser):
                      'dc': 0,
                      'attackBonus': 0}
 
-        spellslots = {'1': int(self.character.acell('AK101').value or 0),
-                      '2': int(self.character.acell('E107').value or 0),
-                      '3': int(self.character.acell('AK113').value or 0),
-                      '4': int(self.character.acell('E119').value or 0),
-                      '5': int(self.character.acell('AK124').value or 0),
-                      '6': int(self.character.acell('E129').value or 0),
-                      '7': int(self.character.acell('AK134').value or 0),
-                      '8': int(self.character.acell('E138').value or 0),
-                      '9': int(self.character.acell('AK142').value or 0)}
+        spellslots = {'1': int(self.character.cell('AK101').value or 0),
+                      '2': int(self.character.cell('E107').value or 0),
+                      '3': int(self.character.cell('AK113').value or 0),
+                      '4': int(self.character.cell('E119').value or 0),
+                      '5': int(self.character.cell('AK124').value or 0),
+                      '6': int(self.character.cell('E129').value or 0),
+                      '7': int(self.character.cell('AK134').value or 0),
+                      '8': int(self.character.cell('E138').value or 0),
+                      '9': int(self.character.cell('AK142').value or 0)}
         spellbook['spellslots'] = spellslots
 
         potential_spells = self.character.range('C96:AH143')
         spells = set()
 
-        for cell in potential_spells:
-            if cell.value and not cell.value in ('MAX', 'SLOTS'):
-                s = fuzzy_search(c.spells, 'name', cell.value.strip())
-                if s:
-                    spells.add(s.get('name'))
+        for col in potential_spells:
+            for cell in col:
+                if cell.value and not cell.value in ('MAX', 'SLOTS'):
+                    s = fuzzy_search(c.spells, 'name', cell.value.strip())
+                    if s:
+                        spells.add(s.get('name'))
 
         spellbook['spells'] = list(spells)
 
         try:
-            spellbook['dc'] = int(self.character.acell('AB91').value or 0)
+            spellbook['dc'] = int(self.character.cell('AB91').value or 0)
         except ValueError:
             pass
 
         try:
-            spellbook['attackBonus'] = int(self.character.acell('AI91').value or 0)
+            spellbook['attackBonus'] = int(self.character.cell('AI91').value or 0)
         except ValueError:
             pass
 

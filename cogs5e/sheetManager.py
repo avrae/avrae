@@ -14,13 +14,11 @@ import traceback
 from socket import timeout
 
 import discord
-import gspread
 import numexpr
+import pygsheets
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
-from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound, RequestError
-from gspread.utils import extract_id_from_url
-from oauth2client.service_account import ServiceAccountCredentials
+from pygsheets.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound, RequestError
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
@@ -32,6 +30,7 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
+from utils.functions import extract_gsheet_id_from_url
 from utils.functions import list_get, get_positivity, a_or_an, get_selection
 from utils.loggers import TextLogger
 
@@ -54,9 +53,7 @@ class SheetManager:
 
     async def init_gsheet_client(self):
         def _():
-            scope = ['https://spreadsheets.google.com/feeds']
-            credentials = ServiceAccountCredentials.from_json_keyfile_name('avrae-0b82f09d7ab3.json', scope)
-            return gspread.authorize(credentials)
+            return pygsheets.authorize(service_file='avrae-0b82f09d7ab3.json')
 
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
 
@@ -626,7 +623,7 @@ class SheetManager:
                 fmt = character.get('CharacterName')
                 sheet = parser.get_sheet()
             elif sheet_type == 'google':
-                fmt = character.acell("C6").value
+                fmt = character.cell("C6").value
                 sheet = await parser.get_sheet()
             elif sheet_type == 'beyond-pdf':
                 fmt = character.get('CharacterName')
@@ -1087,11 +1084,11 @@ class SheetManager:
 
         loading = await self.bot.say('Loading character data from Google... (This usually takes ~30 sec)')
         try:
-            url = extract_id_from_url(url)
+            url = extract_gsheet_id_from_url(url)
         except NoValidUrlKeyFound:
             return await self.bot.edit_message(loading, "This is not a Google Sheets link.")
 
-        override = await self._confirm_overwrite(ctx, url)
+        override = await self._confirm_overwrite(ctx, f"google-{url}")
         if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
 
         try:
@@ -1115,7 +1112,7 @@ class SheetManager:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         try:
-            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.acell("C6").value))
+            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.cell("C6").value))
         except TypeError as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading,

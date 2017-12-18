@@ -16,7 +16,7 @@ from cogs5e.dice import Dice
 from cogs5e.gametrack import GameTrack
 from cogs5e.initiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
-from cogs5e.models.errors import AvraeException, EvaluationError
+from cogs5e.models.errors import AvraeException
 from cogs5e.pbpUtils import PBPUtils
 from cogs5e.sheetManager import SheetManager
 from cogsmisc.adminUtils import AdminUtils

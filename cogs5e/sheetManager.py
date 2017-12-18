@@ -1099,7 +1099,7 @@ class SheetManager:
 
         try:
             character = await parser.get_character()
-        except SpreadsheetNotFound:
+        except (KeyError, SpreadsheetNotFound):
             return await self.bot.edit_message(loading,
                                                "Invalid character sheet. Make sure you've shared it with me at `avrae-320@avrae-bot.iam.gserviceaccount.com`!")
         except HttpError:

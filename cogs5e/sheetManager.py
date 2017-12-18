@@ -18,7 +18,7 @@ import gspread
 import numexpr
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
-from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
+from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound, RequestError
 from gspread.utils import extract_id_from_url
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -252,7 +252,7 @@ class SheetManager:
             embed.set_footer(text="Success!" if save_roll.total >= dc else "Failure!")
 
         embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + save_roll.skeleton + (
-        '\n*' + phrase + '*' if phrase is not None else '')
+            '\n*' + phrase + '*' if phrase is not None else '')
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
@@ -322,7 +322,7 @@ class SheetManager:
             embed.set_footer(text="Success!" if check_roll.total >= dc else "Failure!")
 
         embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + check_roll.skeleton + (
-        '\n*' + phrase + '*' if phrase is not None else '')
+            '\n*' + phrase + '*' if phrase is not None else '')
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
         await self.bot.say(embed=embed)
@@ -607,11 +607,14 @@ class SheetManager:
             return await self.bot.say("Error: Unknown sheet type.")
         try:
             character = await parser.get_character()
-        except Exception as e:
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         except timeout:
             return await self.bot.say(
                 "We're having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
+        except RequestError:
+            return await self.bot.say(
+                "Google returned an error trying to access your sheet. Please try again in a few minutes.")
+        except Exception as e:
+            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         try:
             if sheet_type == 'dicecloud':
@@ -1101,6 +1104,9 @@ class SheetManager:
         except SpreadsheetNotFound:
             return await self.bot.edit_message(loading,
                                                "Invalid character sheet. Make sure you've shared it with me at `avrae-320@avrae-bot.iam.gserviceaccount.com`!")
+        except RequestError:
+            return await self.bot.edit_message(loading,
+                                               "Error: Google returned an error. Please try again in a few minutes.")
 
         try:
             sheet = await parser.get_sheet()

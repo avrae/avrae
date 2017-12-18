@@ -608,7 +608,7 @@ class SheetManager:
             return await self.bot.say(
                 "We're having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
         except RequestError:
-            return await self.bot.say(
+            return await self.bot.edit_message(loading,
                 "Google returned an error trying to access your sheet. Please try again in a few minutes.")
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))

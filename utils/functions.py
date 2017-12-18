@@ -11,6 +11,7 @@ import re
 
 import discord
 from fuzzywuzzy import process, fuzz
+from pygsheets import NoValidUrlKeyFound
 
 from cogs5e.models.errors import SelectionCancelled, NoSelectionElements
 
@@ -513,3 +514,17 @@ def dicecloud_parse(spell):
         'level': int(spell['level']),
         'school': schools.get(spell.get('school', 'A'))
     }
+
+URL_KEY_V1_RE = re.compile(r'key=([^&#]+)')
+URL_KEY_V2_RE = re.compile(r'/spreadsheets/d/([a-zA-Z0-9-_]+)')
+
+def extract_gsheet_id_from_url(url):
+    m2 = URL_KEY_V2_RE.search(url)
+    if m2:
+        return m2.group(1)
+
+    m1 = URL_KEY_V1_RE.search(url)
+    if m1:
+        return m1.group(1)
+
+    raise NoValidUrlKeyFound

@@ -18,7 +18,8 @@ import numexpr
 import pygsheets
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
-from pygsheets.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound, RequestError
+from googleapiclient.errors import HttpError
+from pygsheets.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
@@ -607,9 +608,9 @@ class SheetManager:
         except timeout:
             return await self.bot.say(
                 "We're having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
-        except RequestError:
+        except HttpError:
             return await self.bot.edit_message(loading,
-                "Google returned an error trying to access your sheet. Please try again in a few minutes.")
+                "Google returned an error trying to access your sheet. Please ensure your sheet is shared and try again in a few minutes.")
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
@@ -1101,9 +1102,9 @@ class SheetManager:
         except SpreadsheetNotFound:
             return await self.bot.edit_message(loading,
                                                "Invalid character sheet. Make sure you've shared it with me at `avrae-320@avrae-bot.iam.gserviceaccount.com`!")
-        except RequestError:
+        except HttpError:
             return await self.bot.edit_message(loading,
-                                               "Error: Google returned an error. Please try again in a few minutes.")
+                                               "Error: Google returned an error. Please ensure your sheet is shared with `avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
 
         try:
             sheet = await parser.get_sheet()

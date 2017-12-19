@@ -312,8 +312,9 @@ class Dice:
         else:
             check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]), adv=adv, inline=True)
 
-        embed.title = '{} makes {} check!'.format(monster_name,
-                                                  a_or_an(skill.title()))
+        embed.title = args.get('title', '').replace('[mname]', monster_name).replace('[cname]', skill.title()) \
+                      or '{} makes {} check!'.format(monster_name,
+                                                     a_or_an(skill.title()))
         embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
 
         if args.get('image') is not None:
@@ -382,9 +383,13 @@ class Dice:
         else:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
 
-        embed.title = '{} makes {}!'.format(monster_name,
-                                            a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1',
-                                                           save).title()))
+        embed.title = args.get('title', '').replace('[mname]', monster_name).replace('[sname]', re.sub(
+            r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) or \
+                      '{} makes {}!'.format(monster_name,
+                                            a_or_an(re.sub(
+                                                r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))',
+                                                r' \1',
+                                                save).title()))
 
         embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
 

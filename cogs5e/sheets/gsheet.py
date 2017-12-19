@@ -18,6 +18,62 @@ from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)
 
+POS_RE = re.compile(r"([A-Z]+)(\d+)")
+
+
+def letter2num(letters, zbase=False):
+    """A = 1, C = 3 and so on. Convert spreadsheet style column
+    enumeration to a number.
+
+    Answers:
+    A = 1, Z = 26, AA = 27, AZ = 52, ZZ = 702, AMJ = 1024
+
+    >>> letter2num('A') == 1
+    True
+    >>> letter2num('Z') == 26
+    True
+    >>> letter2num('AZ') == 52
+    True
+    >>> letter2num('ZZ') == 702
+    True
+    >>> letter2num('AMJ') == 1024
+    True
+    >>> letter2num('AMJ', zbase=True) == 1023
+    True
+    >>> letter2num('A', zbase=True) == 0
+    True
+
+    """
+
+    letters = letters.upper()
+    res = 0
+    weight = len(letters) - 1
+    for i, c in enumerate(letters):
+        res += (ord(c) - 64) * 26 ** (weight - i)
+    if not zbase:
+        return res
+    return res - 1
+
+
+class TempCharacter:
+    def __init__(self, worksheet):
+        self.worksheet = worksheet
+        self.cells = worksheet.range("A1:AP180")
+
+    def cell(self, pos):
+        pos = POS_RE.match(pos)
+        if pos is None:
+            raise Exception("No A1-style position found.")
+        row = letter2num(pos.group(1))
+        col = int(pos.group(2)) - 1
+        if row > len(self.cells) or col > len(self.cells[row]):
+            raise Exception("Cell out of bounds.")
+        return self.cells[row][col]
+
+    def range(self, rng):
+        self.worksheet.range(rng)
+
+
 class GoogleSheet(SheetParser):
     def __init__(self, url, client):
         self.url = url
@@ -28,7 +84,7 @@ class GoogleSheet(SheetParser):
     def _gchar(self):
         # self.client.login()
         sheet = self.client.open_by_key(self.url).sheet1
-        self.character = sheet
+        self.character = TempCharacter(sheet)
         return sheet
 
     async def get_character(self):
@@ -71,8 +127,8 @@ class GoogleSheet(SheetParser):
 
         sheet = {'type': 'google',
                  'version': 5,  # v3: added stat cvars
-                                # v4: consumables
-                                # v5: spellbook
+                 # v4: consumables
+                 # v5: spellbook
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': hp,
@@ -276,7 +332,7 @@ class GoogleSheet(SheetParser):
     def get_spellbook(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         spellbook = {'spellslots': {},
-                     'spells': [], # C96:AH143 - gah.
+                     'spells': [],  # C96:AH143 - gah.
                      'dc': 0,
                      'attackBonus': 0}
 

@@ -61,7 +61,7 @@ class Dice:
         await self.bot.say(ctx.message.author.mention + '  :game_die:\n' + out)
 
     @commands.command(pass_context=True, name='roll', aliases=['r'])
-    async def rollCmd(self, ctx, *, rollStr: str):
+    async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
         """Rolls dice in xdy format.
         Usage: !r xdy Attack!
                !r xdy+z adv Attack with Advantage!

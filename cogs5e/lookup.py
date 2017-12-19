@@ -96,7 +96,7 @@ class Lookup:
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
-            embed.add_field(name="con't", value=piece)
+            embed.add_field(name="\u200b", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -157,8 +157,10 @@ class Lookup:
         if ability:
             embed.add_field(name="Ability Improvement",
                             value=f"Increase your {ability} score by 1, up to a maximum of 20.")
+        _name = 'Description'
         for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
-            embed.add_field(name="Description", value=piece)
+            embed.add_field(name=_name, value=piece)
+            _name = '\u200b'
         await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
@@ -195,7 +197,7 @@ class Lookup:
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
-            embed.add_field(name="con't", value=piece)
+            embed.add_field(name="\u200b", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -239,7 +241,7 @@ class Lookup:
             f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
             embed.add_field(name=t['name'], value=f_text[0])
             for piece in f_text[1:]:
-                embed.add_field(name="con't", value=piece)
+                embed.add_field(name="\u200b", value=piece)
 
         # trait_str = ', '.join(t['name'] for t in result.get('trait', []))
         # embed.add_field(name="Traits", value=trait_str, inline=False)
@@ -278,7 +280,7 @@ class Lookup:
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
-            embed.add_field(name="con't", value=piece)
+            embed.add_field(name="\u200b", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -904,7 +906,8 @@ class Lookup:
         itemDict['damage'] = ''
         if 'type' in item:
             itemDict['type'] = ', '.join(i for i in (
-                [parsetype(t) for t in item['type'].split(',')] + ["Wondrous Item" if item.get('wondrous') else '']) if
+                    [parsetype(t) for t in item['type'].split(',')] + ["Wondrous Item" if item.get('wondrous') else ''])
+                                         if
                                          i)
             for iType in item['type'].split(','):
                 if iType in ('M', 'R', 'GUN'):
@@ -956,7 +959,7 @@ class Lookup:
         field_name = "Description"
         for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
             embed.add_field(name=field_name, value=piece)
-            field_name = "con't"
+            field_name = "\u200b"
 
         # embed.set_footer(text=f"Source: {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
 

@@ -21,28 +21,9 @@ log = logging.getLogger(__name__)
 POS_RE = re.compile(r"([A-Z]+)(\d+)")
 
 
-def letter2num(letters, zbase=False):
+def letter2num(letters, zbase=True):
     """A = 1, C = 3 and so on. Convert spreadsheet style column
     enumeration to a number.
-
-    Answers:
-    A = 1, Z = 26, AA = 27, AZ = 52, ZZ = 702, AMJ = 1024
-
-    >>> letter2num('A') == 1
-    True
-    >>> letter2num('Z') == 26
-    True
-    >>> letter2num('AZ') == 52
-    True
-    >>> letter2num('ZZ') == 702
-    True
-    >>> letter2num('AMJ') == 1024
-    True
-    >>> letter2num('AMJ', zbase=True) == 1023
-    True
-    >>> letter2num('A', zbase=True) == 0
-    True
-
     """
 
     letters = letters.upper()
@@ -59,19 +40,22 @@ class TempCharacter:
     def __init__(self, worksheet):
         self.worksheet = worksheet
         self.cells = worksheet.range("A1:AP180")
+        # print('\n'.join(str(r) for r in self.cells))
 
     def cell(self, pos):
-        pos = POS_RE.match(pos)
-        if pos is None:
+        _pos = POS_RE.match(pos)
+        if _pos is None:
             raise Exception("No A1-style position found.")
-        row = letter2num(pos.group(1))
-        col = int(pos.group(2)) - 1
+        col = letter2num(_pos.group(1))
+        row = int(_pos.group(2)) - 1
         if row > len(self.cells) or col > len(self.cells[row]):
             raise Exception("Cell out of bounds.")
-        return self.cells[row][col]
+        cell = self.cells[row][col]
+        log.debug(f"Cell {pos}: {cell}")
+        return cell
 
     def range(self, rng):
-        self.worksheet.range(rng)
+        return self.worksheet.range(rng)
 
 
 class GoogleSheet(SheetParser):

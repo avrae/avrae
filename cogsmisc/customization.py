@@ -97,7 +97,9 @@ class Customization:
         """Takes an alias name, alias value, and message and handles percent-encoded args.
         Returns: string"""
         args = " ".join(self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[1:])
-        args = shlex.split(args)
+        s = shlex.shlex(args)
+        s.whitespace = ' ' # doofy workaround
+        args = list(s)
         for index, arg in enumerate(args):
             if " " in arg:
                 args[index] = shlex.quote(arg)

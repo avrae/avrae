@@ -17,6 +17,7 @@ class Customization:
     def __init__(self, bot):
         self.bot = bot
         self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        self.serv_aliases = self.bot.db.jget('serv_aliases', {})
         self.bot.loop.create_task(self.update_aliases())
         self.bot.loop.create_task(self.backup_aliases())
 
@@ -31,6 +32,7 @@ class Customization:
             while not self.bot.is_closed:
                 await asyncio.sleep(10)
                 self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+                self.serv_aliases = self.bot.db.jget('serv_aliases', {})
         except asyncio.CancelledError:
             pass
 
@@ -74,7 +76,8 @@ class Customization:
     async def handle_aliases(self, message):
         if message.content.startswith(self.bot.prefix):
             alias = self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0]
-            command = self.aliases.get(message.author.id, {}).get(alias)
+            command = self.aliases.get(message.author.id, {}).get(alias) or \
+                      self.serv_aliases.get(message.server.id, {}).get(alias)
             if command:
                 message.content = self.handle_alias_arguments(command, message)
                 # message.content = message.content.replace(alias, command, 1)
@@ -117,6 +120,7 @@ class Customization:
     async def alias(self, ctx, alias_name, *, commands=None):
         """Adds an alias for a long command.
         After an alias has been added, you can instead run the aliased command with !<alias_name>.
+        If a user and a server have aliases with the same name, the user alias will take priority.
         Valid Commands: *!alias list* - lists your aliases.
         *!alias [alias name]* - reveals what the alias runs.
         *!alias remove [alias name]* - removes an alias."""
@@ -146,8 +150,8 @@ class Customization:
                 return await self.bot.say('Alias not found.')
             await self.bot.say('Alias {} removed.'.format(commands))
         else:
-            user_aliases[alias_name] = commands
-            await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, commands))
+            user_aliases[alias_name] = commands.lstrip('!')
+            await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, commands.lstrip('!')))
 
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)

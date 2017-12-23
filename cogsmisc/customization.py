@@ -9,6 +9,7 @@ import shlex
 from discord.ext import commands
 
 from cogs5e.models.character import Character
+from cogs5e.models.errors import NoCharacter
 
 
 class Customization:
@@ -81,19 +82,13 @@ class Customization:
             if command:
                 message.content = self.handle_alias_arguments(command, message)
                 # message.content = message.content.replace(alias, command, 1)
-                user_characters = self.bot.db.not_json_get(message.author.id + '.characters',
-                                                           {})  # grab user's characters
-                if len(user_characters) > 0:
-                    active_character = self.bot.db.not_json_get('active_characters', {}).get(
-                        message.author.id)  # get user's active
-                    if active_character is not None:
-                        try:
-                            message.content = Character.from_bot_and_ids(self.bot, message.author.id,
-                                                                         active_character).parse_cvars(message.content,
-                                                                                                       Context(self.bot,
-                                                                                                               message))
-                        except Exception as e:
-                            return await self.bot.send_message(message.channel, e)
+                try:
+                    ctx = Context(self.bot, message)
+                    message.content = Character.from_ctx(ctx).parse_cvars(message.content, ctx)
+                except NoCharacter:
+                    pass  # TODO: parse aliases anyway
+                except Exception as e:
+                    return await self.bot.send_message(message.channel, e)
                 await self.bot.process_commands(message)
 
     def handle_alias_arguments(self, command, message):
@@ -101,7 +96,7 @@ class Customization:
         Returns: string"""
         args = " ".join(self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[1:])
         s = shlex.shlex(args)
-        s.whitespace = ' ' # doofy workaround
+        s.whitespace = ' '  # doofy workaround
         args = list(s)
         for index, arg in enumerate(args):
             if " " in arg:
@@ -115,6 +110,57 @@ class Customization:
                 tempargs.remove(value)
 
         return self.bot.prefix + new_command + " " + ' '.join(tempargs)
+
+    @commands.group(pass_context=True, invoke_without_command=True)
+    async def alias(self, ctx, alias_name, *, commands=None):
+        """Adds an alias for a long command.
+        After an alias has been added, you can instead run the aliased command with !<alias_name>.
+        If a user and a server have aliases with the same name, the user alias will take priority."""
+        user_id = ctx.message.author.id
+        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        user_aliases = self.aliases.get(user_id, {})
+        if alias_name in self.bot.commands:
+            return await self.bot.say('There is already a built-in command with that name!')
+
+        if commands is None:
+            alias = user_aliases.get(alias_name)
+            if alias is None:
+                alias = 'Not defined.'
+            else:
+                alias = '!' + alias
+            return await self.bot.say('**' + alias_name + '**:\n```md\n' + alias + "\n```")
+
+        user_aliases[alias_name] = commands.lstrip('!')
+        await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, commands.lstrip('!')))
+
+        self.aliases[user_id] = user_aliases
+        self.bot.db.not_json_set('cmd_aliases', self.aliases)
+
+    @alias.command(pass_context=True, name='list')
+    async def alias_list(self, ctx):
+        """Lists all user aliases."""
+        user_id = ctx.message.author.id
+        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        user_aliases = self.aliases.get(user_id, {})
+        aliases = [name for name in user_aliases.keys()]
+        sorted_aliases = sorted(aliases)
+        return await self.bot.say('Your aliases:\n{}'.format(', '.join(sorted_aliases)))
+
+    @alias.command(pass_context=True, name='delete', aliases=['remove'])
+    async def alias_delete(self, ctx, alias_name):
+        """Deletes a user alias."""
+        user_id = ctx.message.author.id
+        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        user_aliases = self.aliases.get(user_id, {})
+
+        try:
+            del user_aliases[alias_name]
+        except KeyError:
+            return await self.bot.say('Alias not found.')
+        await self.bot.say('Alias {} removed.'.format(alias_name))
+
+        self.aliases[user_id] = user_aliases
+        self.bot.db.not_json_set('cmd_aliases', self.aliases)
 
     @commands.command(pass_context=True)
     async def alias(self, ctx, alias_name, *, commands=None):
@@ -162,8 +208,10 @@ class Customization:
         char = Character.from_ctx(ctx)
         await self.bot.say(f"{ctx.message.author.display_name}: {char.parse_cvars(str, ctx)}")
 
+
 class Context:
     """A singleton class to pretend to be ctx."""
+
     def __init__(self, bot, message):
         self.bot = bot
         self.message = message

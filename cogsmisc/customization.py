@@ -162,45 +162,71 @@ class Customization:
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)
 
-    @commands.command(pass_context=True)
-    async def alias(self, ctx, alias_name, *, commands=None):
-        """Adds an alias for a long command.
-        After an alias has been added, you can instead run the aliased command with !<alias_name>.
-        If a user and a server have aliases with the same name, the user alias will take priority.
-        Valid Commands: *!alias list* - lists your aliases.
-        *!alias [alias name]* - reveals what the alias runs.
-        *!alias remove [alias name]* - removes an alias."""
-        user_id = ctx.message.author.id
-        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
-        user_aliases = self.aliases.get(user_id, {})
+    @commands.group(pass_context=True, invoke_without_command=True)
+    async def servalias(self, ctx, alias_name, *, commands=None):
+        """Adds an alias that the entire server can use.
+        Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
+        If a user and a server have aliases with the same name, the user alias will take priority."""
+        server_id = ctx.message.server.id
+        self.serv_aliases = self.bot.db.not_json_get('serv_aliases', {})
+        server_aliases = self.serv_aliases.get(server_id, {})
         if alias_name in self.bot.commands:
             return await self.bot.say('There is already a built-in command with that name!')
 
-        if alias_name == 'list':
-            aliases = [name for name in user_aliases.keys()]
-            sorted_aliases = sorted(aliases)
-            return await self.bot.say('Your aliases:\n{}'.format(', '.join(sorted_aliases)))
-
         if commands is None:
-            alias = user_aliases.get(alias_name)
+            alias = server_aliases.get(alias_name)
             if alias is None:
                 alias = 'Not defined.'
             else:
                 alias = '!' + alias
             return await self.bot.say('**' + alias_name + '**:\n```md\n' + alias + "\n```")
 
-        if alias_name == 'remove' or alias_name == 'delete':
-            try:
-                del user_aliases[commands]
-            except KeyError:
-                return await self.bot.say('Alias not found.')
-            await self.bot.say('Alias {} removed.'.format(commands))
-        else:
-            user_aliases[alias_name] = commands.lstrip('!')
-            await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, commands.lstrip('!')))
+        if not self.can_edit_servaliases(ctx):
+            return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "
+                                      "Discord permissions or a role called \"Server Aliaser\" is required.")
 
-        self.aliases[user_id] = user_aliases
-        self.bot.db.not_json_set('cmd_aliases', self.aliases)
+        server_aliases[alias_name] = commands.lstrip('!')
+        await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, commands.lstrip('!')))
+
+        self.serv_aliases[server_id] = server_aliases
+        self.bot.db.not_json_set('serv_aliases', self.serv_aliases)
+
+    @servalias.command(pass_context=True, name='list')
+    async def servalias_list(self, ctx):
+        """Lists all server aliases."""
+        server_id = ctx.message.server.id
+        self.serv_aliases = self.bot.db.not_json_get('serv_aliases', {})
+        server_aliases = self.serv_aliases.get(server_id, {})
+        aliases = [name for name in server_aliases.keys()]
+        sorted_aliases = sorted(aliases)
+        return await self.bot.say('This server\'s aliases:\n{}'.format(', '.join(sorted_aliases)))
+
+    @servalias.command(pass_context=True, name='delete', aliases=['remove'])
+    async def servalias_delete(self, ctx, alias_name):
+        """Deletes a server alias.
+        Any user with permission to create a server alias can delete one from the server."""
+        if not self.can_edit_servaliases(ctx):
+            return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "
+                                      "Discord permissions or a role called \"Server Aliaser\" is required.")
+        server_id = ctx.message.server.id
+        self.serv_aliases = self.bot.db.not_json_get('serv_aliases', {})
+        server_aliases = self.serv_aliases.get(server_id, {})
+
+        try:
+            del server_aliases[alias_name]
+        except KeyError:
+            return await self.bot.say('Server alias not found.')
+        await self.bot.say('Server alias {} removed.'.format(alias_name))
+
+        self.serv_aliases[server_id] = server_aliases
+        self.bot.db.not_json_set('serv_aliases', self.serv_aliases)
+
+    def can_edit_servaliases(self, ctx):
+        """
+        Returns whether a user can edit server aliases in the current context.
+        """
+        return ctx.message.author.server_permissions.administrator or \
+               'server aliaser' in (r.name.lower() for r in ctx.message.author.roles)
 
     @commands.command(pass_context=True)
     async def test(self, ctx, *, str):

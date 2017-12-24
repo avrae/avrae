@@ -156,6 +156,7 @@ class Character:
         ops = r"([-+*/().<>=])"
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
+        user_vars = ctx.bot.db.hget("user_vars", ctx.message.author.id, {}) if ctx else {}
 
         changed = False
 
@@ -225,7 +226,8 @@ class Character:
                       set_cvar=set_cvar)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
-        _names = copy.copy(cvars)
+        _names = copy.copy(user_vars)
+        _names.update(cvars)
         _names.update(stat_vars)
         _names.update({"True": True, "False": False, "currentHp": self.get_current_hp()})
         evaluator = simpleeval.EvalWithCompoundTypes(functions=_funcs, operators=_ops, names=_names)
@@ -298,6 +300,7 @@ class Character:
         @:returns int - the value of the cvar, or 0 if evaluation failed."""
         ops = r"([-+*/().<>=])"
         varstr = str(varstr).strip('<>{}')
+
         cvars = self.character.get('cvars', {})
         stat_vars = self.character.get('stat_cvars', {})
         out = ""

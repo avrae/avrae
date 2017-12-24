@@ -226,13 +226,70 @@ class Customization:
         Returns whether a user can edit server aliases in the current context.
         """
         return ctx.message.author.server_permissions.administrator or \
-               'server aliaser' in (r.name.lower() for r in ctx.message.author.roles)
+               'server aliaser' in (r.name.lower() for r in ctx.message.author.roles) or \
+               ctx.message.author.id == ctx.bot.owner.id
 
     @commands.command(pass_context=True)
     async def test(self, ctx, *, str):
         """Parses `str` as if it were in an alias, for testing."""
         char = Character.from_ctx(ctx)
         await self.bot.say(f"{ctx.message.author.display_name}: {char.parse_cvars(str, ctx)}")
+
+    @commands.group(pass_context=True, invoke_without_command=True, aliases=['uvar'])
+    async def uservar(self, ctx, name, *, value=None):
+        """Commands to manage user variables for use in snippets and aliases.
+        User variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
+        Arguments surrounded with `{{}}` will be evaluated as a custom script.
+        See http://avrae.io/cheatsheets/aliasing for more help."""
+        user_vars = self.bot.db.hget("user_vars", ctx.message.author.id, {})
+
+        if value is None:  # display value
+            uvar = user_vars.get('name')
+            if uvar is None: uvar = 'Not defined.'
+            return await self.bot.say(f'**{name}**:\n`{uvar}`')
+
+        try:
+            assert not name in STAT_VAR_NAMES
+            assert not any(c in name for c in '-/()[]\\.^$*+?|{}')
+        except AssertionError:
+            return await self.bot.say("Could not create uvar: already builtin, or contains invalid character!")
+
+        user_vars[name] = value
+        self.bot.db.hset("user_vars", ctx.message.author.id, user_vars)
+        await self.bot.say('User variable `{}` set to: `{}`'.format(name, value))
+
+    @uservar.command(pass_context=True, name='remove', aliases=['delete'])
+    async def uvar_remove(self, ctx, name):
+        """Deletes a uvar from the user."""
+        user_vars = self.bot.db.hget("user_vars", ctx.message.author.id, {})
+
+        try:
+            del user_vars[name]
+        except KeyError:
+            return await self.bot.say('User variable not found.')
+
+        self.bot.db.hset("user_vars", ctx.message.author.id, user_vars)
+
+        await self.bot.say('User variable {} removed.'.format(name))
+
+    @uservar.command(pass_context=True, name='list')
+    async def uvar_list(self, ctx):
+        """Lists all uvars for the user."""
+        user_vars = self.bot.db.hget("user_vars", ctx.message.author.id, {})
+
+        await self.bot.say('Your user variables:\n{}'.format(', '.join(sorted([name for name in user_vars.keys()]))))
+
+
+STAT_VAR_NAMES = ("armor",
+                  "charisma", "charismaMod", "charismaSave",
+                  "constitution", "constitutionMod", "constitutionSave",
+                  "description",
+                  "dexterity", "dexterityMod", "dexteritySave",
+                  "hp", "image",
+                  "intelligence", "intelligenceMod", "intelligenceSave",
+                  "level", "name", "proficiencyBonus",
+                  "strength", "strengthMod", "strengthSave",
+                  "wisdom", "wisdomMod", "wisdomSave")
 
 
 class Context:

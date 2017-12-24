@@ -330,6 +330,9 @@ class Character:
         self.character['cvars'][name] = str(val)
         return self
 
+    def get_cvars(self):
+        return self.character.get('cvars', {})
+
     def get_stat_vars(self):
         return self.character.get('stat_cvars', {})
 

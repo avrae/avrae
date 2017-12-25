@@ -6,12 +6,13 @@ Created on Jan 30, 2017
 import asyncio
 import shlex
 import textwrap
+import traceback
 import uuid
 
 from discord.ext import commands
 
 from cogs5e.models.character import Character
-from cogs5e.models.errors import NoCharacter
+from cogs5e.models.errors import NoCharacter, EvaluationError, AvraeException
 from utils.functions import confirm
 
 
@@ -90,6 +91,15 @@ class Customization:
                     message.content = Character.from_ctx(ctx).parse_cvars(message.content, ctx)
                 except NoCharacter:
                     pass  # TODO: parse aliases anyway
+                except EvaluationError as err:
+                    e = err.original
+                    if not isinstance(e, AvraeException):
+                        tb = f"```py\n{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
+                        try:
+                            await self.bot.send_message(message.author, tb)
+                        except Exception as e:
+                            pass
+                    return await self.bot.send_message(message.channel, err)
                 except Exception as e:
                     return await self.bot.send_message(message.channel, e)
                 await self.bot.process_commands(message)
@@ -165,7 +175,7 @@ class Customization:
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'])
     async def servalias(self, ctx, alias_name, *, commands=None):
         """Adds an alias that the entire server can use.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
@@ -244,7 +254,7 @@ class Customization:
         User variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
         See http://avrae.io/cheatsheets/aliasing for more help."""
-        user_vars = self.bot.db.hget("user_vars", ctx.message.author.id, {})
+        user_vars = self.bot.db.jhget("user_vars", ctx.message.author.id, {})
 
         if value is None:  # display value
             uvar = user_vars.get(name)
@@ -258,27 +268,27 @@ class Customization:
             return await self.bot.say("Could not create uvar: already builtin, or contains invalid character!")
 
         user_vars[name] = value
-        self.bot.db.hset("user_vars", ctx.message.author.id, user_vars)
+        self.bot.db.jhset("user_vars", ctx.message.author.id, user_vars)
         await self.bot.say('User variable `{}` set to: `{}`'.format(name, value))
 
     @uservar.command(pass_context=True, name='remove', aliases=['delete'])
     async def uvar_remove(self, ctx, name):
         """Deletes a uvar from the user."""
-        user_vars = self.bot.db.hget("user_vars", ctx.message.author.id, {})
+        user_vars = self.bot.db.jhget("user_vars", ctx.message.author.id, {})
 
         try:
             del user_vars[name]
         except KeyError:
             return await self.bot.say('User variable not found.')
 
-        self.bot.db.hset("user_vars", ctx.message.author.id, user_vars)
+        self.bot.db.jhset("user_vars", ctx.message.author.id, user_vars)
 
         await self.bot.say('User variable {} removed.'.format(name))
 
     @uservar.command(pass_context=True, name='list')
     async def uvar_list(self, ctx):
         """Lists all uvars for the user."""
-        user_vars = self.bot.db.hget("user_vars", ctx.message.author.id, {})
+        user_vars = self.bot.db.jhget("user_vars", ctx.message.author.id, {})
 
         await self.bot.say('Your user variables:\n{}'.format(', '.join(sorted([name for name in user_vars.keys()]))))
 
@@ -292,7 +302,7 @@ class Customization:
         glob_vars = self.bot.db.jget("global_vars", {})
 
         gvar = glob_vars.get(name)
-        if gvar is None: gvar = 'Not defined.'
+        if gvar is None: gvar = {'owner_name': 'None', 'value': 'Not defined.'}
         return await self.bot.say(f"**{name}**:\n*Owner: {gvar['owner_name']}* ```\n{gvar['value']}\n```")
 
     @globalvar.command(pass_context=True, name='create')

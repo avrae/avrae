@@ -87,3 +87,11 @@ class DataIO:
 
     def hset(self, key, field, value):
         return self._db.hset(key, field, value)
+
+    def jhget(self, key, field, default=None):
+        data = self.hget(key, field)
+        return json.loads(data) if data is not None else default
+
+    def jhset(self, key, field, value, **kwargs):
+        data = json.dumps(value, **kwargs)
+        return self.hset(key, field, data)

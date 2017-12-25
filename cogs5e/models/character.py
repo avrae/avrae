@@ -157,7 +157,10 @@ class Character:
         ops = r"([-+*/().<>=])"
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
-        user_vars = ctx.bot.db.hget("user_vars", ctx.message.author.id, {}) if ctx else {}
+        user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
+
+        _vars = user_vars
+        _vars.update(cvars)
         global_vars = None # we'll load them if we need them
 
         changed = False
@@ -234,8 +237,7 @@ class Character:
                       set_cvar=set_cvar, get_gvar=get_gvar)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
-        _names = copy.copy(user_vars)
-        _names.update(cvars)
+        _names = copy.copy(_vars)
         _names.update(stat_vars)
         _names.update({"True": True, "False": False, "currentHp": self.get_current_hp()})
         evaluator = simpleeval.EvalWithCompoundTypes(functions=_funcs, operators=_ops, names=_names)
@@ -247,13 +249,13 @@ class Character:
         evaluator.functions['set'] = set_value
 
         def cvarrepl(match):
-            return f"{match.group(1)}{cvars.get(match.group(2), match.group(2))}"
+            return f"{match.group(1)}{_vars.get(match.group(2), match.group(2))}"
 
         for var in re.finditer(r'{{([^{}]+)}}', cstr):
             raw = var.group(0)
             varstr = var.group(1)
 
-            for cvar, value in cvars.items():
+            for cvar, value in _vars.items():
                 varstr = re.sub(r'(^|\s)(' + cvar + r')(?=\s|$)', cvarrepl, varstr)
 
             try:
@@ -277,7 +279,7 @@ class Character:
                 #             except AttributeError:
                 #                 break
                 #     temp = str(_last)
-                tempout += str(cvars.get(temp, temp)) + " "
+                tempout += str(_vars.get(temp, temp)) + " "
             for substr in re.split(ops, tempout):
                 temp = substr.strip()
                 out += str(stat_vars.get(temp, temp)) + " "
@@ -295,7 +297,7 @@ class Character:
                         except AttributeError:
                             break
                 out = str(_last)
-            out = str(cvars.get(out, out))
+            out = str(_vars.get(out, out))
             out = str(stat_vars.get(out, out))
             cstr = cstr.replace(raw, out, 1)
         if changed and ctx:

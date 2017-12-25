@@ -189,8 +189,8 @@ async def on_command_error(error, ctx):
                 tb = f"```py\n{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
                 try:
                     await bot.send_message(ctx.message.author, tb)
-                except:
-                    pass
+                except Exception as e:
+                    log.info(f"Error sending traceback: {e}")
         if isinstance(original, AvraeException):
             return await bot.send_message(ctx.message.channel, str(original))
         if isinstance(original, Forbidden):

@@ -150,13 +150,15 @@ class Character:
 
     def parse_cvars(self, cstr, ctx=None):
         """Parses cvars.
-        :param cstr - The string to parse.
+        :param ctx: The Context the cvar is parsed in.
+        :param cstr: The string to parse.
         :returns string - the parsed string."""
         character = self.character
         ops = r"([-+*/().<>=])"
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
         user_vars = ctx.bot.db.hget("user_vars", ctx.message.author.id, {}) if ctx else {}
+        global_vars = None # we'll load them if we need them
 
         changed = False
 
@@ -216,6 +218,12 @@ class Character:
             changed = True
             return ''
 
+        def get_gvar(name):
+            nonlocal global_vars
+            if global_vars is None: # load only if needed
+                global_vars = ctx.bot.db.jget("global_vars", {})
+            return global_vars.get(name, {}).get('value')
+
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
         _funcs['vroll'] = verbose_roll
@@ -223,7 +231,7 @@ class Character:
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                       get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
-                      set_cvar=set_cvar)
+                      set_cvar=set_cvar, get_gvar=get_gvar)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(user_vars)

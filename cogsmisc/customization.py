@@ -5,11 +5,14 @@ Created on Jan 30, 2017
 """
 import asyncio
 import shlex
+import textwrap
+import uuid
 
 from discord.ext import commands
 
 from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
+from utils.functions import confirm
 
 
 class Customization:
@@ -244,7 +247,7 @@ class Customization:
         user_vars = self.bot.db.hget("user_vars", ctx.message.author.id, {})
 
         if value is None:  # display value
-            uvar = user_vars.get('name')
+            uvar = user_vars.get(name)
             if uvar is None: uvar = 'Not defined.'
             return await self.bot.say(f'**{name}**:\n`{uvar}`')
 
@@ -278,6 +281,75 @@ class Customization:
         user_vars = self.bot.db.hget("user_vars", ctx.message.author.id, {})
 
         await self.bot.say('Your user variables:\n{}'.format(', '.join(sorted([name for name in user_vars.keys()]))))
+
+    @commands.group(pass_context=True, invoke_without_command=True, aliases=['gvar'])
+    async def globalvar(self, ctx, name):
+        """Commands to manage global, community variables for use in snippets and aliases.
+        If run without a subcommand, shows the value of a global variable.
+        Global variables are readable by all users, but only editable by the creator.
+        Global variables must be accessed through scripting, with `get_gvar(gvar_id)`.
+        See http://avrae.io/cheatsheets/aliasing for more help."""
+        glob_vars = self.bot.db.jget("global_vars", {})
+
+        gvar = glob_vars.get(name)
+        if gvar is None: gvar = 'Not defined.'
+        return await self.bot.say(f"**{name}**:\n*Owner: {gvar['owner_name']}* ```\n{gvar['value']}\n```")
+
+    @globalvar.command(pass_context=True, name='create')
+    async def gvar_create(self, ctx, *, value):
+        """Creates a global variable.
+        A name will be randomly assigned upon creation."""
+        glob_vars = self.bot.db.jget("global_vars", {})
+        name = str(uuid.uuid4())
+        glob_vars[name] = {'owner': ctx.message.author.id, 'owner_name': str(ctx.message.author), 'value': value}
+        self.bot.db.jset("global_vars", glob_vars)
+        await self.bot.say(f"Created global variable `{name}`.")
+
+    @globalvar.command(pass_context=True, name='edit')
+    async def gvar_edit(self, ctx, name, *, value):
+        """Edits a global variable."""
+        glob_vars = self.bot.db.jget("global_vars", {})
+
+        gvar = glob_vars.get(name)
+        if gvar is None:
+            return await self.bot.say("Global variable not found.")
+        elif gvar['owner'] != ctx.message.author.id:
+            return await self.bot.say("You are not the owner of this variable.")
+        else:
+            glob_vars[name]['value'] = value
+
+        self.bot.db.jset("global_vars", glob_vars)
+        await self.bot.say(f'Global variable `{name}` edited.')
+
+    @globalvar.command(pass_context=True, name='remove', aliases=['delete'])
+    async def gvar_remove(self, ctx, name):
+        """Deletes a global variable."""
+        glob_vars = self.bot.db.jget("global_vars", {})
+
+        gvar = glob_vars.get(name)
+        if gvar is None:
+            return await self.bot.say("Global variable not found.")
+        elif gvar['owner'] != ctx.message.author.id:
+            return await self.bot.say("You are not the owner of this variable.")
+        else:
+            if await confirm(ctx, f"Are you sure you want to delete `{name}`?"):
+                del glob_vars[name]
+            else:
+                return await self.bot.say("Ok, cancelling.")
+
+        self.bot.db.jset("global_vars", glob_vars)
+
+        await self.bot.say('Global variable {} removed.'.format(name))
+
+    @globalvar.command(pass_context=True, name='list')
+    async def gvar_list(self, ctx):
+        """Lists all global variables for the user."""
+        glob_vars = self.bot.db.jget("global_vars", {})
+        user_vars = {k: v['value'] for k, v in glob_vars.items() if v['owner'] == ctx.message.author.id}
+
+        await self.bot.say('Your global variables:\n{}'.format('\n'.join(
+            f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in
+            sorted(((k, v) for k, v in user_vars.items()), key=lambda i: i[0]))))
 
 
 STAT_VAR_NAMES = ("armor",

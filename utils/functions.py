@@ -529,3 +529,23 @@ def extract_gsheet_id_from_url(url):
         return m1.group(1)
 
     raise NoValidUrlKeyFound
+
+async def confirm(ctx, message, delete_msgs=False):
+    """
+    Confirms whether a user wants to take an actions.
+    :rtype: bool|None
+    :param ctx: The current Context.
+    :param message: The message for the user to confirm.
+    :param delete_msgs: Whether to delete the messages.
+    :return: Whether the user confirmed or not. None if no reply was recieved
+    """
+    msg = await ctx.bot.send_message(ctx.message.channel, message)
+    reply = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+    replyBool = get_positivity(reply.content) if reply is not None else None
+    if delete_msgs:
+        try:
+            await ctx.bot.delete_message(msg)
+            await ctx.bot.delete_message(reply)
+        except:
+            pass
+    return replyBool

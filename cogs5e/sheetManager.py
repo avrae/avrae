@@ -296,7 +296,7 @@ class SheetManager:
         phrase = args.get('phrase', None)
         formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
                         + ('ro{}'.format(char.get_setting('reroll', 0))
-                           if not char.get_setting('reroll', '0') == '0' else '') \
+        if not char.get_setting('reroll', '0') == '0' else '') \
                         + ('mi{}'.format(mc) if mc is not None else '')
 
         if b is not None:
@@ -610,7 +610,7 @@ class SheetManager:
                 "We're having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
         except HttpError:
             return await self.bot.edit_message(loading,
-                "Google returned an error trying to access your sheet. Please ensure your sheet is shared and try again in a few minutes.")
+                                               "Google returned an error trying to access your sheet. Please ensure your sheet is shared and try again in a few minutes.")
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
@@ -903,12 +903,12 @@ class SheetManager:
 
         try:
             assert not name in character.get_stat_vars()
-            assert not any(c in name for c in '/()[]\\.^$*+?|{}')
+            assert not any(c in name for c in '-/()[]\\.^$*+?|{}')
         except AssertionError:
             return await self.bot.say("Could not create cvar: already builtin, or contains invalid character!")
 
         character.set_cvar(name, value).commit(ctx)
-        await self.bot.say('Variable `{}` set to: `{}`'.format(name, value))
+        await self.bot.say('Character variable `{}` set to: `{}`'.format(name, value))
 
     @cvar.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
@@ -922,24 +922,21 @@ class SheetManager:
         try:
             del character.get('cvars', {})[name]
         except KeyError:
-            return await self.bot.say('Variable not found.')
+            return await self.bot.say('Character variable not found.')
 
         user_characters[active_character] = character  # commit
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
 
-        await self.bot.say('Variable {} removed.'.format(name))
+        await self.bot.say('Character variable {} removed.'.format(name))
 
     @cvar.command(pass_context=True, name='list')
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
-        cvars = character.get('cvars', {})
+        character = Character.from_ctx(ctx)
+        cvars = character.get_cvars()
 
-        await self.bot.say('Your variables:\n{}'.format(', '.join(sorted([name for name in cvars.keys()]))))
+        await self.bot.say('{}\'s character variables:\n{}'.format(character.get_name(),
+                                                                   ', '.join(sorted([name for name in cvars.keys()]))))
 
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.

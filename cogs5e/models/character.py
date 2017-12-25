@@ -150,12 +150,18 @@ class Character:
 
     def parse_cvars(self, cstr, ctx=None):
         """Parses cvars.
-        :param cstr - The string to parse.
+        :param ctx: The Context the cvar is parsed in.
+        :param cstr: The string to parse.
         :returns string - the parsed string."""
         character = self.character
         ops = r"([-+*/().<>=])"
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
+        user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
+
+        _vars = user_vars
+        _vars.update(cvars)
+        global_vars = None # we'll load them if we need them
 
         changed = False
 
@@ -215,6 +221,12 @@ class Character:
             changed = True
             return ''
 
+        def get_gvar(name):
+            nonlocal global_vars
+            if global_vars is None: # load only if needed
+                global_vars = ctx.bot.db.jget("global_vars", {})
+            return global_vars.get(name, {}).get('value')
+
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
         _funcs['vroll'] = verbose_roll
@@ -222,10 +234,10 @@ class Character:
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                       get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
-                      set_cvar=set_cvar)
+                      set_cvar=set_cvar, get_gvar=get_gvar)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
-        _names = copy.copy(cvars)
+        _names = copy.copy(_vars)
         _names.update(stat_vars)
         _names.update({"True": True, "False": False, "currentHp": self.get_current_hp()})
         evaluator = simpleeval.EvalWithCompoundTypes(functions=_funcs, operators=_ops, names=_names)
@@ -237,13 +249,13 @@ class Character:
         evaluator.functions['set'] = set_value
 
         def cvarrepl(match):
-            return f"{match.group(1)}{cvars.get(match.group(2), match.group(2))}"
+            return f"{match.group(1)}{_vars.get(match.group(2), match.group(2))}"
 
         for var in re.finditer(r'{{([^{}]+)}}', cstr):
             raw = var.group(0)
             varstr = var.group(1)
 
-            for cvar, value in cvars.items():
+            for cvar, value in _vars.items():
                 varstr = re.sub(r'(^|\s)(' + cvar + r')(?=\s|$)', cvarrepl, varstr)
 
             try:
@@ -267,7 +279,7 @@ class Character:
                 #             except AttributeError:
                 #                 break
                 #     temp = str(_last)
-                tempout += str(cvars.get(temp, temp)) + " "
+                tempout += str(_vars.get(temp, temp)) + " "
             for substr in re.split(ops, tempout):
                 temp = substr.strip()
                 out += str(stat_vars.get(temp, temp)) + " "
@@ -285,7 +297,7 @@ class Character:
                         except AttributeError:
                             break
                 out = str(_last)
-            out = str(cvars.get(out, out))
+            out = str(_vars.get(out, out))
             out = str(stat_vars.get(out, out))
             cstr = cstr.replace(raw, out, 1)
         if changed and ctx:
@@ -298,6 +310,7 @@ class Character:
         @:returns int - the value of the cvar, or 0 if evaluation failed."""
         ops = r"([-+*/().<>=])"
         varstr = str(varstr).strip('<>{}')
+
         cvars = self.character.get('cvars', {})
         stat_vars = self.character.get('stat_cvars', {})
         out = ""
@@ -329,6 +342,9 @@ class Character:
         self.character['cvars'] = self.character.get('cvars', {})  # set value
         self.character['cvars'][name] = str(val)
         return self
+
+    def get_cvars(self):
+        return self.character.get('cvars', {})
 
     def get_stat_vars(self):
         return self.character.get('stat_cvars', {})

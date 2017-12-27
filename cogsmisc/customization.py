@@ -3,16 +3,22 @@ Created on Jan 30, 2017
 
 @author: andrew
 """
+import ast
 import asyncio
+import re
 import shlex
 import textwrap
 import traceback
 import uuid
+from math import floor, ceil
 
+import simpleeval
 from discord.ext import commands
 
-from cogs5e.models.character import Character
-from cogs5e.models.errors import NoCharacter, EvaluationError, AvraeException
+from cogs5e.funcs.dice import roll
+from cogs5e.models.character import Character, simple_roll, verbose_roll
+from cogs5e.models.errors import NoCharacter, EvaluationError, FunctionRequiresCharacter, \
+    AvraeException
 from utils.functions import confirm
 
 
@@ -25,6 +31,7 @@ class Customization:
         self.serv_aliases = self.bot.db.jget('serv_aliases', {})
         self.bot.loop.create_task(self.update_aliases())
         self.bot.loop.create_task(self.backup_aliases())
+        self.nochar_eval = NoCharacterEvaluator()
 
     async def on_ready(self):
         if getattr(self.bot, "shard_id", 0) == 0:
@@ -86,18 +93,25 @@ class Customization:
             if command:
                 message.content = self.handle_alias_arguments(command, message)
                 # message.content = message.content.replace(alias, command, 1)
+                ctx = Context(self.bot, message)
+                char = None
                 try:
-                    ctx = Context(self.bot, message)
-                    message.content = Character.from_ctx(ctx).parse_cvars(message.content, ctx)
+                    char = Character.from_ctx(ctx)
                 except NoCharacter:
-                    pass  # TODO: parse aliases anyway
+                    pass
+
+                try:
+                    if char:
+                        message.content = char.parse_cvars(message.content, ctx)
+                    else:
+                        message.content = self.parse_no_char(message.content, ctx)
                 except EvaluationError as err:
                     e = err.original
                     if not isinstance(e, AvraeException):
                         tb = f"```py\n{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
                         try:
                             await self.bot.send_message(message.author, tb)
-                        except Exception as e:
+                        except Exception:
                             pass
                     return await self.bot.send_message(message.channel, err)
                 except Exception as e:
@@ -125,6 +139,60 @@ class Customization:
                 tempargs.remove(value)
 
         return self.bot.prefix + new_command + " " + ' '.join(tempargs)
+
+    def parse_no_char(self, cstr, ctx):
+        """
+        Parses cvars and whatnot without an active character.
+        :param string: The string to parse.
+        :param ctx: The Context to parse the string in.
+        :return: The parsed string.
+        :rtype: str
+        """
+        ops = r"([-+*/().<>=])"
+        user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
+
+        _vars = user_vars
+        global_vars = None  # we'll load them if we need them
+
+        def get_gvar(name):
+            nonlocal global_vars
+            if global_vars is None:  # load only if needed
+                global_vars = ctx.bot.db.jget("global_vars", {})
+            return global_vars.get(name, {}).get('value')
+
+        evaluator = self.nochar_eval
+        evaluator.functions['get_gvar'] = get_gvar
+
+        def cvarrepl(match):
+            return f"{match.group(1)}{_vars.get(match.group(2), match.group(2))}"
+
+        for var in re.finditer(r'{{([^{}]+)}}', cstr):
+            raw = var.group(0)
+            varstr = var.group(1)
+
+            for cvar, value in _vars.items():
+                varstr = re.sub(r'(^|\s)(' + cvar + r')(?=\s|$)', cvarrepl, varstr)
+
+            try:
+                cstr = cstr.replace(raw, str(evaluator.eval(varstr)), 1)
+            except Exception as e:
+                raise EvaluationError(e)
+
+        for var in re.finditer(r'{([^{}]+)}', cstr):
+            raw = var.group(0)
+            varstr = var.group(1)
+            out = ""
+            for substr in re.split(ops, varstr):
+                temp = substr.strip()
+                out += str(_vars.get(temp, temp)) + " "
+            cstr = cstr.replace(raw, str(roll(out).total), 1)
+        for var in re.finditer(r'<([^<>]+)>', cstr):
+            raw = var.group(0)
+            if re.match(r'<([@#]|:.+:)[&!]{0,2}\d+>', raw): continue  # ignore mentions, channels, emotes
+            out = var.group(1)
+            out = str(_vars.get(out, out))
+            cstr = cstr.replace(raw, out, 1)
+        return cstr
 
     @commands.group(pass_context=True, invoke_without_command=True)
     async def alias(self, ctx, alias_name, *, commands=None):
@@ -382,3 +450,39 @@ class Context:
     def __init__(self, bot, message):
         self.bot = bot
         self.message = message
+
+
+class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
+    def __init__(self, operators=None, functions=None, names=None):
+        _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
+        _funcs['roll'] = simple_roll
+        _funcs['vroll'] = verbose_roll
+        _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
+                      get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
+                      get_cc_min=self.needs_char, mod_cc=self.needs_char,
+                      get_slots=self.needs_char, get_slots_max=self.needs_char, set_slots=self.needs_char,
+                      use_slot=self.needs_char,
+                      get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char,
+                      set_cvar=self.needs_char)
+        _ops = simpleeval.DEFAULT_OPERATORS.copy()
+        _ops.pop(ast.Pow)  # no exponents pls
+        _names = {"True": True, "False": False, "currentHp": 0}
+
+        def set_value(name, value):
+            self.names[name] = value
+            return ''
+
+        _funcs['set'] = set_value
+
+        if operators:
+            _ops.update(operators)
+        if functions:
+            _funcs.update(functions)
+        if names:
+            _names.update(names)
+
+        super(NoCharacterEvaluator, self).__init__(_ops, _funcs, _names)
+
+    def needs_char(self, *args, **kwargs):
+        raise FunctionRequiresCharacter()  # no. bad.
+

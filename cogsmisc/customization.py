@@ -110,6 +110,8 @@ class Customization:
         args = " ".join(self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[1:])
         s = shlex.shlex(args, posix=True)
         s.whitespace = ' '  # doofy workaround
+        s.whitespace_split = True
+        s.commenters = ''
         args = list(s)
         for index, arg in enumerate(args):
             if " " in arg:

@@ -12,6 +12,7 @@ import traceback
 import uuid
 from math import floor, ceil
 
+import copy
 import simpleeval
 from discord.ext import commands
 
@@ -161,7 +162,9 @@ class Customization:
             return global_vars.get(name, {}).get('value')
 
         evaluator = self.nochar_eval
+        evaluator.reset()
         evaluator.functions['get_gvar'] = get_gvar
+        evaluator.names.update(_vars)
 
         def cvarrepl(match):
             return f"{match.group(1)}{_vars.get(match.group(2), match.group(2))}"
@@ -482,7 +485,12 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
             _names.update(names)
 
         super(NoCharacterEvaluator, self).__init__(_ops, _funcs, _names)
+        self._initial_names = copy.copy(self.names)
 
     def needs_char(self, *args, **kwargs):
         raise FunctionRequiresCharacter()  # no. bad.
+
+    def reset(self):
+        self.names = copy.copy(self._initial_names)
+
 

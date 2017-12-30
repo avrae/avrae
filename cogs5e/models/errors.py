@@ -19,6 +19,13 @@ class EvaluationError(AvraeException):
         super().__init__(f"Error evaluating expression: {original}")
         self.original = original
 
+class FunctionRequiresCharacter(AvraeException):
+    """
+    Raised when a function that requires a character is called without one.
+    """
+    def __init__(self, msg=None):
+        super().__init__(msg or "This alias requires an active character.")
+
 class OutdatedSheet(AvraeException):
     """Raised when a feature is used that requires an updated sheet."""
     def __init__(self, msg=None):
@@ -70,3 +77,8 @@ class LoginFailure(MeteorClientException):
     """Raised when a login fails."""
     def __init__(self):
         super().__init__("Failed to login.")
+
+class InsertFailure(MeteorClientException):
+    """Raised when an insertion fails."""
+    def __init__(self, error):
+        super().__init__(f"Failed to insert: {error}")

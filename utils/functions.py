@@ -11,10 +11,12 @@ import re
 
 import discord
 from fuzzywuzzy import process, fuzz
+from pygsheets import NoValidUrlKeyFound
 
 from cogs5e.models.errors import SelectionCancelled, NoSelectionElements
 
 log = logging.getLogger(__name__)
+
 
 def print_table(table):
     tableStr = ''
@@ -339,18 +341,19 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
         if roll_string[0] in '-+*/().<>=':  # case: +6[blud]
             preop = roll_string[0]
             roll_string = roll_string[1:]
-        for resistance in resistances:
-            if resistance.lower() in comment.lower() and len(resistance) > 0:
-                roll_string = '({0}) / 2'.format(roll_string)
-                break
-        for immunity in immunities:
-            if immunity.lower() in comment.lower() and len(immunity) > 0:
-                roll_string = '({0}) * 0'.format(roll_string)
-                break
-        for vulnerability in vulnerabilities:
-            if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
-                roll_string = '({0}) * 2'.format(roll_string)
-                break
+        if not comment.endswith('^'):
+            for resistance in resistances:
+                if resistance.lower() in comment.lower() and len(resistance) > 0:
+                    roll_string = '({0}) / 2'.format(roll_string)
+                    break
+            for immunity in immunities:
+                if immunity.lower() in comment.lower() and len(immunity) > 0:
+                    roll_string = '({0}) * 0'.format(roll_string)
+                    break
+            for vulnerability in vulnerabilities:
+                if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
+                    roll_string = '({0}) * 2'.format(roll_string)
+                    break
         formatted_roll_strings[index] = '{0}{1}{2}'.format(preop, roll_string,
                                                            "[{}]".format(comment) if comment is not '' else "")
     if formatted_roll_strings:
@@ -412,8 +415,10 @@ def gen_error_message():
     thing_to_do = random.choice(['stopped', 'killed', 'talked to', 'found', 'destroyed', 'fought'])
     return f"{subject} {verb} {thing_to_do}"
 
+
 ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
                'int': 'Intelligence', 'wis': 'Wisdom', 'cha': 'Charisma'}
+
 
 def parse_data_entry(text):
     """Parses a list or string from astranauta data.
@@ -438,7 +443,7 @@ def parse_data_entry(text):
                 out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
                     entry['entries']))  # oh gods here we goooooooo
             elif entry['type'] == 'options':
-                pass # parsed separately in classfeat
+                pass  # parsed separately in classfeat
             elif entry['type'] == 'list':
                 out.append('\n'.join(f"- {t}" for t in entry['items']))
             elif entry['type'] == 'table':
@@ -448,7 +453,7 @@ def parse_data_entry(text):
                     temp += ' - '.join(f"{col}" for col in row) + '\n'
                 out.append(temp.strip())
             elif entry['type'] == 'invocation':
-                pass # this is only found in options
+                pass  # this is only found in options
             elif entry['type'] == 'abilityAttackMod':
                 out.append(f"`{entry['name']} Attack Bonus = "
                            f"{' or '.join(ABILITY_MAP.get(a) for a in entry['attributes'])}"
@@ -482,3 +487,81 @@ def parse_data_formatting(text):
     while exp.search(text):
         text = exp.sub(sub, text)
     return text
+
+
+
+def dicecloud_parse(spell):
+    """
+    :param spell: The spell to parse.
+    :return: (dict) A dictionary with all the keys necessary for dicecloud exporting.
+    """
+    mat = re.search(r'\(([^()]+)\)', spell['components'])
+    schools = {
+        "A": "Abjuration",
+        "EV": "Evocation",
+        "EN": "Enchantment",
+        "I": "Illusion",
+        "D": "Divination",
+        "N": "Necromancy",
+        "T": "Transmutation",
+        "C": "Conjuration"
+    }
+    spellDesc = []
+    if isinstance(spell['text'], list):
+        for a in spell["text"]:
+            if a is '': continue
+            spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
+                "This spell can be found in the Elemental Evil Player's Companion", ""))
+    else:
+        spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
+            "This spell can be found in the Elemental Evil Player's Companion", ""))
+
+    text = '\n\n'.join(spellDesc)
+    return {
+        'name': spell['name'],
+        'description': text,
+        'castingTime': spell['time'],
+        'range': spell['range'],
+        'duration': spell['duration'],
+        'components.verbal': 'V' in spell['components'],
+        'components.somatic': 'S' in spell['components'],
+        'components.concentration': 'Concentration' in spell['duration'],
+        'components.material': mat.group(1) if mat else None,
+        'ritual': 'ritual' in spell,
+        'level': int(spell['level']),
+        'school': schools.get(spell.get('school', 'A'))
+    }
+
+URL_KEY_V1_RE = re.compile(r'key=([^&#]+)')
+URL_KEY_V2_RE = re.compile(r'/spreadsheets/d/([a-zA-Z0-9-_]+)')
+
+def extract_gsheet_id_from_url(url):
+    m2 = URL_KEY_V2_RE.search(url)
+    if m2:
+        return m2.group(1)
+
+    m1 = URL_KEY_V1_RE.search(url)
+    if m1:
+        return m1.group(1)
+
+    raise NoValidUrlKeyFound
+
+async def confirm(ctx, message, delete_msgs=False):
+    """
+    Confirms whether a user wants to take an actions.
+    :rtype: bool|None
+    :param ctx: The current Context.
+    :param message: The message for the user to confirm.
+    :param delete_msgs: Whether to delete the messages.
+    :return: Whether the user confirmed or not. None if no reply was recieved
+    """
+    msg = await ctx.bot.send_message(ctx.message.channel, message)
+    reply = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+    replyBool = get_positivity(reply.content) if reply is not None else None
+    if delete_msgs:
+        try:
+            await ctx.bot.delete_message(msg)
+            await ctx.bot.delete_message(reply)
+        except:
+            pass
+    return replyBool

@@ -16,7 +16,7 @@ from cogs5e.dice import Dice
 from cogs5e.gametrack import GameTrack
 from cogs5e.initiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
-from cogs5e.models.errors import AvraeException
+from cogs5e.models.errors import AvraeException, EvaluationError
 from cogs5e.pbpUtils import PBPUtils
 from cogs5e.sheetManager import SheetManager
 from cogsmisc.adminUtils import AdminUtils
@@ -183,6 +183,14 @@ async def on_command_error(error, ctx):
                                       "This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
     elif isinstance(error, CommandInvokeError):
         original = error.original
+        if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
+            e = original.original
+            if not isinstance(e, AvraeException):
+                tb = f"```py\n{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
+                try:
+                    await bot.send_message(ctx.message.author, tb)
+                except Exception as e:
+                    log.info(f"Error sending traceback: {e}")
         if isinstance(original, AvraeException):
             return await bot.send_message(ctx.message.channel, str(original))
         if isinstance(original, Forbidden):
@@ -221,7 +229,7 @@ async def on_command_error(error, ctx):
                                    ctx.message.content))
     except AttributeError:
         await bot.send_message(bot.owner, f"**{error_msg}**\n" \
-                                          + "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
+                               + "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
             ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
     for o in discord_trim(tb):
         await bot.send_message(bot.owner, o)

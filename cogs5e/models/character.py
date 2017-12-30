@@ -28,17 +28,17 @@ from cogs5e.funcs.dice import roll
 from cogs5e.models.dicecloudClient import dicecloud_client
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError, InvalidSpellLevel
+from cogs5e.sheets.dicecloud import CLASS_RESOURCES
 from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
 
 
-class Character:  # TODO: refactor old commands to use this
-
+class Character:
     def __init__(self, _dict, _id):
         self.character = _dict
         self.id = _id
-        self._live = self.character.get('live') and self.character.get('type') == 'dicecloud'
+        self.live = self.character.get('live') and self.character.get('type') == 'dicecloud'
 
     @classmethod
     def from_ctx(cls, ctx):
@@ -150,12 +150,18 @@ class Character:  # TODO: refactor old commands to use this
 
     def parse_cvars(self, cstr, ctx=None):
         """Parses cvars.
-        :param cstr - The string to parse.
+        :param ctx: The Context the cvar is parsed in.
+        :param cstr: The string to parse.
         :returns string - the parsed string."""
         character = self.character
         ops = r"([-+*/().<>=])"
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
+        user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
+
+        _vars = user_vars
+        _vars.update(cvars)
+        global_vars = None # we'll load them if we need them
 
         changed = False
 
@@ -215,6 +221,12 @@ class Character:  # TODO: refactor old commands to use this
             changed = True
             return ''
 
+        def get_gvar(name):
+            nonlocal global_vars
+            if global_vars is None: # load only if needed
+                global_vars = ctx.bot.db.jget("global_vars", {})
+            return global_vars.get(name, {}).get('value')
+
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
         _funcs['vroll'] = verbose_roll
@@ -222,13 +234,13 @@ class Character:  # TODO: refactor old commands to use this
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                       get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
-                      set_cvar=set_cvar)
+                      set_cvar=set_cvar, get_gvar=get_gvar)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
-        _names = copy.copy(cvars)
+        _names = copy.copy(_vars)
         _names.update(stat_vars)
         _names.update({"True": True, "False": False, "currentHp": self.get_current_hp()})
-        evaluator = simpleeval.SimpleEval(functions=_funcs, operators=_ops, names=_names)
+        evaluator = simpleeval.EvalWithCompoundTypes(functions=_funcs, operators=_ops, names=_names)
 
         def set_value(name, value):
             evaluator.names[name] = value
@@ -237,13 +249,13 @@ class Character:  # TODO: refactor old commands to use this
         evaluator.functions['set'] = set_value
 
         def cvarrepl(match):
-            return f"{match.group(1)}{cvars.get(match.group(2), match.group(2))}"
+            return f"{match.group(1)}{_vars.get(match.group(2), match.group(2))}"
 
         for var in re.finditer(r'{{([^{}]+)}}', cstr):
             raw = var.group(0)
             varstr = var.group(1)
 
-            for cvar, value in cvars.items():
+            for cvar, value in _vars.items():
                 varstr = re.sub(r'(^|\s)(' + cvar + r')(?=\s|$)', cvarrepl, varstr)
 
             try:
@@ -267,7 +279,7 @@ class Character:  # TODO: refactor old commands to use this
                 #             except AttributeError:
                 #                 break
                 #     temp = str(_last)
-                tempout += str(cvars.get(temp, temp)) + " "
+                tempout += str(_vars.get(temp, temp)) + " "
             for substr in re.split(ops, tempout):
                 temp = substr.strip()
                 out += str(stat_vars.get(temp, temp)) + " "
@@ -285,7 +297,7 @@ class Character:  # TODO: refactor old commands to use this
                         except AttributeError:
                             break
                 out = str(_last)
-            out = str(cvars.get(out, out))
+            out = str(_vars.get(out, out))
             out = str(stat_vars.get(out, out))
             cstr = cstr.replace(raw, out, 1)
         if changed and ctx:
@@ -298,6 +310,7 @@ class Character:  # TODO: refactor old commands to use this
         @:returns int - the value of the cvar, or 0 if evaluation failed."""
         ops = r"([-+*/().<>=])"
         varstr = str(varstr).strip('<>{}')
+
         cvars = self.character.get('cvars', {})
         stat_vars = self.character.get('stat_cvars', {})
         out = ""
@@ -329,6 +342,9 @@ class Character:  # TODO: refactor old commands to use this
         self.character['cvars'] = self.character.get('cvars', {})  # set value
         self.character['cvars'][name] = str(val)
         return self
+
+    def get_cvars(self):
+        return self.character.get('cvars', {})
 
     def get_stat_vars(self):
         return self.character.get('stat_cvars', {})
@@ -392,7 +408,7 @@ class Character:  # TODO: refactor old commands to use this
 
         self.on_hp()
 
-        if self._live:
+        if self.live:
             self._sync_hp()
 
         return self
@@ -403,7 +419,7 @@ class Character:  # TODO: refactor old commands to use this
                 log.warning(error)
                 if error.get('error') == 403:  # character no longer shared
                     self.character['live'] = False
-                    self._live = False
+                    self.live = False
             else:
                 log.debug(data)
 
@@ -436,18 +452,30 @@ class Character:  # TODO: refactor old commands to use this
         self._initialize_deathsaves()
         return self.character['consumables']['deathsaves']
 
+    def get_ds_str(self):
+        """
+        :rtype: str
+        :return: A bubble representation of a character's death saves.
+        """
+        ds = self.get_deathsaves()
+        successes = '\u25c9' * ds['success']['value'] + '\u3007' * (3 - ds['success']['value'])
+        fails = '\u25c9' * ds['fail']['value'] + '\u3007' * (3 - ds['fail']['value'])
+        return f"S {successes} | {fails} F"
+
     def add_successful_ds(self):
         """Adds a successful death save to the character.
         Returns True if the character is stable."""
         self._initialize_deathsaves()
-        self.character['consumables']['deathsaves']['success']['value'] += 1
+        self.character['consumables']['deathsaves']['success']['value'] = min(3, self.character['consumables'][
+            'deathsaves']['success']['value'] + 1)
         return self.character['consumables']['deathsaves']['success']['value'] == 3
 
     def add_failed_ds(self):
         """Adds a failed death save to the character.
         Returns True if the character is dead."""
         self._initialize_deathsaves()
-        self.character['consumables']['deathsaves']['fail']['value'] += 1
+        self.character['consumables']['deathsaves']['fail']['value'] = min(3, self.character['consumables'][
+            'deathsaves']['fail']['value'] + 1)
         return self.character['consumables']['deathsaves']['fail']['value'] == 3
 
     def reset_death_saves(self):
@@ -513,7 +541,7 @@ class Character:  # TODO: refactor old commands to use this
             out = "No spell slots."
         return out
 
-    def set_remaining_slots(self, level: int, value: int):
+    def set_remaining_slots(self, level: int, value: int, sync: bool = True):
         """Sets the character's remaining spell slots of level level.
         @:param level - The spell level.
         @:param value - The number of remaining spell slots.
@@ -530,7 +558,7 @@ class Character:  # TODO: refactor old commands to use this
         self._initialize_spellslots()
         self.character['consumables']['spellslots'][str(level)]['value'] = int(value)
 
-        if self._live:
+        if self.live and sync:
             self._sync_slots()
 
         return self
@@ -541,7 +569,7 @@ class Character:  # TODO: refactor old commands to use this
                 log.warning(error)
                 if error.get('error') == 403:  # character no longer shared
                     self.character['live'] = False
-                    self._live = False
+                    self.live = False
             else:
                 log.debug(data)
 
@@ -572,7 +600,60 @@ class Character:  # TODO: refactor old commands to use this
         """Resets all spellslots to their max value.
         @:returns self"""
         for level in range(1, 10):
-            self.set_remaining_slots(level, self.get_max_spellslots(level))
+            self.set_remaining_slots(level, self.get_max_spellslots(level), False)
+        self._sync_slots()
+        return self
+
+    def _initialize_spellbook(self):
+        """Sets up a character's spellbook override.
+        @:raises OutdatedSheet if sheet does not have spellbook."""
+        try:
+            assert self.character.get('spellbook') is not None
+        except AssertionError:
+            raise OutdatedSheet()
+
+    def _initialize_spell_overrides(self):
+        """Sets up a character's spell overrides."""
+        try:
+            assert self.character.get('overrides') is not None
+        except AssertionError:
+            self.character['overrides'] = {}
+        if not 'spells' in self.character['overrides']:
+            self.character['overrides']['spells'] = []
+
+    def add_known_spell(self, spell):
+        """Adds a spell to the character's known spell list.
+        :param spell (dict) - the Spell dictionary.
+        :returns self"""
+        self._initialize_spellbook()
+        spells = set(self.character['spellbook']['spells'])
+        spells.add(spell['name'])
+        self.character['spellbook']['spells'] = list(spells)
+
+        if not self.live:
+            self._initialize_spell_overrides()
+            overrides = set(self.character['overrides']['spells'])
+            overrides.add(spell['name'])
+            self.character['overrides']['spells'] = list(overrides)
+        return self
+
+    def remove_known_spell(self, spell_name):
+        """
+        Removes a spell from the character's spellbook override.
+        :param spell_name: (str) The name of the spell to remove.
+        :return: (str) The name of the removed spell.
+        """
+        assert not self.live
+        self._initialize_spellbook()
+        overrides = set(self.character['overrides'].get('spells', []))
+        spell_name = next((s for s in overrides if spell_name.lower() == s.lower()), None)
+        if spell_name:
+            overrides.remove(spell_name)
+            self.character['overrides']['spells'] = list(overrides)
+            spells = set(self.character['spellbook']['spells'])
+            spells.remove(spell_name)
+            self.character['spellbook']['spells'] = list(spells)
+        return spell_name
 
     def _initialize_custom_counters(self):
         try:
@@ -591,15 +672,19 @@ class Character:  # TODO: refactor old commands to use this
         _min = kwargs.get('minValue')
         _reset = kwargs.get('reset')
         _type = kwargs.get('displayType')
+        _live_id = kwargs.get('live')
         try:
             assert _reset in ('short', 'long', 'none') or _reset is None
         except AssertionError:
             raise InvalidArgument("Invalid reset.")
         if _max is not None and _min is not None:
+            maxV = self.evaluate_cvar(_max)
             try:
-                assert self.evaluate_cvar(_max) >= self.evaluate_cvar(_min)
+                assert maxV >= self.evaluate_cvar(_min)
             except AssertionError:
                 raise InvalidArgument("Max value is less than min value.")
+            if maxV == 0:
+                raise InvalidArgument("Max value cannot be 0.")
         if _reset and _max is None: raise InvalidArgument("Reset passed but no maximum passed.")
         if _type == 'bubble' and (_max is None or _min is None): raise InvalidArgument(
             "Bubble display requires a max and min value.")
@@ -608,6 +693,7 @@ class Character:  # TODO: refactor old commands to use this
         if _min is not None: newCounter['min'] = _min
         if _reset and _max is not None: newCounter['reset'] = _reset
         newCounter['type'] = _type
+        newCounter['live'] = _live_id
         log.debug(f"Creating new counter {newCounter}")
 
         self.character['consumables']['custom'][name] = newCounter
@@ -634,7 +720,32 @@ class Character:  # TODO: refactor old commands to use this
             raise CounterOutOfBounds()
         self.character['consumables']['custom'][name]['value'] = int(newValue)
 
+        if self.character['consumables']['custom'][name].get('live') and self.live:
+            used = _max - newValue
+            self._sync_consumable(self.character['consumables']['custom'][name], used)
+
         return self
+
+    def _sync_consumable(self, counter, used):
+        """Syncs a consumable's uses with dicecloud."""
+
+        def update_callback(error, data):
+            if error:
+                log.warning(error)
+                if error.get('error') == 403:  # character no longer shared
+                    self.character['live'] = False  # this'll be committed since we're modifying something to sync
+                    self.live = False
+            else:
+                log.debug(data)
+
+        if counter['live'] in CLASS_RESOURCES:
+            dicecloud_client.update('characters', {'_id': self.id[10:]},
+                                    {'$set': {f"{counter['live']}.adjustment": -used}},
+                                    callback=update_callback)
+        else:
+            dicecloud_client.update('features', {'_id': counter['live']},
+                                    {'$set': {"used": used}},
+                                    callback=update_callback)
 
     def get_consumable(self, name):
         """Returns the dict object of the consumable, or raises NoConsumable."""

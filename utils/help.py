@@ -6,32 +6,31 @@ Created on Jan 17, 2017
 import inspect
 import itertools
 import re
-from math import floor
 
 import discord
 from discord.errors import Forbidden
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
-from discord.ext.commands.core import Command
+from discord.ext.commands.core import Command, GroupMixin
 from discord.ext.commands.formatter import HelpFormatter
 
 
 class Help:
-    
+
     def __init__(self, bot):
         self._mentions_transforms = {
             '@everyone': '@\u200beveryone',
             '@here': '@\u200bhere'
         }
-        
+
         self._mention_pattern = re.compile('|'.join(self._mentions_transforms.keys()))
-        
-        self.formatter = CustomHelpFormatter(width = 2000)
+
+        self.formatter = CustomHelpFormatter(width=2000)
         self.bot = bot
-    
+
     @commands.command(name='help', aliases=['commands'], pass_context=True)
     @commands.cooldown(1, 2, BucketType.user)
-    async def _default_help_command(self, ctx, *commands : str):
+    async def _default_help_command(self, ctx, *commands: str):
         """Shows this message.
         <argument> - This means the argument is __**required**__.
         [argument] - This means the argument is __**optional**__.
@@ -40,10 +39,10 @@ class Help:
         Now that you know the basics, it should be noted that __**you do not type in the brackets!**__"""
         bot = ctx.bot
         destination = ctx.message.author if bot.pm_help else ctx.message.channel
-    
+
         def repl(obj):
             return self._mentions_transforms.get(obj.group(0), '')
-    
+
         # help by itself just lists our own commands.
         if len(commands) == 0:
             embed = self.formatter.format_help_for(ctx, bot)
@@ -59,9 +58,10 @@ class Help:
                     try:
                         await bot.send_message(destination, bot.command_not_found.format(name))
                     except Forbidden:
-                        await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
+                        await bot.send_message(ctx.message.channel,
+                                               'Error: I cannot send messages to this user or channel.')
                     return
-    
+
             embed = self.formatter.format_help_for(ctx, command)
         else:
             name = self._mention_pattern.sub(repl, commands[0])
@@ -70,9 +70,10 @@ class Help:
                 try:
                     await bot.send_message(destination, bot.command_not_found.format(name))
                 except Forbidden:
-                    await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
+                    await bot.send_message(ctx.message.channel,
+                                           'Error: I cannot send messages to this user or channel.')
                 return
-    
+
             for key in commands[1:]:
                 try:
                     key = self._mention_pattern.sub(repl, key)
@@ -81,17 +82,19 @@ class Help:
                         try:
                             await bot.send_message(destination, bot.command_not_found.format(key))
                         except Forbidden:
-                            await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
+                            await bot.send_message(ctx.message.channel,
+                                                   'Error: I cannot send messages to this user or channel.')
                         return
                 except AttributeError:
                     try:
                         await bot.send_message(destination, bot.command_has_no_subcommands.format(command, key))
                     except Forbidden:
-                        await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
+                        await bot.send_message(ctx.message.channel,
+                                               'Error: I cannot send messages to this user or channel.')
                     return
-    
+
             embed = self.formatter.format_help_for(ctx, command)
-        
+
         try:
             for e in embed:
                 await bot.send_message(destination, embed=e)
@@ -100,9 +103,10 @@ class Help:
         else:
             if bot.pm_help:
                 await bot.send_message(ctx.message.channel, 'I have sent help to your PMs.')
-        
+
+
 class CustomHelpFormatter(HelpFormatter):
-    
+
     def _get_subcommands(self, commands):
         out = []
         for name, command in commands:
@@ -110,14 +114,19 @@ class CustomHelpFormatter(HelpFormatter):
                 # skip aliases
                 continue
 
-            entry = '**{0}** - {1}\n'.format(name, command.short_doc)
+            entry = '**{0}** - {1}\n'.format(name if not self.command_has_subcommands(command) else f'__{name}__',
+                                             command.short_doc)
             shortened = self.shorten(entry)
             out.append(shortened)
         return ''.join(sorted(out))
-    
+
+    def command_has_subcommands(self, command):
+        return isinstance(command, GroupMixin)
+
     def get_ending_note(self):
         command_name = self.context.invoked_with
-        return "Type {0}{1} command for more info on a command.\n" \
+        return "An underlined command signifies that the command has subcommands.\n" \
+               "Type {0}{1} command for more info on a command.\n" \
                "You can also type {0}{1} category for more info on a category.".format(self.clean_prefix, command_name)
 
     def format(self):
@@ -128,7 +137,7 @@ class CustomHelpFormatter(HelpFormatter):
         embed
             An embed.
         """
-        
+
         embed = discord.Embed()
         self.embeds = [embed]
         length = 0
@@ -163,7 +172,7 @@ class CustomHelpFormatter(HelpFormatter):
             # we insert the zero width space there to give it approximate
             # last place sorting position.
             return cog if cog is not None else '\u200bNo Category'
-        
+
         current_embed = embed
         if self.is_bot():
             data = sorted(self.filter_command_list(), key=category)
@@ -210,12 +219,12 @@ class CustomHelpFormatter(HelpFormatter):
                     current_embed.add_field(name=title, value=v, inline=False)
                 else:
                     current_embed.add_field(name="con't", value=v, inline=False)
-        
+
         if length > 5500:
             current_embed = discord.Embed()
             self.embeds.append(current_embed)
             length = 0
-        
+
         ending_note = self.get_ending_note()
         current_embed.add_field(name='More Help', value=ending_note, inline=False)
         return self.embeds

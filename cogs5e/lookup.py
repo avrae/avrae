@@ -24,6 +24,7 @@ CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'invocationsknown': "Invocations Known", 'spellslots': "Spell Slots", 'slotlevel': "Slot Level",
                       'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
                       'psipoints': "Psi Points", 'psilimit': "Psi Limit"}
+IMG_BASE_URL = "5etools.com"
 
 
 class Lookup:
@@ -95,7 +96,7 @@ class Lookup:
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
-            embed.add_field(name="con't", value=piece)
+            embed.add_field(name="\u200b", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -142,12 +143,24 @@ class Lookup:
                 if 'proficiency' in entry:
                     prereq = f"Proficiency with {entry['proficiency'][0]['armor']} armor"
 
+        ability = None
+        if 'ability' in result:
+            if 'choose' in result['ability']:
+                ability = ' or '.join(ABILITY_MAP.get(a) for a in result['ability']['choose'][0]['from'])
+            else:
+                ability = ' or '.join(ABILITY_MAP.get(a) for a in result['ability'].keys())
+
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         embed.add_field(name="Prerequisite", value=prereq)
         embed.add_field(name="Source", value=result['source'])
+        if ability:
+            embed.add_field(name="Ability Improvement",
+                            value=f"Increase your {ability} score by 1, up to a maximum of 20.")
+        _name = 'Description'
         for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
-            embed.add_field(name="Description", value=piece)
+            embed.add_field(name=_name, value=piece)
+            _name = '\u200b'
         await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
@@ -181,7 +194,7 @@ class Lookup:
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
-            embed.add_field(name="con't", value=piece)
+            embed.add_field(name="\u200b", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -249,7 +262,7 @@ class Lookup:
             f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
             embed.add_field(name=t['name'], value=f_text[0])
             for piece in f_text[1:]:
-                embed.add_field(name="con't", value=piece)
+                embed.add_field(name="\u200b", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -284,7 +297,7 @@ class Lookup:
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
-            embed.add_field(name="con't", value=piece)
+            embed.add_field(name="\u200b", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -469,7 +482,7 @@ class Lookup:
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
         src = parse.quote(parsesource(result.get('type', '').split(',')[-1]))
-        url = f"https://astranauta.github.io/img/{src}/{parse.quote(result['name'])}.png"
+        url = f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(result['name'])}.png"
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -705,7 +718,7 @@ class Lookup:
             if "legendary" in monster:
                 embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster["legendary"])))
 
-        embed_queue[0].set_thumbnail(url=f"https://astranauta.github.io/img/{src}/{parse.quote(monster['name'])}.png")
+        embed_queue[0].set_thumbnail(url=f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(monster['name'])}.png")
 
         for embed in embed_queue:
             if pm:
@@ -910,7 +923,8 @@ class Lookup:
         itemDict['damage'] = ''
         if 'type' in item:
             itemDict['type'] = ', '.join(i for i in (
-                [parsetype(t) for t in item['type'].split(',')] + ["Wondrous Item" if item.get('wondrous') else '']) if
+                    [parsetype(t) for t in item['type'].split(',')] + ["Wondrous Item" if item.get('wondrous') else ''])
+                                         if
                                          i)
             for iType in item['type'].split(','):
                 if iType in ('M', 'R', 'GUN'):
@@ -962,7 +976,7 @@ class Lookup:
         field_name = "Description"
         for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
             embed.add_field(name=field_name, value=piece)
-            field_name = "con't"
+            field_name = "\u200b"
 
         # embed.set_footer(text=f"Source: {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
 

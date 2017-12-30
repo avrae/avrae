@@ -1196,7 +1196,7 @@ class InitTracker:
             args['resist'] = args.get('resist') or '|'.join(target.resist)
             args['immune'] = args.get('immune') or '|'.join(target.immune)
             args['vuln'] = args.get('vuln') or '|'.join(target.vuln)
-            args['criton'] = combatant.sheet.get('settings', {}).get('criton', 20) or 20
+            args['criton'] = args.get('criton') or combatant.sheet.get('settings', {}).get('criton', 20) or 20
             args['c'] = combatant.sheet.get('settings', {}).get('critdmg') or args.get('c')
             args['hocrit'] = combatant.sheet.get('settings', {}).get('hocrit') or False
             args['crittype'] = combatant.sheet.get('settings', {}).get('crittype') or 'default'

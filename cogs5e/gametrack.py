@@ -14,12 +14,13 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName
+from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName, searchSpell
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
+from cogs5e.models.dicecloudClient import dicecloud_client
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
-from utils.functions import parse_args_3, strict_search
+from utils.functions import parse_args_3, strict_search, get_selection, dicecloud_parse
 
 log = logging.getLogger(__name__)
 
@@ -52,27 +53,10 @@ class GameTrack:
             embed.add_field(name=name, value=val)
         await self.bot.say(embed=embed)
 
-    @game.command(pass_context=True, name='spellbook', aliases=['sb'])
+    @game.command(pass_context=True, name='spellbook', aliases=['sb'], hidden=True)
     async def game_spellbook(self, ctx):
-        """Displays your character's known spells and spell metadata."""
-        character = Character.from_ctx(ctx)
-        embed = EmbedWithCharacter(character)
-        embed.description = f"{character.get_name()} knows {len(character.get_spell_list())} spells."
-        embed.add_field(name="DC", value=str(character.get_save_dc()))
-        embed.add_field(name="Spell Attack Bonus", value=str(character.get_spell_ab()))
-        embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
-        spells_known = {}
-        for spell_name in character.get_spell_list():
-            spell = strict_search(c.spells, 'name', spell_name)
-            spells_known[spell['level']] = spells_known.get(spell['level'], []) + [spell_name]
-
-        level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
-                      '4': '4th Level', '5': '5th Level', '6': '6th Level',
-                      '7': '7th Level', '8': '8th Level', '9': '9th Level'}
-        for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
-            if spells:
-                embed.add_field(name=level_name.get(level, "Unknown Level"), value=', '.join(spells))
-        await self.bot.say(embed=embed)
+        """**DEPRECATED** - use `!spellbook` instead."""
+        await ctx.invoke(self.bot.get_command('spellbook'))
 
     @game.command(pass_context=True, name='spellslot', aliases=['ss'])
     async def game_spellslot(self, ctx, level: int = None, value: str = None):
@@ -165,9 +149,9 @@ class GameTrack:
 
         await self.bot.say(out)
 
-    @game.command(pass_context=True, name='deathsave', aliases=['ds'])
+    @game.group(pass_context=True, name='deathsave', aliases=['ds'], invoke_without_command=True)
     async def game_deathsave(self, ctx, *args):
-        """Rolls a death save.
+        """Commands to manage character death saves.
         __Valid Arguments__
         See `!help save`."""
         character = Character.from_ctx(ctx)
@@ -206,18 +190,145 @@ class GameTrack:
         embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase else '')
         if death_phrase: embed.set_footer(text=death_phrase)
 
-        saves = character.get_deathsaves()
-        embed.add_field(name="Successes", value=str(saves['success']['value']))
-        embed.add_field(name="Failures", value=str(saves['fail']['value']))
+        embed.add_field(name="Death Saves", value=character.get_ds_str())
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
 
         await self.bot.say(embed=embed)
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            pass
+
+    @game_deathsave.command(pass_context=True, name='success', aliases=['s', 'save'])
+    async def game_deathsave_save(self, ctx):
+        """Adds a successful death save."""
+        character = Character.from_ctx(ctx)
+
+        embed = EmbedWithCharacter(character)
+        embed.title = f'{character.get_name()} succeeds a Death Save!'
+
+        death_phrase = ''
+        if character.add_successful_ds(): death_phrase = f"{character.get_name()} is STABLE!"
+
+        character.commit(ctx)
+        embed.description = "Added 1 successful death save."
+        if death_phrase: embed.set_footer(text=death_phrase)
+
+        embed.add_field(name="Death Saves", value=character.get_ds_str())
+
+        await self.bot.say(embed=embed)
+
+    @game_deathsave.command(pass_context=True, name='fail', aliases=['f'])
+    async def game_deathsave_fail(self, ctx):
+        """Adds a failed death save."""
+        character = Character.from_ctx(ctx)
+
+        embed = EmbedWithCharacter(character)
+        embed.title = f'{character.get_name()} succeeds a Death Save!'
+
+        death_phrase = ''
+        if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
+
+        character.commit(ctx)
+        embed.description = "Added 1 failed death save."
+        if death_phrase: embed.set_footer(text=death_phrase)
+
+        embed.add_field(name="Death Saves", value=character.get_ds_str())
+
+        await self.bot.say(embed=embed)
+
+    @game_deathsave.command(pass_context=True, name='reset')
+    async def game_deathsave_reset(self, ctx):
+        """Resets all death saves."""
+        character = Character.from_ctx(ctx)
+        character.reset_death_saves()
+        embed = EmbedWithCharacter(character)
+        embed.title = f'{character.get_name()} reset Death Saves!'
+
+        character.commit(ctx)
+
+        embed.add_field(name="Death Saves", value=character.get_ds_str())
+
+        await self.bot.say(embed=embed)
+
+    @commands.group(pass_context=True, invoke_without_command=True, name='spellbook', aliases=['sb'])
+    async def spellbook(self, ctx):
+        """Commands to display a character's known spells and metadata."""
+        character = Character.from_ctx(ctx)
+        embed = EmbedWithCharacter(character)
+        embed.description = f"{character.get_name()} knows {len(character.get_spell_list())} spells."
+        embed.add_field(name="DC", value=str(character.get_save_dc()))
+        embed.add_field(name="Spell Attack Bonus", value=str(character.get_spell_ab()))
+        embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
+        spells_known = {}
+        for spell_name in character.get_spell_list():
+            spell = strict_search(c.spells, 'name', spell_name)
+            spells_known[spell['level']] = spells_known.get(spell['level'], []) + [spell_name]
+
+        level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
+                      '4': '4th Level', '5': '5th Level', '6': '6th Level',
+                      '7': '7th Level', '8': '8th Level', '9': '9th Level'}
+        for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
+            if spells:
+                embed.add_field(name=level_name.get(level, "Unknown Level"), value=', '.join(spells))
+        await self.bot.say(embed=embed)
+
+    @spellbook.command(pass_context=True, name='add')
+    async def spellbook_add(self, ctx, *, spell_name):
+        """Adds a spell to the spellbook override. If character is live, will add to sheet as well."""
+        result = searchSpell(spell_name)
+        if result is None:
+            return await self.bot.say('Spell not found.')
+        strict = result[1]
+        results = result[0]
+
+        if strict:
+            result = results
+        else:
+            if len(results) == 1:
+                result = results[0]
+            else:
+                result = await get_selection(ctx, [(r, r) for r in results])
+                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        spell = getSpell(result)
+        character = Character.from_ctx(ctx)
+        if character.live:
+            await dicecloud_client.sync_add_spell(character, dicecloud_parse(spell))
+        character.add_known_spell(spell).commit(ctx)
+        live = "Spell added to Dicecloud!" if character.live else ''
+        await self.bot.say(f"{spell['name']} added to known spell list!\n{live}")
+
+    @spellbook.command(pass_context=True, name='addall')
+    async def spellbook_addall(self, ctx, _class, level: int, spell_list=None):
+        """Adds all spells of a given level from a given class list to the spellbook override. Requires live sheet.
+        If `spell_list` is passed, will add these spells to the list named so in Dicecloud."""
+        character = Character.from_ctx(ctx)
+        if not character.live:
+            return await self.bot.say("This command requires a live Dicecloud sheet. To set up, share your Dicecloud "
+                                      "sheet with `avrae` with edit permissions, then `!update`.")
+        if not 0 <= level < 10:
+            return await self.bot.say("Invalid spell level.")
+        class_spells = [sp for sp in c.spells if _class.lower() in sp['classes'].lower()]
+        if len(class_spells) == 0:
+            return await self.bot.say("No spells for that class found.")
+        level_spells = [s for s in class_spells if str(level) == s['level']]
+        await dicecloud_client.sync_add_mass_spells(character, [dicecloud_parse(s) for s in level_spells], spell_list)
+        await self.bot.say(f"{len(level_spells)} spells added to {character.get_name()}'s spell list on Dicecloud.")
+
+    @spellbook.command(pass_context=True, name='remove')
+    async def spellbook_remove(self, ctx, *, spell_name):
+        """
+        Removes a spell from the spellbook override. Must type in full name.
+        """
+        character = Character.from_ctx(ctx)
+        if character.live:
+            return await self.bot.say("Just delete the spell from your character sheet!")
+        spell = character.remove_known_spell(spell_name)
+        if spell:
+            character.commit(ctx)
+            await self.bot.say(f"{spell} removed from spellbook override.")
+        else:
+            await self.bot.say(
+                f"Spell not in spellbook override. To remove a spell on your sheet, just delete it from "
+                f"your sheet.")
 
     @commands.group(pass_context=True, invoke_without_command=True, name='customcounter', aliases=['cc'])
     async def customcounter(self, ctx, name, modifier=None):
@@ -603,11 +714,11 @@ class GameTrack:
         if spell_ctx:
             embed.add_field(name='Effect', value=spell_ctx)
 
+        if not args.get('i'):
+            char.use_slot(cast_level)
         if cast_level > 0:
             embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
 
-        if not args.get('i'):
-            char.use_slot(cast_level)
         char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)
 
@@ -695,12 +806,12 @@ class GameTrack:
                     roll_results += "**Effect:** " + r
             out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
 
+        if not args.get('i'):
+            char.use_slot(cast_level)
         if cast_level > 0:
             out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"
 
         out = "Spell not supported by new cast, falling back to old cast.\n" + out
-        if not args.get('i'):
-            char.use_slot(cast_level)
         char.commit(ctx)  # make sure we save changes
         await self.bot.say(out)
         spell_cmd = self.bot.get_command('spell')

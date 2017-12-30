@@ -16,7 +16,7 @@ from DDPClient import DDPClient
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import dicecloud_client
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import strict_search
+from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)
 
@@ -93,11 +93,12 @@ class DicecloudParser(SheetParser):
         stat_vars.update(saves)
 
         sheet = {'type': 'dicecloud',
-                 'version': 10,  # v6: added stat cvars
+                 'version': 11,  # v6: added stat cvars
                  # v7: added check effects (adv/dis)
                  # v8: consumables
                  # v9: spellbook
                  # v10: live tracking
+                 # v11: save effects (adv/dis)
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -149,12 +150,17 @@ class DicecloudParser(SheetParser):
                                             "**INT:** {intelligence} ({intelligenceMod:+})\n" \
                                             "**WIS:** {wisdom} ({wisdomMod:+})\n" \
                                             "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
-        embed.add_field(name="Saves", value="**STR:** {strengthSave:+}\n" \
-                                            "**DEX:** {dexteritySave:+}\n" \
-                                            "**CON:** {constitutionSave:+}\n" \
-                                            "**INT:** {intelligenceSave:+}\n" \
-                                            "**WIS:** {wisdomSave:+}\n" \
-                                            "**CHA:** {charismaSave:+}".format(**saves))
+
+        savesStr = ''
+        for save in (
+        'strengthSave', 'dexteritySave', 'constitutionSave', 'intelligenceSave', 'wisdomSave', 'charismaSave'):
+            if skill_effects.get(save):
+                skill_effect = f"({skill_effects.get(save)})"
+            else:
+                skill_effect = ''
+            savesStr += '**{}**: {:+} {}\n'.format(save[:3].upper(), saves.get(save), skill_effect)
+
+        embed.add_field(name="Saves", value=savesStr)
 
         def cc_to_normal(string):
             return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string)
@@ -393,7 +399,7 @@ class DicecloudParser(SheetParser):
                 log.debug(f"exception in damage_sub: {ex}")
                 return match.group(0)
 
-        damage = re.sub(r'{(.*)}', damage_sub, atkIn.get('damage', ''))
+        damage = re.sub(r'{(.*?)}', damage_sub, atkIn.get('damage', ''))
         damage = re.split('([-+*/^().<>= ])', damage.replace('{', '').replace('}', ''))
         attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage)
         if not attack['damage']:
@@ -526,7 +532,7 @@ class DicecloudParser(SheetParser):
             spellbook['spellslots'][str(lvl)] = numSlots
 
         for spell in spellnames:
-            s = strict_search(c.spells, 'name', spell)
+            s = fuzzy_search(c.spells, 'name', spell.strip())
             if s:
                 spellbook['spells'].append(s.get('name'))
 
@@ -563,10 +569,11 @@ class DicecloudParser(SheetParser):
             resValue = self.calculate_stat(res)
             if resValue > 0:
                 c = {'name': CLASS_RESOURCE_NAMES.get(res, 'Unknown'), 'max': resValue, 'min': 0,
-                     'reset': CLASS_RESOURCE_RESETS.get(res)}
+                     'reset': CLASS_RESOURCE_RESETS.get(res), 'live': res}
                 counters.append(c)
         for f in self.character.get('features', []):
             if not f.get('enabled'): continue
+            if f.get('removed'): continue
             if not 'uses' in f: continue
             reset = None
             desc = f.get('description', '').lower()
@@ -575,6 +582,6 @@ class DicecloudParser(SheetParser):
             elif 'long rest' in desc:
                 reset = 'long'
             c = {'name': f['name'], 'max': f['uses'], 'min': 0,
-                 'reset': reset}
+                 'reset': reset, 'live': f['id']}
             counters.append(c)
         return counters

@@ -14,13 +14,12 @@ import traceback
 from socket import timeout
 
 import discord
-import gspread
 import numexpr
+import pygsheets
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
-from gspread.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
-from gspread.utils import extract_id_from_url
-from oauth2client.service_account import ServiceAccountCredentials
+from googleapiclient.errors import HttpError
+from pygsheets.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
@@ -32,6 +31,7 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
+from utils.functions import extract_gsheet_id_from_url
 from utils.functions import list_get, get_positivity, a_or_an, get_selection
 from utils.loggers import TextLogger
 
@@ -54,9 +54,7 @@ class SheetManager:
 
     async def init_gsheet_client(self):
         def _():
-            scope = ['https://spreadsheets.google.com/feeds']
-            credentials = ServiceAccountCredentials.from_json_keyfile_name('avrae-0b82f09d7ab3.json', scope)
-            return gspread.authorize(credentials)
+            return pygsheets.authorize(service_file='avrae-0b82f09d7ab3.json')
 
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
 
@@ -159,7 +157,7 @@ class SheetManager:
                 else:
                     tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                      a['damage'] if a['damage'] is not None else 'no'))
-            if tempAttacks == []:
+            if not tempAttacks:
                 tempAttacks = ['No attacks.']
             a = '\n'.join(tempAttacks)
             if len(a) > 2000:
@@ -178,7 +176,7 @@ class SheetManager:
 
         args = self.new_arg_stuff(args, ctx, char)
         args['name'] = char.get_name()
-        args['criton'] = char.get_setting('criton', 20)
+        args['criton'] = args.get('criton') or char.get_setting('criton', 20)
         args['hocrit'] = char.get_setting('hocrit', False)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
@@ -221,6 +219,9 @@ class SheetManager:
 
         embed = EmbedWithCharacter(char, name=False)
 
+        skill_effects = char.get_skill_effects()
+        args += ' ' + skill_effects.get(save, '')  # dicecloud v11 - autoadv
+
         args = self.new_arg_stuff(args, ctx, char)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
                                                                                         False) else -1 if args.get(
@@ -249,7 +250,7 @@ class SheetManager:
             embed.set_footer(text="Success!" if save_roll.total >= dc else "Failure!")
 
         embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + save_roll.skeleton + (
-        '\n*' + phrase + '*' if phrase is not None else '')
+            '\n*' + phrase + '*' if phrase is not None else '')
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
@@ -295,7 +296,7 @@ class SheetManager:
         phrase = args.get('phrase', None)
         formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
                         + ('ro{}'.format(char.get_setting('reroll', 0))
-                           if not char.get_setting('reroll', '0') == '0' else '') \
+        if not char.get_setting('reroll', '0') == '0' else '') \
                         + ('mi{}'.format(mc) if mc is not None else '')
 
         if b is not None:
@@ -319,7 +320,7 @@ class SheetManager:
             embed.set_footer(text="Success!" if check_roll.total >= dc else "Failure!")
 
         embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + check_roll.skeleton + (
-        '\n*' + phrase + '*' if phrase is not None else '')
+            '\n*' + phrase + '*' if phrase is not None else '')
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
         await self.bot.say(embed=embed)
@@ -604,11 +605,14 @@ class SheetManager:
             return await self.bot.say("Error: Unknown sheet type.")
         try:
             character = await parser.get_character()
-        except Exception as e:
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
         except timeout:
             return await self.bot.say(
                 "We're having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
+        except HttpError:
+            return await self.bot.edit_message(loading,
+                                               "Google returned an error trying to access your sheet. Please ensure your sheet is shared and try again in a few minutes.")
+        except Exception as e:
+            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         try:
             if sheet_type == 'dicecloud':
@@ -620,7 +624,7 @@ class SheetManager:
                 fmt = character.get('CharacterName')
                 sheet = parser.get_sheet()
             elif sheet_type == 'google':
-                fmt = character.acell("C6").value
+                fmt = character.cell("C6").value
                 sheet = await parser.get_sheet()
             elif sheet_type == 'beyond-pdf':
                 fmt = character.get('CharacterName')
@@ -648,6 +652,9 @@ class SheetManager:
         sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description",
                                                                                             "No description available.")
         sheet['stats']['image'] = overrides.get('image') or sheet.get('stats', {}).get('image', '')
+        spells = set(sheet['spellbook']['spells'])
+        spells.update(overrides.get('spells', []))
+        sheet['spellbook']['spells'] = list(spells)
 
         c = Character(sheet, url).initialize_consumables()
 
@@ -657,7 +664,7 @@ class SheetManager:
                 try:
                     c.create_consumable(counter['name'], maxValue=str(counter['max']),
                                         minValue=str(counter['min']),
-                                        reset=counter['reset'], displayType=displayType)
+                                        reset=counter['reset'], displayType=displayType, live=counter['live'])
                 except InvalidArgument:
                     pass
 
@@ -896,12 +903,12 @@ class SheetManager:
 
         try:
             assert not name in character.get_stat_vars()
-            assert not any(c in name for c in '/()[]\\.^$*+?|{}')
+            assert not any(c in name for c in '-/()[]\\.^$*+?|{}')
         except AssertionError:
             return await self.bot.say("Could not create cvar: already builtin, or contains invalid character!")
 
         character.set_cvar(name, value).commit(ctx)
-        await self.bot.say('Variable `{}` set to: `{}`'.format(name, value))
+        await self.bot.say('Character variable `{}` set to: `{}`'.format(name, value))
 
     @cvar.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
@@ -915,24 +922,21 @@ class SheetManager:
         try:
             del character.get('cvars', {})[name]
         except KeyError:
-            return await self.bot.say('Variable not found.')
+            return await self.bot.say('Character variable not found.')
 
         user_characters[active_character] = character  # commit
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
 
-        await self.bot.say('Variable {} removed.'.format(name))
+        await self.bot.say('Character variable {} removed.'.format(name))
 
     @cvar.command(pass_context=True, name='list')
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
-        cvars = character.get('cvars', {})
+        character = Character.from_ctx(ctx)
+        cvars = character.get_cvars()
 
-        await self.bot.say('Your variables:\n{}'.format(', '.join(sorted([name for name in cvars.keys()]))))
+        await self.bot.say('{}\'s character variables:\n{}'.format(character.get_name(),
+                                                                   ', '.join(sorted([name for name in cvars.keys()]))))
 
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.
@@ -989,7 +993,7 @@ class SheetManager:
                 displayType = 'bubble' if c.evaluate_cvar(counter['max']) < 6 else None
                 try:
                     c.create_consumable(counter['name'], maxValue=str(counter['max']), minValue=str(counter['min']),
-                                        reset=counter['reset'], displayType=displayType)
+                                        reset=counter['reset'], displayType=displayType, live=counter['live'])
                 except InvalidArgument:
                     pass
 
@@ -1078,11 +1082,11 @@ class SheetManager:
 
         loading = await self.bot.say('Loading character data from Google... (This usually takes ~30 sec)')
         try:
-            url = extract_id_from_url(url)
+            url = extract_gsheet_id_from_url(url)
         except NoValidUrlKeyFound:
             return await self.bot.edit_message(loading, "This is not a Google Sheets link.")
 
-        override = await self._confirm_overwrite(ctx, url)
+        override = await self._confirm_overwrite(ctx, f"google-{url}")
         if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
 
         try:
@@ -1092,9 +1096,12 @@ class SheetManager:
 
         try:
             character = await parser.get_character()
-        except SpreadsheetNotFound:
+        except (KeyError, SpreadsheetNotFound):
             return await self.bot.edit_message(loading,
                                                "Invalid character sheet. Make sure you've shared it with me at `avrae-320@avrae-bot.iam.gserviceaccount.com`!")
+        except HttpError:
+            return await self.bot.edit_message(loading,
+                                               "Error: Google returned an error. Please ensure your sheet is shared with `avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
 
         try:
             sheet = await parser.get_sheet()
@@ -1103,7 +1110,7 @@ class SheetManager:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         try:
-            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.acell("C6").value))
+            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.cell("C6").value))
         except TypeError as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading,

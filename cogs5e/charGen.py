@@ -110,6 +110,7 @@ class CharGenerator:
 
     async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None, background=None):
         loadingMessage = await self.bot.send_message(ctx.message.channel, "Generating character, please wait...")
+        color = random.randint(0, 0xffffff)
 
         # Name Gen
         #    DMG name gen
@@ -164,6 +165,7 @@ class CharGenerator:
             for piece in f_text[1:]:
                 embed.add_field(name="\u200b", value=piece)
 
+        embed.colour = color
         await self.bot.send_message(ctx.message.author, embed=embed)
 
         # Class Gen
@@ -191,7 +193,7 @@ class CharGenerator:
                          f"{equip_choices}\n" \
                          f"{gold_alt}"
 
-        for level in range(1, 21):
+        for level in range(1, final_level + 1):
             level_str = []
             level_features = _class['classFeatures'][level - 1]
             for feature in level_features:
@@ -206,6 +208,7 @@ class CharGenerator:
             level_features_str += f"`{i+1}` {l}\n"
         embed.description = level_features_str
 
+        embed.colour = color
         await self.bot.send_message(ctx.message.author, embed=embed)
 
         embed = EmbedWithAuthor(ctx)
@@ -217,6 +220,8 @@ class CharGenerator:
 
         for res_name, res_value in level_resources.items():
             embed.add_field(name=res_name, value=res_value)
+
+        embed.colour = color
         await self.bot.send_message(ctx.message.author, embed=embed)
 
         embed_queue = [EmbedWithAuthor(ctx)]
@@ -266,6 +271,7 @@ class CharGenerator:
                         embed_queue[-1].add_field(name="\u200b", value=piece)
 
         for embed in embed_queue:
+            embed.colour = color
             await self.bot.send_message(ctx.message.author, embed=embed)
 
         # Background Gen
@@ -284,6 +290,7 @@ class CharGenerator:
             embed.add_field(name=trait['name'], value=text[0])
             for piece in text[1:]:
                 embed.add_field(name="con't", value=piece)
+        embed.colour = color
         await self.bot.send_message(ctx.message.author, embed=embed)
 
         out = "{6}\n{0}, {1} {7} {2} {3}. {4} Background.\nStat Array: `{5}`\nI have PM'd you full character details.".format(
@@ -307,6 +314,7 @@ class CharGenerator:
     def genStats(self):
         stats = [roll('4d6kh3').total for i in range(6)]
         return stats
+
 
 async def resolve(result, ctx):
     if result is None:

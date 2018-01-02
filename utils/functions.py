@@ -431,11 +431,14 @@ def parse_data_entry(text):
         if not isinstance(entry, dict):
             out.append(str(entry))
         elif isinstance(entry, dict):
-            if not 'type' in entry and not 'title' in entry:
-                log.warning(f"Unknown astranauta entry type: {entry}")
-
             if not 'type' in entry and 'title' in entry:
                 out.append(f"**{entry['title']}**: {parse_data_entry(entry['text'])}")
+            elif not 'type' in entry and 'istable' in entry: # only for races
+                temp = f"**{entry['caption']}**\n" if 'caption' in entry else ''
+                temp += ' - '.join(f"**{cl}**" for cl in entry['thead']) + '\n'
+                for row in entry['tbody']:
+                    temp += ' - '.join(f"{col}" for col in row) + '\n'
+                out.append(temp.strip())
             elif entry['type'] == 'entries':
                 out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
                     entry['entries']))  # oh gods here we goooooooo
@@ -471,7 +474,20 @@ def parse_data_entry(text):
         else:
             log.warning(f"Unknown astranauta entry: {entry}")
 
-    return '\n'.join(out)
+    return parse_data_formatting('\n'.join(out))
+
+FORMATTING = {'bold': '**', 'italic': '*'}
+
+def parse_data_formatting(text):
+    """Parses a {@format } string."""
+    exp = re.compile(r'{@(\w+) (.+)}')
+    def sub(match):
+        f = FORMATTING.get(match.group(1), '')
+        return f"{f}{match.group(2)}{f}"
+    while exp.search(text):
+        text = exp.sub(sub, text)
+    return text
+
 
 
 def dicecloud_parse(spell):

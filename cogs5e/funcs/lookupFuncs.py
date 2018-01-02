@@ -26,10 +26,17 @@ class Compendium:
             self.rfeats = []
             self.races = copy.deepcopy(_raw)
             for race in _raw:
-                one_rfeats = race.get('trait', [])
-                for i, rfeat in enumerate(one_rfeats):
-                    one_rfeats[i]['name'] = "{}: {}".format(race['name'], rfeat['name'])
-                self.rfeats += one_rfeats
+                if 'trait' in race:
+                    one_rfeats = race.get('trait', [])
+                    for rfeat in one_rfeats:
+                        temp = {'name': "{}: {}".format(race['name'], rfeat['name']),
+                                'text': parse_data_entry(rfeat['text'])}
+                        self.rfeats.append(temp)
+                else: # assume entries
+                    for entry in race['entries']:
+                        temp = {'name': "{}: {}".format(race['name'], entry['name']),
+                                'text': parse_data_entry(entry['entries'])}
+                        self.rfeats.append(temp)
         with open('./res/classes.json', 'r', encoding='utf-8-sig') as f:
             _raw = json.load(f)
             self.cfeats = []

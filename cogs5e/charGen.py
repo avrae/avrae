@@ -1,20 +1,13 @@
 import asyncio
 import logging
 import random
-import textwrap
-from string import capwords
 
-from MeteorClient import MeteorClient
 from discord.ext import commands
 
-import credentials
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import c
+from cogs5e.funcs.lookupFuncs import c, searchRace, searchClass, searchBackground
 from cogs5e.models.embeds import EmbedWithAuthor
-from utils.functions import parse_data_entry, ABILITY_MAP
-
-DICECLOUD_USERNAME = 'avrae'
-DICECLOUD_PASSWORD = credentials.dicecloud_pass.encode()
+from utils.functions import parse_data_entry, ABILITY_MAP, get_selection, fuzzywuzzy_search_all_3
 
 log = logging.getLogger(__name__)
 
@@ -25,24 +18,6 @@ class CharGenerator:
     def __init__(self, bot):
         self.bot = bot
         self.makingChar = set()
-        self.dicecloud_client = MeteorClient('ws://dicecloud.com/websocket', debug=self.bot.testing)
-        self.dicecloud_client.initialized = False
-        self.bot.loop.create_task(self.auth_dicecloud())
-
-    async def auth_dicecloud(self):
-        self.dicecloud_client.connect()
-        log.info("Connecting to dicecloud")
-        while not self.dicecloud_client.connected:
-            await asyncio.sleep(0.1)
-        self.dicecloud_client.login(DICECLOUD_USERNAME, DICECLOUD_PASSWORD)
-        log.info("Logged in to dicecloud")
-
-        await asyncio.sleep(1)  # wait until users collection has updated
-
-        USER_ID = self.dicecloud_client.find_one('users', selector={'username': DICECLOUD_USERNAME}).get('_id')
-        log.info("User ID: " + USER_ID)
-        self.dicecloud_client.initialized = True
-        self.dicecloud_client.user_id = USER_ID
 
     @commands.command(pass_context=True, name='randchar')
     async def randChar(self, ctx, level="0"):
@@ -88,100 +63,40 @@ class CharGenerator:
             return
         author = ctx.message.author
         channel = ctx.message.channel
-        await self.bot.say(author.mention + " What race? (Include the subrace before the race; e.g. \"Wood Elf\")")
 
-        def raceCheck(msg):
-            return msg.content.lower() in ["hill dwarf", "mountain dwarf",
-                                           "high elf", "wood elf", "drow",
-                                           "lightfoot halfling", "stout halfling",
-                                           "human", "dragonborn",
-                                           "forest gnome", "rock gnome",
-                                           "half-elf", "half-orc", "tiefling"]
+        await self.bot.say(author.mention + " What race?")
+        race_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
+        if race_response is None: return await self.bot.say("Race not found.")
+        result = searchRace(race_response.content)
+        race = await resolve(result, ctx)
 
-        race = await self.bot.wait_for_message(timeout=90, author=author, channel=channel, check=raceCheck)
-        if race:
-            def classCheck(msg):
-                return capwords(msg.content) in ["Totem Warrior Barbarian", "Berserker Barbarian",
-                                                 "Lore Bard", "Valor Bard",
-                                                 "Knowledge Cleric", "Life Cleric", "Light Cleric", "Nature Cleric",
-                                                 "Tempest Cleric", "Trickery Cleric", "War Cleric",
-                                                 "Land Druid", "Moon Druid",
-                                                 "Champion Fighter", "Battle Master Fighter", "Eldritch Knight Fighter",
-                                                 "Open Hand Monk", "Shadow Monk", "Four Elements Monk",
-                                                 "Devotion Paladin", "Ancients Paladin", "Vengeance Paladin",
-                                                 "Hunter Ranger", "Beast Master Ranger",
-                                                 "Thief Rogue", "Assassin Rogue", "Arcane Trickster Rogue",
-                                                 "Wild Magic Sorcerer", "Draconic Sorcerer",
-                                                 "Archfey Warlock", "Fiend Warlock", "Great Old One Warlock",
-                                                 "Abjuration Wizard", "Conjuration Wizard", "Divination Wizard",
-                                                 "Enchantment Wizard", "Evocation Wizard", "Illusion Wizard",
-                                                 "Necromancy Wizard", "Transmutation Wizard"]
+        await self.bot.say(author.mention + " What class?")
+        class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
+        if class_response is None: return await self.bot.say("Class not found.")
+        result = searchClass(class_response.content)
+        _class = await resolve(result, ctx)
 
-            await self.bot.say(
-                author.mention + " What class? (Include the archetype before the class; e.g. \"Life Cleric\")")
-            classVar = await self.bot.wait_for_message(timeout=90, author=author, channel=channel, check=classCheck)
-            if classVar:
-                def backgroundCheck(msg):
-                    return capwords(msg.content) in ["Acolyte", "Charlatan", "Criminal", "Entertainer", "Folk Hero",
-                                                     "Guild Artisan", "Hermit", "Noble", "Outlander", "Sage", "Sailor",
-                                                     "Soldier", "Urchin"]
-
-                await self.bot.say(author.mention + " What background?")
-                background = await self.bot.wait_for_message(timeout=90, author=author, channel=channel,
-                                                             check=backgroundCheck)
-                if background:
-                    loading = await self.bot.say("Generating character, please wait...")
-                    name = self.nameGen()
-                    # Stat Gen
-                    stats = self.genStats()
-                    await self.bot.send_message(ctx.message.author, "**Stats for {0}:** `{1}`".format(name, stats))
-                    # Race Gen
-                    raceTraits = self.getRaceTraits(race.content, level)
-                    raceTraitStr = ''
-                    for t in raceTraits:
-                        raceTraitStr += "\n\n**{trait}**: {desc}".format(**t)
-                    raceTraitStr = "**Racial Traits ({0}):** {1}".format(capwords(race.content), raceTraitStr)
-                    result = self.discord_trim(raceTraitStr)
-                    for r in result:
-                        await self.bot.send_message(ctx.message.author, r)
-                    # Class Gen
-                    classTraits = self.getClassTraits(classVar.content, level)
-                    classTraitStr = ''
-                    for t in classTraits:
-                        classTraitStr += "\n\n**{0}**: {1}".format(t['trait'], t['desc'].replace('<br>', '\n'))
-                    classTraitStr = "**Class Traits ({0}):** {1}".format(capwords(classVar.content), classTraitStr)
-                    result = self.discord_trim(classTraitStr)
-                    for r in result:
-                        await self.bot.send_message(ctx.message.author, r)
-                    # background Gen
-                    backgroundTraits = self.getBackgroundTraits(background.content)
-                    backgroundTraitStr = ''
-                    for t in backgroundTraits:
-                        backgroundTraitStr += "\n**{0}**: {1}".format(t['trait'], t['desc'].replace('<br>', '\n'))
-                    backgroundTraitStr = "**Background Traits ({0}):** {1}".format(capwords(background.content),
-                                                                                   backgroundTraitStr)
-                    result = self.discord_trim(backgroundTraitStr)
-                    for r in result:
-                        await self.bot.send_message(ctx.message.author, r)
-
-                    await self.bot.edit_message(loading,
-                                                author.mention + " I have PM'd you stats for {0}, a level {1} {2} {3} with the {4} background.\nStat Block: `{5}`".format(
-                                                    name, level, race.content, classVar.content, background.content,
-                                                    stats))
-                else:
-                    await self.bot.say(
-                        author.mention + " No background found. Make sure you are using a background from the 5e PHB.")
-            else:
-                await self.bot.say(
-                    author.mention + " No class found. Make sure you are using a class from the 5e PHB, and include the archetype, even at low levels.")
+        if 'subclasses' in _class:
+            await self.bot.say(author.mention + " What subclass?")
+            subclass_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
+            if subclass_response is None: return await self.bot.say("Subclass not found.")
+            result = fuzzywuzzy_search_all_3(_class['subclasses'], 'name', subclass_response.content)
+            subclass = await resolve(result, ctx)
         else:
-            await self.bot.say(
-                author.mention + " No race found. Make sure you are using a race from the 5e PHB, and use \"Drow\" instead of Dark Elf.")
+            subclass = None
+
+        await self.bot.say(author.mention + " What background?")
+        bg_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
+        if bg_response is None: return await self.bot.say("Background not found.")
+        result = searchBackground(bg_response.content)
+        background = await resolve(result, ctx)
 
         try:
             self.makingChar.remove(author)
         except (ValueError, KeyError):
             pass
+
+        await self.genChar(ctx, level, race, _class, subclass, background)
 
     async def _time_making(self, author):
         try:
@@ -193,13 +108,8 @@ class CharGenerator:
         except asyncio.CancelledError:
             pass
 
-    async def genChar(self, ctx, final_level):
+    async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None, background=None):
         loadingMessage = await self.bot.send_message(ctx.message.channel, "Generating character, please wait...")
-
-        features = []
-        race_attrs = {}
-        class_attrs = {}
-        gen_attrs = {}
 
         # Name Gen
         #    DMG name gen
@@ -211,7 +121,7 @@ class CharGenerator:
         await self.bot.send_message(ctx.message.author, "**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
-        race = random.choice([r for r in c.races if r['source'] in ('PHB', 'VGM')])
+        race = race or random.choice([r for r in c.races if r['source'] in ('PHB', 'VGM')])
 
         _sizes = {'T': "Tiny", 'S': "Small",
                   'M': "Medium", 'L': "Large", 'H': "Huge"}
@@ -252,14 +162,14 @@ class CharGenerator:
             f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
             embed.add_field(name=t['name'], value=f_text[0])
             for piece in f_text[1:]:
-                embed.add_field(name="con't", value=piece)
+                embed.add_field(name="\u200b", value=piece)
 
         await self.bot.send_message(ctx.message.author, embed=embed)
 
         # Class Gen
         #    Class Features
-        _class = random.choice([cl for cl in c.classes if not 'UA' in cl.get('source')])
-        subclass = random.choice([s for s in _class['subclasses'] if not 'UA' in s['source']])
+        _class = _class or random.choice([cl for cl in c.classes if not 'UA' in cl.get('source')])
+        subclass = subclass or random.choice([s for s in _class['subclasses'] if not 'UA' in s['source']])
         embed = EmbedWithAuthor(ctx)
         embed.title = f"{_class['name']} ({subclass['name']})"
         embed.add_field(name="Hit Die", value=f"1d{_class['hd']['faces']}")
@@ -339,7 +249,7 @@ class CharGenerator:
                 embed_queue[-1].add_field(name=f['name'], value=text[0])
                 for piece in text[1:]:
                     inc_fields(piece)
-                    embed_queue[-1].add_field(name="con't", value=piece)
+                    embed_queue[-1].add_field(name="\u200b", value=piece)
         for num in range(num_subclass_features):
             level_features = subclass['subclassFeatures'][num]
             for feature in level_features:
@@ -353,14 +263,14 @@ class CharGenerator:
                     embed_queue[-1].add_field(name=fe['name'], value=text[0])
                     for piece in text[1:]:
                         inc_fields(piece)
-                        embed_queue[-1].add_field(name="con't", value=piece)
+                        embed_queue[-1].add_field(name="\u200b", value=piece)
 
         for embed in embed_queue:
             await self.bot.send_message(ctx.message.author, embed=embed)
 
         # Background Gen
         #    Inventory/Trait Gen
-        background = random.choice(c.backgrounds)
+        background = background or random.choice(c.backgrounds)
         embed = EmbedWithAuthor(ctx)
         embed.title = background['name']
         embed.description = f"*Source: {background.get('source', 'Unknown')}*"
@@ -397,3 +307,18 @@ class CharGenerator:
     def genStats(self):
         stats = [roll('4d6kh3').total for i in range(6)]
         return stats
+
+async def resolve(result, ctx):
+    if result is None:
+        return None
+    strict = result[1]
+    results = result[0]
+
+    if strict:
+        result = results
+    else:
+        if len(results) == 1:
+            result = results[0]
+        else:
+            result = await get_selection(ctx, [(r['name'], r) for r in results])
+    return result

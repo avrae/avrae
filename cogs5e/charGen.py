@@ -289,7 +289,7 @@ class CharGenerator:
             text = [text[i:i + 1024] for i in range(0, len(text), 1024)]
             embed.add_field(name=trait['name'], value=text[0])
             for piece in text[1:]:
-                embed.add_field(name="con't", value=piece)
+                embed.add_field(name="\u200b", value=piece)
         embed.colour = color
         await self.bot.send_message(ctx.message.author, embed=embed)
 

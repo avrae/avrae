@@ -178,6 +178,7 @@ class SheetManager:
         args['name'] = char.get_name()
         args['criton'] = args.get('criton') or char.get_setting('criton', 20)
         args['hocrit'] = char.get_setting('hocrit', False)
+        args['reroll'] = char.get_setting('reroll', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
             attack['details'] = char.parse_cvars(attack['details'], ctx)
@@ -228,11 +229,12 @@ class SheetManager:
             'dis', False) else 0
         b = args.get('b', None)
         phrase = args.get('phrase', None)
+        reroll = f'ro{char.get_setting("reroll", 0)}' if int(char.get_setting("reroll", 0)) else ''
 
         if b is not None:
-            save_roll = roll('1d20' + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
+            save_roll = roll(f'1d20{reroll}' + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
         else:
-            save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
+            save_roll = roll(f'1d20{reroll}' + '{:+}'.format(saves[save]), adv=adv, inline=True)
 
         embed.title = args.get('title', '').replace('[charname]', char.get_name()).replace('[sname]', re.sub(
             r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) \

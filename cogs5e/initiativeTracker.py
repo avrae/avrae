@@ -1199,6 +1199,7 @@ class InitTracker:
             args['criton'] = args.get('criton') or combatant.sheet.get('settings', {}).get('criton', 20) or 20
             args['c'] = combatant.sheet.get('settings', {}).get('critdmg') or args.get('c')
             args['hocrit'] = combatant.sheet.get('settings', {}).get('hocrit') or False
+            args['reroll'] = combatant.sheet.get('settings', {}).get('reroll') or 0
             args['crittype'] = combatant.sheet.get('settings', {}).get('crittype') or 'default'
             result = sheet_attack(attack, args)
             result['embed'].colour = random.randint(0, 0xffffff) if combatant.sheet.get('settings', {}).get(

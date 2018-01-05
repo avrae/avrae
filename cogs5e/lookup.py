@@ -188,9 +188,6 @@ class Lookup:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
-        if isinstance(result['text'], list):
-            result['text'] = '\n'.join(t for t in result.get('text', []) if t is not None)
-
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         desc = result['text']
@@ -231,21 +228,41 @@ class Lookup:
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         embed.description = f"Source: {result.get('source', 'unknown')}"
-        embed.add_field(name="Speed", value=f"{result.get('speed', 'unknown')} ft.")
+        embed.add_field(name="Speed",
+                        value=result['speed'] + ' ft.' if isinstance(result['speed'], str) else \
+                            ', '.join(f"{k} {v} ft." for k, v in result['speed'].items()))
         embed.add_field(name="Size", value=_sizes.get(result.get('size'), 'unknown'))
-        embed.add_field(name="Ability Bonuses", value=result.get('ability', 'none'))
+
+        ability = []
+        for k, v in result['ability'].items():
+            if not k == 'choose':
+                ability.append(f"{k} {v}")
+            else:
+                ability.append(f"Choose {v[0]['count']} from {', '.join(v[0]['from'])} {v[0].get('amount', 1)}")
+
+        embed.add_field(name="Ability Bonuses", value=', '.join(ability))
         if result.get('proficiency'):
             embed.add_field(name="Proficiencies", value=result.get('proficiency', 'none'))
-        for t in result.get('trait', []):
-            f_text = '\n'.join(txt for txt in t['text'] if txt) if isinstance(t['text'], list) else t['text']
+
+        traits = []
+        if 'trait' in result:
+            one_rfeats = result.get('trait', [])
+            for rfeat in one_rfeats:
+                temp = {'name': rfeat['name'],
+                        'text': parse_data_entry(rfeat['text'])}
+                traits.append(temp)
+        else:  # assume entries
+            for entry in result['entries']:
+                temp = {'name': entry['name'],
+                        'text': parse_data_entry(entry['entries'])}
+                traits.append(temp)
+
+        for t in traits:
+            f_text = t['text']
             f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
             embed.add_field(name=t['name'], value=f_text[0])
             for piece in f_text[1:]:
                 embed.add_field(name="\u200b", value=piece)
-
-        # trait_str = ', '.join(t['name'] for t in result.get('trait', []))
-        # embed.add_field(name="Traits", value=trait_str, inline=False)
-        # embed.set_footer(text="Use !racefeat to look up a trait.")
 
         await self.bot.send_message(destination, embed=embed)
 

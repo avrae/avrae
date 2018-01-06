@@ -277,7 +277,7 @@ class DicecloudParser(SheetParser):
         stats['description'] = character.get('characters')[0].get('description')
         stats['image'] = character.get('characters')[0].get('picture', '')
         profByLevel = floor(self.get_levels()['level'] / 4 + 1.75)
-        stats['proficiencyBonus'] = profByLevel + self.get_stat('proficiencyBonus', base=0)
+        stats['proficiencyBonus'] = self.get_stat('proficiencyBonus', base=int(profByLevel))
 
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             stats[stat] = self.get_stat(stat)

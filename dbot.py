@@ -14,7 +14,7 @@ from discord.ext.commands.errors import CommandInvokeError
 from cogs5e.charGen import CharGenerator
 from cogs5e.dice import Dice
 from cogs5e.gametrack import GameTrack
-from cogs5e.initiativeTracker import InitTracker
+from cogs5e.oldinitiativeTracker import InitTracker
 from cogs5e.lookup import Lookup
 from cogs5e.models.errors import AvraeException, EvaluationError
 from cogs5e.pbpUtils import PBPUtils

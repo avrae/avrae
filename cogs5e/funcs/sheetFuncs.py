@@ -65,11 +65,15 @@ def sheet_attack(attack, args, embed=None):
             mods = ''
             if int(args.get('reroll', 0)):
                 mods += f'ro{args["reroll"]}'
+            adv = args.get('adv')
+            formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
+                            + ('ro{}'.format(args.get('reroll', 0))
+                            if not args.get('reroll', 0) else '')
             if args.get('b') is not None:
-                toHit = roll(f'1d20{mods}+' + attack.get('attackBonus') + '+' + args.get('b'), adv=args.get('adv'),
+                toHit = roll(f'{formatted_d20}+' + attack.get('attackBonus') + '+' + args.get('b'),
                              rollFor='To Hit', inline=True, show_blurbs=False)
             else:
-                toHit = roll(f'1d20{mods}+' + attack.get('attackBonus'), adv=args.get('adv'), rollFor='To Hit', inline=True,
+                toHit = roll(f'{formatted_d20}+' + attack.get('attackBonus'), rollFor='To Hit', inline=True,
                              show_blurbs=False)
 
             try:

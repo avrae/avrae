@@ -229,12 +229,14 @@ class SheetManager:
             'dis', False) else 0
         b = args.get('b', None)
         phrase = args.get('phrase', None)
-        reroll = f'ro{char.get_setting("reroll", 0)}' if int(char.get_setting("reroll", 0)) else ''
+        formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
+                        + ('ro{}'.format(char.get_setting('reroll', 0))
+        if not char.get_setting('reroll', '0') == '0' else '')
 
         if b is not None:
-            save_roll = roll(f'1d20{reroll}' + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
+            save_roll = roll(formatted_d20 + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
         else:
-            save_roll = roll(f'1d20{reroll}' + '{:+}'.format(saves[save]), adv=adv, inline=True)
+            save_roll = roll(formatted_d20 + '{:+}'.format(saves[save]), adv=adv, inline=True)
 
         embed.title = args.get('title', '').replace('[charname]', char.get_name()).replace('[sname]', re.sub(
             r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) \

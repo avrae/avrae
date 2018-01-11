@@ -74,6 +74,7 @@ class CharGenerator:
         class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
         if class_response is None: return await self.bot.say("Class not found.")
         result = searchClass(class_response.content)
+        if result is None: return await self.bot.say("Class not found.")
         _class = await resolve(result, ctx)
 
         if 'subclasses' in _class:

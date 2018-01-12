@@ -18,7 +18,7 @@ import numexpr
 
 log = logging.getLogger(__name__)
 
-VALID_OPERATORS = 'k|rr|ro|mi|ma'
+VALID_OPERATORS = 'k|rr|ro|mi|ma|ra|e'
 VALID_OPERATORS_2 = '|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')])
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
 DICE_PATTERN = r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+)|([-+*/().<>=])?)\s*(\[.*\])?)(.*?)\s*$'
@@ -214,6 +214,9 @@ class Roll(object):
             rerollList = []
             reroll_once = []
             keep = None
+            to_explode = []
+            to_reroll_add = []
+
             valid_operators = VALID_OPERATORS_ARRAY
             for index, op in enumerate(ops):
                 if op == 'rr':
@@ -242,9 +245,21 @@ class Roll(object):
                     for r in result.rolled:
                         if r.value > int(_max): 
                             r.update(int(_max))
+                if op == 'ra':
+                    to_reroll_add += parse_selectors([list_get(index + 1, 0, ops)], result)
+                elif op in valid_operators:
+                    result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
+                    to_reroll_add = []
+                if op == 'e':
+                    to_explode += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
+                elif op in valid_operators:
+                    result.reroll(to_explode, greedy=True, keep_rerolled=True)
+                    to_explode = []
             result.reroll(reroll_once, 1)
             result.reroll(rerollList)
             result.keep(keep)
+            result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
+            result.reroll(to_explode, greedy=True, keep_rerolled=True)
             
         return result
 
@@ -269,31 +284,42 @@ class SingleDiceGroup(Part):
             else:
                 rolls_to_keep.remove(roll.value)
                 
-    def reroll(self, rerollList, iterations=250, greedy=False):
+    def reroll(self, rerollList, iterations=250, greedy=False, keep_rerolled=False, unique=False):
+        if not rerollList: return  # don't reroll nothing - minor optimization
+        if unique:
+            rerollList = list(set(rerollList)) # remove duplicates
+        rerolled_list = []
         for i in range(iterations): # let's only iterate 250 times for sanity
             temp = copy(rerollList)
             breakCheck = True
             for r in rerollList:
-                if r in (d.value for d in self.rolled if d.kept):
+                if r in (d.value for d in self.rolled if d.kept and not d in rerolled_list):
                     breakCheck = False
+            to_extend = []
             for r in self.rolled:
-                if r.value in temp and r.kept:
+                if r.value in temp and r.kept and not r in rerolled_list:
                     try:
                         tempdice = SingleDice()
                         tempdice.value = random.randint(1, self.max_value)
                         tempdice.rolls = [tempdice.value]
                         tempdice.max_value = self.max_value
                         tempdice.kept = True
-                        self.rolled.append(tempdice)
-                        r.drop()
+                        to_extend.append(tempdice)
+                        if not keep_rerolled:
+                            r.drop()
+                        else:
+                            rerolled_list.append(r)
                     except:
-                        self.rolled.append(SingleDice())
-                        r.drop()
+                        to_extend.append(SingleDice())
+                        if not keep_rerolled:
+                            r.drop()
+                        else:
+                            rerolled_list.append(r)
                     if not greedy:
                         temp.remove(r.value)
+            self.rolled.extend(to_extend)
             if breakCheck:
                 break
-        rerollList = []
                 
     def get_total(self):
         """Returns:

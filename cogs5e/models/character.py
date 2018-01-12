@@ -157,6 +157,7 @@ class Character:
         ops = r"([-+*/().<>=])"
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
+        stat_vars['color'] = hex(self.get_color())[2:]
         user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
 
         _vars = user_vars

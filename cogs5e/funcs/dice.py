@@ -218,23 +218,26 @@ class Roll(object):
             to_reroll_add = []
 
             valid_operators = VALID_OPERATORS_ARRAY
+            last_operator = None
             for index, op in enumerate(ops):
-                if op == 'rr':
-                    rerollList += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
-                elif op in valid_operators:
+                if last_operator is not None and op in valid_operators:
+                    result.reroll(reroll_once, 1)
+                    reroll_once = []
                     result.reroll(rerollList)
                     rerollList = []
+                    result.keep(keep)
+                    keep = None
+                    result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
+                    to_reroll_add = []
+                    result.reroll(to_explode, greedy=True, keep_rerolled=True)
+                    to_explode = []
+                if op == 'rr':
+                    rerollList += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
                 if op == 'k':
                     keep = [] if keep is None else keep
                     keep += parse_selectors([list_get(index + 1, 0, ops)], result)
-                elif op in valid_operators:
-                    result.keep(keep)
-                    keep = None
                 if op == 'ro':
                     reroll_once += parse_selectors([list_get(index + 1, 0, ops)], result)
-                elif op in valid_operators:
-                    result.reroll(reroll_once, 1)
-                    reroll_once = []
                 if op == 'mi':
                     _min = list_get(index + 1, 0, ops)
                     for r in result.rolled:
@@ -247,14 +250,10 @@ class Roll(object):
                             r.update(int(_max))
                 if op == 'ra':
                     to_reroll_add += parse_selectors([list_get(index + 1, 0, ops)], result)
-                elif op in valid_operators:
-                    result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
-                    to_reroll_add = []
                 if op == 'e':
                     to_explode += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
-                elif op in valid_operators:
-                    result.reroll(to_explode, greedy=True, keep_rerolled=True)
-                    to_explode = []
+                if op in valid_operators:
+                    last_operator = op
             result.reroll(reroll_once, 1)
             result.reroll(rerollList)
             result.keep(keep)

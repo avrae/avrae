@@ -306,7 +306,8 @@ class GameTrack:
                                       "sheet with `avrae` with edit permissions, then `!update`.")
         if not 0 <= level < 10:
             return await self.bot.say("Invalid spell level.")
-        class_spells = [sp for sp in c.spells if _class.lower() in sp['classes'].lower()]
+        class_spells = [sp for sp in c.spells if
+                        _class.lower() in [cl.lower() for cl in sp['classes'].split(', ') if not '(' in cl]]
         if len(class_spells) == 0:
             return await self.bot.say("No spells for that class found.")
         level_spells = [s for s in class_spells if str(level) == s['level']]

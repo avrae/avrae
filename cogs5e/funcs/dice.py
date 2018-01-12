@@ -288,16 +288,15 @@ class SingleDiceGroup(Part):
         if not rerollList: return  # don't reroll nothing - minor optimization
         if unique:
             rerollList = list(set(rerollList)) # remove duplicates
-        rerolled_list = []
         for i in range(iterations): # let's only iterate 250 times for sanity
             temp = copy(rerollList)
             breakCheck = True
             for r in rerollList:
-                if r in (d.value for d in self.rolled if d.kept and not d in rerolled_list):
+                if r in (d.value for d in self.rolled if d.kept and not d.exploded):
                     breakCheck = False
             to_extend = []
             for r in self.rolled:
-                if r.value in temp and r.kept and not r in rerolled_list:
+                if r.value in temp and r.kept and not r.exploded:
                     try:
                         tempdice = SingleDice()
                         tempdice.value = random.randint(1, self.max_value)
@@ -308,13 +307,13 @@ class SingleDiceGroup(Part):
                         if not keep_rerolled:
                             r.drop()
                         else:
-                            rerolled_list.append(r)
+                            r.explode()
                     except:
                         to_extend.append(SingleDice())
                         if not keep_rerolled:
                             r.drop()
                         else:
-                            rerolled_list.append(r)
+                            r.explode()
                     if not greedy:
                         temp.remove(r.value)
             self.rolled.extend(to_extend)
@@ -347,14 +346,18 @@ class SingleDiceGroup(Part):
                 self, ''.join(self.operators), ', '.join(str(r) for r in self.rolled))
                 
 class SingleDice:
-    def __init__(self, value:int=0, max_value:int=0, kept:bool=True):
+    def __init__(self, value:int=0, max_value:int=0, kept:bool=True, exploded:bool=False):
         self.value = value
         self.max_value = max_value
         self.kept = kept
         self.rolls = [value] # list of ints (for X -> Y -> Z)
+        self.exploded = exploded
         
     def drop(self):
         self.kept = False
+
+    def explode(self):
+        self.exploded = True
         
     def update(self, new_value):
         self.value = new_value
@@ -364,6 +367,8 @@ class SingleDice:
         formatted_rolls = [str(r) for r in self.rolls]
         if int(formatted_rolls[-1]) == self.max_value or int(formatted_rolls[-1]) == 1:
             formatted_rolls[-1] = '**' + formatted_rolls[-1] + '**'
+        if self.exploded:
+            formatted_rolls[-1] = '__' + formatted_rolls[-1] + '__'
         if self.kept:
             return ' -> '.join(formatted_rolls)
         else:

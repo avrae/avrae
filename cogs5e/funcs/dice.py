@@ -220,7 +220,7 @@ class Roll(object):
             valid_operators = VALID_OPERATORS_ARRAY
             last_operator = None
             for index, op in enumerate(ops):
-                if last_operator is not None and op in valid_operators:
+                if last_operator is not None and op in valid_operators and not op == last_operator:
                     result.reroll(reroll_once, 1)
                     reroll_once = []
                     result.reroll(rerollList)

@@ -33,6 +33,14 @@ def sheet_attack(attack, args, embed=None):
                 embed.description = "Malformed tag: {}".format(k)
                 return {"embed": embed, "total_damage": 0}
 
+    advnum_keys = [k for k in args.keys() if re.match(r'(adv|dis)\d+', k)]
+    advnum = {}
+    for k in advnum_keys:  # parse adv# args
+        m = re.match(r'(adv|dis)(\d+)', k)
+        _adv = m.group(1)
+        num = int(m.group(2))
+        advnum[_adv] = num
+
     if args.get('phrase') is not None:  # parse phrase
         embed.description = '*' + args.get('phrase') + '*'
     else:
@@ -63,9 +71,13 @@ def sheet_attack(attack, args, embed=None):
             attack['attackBonus'] = '0'
         if attack.get('attackBonus') is not None:
             adv = args.get('adv')
+            for _adv, numHits in advnum.items():
+                if numHits > 0:
+                    adv = 1 if _adv == 'adv' else -1
+                    advnum[_adv] -= 1
             formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
                             + ('ro{}'.format(args.get('reroll', 0))
-                            if int(args.get('reroll', 0)) else '')
+            if int(args.get('reroll', 0)) else '')
             if args.get('b') is not None:
                 toHit = roll(f'{formatted_d20}+' + attack.get('attackBonus') + '+' + args.get('b'),
                              rollFor='To Hit', inline=True, show_blurbs=False)

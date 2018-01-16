@@ -162,7 +162,7 @@ class Character:
 
         _vars = user_vars
         _vars.update(cvars)
-        global_vars = None # we'll load them if we need them
+        global_vars = None  # we'll load them if we need them
 
         changed = False
 
@@ -212,8 +212,11 @@ class Character:
             changed = True
             return ''
 
-        def mod_hp(val: int):
-            return set_hp(self.get_current_hp() + val)
+        def mod_hp(val: int, overflow: bool = True):
+            if not overflow:
+                return set_hp(min(self.get_current_hp() + val, self.get_max_hp()))
+            else:
+                return set_hp(self.get_current_hp() + val)
 
         def set_cvar(name, val: str):
             self.set_cvar(name, val)
@@ -224,7 +227,7 @@ class Character:
 
         def get_gvar(name):
             nonlocal global_vars
-            if global_vars is None: # load only if needed
+            if global_vars is None:  # load only if needed
                 global_vars = ctx.bot.db.jget("global_vars", {})
             return global_vars.get(name, {}).get('value')
 

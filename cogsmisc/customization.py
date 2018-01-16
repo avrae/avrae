@@ -131,15 +131,19 @@ class Customization:
         s.whitespace_split = True
         s.commenters = ''
         args = list(s)
-        for index, arg in enumerate(args):
-            if " " in arg:
-                args[index] = shlex.quote(arg)
         tempargs = args[:]
         new_command = command
         for index, value in enumerate(args):
             key = '%{}%'.format(index + 1)
+            to_remove = False
             if key in command:
-                new_command = new_command.replace(key, value)
+                new_command = new_command.replace(key, shlex.quote(value) if ' ' in value else value)
+                to_remove = True
+            key = '&{}&'.format(index + 1)
+            if key in command:
+                new_command = new_command.replace(key, value.replace("\"", "\\\"").replace("'", "\\'"))
+                to_remove = True
+            if to_remove:
                 tempargs.remove(value)
 
         return self.bot.prefix + new_command + " " + ' '.join(tempargs)

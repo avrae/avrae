@@ -260,7 +260,7 @@ class Character:
             varstr = var.group(1)
 
             for cvar, value in _vars.items():
-                varstr = re.sub(r'(^|\s)(' + cvar + r')(?=\s|$)', cvarrepl, varstr)
+                varstr = re.sub(r'(^|\s)(' + re.escape(cvar) + r')(?=\s|$)', cvarrepl, varstr)
 
             try:
                 cstr = cstr.replace(raw, str(evaluator.eval(varstr)), 1)

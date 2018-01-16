@@ -89,8 +89,11 @@ class Customization:
     async def handle_aliases(self, message):
         if message.content.startswith(self.bot.prefix):
             alias = self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0]
-            command = self.aliases.get(message.author.id, {}).get(alias) or \
-                      self.serv_aliases.get(message.server.id, {}).get(alias)
+            if not message.channel.is_private:
+                command = self.aliases.get(message.author.id, {}).get(alias) or \
+                          self.serv_aliases.get(message.server.id, {}).get(alias)
+            else:
+                command = self.aliases.get(message.author.id, {}).get(alias)
             if command:
                 message.content = self.handle_alias_arguments(command, message)
                 # message.content = message.content.replace(alias, command, 1)
@@ -248,7 +251,7 @@ class Customization:
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)
 
-    @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'])
+    @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'], no_pm=True)
     async def servalias(self, ctx, alias_name, *, commands=None):
         """Adds an alias that the entire server can use.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
@@ -277,7 +280,7 @@ class Customization:
         self.serv_aliases[server_id] = server_aliases
         self.bot.db.not_json_set('serv_aliases', self.serv_aliases)
 
-    @servalias.command(pass_context=True, name='list')
+    @servalias.command(pass_context=True, name='list', no_pm=True)
     async def servalias_list(self, ctx):
         """Lists all server aliases."""
         server_id = ctx.message.server.id
@@ -287,7 +290,7 @@ class Customization:
         sorted_aliases = sorted(aliases)
         return await self.bot.say('This server\'s aliases:\n{}'.format(', '.join(sorted_aliases)))
 
-    @servalias.command(pass_context=True, name='delete', aliases=['remove'])
+    @servalias.command(pass_context=True, name='delete', aliases=['remove'], no_pm=True)
     async def servalias_delete(self, ctx, alias_name):
         """Deletes a server alias.
         Any user with permission to create a server alias can delete one from the server."""

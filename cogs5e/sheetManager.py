@@ -875,7 +875,7 @@ class SheetManager:
 
         if snippet is None:
             return await self.bot.say(
-                '**' + snipname + '**:\n```md\n' + user_snippets.get(snipname, 'Not defined.') + '\n```')
+                '**' + snipname + f'**:\n(Copy-pastable)```md\n!snippet {snipname} ' + user_snippets.get(snipname, 'Not defined.') + '\n```')
 
         if snipname == 'remove' or snipname == 'delete':
             try:

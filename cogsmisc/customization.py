@@ -220,8 +220,8 @@ class Customization:
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = '!' + alias
-            return await self.bot.say('**' + alias_name + '**:\n```md\n' + alias + "\n```")
+                alias = f'!alias {alias_name} ' + alias
+            return await self.bot.say('**' + alias_name + f'**:\n(Copy-pastable)\n```md\n' + alias + "\n```")
 
         user_aliases[alias_name] = commands.lstrip('!')
         await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, commands.lstrip('!')))
@@ -271,8 +271,8 @@ class Customization:
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = '!' + alias
-            return await self.bot.say('**' + alias_name + '**:\n```md\n' + alias + "\n```")
+                alias = f'!alias {alias_name} ' + alias
+            return await self.bot.say('**' + alias_name + '**:\n(Copy-pastable)```md\n' + alias + "\n```")
 
         if not self.can_edit_servaliases(ctx):
             return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "

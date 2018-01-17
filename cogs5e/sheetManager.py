@@ -69,9 +69,9 @@ class SheetManager:
         except asyncio.CancelledError:
             pass
 
-    def new_arg_stuff(self, args, ctx, character):
+    async def new_arg_stuff(self, args, ctx, character):
         args = self.parse_snippets(args, ctx.message.author.id)
-        args = character.parse_cvars(args, ctx)
+        args = await character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = self.parse_args(args)
         return args
@@ -174,14 +174,14 @@ class SheetManager:
             except StopIteration:
                 return await self.bot.say('No attack with that name found.')
 
-        args = self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char)
         args['name'] = char.get_name()
         args['criton'] = args.get('criton') or char.get_setting('criton', 20)
         args['hocrit'] = char.get_setting('hocrit', False)
         args['reroll'] = char.get_setting('reroll', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
-            attack['details'] = char.parse_cvars(attack['details'], ctx)
+            attack['details'] = await char.parse_cvars(attack['details'], ctx)
 
         result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
         embed = result['embed']
@@ -223,7 +223,7 @@ class SheetManager:
         skill_effects = char.get_skill_effects()
         args += ' ' + skill_effects.get(save, '')  # dicecloud v11 - autoadv
 
-        args = self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
                                                                                         False) else -1 if args.get(
             'dis', False) else 0
@@ -291,7 +291,7 @@ class SheetManager:
         skill_effects = char.get_skill_effects()
         args += ' ' + skill_effects.get(skill, '')  # dicecloud v7 - autoadv
 
-        args = self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
                                                                                         False) else -1 if args.get(
             'dis', False) else 0

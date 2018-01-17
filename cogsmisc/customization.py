@@ -106,9 +106,9 @@ class Customization:
 
                 try:
                     if char:
-                        message.content = char.parse_cvars(message.content, ctx)
+                        message.content = await char.parse_cvars(message.content, ctx)
                     else:
-                        message.content = self.parse_no_char(message.content, ctx)
+                        message.content = await self.parse_no_char(message.content, ctx)
                 except EvaluationError as err:
                     e = err.original
                     if not isinstance(e, AvraeException):
@@ -148,7 +148,7 @@ class Customization:
 
         return self.bot.prefix + new_command + " " + ' '.join(tempargs)
 
-    def parse_no_char(self, cstr, ctx):
+    async def parse_no_char(self, cstr, ctx):
         """
         Parses cvars and whatnot without an active character.
         :param string: The string to parse.
@@ -326,7 +326,8 @@ class Customization:
     async def test(self, ctx, *, str):
         """Parses `str` as if it were in an alias, for testing."""
         char = Character.from_ctx(ctx)
-        await self.bot.say(f"{ctx.message.author.display_name}: {char.parse_cvars(str, ctx)}")
+        parsed = await char.parse_cvars(str, ctx)
+        await self.bot.say(f"{ctx.message.author.display_name}: {parsed}")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name, *, value=None):

@@ -148,7 +148,7 @@ class Character:
         self.character['settings'][setting] = value
         return self
 
-    def parse_cvars(self, cstr, ctx=None):
+    async def parse_cvars(self, cstr, ctx=None):
         """Parses cvars.
         :param ctx: The Context the cvar is parsed in.
         :param cstr: The string to parse.
@@ -290,7 +290,7 @@ class Character:
             cstr = cstr.replace(raw, str(roll(out).total), 1)
         for var in re.finditer(r'<([^<>]+)>', cstr):
             raw = var.group(0)
-            if re.match(r'<([@#]|:.+:)[&!]{0,2}\d+>', raw): continue  # ignore mentions, channels, emotes
+            if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', raw): continue  # ignore mentions, channels, emotes
             out = var.group(1)
             if out.startswith('/'):
                 _last = character

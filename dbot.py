@@ -290,7 +290,10 @@ for cog in cogs:
 if SHARDED: log.info("I am shard {} of {}.".format(str(int(bot.shard_id) + 1), str(bot.shard_count)))
 
 INITIALIZING = False
-if not TESTING:
-    bot.run(bot.credentials.officialToken)  # official token
-else:
-    bot.run(bot.credentials.testToken)  # test token
+try:
+    if not TESTING:
+        bot.run(bot.credentials.officialToken)  # official token
+    else:
+        bot.run(bot.credentials.testToken)  # test token
+except:
+    sigterm_handler(None, None)

@@ -68,7 +68,7 @@ class PBPUtils:
         args = self.parse_args(args)
         embed.title = args.get('title')
         embed.description = args.get('desc')
-        embed.set_thumbnail(url=args.get('thumb', ''))
+        embed.set_thumbnail(url=args.get('thumb', '') if 'http' in str(args.get('thumb')) else '')
         embed.set_image(url=args.get('image', '') if 'http' in str(args.get('image')) else '')
         embed.set_footer(text=args.get('footer', ''))
         try:

@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 VALID_OPERATORS = 'k|rr|ro|mi|ma|ra|e'
 VALID_OPERATORS_2 = '|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')])
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
-DICE_PATTERN = r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+)|([-+*/().<>=])?)\s*(\[.*\])?)(.*?)\s*$'
+DICE_PATTERN = re.compile(r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+)|([-+*/().<>=])?)\s*(\[.*\])?)(.*?)\s*$', IGNORECASE)
 
 def list_get(index, default, l):
     try:
@@ -44,20 +44,22 @@ def get_roll_comment(rollStr):
         dice_set = [d for d in dice_set if not d in (None, '')]
         log.debug("Found dice set: " + str(dice_set))
         for index, dice in enumerate(dice_set):
-            match = re.match(DICE_PATTERN, dice, IGNORECASE)
+            match = DICE_PATTERN.match(dice)
             log.debug("Found dice group: " + str(match.groups()))
             no_comment += dice.replace(match.group(5), '')
             if match.group(5):
                 comment = match.group(5) + ''.join(dice_set[index+1:])
                 break
                 
-        return (no_comment, comment)
+        return no_comment, comment
     except:
         pass
-    return (rollStr, '')
+    return rollStr, ''
 
 class Roll(object):
-    def __init__(self, parts:list=[]):
+    def __init__(self, parts=None):
+        if parts is None:
+            parts = []
         self.parts = parts
         
     def get_crit(self):
@@ -86,7 +88,7 @@ class Roll(object):
             dice_set = [d for d in dice_set if not d in (None, '')]
             log.debug("Found dice set: " + str(dice_set))
             for index, dice in enumerate(dice_set):
-                match = re.match(DICE_PATTERN, dice, IGNORECASE)
+                match = DICE_PATTERN.match(dice)
                 log.debug("Found dice group: " + str(match.groups()))
                 # check if it's dice
                 if match.group(1):
@@ -110,7 +112,6 @@ class Roll(object):
             if rollFor is '':
                 rollFor = ''.join(str(c) for c in results.parts if isinstance(c, Comment))
             # return final solution
-            skeletonReply = ''
             if not inline:
                 # Builds end result while showing rolls
                 reply = ' '.join(str(res) for res in results.parts if not isinstance(res, Comment)) + '\n**Total:** ' + str(floor(total))
@@ -147,7 +148,7 @@ class Roll(object):
                         reply += critStr
             reply = re.sub(' +', ' ', reply)
             skeletonReply = re.sub(' +', ' ', str(skeletonReply))
-            return DiceResult(result=floor(total), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply, raw_dice=results)
+            return DiceResult(result=int(floor(total)), verbose_result=reply, crit=crit, rolled=rolled, skeleton=skeletonReply, raw_dice=results)
         except Exception as ex:
             if not isinstance(ex, (SyntaxError, KeyError)):
                 log.error('Error in roll() caused by roll {}:'.format(rollStr))

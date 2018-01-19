@@ -239,7 +239,7 @@ def parse_args_2(args):
                 out[a.replace('-', '')] = list_get(index + 1, '0', args)
             else:
                 out[a.replace('-', '')] += '|' + list_get(index + 1, '0', args)
-        elif a in ('-phrase'):
+        elif a in ('-phrase',):
             if out.get(a.replace('-', '')) is None:
                 out[a.replace('-', '')] = list_get(index + 1, '0', args)
             else:

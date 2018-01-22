@@ -148,6 +148,8 @@ def sheet_attack(attack, args, embed=None):
                 if args.get('c') is not None:
                     damage += '+' + args.get('c', '')
                 rollFor = "Damage (CRIT!)"
+            elif itercrit == 2:
+                rollFor = "Damage (Miss!)"
 
             # resist parsing
             if 'resist' in args or 'immune' in args or 'vuln' in args:
@@ -157,12 +159,13 @@ def sheet_attack(attack, args, embed=None):
                 damage = parse_resistances(damage, resistances, immunities, vulnerabilities)
 
             # actual roll
-            if itercrit == 2:
+            if itercrit == 2 and not args.get('showmiss', False):
                 out += '**Miss!**\n'
             else:
                 dmgroll = roll(damage, rollFor=rollFor, inline=True, show_blurbs=False)
                 out += dmgroll.result + '\n'
-                total_damage += dmgroll.total
+                if itercrit == 2:  # if we actually missed
+                    total_damage += dmgroll.total
 
         if out is not '':
             if (args.get('rr', 1) or 1) > 1:

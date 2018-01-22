@@ -124,6 +124,7 @@ class SheetManager:
     async def attack(self, ctx, atk_name: str = 'list', *, args: str = ''):
         """Rolls an attack for the current active character.
         Valid Arguments: adv/dis
+                         adv#/dis# (applies adv to the first # attacks)
                          -ac [target ac]
                          -b [to hit bonus]
                          -d [damage bonus]

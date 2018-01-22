@@ -137,6 +137,7 @@ class SheetManager:
                          -immune [damage immunity]
                          -vuln [damage vulnerability]
                          crit (automatically crit)
+                         ea (Elven Accuracy double advantage)
                          [user snippet]"""
         char = Character.from_ctx(ctx)
 

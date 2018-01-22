@@ -63,6 +63,7 @@ def sheet_attack(attack, args, embed=None):
     args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
                                                                                             False) else -1 if args.get(
         'dis', False) else 0
+    args['adv'] = 2 if args.get('ea', False) and not args.get('dis', False) else args['adv']
     args['crit'] = 1 if args.get('crit', False) else None
     for r in range(args.get('rr', 1) or 1):  # start rolling attacks
         out = ''
@@ -75,9 +76,10 @@ def sheet_attack(attack, args, embed=None):
                 if numHits > 0:
                     adv = 1 if _adv == 'adv' else -1
                     advnum[_adv] -= 1
-            formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
+            formatted_d20 = ('1d20' if adv == 0 else '2d20' + (
+                'kh1' if adv == 1 else 'kl1') if not adv == 2 else '3d20kh1') \
                             + ('ro{}'.format(args.get('reroll', 0))
-            if int(args.get('reroll', 0)) else '')
+                               if int(args.get('reroll', 0)) else '')
             if args.get('b') is not None:
                 toHit = roll(f'{formatted_d20}+' + attack.get('attackBonus') + '+' + args.get('b'),
                              rollFor='To Hit', inline=True, show_blurbs=False)

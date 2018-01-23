@@ -404,34 +404,34 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
             if n == 0:
                 selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
             else:
-                try:
-                    await ctx.bot.delete_message(selectMsg)
-                except:
-                    pass
-                selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
+                newSelectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
         else:
             embed.add_field(name="Instructions",
                             value="Type your response in the channel you called the command. This message was PMed to you to hide the monster name.")
-            selectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
+            if n == 0:
+                selectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
+            else:
+                newSelectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
+
+        if n > 0: # clean up old messages
+            try:
+                await ctx.bot.delete_message(selectMsg)
+                await ctx.bot.delete_message(m)
+            except:
+                pass
+            finally:
+                selectMsg = newSelectMsg
 
         m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel,
                                            check=chk)
         if m is None:
             break
         if m.content.lower() == 'n':
-            try:
-                await ctx.bot.delete_message(m)
-            except:
-                pass
             if page + 1 < len(pages):
                 page += 1
             else:
                 await ctx.bot.send_message(ctx.message.channel, "You are already on the last page.")
         elif m.content.lower() == 'p':
-            try:
-                await ctx.bot.delete_message(m)
-            except:
-                pass
             if page - 1 >= 0:
                 page -= 1
             else:

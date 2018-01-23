@@ -8,6 +8,7 @@ import logging
 import os
 import random
 import re
+from itertools import zip_longest
 
 import discord
 from fuzzywuzzy import process, fuzz
@@ -362,6 +363,11 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
     return damage
 
 
+def paginate(iterable, n, fillvalue=None):
+    args = [iter(iterable)] * n
+    return [i for i in zip_longest(*args, fillvalue=fillvalue) if i is not None]
+
+
 async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
     If delete is True, will delete the selection message and the response.
@@ -373,29 +379,66 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
             return choices[0][1] if not return_name else choices[0]
         else:
             raise NoSelectionElements()
-    choices = choices[:10]  # sanity
-    names = [o[0] for o in choices]
-    results = [o[1] for o in choices]
-    embed = discord.Embed()
-    embed.title = "Multiple Matches Found"
-    selectStr = " Which one were you looking for? (Type the number, or \"c\" to cancel)\n"
-    for i, r in enumerate(names):
-        selectStr += f"**[{i+1}]** - {r}\n"
-    embed.description = selectStr
-    embed.colour = random.randint(0, 0xffffff)
-    if not pm:
-        selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
-    else:
-        embed.add_field(name="Instructions",
-                        value="Type your response in the channel you called the command. This message was PMed to you to hide the monster name.")
-        selectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
+    page = 0
+    pages = paginate(choices, 10)
+    m = None
 
     def chk(msg):
-        valid = [str(v) for v in range(1, len(choices) + 1)] + ["c"]
+        valid = [str(v) for v in range(1, len(choices) + 1)] + ["c", "n", "p"]
         return msg.content.lower() in valid
 
-    m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel,
-                                       check=chk)
+    for n in range(200):
+        _choices = pages[page]
+        names = [o[0] for o in _choices if o]
+        embed = discord.Embed()
+        embed.title = "Multiple Matches Found"
+        selectStr = "Which one were you looking for? (Type the number or \"c\" to cancel)\n"
+        if len(pages) > 1:
+            selectStr += "`n` to go to the next page, or `p` for previous\n"
+            embed.set_footer(text=f"Page {page+1}/{len(pages)}")
+        for i, r in enumerate(names):
+            selectStr += f"**[{i+1+page*10}]** - {r}\n"
+        embed.description = selectStr
+        embed.colour = random.randint(0, 0xffffff)
+        if not pm:
+            if n == 0:
+                selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
+            else:
+                try:
+                    await ctx.bot.delete_message(selectMsg)
+                except:
+                    pass
+                selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
+        else:
+            embed.add_field(name="Instructions",
+                            value="Type your response in the channel you called the command. This message was PMed to you to hide the monster name.")
+            selectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
+
+        m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel,
+                                           check=chk)
+        if m is None:
+            break
+        if m.content.lower() == 'n':
+            try:
+                await ctx.bot.delete_message(m)
+            except:
+                pass
+            if page + 1 < len(pages):
+                page += 1
+            else:
+                await ctx.bot.send_message(ctx.message.channel, "You are already on the last page.")
+        elif m.content.lower() == 'p':
+            try:
+                await ctx.bot.delete_message(m)
+            except:
+                pass
+            if page - 1 >= 0:
+                page -= 1
+            else:
+                await ctx.bot.send_message(ctx.message.channel, "You are already on the first page.")
+        else:
+            break
+
     if delete and not pm:
         try:
             await ctx.bot.delete_message(selectMsg)
@@ -405,7 +448,7 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
     if m is None or m.content.lower() == "c": raise SelectionCancelled()
     if return_name:
         return choices[int(m.content) - 1]
-    return results[int(m.content) - 1]
+    return choices[int(m.content) - 1][1]
 
 
 def gen_error_message():
@@ -433,7 +476,7 @@ def parse_data_entry(text):
         elif isinstance(entry, dict):
             if not 'type' in entry and 'title' in entry:
                 out.append(f"**{entry['title']}**: {parse_data_entry(entry['text'])}")
-            elif not 'type' in entry and 'istable' in entry: # only for races
+            elif not 'type' in entry and 'istable' in entry:  # only for races
                 temp = f"**{entry['caption']}**\n" if 'caption' in entry else ''
                 temp += ' - '.join(f"**{cl}**" for cl in entry['thead']) + '\n'
                 for row in entry['tbody']:
@@ -476,18 +519,21 @@ def parse_data_entry(text):
 
     return parse_data_formatting('\n'.join(out))
 
+
 FORMATTING = {'bold': '**', 'italic': '*'}
+
 
 def parse_data_formatting(text):
     """Parses a {@format } string."""
     exp = re.compile(r'{@(\w+) (.+)}')
+
     def sub(match):
         f = FORMATTING.get(match.group(1), '')
         return f"{f}{match.group(2)}{f}"
+
     while exp.search(text):
         text = exp.sub(sub, text)
     return text
-
 
 
 def dicecloud_parse(spell):
@@ -532,8 +578,10 @@ def dicecloud_parse(spell):
         'school': schools.get(spell.get('school', 'A'))
     }
 
+
 URL_KEY_V1_RE = re.compile(r'key=([^&#]+)')
 URL_KEY_V2_RE = re.compile(r'/spreadsheets/d/([a-zA-Z0-9-_]+)')
+
 
 def extract_gsheet_id_from_url(url):
     m2 = URL_KEY_V2_RE.search(url)
@@ -545,6 +593,7 @@ def extract_gsheet_id_from_url(url):
         return m1.group(1)
 
     raise NoValidUrlKeyFound
+
 
 async def confirm(ctx, message, delete_msgs=False):
     """

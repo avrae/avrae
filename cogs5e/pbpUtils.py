@@ -47,6 +47,18 @@ class PBPUtils:
         await self.bot.say(ctx.message.author.display_name + ": " + msg)
 
     @commands.command(pass_context=True)
+    async def techo(self, ctx, seconds: int, *, msg):
+        """Echos a message, and deletes it after a few seconds."""
+        try:
+            await self.bot.delete_message(ctx.message)
+        except:
+            pass
+
+        seconds = min(max(0, seconds), 600)
+
+        await self.bot.say(ctx.message.author.display_name + ": " + msg, delete_after=seconds)
+
+    @commands.command(pass_context=True)
     async def embed(self, ctx, *, args):
         """Creates and prints an Embed.
         Arguments: -title [title]
@@ -56,6 +68,7 @@ class PBPUtils:
         -footer [footer text]
         -f ["Field Title|Field Text"]
         -color [hex color]
+        -t [timeout (0..600)]
         """
         try:
             await self.bot.delete_message(ctx.message)
@@ -80,7 +93,17 @@ class PBPUtils:
             value = "|".join(f.split('|')[1:])
             embed.add_field(name=title, value=value)
 
-        await self.bot.say(embed=embed)
+        timeout = 0
+        if 't' in args:
+            try:
+                timeout = min(max(int(args['t']), 0), 600)
+            except:
+                pass
+
+        if timeout:
+            await self.bot.say(embed=embed, delete_after=timeout)
+        else:
+            await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True)
     async def br(self, ctx):

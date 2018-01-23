@@ -7,7 +7,6 @@
 
 *.avrae
 
-/tests/
 /venv/
 /.idea/
 
@@ -28,7 +27,7 @@ damage_snippets-backup.json
 /saves/
 /test/output/*
 /test/input/*
-
+/.cache/
 
 test/test.pdf
 

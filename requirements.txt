@@ -1,5 +1,6 @@
 aiohttp==1.0.5
 async-timeout==2.0.0
+attrs==17.4.0
 chardet==3.0.4
 discord.py==0.16.12
 fuzzywuzzy==0.15.1
@@ -11,12 +12,15 @@ numexpr==2.6.4
 numpy==1.13.3
 oauth2client==4.1.2
 pdfminer.six==20170720
+pluggy==0.6.0
 psutil==5.4.2
+py==1.5.2
 pyasn1==0.4.2
 pyasn1-modules==0.2.1
 pycryptodome==3.4.7
 pyee==5.0.0
 pygsheets==1.1.3
+pytest==3.3.2
 python-ddp==0.1.5
 python-Levenshtein==0.12.0
 python-meteor==0.1.6

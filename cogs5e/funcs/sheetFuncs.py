@@ -164,7 +164,7 @@ def sheet_attack(attack, args, embed=None):
             else:
                 dmgroll = roll(damage, rollFor=rollFor, inline=True, show_blurbs=False)
                 out += dmgroll.result + '\n'
-                if itercrit == 2:  # if we actually missed
+                if not itercrit == 2:  # if we actually hit
                     total_damage += dmgroll.total
 
         if out is not '':

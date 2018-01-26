@@ -185,6 +185,13 @@ class Character:
         def mod_cc(name, val: int, strict=False):
             return set_cc(name, get_cc(name) + val, strict)
 
+        def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None, dispType: str = None):
+            if not name in self.get_all_consumables():
+                self.create_consumable(name, minValue=minVal, maxValue=maxVal, reset=reset, displayType=dispType)
+                nonlocal changed
+                changed = True
+            return ''
+
         def get_slots(level: int):
             return self.get_remaining_slots(level)
 
@@ -225,6 +232,11 @@ class Character:
             changed = True
             return ''
 
+        def set_cvar_nx(name, val: str):
+            if not name in self.get_cvars():
+                set_cvar(name, val)
+            return ''
+
         def get_gvar(name):
             nonlocal global_vars
             if global_vars is None:  # load only if needed
@@ -238,7 +250,8 @@ class Character:
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                       get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
-                      set_cvar=set_cvar, get_gvar=get_gvar)
+                      set_cvar=set_cvar, get_gvar=get_gvar, exists=exists, set_cvar_nx=set_cvar_nx,
+                      create_cc_nx=create_cc_nx)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(_vars)

@@ -243,6 +243,9 @@ class Character:
                 global_vars = ctx.bot.db.jget("global_vars", {})
             return global_vars.get(name, {}).get('value')
 
+        def exists(name):
+            return name in evaluator.names
+
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
         _funcs['vroll'] = verbose_roll

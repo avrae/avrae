@@ -1278,6 +1278,12 @@ class InitTracker:
                 embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
         else:
             embed.set_footer(text="Target AC not set.")
+        _fields = args.get('f', [])
+        if type(_fields) == list:
+            for f in _fields:
+                title = f.split('|')[0] if '|' in f else '--'
+                value = "|".join(f.split('|')[1:]) if '|' in f else f
+                embed.add_field(name=title, value=value)
         await self.bot.say(embed=embed)
         await combat.update_summary(self.bot)
 

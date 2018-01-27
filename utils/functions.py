@@ -245,6 +245,11 @@ def parse_args_2(args):
                 out[a.replace('-', '')] = list_get(index + 1, '0', args)
             else:
                 out[a.replace('-', '')] += '\n' + list_get(index + 1, '0', args)
+        elif a == '-f':
+            if out.get(a.replace('-', '')) is None:
+                out[a.replace('-', '')] = [list_get(index + 1, '0', args)]
+            else:
+                out[a.replace('-', '')].append(list_get(index + 1, '0', args))
         elif a.startswith('-'):
             if list_get(index + 1, 'MISSING_ARGUMENT', args).startswith('-'):
                 out[a.replace('-', '')] = 'True'

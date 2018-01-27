@@ -372,8 +372,8 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
     If delete is True, will delete the selection message and the response.
     If length of choices is 1, will return the only choice.
-    @:raises NoSelectionElements if len(choices) is 0.
-    @:raises SelectionCancelled if selection is cancelled."""
+    :raises NoSelectionElements if len(choices) is 0.
+    :raises SelectionCancelled if selection is cancelled."""
     if len(choices) < 2:
         if len(choices):
             return choices[0][1] if not return_name else choices[0]

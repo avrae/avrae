@@ -94,11 +94,16 @@ class SheetManager:
                     out[a.replace('-', '')] = list_get(index + 1, '0', args)
                 else:
                     out[a.replace('-', '')] += '|' + list_get(index + 1, '0', args)
-            elif a in ('-phrase'):
+            elif a in ('-phrase',):
                 if out.get(a.replace('-', '')) is None:
                     out[a.replace('-', '')] = list_get(index + 1, '0', args)
                 else:
                     out[a.replace('-', '')] += '\n' + list_get(index + 1, '0', args)
+            elif a == '-f':
+                if out.get(a.replace('-', '')) is None:
+                    out[a.replace('-', '')] = [list_get(index + 1, '0', args)]
+                else:
+                    out[a.replace('-', '')].append(list_get(index + 1, '0', args))
             elif a.startswith('-'):
                 out[a.replace('-', '')] = list_get(index + 1, 'MISSING_ARGUMENT', args)
             else:
@@ -139,6 +144,7 @@ class SheetManager:
                          -vuln [damage vulnerability]
                          crit (automatically crit)
                          ea (Elven Accuracy double advantage)
+                         -f "Field Title|Field Text" (see !embed)
                          [user snippet]"""
         char = Character.from_ctx(ctx)
 
@@ -187,6 +193,14 @@ class SheetManager:
 
         result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
         embed = result['embed']
+
+        _fields = args.get('f', [])
+        if type(_fields) == list:
+            for f in _fields:
+                title = f.split('|')[0] if '|' in f else '--'
+                value = "|".join(f.split('|')[1:]) if '|' in f else f
+                embed.add_field(name=title, value=value)
+
         await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)

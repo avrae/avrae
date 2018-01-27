@@ -89,9 +89,10 @@ class PBPUtils:
         except:
             pass
         for f in args.get('f', []):
-            title = f.split('|')[0]
-            value = "|".join(f.split('|')[1:])
-            embed.add_field(name=title, value=value)
+            if f:
+                title = f.split('|')[0] if '|' in f else '--'
+                value = "|".join(f.split('|')[1:]) if '|' in f else f
+                embed.add_field(name=title, value=value)
 
         timeout = 0
         if 't' in args:

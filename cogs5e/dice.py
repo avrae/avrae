@@ -69,11 +69,15 @@ class Dice:
                !r xdy+xdy*z
                !r XdYkhZ
                !r 4d6mi2[fire] Elemental Adept, Fire
+               !r 2d6e6 Explode on 6
+               !r 10d6ra6 Spell Bombardment
         Supported Operators: k (keep)
                              ro (reroll once)
                              rr (reroll infinitely)
                              mi/ma (min/max result)
                              >/< (test if result is greater than/less than)
+                             e (explode dice of value)
+                             ra (reroll and add)
         Supported Selectors: lX (lowest X)
                              hX (highest X)"""
 

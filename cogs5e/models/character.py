@@ -148,7 +148,7 @@ class Character:
         self.character['settings'][setting] = value
         return self
 
-    def parse_cvars(self, cstr, ctx=None):
+    async def parse_cvars(self, cstr, ctx=None):
         """Parses cvars.
         :param ctx: The Context the cvar is parsed in.
         :param cstr: The string to parse.
@@ -157,11 +157,12 @@ class Character:
         ops = r"([-+*/().<>=])"
         cvars = character.get('cvars', {})
         stat_vars = character.get('stat_cvars', {})
+        stat_vars['color'] = hex(self.get_color())[2:]
         user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
 
         _vars = user_vars
         _vars.update(cvars)
-        global_vars = None # we'll load them if we need them
+        global_vars = None  # we'll load them if we need them
 
         changed = False
 
@@ -183,6 +184,13 @@ class Character:
 
         def mod_cc(name, val: int, strict=False):
             return set_cc(name, get_cc(name) + val, strict)
+
+        def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None, dispType: str = None):
+            if not name in self.get_all_consumables():
+                self.create_consumable(name, minValue=minVal, maxValue=maxVal, reset=reset, displayType=dispType)
+                nonlocal changed
+                changed = True
+            return ''
 
         def get_slots(level: int):
             return self.get_remaining_slots(level)
@@ -211,8 +219,11 @@ class Character:
             changed = True
             return ''
 
-        def mod_hp(val: int):
-            return set_hp(self.get_current_hp() + val)
+        def mod_hp(val: int, overflow: bool = True):
+            if not overflow:
+                return set_hp(min(self.get_current_hp() + val, self.get_max_hp()))
+            else:
+                return set_hp(self.get_current_hp() + val)
 
         def set_cvar(name, val: str):
             self.set_cvar(name, val)
@@ -221,11 +232,19 @@ class Character:
             changed = True
             return ''
 
+        def set_cvar_nx(name, val: str):
+            if not name in self.get_cvars():
+                set_cvar(name, val)
+            return ''
+
         def get_gvar(name):
             nonlocal global_vars
-            if global_vars is None: # load only if needed
+            if global_vars is None:  # load only if needed
                 global_vars = ctx.bot.db.jget("global_vars", {})
             return global_vars.get(name, {}).get('value')
+
+        def exists(name):
+            return name in evaluator.names
 
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
@@ -234,7 +253,8 @@ class Character:
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                       get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
-                      set_cvar=set_cvar, get_gvar=get_gvar)
+                      set_cvar=set_cvar, get_gvar=get_gvar, exists=exists, set_cvar_nx=set_cvar_nx,
+                      create_cc_nx=create_cc_nx)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(_vars)
@@ -256,7 +276,7 @@ class Character:
             varstr = var.group(1)
 
             for cvar, value in _vars.items():
-                varstr = re.sub(r'(^|\s)(' + cvar + r')(?=\s|$)', cvarrepl, varstr)
+                varstr = re.sub(r'(^|\s)(' + re.escape(cvar) + r')(?=\s|$)', cvarrepl, varstr)
 
             try:
                 cstr = cstr.replace(raw, str(evaluator.eval(varstr)), 1)
@@ -286,7 +306,7 @@ class Character:
             cstr = cstr.replace(raw, str(roll(out).total), 1)
         for var in re.finditer(r'<([^<>]+)>', cstr):
             raw = var.group(0)
-            if re.match(r'<([@#]|:.+:)[&!]{0,2}\d+>', raw): continue  # ignore mentions, channels, emotes
+            if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', raw): continue  # ignore mentions, channels, emotes
             out = var.group(1)
             if out.startswith('/'):
                 _last = character
@@ -645,6 +665,7 @@ class Character:
         """
         assert not self.live
         self._initialize_spellbook()
+        self._initialize_spell_overrides()
         overrides = set(self.character['overrides'].get('spells', []))
         spell_name = next((s for s in overrides if spell_name.lower() == s.lower()), None)
         if spell_name:

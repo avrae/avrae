@@ -33,6 +33,14 @@ def sheet_attack(attack, args, embed=None):
                 embed.description = "Malformed tag: {}".format(k)
                 return {"embed": embed, "total_damage": 0}
 
+    advnum_keys = [k for k in args.keys() if re.match(r'(adv|dis)\d+', k)]
+    advnum = {}
+    for k in advnum_keys:  # parse adv# args
+        m = re.match(r'(adv|dis)(\d+)', k)
+        _adv = m.group(1)
+        num = int(m.group(2))
+        advnum[_adv] = num
+
     if args.get('phrase') is not None:  # parse phrase
         embed.description = '*' + args.get('phrase') + '*'
     else:
@@ -55,6 +63,7 @@ def sheet_attack(attack, args, embed=None):
     args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
                                                                                             False) else -1 if args.get(
         'dis', False) else 0
+    args['adv'] = 2 if args.get('ea', False) and not args.get('dis', False) else args['adv']
     args['crit'] = 1 if args.get('crit', False) else None
     for r in range(args.get('rr', 1) or 1):  # start rolling attacks
         out = ''
@@ -63,9 +72,14 @@ def sheet_attack(attack, args, embed=None):
             attack['attackBonus'] = '0'
         if attack.get('attackBonus') is not None:
             adv = args.get('adv')
-            formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
+            for _adv, numHits in advnum.items():
+                if numHits > 0:
+                    adv = 1 if _adv == 'adv' else -1
+                    advnum[_adv] -= 1
+            formatted_d20 = ('1d20' if adv == 0 else '2d20' + (
+                'kh1' if adv == 1 else 'kl1') if not adv == 2 else '3d20kh1') \
                             + ('ro{}'.format(args.get('reroll', 0))
-                            if int(args.get('reroll', 0)) else '')
+                               if int(args.get('reroll', 0)) else '')
             if args.get('b') is not None:
                 toHit = roll(f'{formatted_d20}+' + attack.get('attackBonus') + '+' + args.get('b'),
                              rollFor='To Hit', inline=True, show_blurbs=False)
@@ -134,6 +148,8 @@ def sheet_attack(attack, args, embed=None):
                 if args.get('c') is not None:
                     damage += '+' + args.get('c', '')
                 rollFor = "Damage (CRIT!)"
+            elif itercrit == 2:
+                rollFor = "Damage (Miss!)"
 
             # resist parsing
             if 'resist' in args or 'immune' in args or 'vuln' in args:
@@ -143,12 +159,13 @@ def sheet_attack(attack, args, embed=None):
                 damage = parse_resistances(damage, resistances, immunities, vulnerabilities)
 
             # actual roll
-            if itercrit == 2:
+            if itercrit == 2 and not args.get('showmiss', False):
                 out += '**Miss!**\n'
             else:
                 dmgroll = roll(damage, rollFor=rollFor, inline=True, show_blurbs=False)
                 out += dmgroll.result + '\n'
-                total_damage += dmgroll.total
+                if not itercrit == 2:  # if we actually hit
+                    total_damage += dmgroll.total
 
         if out is not '':
             if (args.get('rr', 1) or 1) > 1:

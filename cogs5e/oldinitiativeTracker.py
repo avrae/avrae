@@ -1185,11 +1185,11 @@ class InitTracker:
 
             args = " ".join(tempargs)
             tempchar = Character(combatant.sheet, combatant.id)
-            args = tempchar.parse_cvars(args, ctx)
+            args = await tempchar.parse_cvars(args, ctx)
             args = shlex.split(args)
             args = parse_args_2(args)
             if attack.get('details') is not None:
-                attack['details'] = tempchar.parse_cvars(attack['details'], ctx)
+                attack['details'] = await tempchar.parse_cvars(attack['details'], ctx)
             args['name'] = combatant.name  # combatant.sheet.get('stats', {}).get('name', "NONAME")
             if target.ac is not None: args['ac'] = target.ac
             args['t'] = target.name
@@ -1278,6 +1278,12 @@ class InitTracker:
                 embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
         else:
             embed.set_footer(text="Target AC not set.")
+        _fields = args.get('f', [])
+        if type(_fields) == list:
+            for f in _fields:
+                title = f.split('|')[0] if '|' in f else '--'
+                value = "|".join(f.split('|')[1:]) if '|' in f else f
+                embed.add_field(name=title, value=value)
         await self.bot.say(embed=embed)
         await combat.update_summary(self.bot)
 
@@ -1322,7 +1328,7 @@ class InitTracker:
                 tempargs[index] = shlex.quote(arg)
 
         args = " ".join(tempargs)
-        args = character.parse_cvars(args, ctx)
+        args = await character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)
 

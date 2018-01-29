@@ -89,8 +89,11 @@ class Customization:
     async def handle_aliases(self, message):
         if message.content.startswith(self.bot.prefix):
             alias = self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0]
-            command = self.aliases.get(message.author.id, {}).get(alias) or \
-                      self.serv_aliases.get(message.server.id, {}).get(alias)
+            if not message.channel.is_private:
+                command = self.aliases.get(message.author.id, {}).get(alias) or \
+                          self.serv_aliases.get(message.server.id, {}).get(alias)
+            else:
+                command = self.aliases.get(message.author.id, {}).get(alias)
             if command:
                 message.content = self.handle_alias_arguments(command, message)
                 # message.content = message.content.replace(alias, command, 1)
@@ -103,9 +106,9 @@ class Customization:
 
                 try:
                     if char:
-                        message.content = char.parse_cvars(message.content, ctx)
+                        message.content = await char.parse_cvars(message.content, ctx)
                     else:
-                        message.content = self.parse_no_char(message.content, ctx)
+                        message.content = await self.parse_no_char(message.content, ctx)
                 except EvaluationError as err:
                     e = err.original
                     if not isinstance(e, AvraeException):
@@ -128,20 +131,24 @@ class Customization:
         s.whitespace_split = True
         s.commenters = ''
         args = list(s)
-        for index, arg in enumerate(args):
-            if " " in arg:
-                args[index] = shlex.quote(arg)
         tempargs = args[:]
         new_command = command
         for index, value in enumerate(args):
             key = '%{}%'.format(index + 1)
+            to_remove = False
             if key in command:
-                new_command = new_command.replace(key, value)
+                new_command = new_command.replace(key, shlex.quote(value) if ' ' in value else value)
+                to_remove = True
+            key = '&{}&'.format(index + 1)
+            if key in command:
+                new_command = new_command.replace(key, value.replace("\"", "\\\"").replace("'", "\\'"))
+                to_remove = True
+            if to_remove:
                 tempargs.remove(value)
 
         return self.bot.prefix + new_command + " " + ' '.join(tempargs)
 
-    def parse_no_char(self, cstr, ctx):
+    async def parse_no_char(self, cstr, ctx):
         """
         Parses cvars and whatnot without an active character.
         :param string: The string to parse.
@@ -213,8 +220,8 @@ class Customization:
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = '!' + alias
-            return await self.bot.say('**' + alias_name + '**:\n```md\n' + alias + "\n```")
+                alias = f'!alias {alias_name} ' + alias
+            return await self.bot.say('**' + alias_name + f'**:\n(Copy-pastable)\n```md\n' + alias + "\n```")
 
         user_aliases[alias_name] = commands.lstrip('!')
         await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, commands.lstrip('!')))
@@ -248,7 +255,7 @@ class Customization:
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)
 
-    @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'])
+    @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'], no_pm=True)
     async def servalias(self, ctx, alias_name, *, commands=None):
         """Adds an alias that the entire server can use.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
@@ -264,8 +271,8 @@ class Customization:
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = '!' + alias
-            return await self.bot.say('**' + alias_name + '**:\n```md\n' + alias + "\n```")
+                alias = f'!alias {alias_name} ' + alias
+            return await self.bot.say('**' + alias_name + '**:\n(Copy-pastable)```md\n' + alias + "\n```")
 
         if not self.can_edit_servaliases(ctx):
             return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "
@@ -277,7 +284,7 @@ class Customization:
         self.serv_aliases[server_id] = server_aliases
         self.bot.db.not_json_set('serv_aliases', self.serv_aliases)
 
-    @servalias.command(pass_context=True, name='list')
+    @servalias.command(pass_context=True, name='list', no_pm=True)
     async def servalias_list(self, ctx):
         """Lists all server aliases."""
         server_id = ctx.message.server.id
@@ -287,7 +294,7 @@ class Customization:
         sorted_aliases = sorted(aliases)
         return await self.bot.say('This server\'s aliases:\n{}'.format(', '.join(sorted_aliases)))
 
-    @servalias.command(pass_context=True, name='delete', aliases=['remove'])
+    @servalias.command(pass_context=True, name='delete', aliases=['remove'], no_pm=True)
     async def servalias_delete(self, ctx, alias_name):
         """Deletes a server alias.
         Any user with permission to create a server alias can delete one from the server."""
@@ -319,7 +326,8 @@ class Customization:
     async def test(self, ctx, *, str):
         """Parses `str` as if it were in an alias, for testing."""
         char = Character.from_ctx(ctx)
-        await self.bot.say(f"{ctx.message.author.display_name}: {char.parse_cvars(str, ctx)}")
+        parsed = await char.parse_cvars(str, ctx)
+        await self.bot.say(f"{ctx.message.author.display_name}: {parsed}")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name, *, value=None):

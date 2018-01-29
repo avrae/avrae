@@ -69,9 +69,9 @@ class SheetManager:
         except asyncio.CancelledError:
             pass
 
-    def new_arg_stuff(self, args, ctx, character):
+    async def new_arg_stuff(self, args, ctx, character):
         args = self.parse_snippets(args, ctx.message.author.id)
-        args = character.parse_cvars(args, ctx)
+        args = await character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = self.parse_args(args)
         return args
@@ -94,11 +94,16 @@ class SheetManager:
                     out[a.replace('-', '')] = list_get(index + 1, '0', args)
                 else:
                     out[a.replace('-', '')] += '|' + list_get(index + 1, '0', args)
-            elif a in ('-phrase'):
+            elif a in ('-phrase',):
                 if out.get(a.replace('-', '')) is None:
                     out[a.replace('-', '')] = list_get(index + 1, '0', args)
                 else:
                     out[a.replace('-', '')] += '\n' + list_get(index + 1, '0', args)
+            elif a == '-f':
+                if out.get(a.replace('-', '')) is None:
+                    out[a.replace('-', '')] = [list_get(index + 1, '0', args)]
+                else:
+                    out[a.replace('-', '')].append(list_get(index + 1, '0', args))
             elif a.startswith('-'):
                 out[a.replace('-', '')] = list_get(index + 1, 'MISSING_ARGUMENT', args)
             else:
@@ -124,6 +129,7 @@ class SheetManager:
     async def attack(self, ctx, atk_name: str = 'list', *, args: str = ''):
         """Rolls an attack for the current active character.
         Valid Arguments: adv/dis
+                         adv#/dis# (applies adv to the first # attacks)
                          -ac [target ac]
                          -b [to hit bonus]
                          -d [damage bonus]
@@ -137,6 +143,8 @@ class SheetManager:
                          -immune [damage immunity]
                          -vuln [damage vulnerability]
                          crit (automatically crit)
+                         ea (Elven Accuracy double advantage)
+                         -f "Field Title|Field Text" (see !embed)
                          [user snippet]"""
         char = Character.from_ctx(ctx)
 
@@ -174,17 +182,25 @@ class SheetManager:
             except StopIteration:
                 return await self.bot.say('No attack with that name found.')
 
-        args = self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char)
         args['name'] = char.get_name()
         args['criton'] = args.get('criton') or char.get_setting('criton', 20)
         args['hocrit'] = char.get_setting('hocrit', False)
         args['reroll'] = char.get_setting('reroll', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
-            attack['details'] = char.parse_cvars(attack['details'], ctx)
+            attack['details'] = await char.parse_cvars(attack['details'], ctx)
 
         result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
         embed = result['embed']
+
+        _fields = args.get('f', [])
+        if type(_fields) == list:
+            for f in _fields:
+                title = f.split('|')[0] if '|' in f else '--'
+                value = "|".join(f.split('|')[1:]) if '|' in f else f
+                embed.add_field(name=title, value=value)
+
         await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)
@@ -223,7 +239,7 @@ class SheetManager:
         skill_effects = char.get_skill_effects()
         args += ' ' + skill_effects.get(save, '')  # dicecloud v11 - autoadv
 
-        args = self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
                                                                                         False) else -1 if args.get(
             'dis', False) else 0
@@ -291,7 +307,7 @@ class SheetManager:
         skill_effects = char.get_skill_effects()
         args += ' ' + skill_effects.get(skill, '')  # dicecloud v7 - autoadv
 
-        args = self.new_arg_stuff(args, ctx, char)
+        args = await self.new_arg_stuff(args, ctx, char)
         adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
                                                                                         False) else -1 if args.get(
             'dis', False) else 0
@@ -875,7 +891,7 @@ class SheetManager:
 
         if snippet is None:
             return await self.bot.say(
-                '**' + snipname + '**:\n```md\n' + user_snippets.get(snipname, 'Not defined.') + '\n```')
+                '**' + snipname + f'**:\n(Copy-pastable)```md\n!snippet {snipname} ' + user_snippets.get(snipname, 'Not defined.') + '\n```')
 
         if snipname == 'remove' or snipname == 'delete':
             try:

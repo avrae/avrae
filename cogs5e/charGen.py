@@ -74,6 +74,7 @@ class CharGenerator:
         class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
         if class_response is None: return await self.bot.say("Class not found.")
         result = searchClass(class_response.content)
+        if result is None: return await self.bot.say("Class not found.")
         _class = await resolve(result, ctx)
 
         if 'subclasses' in _class:
@@ -227,21 +228,16 @@ class CharGenerator:
         embed_queue = [EmbedWithAuthor(ctx)]
         num_subclass_features = 0
         num_fields = 0
-        char_count = 0
 
         def inc_fields(text):
             nonlocal num_fields
-            nonlocal char_count
             num_fields += 1
-            char_count += len(text)
             if num_fields > 25:
                 embed_queue.append(EmbedWithAuthor(ctx))
                 num_fields = 0
-                char_count = 0
-            if char_count > 5800:
+            if len(str(embed_queue[-1].to_dict())) + len(text) > 5800:
                 embed_queue.append(EmbedWithAuthor(ctx))
                 num_fields = 0
-                char_count = 0
 
         for level in range(1, final_level + 1):
             level_features = _class['classFeatures'][level - 1]

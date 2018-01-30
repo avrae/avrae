@@ -50,6 +50,10 @@ class Combat:
                 'combatants': [c.to_dict() for c in self.get_combatants()], 'turn': self.turn_num,
                 'round': self.round_num, 'current': self.current_combatant}
 
+    @staticmethod
+    def ensure_unique_chan(ctx):  # TODO: raise ChannelInCombat if channel in combat
+        pass
+
 
 class Combatant:
     def __init__(self, name, controllerId, initMod, hpMax, hp, ac, private, resists, attacks, ctx=None):
@@ -62,6 +66,7 @@ class Combatant:
         self._private = private
         self._resists = resists
         self._attacks = attacks
+        self._index = None  # combat write only; position in combat
         self.ctx = ctx
 
     @property
@@ -100,10 +105,14 @@ class Combatant:
     def attacks(self):
         return self._attacks
 
+    @property
+    def index(self):
+        return self._index
+
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'mod': self.initMod, 'hpMax': self.hpMax,
                 'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
-                'attacks': self.attacks}
+                'attacks': self.attacks, 'index': self.index, 'type': 'common'}
 
 
 class MonsterCombatant(Combatant):

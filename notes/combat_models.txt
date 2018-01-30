@@ -8,7 +8,8 @@ combat:
     tracked:
         what channel it's in
         the current round/combatant
-        the summary message
+        the summary message (id)
+            to grab message, grab from cache or use coroutine
         (options: name, variant rules)
         dm
         (lastmodified)

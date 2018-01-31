@@ -1,9 +1,11 @@
+import random
 import shlex
 
 import cachetools
 from discord.ext import commands
 
-from cogs5e.models.initiative import Combat
+from cogs5e.models.initiative import Combat, Combatant
+from utils.functions import parse_args_3
 
 
 class InitTracker:
@@ -77,7 +79,7 @@ class InitTracker:
         temp_summary_msg = await self.bot.say("```Awaiting combatants...```")
         self.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
 
-        Combat(ctx.message.channel.id, temp_summary_msg.id, ctx.message.author.id, options, ctx).commit()
+        Combat.new(ctx.message.channel.id, temp_summary_msg.id, ctx.message.author.id, options, ctx).commit()
 
         try:
             await self.bot.pin_message(temp_summary_msg)
@@ -86,3 +88,103 @@ class InitTracker:
         await self.bot.say(
             "Everyone roll for initiative!\nIf you have a character set up with SheetManager: `!init cadd`\n"
             "If it's a 5e monster: `!init madd [monster name]`\nOtherwise: `!init add [modifier] [name]`")
+
+    @init.command(pass_context=True)
+    async def add(self, ctx, modifier: int, name: str, *args):
+        """Adds a combatant to the initiative order.
+        If a character is set up with the SheetManager module, you can use !init dcadd instead.
+        If you are adding monsters to combat, you can use !init madd instead.
+        Use !help init [dcadd|madd] for more help.
+        Valid Arguments:    -h (hides HP)
+                            -p (places at given number instead of rolling)
+                            --controller <CONTROLLER> (pings a different person on turn)
+                            --group <GROUP> (adds the combatant to a group)
+                            --hp <HP> (starts with HP)
+                            --ac <AC> (sets combatant AC)"""
+        private = False
+        place = False
+        controller = ctx.message.author.id
+        group = None
+        hp = None
+        ac = None
+        args = parse_args_3(args)
+
+        if 'h' in args:
+            private = True
+        if 'p' in args:
+            place = True
+        if 'controller' in args:
+            try:
+                controllerStr = args['controller'][0]
+                controllerEscaped = controllerStr.replace('<', '').replace('>', '').replace('@', '').replace('!', '')
+                a = ctx.message.server.get_member(controllerEscaped)
+                b = ctx.message.server.get_member_named(controllerStr)
+                controller = a.id if a is not None else b.id if b is not None else controller
+            except IndexError:
+                await self.bot.say("You must pass in a controller with the --controller tag.")
+                return
+        if 'group' in args:
+            try:
+                group = args['group'][0]
+            except IndexError:
+                await self.bot.say("You must pass in a group with the --group tag.")
+                return
+        if 'hp' in args:
+            try:
+                hp = int(args['hp'][0])
+                if hp < 1:
+                    hp = None
+                    raise Exception
+            except:
+                await self.bot.say("You must pass in a positive, nonzero HP with the --hp tag.")
+                return
+        if 'ac' in args:
+            try:
+                ac = int(args['ac'][0])
+            except:
+                await self.bot.say("You must pass in an AC with the --ac tag.")
+                return
+
+        combat = Combat.from_ctx(ctx)
+
+        if combat.get_combatant(name) is not None:
+            await self.bot.say("Combatant already exists.")
+            return
+
+        try:
+            if not place:
+                if combat.options.get('d100_init') is True:
+                    init = random.randint(1, 100) + (modifier * 5)
+                else:
+                    init = random.randint(1, 20) + modifier
+            else:
+                init = modifier
+                modifier = 0
+
+            me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private) # TODO: finish
+
+            if group is None:
+                combat.combatants.append(me)
+                await self.bot.say(
+                    "{}\n{} was added to combat with initiative {}.".format(controller.mention, name, init),
+                    delete_after=10)
+            elif combat.get_combatant_group(group) is None:
+                newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
+                newGroup.combatants.append(me)
+                combat.combatants.append(newGroup)
+                await self.bot.say(
+                    "{}\n{} was added to combat as part of group {}, with initiative {}.".format(controller.mention,
+                                                                                                 name, group, init),
+                    delete_after=10)
+            else:
+                group = combat.get_combatant_group(group)
+                group.combatants.append(me)
+                await self.bot.say(
+                    "{}\n{} was added to combat as part of group {}.".format(controller.mention, name, group.name),
+                    delete_after=10)
+        except Exception as e:
+            await self.bot.say("Error adding combatant: {}".format(e))
+            return
+
+        await combat.update_summary(self.bot)
+        combat.sortCombatants()

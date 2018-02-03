@@ -79,7 +79,8 @@ class InitTracker:
         temp_summary_msg = await self.bot.say("```Awaiting combatants...```")
         self.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
 
-        Combat.new(ctx.message.channel.id, temp_summary_msg.id, ctx.message.author.id, options, ctx).commit()
+        combat = Combat.new(ctx.message.channel.id, temp_summary_msg.id, ctx.message.author.id, options, ctx)
+        await combat.final(self.get_summary_msg(combat))
 
         try:
             await self.bot.pin_message(temp_summary_msg)
@@ -97,16 +98,18 @@ class InitTracker:
         Use !help init [dcadd|madd] for more help.
         Valid Arguments:    -h (hides HP)
                             -p (places at given number instead of rolling)
-                            --controller <CONTROLLER> (pings a different person on turn)
-                            --group <GROUP> (adds the combatant to a group)
-                            --hp <HP> (starts with HP)
-                            --ac <AC> (sets combatant AC)"""
+                            -controller <CONTROLLER> (pings a different person on turn)
+                            -group <GROUP> (adds the combatant to a group)
+                            -hp <HP> (starts with HP)
+                            -ac <AC> (sets combatant AC)
+                            -resist/immune/vuln <resistance>"""
         private = False
         place = False
         controller = ctx.message.author.id
         group = None
         hp = None
         ac = None
+        resists = {}
         args = parse_args_3(args)
 
         if 'h' in args:
@@ -145,6 +148,9 @@ class InitTracker:
                 await self.bot.say("You must pass in an AC with the --ac tag.")
                 return
 
+        for k in ('resist', 'immune', 'vuln'):
+            resists[k] = args.get(k, [])
+
         combat = Combat.from_ctx(ctx)
 
         if combat.get_combatant(name) is not None:
@@ -161,30 +167,17 @@ class InitTracker:
                 init = modifier
                 modifier = 0
 
-            me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private) # TODO: finish
+            me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private, resists, [], ctx)
 
             if group is None:
-                combat.combatants.append(me)
+                combat.add_combatant(me)
                 await self.bot.say(
-                    "{}\n{} was added to combat with initiative {}.".format(controller.mention, name, init),
-                    delete_after=10)
-            elif combat.get_combatant_group(group) is None:
-                newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
-                newGroup.combatants.append(me)
-                combat.combatants.append(newGroup)
-                await self.bot.say(
-                    "{}\n{} was added to combat as part of group {}, with initiative {}.".format(controller.mention,
-                                                                                                 name, group, init),
+                    "{}\n{} was added to combat with initiative {}.".format(f'<@{controller}>', name, init),
                     delete_after=10)
             else:
-                group = combat.get_combatant_group(group)
-                group.combatants.append(me)
-                await self.bot.say(
-                    "{}\n{} was added to combat as part of group {}.".format(controller.mention, name, group.name),
-                    delete_after=10)
+                raise NotImplementedError  # TODO: groups
         except Exception as e:
             await self.bot.say("Error adding combatant: {}".format(e))
             return
 
-        await combat.update_summary(self.bot)
-        combat.sortCombatants()
+        await combat.final(self.get_summary_msg(combat))

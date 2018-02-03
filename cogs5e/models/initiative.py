@@ -75,6 +75,9 @@ class Combat:
     def get_combatants(self):
         return self._combatants
 
+    def add_combatant(self, combatant):
+        raise NotImplementedError
+
     @staticmethod
     def ensure_unique_chan(ctx):  # TODO: raise ChannelInCombat if channel in combat
         pass
@@ -87,16 +90,27 @@ class Combat:
             raise RequiresContext  # TODO
         self.ctx.bot.db.jsetex(self.get_db_key(), self.to_dict(), COMBAT_TTL)
 
+    async def update_summary(self, msg):
+        await self.ctx.bot.edit_message(msg, self.get_summary())  # TODO
+
+    async def final(self, summary_msg):
+        self.commit()
+        await self.update_summary(summary_msg)
+
 
 class Combatant:
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx, index=None):
+        if resists is None:
+            resists = {}
+        if attacks is None:
+            attacks = {}
         self._name = name
         self._controller = controllerId
         self._init = init
         self._mod = initMod  # readonly
-        self._hpMax = hpMax
-        self._hp = hp
-        self._ac = ac
+        self._hpMax = hpMax  # optional
+        self._hp = hp  # optional
+        self._ac = ac  # optional
         self._private = private
         self._resists = resists
         self._attacks = attacks

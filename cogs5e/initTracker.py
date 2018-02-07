@@ -4,6 +4,7 @@ import shlex
 import cachetools
 from discord.ext import commands
 
+from cogs5e.models.errors import CombatChannelNotFound
 from cogs5e.models.initiative import Combat, Combatant
 from utils.functions import parse_args_3
 
@@ -32,7 +33,7 @@ class InitTracker:
             if chan:
                 return chan
             else:
-                raise CombatChannelNotFound  # TODO
+                raise CombatChannelNotFound
 
     async def get_summary_msg(self, combat):
         if combat.summary in self.message_cache:
@@ -56,31 +57,28 @@ class InitTracker:
     async def begin(self, ctx, *, args: str = ''):
         """Begins combat in the channel the command is invoked.
         Usage: !init begin <ARGS (opt)>
-        Valid Arguments:    -1 (modifies initiative rolls)
-                            -dyn (dynamic init; rerolls all initiatives at the start of a round)
-                            --name <NAME> (names the combat)"""
+        Valid Arguments: -dyn (dynamic init; rerolls all initiatives at the start of a round)
+                         -name <NAME> (names the combat)"""
         Combat.ensure_unique_chan(ctx)
 
         options = {}
         name = 'Current initiative'
         args = shlex.split(args.lower())
-        if '-1' in args:  # rolls a d100 instead of a d20 and multiplies modifier by 5
-            options['d100_init'] = True
         if '-dyn' in args:  # rerolls all inits at the start of each round
             options['dynamic'] = True
-        if '--name' in args:
+        if '-name' in args:
             try:
-                a = args[args.index('--name') + 1]
+                a = args[args.index('-name') + 1]
                 options['name'] = a if a is not None else name
             except IndexError:
-                await self.bot.say("You must pass in a name with the --name tag.")
+                await self.bot.say("You must pass in a name with the -name tag.")
                 return
 
         temp_summary_msg = await self.bot.say("```Awaiting combatants...```")
         self.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
 
         combat = Combat.new(ctx.message.channel.id, temp_summary_msg.id, ctx.message.author.id, options, ctx)
-        await combat.final(self.get_summary_msg(combat))
+        await combat.final(await self.get_summary_msg(combat))
 
         try:
             await self.bot.pin_message(temp_summary_msg)
@@ -159,10 +157,7 @@ class InitTracker:
 
         try:
             if not place:
-                if combat.options.get('d100_init') is True:
-                    init = random.randint(1, 100) + (modifier * 5)
-                else:
-                    init = random.randint(1, 20) + modifier
+                init = random.randint(1, 20) + modifier
             else:
                 init = modifier
                 modifier = 0
@@ -180,4 +175,4 @@ class InitTracker:
             await self.bot.say("Error adding combatant: {}".format(e))
             return
 
-        await combat.final(self.get_summary_msg(combat))
+        await combat.final(await self.get_summary_msg(combat))

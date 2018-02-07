@@ -1,3 +1,5 @@
+from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat
+
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
 
@@ -15,6 +17,7 @@ class Combat:
         self._turn = turnNum
         self._current_index = currentIndex
         self.ctx = ctx
+        self.sort_combatants()
 
     @classmethod
     def new(cls, channelId, summaryMsgId, dmId, options, ctx):
@@ -31,7 +34,10 @@ class Combat:
     def from_dict(cls, raw, ctx):
         combatants = []
         for c in raw['combatants']:
-            pass  # filter by type and create Combatant objects
+            if c['type'] == 'common':
+                combatants.append(Combatant.from_dict(c, ctx))
+            else:
+                raise CombatException("Unknown combatant type")
         return cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, combatants, raw['round'],
                    raw['turn'], raw['current'])
 
@@ -68,6 +74,10 @@ class Combat:
     def index(self):
         return self._current_index
 
+    @index.setter
+    def index(self, new_index):
+        self._current_index = new_index
+
     @property
     def current_combatant(self):
         return self.get_combatants()[self.index] if self.index is not None else None
@@ -76,22 +86,46 @@ class Combat:
         return self._combatants
 
     def add_combatant(self, combatant):
-        raise NotImplementedError
+        self._combatants.append(combatant)
+        self.sort_combatants()
+
+    def sort_combatants(self):
+        current = self.current_combatant
+        self._combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
+        for n, c in enumerate(self._combatants):
+            c.index = n
+        self.index = current.index if current is not None else None
+
+    def get_combatant(self, name):
+        return next((c for c in self.get_combatants() if c.name == name), None)
 
     @staticmethod
-    def ensure_unique_chan(ctx):  # TODO: raise ChannelInCombat if channel in combat
-        pass
+    def ensure_unique_chan(ctx):
+        if ctx.bot.db.exists(f"{ctx.message.channel.id}.combat"):
+            raise ChannelInCombat
 
     def get_db_key(self):
         return f"{self.channel}.combat"
 
     def commit(self):
         if not self.ctx:
-            raise RequiresContext  # TODO
+            raise RequiresContext
         self.ctx.bot.db.jsetex(self.get_db_key(), self.to_dict(), COMBAT_TTL)
 
+    def get_summary(self):
+        combatants = sorted(self.get_combatants(), key=lambda k: (k.init, k.initMod), reverse=True)
+        outStr = "```markdown\n{}: {} (round {})\n".format(
+            self.options.get('name') if self.options.get('name') else "Current initiative",
+            self.turn_num, self.round_num)
+        outStr += '=' * (len(outStr) - 13)
+        outStr += '\n'
+        for c in combatants:
+            outStr += ("# " if self.index == c.index else "  ") + c.get_summary() + "\n"
+        outStr += "```"
+        return outStr
+
     async def update_summary(self, msg):
-        await self.ctx.bot.edit_message(msg, self.get_summary())  # TODO
+        await self.ctx.bot.edit_message(msg, self.get_summary())
 
     async def final(self, summary_msg):
         self.commit()
@@ -120,6 +154,11 @@ class Combatant:
     @classmethod
     def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx):
         return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx)
+
+    @classmethod
+    def from_dict(cls, raw, ctx):
+        return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
+                   raw['private'], raw['resists'], raw['attacks'], ctx, raw['index'])
 
     @property
     def name(self):
@@ -165,9 +204,20 @@ class Combatant:
     def index(self):
         return self._index
 
+    @index.setter
+    def index(self, new_index):
+        self._index = new_index
+
+    def get_summary(self):  # TODO
+        """
+        Gets a short summary of a combatant's status.
+        :return: A string describing the combatant.
+        """
+        return self.name
+
     def to_dict(self):
-        return {'name': self.name, 'controller': self.controller, 'mod': self.initMod, 'hpMax': self.hpMax,
-                'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
+        return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
+                'hpMax': self.hpMax, 'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
                 'attacks': self.attacks, 'index': self.index, 'type': 'common'}
 
 

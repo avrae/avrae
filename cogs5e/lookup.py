@@ -436,7 +436,8 @@ class Lookup:
         """Changes settings for the lookup module.
         Usage: !lookup_settings -req_dm_monster True
         Current settings are: -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
-                              -pm_result [True/False] - PMs the result of the lookup to reduce spam."""
+                              -pm_result [True/False] - PMs the result of the lookup to reduce spam.
+                              -srd [True/False] - toggles SRD lookup restriction in a server."""
         args = shlex.split(args.lower())
         guild_id = ctx.message.server.id
         self.settings = self.bot.db.not_json_get("lookup_settings", {})
@@ -458,6 +459,14 @@ class Lookup:
             setting = get_positivity(setting)
             guild_settings['pm_result'] = setting if setting is not None else False
             out += 'pm_result set to {}!\n'.format(str(guild_settings['pm_result']))
+        if '-srd' in args:
+            try:
+                setting = args[args.index('-srd') + 1]
+            except IndexError:
+                setting = 'False'
+            setting = get_positivity(setting)
+            guild_settings['srd'] = setting if setting is not None else False
+            out += 'srd set to {}!\n'.format(str(guild_settings['srd']))
 
         self.settings[guild_id] = guild_settings
         self.bot.db.not_json_set("lookup_settings", self.settings)

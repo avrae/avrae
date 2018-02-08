@@ -176,3 +176,87 @@ class InitTracker:
             return
 
         await combat.final(await self.get_summary_msg(combat))
+
+    @init.command(pass_context=True, name="next", aliases=['n'])
+    async def nextInit(self, ctx):  # TODO
+        """Moves to the next turn in initiative order.
+        It must be your turn or you must be the DM (the person who started combat) to use this command.
+        Usage: !init next"""
+
+        combat = Combat.from_ctx(ctx)
+
+        if len(combat.combatants) == 0:
+            await self.bot.say("There are no combatants.")
+            return
+
+        if combat.index is None:
+            pass
+        elif not ctx.message.author.id in (combat.current_combatant.controller, combat.dm):
+            await self.bot.say("It is not your turn.")
+            return
+
+        toRemove = []
+        if combat.currentCombatant is not None:
+            if isinstance(combat.currentCombatant, CombatantGroup):
+                thisTurn = [c for c in combat.currentCombatant.combatants]
+            else:
+                thisTurn = [combat.currentCombatant]
+            for c in thisTurn:
+                if isinstance(c, MonsterCombatant) and c.hp <= 0:
+                    toRemove.append(c)
+
+        try:
+            nextCombatant = combat.getNextCombatant()
+            combat.current = nextCombatant.init
+            combat.currentCombatant = nextCombatant
+            self.bot.db.incr('turns_init_tracked_life')
+        except IndexError:
+            combat.current = combat.sorted_combatants[0].init
+            combat.round += 1
+            self.bot.db.incr('rounds_init_tracked_life')
+            combat.index = None
+            if combat.options.get('dynamic', False):
+                for combatant in combat.combatants:
+                    combatant.init = roll('1d20+' + str(combatant.mod)).total
+                combat.sorted_combatants = sorted(combat.combatants, key=lambda k: (k.init, k.mod), reverse=True)
+            nextCombatant = combat.getNextCombatant()
+            combat.currentCombatant = nextCombatant
+        if isinstance(nextCombatant, CombatantGroup):
+            thisTurn = [c for c in nextCombatant.combatants]
+            for c in thisTurn:
+                for e in c.effects:
+                    if e.remaining == 0:
+                        c.effects.remove(e)
+                    else:
+                        e.remaining -= 1
+            outStr = "**Initiative {} (round {})**: {} ({})\n{}"
+            outStr = outStr.format(combat.current,
+                                   combat.round,
+                                   nextCombatant.name,
+                                   ", ".join({c.author.mention for c in thisTurn}),
+                                   '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
+        else:
+            thisTurn = [nextCombatant]
+            for c in thisTurn:
+                for e in c.effects:
+                    if e.remaining == 0:
+                        c.effects.remove(e)
+                    else:
+                        e.remaining -= 1
+            outStr = "**Initiative {} (round {})**: {}\n{}"
+            outStr = outStr.format(combat.current,
+                                   combat.round,
+                                   " and ".join(["{} ({})".format(c.name, c.author.mention) for c in thisTurn]),
+                                   '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
+        for c in toRemove:
+            if c.group is None:
+                combat.combatants.remove(c)
+            else:
+                group = combat.get_combatant_group(c.group)
+                group.combatants.remove(c)
+            outStr += "{} automatically removed from combat.\n".format(c.name)
+        if len(toRemove) > 0:
+            combat.sortCombatants()
+            combat.checkGroups()
+        await self.bot.say(outStr)
+        await combat.update_summary(self.bot)

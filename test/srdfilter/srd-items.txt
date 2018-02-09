@@ -1,0 +1,417 @@
+Armor
+Adamantine armor
+Armor +1
+Armor of resistance
+Armor of vulnerability
+Armor +2
+Demon armor
+Dwarven plate
+Armor +3
+Armor of invulnerability
+Plate armor of etherealness
+Arrow-catching shield
+Dwarven plate
+Plate armor of etherealness
+Elven chain
+Dragon scale mail
+Shield +2
+Shield of missile attraction
+Animated shield
+Shield +3
+Spellguard shield
+Glamoured studded leather
+Efreeti chain
+Back to Top
+
+Weapons
+Luck blade
+Javelin of lightning
+Berserker axe
+Dagger of venom
+Dwarven thrower
+Flame tongue
+Frost brand
+Giant slayer
+Mace of disruption
+Mace of smiting
+Mace of terror
+Sun blade
+Sword of life stealing
+Sword of wounding
+Vicious weapon
+Arrow of slaying
+Nine lives stealer
+Oathbow
+Scimitar of speed
+Sword of sharpness
+Defender
+Hammer of thunderbolts
+Holy avenger
+Sword of answering
+Back to Top
+
+Potions & Oils
+Potion of climbing
+Potion of healing
+Oil of etherealness
+Potion of clairvoyance
+Potion of diminution
+Potion of gaseous form
+Potion of giant strength (fire giant)
+Potion of giant strength (frost or stone giant)
+Potion of heroism
+Potion of invulnerability
+Potion of mind reading
+Potion of superior healing
+Oil of sharpness
+Potion of flying
+Potion of giant strength (cloud giant)
+Potion of invisibility
+Potion of longevity
+Potion of speed
+Potion of supreme healing
+Potion of vitality
+Back to Top
+
+Scrolls
+Rods
+Rod of rulership
+Rod of the pact keeper +2
+Staffs
+Staff of charming
+Staff of healing
+Staff of swarming insects
+Staff of the woodlands
+Staff of withering
+Staff of fire
+Staff of frost
+Staff of power
+Staff of striking
+Staff of thunder and lightning
+Back to Top
+
+Wands
+Wand of binding
+Wand of enemy detection
+Wand of fear
+Wand of fireballs
+Wand of lightning bolts
+Wand of paralysis
+Wand of the war mage +2
+Wand of wonder
+Wand of polymorph
+Wand of the war mage +3
+Back to Top
+
+Rings
+Ring of animal influence
+Ring of djinni summoning
+Ring of elemental command
+Ring of evasion
+Ring of feather falling
+Ring of free action
+Ring of invisibility
+Ring of protection
+Ring of regeneration
+Ring of resistance
+Ring of shooting stars
+Ring of spell storing
+Ring of spell turning
+Ring of the ram
+Ring of telekinesis
+Ring of three wishes
+Ring of x-ray vision
+Back to Top
+
+Wondrous Items
+Back to Top
+
+
+Magic Items by Rarity
+Common | Uncommon | Rare | Very Rare | Legendary | Artifacts
+Common
+Potion of climbing
+Potion of healing
+Spell scroll (1st level)
+Spell scroll (cantrip)
+Back to Top
+
+Uncommon
+Adamantine armor
+Alchemy jug
+Ammunition +1
+Amulet of proof against detection and location
+Bag of holding
+Bag of tricks
+Boots of elvenkind
+Boots of striding and springing
+Boots of the winterlands
+Bracers of archery
+Brooch of shielding
+Broom of flying
+Cap of water breathing
+Circlet of blasting
+Cloak of elvenkind
+Cloak of protection
+Cloak of the manta ray
+Decanter of endless water
+Deck of illusions
+Dust of disappearance
+Dust of dryness
+Dust of sneezing and choking
+Elemental gem
+Eversmoking bottle
+Eyes of charming
+Eyes of minute seeing
+Eyes of the eagle
+Figurine of wondrous power (silver raven)
+Gauntlets of ogre power
+Gem of brightness
+Gloves of missile snaring
+Gloves of swimming and climbing
+Gloves of thievery
+Goggles of night
+Hat of disguise
+Headband of intellect
+Helm of comprehending languages
+Helm of telepathy
+Immovable rod
+Instrument of the bard
+Javelin of lightning
+Back to Top
+
+Rare
+Ammunition +2
+Amulet of health
+Armor +1
+Armor of resistance
+Armor of vulnerability
+Arrow-catching shield
+Bag of beans
+Bead of force
+Belt of dwarvenkind
+Belt of giant strength (hill giant)
+Berserker axe
+Boots of levitation
+Boots of speed
+Bowl of commanding water elementals
+Bracers of defense
+Brazier of commanding fire elementals
+Cape of the mountebank
+Censer of controlling air elementals
+Chime of opening
+Cloak of displacement
+Cloak of the bat
+Cube of force
+Dagger of venom
+Dimensional shackles
+Dragon slayer
+Elixir of health
+Elven chain
+Feather token
+Figurine of wondrous power (bronze griffon)
+Figurine of wondrous power (ebony fly)
+Figurine of wondrous power (golden lions)
+Figurine of wondrous power (ivory goats)
+Figurine of wondrous power (marble elephant)
+Figurine of wondrous power (onyx dog)
+Figurine of wondrous power (serpentine owl)
+Flame tongue
+Folding boat
+Gem of seeing
+Giant slayer
+Glamoured studded leather
+Handy haversack
+Helm of teleportation
+Horn of blasting
+Horn of valhalla (silver or brass)
+Horseshoes of speed
+Instant fortress
+Instrument of the bard
+Ioun stone (awareness)
+Ioun stone (protection)
+Ioun stone (reserve)
+Ioun stone (sustenance)
+Iron bands
+Mace of disruption
+Mace of smiting
+Mace of terror
+Mantle of spell resistance
+Necklace of fireballs
+Necklace of prayer beads
+Oil of etherealness
+Periapt of proof against poison
+Portable hole
+Potion of clairvoyance
+Potion of diminution
+Potion of gaseous form
+Potion of giant strength (fire giant)
+Potion of giant strength (frost or stone giant)
+Potion of heroism
+Potion of invulnerability
+Potion of mind reading
+Potion of superior healing
+Ring of animal influence
+Ring of evasion
+Ring of feather falling
+Ring of free action
+Ring of protection
+Ring of resistance
+Ring of spell storing
+Ring of the ram
+Ring of x-ray vision
+Robe of eyes
+Rod of rulership
+Rod of the pact keeper +2
+Rope of entanglement
+Scroll of protection
+Shield +2
+Shield of missile attraction
+Spell scroll (4th level)
+Spell scroll (5th level)
+Staff of charming
+Staff of healing
+Staff of swarming insects
+Staff of the woodlands
+Staff of withering
+Stone of controlling earth elementals
+Sun blade
+Sword of life stealing
+Sword of wounding
+Tentacle rod
+Vicious weapon
+Wand of binding
+Wand of enemy detection
+Wand of fear
+Wand of fireballs
+Wand of lightning bolts
+Wand of paralysis
+Wand of the war mage +2
+Wand of wonder
+Weapon +2
+Wings of flying
+Back to Top
+
+Very Rare
+Ammunition +3
+Amulet of the planes
+Animated shield
+Armor +2
+Arrow of slaying
+Bag of devouring
+Belt of giant strength (fire giant)
+Belt of giant strength (frost or stone giant)
+Candle of invocation
+Carpet of flying
+Cloak of arachnida
+Crystal ball
+Dancing sword
+Demon armor
+Dragon scale mail
+Dwarven plate
+Dwarven thrower
+Efreeti bottle
+Figurine of wondrous power (obsidian steed)
+Frost brand
+Helm of brilliance
+Horn of valhalla (bronze)
+Horseshoes of the zephyr
+Instrument of the bard
+Ioun stone (absorption)
+Ioun stone (agility)
+Ioun stone (fortitude)
+Ioun stone (insight)
+Ioun stone (intellect)
+Ioun stone (leadership)
+Ioun stone (strength)
+Manual of bodily health
+Manual of gainful exercise
+Manual of golems
+Manual of quickness of action
+Marvelous pigments
+Mirror of life trapping
+Nine lives stealer
+Oathbow
+Oil of sharpness
+Potion of flying
+Potion of giant strength
+Potion of invisibility
+Potion of longevity
+Potion of speed
+Potion of supreme healing
+Potion of vitality
+Ring of regeneration
+Ring of shooting stars
+Ring of telekinesis
+Robe of scintillating colors
+Robe of stars
+Rod of absorption
+Rod of alertness
+Rod of security
+Rod of the pact keeper +3
+Scimitar of speed
+Shield +3
+Spell scroll (6th level)
+Spell scroll (7th level)
+Spell scroll (8th level)
+Spellguard shield
+Staff of fire
+Staff of frost
+Staff of power
+Staff of striking
+Staff of thunder and lightning
+Sword of sharpness
+Tome of clear thought
+Tome of leadership and influence
+Tome of understanding
+Wand of polymorph
+Wand of the war mage +3
+Weapon +3
+Apparatus of the Crab
+Armor +3
+Armor of invulnerability
+Belt of giant strength (cloud giant)
+Belt of giant strength (storm giant)
+Cloak of invisibility
+Crystal ball
+Cubic gate
+Deck of many things
+Defender
+Efreeti chain
+Hammer of thunderbolts
+Holy avenger
+Horn of valhalla
+Instrument of the bard
+Ioun stone
+Ioun stone (mastery)
+Ioun stone (regeneration)
+Iron flask
+Luck blade
+Plate armor of etherealness
+Potion of giant strength (storm giant)
+Ring of djinni summoning
+Ring of elemental command
+Ring of invisibility
+Ring of spell turning
+Ring of three wishes
+Robe of the archmagi
+Rod of lordly might
+Rod of resurrection
+Scarab of protection
+Sovereign glue
+Spell scroll (9th level)
+Sphere of annihilation
+Staff of the magi
+Sword of answering
+Talisman of pure good
+Talisman of the sphere
+Talisman of ultimate evil
+Tome of the stilled tongue
+Universal solvent
+Vorpal sword
+Well of many worlds
+Axe of the Dwarvish Lords
+Book of Exalted Deeds
+Book of Vile Darkness
+Orb of Dragonkind
+Wand of Orcus

@@ -106,8 +106,10 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
         except:
             pm = False
+            srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = searchFeat(name)
@@ -124,6 +126,12 @@ class Lookup:
             else:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        if not result['name'] == 'Grappler' and srd:  # the only SRD feat.
+            e = EmbedWithAuthor(ctx)
+            e.title = result['name']
+            e.description = "Description not available."
+            return await self.bot.say(embed=e)
 
         text = parse_data_entry(result['entries'])
         prereq = "None"
@@ -169,8 +177,10 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
         except:
             pm = False
+            srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = searchRacialFeat(name)
@@ -188,6 +198,12 @@ class Lookup:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
+        if not result['srd'] and srd:
+            e = EmbedWithAuthor(ctx)
+            e.title = result['name']
+            e.description = "Description not available."
+            return await self.bot.say(embed=e)
+
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         desc = result['text']
@@ -204,8 +220,10 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
         except:
             pm = False
+            srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = searchRace(name)
@@ -222,6 +240,12 @@ class Lookup:
             else:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        if not result['srd'] and srd:
+            e = EmbedWithAuthor(ctx)
+            e.title = result['name']
+            e.description = "Description not available."
+            return await self.bot.say(embed=e)
 
         _sizes = {'T': "Tiny", 'S': "Small",
                   'M': "Medium", 'L': "Large", 'H': "Huge"}
@@ -272,8 +296,10 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
         except:
             pm = False
+            srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = searchClassFeat(name)
@@ -291,6 +317,12 @@ class Lookup:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
 
+        if not result['srd'] and srd:
+            e = EmbedWithAuthor(ctx)
+            e.title = result['name']
+            e.description = "Description not available."
+            return await self.bot.say(embed=e)
+
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         desc = result['text']
@@ -307,8 +339,10 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
         except:
             pm = False
+            srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
         if level is not None and not 0 < level < 21:
@@ -328,6 +362,12 @@ class Lookup:
             else:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        if not result['srd'] and srd:
+            e = EmbedWithAuthor(ctx)
+            e.title = result['name']
+            e.description = "Description not available."
+            return await self.bot.say(embed=e)
 
         embed = EmbedWithAuthor(ctx)
         if level is None:
@@ -394,8 +434,10 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
         except:
             pm = False
+            srd = False
 
         result = searchBackground(name)
         if result is None:
@@ -411,6 +453,12 @@ class Lookup:
             else:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        if not result['srd'] and srd:
+            e = EmbedWithAuthor(ctx)
+            e.title = result['name']
+            e.description = "Description not available."
+            return await self.bot.say(embed=e)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -436,7 +484,8 @@ class Lookup:
         """Changes settings for the lookup module.
         Usage: !lookup_settings -req_dm_monster True
         Current settings are: -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
-                              -pm_result [True/False] - PMs the result of the lookup to reduce spam."""
+                              -pm_result [True/False] - PMs the result of the lookup to reduce spam.
+                              -srd [True/False] - toggles SRD lookup restriction in a server."""
         args = shlex.split(args.lower())
         guild_id = ctx.message.server.id
         self.settings = self.bot.db.not_json_get("lookup_settings", {})
@@ -458,6 +507,14 @@ class Lookup:
             setting = get_positivity(setting)
             guild_settings['pm_result'] = setting if setting is not None else False
             out += 'pm_result set to {}!\n'.format(str(guild_settings['pm_result']))
+        if '-srd' in args:
+            try:
+                setting = args[args.index('-srd') + 1]
+            except IndexError:
+                setting = 'False'
+            setting = get_positivity(setting)
+            guild_settings['srd'] = setting if setting is not None else False
+            out += 'srd set to {}!\n'.format(str(guild_settings['srd']))
 
         self.settings[guild_id] = guild_settings
         self.bot.db.not_json_set("lookup_settings", self.settings)
@@ -466,6 +523,13 @@ class Lookup:
     @commands.command(pass_context=True)
     async def token(self, ctx, *, name):
         """Shows a token for a monster. May not support all monsters."""
+
+        try:
+            guild_id = ctx.message.server.id
+            srd = self.settings.get(guild_id, {}).get("srd", False)
+        except:
+            srd = False
+
         result = searchMonster(name)
         if result is None:
             return await self.bot.say('Monster not found.')
@@ -480,6 +544,12 @@ class Lookup:
             else:
                 result = await get_selection(ctx, [(r['name'], r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        if not result['srd'] and srd:
+            e = EmbedWithAuthor(ctx)
+            e.title = result['name']
+            e.description = "Token not available."
+            return await self.bot.say(embed=e)
 
         src = parse.quote(parsesource(result.get('type', '').split(',')[-1]))
         url = f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(result['name'])}.png"
@@ -501,6 +571,7 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
             visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
             if self.settings.get(guild_id, {}).get("req_dm_monster", True):
                 visible = True if any(
@@ -510,6 +581,7 @@ class Lookup:
         except:
             visible = True
             pm = False
+            srd = False
 
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr('monsters_looked_up_life')
@@ -534,6 +606,12 @@ class Lookup:
         monster = copy.copy(result)
 
         embed_queue[-1].title = monster['name']
+
+        if not monster['srd'] and srd:
+            e = EmbedWithAuthor(ctx)
+            e.title = monster['name']
+            e.description = "Description not available."
+            return await self.bot.say(embed=e)
 
         src = parse.quote(parsesource(monster.get('type', '').split(',')[-1]))
 
@@ -733,8 +811,10 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
         except:
             pm = False
+            srd = False
 
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
@@ -813,6 +893,10 @@ class Lookup:
         else:
             higher_levels = None
 
+        if not spell['srd'] and srd:
+            text = "No description available."
+            higher_levels = ''
+
         if len(text) > 1020:
             pieces = [text[:1020]] + [text[i:i + 2040] for i in range(1020, len(text), 2040)]
         else:
@@ -843,8 +927,10 @@ class Lookup:
         try:
             guild_id = ctx.message.server.id
             pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
         except:
             pm = False
+            srd = False
 
         self.bot.botStats["items_looked_up_session"] += 1
         self.bot.db.incr('items_looked_up_life')
@@ -866,6 +952,12 @@ class Lookup:
 
         embed = EmbedWithAuthor(ctx)
         item = result
+
+        if not item['srd'] and srd:
+            e = EmbedWithAuthor(ctx)
+            e.title = item['name']
+            e.description = "Description not available."
+            return await self.bot.say(embed=e)
 
         def parsetype(_type):
             if _type == "G": return "Adventuring Gear"

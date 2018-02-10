@@ -1,9 +1,14 @@
-from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat
+import cachetools
+
+from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
+    CombatChannelNotFound, NoCombatants
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
 
 class Combat:
+    message_cache = cachetools.LRUCache(100)
+
     def __init__(self, channelId, summaryMsgId, dmId, options, ctx, combatants=None, roundNum=0, turnNum=0,
                  currentIndex=None):
         if combatants is None:
@@ -27,7 +32,7 @@ class Combat:
     def from_ctx(cls, ctx):
         raw = ctx.bot.db.jget(f"{ctx.message.channel.id}.combat")
         if raw is None:
-            raise CombatNotFound  # TODO
+            raise CombatNotFound
         return cls.from_dict(raw, ctx)
 
     @classmethod
@@ -74,10 +79,6 @@ class Combat:
     def index(self):
         return self._current_index
 
-    @index.setter
-    def index(self, new_index):
-        self._current_index = new_index
-
     @property
     def current_combatant(self):
         return self.get_combatants()[self.index] if self.index is not None else None
@@ -94,10 +95,28 @@ class Combat:
         self._combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
         for n, c in enumerate(self._combatants):
             c.index = n
-        self.index = current.index if current is not None else None
+        self._current_index = current.index if current is not None else None
 
     def get_combatant(self, name):
         return next((c for c in self.get_combatants() if c.name == name), None)
+
+    def advance_turn(self):
+        if len(self.get_combatants()) == 0:
+            raise NoCombatants
+
+        changed_round = False
+        if self.index is None:  # new round, no dynamic reroll
+            self._current_index = 0
+            self._round += 1
+        elif self.index + 1 >= len(self.get_combatants()):  # new round, TODO: dynamic reroll
+            self._current_index = 0
+            self._round += 1
+            changed_round = True
+        else:
+            self._current_index += 1
+
+        self._turn = self.current_combatant.init
+        return changed_round
 
     @staticmethod
     def ensure_unique_chan(ctx):
@@ -124,12 +143,30 @@ class Combat:
         outStr += "```"
         return outStr
 
-    async def update_summary(self, msg):
-        await self.ctx.bot.edit_message(msg, self.get_summary())
+    async def update_summary(self):
+        await self.ctx.bot.edit_message(await self.get_summary_msg(), self.get_summary())
 
-    async def final(self, summary_msg):
+    def get_channel(self):
+        if self.ctx:
+            return self.ctx.message.channel
+        else:
+            chan = self.ctx.bot.get_channel(self.channel)
+            if chan:
+                return chan
+            else:
+                raise CombatChannelNotFound
+
+    async def get_summary_msg(self):
+        if self.summary in Combat.message_cache:
+            return Combat.message_cache[self.summary]
+        else:
+            msg = await self.ctx.bot.get_message(self.get_channel(), self.summary)
+            Combat.message_cache[msg.id] = msg
+            return msg
+
+    async def final(self):
         self.commit()
-        await self.update_summary(summary_msg)
+        await self.update_summary()
 
 
 class Combatant:
@@ -208,12 +245,29 @@ class Combatant:
     def index(self, new_index):
         self._index = new_index
 
+    def controller_mention(self):
+        return f"<@{self.controller}>"
+
+    def on_turn(self):  # TODO: reduce effect counters by 1
+        """
+        A method called at the start of each of the combatant's turns.
+        :return: None
+        """
+        return
+
     def get_summary(self):  # TODO
         """
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
         return self.name
+
+    def get_status(self):  # TODO
+        """
+        Gets the start-of-turn status of a combatant.
+        :return: A string describing the combatant.
+        """
+        return f"Placeholder status for {self.name}"
 
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,

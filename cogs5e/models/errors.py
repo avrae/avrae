@@ -143,3 +143,10 @@ class CombatChannelNotFound(CombatException):
 
     def __init__(self):
         super().__init__("Combat channel does not exist.")
+
+
+class NoCombatants(CombatException):
+    """Raised when a combat tries to advance turn with no combatants."""
+
+    def __init__(self):
+        super().__init__("There are no combatants.")

@@ -270,30 +270,14 @@ async def on_command(command, ctx):
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 
-
-# SIGNAL HANDLING
-def sigterm_handler(_signum, _frame):
-    try:
-        log.info("Attempting to save combats...")
-        bot.get_cog("InitTracker").panic_save()
-    except:
-        pass
-    time.sleep(0.1)  # maybe?
-    sys.exit(0)
-
-
-signal.signal(signal.SIGTERM, sigterm_handler)
-
 for cog in cogs:
     bot.add_cog(cog)
 
 if SHARDED: log.info("I am shard {} of {}.".format(str(int(bot.shard_id) + 1), str(bot.shard_count)))
 
 INITIALIZING = False
-try:
-    if not TESTING:
-        bot.run(bot.credentials.officialToken)  # official token
-    else:
-        bot.run(bot.credentials.testToken)  # test token
-except:
-    sigterm_handler(None, None)
+if not TESTING:
+    bot.run(bot.credentials.officialToken)  # official token
+else:
+    bot.run(bot.credentials.testToken)  # test token
+

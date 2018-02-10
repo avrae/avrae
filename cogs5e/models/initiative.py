@@ -127,11 +127,13 @@ class Combat:
         return f"{self.channel}.combat"
 
     def commit(self):
+        """Commits the combat to db."""
         if not self.ctx:
             raise RequiresContext
         self.ctx.bot.db.jsetex(self.get_db_key(), self.to_dict(), COMBAT_TTL)
 
     def get_summary(self):
+        """Returns the generated summary message content."""
         combatants = sorted(self.get_combatants(), key=lambda k: (k.init, k.initMod), reverse=True)
         outStr = "```markdown\n{}: {} (round {})\n".format(
             self.options.get('name') if self.options.get('name') else "Current initiative",
@@ -144,9 +146,11 @@ class Combat:
         return outStr
 
     async def update_summary(self):
+        """Edits the summary message with the latest summary."""
         await self.ctx.bot.edit_message(await self.get_summary_msg(), self.get_summary())
 
     def get_channel(self):
+        """Gets the Channel object of the combat."""
         if self.ctx:
             return self.ctx.message.channel
         else:
@@ -157,6 +161,7 @@ class Combat:
                 raise CombatChannelNotFound
 
     async def get_summary_msg(self):
+        """Gets the Message object of the combat summary."""
         if self.summary in Combat.message_cache:
             return Combat.message_cache[self.summary]
         else:
@@ -165,8 +170,13 @@ class Combat:
             return msg
 
     async def final(self):
+        """Final commit/update."""
         self.commit()
         await self.update_summary()
+
+    def end(self):
+        """Ends combat in a channel."""
+        self.ctx.bot.db.delete(self.get_db_key())
 
 
 class Combatant:

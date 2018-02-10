@@ -4,7 +4,7 @@ import shlex
 from discord.ext import commands
 
 from cogs5e.models.initiative import Combat, Combatant
-from utils.functions import parse_args_3
+from utils.functions import parse_args_3, confirm
 
 
 class InitTracker:
@@ -159,8 +159,7 @@ class InitTracker:
     @init.command(pass_context=True, name="next", aliases=['n'])
     async def nextInit(self, ctx):
         """Moves to the next turn in initiative order.
-        It must be your turn or you must be the DM (the person who started combat) to use this command.
-        Usage: !init next"""
+        It must be your turn or you must be the DM (the person who started combat) to use this command."""
 
         combat = Combat.from_ctx(ctx)
 
@@ -184,7 +183,7 @@ class InitTracker:
         #         if isinstance(c, MonsterCombatant) and c.hp <= 0:
         #             toRemove.append(c)
 
-        advanced_round = combat.advance_turn()  # TODO: this
+        advanced_round = combat.advance_turn()
         self.bot.db.incr('turns_init_tracked_life')
         if advanced_round:
             self.bot.db.incr('rounds_init_tracked_life')
@@ -241,3 +240,29 @@ class InitTracker:
         await self.bot.say(outStr)
 
         await combat.final()
+
+    @init.command(pass_context=True)
+    async def end(self, ctx):
+        """Ends combat in the channel."""
+
+        combat = Combat.from_ctx(ctx)
+
+        to_end = await confirm(ctx, 'Are you sure you want to end combat? (Reply with yes/no)', True)
+
+        if to_end is None:
+            return await self.bot.say('Timed out waiting for a response or invalid response.', delete_after=10)
+        elif not to_end:
+            return await self.bot.say('OK, cancelling.', delete_after=10)
+
+        msg = await self.bot.say("OK, ending...")
+
+        try:
+            await self.bot.edit_message(combat.summary_message,
+                                        combat.summary_message.content + "\n```-----COMBAT ENDED-----```")
+            await self.bot.unpin_message(combat.summary_message)
+        except:
+            pass
+
+        combat.end()
+
+        await self.bot.edit_message(msg, "Combat ended.")

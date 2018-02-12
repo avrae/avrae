@@ -1,5 +1,4 @@
 import random
-import random
 import re
 import shlex
 from math import floor
@@ -80,6 +79,9 @@ class Dice:
                              ra (reroll and add)
         Supported Selectors: lX (lowest X)
                              hX (highest X)"""
+
+        if rollStr == '0/0':  # easter eggs
+            return await self.bot.say("What do you expect me to do, destroy the universe?")
 
         adv = 0
         self.bot.botStats["dice_rolled_session"] += 1

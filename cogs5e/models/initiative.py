@@ -307,11 +307,11 @@ class MonsterCombatant(Combatant):
             for t in (resist, immune, vuln):
                 for e in t:
                     for d in ('bludgeoning', 'piercing', 'slashing'):
-                        if d in e: t.remove(e)
+                        if d in e.lower(): t.remove(e)
         for t in (resist, immune, vuln):
             for e in t:
                 for d in ('bludgeoning', 'piercing', 'slashing'):
-                    if d in e and not d.lower() == e.lower():
+                    if d in e and not d == e.lower():
                         try:
                             t.remove(e)
                         except ValueError:

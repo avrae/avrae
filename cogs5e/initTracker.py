@@ -1,10 +1,17 @@
+import logging
 import random
 import shlex
+import traceback
+from math import floor
 
 from discord.ext import commands
 
-from cogs5e.models.initiative import Combat, Combatant
+from cogs5e.funcs.dice import roll
+from cogs5e.funcs.lookupFuncs import searchMonsterFull
+from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant
 from utils.functions import parse_args_3, confirm
+
+log = logging.getLogger(__name__)
 
 
 class InitTracker:
@@ -113,7 +120,6 @@ class InitTracker:
             try:
                 hp = int(args['hp'][0])
                 if hp < 1:
-                    hp = None
                     raise Exception
             except:
                 await self.bot.say("You must pass in a positive, nonzero HP with the --hp tag.")
@@ -154,6 +160,95 @@ class InitTracker:
             await self.bot.say("Error adding combatant: {}".format(e))
             return
 
+        await combat.final()
+
+    @init.command(pass_context=True)
+    async def madd(self, ctx, monster_name: str, *args):
+        """Adds a monster to combat.
+        Args: adv/dis
+              -b [conditional bonus]
+              -n [number of monsters]
+              -p [init value]
+              -name [name scheme, use "#" for auto-numbering, ex. "Orc#"]
+              -h (same as !init add, default true)
+              -group (same as !init add)
+              -npr (removes physical resistances when added)"""
+
+        monster = await searchMonsterFull(monster_name, ctx, pm=True)
+        self.bot.db.incr("monsters_looked_up_life")
+        if monster['monster'] is None:
+            return await self.bot.say(monster['string'][0], delete_after=15)
+        monster = monster['monster']
+        dexMod = floor((int(monster['dex']) - 10) / 2)
+
+        args = parse_args_3(args)
+        private = not bool(args.get('h', [False])[-1])
+
+        group = args.get('group', [None])[-1]
+
+        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
+                                                                                        False) else -1 if args.get(
+            'dis', False) else 0
+
+        b = '+'.join(args.get('b', []))
+        p = args.get('p', [None])[-1]
+
+        opts = {}
+        if 'npr' in args:
+            opts['npr'] = True
+
+        combat = Combat.from_ctx(ctx)
+
+        out = ''
+        try:
+            recursion = int(args.get('n', [1])[-1])
+        except ValueError:
+            return await self.bot.say(args.get('n', 1) + " is not a number.")
+        recursion = 25 if recursion > 25 else 1 if recursion < 1 else recursion
+
+        name_num = 1
+        for i in range(recursion):
+            name = args.get('name', [monster['name'][:2].upper() + '#'])[-1].replace('#', str(name_num))
+
+            while combat.get_combatant(name):  # keep increasing to avoid duplicates
+                name_num += 1
+                name = args.get('name', [monster['name'][:2].upper() + '#'])[-1].replace('#', str(name_num))
+
+            try:
+                check_roll = None  # to make things happy
+                if p is None:
+                    if b:
+                        check_roll = roll('1d20' + '{:+}'.format(dexMod) + '+' + b, adv=adv, inline=True)
+                    else:
+                        check_roll = roll('1d20' + '{:+}'.format(dexMod), adv=adv, inline=True)
+                    init = check_roll.total
+                else:
+                    init = int(p)
+                controller = ctx.message.author.id
+
+                # me = MonsterCombatant(name=name, init=init, author=controller, effects=[], notes='', private=private,
+                #                       group=group, monster=monster, modifier=dexMod, opts=opts)
+
+                me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, opts)
+                if group is None:
+                    combat.add_combatant(me)
+                    out += "{} was added to combat with initiative {}.\n".format(name,
+                                                                                 check_roll.skeleton if p is None else p)
+                # elif combat.get_combatant_group(group) is None:
+                #     newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
+                #     newGroup.combatants.append(me)
+                #     combat.combatants.append(newGroup)
+                #     out += "{} was added to combat as part of group {}, with initiative {}.\n".format(name, group,
+                #                                                                                       check_roll.skeleton if p is None else p)
+                # else:
+                #     temp_group = combat.get_combatant_group(group)
+                #     temp_group.combatants.append(me)
+                #     out += "{} was added to combat as part of group {}.\n".format(name, temp_group.name)
+            except Exception as e:
+                log.error('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
+                out += "Error adding combatant: {}\n".format(e)
+
+        await self.bot.say(out, delete_after=15)
         await combat.final()
 
     @init.command(pass_context=True, name="next", aliases=['n'])
@@ -257,9 +352,10 @@ class InitTracker:
         msg = await self.bot.say("OK, ending...")
 
         try:
-            await self.bot.edit_message(combat.summary_message,
-                                        combat.summary_message.content + "\n```-----COMBAT ENDED-----```")
-            await self.bot.unpin_message(combat.summary_message)
+            summary = await combat.get_summary_msg()
+            await self.bot.edit_message(summary,
+                                        combat.get_summary() + " ```-----COMBAT ENDED-----```")
+            await self.bot.unpin_message(summary)
         except:
             pass
 

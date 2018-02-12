@@ -180,7 +180,8 @@ class Combat:
 
 
 class Combatant:
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx, index=None):
+    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx, index=None,
+                 *args, **kwargs):
         if resists is None:
             resists = {}
         if attacks is None:
@@ -270,7 +271,7 @@ class Combatant:
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        return self.name
+        return f"{self.name} - {self.index}"
 
     def get_status(self):  # TODO
         """
@@ -286,8 +287,46 @@ class Combatant:
 
 
 class MonsterCombatant(Combatant):
-    def __init__(self, monster):
-        super(MonsterCombatant, self).__init__()
+    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx, index=None,
+                 monster_name=None):
+        super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
+                                               attacks, ctx, index)
+        self._monster_name = monster_name
+
+    @classmethod
+    def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, opts=None, index=None):
+        monster_name = monster['name']
+        hp = int(monster['hp'].split(' (')[0])
+        ac = int(monster['ac'].split(' (')[0])
+
+        resist = monster.get('resist', '').replace(' ', '').split(',')
+        immune = monster.get('immune', '').replace(' ', '').split(',')
+        vuln = monster.get('vulnerable', '').replace(' ', '').split(',')
+        # fix npr and blug/pierc/slash
+        if opts.get('npr'):
+            for t in (resist, immune, vuln):
+                for e in t:
+                    for d in ('bludgeoning', 'piercing', 'slashing'):
+                        if d in e: t.remove(e)
+        for t in (resist, immune, vuln):
+            for e in t:
+                for d in ('bludgeoning', 'piercing', 'slashing'):
+                    if d in e and not d.lower() == e.lower():
+                        try:
+                            t.remove(e)
+                        except ValueError:
+                            pass
+                        t.append(d)
+
+        resists = {'resist': resist, 'immune': immune, 'vuln': vuln}
+        attacks = {}  # TODO
+
+        return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, ctx, index,
+                   monster_name)
+
+    @property
+    def monster_name(self):
+        return self._monster_name
 
 
 class PlayerCombatant(Combatant):

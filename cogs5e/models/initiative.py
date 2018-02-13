@@ -327,9 +327,10 @@ class Combatant:
         """
         return f"{self.name} - {self.index}"
 
-    def get_status(self):  # TODO
+    def get_status(self, private=False):  # TODO
         """
         Gets the start-of-turn status of a combatant.
+        :param private: Whether to return the full revealed stats or not.
         :return: A string describing the combatant.
         """
         return f"Placeholder status for {self.name}"

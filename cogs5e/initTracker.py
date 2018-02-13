@@ -487,6 +487,26 @@ class InitTracker:
         await combat.final()
 
     @init.command(pass_context=True)
+    async def status(self, ctx, name: str, *, args: str = ''):
+        """Gets the status of a combatant or group."""
+        combat = Combat.from_ctx(ctx)
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            await self.bot.say("Combatant or group not found.")
+            return
+
+        private = 'private' in args.lower() if ctx.message.author.id == combatant.controller else False
+        if isinstance(combatant, Combatant):
+            status = combatant.get_status(private=private)
+        else:
+            status = "\n".join([c.get_status(private=private) for c in combatant.combatants])
+        if 'private' in args.lower():
+            await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
+                                        "```markdown\n" + status + "```")
+        else:
+            await self.bot.say("```markdown\n" + status + "```", delete_after=30)
+
+    @init.command(pass_context=True)
     async def end(self, ctx):
         """Ends combat in the channel."""
 

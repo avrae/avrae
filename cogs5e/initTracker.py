@@ -302,16 +302,17 @@ class InitTracker:
         #     nextCombatant = combat.getNextCombatant()
         #     combat.currentCombatant = nextCombatant
 
-        if isinstance(nextCombatant, int):  # TODO - groups
-            thisTurn = nextCombatant.combatants
-            for c in thisTurn:
-                c.on_turn()
-            outStr = "**Initiative {} (round {})**: {} ({})\n{}"
-            outStr = outStr.format(combat.current,
-                                   combat.round,
-                                   nextCombatant.name,
-                                   ", ".join({c.controller_mention() for c in thisTurn}),
-                                   '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
+        if False:  # TODO - groups
+            pass
+            # thisTurn = nextCombatant.combatants
+            # for c in thisTurn:
+            #     c.on_turn()
+            # outStr = "**Initiative {} (round {})**: {} ({})\n{}"
+            # outStr = outStr.format(combat.current,
+            #                        combat.round,
+            #                        nextCombatant.name,
+            #                        ", ".join({c.controller_mention() for c in thisTurn}),
+            #                        '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
         else:
             nextCombatant.on_turn()
             outStr = "**Initiative {} (round {})**: {}\n{}"
@@ -333,7 +334,156 @@ class InitTracker:
         #     combat.checkGroups()
 
         await self.bot.say(outStr)
+        await combat.final()
 
+    @init.command(pass_context=True, name="list", aliases=['summary'])
+    async def listInits(self, ctx):
+        """Lists the combatants."""
+        combat = Combat.from_ctx(ctx)
+        outStr = combat.getSummary()
+        await self.bot.say(outStr, delete_after=60)
+
+    @init.command(pass_context=True)
+    async def note(self, ctx, name: str, *, note: str = ''):
+        """Attaches a note to a combatant."""
+        combat = Combat.from_ctx(ctx)
+
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            return await self.bot.say("Combatant not found.")
+
+        combatant.notes = note
+        if note == '':
+            await self.bot.say("Removed note.", delete_after=10)
+        else:
+            await self.bot.say("Added note.", delete_after=10)
+        await combat.final()
+
+    @init.command(pass_context=True, aliases=['opts'])
+    async def opt(self, ctx, name: str, *args):
+        """Edits the options of a combatant.
+        Valid Arguments:    -h (hides HP)
+                            -p (changes init)
+                            -name <NAME> (changes combatant name)
+                            -controller <CONTROLLER> (pings a different person on turn)
+                            -ac <AC> (changes combatant AC)
+                            -resist <RESISTANCE>
+                            -immune <IMMUNITY>
+                            -vuln <VULNERABILITY>
+                            -group <GROUP> (changes group)"""
+        combat = Combat.from_ctx(ctx)
+
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            await self.bot.say("Combatant not found.")
+            return
+
+        private = combatant.isPrivate
+        controller = combatant.controller
+        args = parse_args_3(args)
+        out = ''
+
+        if args.get('h'):
+            private = not private
+            combatant.isPrivate = private
+            out += "\u2705 Combatant {}.\n".format('hidden' if private else 'unhidden')
+        if 'controller' in args:
+            try:
+                controllerStr = args.get('controller')[-1]
+                controllerEscaped = controllerStr.strip('<>@!')
+                a = ctx.message.server.get_member(controllerEscaped)
+                b = ctx.message.server.get_member_named(controllerStr)
+                cont = a if a is not None else b if b is not None else controller
+                combatant.controller = cont.id
+                out += "\u2705 Combatant controller set to {}.\n".format(combatant.controller_mention())
+            except IndexError:
+                out += "\u274c You must pass in a controller with the --controller tag.\n"
+        if 'ac' in args:
+            try:
+                ac = int(args.get('ac')[-1])
+                combatant.ac = ac
+                out += "\u2705 Combatant AC set to {}.\n".format(ac)
+            except:
+                out += "\u274c You must pass in an AC with the --ac tag.\n"
+        if 'p' in args:
+            if combatant == combat.currentCombatant:
+                out += "\u274c You cannot change a combatant's initiative on their own turn.\n"
+            else:
+                try:
+                    p = int(args.get('p')[-1])
+                    combatant.init = p
+                    combat.sort_combatants()
+                    out += "\u2705 Combatant initiative set to {}.\n".format(p)
+                except:
+                    out += "\u274c You must pass in a number with the -p tag.\n"
+        # if 'group' in args:  # TODO
+        #     if combatant == combat.currentCombatant:
+        #         out += "\u274c You cannot change a combatant's group on their own turn.\n"
+        #     else:
+        #         group = args.get('group')
+        #         if group.lower() == 'none':
+        #             if combatant.group:
+        #                 currentGroup = combat.get_combatant_group(combatant.group)
+        #                 currentGroup.combatants.remove(combatant)
+        #             combatant.group = None
+        #             combat.combatants.append(combatant)
+        #             combat.checkGroups()
+        #             combat.sortCombatants()
+        #             out += "\u2705 Combatant removed from all groups.\n"
+        #         elif combat.get_combatant_group(group) is not None:
+        #             if combatant.group:
+        #                 currentGroup = combat.get_combatant_group(combatant.group)
+        #                 currentGroup.combatants.remove(combatant)
+        #             else:
+        #                 combat.combatants.remove(combatant)
+        #             group = combat.get_combatant_group(group)
+        #             combatant.group = group.name
+        #             group.combatants.append(combatant)
+        #             combat.checkGroups()
+        #             combat.sortCombatants()
+        #             out += "\u2705 Combatant group set to {}.\n".format(group)
+        #         else:
+        #             out += "\u274c New group not found.\n"
+        if 'name' in args:
+            name = args.get('name')[-1]
+            if combat.get_combatant(name) is not None:
+                out += "\u274c There is already another combatant with that name.\n"
+            elif name:
+                combatant.name = name
+                out += "\u2705 Combatant name set to {}.\n".format(name)
+            else:
+                out += "\u274c You must pass in a name with the -name tag.\n"
+        if 'resist' in args:
+            for resist in args.get('resist'):
+                if resist in combatant.resists['resist']:
+                    combatant.resists['resist'].remove(resist)
+                    out += "\u2705 {} removed from combatant resistances.\n".format(resist)
+                else:
+                    combatant.resists['resist'].append(resist)
+                    out += "\u2705 {} added to combatant resistances.\n".format(resist)
+        if 'immune' in args:
+            for immune in args.get('immune'):
+                if immune in combatant.resists['immune']:
+                    combatant.resists['immune'].remove(immune)
+                    out += "\u2705 {} removed from combatant immunities.\n".format(immune)
+                else:
+                    combatant.resists['immune'].append(immune)
+                    out += "\u2705 {} added to combatant immunities.\n".format(immune)
+        if 'vuln' in args:
+            for vuln in args.get('vuln'):
+                if vuln in combatant.resists['vuln']:
+                    combatant.resists['vuln'].remove(vuln)
+                    out += "\u2705 {} removed from combatant vulnerabilities.\n".format(vuln)
+                else:
+                    combatant.resists['vuln'].append(vuln)
+                    out += "\u2705 {} added to combatant vulnerabilities.\n".format(vuln)
+
+        if combatant.isPrivate:
+            await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
+                                        "{}'s options updated.\n".format(combatant.name) + out)
+            await self.bot.say("Combatant options updated.", delete_after=10)
+        else:
+            await self.bot.say("{}'s options updated.\n".format(combatant.name) + out, delete_after=10)
         await combat.final()
 
     @init.command(pass_context=True)

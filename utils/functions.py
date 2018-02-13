@@ -373,7 +373,7 @@ def paginate(iterable, n, fillvalue=None):
     return [i for i in zip_longest(*args, fillvalue=fillvalue) if i is not None]
 
 
-async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
+async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, message=None):
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
     If delete is True, will delete the selection message and the response.
     If length of choices is 1, will return the only choice.
@@ -405,6 +405,8 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
             selectStr += f"**[{i+1+page*10}]** - {r}\n"
         embed.description = selectStr
         embed.colour = random.randint(0, 0xffffff)
+        if message:
+            embed.add_field(name="Note", value=message)
         if not pm:
             if n == 0:
                 selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
@@ -412,13 +414,14 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False):
                 newSelectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
         else:
             embed.add_field(name="Instructions",
-                            value="Type your response in the channel you called the command. This message was PMed to you to hide the monster name.")
+                            value="Type your response in the channel you called the command. This message was PMed to "
+                                  "you to hide the monster name.")
             if n == 0:
                 selectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
             else:
                 newSelectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
 
-        if n > 0: # clean up old messages
+        if n > 0:  # clean up old messages
             try:
                 await ctx.bot.delete_message(selectMsg)
                 await ctx.bot.delete_message(m)

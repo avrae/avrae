@@ -2,6 +2,7 @@ import cachetools
 
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
+from utils.functions import get_selection
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
@@ -41,6 +42,10 @@ class Combat:
         for c in raw['combatants']:
             if c['type'] == 'common':
                 combatants.append(Combatant.from_dict(c, ctx))
+            elif c['type'] == 'monster':
+                combatants.append(MonsterCombatant.from_dict(c, ctx))
+            elif c['type'] == 'player':
+                combatants.append(PlayerCombatant.from_dict(c, ctx))
             else:
                 raise CombatException("Unknown combatant type")
         return cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, combatants, raw['round'],
@@ -99,6 +104,16 @@ class Combat:
 
     def get_combatant(self, name):
         return next((c for c in self.get_combatants() if c.name == name), None)
+
+    async def select_combatant(self, name):
+        """
+        Opens a prompt for a user to select the combatant they were searching for.
+        :rtype: Combatant
+        :param name: The name of the combatant to search for.
+        :return: The selected Combatant, or None if the search failed.
+        """
+        matching = [(c.name, c) for c in self.get_combatants() if name.lower() in c.name.lower()]
+        return await get_selection(self.ctx, matching)
 
     def advance_turn(self):
         if len(self.get_combatants()) == 0:
@@ -181,11 +196,13 @@ class Combat:
 
 class Combatant:
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx, index=None,
-                 *args, **kwargs):
+                 notes=None, effects=None, *args, **kwargs):
         if resists is None:
             resists = {}
         if attacks is None:
             attacks = {}
+        if effects is None:
+            effects = []
         self._name = name
         self._controller = controllerId
         self._init = init
@@ -198,6 +215,8 @@ class Combatant:
         self._attacks = attacks
         self._index = index  # combat write only; position in combat
         self.ctx = ctx
+        self._notes = notes
+        self._effects = effects
 
     @classmethod
     def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx):
@@ -205,20 +224,33 @@ class Combatant:
 
     @classmethod
     def from_dict(cls, raw, ctx):
+        effects = []  # TODO
         return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
-                   raw['private'], raw['resists'], raw['attacks'], ctx, raw['index'])
+                   raw['private'], raw['resists'], raw['attacks'], ctx, raw['index'], raw['notes'], effects)
 
     @property
     def name(self):
         return self._name
 
+    @name.setter
+    def name(self, new_name):
+        self.name = new_name
+
     @property
     def controller(self):
         return self._controller
 
+    @controller.setter
+    def controller(self, new_controller_id):
+        self._controller = new_controller_id
+
     @property
     def init(self):
         return self._init
+
+    @init.setter
+    def init(self, new_init):
+        self._init = new_init
 
     @property
     def initMod(self):
@@ -236,12 +268,23 @@ class Combatant:
     def ac(self):
         return self._ac
 
+    @ac.setter
+    def ac(self, new_ac):
+        self._ac = new_ac
+
     @property
     def isPrivate(self):
         return self._private
 
+    @isPrivate.setter
+    def isPrivate(self, new_privacy):
+        self._private = new_privacy
+
     @property
     def resists(self):
+        for k in ('resist', 'immune', 'vuln'):
+            if not k in self._resists:
+                self.resists[k] = []
         return self._resists
 
     @property
@@ -255,6 +298,17 @@ class Combatant:
     @index.setter
     def index(self, new_index):
         self._index = new_index
+
+    @property
+    def notes(self):
+        return self._notes
+
+    @notes.setter
+    def notes(self, new_notes):
+        self._notes = new_notes
+
+    def get_effects(self):
+        return self._effects
 
     def controller_mention(self):
         return f"<@{self.controller}>"
@@ -283,14 +337,15 @@ class Combatant:
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
                 'hpMax': self.hpMax, 'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
-                'attacks': self.attacks, 'index': self.index, 'type': 'common'}
+                'attacks': self.attacks, 'index': self.index, 'notes': self.notes,
+                'effects': [e.to_dict() for e in self.get_effects()], 'type': 'common'}
 
 
 class MonsterCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx, index=None,
-                 monster_name=None):
+                 monster_name=None, notes=None, effects=None):
         super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                               attacks, ctx, index)
+                                               attacks, ctx, index, notes, effects)
         self._monster_name = monster_name
 
     @classmethod
@@ -324,13 +379,25 @@ class MonsterCombatant(Combatant):
         return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, ctx, index,
                    monster_name)
 
+    @classmethod
+    def from_dict(cls, raw, ctx):
+        inst = super(MonsterCombatant, cls).from_dict(raw, ctx)
+        inst._monster_name = raw['monster_name']
+        return inst
+
     @property
     def monster_name(self):
         return self._monster_name
 
+    def to_dict(self):
+        raw = super(MonsterCombatant, self).to_dict()
+        raw['monster_name'] = self.monster_name
+        raw['type'] = 'monster'
+        return raw
+
 
 class PlayerCombatant(Combatant):
-    def __init__(self, character):
+    def __init__(self, name=None, notes=None, effects=None):
         super(PlayerCombatant, self).__init__()
 
 

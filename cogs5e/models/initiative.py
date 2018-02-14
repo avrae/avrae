@@ -1,5 +1,8 @@
+from math import floor
+
 import cachetools
 
+from cogs5e.models.character import Character
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
 from utils.functions import get_selection
@@ -195,8 +198,8 @@ class Combat:
 
 
 class Combatant:
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx, index=None,
-                 notes=None, effects=None, *args, **kwargs):
+    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
+                 index=None, notes=None, effects=None, *args, **kwargs):
         if resists is None:
             resists = {}
         if attacks is None:
@@ -213,20 +216,22 @@ class Combatant:
         self._private = private
         self._resists = resists
         self._attacks = attacks
+        self._saves = saves
         self._index = index  # combat write only; position in combat
         self.ctx = ctx
         self._notes = notes
         self._effects = effects
 
     @classmethod
-    def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx):
-        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx)
+    def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx):
+        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx)
 
     @classmethod
     def from_dict(cls, raw, ctx):
         effects = [Effect.from_dict(e) for e in raw['effects']]
         return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
-                   raw['private'], raw['resists'], raw['attacks'], ctx, raw['index'], raw['notes'], effects)
+                   raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, raw['index'], raw['notes'],
+                   effects)
 
     @property
     def name(self):
@@ -322,6 +327,10 @@ class Combatant:
         return self._attacks
 
     @property
+    def saves(self):
+        return self._saves
+
+    @property
     def index(self):
         return self._index
 
@@ -365,12 +374,14 @@ class Combatant:
     def controller_mention(self):
         return f"<@{self.controller}>"
 
-    def on_turn(self):  # TODO: reduce effect counters by 1
+    def on_turn(self):
         """
         A method called at the start of each of the combatant's turns.
         :return: None
         """
-        return
+        for e in self.get_effects():
+            if e.on_turn():
+                self.remove_effect(e)
 
     def get_summary(self):  # TODO
         """
@@ -390,15 +401,15 @@ class Combatant:
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
                 'hpMax': self.hpMax, 'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
-                'attacks': self.attacks, 'index': self.index, 'notes': self.notes,
+                'attacks': self.attacks, 'saves': self.saves, 'index': self.index, 'notes': self.notes,
                 'effects': [e.to_dict() for e in self.get_effects()], 'type': 'common'}
 
 
 class MonsterCombatant(Combatant):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, ctx, index=None,
-                 monster_name=None, notes=None, effects=None):
+    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
+                 index=None, monster_name=None, notes=None, effects=None):
         super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                               attacks, ctx, index, notes, effects)
+                                               attacks, saves, ctx, index, notes, effects)
         self._monster_name = monster_name
 
     @classmethod
@@ -427,9 +438,29 @@ class MonsterCombatant(Combatant):
                         t.append(d)
 
         resists = {'resist': resist, 'immune': immune, 'vuln': vuln}
-        attacks = {}  # TODO
+        attacks = monster.get('attacks', [])
 
-        return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, ctx, index,
+        saves = {'strengthSave': floor((int(monster['str']) - 10) / 2),
+                 'dexteritySave': floor((int(monster['dex']) - 10) / 2),
+                 'constitutionSave': floor((int(monster['con']) - 10) / 2),
+                 'intelligenceSave': floor((int(monster['int']) - 10) / 2),
+                 'wisdomSave': floor((int(monster['wis']) - 10) / 2),
+                 'charismaSave': floor((int(monster['cha']) - 10) / 2)}
+        save_overrides = monster.get('save', '').split(', ')
+        for s in save_overrides:
+            try:
+                _type = next(sa for sa in ('strengthSave',
+                                           'dexteritySave',
+                                           'constitutionSave',
+                                           'intelligenceSave',
+                                           'wisdomSave',
+                                           'charismaSave') if s.split(' ')[0].lower() in sa.lower())
+                mod = int(s.split(' ')[1])
+                saves[_type] = mod
+            except:
+                pass
+
+        return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, index,
                    monster_name)
 
     @classmethod
@@ -450,8 +481,38 @@ class MonsterCombatant(Combatant):
 
 
 class PlayerCombatant(Combatant):
-    def __init__(self, name=None, notes=None, effects=None):
-        super(PlayerCombatant, self).__init__()
+    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
+                 index=None, character_id=None, character_owner=None, notes=None, effects=None):
+        super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
+                                              attacks, saves, ctx, index, notes, effects)
+        self._character_id = character_id
+        self._character_owner = character_owner
+        self._character = None  # only grab the Character instance if we have to
+
+    @classmethod
+    def from_character(cls, name, controllerId, init, initMod, ac, private, ctx, character_id, character_owner):
+        return cls(name, controllerId, init, initMod, None, None, ac, private, None, None, None, ctx,
+                   character_id=character_id, character_owner=character_owner)
+
+    @property
+    def character(self):
+        if self._character is None:
+            self._character = Character.from_bot_and_ids(self.ctx.bot, self._character_owner, self._character_id)
+        return self._character
+
+    @classmethod
+    def from_dict(cls, raw, ctx):
+        inst = super(PlayerCombatant, cls).from_dict(raw, ctx)
+        inst._character_id = raw['character_id']
+        inst._character_owner = raw['character_owner']
+        return inst
+
+    def to_dict(self):
+        raw = super(PlayerCombatant, self).to_dict()
+        raw['character_id'] = self._character_id
+        raw['character_owner'] = self._character_owner
+        raw['type'] = 'player'
+        return raw
 
 
 class CombatantGroup:
@@ -484,6 +545,16 @@ class Effect:
     @property
     def effect(self):
         return self._effect
+
+    def on_turn(self):
+        """
+        :return: Whether to remove the effect.
+        """
+        if self.duration > 0:
+            self._duration -= 1
+            if self.duration == 0:
+                return True
+        return False
 
     @classmethod
     def from_dict(cls, raw):

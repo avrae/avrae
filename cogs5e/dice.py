@@ -318,7 +318,7 @@ class Dice:
         else:
             check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]), adv=adv, inline=True)
 
-        embed.title = args.get('title', '').replace('[mname]', monster_name).replace('[cname]', skill.title()) \
+        embed.title = args.get('title', [''])[-1].replace('[mname]', monster_name).replace('[cname]', skill.title()) \
                       or '{} makes {} check!'.format(monster_name,
                                                      a_or_an(skill.title()))
         embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')

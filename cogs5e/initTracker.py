@@ -507,6 +507,52 @@ class InitTracker:
             await self.bot.say("```markdown\n" + status + "```", delete_after=30)
 
     @init.command(pass_context=True)
+    async def hp(self, ctx, name: str, operator: str, *, hp: str = ''):
+        """Modifies the HP of a combatant.
+        Usage: !init hp <NAME> <mod/set/max> <HP>"""
+        combat = Combat.from_ctx(ctx)
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            await self.bot.say("Combatant not found.")
+            return
+
+        hp_roll = roll(hp, inline=True, show_blurbs=False)
+
+        if 'mod' in operator.lower():
+            if combatant.hp is None:
+                combatant.hp = 0
+            combatant.hp += hp_roll.total
+        elif 'set' in operator.lower():
+            combatant.hp = hp_roll.total
+        elif 'max' in operator.lower():
+            if hp == '':
+                combat.hp = combatant.hpMax
+            elif hp_roll.total < 1:
+                return await self.bot.say("You can't have a negative max HP!")
+            else:
+                combatant.hpMax = hp_roll.total
+        elif hp == '':
+            hp_roll = roll(operator, inline=True, show_blurbs=False)
+            if combatant.hp is None:
+                combatant.hp = 0
+            combatant.hp += hp_roll.total
+        else:
+            await self.bot.say("Incorrect operator. Use mod, set, or max.")
+            return
+
+        out = "{}: {}".format(combatant.name, combatant.get_hp_str())
+        if 'd' in hp: out += '\n' + hp_roll.skeleton
+
+        await self.bot.say(out, delete_after=10)
+        if combatant.isPrivate:
+            try:
+                await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
+                                            "{}'s HP: {}/{}".format(combatant.name, combatant.hp, combatant.hpMax))
+            except:
+                pass
+        await combat.final()
+
+    @init.command(pass_context=True)
     async def end(self, ctx):
         """Ends combat in the channel."""
 

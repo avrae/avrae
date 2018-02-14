@@ -260,9 +260,19 @@ class Combatant:
     def hpMax(self):
         return self._hpMax
 
+    @hpMax.setter
+    def hpMax(self, new_hpMax):
+        self._hpMax = new_hpMax
+        if self._hp is None:
+            self._hp = new_hpMax
+
     @property
     def hp(self):
         return self._hp
+
+    @hp.setter
+    def hp(self, new_hp):
+        self._hp = new_hp
 
     @property
     def ac(self):

@@ -380,7 +380,9 @@ class AdminUtils:
             log.info("Detected bot collection server ({}), ratio {}. Leaving.".format(server.id, ratio))
             try:
                 await self.bot.send_message(server.owner,
-                                            "Please do not add me to bot collection servers. If you believe this is an error, please PM the bot author.")
+                                            "Please do not add me to bot collection servers. "
+                                            "Your server was flagged for having over 60% bots. "
+                                            "If you believe this is an error, please PM the bot author.")
             except:
                 pass
             await asyncio.sleep(members / 200)
@@ -520,7 +522,8 @@ class AdminUtils:
         reply_to = _data['uuid']
         try:
             invite = (
-            await self.bot.create_invite(self.bot.get_server(server_id) or self.bot.get_channel(server_id).server)).url
+                await self.bot.create_invite(
+                    self.bot.get_server(server_id) or self.bot.get_channel(server_id).server)).url
         except:
             invite = None
         response = ServerInfoResponse(self.bot, reply_to, server_id, invite)

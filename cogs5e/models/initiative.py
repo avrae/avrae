@@ -224,7 +224,7 @@ class Combatant:
 
     @classmethod
     def from_dict(cls, raw, ctx):
-        effects = []  # TODO
+        effects = [Effect.from_dict(e) for e in raw['effects']]
         return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], ctx, raw['index'], raw['notes'], effects)
 
@@ -337,8 +337,30 @@ class Combatant:
     def notes(self, new_notes):
         self._notes = new_notes
 
+    def add_effect(self, effect):
+        self._effects.append(effect)
+
     def get_effects(self):
         return self._effects
+
+    async def select_effect(self, name):
+        """
+        Opens a prompt for a user to select the effect they were searching for.
+        :rtype: Effect
+        :param name: The name of the effect to search for.
+        :return: The selected Effect, or None if the search failed.
+        """
+        matching = [(c.name, c) for c in self.get_effects() if name.lower() in c.name.lower()]
+        return await get_selection(self.ctx, matching)
+
+    def remove_effect(self, effect):
+        try:
+            self._effects.remove(effect)
+        except ValueError:
+            raise CombatException("Effect does not exist on combatant.")
+
+    def remove_all_effects(self):
+        self._effects = []
 
     def controller_mention(self):
         return f"<@{self.controller}>"
@@ -434,3 +456,38 @@ class PlayerCombatant(Combatant):
 
 class CombatantGroup:
     pass
+
+
+class Effect:
+    def __init__(self, name, duration, remaining, effect):
+        self._name = name
+        self._duration = duration
+        self._remaining = remaining
+        self._effect = effect
+
+    @classmethod
+    def new(cls, name, duration, effect):
+        return cls(name, duration, duration, effect)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def duration(self):
+        return self._duration
+
+    @property
+    def remaining(self):
+        return self._remaining
+
+    @property
+    def effect(self):
+        return self._effect
+
+    @classmethod
+    def from_dict(cls, raw):
+        return cls(raw['name'], raw['duration'], raw['remaining'], raw['effect'])
+
+    def to_dict(self):
+        return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect}

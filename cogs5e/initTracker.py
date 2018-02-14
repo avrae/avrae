@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchMonsterFull
-from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant
+from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect
 from utils.functions import parse_args_3, confirm
 
 log = logging.getLogger(__name__)
@@ -550,6 +550,42 @@ class InitTracker:
                                             "{}'s HP: {}/{}".format(combatant.name, combatant.hp, combatant.hpMax))
             except:
                 pass
+        await combat.final()
+
+    @init.command(pass_context=True)
+    async def effect(self, ctx, name: str, duration: int, effect_name: str, *, effect: str = None):
+        """Attaches a status effect to a combatant.
+        [effect] is a set of args that will be appended to every `!i a` the combatant makes."""
+        combat = Combat.from_ctx(ctx)
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            await self.bot.say("Combatant not found.")
+            return
+
+        if effect_name.lower() in (e.name.lower() for e in combatant.get_effects()):
+            return await self.bot.say("Effect already exists.", delete_after=10)
+
+        effectObj = Effect.new(duration=duration, name=effect_name, effect=effect)
+        combatant.add_effect(effectObj)
+        await self.bot.say("Added effect {} to {}.".format(effect_name, combatant.name), delete_after=10)
+        await combat.final()
+
+    @init.command(pass_context=True, name='re')
+    async def remove_effect(self, ctx, name: str, effect: str = ''):
+        """Removes a status effect from a combatant. Removes all if effect is not passed."""
+        combat = Combat.from_ctx(ctx)
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            await self.bot.say("Combatant not found.")
+            return
+
+        if effect is '':
+            combatant.remove_all_effects()
+            await self.bot.say("All effects removed from {}.".format(combatant.name), delete_after=10)
+        else:
+            to_remove = await combatant.select_effect(effect)
+            combatant.remove_effect(to_remove)
+            await self.bot.say('Effect {} removed from {}.'.format(to_remove.name, combatant.name), delete_after=10)
         await combat.final()
 
     @init.command(pass_context=True)

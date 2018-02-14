@@ -274,6 +274,26 @@ class Combatant:
     def hp(self, new_hp):
         self._hp = new_hp
 
+    def get_hp_str(self, private=False):
+        """Returns a string representation of the combatant's HP."""
+        hpStr = ''
+        if not self.isPrivate or private:
+            hpStr = '<{}/{} HP>'.format(self.hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
+                self.hp) if self.hp is not None else ''
+        elif self.hpMax is not None and self.hpMax > 0:
+            ratio = self.hp / self.hpMax
+            if ratio >= 1:
+                hpStr = "<Healthy>"
+            elif 0.5 < ratio < 1:
+                hpStr = "<Injured>"
+            elif 0.15 < ratio <= 0.5:
+                hpStr = "<Bloodied>"
+            elif 0 < ratio <= 0.15:
+                hpStr = "<Critical>"
+            elif ratio <= 0:
+                hpStr = "<Dead>"
+        return hpStr
+
     @property
     def ac(self):
         return self._ac

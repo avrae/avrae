@@ -379,7 +379,7 @@ class AdminUtils:
         if ratio >= 0.6 and members >= 20:
             log.info("Detected bot collection server ({}), ratio {}. Leaving.".format(server.id, ratio))
             try:
-                await self.bot.send_message(server,
+                await self.bot.send_message(server.owner,
                                             "Please do not add me to bot collection servers. If you believe this is an error, please PM the bot author.")
             except:
                 pass

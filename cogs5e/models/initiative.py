@@ -195,6 +195,8 @@ class Combat:
 
     def end(self):
         """Ends combat in a channel."""
+        for c in self.get_combatants():
+            c.on_remove()
         self.ctx.bot.db.delete(self.get_db_key())
 
 
@@ -399,6 +401,12 @@ class Combatant:
         """
         return f"Placeholder status for {self.name}"
 
+    def on_remove(self):
+        """
+        Called when the combatant is removed from combat, either through !i remove or the combat ending.
+        """
+        pass
+
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
                 'hpMax': self.hpMax, 'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
@@ -532,6 +540,10 @@ class PlayerCombatant(Combatant):
     @property
     def saves(self):
         return self.character.get_saves()
+
+    def on_remove(self):
+        super(PlayerCombatant, self).on_remove()
+        self.character.leave_combat().commit(self.ctx)
 
     @classmethod
     def from_dict(cls, raw, ctx):

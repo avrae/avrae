@@ -262,6 +262,11 @@ class InitTracker:
               --group (same as !init add)"""
         char = Character.from_ctx(ctx)
         character = char.character
+
+        if char.get_combat_id():
+            return await self.bot.say(f"This character is already in a combat. "
+                                      f"Please leave combat in <#{char.get_combat_id()}> first.")
+
         skills = character.get('skills')
         if skills is None:
             return await self.bot.say('You must update your character sheet first.')
@@ -323,6 +328,8 @@ class InitTracker:
         #     group = combat.get_combatant_group(group)
         #     group.combatants.append(me)
         #     embed.set_footer(text="Added to combat in group {}!".format('group'))
+
+        char.join_combat(ctx.message.channel.id).commit(ctx)
 
         await self.bot.say(embed=embed)
         await combat.final()

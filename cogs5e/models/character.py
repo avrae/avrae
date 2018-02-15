@@ -894,6 +894,7 @@ class Character:
         :return: self
         """
         self.character['combat'] = channel_id
+        return self
 
     def leave_combat(self):
         """
@@ -902,6 +903,7 @@ class Character:
         """
         if 'combat' in self.character:
             del self.character['combat']
+        return self
 
     def get_combat_id(self):
         """

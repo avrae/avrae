@@ -887,6 +887,28 @@ class Character:
         reset.extend(self._reset_custom(None))
         return reset
 
+    def join_combat(self, channel_id):
+        """
+        Puts the character into combat.
+        :param channel_id: The channel id of the combat
+        :return: self
+        """
+        self.character['combat'] = channel_id
+
+    def leave_combat(self):
+        """
+        Removes the character from all combats.
+        :return: self
+        """
+        if 'combat' in self.character:
+            del self.character['combat']
+
+    def get_combat_id(self):
+        """
+        :return: The channel id if the character is in combat, or None.
+        """
+        return self.character.get('combat')
+
 
 # helper methods
 def simple_roll(rollStr):

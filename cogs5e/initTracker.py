@@ -8,8 +8,9 @@ from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchMonsterFull
-from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect
-from utils.functions import parse_args_3, confirm
+from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant
+from utils.functions import parse_args_3, confirm, get_selection, parse_args_2
 
 log = logging.getLogger(__name__)
 
@@ -586,6 +587,109 @@ class InitTracker:
             to_remove = await combatant.select_effect(effect)
             combatant.remove_effect(to_remove)
             await self.bot.say('Effect {} removed from {}.'.format(to_remove.name, combatant.name), delete_after=10)
+        await combat.final()
+
+    @init.command(pass_context=True, aliases=['a'])
+    async def attack(self, ctx, target_name, atk_name, *, args=''):
+        """Rolls an attack against another combatant.
+        Valid Arguments: see !a and !ma.
+        `-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit."""
+        return await self._attack(ctx, None, target_name, atk_name, args)
+
+    @init.command(pass_context=True)
+    async def aoo(self, ctx, combatant_name, target_name, atk_name, *, args=''):
+        """Rolls an attack of opportunity against another combatant.
+        Valid Arguments: see !a and !ma.
+        `-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit."""
+        return await self._attack(ctx, combatant_name, target_name, atk_name, args)
+
+    async def _attack(self, ctx, combatant_name, target_name, atk_name, args):
+        combat = Combat.from_ctx(ctx)
+        target = await combat.select_combatant(target_name, "Select the target.")
+        if target is None:
+            await self.bot.say("Target not found.")
+            return
+
+        if combatant_name is None:
+            combatant = combat.current_combatant
+            if combatant is None:
+                return await self.bot.say("You must start combat with `!init next` first.")
+        else:
+            combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
+            if combatant is None:
+                return await self.bot.say("Combatant not found.")
+
+        # if not isinstance(combatant, CombatantGroup): # TODO: effects
+        #     for eff in combatant.effects:
+        #         if hasattr(eff, "effect"):
+        #             args += " " + eff.effect if eff.effect is not None else ""
+
+        attacks = combatant.attacks
+        if '-custom' in args:
+            attack = {'attackBonus': None, 'damage': None, 'name': atk_name}
+        else:
+            attack = await get_selection(ctx,
+                                         [(a['name'], a) for a in attacks if atk_name.lower() in a['name'].lower()],
+                                         message="Select your attack.")
+
+        tempargs = shlex.split(args)  # parse snippets
+        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
+        for index, arg in enumerate(tempargs):  # parse snippets
+            snippet_value = user_snippets.get(arg)
+            if snippet_value:
+                tempargs[index] = snippet_value
+            elif ' ' in arg:
+                tempargs[index] = shlex.quote(arg)
+        args = " ".join(tempargs)
+
+        is_player = isinstance(combatant, PlayerCombatant)
+
+        if is_player:
+            args = await combatant.character.parse_cvars(args, ctx)
+
+        args = parse_args_2(shlex.split(args))  # set up all the arguments
+        args['name'] = combatant.name
+        if target.ac is not None: args['ac'] = target.ac
+        args['t'] = target.name
+        args['resist'] = args.get('resist') or '|'.join(target.resists['resist'])
+        args['immune'] = args.get('immune') or '|'.join(target.resists['immune'])
+        args['vuln'] = args.get('vuln') or '|'.join(target.resists['vuln'])
+        if is_player:
+            args['c'] = combatant.character.get_setting('critdmg') or args.get('c')
+            args['hocrit'] = combatant.character.get_setting('hocrit') or False
+            args['reroll'] = combatant.character.get_setting('reroll') or 0
+            args['crittype'] = combatant.character.get_setting('crittype') or 'default'
+
+        result = sheet_attack(attack, args)
+        embed = result['embed']
+        if is_player:
+            embed.colour = combatant.character.get_color()
+        else:
+            embed.colour = random.randint(0, 0xffffff)
+        if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
+
+        if target.ac is not None:
+            if target.hp is not None:
+                embed.set_footer(text="{}: {}".format(target.name, target.get_hp_str()))
+                if target.isPrivate:
+                    try:
+                        await self.bot.send_message(ctx.message.server.get_member(target.controller),
+                                                    "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                    except:
+                        pass
+            else:
+                embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
+        else:
+            embed.set_footer(text="Target AC not set.")
+
+        _fields = args.get('f', [])
+        if type(_fields) == list:
+            for f in _fields:
+                title = f.split('|')[0] if '|' in f else '--'
+                value = "|".join(f.split('|')[1:]) if '|' in f else f
+                embed.add_field(name=title, value=value)
+
+        await self.bot.say(embed=embed)
         await combat.final()
 
     @init.command(pass_context=True)

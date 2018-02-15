@@ -108,15 +108,16 @@ class Combat:
     def get_combatant(self, name):
         return next((c for c in self.get_combatants() if c.name == name), None)
 
-    async def select_combatant(self, name):
+    async def select_combatant(self, name, choice_message=None):
         """
         Opens a prompt for a user to select the combatant they were searching for.
+        :param choice_message: The message to pass to the selector.
         :rtype: Combatant
         :param name: The name of the combatant to search for.
         :return: The selected Combatant, or None if the search failed.
         """
         matching = [(c.name, c) for c in self.get_combatants() if name.lower() in c.name.lower()]
-        return await get_selection(self.ctx, matching)
+        return await get_selection(self.ctx, matching, message=choice_message)
 
     def advance_turn(self):
         if len(self.get_combatants()) == 0:
@@ -324,7 +325,7 @@ class Combatant:
 
     @property
     def attacks(self):
-        return self._attacks
+        return self._attacks  # TODO: effect-modified
 
     @property
     def saves(self):
@@ -438,7 +439,11 @@ class MonsterCombatant(Combatant):
                         t.append(d)
 
         resists = {'resist': resist, 'immune': immune, 'vuln': vuln}
-        attacks = monster.get('attacks', [])
+        raw_attacks = monster.get('attacks', [])
+        attacks = []
+        for a in raw_attacks:
+            attacks.append({'name': a['name'], 'attackBonus': a.get('attackBonus'), 'damage': a.get('damage'),
+                            'details': a.get('desc')})
 
         saves = {'strengthSave': floor((int(monster['str']) - 10) / 2),
                  'dexteritySave': floor((int(monster['dex']) - 10) / 2),

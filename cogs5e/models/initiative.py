@@ -320,7 +320,7 @@ class Combatant:
     def resists(self):
         for k in ('resist', 'immune', 'vuln'):
             if not k in self._resists:
-                self.resists[k] = []
+                self._resists[k] = []
         return self._resists
 
     @property
@@ -504,6 +504,34 @@ class PlayerCombatant(Combatant):
         if self._character is None:
             self._character = Character.from_bot_and_ids(self.ctx.bot, self._character_owner, self._character_id)
         return self._character
+
+    @property
+    def hpMax(self):
+        return self._hpMax or self.character.get_max_hp()
+
+    @hpMax.setter
+    def hpMax(self, new_hpMax):
+        self._hpMax = new_hpMax
+
+    @property
+    def hp(self):
+        return self.character.get_current_hp()
+
+    @hp.setter
+    def hp(self, new_hp):
+        self.character.set_hp(new_hp).commit(self.ctx)
+
+    @property
+    def resists(self):
+        return self.character.get_resists()
+
+    @property
+    def attacks(self):
+        return self.character.get_attacks()  # TODO: effect-modified
+
+    @property
+    def saves(self):
+        return self.character.get_saves()
 
     @classmethod
     def from_dict(cls, raw, ctx):

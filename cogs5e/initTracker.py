@@ -9,6 +9,8 @@ from discord.ext import commands
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import searchMonsterFull
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models.character import Character
+from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant
 from utils.functions import parse_args_3, confirm, get_selection, parse_args_2
 
@@ -72,7 +74,7 @@ class InitTracker:
         except:
             pass
         await self.bot.say(
-            "Everyone roll for initiative!\nIf you have a character set up with SheetManager: `!init cadd`\n"
+            "Everyone roll for initiative!\nIf you have a character set up with SheetManager: `!init join`\n"
             "If it's a 5e monster: `!init madd [monster name]`\nOtherwise: `!init add [modifier] [name]`")
 
     @init.command(pass_context=True)
@@ -227,15 +229,12 @@ class InitTracker:
                     init = int(p)
                 controller = ctx.message.author.id
 
-                # me = MonsterCombatant(name=name, init=init, author=controller, effects=[], notes='', private=private,
-                #                       group=group, monster=monster, modifier=dexMod, opts=opts)
-
                 me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, opts)
                 if group is None:
                     combat.add_combatant(me)
                     out += "{} was added to combat with initiative {}.\n".format(name,
                                                                                  check_roll.skeleton if p is None else p)
-                # elif combat.get_combatant_group(group) is None:
+                # elif combat.get_combatant_group(group) is None:  # TODO
                 #     newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
                 #     newGroup.combatants.append(me)
                 #     combat.combatants.append(newGroup)
@@ -250,6 +249,82 @@ class InitTracker:
                 out += "Error adding combatant: {}\n".format(e)
 
         await self.bot.say(out, delete_after=15)
+        await combat.final()
+
+    @init.command(pass_context=True, name='join', aliases=['cadd', 'dcadd'])
+    async def join(self, ctx, *, args: str = ''):
+        """Adds the current active character to combat. A character must be loaded through the SheetManager module first.
+        Args: adv/dis
+              -b [conditional bonus]
+              -phrase [flavor text]
+              -p [init value]
+              -h (same as !init add)
+              --group (same as !init add)"""
+        char = Character.from_ctx(ctx)
+        character = char.character
+        skills = character.get('skills')
+        if skills is None:
+            return await self.bot.say('You must update your character sheet first.')
+        skill = 'initiative'
+        combat = Combat.from_ctx(ctx)
+
+        if combat.get_combatant(char.get_name()) is not None:
+            await self.bot.say("Combatant already exists.")
+            return
+
+        embed = EmbedWithCharacter(char, False)
+        embed.colour = char.get_color()
+
+        skill_effects = character.get('skill_effects', {})
+        args += ' ' + skill_effects.get(skill, '')  # dicecloud v7 - autoadv
+
+        args = shlex.split(args)
+        args = parse_args_3(args)
+        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
+                                                                                        False) else -1 if args.get(
+            'dis', False) else 0
+        b = '+'.join(args.get('b', [])) or None
+        p = args.get('p', [None])[-1]
+        phrase = '\n'.join(args.get('phrase', [])) or None
+
+        if p is None:
+            if b:
+                bonus = '{:+}'.format(skills[skill]) + '+' + b
+                check_roll = roll('1d20' + bonus, adv=adv, inline=True)
+            else:
+                bonus = '{:+}'.format(skills[skill])
+                check_roll = roll('1d20' + bonus, adv=adv, inline=True)
+
+            embed.title = '{} makes an Initiative check!'.format(char.get_name())
+            embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+            init = check_roll.total
+        else:
+            init = int(p)
+            bonus = 0
+            embed.title = "{} already rolled initiative!".format(char.get_name())
+            embed.description = "Placed at initiative `{}`.".format(init)
+
+        group = args.get('group', [None])[-1]
+        controller = ctx.message.author.id
+        private = bool(args.get('h', [False])[-1])
+
+        me = PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private, ctx,
+                                            char.id, ctx.message.author.id)
+
+        if group is None:
+            combat.add_combatant(me)
+            embed.set_footer(text="Added to combat!")
+        # elif combat.get_combatant_group(group) is None:  # TODO: group
+        #     newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
+        #     newGroup.combatants.append(me)
+        #     combat.combatants.append(newGroup)
+        #     embed.set_footer(text="Added to combat in group {}!".format('group'))
+        # else:
+        #     group = combat.get_combatant_group(group)
+        #     group.combatants.append(me)
+        #     embed.set_footer(text="Added to combat in group {}!".format('group'))
+
+        await self.bot.say(embed=embed)
         await combat.final()
 
     @init.command(pass_context=True, name="next", aliases=['n'])

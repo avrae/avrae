@@ -65,6 +65,17 @@ class Character:
     def get_color(self):
         return self.character.get('settings', {}).get('color') or random.randint(0, 0xffffff)
 
+    def get_ac(self):
+        return self.character['armor']
+
+    def get_resists(self):
+        """
+        Gets the resistances of a character.
+        :return: The resistances, immunities, and vulnerabilites of a character.
+        :rtype: dict
+        """
+        return {'resist': self.character['resist'], 'immune': self.character['immune'], 'vuln': self.character['vuln']}
+
     def get_max_hp(self):
         return self.character.get('hp', 0)
 

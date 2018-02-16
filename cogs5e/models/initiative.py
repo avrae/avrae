@@ -49,6 +49,8 @@ class Combat:
                 combatants.append(MonsterCombatant.from_dict(c, ctx))
             elif c['type'] == 'player':
                 combatants.append(PlayerCombatant.from_dict(c, ctx))
+            elif c['type'] == 'group':
+                combatants.append(CombatantGroup.from_dict(c, ctx))
             else:
                 raise CombatException("Unknown combatant type")
         return cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, combatants, raw['round'],
@@ -56,7 +58,7 @@ class Combat:
 
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
-                'combatants': [c.to_dict() for c in self.get_combatants()], 'turn': self.turn_num,
+                'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
                 'round': self.round_num, 'current': self.index}
 
     @property
@@ -89,10 +91,16 @@ class Combat:
 
     @property
     def current_combatant(self):
-        return self.get_combatants()[self.index] if self.index is not None else None
+        return self._combatants[self.index] if self.index is not None else None
 
     def get_combatants(self):
-        return self._combatants
+        combatants = []
+        for c in self._combatants:
+            if isinstance(c, Combatant):
+                combatants.append(c)
+            else:
+                combatants.extend(c.get_combatants())
+        return combatants
 
     def add_combatant(self, combatant):
         self._combatants.append(combatant)
@@ -108,6 +116,25 @@ class Combat:
     def get_combatant(self, name):
         return next((c for c in self.get_combatants() if c.name == name), None)
 
+    def get_group(self, name, create=None):
+        """
+        Gets a combatant group.
+        :rtype: CombatantGroup
+        :param name: The name of the combatant group.
+        :param create: The initiaitve to create a group at if a group is not found.
+        :return: The combatant group.
+        """
+        grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
+
+        if grp is None and create is not None:
+            grp = CombatantGroup.new(name, create, self.ctx)
+            self.add_combatant(grp)
+
+        return grp
+
+    def get_groups(self):
+        return [c for c in self._combatants if isinstance(c, CombatantGroup)]
+
     async def select_combatant(self, name, choice_message=None):
         """
         Opens a prompt for a user to select the combatant they were searching for.
@@ -120,14 +147,14 @@ class Combat:
         return await get_selection(self.ctx, matching, message=choice_message)
 
     def advance_turn(self):
-        if len(self.get_combatants()) == 0:
+        if len(self._combatants) == 0:
             raise NoCombatants
 
         changed_round = False
         if self.index is None:  # new round, no dynamic reroll
             self._current_index = 0
             self._round += 1
-        elif self.index + 1 >= len(self.get_combatants()):  # new round, TODO: dynamic reroll
+        elif self.index + 1 >= len(self._combatants):  # new round, TODO: dynamic reroll
             self._current_index = 0
             self._round += 1
             changed_round = True
@@ -153,7 +180,7 @@ class Combat:
 
     def get_summary(self):
         """Returns the generated summary message content."""
-        combatants = sorted(self.get_combatants(), key=lambda k: (k.init, k.initMod), reverse=True)
+        combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
         outStr = "```markdown\n{}: {} (round {})\n".format(
             self.options.get('name') if self.options.get('name') else "Current initiative",
             self.turn_num, self.round_num)
@@ -195,7 +222,7 @@ class Combat:
 
     def end(self):
         """Ends combat in a channel."""
-        for c in self.get_combatants():
+        for c in self._combatants:
             c.on_remove()
         self.ctx.bot.db.delete(self.get_db_key())
 
@@ -613,7 +640,85 @@ class PlayerCombatant(Combatant):
 
 
 class CombatantGroup:
-    pass
+    def __init__(self, name, init, combatants, ctx, index=None):
+        self._name = name
+        self._init = init
+        self._combatants = combatants
+        self.ctx = ctx
+        self._index = index
+        self.initMod = 0  # for sorting
+
+    @classmethod
+    def new(cls, name, init, ctx=None):
+        return cls(name, init, [], ctx)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def init(self):
+        return self._init
+
+    @property
+    def index(self):
+        return self._index
+
+    @index.setter
+    def index(self, new_index):
+        self._index = new_index
+
+    @property
+    def controller(self):
+        return self.ctx.message.author.id  # workaround
+
+    def get_combatants(self):
+        return self._combatants
+
+    def add_combatant(self, combatant):
+        self._combatants.append(combatant)
+
+    def get_summary(self):
+        """
+        Gets a short summary of a combatant's status.
+        :return: A string describing the combatant.
+        """
+        status = f"{self.init}: {self.name} ({len(self.get_combatants())} combatants)"
+        return status
+
+    def get_status(self, private=False):
+        """
+        Gets the start-of-turn status of a combatant.
+        :param private: Whether to return the full revealed stats or not.
+        :return: A string describing the combatant.
+        """
+        return '\n'.join(c.get_status(private) for c in self.get_combatants())
+
+    def on_turn(self):
+        for c in self.get_combatants():
+            c.on_turn()
+
+    def on_remove(self):
+        for c in self.get_combatants():
+            c.on_remove()
+
+    @classmethod
+    def from_dict(cls, raw, ctx):
+        combatants = []
+        for c in raw['combatants']:
+            if c['type'] == 'common':
+                combatants.append(Combatant.from_dict(c, ctx))
+            elif c['type'] == 'monster':
+                combatants.append(MonsterCombatant.from_dict(c, ctx))
+            elif c['type'] == 'player':
+                combatants.append(PlayerCombatant.from_dict(c, ctx))
+            else:
+                raise CombatException("Unknown combatant type")
+        return cls(raw['name'], raw['init'], combatants, ctx, raw['index'])
+
+    def to_dict(self):
+        return {'name': self.name, 'init': self.init, 'combatants': [c.to_dict() for c in self.get_combatants()],
+                'index': self.index, 'type': 'group'}
 
 
 class Effect:

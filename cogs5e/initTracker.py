@@ -11,7 +11,7 @@ from cogs5e.funcs.lookupFuncs import searchMonsterFull
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant
+from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
 from utils.functions import parse_args_3, confirm, get_selection, parse_args_2
 
 log = logging.getLogger(__name__)
@@ -143,25 +143,27 @@ class InitTracker:
             await self.bot.say("Combatant already exists.")
             return
 
-        try:
-            if not place:
-                init = random.randint(1, 20) + modifier
-            else:
-                init = modifier
-                modifier = 0
+        if not place:
+            init = random.randint(1, 20) + modifier
+        else:
+            init = modifier
+            modifier = 0
 
-            me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private, resists, [], [], ctx)
+        me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private, resists, [], [], ctx)
 
-            if group is None:
-                combat.add_combatant(me)
-                await self.bot.say(
-                    "{}\n{} was added to combat with initiative {}.".format(f'<@{controller}>', name, init),
-                    delete_after=10)
-            else:
-                raise NotImplementedError  # TODO: groups
-        except Exception as e:
-            await self.bot.say("Error adding combatant: {}".format(e))
-            return
+        if group is None:
+            combat.add_combatant(me)
+            await self.bot.say(
+                "{}\n{} was added to combat with initiative {}.".format(f'<@{controller}>', name, init),
+                delete_after=10)
+        else:
+            grp = combat.get_group(group, create=init)
+            grp.add_combatant(me)
+            await self.bot.say(
+                "{}\n{} was added to combat with initiative {} as part of group {}.".format(me.controller_mention(),
+                                                                                            name, grp.init,
+                                                                                            grp.name),
+                delete_after=10)
 
         await combat.final()
 
@@ -385,17 +387,17 @@ class InitTracker:
         #     nextCombatant = combat.getNextCombatant()
         #     combat.currentCombatant = nextCombatant
 
-        if False:  # TODO - groups
+        if isinstance(nextCombatant, CombatantGroup):  # TODO - groups
             pass
-            # thisTurn = nextCombatant.combatants
-            # for c in thisTurn:
-            #     c.on_turn()
-            # outStr = "**Initiative {} (round {})**: {} ({})\n{}"
-            # outStr = outStr.format(combat.current,
-            #                        combat.round,
-            #                        nextCombatant.name,
-            #                        ", ".join({c.controller_mention() for c in thisTurn}),
-            #                        '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
+            thisTurn = nextCombatant.get_combatants()
+            for c in thisTurn:
+                c.on_turn()
+            outStr = "**Initiative {} (round {})**: {} ({})\n{}"
+            outStr = outStr.format(combat.turn_num,
+                                   combat.round_num,
+                                   nextCombatant.name,
+                                   ", ".join({c.controller_mention() for c in thisTurn}),
+                                   '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
         else:
             nextCombatant.on_turn()
             outStr = "**Initiative {} (round {})**: {}\n{}"
@@ -578,11 +580,13 @@ class InitTracker:
             await self.bot.say("Combatant or group not found.")
             return
 
-        private = 'private' in args.lower() if ctx.message.author.id == combatant.controller else False
+        private = 'private' in args.lower()
         if isinstance(combatant, Combatant):
+            private = private and ctx.message.author.id == combatant.controller
             status = combatant.get_status(private=private)
         else:
-            status = "\n".join([c.get_status(private=private) for c in combatant.combatants])
+            status = "\n".join([c.get_status(private=private and ctx.message.author.id == c.controller) for c in
+                                combatant.get_combatants()])
         if 'private' in args.lower():
             await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
                                         "```markdown\n" + status + "```")

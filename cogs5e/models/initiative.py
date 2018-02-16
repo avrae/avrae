@@ -233,8 +233,14 @@ class Combatant:
     def from_dict(cls, raw, ctx):
         effects = [Effect.from_dict(e) for e in raw['effects']]
         return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
-                   raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, raw['index'], raw['notes'],
-                   effects)
+                   raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, index=raw['index'],
+                   notes=raw['notes'], effects=effects)
+
+    def to_dict(self):
+        return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
+                'hpMax': self.hpMax, 'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
+                'attacks': self.attacks, 'saves': self.saves, 'index': self.index, 'notes': self.notes,
+                'effects': [e.to_dict() for e in self.get_effects()], 'type': 'common'}
 
     @property
     def name(self):
@@ -386,32 +392,78 @@ class Combatant:
             if e.on_turn():
                 self.remove_effect(e)
 
-    def get_summary(self):  # TODO
+    def get_summary(self):
         """
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        return f"{self.name} - {self.index}"
+        status = "{}: {} {}({})".format(self.init,
+                                        self.name,
+                                        self.get_hp_str() + ' ' if self.get_hp_str() is not '' else '',
+                                        self.get_effects_and_notes())
+        return status
 
-    def get_status(self, private=False):  # TODO
+    def get_status(self, private=False):
         """
         Gets the start-of-turn status of a combatant.
         :param private: Whether to return the full revealed stats or not.
         :return: A string describing the combatant.
         """
-        return f"Placeholder status for {self.name}"
+        csFormat = "{} {} {}{}{}"
+        status = csFormat.format(self.name,
+                                 self.get_hp_and_ac(private),
+                                 self.get_resist_string(private),
+                                 '\n# ' + self.notes if self.notes else '',
+                                 self.get_long_effects())
+        return status
+
+    def get_long_effects(self):
+        out = ''
+        for e in self.get_effects():
+            edesc = e.name
+            if e.remaining >= 0:
+                edesc += " [{} rounds]".format(e.remaining)
+            if getattr(e, 'effect', None):
+                edesc += " ({})".format(e.effect)
+            out += '\n* ' + edesc
+        return out
+
+    def get_effects_and_notes(self):
+        out = []
+        if self.ac is not None and not self.isPrivate:
+            out.append('AC {}'.format(self.ac))
+        for e in self.get_effects():
+            out.append('{} [{} rds]'.format(e.name, e.remaining if not e.remaining < 0 else '∞'))
+        if self.notes:
+            out.append(self.notes)
+        out = ', '.join(out)
+        return out
+
+    def get_hp_and_ac(self, private: bool = False):
+        out = [self.get_hp_str(private)]
+        if self.ac is not None and (not self.isPrivate or private):
+            out.append("(AC {})".format(self.ac))
+        return ' '.join(out)
+
+    def get_resist_string(self, private: bool = False):
+        resistStr = ''
+        self._resists['resist'] = [r for r in self.resists['resist'] if r]  # clean empty resists
+        self._resists['immune'] = [r for r in self.resists['immune'] if r]  # clean empty resists
+        self._resists['vuln'] = [r for r in self.resists['vuln'] if r]  # clean empty resists
+        if not self.isPrivate or private:
+            if len(self.resists['resist']) > 0:
+                resistStr += "\n> Resistances: " + ', '.join(self.resists['resist']).title()
+            if len(self.resists['immune']) > 0:
+                resistStr += "\n> Immunities: " + ', '.join(self.resists['immune']).title()
+            if len(self.resists['vuln']) > 0:
+                resistStr += "\n> Vulnerabilities: " + ', '.join(self.resists['vuln']).title()
+        return resistStr
 
     def on_remove(self):
         """
         Called when the combatant is removed from combat, either through !i remove or the combat ending.
         """
         pass
-
-    def to_dict(self):
-        return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
-                'hpMax': self.hpMax, 'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
-                'attacks': self.attacks, 'saves': self.saves, 'index': self.index, 'notes': self.notes,
-                'effects': [e.to_dict() for e in self.get_effects()], 'type': 'common'}
 
 
 class MonsterCombatant(Combatant):
@@ -595,9 +647,9 @@ class Effect:
         """
         :return: Whether to remove the effect.
         """
-        if self.duration > 0:
-            self._duration -= 1
-            if self.duration == 0:
+        if self.remaining > 0:
+            self._remaining -= 1
+            if self.remaining == 0:
                 return True
         return False
 

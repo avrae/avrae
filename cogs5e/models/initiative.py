@@ -672,6 +672,13 @@ class CombatantGroup:
     def controller(self):
         return self.ctx.message.author.id  # workaround
 
+    @property
+    def attacks(self):
+        a = []
+        for c in self.get_combatants():
+            a.extend(c.attacks)
+        return a
+
     def get_combatants(self):
         return self._combatants
 

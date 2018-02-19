@@ -236,16 +236,15 @@ class InitTracker:
                     combat.add_combatant(me)
                     out += "{} was added to combat with initiative {}.\n".format(name,
                                                                                  check_roll.skeleton if p is None else p)
-                # elif combat.get_combatant_group(group) is None:  # TODO
-                #     newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
-                #     newGroup.combatants.append(me)
-                #     combat.combatants.append(newGroup)
-                #     out += "{} was added to combat as part of group {}, with initiative {}.\n".format(name, group,
-                #                                                                                       check_roll.skeleton if p is None else p)
-                # else:
-                #     temp_group = combat.get_combatant_group(group)
-                #     temp_group.combatants.append(me)
-                #     out += "{} was added to combat as part of group {}.\n".format(name, temp_group.name)
+                else:
+                    grp = combat.get_group(group, create=init)
+                    grp.add_combatant(me)
+                    await self.bot.say(
+                        "{} was added to combat with initiative {} as part of group {}.".format(
+                            name, grp.init,
+                            grp.name),
+                        delete_after=10)
+
             except Exception as e:
                 log.error('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
                 out += "Error adding combatant: {}\n".format(e)
@@ -321,15 +320,10 @@ class InitTracker:
         if group is None:
             combat.add_combatant(me)
             embed.set_footer(text="Added to combat!")
-        # elif combat.get_combatant_group(group) is None:  # TODO: group
-        #     newGroup = CombatantGroup(name=group, init=init, author=controller, notes='')
-        #     newGroup.combatants.append(me)
-        #     combat.combatants.append(newGroup)
-        #     embed.set_footer(text="Added to combat in group {}!".format('group'))
-        # else:
-        #     group = combat.get_combatant_group(group)
-        #     group.combatants.append(me)
-        #     embed.set_footer(text="Added to combat in group {}!".format('group'))
+        else:
+            grp = combat.get_group(group, create=init)
+            grp.add_combatant(me)
+            embed.set_footer(text=f"Joined group {grp.name}!")
 
         char.join_combat(ctx.message.channel.id).commit(ctx)
 
@@ -370,25 +364,7 @@ class InitTracker:
 
         nextCombatant = combat.current_combatant
 
-        # try:
-        #     nextCombatant = combat.getNextCombatant()
-        #     combat.current = nextCombatant.init
-        #     combat.currentCombatant = nextCombatant
-        #     self.bot.db.incr('turns_init_tracked_life')
-        # except IndexError:
-        #     combat.current = combat.sorted_combatants[0].init
-        #     combat.round += 1
-        #     self.bot.db.incr('rounds_init_tracked_life')
-        #     combat.index = None
-        #     if combat.options.get('dynamic', False):
-        #         for combatant in combat.combatants:
-        #             combatant.init = roll('1d20+' + str(combatant.mod)).total
-        #         combat.sorted_combatants = sorted(combat.combatants, key=lambda k: (k.init, k.mod), reverse=True)
-        #     nextCombatant = combat.getNextCombatant()
-        #     combat.currentCombatant = nextCombatant
-
-        if isinstance(nextCombatant, CombatantGroup):  # TODO - groups
-            pass
+        if isinstance(nextCombatant, CombatantGroup):
             thisTurn = nextCombatant.get_combatants()
             for c in thisTurn:
                 c.on_turn()
@@ -704,11 +680,6 @@ class InitTracker:
             combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
             if combatant is None:
                 return await self.bot.say("Combatant not found.")
-
-        # if not isinstance(combatant, CombatantGroup): # TODO: effects
-        #     for eff in combatant.effects:
-        #         if hasattr(eff, "effect"):
-        #             args += " " + eff.effect if eff.effect is not None else ""
 
         attacks = combatant.attacks
         if '-custom' in args:

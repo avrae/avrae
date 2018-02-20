@@ -469,34 +469,20 @@ class InitTracker:
                     out += "\u2705 Combatant initiative set to {}.\n".format(p)
                 except:
                     out += "\u274c You must pass in a number with the -p tag.\n"
-        # if 'group' in args:  # TODO
-        #     if combatant == combat.currentCombatant:
-        #         out += "\u274c You cannot change a combatant's group on their own turn.\n"
-        #     else:
-        #         group = args.get('group')
-        #         if group.lower() == 'none':
-        #             if combatant.group:
-        #                 currentGroup = combat.get_combatant_group(combatant.group)
-        #                 currentGroup.combatants.remove(combatant)
-        #             combatant.group = None
-        #             combat.combatants.append(combatant)
-        #             combat.checkGroups()
-        #             combat.sortCombatants()
-        #             out += "\u2705 Combatant removed from all groups.\n"
-        #         elif combat.get_combatant_group(group) is not None:
-        #             if combatant.group:
-        #                 currentGroup = combat.get_combatant_group(combatant.group)
-        #                 currentGroup.combatants.remove(combatant)
-        #             else:
-        #                 combat.combatants.remove(combatant)
-        #             group = combat.get_combatant_group(group)
-        #             combatant.group = group.name
-        #             group.combatants.append(combatant)
-        #             combat.checkGroups()
-        #             combat.sortCombatants()
-        #             out += "\u2705 Combatant group set to {}.\n".format(group)
-        #         else:
-        #             out += "\u274c New group not found.\n"
+        if 'group' in args:
+            if combatant is combat.current_combatant:
+                out += "\u274c You cannot change a combatant's group on their own turn.\n"
+            else:
+                group = args.get('group')[-1]
+                if group.lower() == 'none':
+                    combat.remove_combatant(combatant)
+                    combat.add_combatant(combatant)
+                    out += "\u2705 Combatant removed from all groups.\n"
+                else:
+                    group = combat.get_group(group, combatant.init)
+                    combat.remove_combatant(combatant)
+                    group.add_combatant(combatant)
+                    out += "\u2705 Combatant group set to {}.\n".format(group)
         if 'name' in args:
             name = args.get('name')[-1]
             if combat.get_combatant(name) is not None:

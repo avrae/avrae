@@ -156,7 +156,9 @@ class Combat:
         :param name: The name of the combatant to search for.
         :return: The selected Combatant, or None if the search failed.
         """
-        matching = [(c.name, c) for c in self.get_combatants() if name.lower() in c.name.lower()]
+        matching = [(c.name, c) for c in self.get_combatants() if name.lower() == c.name.lower()]
+        if not matching:
+            matching = [(c.name, c) for c in self.get_combatants() if name.lower() in c.name.lower()]
         return await get_selection(self.ctx, matching, message=choice_message)
 
     def advance_turn(self):

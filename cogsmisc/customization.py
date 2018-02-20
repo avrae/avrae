@@ -479,11 +479,7 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
         _ops.pop(ast.Pow)  # no exponents pls
         _names = {"True": True, "False": False, "currentHp": 0}
 
-        def set_value(name, value):
-            self.names[name] = value
-            return ''
-
-        _funcs['set'] = set_value
+        _funcs['set'] = self.set_value
 
         if operators:
             _ops.update(operators)
@@ -494,6 +490,10 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
 
         super(NoCharacterEvaluator, self).__init__(_ops, _funcs, _names)
         self._initial_names = copy.copy(self.names)
+
+    def set_value(self, name, value):
+        self.names[name] = value
+        return ''
 
     def needs_char(self, *args, **kwargs):
         raise FunctionRequiresCharacter()  # no. bad.

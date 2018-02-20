@@ -106,6 +106,14 @@ class Combat:
         self._combatants.append(combatant)
         self.sort_combatants()
 
+    def remove_combatant(self, combatant):
+        if not combatant.group:
+            self._combatants.remove(combatant)
+            self.sort_combatants()
+        else:
+            self.get_group(combatant.group).remove_combatant(combatant)
+            self.check_empty_groups()
+
     def sort_combatants(self):
         current = self.current_combatant
         self._combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
@@ -134,6 +142,11 @@ class Combat:
 
     def get_groups(self):
         return [c for c in self._combatants if isinstance(c, CombatantGroup)]
+
+    def check_empty_groups(self):
+        for c in self._combatants:
+            if isinstance(c, CombatantGroup) and len(c.get_combatants()) == 0:
+                self.remove_combatant(c)
 
     async def select_combatant(self, name, choice_message=None):
         """
@@ -229,11 +242,11 @@ class Combat:
 
 class Combatant:
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 index=None, notes=None, effects=None, *args, **kwargs):
+                 index=None, notes=None, effects=None, group=None, *args, **kwargs):
         if resists is None:
             resists = {}
         if attacks is None:
-            attacks = {}
+            attacks = []
         if effects is None:
             effects = []
         self._name = name
@@ -251,6 +264,7 @@ class Combatant:
         self.ctx = ctx
         self._notes = notes
         self._effects = effects
+        self._group = group
 
     @classmethod
     def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx):
@@ -261,13 +275,13 @@ class Combatant:
         effects = [Effect.from_dict(e) for e in raw['effects']]
         return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, index=raw['index'],
-                   notes=raw['notes'], effects=effects)
+                   notes=raw['notes'], effects=effects, group=raw['group'])
 
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
                 'hpMax': self.hpMax, 'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
                 'attacks': self.attacks, 'saves': self.saves, 'index': self.index, 'notes': self.notes,
-                'effects': [e.to_dict() for e in self.get_effects()], 'type': 'common'}
+                'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group, 'type': 'common'}
 
     @property
     def name(self):
@@ -381,6 +395,14 @@ class Combatant:
     @notes.setter
     def notes(self, new_notes):
         self._notes = new_notes
+
+    @property
+    def group(self):
+        return self._group
+
+    @group.setter
+    def group(self, value):
+        self._group = value
 
     def add_effect(self, effect):
         self._effects.append(effect)
@@ -647,6 +669,7 @@ class CombatantGroup:
         self.ctx = ctx
         self._index = index
         self.initMod = 0  # for sorting
+        self.group = None  # groups cannot be in groups
 
     @classmethod
     def new(cls, name, init, ctx=None):
@@ -684,6 +707,11 @@ class CombatantGroup:
 
     def add_combatant(self, combatant):
         self._combatants.append(combatant)
+        combatant.group = self.name
+
+    def remove_combatant(self, combatant):
+        self._combatants.remove(combatant)
+        combatant.group = None
 
     def get_summary(self):
         """

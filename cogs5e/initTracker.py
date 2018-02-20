@@ -347,15 +347,15 @@ class InitTracker:
             await self.bot.say("It is not your turn.")
             return
 
-        toRemove = []  # TODO: automatic dead monster combatant removal
-        # if combat.currentCombatant is not None:
-        #     if isinstance(combat.currentCombatant, CombatantGroup):
-        #         thisTurn = [c for c in combat.currentCombatant.combatants]
-        #     else:
-        #         thisTurn = [combat.currentCombatant]
-        #     for c in thisTurn:
-        #         if isinstance(c, MonsterCombatant) and c.hp <= 0:
-        #             toRemove.append(c)
+        toRemove = []
+        if combat.current_combatant is not None:
+            if isinstance(combat.current_combatant, CombatantGroup):
+                thisTurn = [c for c in combat.current_combatant.get_combatants()]
+            else:
+                thisTurn = [combat.current_combatant]
+            for c in thisTurn:
+                if isinstance(c, MonsterCombatant) and c.hp <= 0:
+                    toRemove.append(c)
 
         advanced_round = combat.advance_turn()
         self.bot.db.incr('turns_init_tracked_life')
@@ -382,17 +382,9 @@ class InitTracker:
                                    "{} ({})".format(nextCombatant.name, nextCombatant.controller_mention()),
                                    '```markdown\n' + nextCombatant.get_status() + '```')
 
-        # TODO: actual autoremove
-        # for c in toRemove:
-        #     if c.group is None:
-        #         combat.combatants.remove(c)
-        #     else:
-        #         group = combat.get_combatant_group(c.group)
-        #         group.combatants.remove(c)
-        #     outStr += "{} automatically removed from combat.\n".format(c.name)
-        # if len(toRemove) > 0:
-        #     combat.sortCombatants()
-        #     combat.checkGroups()
+        for c in toRemove:
+            combat.remove_combatant(c)
+            outStr += "{} automatically removed from combat.\n".format(c.name)
 
         await self.bot.say(outStr)
         await combat.final()
@@ -747,6 +739,28 @@ class InitTracker:
                 embed.add_field(name=title, value=value)
 
         await self.bot.say(embed=embed)
+        await combat.final()
+
+    @init.command(pass_context=True, name='remove')
+    async def remove_combatant(self, ctx, *, name: str):
+        """Removes a combatant or group from the combat.
+        Usage: !init remove <NAME>"""
+        combat = Combat.from_ctx(ctx)
+
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            return await self.bot.say("Combatant not found.")
+
+        if combatant is combat.current_combatant:
+            return await self.bot.say("You cannot remove a combatant on their own turn.")
+
+        if combatant.group is not None:
+            group = combat.get_group(combatant.group)
+            if len(group.get_combatants()) <= 1 and group is combat.currentCombatant:
+                return await self.bot.say(
+                    "You cannot remove a combatant if they are the only remaining combatant in this turn.")
+        combat.remove_combatant(combatant)
+        await self.bot.say("{} removed from combat.".format(combatant.name), delete_after=10)
         await combat.final()
 
     @init.command(pass_context=True)

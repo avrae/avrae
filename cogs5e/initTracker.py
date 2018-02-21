@@ -15,6 +15,7 @@ from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchCharacterSpellName
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
+from cogs5e.models.errors import NoSpellDC, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
 from utils.functions import parse_args_3, confirm, get_selection, parse_args_2, parse_resistances
 
@@ -731,6 +732,320 @@ class InitTracker:
         await self.bot.say(embed=embed)
         await combat.final()
 
+    @init.command(pass_context=True)
+    async def cast(self, ctx, spell_name, *, args):
+        """Casts a spell against another combatant.
+        __Valid Arguments__
+        -t [target (chainable)] - Required
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
+        -l [level] - Specifies the level to cast the spell at.
+        **__Save Spells__**
+        -dc [Save DC] - Default: Pulls a cvar called `dc`.
+        -save [Save type] - Default: The spell's default save.
+        -d [damage] - adds additional damage.
+        adv/dis - forces all saves to be at adv/dis.
+        **__Attack Spells__**
+        See `!a`.
+        **__All Spells__**
+        -phrase [phrase] - adds flavor text."""
+        combat = Combat.from_ctx(ctx)
+
+        combatant = combat.current_combatant
+        if combatant is None:
+            return await self.bot.say("You must begin combat with !init next first.")
+
+        is_character = isinstance(combatant, PlayerCombatant)
+        if not is_character: return await self.bot.say(
+            "This command requires a SheetManager integrated combatant.")  # TODO
+
+        character = combatant.character
+
+        tempargs = shlex.split(args)
+        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
+        for index, arg in enumerate(tempargs):  # parse snippets
+            snippet_value = user_snippets.get(arg)
+            if snippet_value:
+                tempargs[index] = snippet_value
+            elif ' ' in arg:
+                tempargs[index] = shlex.quote(arg)
+
+        args = " ".join(tempargs)
+        args = await character.parse_cvars(args, ctx)
+        args = shlex.split(args)
+        args = parse_args_3(args)
+
+        if not args.get('t'):
+            return await self.bot.say("You must pass in targets with `-t target`.", delete_after=15)
+
+        embed = discord.Embed()
+        embed_footer = ''
+        if args.get('phrase') is not None:  # parse phrase
+            embed.description = '*' + '\n'.join(args.get('phrase')) + '*'
+        else:
+            embed.description = '~~' + ' ' * 500 + '~~'
+
+        if not args.get('i'):
+            spell_name = await searchCharacterSpellName(spell_name, ctx, character)
+        else:
+            spell_name = await searchSpellNameFull(spell_name, ctx)
+
+        if spell_name is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
+                                                                             description="The spell was not found or is not supported."))
+
+        spell = await searchAutoSpellFull(spell_name, ctx)
+
+        can_cast = True
+        spell_level = int(spell.get('level', 0))
+        try:
+            cast_level = int(args.get('l', [spell_level])[-1])
+            assert spell_level <= cast_level <= 9
+        except (AssertionError, ValueError):
+            return await self.bot.say("Invalid spell level.")
+
+        if is_character:
+            # make sure we can cast it
+            try:
+                assert character.get_remaining_slots(cast_level) > 0
+                assert spell['name'] in character.get_spell_list()
+            except AssertionError:
+                can_cast = False
+            else:
+                # use a spell slot
+                if not args.get('i'):
+                    character.use_slot(cast_level).commit(ctx)
+
+        if args.get('i'):
+            can_cast = True
+
+        if not can_cast:
+            embed = EmbedWithCharacter(character)
+            embed.title = "Cannot cast spell!"
+            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
+                                "Use `!game longrest` to restore all spell slots, or pass `-i` to ignore restrictions."
+            if cast_level > 0:
+                embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str(cast_level))
+            return await self.bot.say(embed=embed)
+
+        upcast_dmg = None
+        if not cast_level == spell_level:
+            upcast_dmg = spell.get('higher_levels', {}).get(str(cast_level))
+
+        embed.title = '{} casts {} at...'.format(combatant.name, spell['name'])
+
+        damage_save = None
+        for i, t in enumerate(args.get('t', [])):
+            target: Combatant = await combat.select_combatant(t, f"Select target #{i+1}.")
+            if target is None:
+                embed.add_field(name="{} not found!".format(t), value="Target not found.")
+            elif not isinstance(target, (PlayerCombatant, MonsterCombatant)):
+                embed.add_field(name="{} not supported!".format(t),
+                                value="Target must be a monster or player added with `madd` or `cadd`.")
+            else:
+                spell_type = spell.get('type')
+                if spell_type == 'save':  # save spell
+                    out = ''
+                    calculated_dc = character.evaluate_cvar('dc') or character.get_save_dc()
+                    dc = args.get('dc', [None])[-1] or calculated_dc
+                    if not dc:
+                        raise NoSpellDC
+                    try:
+                        dc = int(dc)
+                    except:
+                        raise NoSpellDC
+
+                    save_skill = args.get('save', [None])[-1] or spell.get('save', {}).get('save')
+                    try:
+                        save_skill = next(s for s in ('strengthSave',
+                                                      'dexteritySave',
+                                                      'constitutionSave',
+                                                      'intelligenceSave',
+                                                      'wisdomSave',
+                                                      'charismaSave') if save_skill.lower() in s.lower())
+                    except StopIteration:
+                        raise InvalidSaveType
+                    save = spell['save']
+
+                    save_roll_mod = target.saves.get(save_skill, 0)
+                    adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
+                                                                                                    False) else -1 if args.get(
+                        'dis', False) else 0
+
+                    save_roll = roll('1d20{:+}'.format(save_roll_mod), adv=adv,
+                                     rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
+                    is_success = save_roll.total >= dc
+                    out += save_roll.result + ("; Success!" if is_success else "; Failure!") + '\n'
+
+                    if save['damage'] is None:
+                        if i == 0:
+                            embed.add_field(name="DC", value=str(dc))
+                        embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
+                    else:  # save against damage spell
+                        if damage_save is None:
+                            dmg = save['damage']
+
+                            if is_character and spell['level'] == '0' and spell.get('scales', True):
+                                def lsub(matchobj):
+                                    level = combatant.sheet.get('levels', {}).get('level', 0)
+                                    if level < 5:
+                                        levelDice = "1"
+                                    elif level < 11:
+                                        levelDice = "2"
+                                    elif level < 17:
+                                        levelDice = "3"
+                                    else:
+                                        levelDice = "4"
+                                    return levelDice + 'd' + matchobj.group(2)
+
+                                dmg = re.sub(r'(\d+)d(\d+)', lsub, dmg)
+
+                            if upcast_dmg:
+                                dmg = dmg + '+' + upcast_dmg
+
+                            if args.get('d') is not None:
+                                dmg = dmg + '+' + "+".join(args.get('d', []))
+
+                            dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
+                            embed.add_field(name="Damage/DC", value=dmgroll.result + "\n**DC**: {}".format(str(dc)))
+                            d = ""
+                            for p in dmgroll.raw_dice.parts:
+                                if isinstance(p, SingleDiceGroup):
+                                    d += "{} {}".format(p.get_total(), p.annotation)
+                                else:
+                                    d += str(p)
+                            damage_save = d
+                        dmg = damage_save
+
+                        dmg = parse_resistances(dmg, args.get('resist', []) or target.resists['resist'],
+                                                args.get('immune', []) or target.resists['immune'],
+                                                args.get('vuln', []) or target.resists['vuln'])
+
+                        if is_success:
+                            if save['success'] == 'half':
+                                dmg = "({})/2".format(dmg)
+                            else:
+                                dmg = "0"
+
+                        dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
+                        out += dmgroll.result + '\n'
+
+                        embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
+
+                        if target.hp is not None:
+                            target.hp -= dmgroll.total
+                            embed_footer += "{}: {}\n".format(target.name, target.get_hp_str())
+                            if target.isPrivate:
+                                try:
+                                    await self.bot.send_message(ctx.message.server.get_member(target.controller),
+                                                                "{}'s HP: {}/{}".format(target.name, target.hp,
+                                                                                        target.hpMax))
+                                except:
+                                    pass
+                        else:
+                            embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
+                elif spell['type'] == 'attack':  # attack spell
+                    if not is_character: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
+                                                                                       description="Attack spells are only supported for combatants added with `cadd`."))
+
+                    outargs = copy.copy(args)
+                    outargs['t'] = target.name
+                    if target.ac is not None: outargs['ac'] = target.ac
+                    outargs['resist'] = '|'.join(args.get('resist', [])) or '|'.join(target.resists['resist'])
+                    outargs['immune'] = '|'.join(args.get('immune', [])) or '|'.join(target.resists['immune'])
+                    outargs['vuln'] = '|'.join(args.get('vuln', [])) or '|'.join(target.resists['vuln'])
+                    outargs['d'] = "+".join(args.get('d', [])) or None
+                    outargs['crittype'] = character.get_setting('crittype', 'default')
+                    for _arg, _value in outargs.items():
+                        if isinstance(_value, list):
+                            outargs[_arg] = _value[-1]
+                    attack = copy.copy(spell['atk'])
+                    attack['attackBonus'] = str(
+                        character.evaluate_cvar(attack['attackBonus']) or character.get_spell_ab())
+
+                    if not attack['attackBonus']:
+                        return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not found.",
+                                                                      description="Your casting ability is not found. Most likely cause is that you do not have spells."))
+
+                    if is_character and spell['level'] == '0' and spell.get('scales', True):
+                        def lsub(matchobj):
+                            level = combatant.sheet.get('levels', {}).get('level', 0)
+                            if level < 5:
+                                levelDice = "1"
+                            elif level < 11:
+                                levelDice = "2"
+                            elif level < 17:
+                                levelDice = "3"
+                            else:
+                                levelDice = "4"
+                            return levelDice + 'd' + matchobj.group(2)
+
+                        attack['damage'] = re.sub(r'(\d+)d(\d+)', lsub, attack['damage'])
+
+                    if upcast_dmg:
+                        attack['damage'] = attack['damage'] + '+' + upcast_dmg
+
+                    attack['damage'] = attack['damage'].replace("SPELL",
+                                                                str(
+                                                                    character.evaluate_cvar(
+                                                                        "SPELL") or character.get_spell_ab() - character.get_prof_bonus()))
+
+                    result = sheet_attack(attack, outargs)
+                    out = ""
+                    for f in result['embed'].fields:
+                        out += "**__{0.name}__**\n{0.value}\n".format(f)
+
+                    embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
+
+                    if target.hp is not None:
+                        target.hp -= result['total_damage']
+                        embed_footer += "{}: {}\n".format(target.name, target.get_hp_str())
+                        if target.isPrivate:
+                            try:
+                                await self.bot.send_message(ctx.message.server.get_member(target.controller),
+                                                            "{}'s HP: {}/{}".format(target.name, target.hp,
+                                                                                    target.hpMax))
+                            except:
+                                pass
+                    else:
+                        embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
+                else:  # special spell (MM)
+                    outargs = copy.copy(args)  # just make an attack for it
+                    outargs['d'] = "+".join(args.get('d', [])) or None
+                    for _arg, _value in outargs.items():
+                        if isinstance(_value, list):
+                            outargs[_arg] = _value[-1]
+                    attack = {"name": spell['name'],
+                              "damage": spell.get("damage", "0").replace('SPELL', str(
+                                  character.evaluate_cvar(
+                                      "SPELL") or character.get_spell_ab() - character.get_prof_bonus())),
+                              "attackBonus": None}
+                    if upcast_dmg:
+                        attack['damage'] = attack['damage'] + '+' + upcast_dmg
+                    result = sheet_attack(attack, outargs)
+                    out = ""
+                    for f in result['embed'].fields:
+                        out += "**__{0.name}__**\n{0.value}\n".format(f)
+
+                    embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
+
+                    if target.hp is not None:
+                        target.hp -= result['total_damage']
+                        embed_footer += "{}: {}\n".format(target.name, target.get_hp_str())
+                        if target.isPrivate:
+                            try:
+                                await self.bot.send_message(ctx.message.server.get_member(target.controller),
+                                                            "{}'s HP: {}/{}".format(target.name, target.hp,
+                                                                                    target.hpMax))
+                            except:
+                                pass
+                    else:
+                        embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
+
+        spell_ctx = spell_context(spell)
+        if spell_ctx:
+            embed.add_field(name='Effect', value=spell_ctx)
+
+        if cast_level > 0:  # TODO: monster casters
+            embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str(cast_level))
 
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
         embed.set_footer(text=embed_footer)

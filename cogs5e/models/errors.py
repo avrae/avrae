@@ -41,6 +41,21 @@ class OutdatedSheet(AvraeException):
         super().__init__(msg or "This command requires an updated character sheet. Try running `!update`.")
 
 
+class NoSpellDC(AvraeException):
+    def __init__(self):
+        super().__init__("No spell save DC found.")
+
+
+class NoSpellAB(AvraeException):
+    def __init__(self):
+        super().__init__("No spell attack bonus found.")
+
+
+class InvalidSaveType(AvraeException):
+    def __init__(self):
+        super().__init__("Invalid save type.")
+
+
 class ConsumableException(AvraeException):
     """A base exception for consumable exceptions to stem from."""
     pass

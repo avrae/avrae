@@ -1,18 +1,22 @@
+import copy
 import logging
 import random
+import re
 import shlex
 import traceback
 from math import floor
 
+import discord
 from discord.ext import commands
 
-from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import searchMonsterFull
-from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.funcs.dice import roll, SingleDiceGroup
+from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchCharacterSpellName, searchSpellNameFull, \
+    searchAutoSpellFull
+from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
-from utils.functions import parse_args_3, confirm, get_selection, parse_args_2
+from utils.functions import parse_args_3, confirm, get_selection, parse_args_2, parse_resistances
 
 log = logging.getLogger(__name__)
 
@@ -726,6 +730,11 @@ class InitTracker:
 
         await self.bot.say(embed=embed)
         await combat.final()
+
+
+        embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
+        embed.set_footer(text=embed_footer)
+        await self.bot.say(embed=embed)
 
     @init.command(pass_context=True, name='remove')
     async def remove_combatant(self, ctx, *, name: str):

@@ -5,9 +5,7 @@ Most of this module was coded 5 miles in the air. (Aug 8, 2017)
 
 @author: andrew
 """
-import copy
 import logging
-import re
 import shlex
 
 import discord
@@ -15,7 +13,7 @@ from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName, searchSpell
-from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
+from cogs5e.funcs.sheetFuncs import sheet_cast
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import dicecloud_client
 from cogs5e.models.embeds import EmbedWithCharacter
@@ -583,137 +581,24 @@ class GameTrack:
                 embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
             return await self.bot.say(embed=embed)
 
-        upcast_dmg = None
-        if not cast_level == spell_level:
-            upcast_dmg = spell.get('higher_levels', {}).get(str(cast_level))
+        args['l'] = [cast_level]
+        args['name'] = [char.get_name()]
+        args['dc'] = [args.get('dc', [char.get_save_dc()])[-1]]
+        args['casterlevel'] = [char.get_level()]
+        args['crittype'] = [char.get_setting('crittype', 'default')]
+        args['ab'] = [char.get_spell_ab()]
+        args['SPELL'] = [str(char.evaluate_cvar("SPELL")) or (char.get_spell_ab() - char.get_prof_bonus())]
 
-        embed = EmbedWithCharacter(char, name=False)
-        if args.get('phrase') is not None:  # parse phrase
-            embed.description = '*' + '\n'.join(args.get('phrase')) + '*'
-        else:
-            embed.description = '~~' + ' ' * 500 + '~~'
+        result = sheet_cast(spell, args, EmbedWithCharacter(char, name=False))
 
-        if args.get('title') is not None:
-            embed.title = args.get('title')[-1].replace('[charname]', args.get('name')).replace('[sname]',
-                                                                                                spell['name']).replace(
-                '[target]', args.get('t', ''))
-        else:
-            embed.title = '{} casts {}!'.format(char.get_name(), spell['name'])
+        embed = result['embed']
 
-        spell_type = spell.get('type')
-        if spell_type == 'save':  # save spell
-            calculated_dc = char.evaluate_cvar('dc') or char.get_save_dc()
-            dc = args.get('dc', [None])[-1] or calculated_dc
-            if not dc:
-                return await self.bot.say(embed=discord.Embed(title="Error: Save DC not found.",
-                                                              description="Your spell save DC is not found. Most likely cause is that you do not have spells."))
-            try:
-                dc = int(dc)
-            except:
-                return await self.bot.say(embed=discord.Embed(title="Error: Save DC malformed.",
-                                                              description="Your spell save DC is malformed."))
-
-            save_skill = args.get('save', [None])[-1] or spell.get('save', {}).get('save')
-            try:
-                save_skill = next(s for s in ('strengthSave',
-                                              'dexteritySave',
-                                              'constitutionSave',
-                                              'intelligenceSave',
-                                              'wisdomSave',
-                                              'charismaSave') if save_skill.lower() in s.lower())
-            except StopIteration:
-                return await self.bot.say(embed=discord.Embed(title="Invalid save!",
-                                                              description="{} is not a valid save.".format(save_skill)))
-            save = spell['save']
-
-            if save['damage'] is None:  # save against effect
-                embed.add_field(name="DC", value=str(dc) + "\n{} Save".format(spell['save']['save']))
-            else:  # damage spell
-                dmg = save['damage']
-
-                if spell['level'] == '0' and spell.get('scales', True):
-                    def lsub(matchobj):
-                        level = char.get_level()
-                        if level < 5:
-                            levelDice = "1"
-                        elif level < 11:
-                            levelDice = "2"
-                        elif level < 17:
-                            levelDice = "3"
-                        else:
-                            levelDice = "4"
-                        return levelDice + 'd' + matchobj.group(2)
-
-                    dmg = re.sub(r'(\d+)d(\d+)', lsub, dmg)
-
-                if upcast_dmg:
-                    dmg = dmg + '+' + upcast_dmg
-
-                if args.get('d') is not None:
-                    dmg = dmg + '+' + "+".join(args.get('d', []))
-
-                dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
-                embed.add_field(name="Damage/DC",
-                                value=dmgroll.result + "\n**DC**: {}\n{} Save".format(str(dc), spell['save']['save']))
-        elif spell['type'] == 'attack':  # attack spell
-            outargs = copy.copy(args)
-            outargs['crittype'] = char.get_setting('crittype', 'default')
-            outargs['d'] = "+".join(args.get('d', [])) or None
-            for _arg, _value in outargs.items():
-                if isinstance(_value, list):
-                    outargs[_arg] = _value[-1]
-            attack = copy.copy(spell['atk'])
-            attack['attackBonus'] = str(char.evaluate_cvar(attack['attackBonus']) or char.get_spell_ab())
-
-            if not attack['attackBonus']:
-                return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not found.",
-                                                              description="Your casting ability is not found. Most likely cause is that you do not have spells."))
-
-            if spell['level'] == '0' and spell.get('scales', True):
-                def lsub(matchobj):
-                    level = char.get_level()
-                    if level < 5:
-                        levelDice = "1"
-                    elif level < 11:
-                        levelDice = "2"
-                    elif level < 17:
-                        levelDice = "3"
-                    else:
-                        levelDice = "4"
-                    return levelDice + 'd' + matchobj.group(2)
-
-                attack['damage'] = re.sub(r'(\d+)d(\d+)', lsub, attack['damage'])
-
-            if upcast_dmg:
-                attack['damage'] = attack['damage'] + '+' + upcast_dmg
-
-            attack['damage'] = attack['damage'].replace("SPELL", str(
-                char.evaluate_cvar("SPELL") or char.get_spell_ab() - char.get_prof_bonus()))
-
-            result = sheet_attack(attack, outargs)
-            for f in result['embed'].fields:
-                embed.add_field(name=f.name, value=f.value, inline=f.inline)
-        else:  # special spell (MM/heal)
-            outargs = copy.copy(args)  # just make an attack for it
-            outargs['d'] = "+".join(args.get('d', [])) or None
-            for _arg, _value in outargs.items():
-                if isinstance(_value, list):
-                    outargs[_arg] = _value[-1]
-            attack = {"name": spell['name'],
-                      "damage": spell.get("damage", "0").replace('SPELL',
-                                                                 str(
-                                                                     char.evaluate_cvar(
-                                                                         "SPELL") or char.get_spell_ab() - char.get_prof_bonus())),
-                      "attackBonus": None}
-            if upcast_dmg:
-                attack['damage'] = attack['damage'] + '+' + upcast_dmg
-            result = sheet_attack(attack, outargs)
-            for f in result['embed'].fields:
-                embed.add_field(name=f.name, value=f.value, inline=f.inline)
-
-        spell_ctx = spell_context(spell)
-        if spell_ctx:
-            embed.add_field(name='Effect', value=spell_ctx)
+        _fields = args.get('f', [])
+        if type(_fields) == list:
+            for f in _fields:
+                title = f.split('|')[0] if '|' in f else '--'
+                value = "|".join(f.split('|')[1:]) if '|' in f else f
+                embed.add_field(name=title, value=value)
 
         if not args.get('i'):
             char.use_slot(cast_level)
@@ -723,7 +608,7 @@ class GameTrack:
         char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)
 
-    async def _old_cast(self, ctx, spell_name, *args):  # TODO
+    async def _old_cast(self, ctx, spell_name, *args):
         spell = getSpell(spell_name)
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')

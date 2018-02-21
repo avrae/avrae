@@ -3,11 +3,13 @@ Created on Feb 27, 2017
 
 @author: andrew
 """
+import copy
 import re
 
 import discord
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
+from cogs5e.models.errors import NoSpellDC, NoSpellAB, InvalidSaveType
 from utils.functions import a_or_an, parse_resistances
 
 
@@ -181,6 +183,147 @@ def sheet_attack(attack, args, embed=None):
 
     if args.get('image') is not None:
         embed.set_thumbnail(url=args.get('image'))
+
+    return {'embed': embed, 'total_damage': total_damage}
+
+
+def sheet_cast(spell, args, embed=None):
+    if embed is None:
+        embed = discord.Embed()
+
+    spell_level = int(spell.get('level', 0))
+    spell_type = spell.get('type')  # save, attack, special
+
+    cast_level = int(args.get('l', [spell_level])[-1])
+    caster_name = args.get('name', ['Unnamed'])[-1]
+    phrase = '\n'.join(args.get('phrase', []))
+    dc = args.get('dc', [None])[-1]  # save DC (int)
+    save_skill = args.get('save', [None])[-1] or spell.get('save', {}).get('save')  # str, dex, etc (optional)
+    caster_level = int(args.get('casterlevel', [1])[-1])  # for cantrip scaling
+    d = "+".join(args.get('d', []))
+    crittype = args.get('crittype', ['default'])[-1]  # char.get_setting('crittype', 'default')
+    spell_ab = sum(int(b) for b in args.get('ab', [0]))
+    casting_mod = sum(int(b) for b in args.get('SPELL', [0]))
+
+    total_damage = 0
+
+    upcast_dmg = None
+    if not cast_level == spell_level:
+        upcast_dmg = spell.get('higher_levels', {}).get(str(cast_level))
+
+    if phrase:  # parse phrase
+        embed.description = '*' + phrase + '*'
+    else:
+        embed.description = '~~' + ' ' * 500 + '~~'
+
+    embed.title = '{} casts {}!'.format(caster_name, spell['name'])
+
+    if spell_type == 'save':  # save spell
+        if not dc:
+            raise NoSpellDC
+        try:
+            dc = int(dc)
+        except:
+            raise NoSpellDC
+
+        try:
+            save_skill = next(s for s in ('strengthSave',
+                                          'dexteritySave',
+                                          'constitutionSave',
+                                          'intelligenceSave',
+                                          'wisdomSave',
+                                          'charismaSave') if save_skill.lower() in s.lower())
+        except StopIteration:
+            raise InvalidSaveType
+        save = spell['save']
+
+        if save['damage'] is None:  # save against effect
+            embed.add_field(name="DC", value=str(dc) + "\n{} Save".format(save_skill[:3].upper()))
+        else:  # damage spell
+            dmg = save['damage']
+
+            if spell['level'] == '0' and spell.get('scales', True):
+                def lsub(matchobj):
+                    level = caster_level
+                    if level < 5:
+                        levelDice = "1"
+                    elif level < 11:
+                        levelDice = "2"
+                    elif level < 17:
+                        levelDice = "3"
+                    else:
+                        levelDice = "4"
+                    return levelDice + 'd' + matchobj.group(2)
+
+                dmg = re.sub(r'(\d+)d(\d+)', lsub, dmg)
+
+            if upcast_dmg:
+                dmg = dmg + '+' + upcast_dmg
+
+            if d:
+                dmg = dmg + '+' + d
+
+            dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
+            embed.add_field(name="Damage/DC",
+                            value=dmgroll.result + "\n**DC**: {}\n{} Save".format(str(dc), save_skill[:3].upper()))
+            total_damage = dmgroll.total
+    elif spell['type'] == 'attack':  # attack spell
+        outargs = copy.copy(args)
+        outargs['crittype'] = crittype
+        outargs['d'] = d or None
+        for _arg, _value in outargs.items():
+            if isinstance(_value, list):
+                outargs[_arg] = _value[-1]
+        attack = copy.copy(spell['atk'])
+        attack['attackBonus'] = str(spell_ab)
+
+        if not attack['attackBonus']:
+            raise NoSpellAB
+
+        if spell['level'] == '0' and spell.get('scales', True):
+            def lsub(matchobj):
+                level = caster_level
+                if level < 5:
+                    levelDice = "1"
+                elif level < 11:
+                    levelDice = "2"
+                elif level < 17:
+                    levelDice = "3"
+                else:
+                    levelDice = "4"
+                return levelDice + 'd' + matchobj.group(2)
+
+            attack['damage'] = re.sub(r'(\d+)d(\d+)', lsub, attack['damage'])
+
+        if upcast_dmg:
+            attack['damage'] = attack['damage'] + '+' + upcast_dmg
+
+        attack['damage'] = attack['damage'].replace("SPELL", str(casting_mod))
+
+        result = sheet_attack(attack, outargs)
+        total_damage = result['total_damage']
+        for f in result['embed'].fields:
+            embed.add_field(name=f.name, value=f.value, inline=f.inline)
+    else:  # special spell (MM/heal)
+        outargs = copy.copy(args)  # just make an attack for it
+        outargs['d'] = "+".join(args.get('d', [])) or None
+        for _arg, _value in outargs.items():
+            if isinstance(_value, list):
+                outargs[_arg] = _value[-1]
+        attack = {"name": spell['name'],
+                  "damage": spell.get("damage", "0").replace('SPELL',
+                                                             str(casting_mod)),
+                  "attackBonus": None}
+        if upcast_dmg:
+            attack['damage'] = attack['damage'] + '+' + upcast_dmg
+        result = sheet_attack(attack, outargs)
+        total_damage = result['total_damage']
+        for f in result['embed'].fields:
+            embed.add_field(name=f.name, value=f.value, inline=f.inline)
+
+    spell_ctx = spell_context(spell)
+    if spell_ctx:
+        embed.add_field(name='Effect', value=spell_ctx)
 
     return {'embed': embed, 'total_damage': total_damage}
 

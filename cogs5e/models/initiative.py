@@ -519,9 +519,9 @@ class Combatant:
 
 class MonsterCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 index=None, monster_name=None, notes=None, effects=None):
+                 index=None, monster_name=None, notes=None, effects=None, group=None):
         super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                               attacks, saves, ctx, index, notes, effects)
+                                               attacks, saves, ctx, index, notes, effects, group)
         self._monster_name = monster_name
 
     @classmethod
@@ -598,9 +598,9 @@ class MonsterCombatant(Combatant):
 
 class PlayerCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 index=None, character_id=None, character_owner=None, notes=None, effects=None):
+                 index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None):
         super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                              attacks, saves, ctx, index, notes, effects)
+                                              attacks, saves, ctx, index, notes, effects, group)
         self._character_id = character_id
         self._character_owner = character_owner
         self._character = None  # only grab the Character instance if we have to

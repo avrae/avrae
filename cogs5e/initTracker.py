@@ -398,7 +398,7 @@ class InitTracker:
     async def listInits(self, ctx):
         """Lists the combatants."""
         combat = Combat.from_ctx(ctx)
-        outStr = combat.getSummary()
+        outStr = combat.get_summary()
         await self.bot.say(outStr, delete_after=60)
 
     @init.command(pass_context=True)
@@ -487,7 +487,7 @@ class InitTracker:
                     group = combat.get_group(group, combatant.init)
                     combat.remove_combatant(combatant)
                     group.add_combatant(combatant)
-                    out += "\u2705 Combatant group set to {}.\n".format(group)
+                    out += "\u2705 Combatant group set to {}.\n".format(group.name)
         if 'name' in args:
             name = args.get('name')[-1]
             if combat.get_combatant(name) is not None:

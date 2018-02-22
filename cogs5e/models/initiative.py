@@ -91,7 +91,7 @@ class Combat:
 
     @property
     def current_combatant(self):
-        return self._combatants[self.index] if self.index is not None else None
+        return next(c for c in self._combatants if c.index == self.index) if self.index is not None else None
 
     def get_combatants(self):
         combatants = []

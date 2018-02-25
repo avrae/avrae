@@ -1,3 +1,5 @@
+import copy
+import shlex
 from math import floor
 
 import cachetools
@@ -5,7 +7,7 @@ import cachetools
 from cogs5e.models.character import Character
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
-from utils.functions import get_selection
+from utils.functions import get_selection, parse_args_3
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
@@ -281,9 +283,10 @@ class Combatant:
 
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
-                'hpMax': self.hpMax, 'hp': self.hp, 'ac': self.ac, 'private': self.isPrivate, 'resists': self.resists,
-                'attacks': self.attacks, 'saves': self.saves, 'index': self.index, 'notes': self.notes,
-                'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group, 'type': 'common'}
+                'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
+                'resists': self.resists, 'attacks': self._attacks, 'saves': self._saves, 'index': self.index,
+                'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
+                'type': 'common'}
 
     @property
     def name(self):
@@ -376,7 +379,7 @@ class Combatant:
 
     @property
     def attacks(self):
-        return self._attacks  # TODO: effect-modified
+        return self.attack_effects(self._attacks)
 
     @property
     def saves(self):
@@ -430,6 +433,20 @@ class Combatant:
 
     def remove_all_effects(self):
         self._effects = []
+
+    def attack_effects(self, attacks):
+        at = copy.deepcopy(attacks)
+        to_parse = ''
+        for e in self.get_effects():
+            if e.effect:
+                to_parse += f' {e.effect}'
+        args = parse_args_3(shlex.split(to_parse))
+        for a in at:
+            if a['attackBonus'] is not None:
+                a['attackBonus'] += f' + {"+".join(args["b"])}' if 'b' in args else ''
+            if a['damage'] is not None:
+                a['damage'] += f' + {"+".join(args["d"])}' if 'd' in args else ''
+        return at
 
     def controller_mention(self):
         return f"<@{self.controller}>"
@@ -638,7 +655,7 @@ class PlayerCombatant(Combatant):
 
     @property
     def attacks(self):
-        return self.character.get_attacks()  # TODO: effect-modified
+        return self.attack_effects(self.character.get_attacks())
 
     @property
     def saves(self):

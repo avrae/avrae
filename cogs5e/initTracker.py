@@ -601,7 +601,9 @@ class InitTracker:
     @init.command(pass_context=True)
     async def effect(self, ctx, name: str, duration: int, effect_name: str, *, effect: str = None):
         """Attaches a status effect to a combatant.
-        [effect] is a set of args that will be appended to every `!i a` the combatant makes."""
+        [effect] is a set of args that will be appended to every `!i a` the combatant makes.
+        Valid Arguments: -b (see !a)
+                         -d (see !a)"""
         combat = Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:

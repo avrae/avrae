@@ -162,15 +162,22 @@ class Customization:
         _vars = user_vars
         global_vars = None  # we'll load them if we need them
 
+        evaluator = self.nochar_eval
+        evaluator.reset()
+
         def get_gvar(name):
             nonlocal global_vars
             if global_vars is None:  # load only if needed
                 global_vars = ctx.bot.db.jget("global_vars", {})
             return global_vars.get(name, {}).get('value')
 
-        evaluator = self.nochar_eval
-        evaluator.reset()
         evaluator.functions['get_gvar'] = get_gvar
+
+        def set_value(name, value):
+            evaluator.names[name] = value
+            return ''
+
+        evaluator.functions['set'] = set_value
         evaluator.names.update(_vars)
 
         def cvarrepl(match):
@@ -486,8 +493,6 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
         _ops.pop(ast.Pow)  # no exponents pls
         _names = {"True": True, "False": False, "currentHp": 0}
 
-        _funcs['set'] = self.set_value
-
         if operators:
             _ops.update(operators)
         if functions:
@@ -497,10 +502,6 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
 
         super(NoCharacterEvaluator, self).__init__(_ops, _funcs, _names)
         self._initial_names = copy.copy(self.names)
-
-    def set_value(self, name, value):
-        self.names[name] = value
-        return ''
 
     def needs_char(self, *args, **kwargs):
         raise FunctionRequiresCharacter()  # no. bad.

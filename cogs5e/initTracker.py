@@ -1052,6 +1052,7 @@ class InitTracker:
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
         embed.set_footer(text=embed_footer)
         await self.bot.say(embed=embed)
+        await combat.final()
 
     @init.command(pass_context=True, name='remove')
     async def remove_combatant(self, ctx, *, name: str):

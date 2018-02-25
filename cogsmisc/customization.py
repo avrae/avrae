@@ -5,6 +5,7 @@ Created on Jan 30, 2017
 """
 import ast
 import asyncio
+import copy
 import re
 import shlex
 import textwrap
@@ -12,7 +13,6 @@ import traceback
 import uuid
 from math import floor, ceil
 
-import copy
 import simpleeval
 from discord.ext import commands
 
@@ -437,10 +437,17 @@ class Customization:
         """Lists all global variables for the user."""
         glob_vars = self.bot.db.jget("global_vars", {})
         user_vars = {k: v['value'] for k, v in glob_vars.items() if v['owner'] == ctx.message.author.id}
-
-        await self.bot.say('Your global variables:\n{}'.format('\n'.join(
-            f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in
-            sorted(((k, v) for k, v in user_vars.items()), key=lambda i: i[0]))))
+        gvar_list = [f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in
+                     sorted(((k, v) for k, v in user_vars.items()), key=lambda i: i[0])]
+        say_list = ['']
+        for g in gvar_list:
+            if len(g) + len(say_list[-1]) < 1900:
+                say_list[-1] += f'\n{g}'
+            else:
+                say_list.append(g)
+        await self.bot.say('Your global variables:{}'.format(say_list[0]))
+        for m in say_list[1:]:
+            await self.bot.say(m)
 
 
 STAT_VAR_NAMES = ("armor",
@@ -500,5 +507,3 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
 
     def reset(self):
         self.names = copy.copy(self._initial_names)
-
-

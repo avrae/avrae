@@ -96,7 +96,7 @@ class Lookup:
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
-            embed.add_field(name="\u200b", value=piece)
+            embed.add_field(name="** **", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -168,7 +168,7 @@ class Lookup:
         _name = 'Description'
         for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
             embed.add_field(name=_name, value=piece)
-            _name = '\u200b'
+            _name = '** **'
         await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
@@ -210,7 +210,7 @@ class Lookup:
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
-            embed.add_field(name="\u200b", value=piece)
+            embed.add_field(name="** **", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -286,7 +286,7 @@ class Lookup:
             f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
             embed.add_field(name=t['name'], value=f_text[0])
             for piece in f_text[1:]:
-                embed.add_field(name="\u200b", value=piece)
+                embed.add_field(name="** **", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -329,7 +329,7 @@ class Lookup:
         desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
         embed.description = ''.join(desc[:2])
         for piece in desc[2:]:
-            embed.add_field(name="\u200b", value=piece)
+            embed.add_field(name="** **", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
 
@@ -1068,7 +1068,7 @@ class Lookup:
         field_name = "Description"
         for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
             embed.add_field(name=field_name, value=piece)
-            field_name = "\u200b"
+            field_name = "** **"
 
         # embed.set_footer(text=f"Source: {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
 

@@ -65,6 +65,17 @@ class Character:
     def get_color(self):
         return self.character.get('settings', {}).get('color') or random.randint(0, 0xffffff)
 
+    def get_ac(self):
+        return self.character['armor']
+
+    def get_resists(self):
+        """
+        Gets the resistances of a character.
+        :return: The resistances, immunities, and vulnerabilites of a character.
+        :rtype: dict
+        """
+        return {'resist': self.character['resist'], 'immune': self.character['immune'], 'vuln': self.character['vuln']}
+
     def get_max_hp(self):
         return self.character.get('hp', 0)
 
@@ -875,6 +886,30 @@ class Character:
         reset.extend(self.long_rest())
         reset.extend(self._reset_custom(None))
         return reset
+
+    def join_combat(self, channel_id):
+        """
+        Puts the character into combat.
+        :param channel_id: The channel id of the combat
+        :return: self
+        """
+        self.character['combat'] = channel_id
+        return self
+
+    def leave_combat(self):
+        """
+        Removes the character from all combats.
+        :return: self
+        """
+        if 'combat' in self.character:
+            del self.character['combat']
+        return self
+
+    def get_combat_id(self):
+        """
+        :return: The channel id if the character is in combat, or None.
+        """
+        return self.character.get('combat')
 
 
 # helper methods

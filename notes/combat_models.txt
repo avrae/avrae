@@ -1,0 +1,36 @@
+each command should grab relevant combat from context
+    throws error if channel not in combat
+
+combat:
+    class to hold stuff
+    internally tracks round, combatants, etc
+    discord interface should just get stuff from this
+    tracked:
+        what channel it's in
+        the current round/combatant
+        the summary message (id)
+            to grab message, grab from cache or use coroutine
+        (options: name, variant rules)
+        dm
+        (lastmodified)
+        which combatants are in (maybe use a hash?)
+
+combatant:
+    one class that rest extends from
+    holds hp, ac, stuff
+    tracked:
+        name
+        controller
+        init mod
+        notes
+        effects (model?)
+        hp (max/current)
+        ac
+        private?
+        (group) - how?
+        resist, immune, vuln
+    subclasses:
+        PlayerCombatant
+            live integration w/ GameTrack
+        MonsterCombatant
+            integration with EncounterBuilder (eventually?)

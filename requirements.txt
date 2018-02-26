@@ -1,6 +1,7 @@
 aiohttp==1.0.5
 async-timeout==2.0.0
 attrs==17.4.0
+cachetools==2.0.1
 chardet==3.0.4
 discord.py==0.16.12
 fuzzywuzzy==0.15.1

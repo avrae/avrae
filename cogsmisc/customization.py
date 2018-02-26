@@ -5,6 +5,7 @@ Created on Jan 30, 2017
 """
 import ast
 import asyncio
+import copy
 import re
 import shlex
 import textwrap
@@ -12,7 +13,6 @@ import traceback
 import uuid
 from math import floor, ceil
 
-import copy
 import simpleeval
 from discord.ext import commands
 
@@ -162,15 +162,22 @@ class Customization:
         _vars = user_vars
         global_vars = None  # we'll load them if we need them
 
+        evaluator = self.nochar_eval
+        evaluator.reset()
+
         def get_gvar(name):
             nonlocal global_vars
             if global_vars is None:  # load only if needed
                 global_vars = ctx.bot.db.jget("global_vars", {})
             return global_vars.get(name, {}).get('value')
 
-        evaluator = self.nochar_eval
-        evaluator.reset()
         evaluator.functions['get_gvar'] = get_gvar
+
+        def set_value(name, value):
+            evaluator.names[name] = value
+            return ''
+
+        evaluator.functions['set'] = set_value
         evaluator.names.update(_vars)
 
         def cvarrepl(match):
@@ -437,10 +444,17 @@ class Customization:
         """Lists all global variables for the user."""
         glob_vars = self.bot.db.jget("global_vars", {})
         user_vars = {k: v['value'] for k, v in glob_vars.items() if v['owner'] == ctx.message.author.id}
-
-        await self.bot.say('Your global variables:\n{}'.format('\n'.join(
-            f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in
-            sorted(((k, v) for k, v in user_vars.items()), key=lambda i: i[0]))))
+        gvar_list = [f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in
+                     sorted(((k, v) for k, v in user_vars.items()), key=lambda i: i[0])]
+        say_list = ['']
+        for g in gvar_list:
+            if len(g) + len(say_list[-1]) < 1900:
+                say_list[-1] += f'\n{g}'
+            else:
+                say_list.append(g)
+        await self.bot.say('Your global variables:{}'.format(say_list[0]))
+        for m in say_list[1:]:
+            await self.bot.say(m)
 
 
 STAT_VAR_NAMES = ("armor",
@@ -479,12 +493,6 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
         _ops.pop(ast.Pow)  # no exponents pls
         _names = {"True": True, "False": False, "currentHp": 0}
 
-        def set_value(name, value):
-            self.names[name] = value
-            return ''
-
-        _funcs['set'] = set_value
-
         if operators:
             _ops.update(operators)
         if functions:
@@ -500,5 +508,3 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
 
     def reset(self):
         self.names = copy.copy(self._initial_names)
-
-

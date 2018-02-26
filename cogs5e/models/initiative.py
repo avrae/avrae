@@ -119,7 +119,7 @@ class Combat:
 
     def sort_combatants(self):
         current = self.current_combatant
-        self._combatants = sorted(self._combatants, key=lambda k: (k.init, roll(str(k.initMod)).total), reverse=True)
+        self._combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
         for n, c in enumerate(self._combatants):
             c.index = n
         self._current_index = current.index if current is not None else None
@@ -295,7 +295,7 @@ class Combatant:
 
     @name.setter
     def name(self, new_name):
-        self.name = new_name
+        self._name = new_name
 
     @property
     def controller(self):

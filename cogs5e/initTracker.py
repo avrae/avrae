@@ -318,6 +318,7 @@ class InitTracker:
         group = args.get('group', [None])[-1]
         controller = ctx.message.author.id
         private = bool(args.get('h', [False])[-1])
+        bonus = roll(bonus).total
 
         me = PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private, ctx,
                                             char.id, ctx.message.author.id)
@@ -330,10 +331,9 @@ class InitTracker:
             grp.add_combatant(me)
             embed.set_footer(text=f"Joined group {grp.name}!")
 
-        char.join_combat(ctx.message.channel.id).commit(ctx)
-
         await self.bot.say(embed=embed)
         await combat.final()
+        char.join_combat(ctx.message.channel.id).commit(ctx)
 
     @init.command(pass_context=True, name="next", aliases=['n'])
     async def nextInit(self, ctx):

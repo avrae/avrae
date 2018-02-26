@@ -4,6 +4,7 @@ from math import floor
 
 import cachetools
 
+from cogs5e.funcs.dice import roll
 from cogs5e.models.character import Character
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
@@ -118,7 +119,7 @@ class Combat:
 
     def sort_combatants(self):
         current = self.current_combatant
-        self._combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
+        self._combatants = sorted(self._combatants, key=lambda k: (k.init, roll(str(k.initMod)).total), reverse=True)
         for n, c in enumerate(self._combatants):
             c.index = n
         self._current_index = current.index if current is not None else None

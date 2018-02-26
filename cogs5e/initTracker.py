@@ -464,7 +464,7 @@ class InitTracker:
             except:
                 out += "\u274c You must pass in an AC with the --ac tag.\n"
         if 'p' in args:
-            if combatant == combat.currentCombatant:
+            if combatant is combat.current_combatant:
                 out += "\u274c You cannot change a combatant's initiative on their own turn.\n"
             else:
                 try:
@@ -1069,7 +1069,7 @@ class InitTracker:
 
         if combatant.group is not None:
             group = combat.get_group(combatant.group)
-            if len(group.get_combatants()) <= 1 and group is combat.currentCombatant:
+            if len(group.get_combatants()) <= 1 and group is combat.current_combatant:
                 return await self.bot.say(
                     "You cannot remove a combatant if they are the only remaining combatant in this turn.")
         combat.remove_combatant(combatant)

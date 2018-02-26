@@ -887,7 +887,7 @@ class InitTracker:
 
                             if is_character and spell['level'] == '0' and spell.get('scales', True):
                                 def lsub(matchobj):
-                                    level = combatant.sheet.get('levels', {}).get('level', 0)
+                                    level = character.get_level()
                                     if level < 5:
                                         levelDice = "1"
                                     elif level < 11:
@@ -969,7 +969,7 @@ class InitTracker:
 
                     if is_character and spell['level'] == '0' and spell.get('scales', True):
                         def lsub(matchobj):
-                            level = combatant.sheet.get('levels', {}).get('level', 0)
+                            level = character.get_level()
                             if level < 5:
                                 levelDice = "1"
                             elif level < 11:

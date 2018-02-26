@@ -90,7 +90,7 @@ class PBPUtils:
             pass
         for f in args.get('f', []):
             if f:
-                title = f.split('|')[0] if '|' in f else '--'
+                title = f.split('|')[0] if '|' in f else '\u200b'
                 value = "|".join(f.split('|')[1:]) if '|' in f else f
                 embed.add_field(name=title, value=value)
 

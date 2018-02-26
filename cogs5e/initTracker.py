@@ -727,7 +727,7 @@ class InitTracker:
         _fields = args.get('f', [])
         if type(_fields) == list:
             for f in _fields:
-                title = f.split('|')[0] if '|' in f else '--'
+                title = f.split('|')[0] if '|' in f else '\u200b'
                 value = "|".join(f.split('|')[1:]) if '|' in f else f
                 embed.add_field(name=title, value=value)
 

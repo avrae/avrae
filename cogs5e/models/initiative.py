@@ -4,7 +4,6 @@ from math import floor
 
 import cachetools
 
-from cogs5e.funcs.dice import roll
 from cogs5e.models.character import Character
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
@@ -631,7 +630,13 @@ class PlayerCombatant(Combatant):
     @property
     def character(self):
         if self._character is None:
-            self._character = Character.from_bot_and_ids(self.ctx.bot, self._character_owner, self._character_id)
+            c = Character.from_bot_and_ids(self.ctx.bot, self._character_owner, self._character_id)
+
+            def new_commit(ctx):
+                c.manual_commit(ctx.bot, self._character_owner)
+
+            c.commit = new_commit
+            self._character = c
         return self._character
 
     @property

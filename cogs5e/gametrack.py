@@ -220,7 +220,7 @@ class GameTrack:
         character = Character.from_ctx(ctx)
 
         embed = EmbedWithCharacter(character)
-        embed.title = f'{character.get_name()} succeeds a Death Save!'
+        embed.title = f'{character.get_name()} fails a Death Save!'
 
         death_phrase = ''
         if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"

@@ -191,7 +191,6 @@ class Character:
             self.set_consumable(name, value, strict)
             nonlocal changed
             changed = True
-            return ''
 
         def mod_cc(name, val: int, strict=False):
             return set_cc(name, get_cc(name) + val, strict)
@@ -201,7 +200,6 @@ class Character:
                 self.create_consumable(name, minValue=minVal, maxValue=maxVal, reset=reset, displayType=dispType)
                 nonlocal changed
                 changed = True
-            return ''
 
         def get_slots(level: int):
             return self.get_remaining_slots(level)
@@ -213,13 +211,11 @@ class Character:
             self.set_remaining_slots(level, value)
             nonlocal changed
             changed = True
-            return ''
 
         def use_slot(level: int):
             self.use_slot(level)
             nonlocal changed
             changed = True
-            return ''
 
         def get_hp():
             return self.get_current_hp()
@@ -228,7 +224,6 @@ class Character:
             self.set_hp(val)
             nonlocal changed
             changed = True
-            return ''
 
         def mod_hp(val: int, overflow: bool = True):
             if not overflow:
@@ -241,12 +236,16 @@ class Character:
             _names[name] = str(val)
             nonlocal changed
             changed = True
-            return ''
 
         def set_cvar_nx(name, val: str):
             if not name in self.get_cvars():
                 set_cvar(name, val)
-            return ''
+
+        def delete_cvar(name):
+            if name in self.get_cvars():
+                del self.get_cvars()[name]
+                nonlocal changed
+                changed = True
 
         def get_gvar(name):
             nonlocal global_vars
@@ -264,8 +263,8 @@ class Character:
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                       get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
-                      set_cvar=set_cvar, get_gvar=get_gvar, exists=exists, set_cvar_nx=set_cvar_nx,
-                      create_cc_nx=create_cc_nx)
+                      set_cvar=set_cvar, delete_cvar=delete_cvar, get_gvar=get_gvar, exists=exists,
+                      set_cvar_nx=set_cvar_nx, create_cc_nx=create_cc_nx)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(_vars)
@@ -275,7 +274,6 @@ class Character:
 
         def set_value(name, value):
             evaluator.names[name] = value
-            return ''
 
         evaluator.functions['set'] = set_value
 
@@ -290,7 +288,8 @@ class Character:
                 varstr = re.sub(r'(^|\s)(' + re.escape(cvar) + r')(?=\s|$)', cvarrepl, varstr)
 
             try:
-                cstr = cstr.replace(raw, str(evaluator.eval(varstr)), 1)
+                res = evaluator.eval(varstr)
+                cstr = cstr.replace(raw, str(res) if res is not None else '', 1)
             except Exception as e:
                 raise EvaluationError(e)
 

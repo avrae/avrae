@@ -201,6 +201,9 @@ class Character:
                 nonlocal changed
                 changed = True
 
+        def cc_exists(name):
+            return name in self.get_all_consumables()
+
         def get_slots(level: int):
             return self.get_remaining_slots(level)
 
@@ -261,10 +264,11 @@ class Character:
         _funcs['vroll'] = verbose_roll
         _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
                       get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
+                      cc_exists=cc_exists, create_cc_nx=create_cc_nx,
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                       get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
-                      set_cvar=set_cvar, delete_cvar=delete_cvar, get_gvar=get_gvar, exists=exists,
-                      set_cvar_nx=set_cvar_nx, create_cc_nx=create_cc_nx)
+                      set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
+                      get_gvar=get_gvar, exists=exists)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(_vars)

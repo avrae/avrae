@@ -271,7 +271,8 @@ class InitTracker:
 
         if char.get_combat_id():
             return await self.bot.say(f"This character is already in a combat. "
-                                      f"Please leave combat in <#{char.get_combat_id()}> first.")
+                                      f"Please leave combat in <#{char.get_combat_id()}> first.\n"
+                                      f"If this seems like an error, please `!update` your character sheet.")
 
         skills = character.get('skills')
         if skills is None:

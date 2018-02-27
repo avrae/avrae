@@ -691,6 +691,10 @@ class SheetManager:
         # print(sheet)
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings',
                                                                                                      {}).get('color')
+
+        if c.get_combat_id() and not self.bot.db.exists(c.get_combat_id()):
+            c.leave_combat()
+
         c.commit(ctx).set_active(ctx)
         del user_characters, character, parser, old_character  # pls don't freak out avrae
         if '-v' in args:

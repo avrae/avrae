@@ -399,7 +399,8 @@ class Customization:
         A name will be randomly assigned upon creation."""
         glob_vars = self.bot.db.jget("global_vars", {})
         name = str(uuid.uuid4())
-        glob_vars[name] = {'owner': ctx.message.author.id, 'owner_name': str(ctx.message.author), 'value': value}
+        glob_vars[name] = {'owner': ctx.message.author.id, 'owner_name': str(ctx.message.author), 'value': value,
+                           'editors': []}
         self.bot.db.jset("global_vars", glob_vars)
         await self.bot.say(f"Created global variable `{name}`.")
 

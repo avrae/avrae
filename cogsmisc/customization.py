@@ -278,7 +278,7 @@ class Customization:
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = f'!alias {alias_name} ' + alias
+                alias = f'!servalias {alias_name} ' + alias
             return await self.bot.say('**' + alias_name + '**:\n(Copy-pastable)```md\n' + alias + "\n```")
 
         if not self.can_edit_servaliases(ctx):

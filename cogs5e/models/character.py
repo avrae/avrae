@@ -493,7 +493,7 @@ class Character:
         """
         ds = self.get_deathsaves()
         successes = '\u25c9' * ds['success']['value'] + '\u3007' * (3 - ds['success']['value'])
-        fails = '\u3007' * (3 - ds['fail']['value'] + '\u25c9' * ds['fail']['value'])
+        fails = '\u3007' * (3 - ds['fail']['value']) + '\u25c9' * ds['fail']['value']
         return f"F {fails} | {successes} S"
 
     def add_successful_ds(self):

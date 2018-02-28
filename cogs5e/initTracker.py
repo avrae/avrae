@@ -244,11 +244,8 @@ class InitTracker:
                 else:
                     grp = combat.get_group(group, create=init)
                     grp.add_combatant(me)
-                    await self.bot.say(
-                        "{} was added to combat with initiative {} as part of group {}.".format(
-                            name, grp.init,
-                            grp.name),
-                        delete_after=10)
+                    out += "{} was added to combat with initiative {} as part of group {}.".format(
+                        name, grp.init, grp.name)
 
             except Exception as e:
                 log.error('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))

@@ -715,7 +715,7 @@ class InitTracker:
                 if target.isPrivate:
                     try:
                         await self.bot.send_message(ctx.message.server.get_member(target.controller),
-                                                    "{}'s HP: {}/{}".format(target.name, target.hp, target.max_hp))
+                                                    "{}'s HP: {}/{}".format(target.name, target.hp, target.hpMax))
                     except:
                         pass
             else:

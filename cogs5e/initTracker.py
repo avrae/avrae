@@ -318,8 +318,8 @@ class InitTracker:
         private = bool(args.get('h', [False])[-1])
         bonus = roll(bonus).total
 
-        me = PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private, ctx,
-                                            char.id, ctx.message.author.id)
+        me = PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
+                                            char.get_resists(), ctx, char.id, ctx.message.author.id)
 
         if group is None:
             combat.add_combatant(me)

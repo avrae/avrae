@@ -623,8 +623,8 @@ class PlayerCombatant(Combatant):
         self._character = None  # only grab the Character instance if we have to
 
     @classmethod
-    def from_character(cls, name, controllerId, init, initMod, ac, private, ctx, character_id, character_owner):
-        return cls(name, controllerId, init, initMod, None, None, ac, private, None, None, None, ctx,
+    def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, character_id, character_owner):
+        return cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx,
                    character_id=character_id, character_owner=character_owner)
 
     @property
@@ -654,10 +654,6 @@ class PlayerCombatant(Combatant):
     @hp.setter
     def hp(self, new_hp):
         self.character.set_hp(new_hp).commit(self.ctx)
-
-    @property
-    def resists(self):
-        return self.character.get_resists()
 
     @property
     def attacks(self):

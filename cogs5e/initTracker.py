@@ -450,8 +450,8 @@ class InitTracker:
                 controllerEscaped = controllerStr.strip('<>@!')
                 a = ctx.message.server.get_member(controllerEscaped)
                 b = ctx.message.server.get_member_named(controllerStr)
-                cont = a if a is not None else b if b is not None else controller
-                combatant.controller = cont.id
+                cont = a.id if a is not None else b.id if b is not None else controller
+                combatant.controller = cont
                 out += "\u2705 Combatant controller set to {}.\n".format(combatant.controller_mention())
             except IndexError:
                 out += "\u274c You must pass in a controller with the --controller tag.\n"

@@ -17,7 +17,6 @@ class CharGenerator:
 
     def __init__(self, bot):
         self.bot = bot
-        self.makingChar = set()
 
     @commands.command(pass_context=True, name='randchar')
     async def randChar(self, ctx, level="0"):
@@ -44,9 +43,9 @@ class CharGenerator:
         """Generates a random name, as per DMG rules."""
         await self.bot.say(f"Your random name: {self.nameGen()}")
 
-    @commands.command(pass_context=True, name='makechar')
+    @commands.command(pass_context=True, name='charref', aliases=['makechar'])
     async def char(self, ctx, level):
-        """Gives you stats for a 5e character."""
+        """Gives you reference stats for a 5e character."""
         try:
             level = int(level)
         except:
@@ -55,12 +54,7 @@ class CharGenerator:
         if level > 20 or level < 1:
             await self.bot.say("Invalid level (must be 1-20).")
             return
-        if ctx.message.author not in self.makingChar:
-            self.makingChar.add(ctx.message.author)
-            self.bot.loop.create_task(self._time_making(ctx.message.author))
-        else:
-            await self.bot.say("You are already making a character!")
-            return
+
         author = ctx.message.author
         channel = ctx.message.channel
 
@@ -92,22 +86,7 @@ class CharGenerator:
         result = searchBackground(bg_response.content)
         background = await resolve(result, ctx)
 
-        try:
-            self.makingChar.remove(author)
-        except (ValueError, KeyError):
-            pass
-
         await self.genChar(ctx, level, race, _class, subclass, background)
-
-    async def _time_making(self, author):
-        try:
-            await asyncio.sleep(180)
-            try:
-                self.makingChar.remove(author)
-            except (ValueError, KeyError):
-                pass
-        except asyncio.CancelledError:
-            pass
 
     async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None, background=None):
         loadingMessage = await self.bot.send_message(ctx.message.channel, "Generating character, please wait...")

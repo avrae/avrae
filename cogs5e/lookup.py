@@ -694,6 +694,7 @@ class Lookup:
                 a = monster["reaction"]
                 if isinstance(a['text'], list):
                     a['text'] = '\n'.join(t for t in a['text'] if t is not None)
+                reaction += "**{name}:** {text}\n".format(**a)
                 if reaction:
                     if len(reaction) < 1024:
                         embed_queue[-1].add_field(name="Reactions", value=reaction)

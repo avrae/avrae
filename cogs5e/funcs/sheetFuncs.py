@@ -240,7 +240,7 @@ def sheet_cast(spell, args, embed=None):
         if save['damage'] is None:  # save against effect
             embed.add_field(name="DC", value=str(dc) + "\n{} Save".format(save_skill[:3].upper()))
         else:  # damage spell
-            dmg = save['damage']
+            dmg = save['damage'].replace("SPELL", str(casting_mod))
 
             if spell['level'] == '0' and spell.get('scales', True):
                 def lsub(matchobj):

@@ -587,7 +587,7 @@ class GameTrack:
         args['casterlevel'] = [char.get_level()]
         args['crittype'] = [char.get_setting('crittype', 'default')]
         args['ab'] = [char.get_spell_ab()]
-        args['SPELL'] = [str(char.evaluate_cvar("SPELL")) or (char.get_spell_ab() - char.get_prof_bonus())]
+        args['SPELL'] = [str(char.evaluate_cvar("SPELL") or (char.get_spell_ab() - char.get_prof_bonus()))]
 
         result = sheet_cast(spell, args, EmbedWithCharacter(char, name=False))
 

@@ -213,7 +213,7 @@ class InitTracker:
         try:
             recursion = int(args.get('n', [1])[-1])
         except ValueError:
-            return await self.bot.say(args.get('n', 1) + " is not a number.")
+            return await self.bot.say(args.get('n', [1])[-1] + " is not a number.")
         recursion = 25 if recursion > 25 else 1 if recursion < 1 else recursion
 
         name_num = 1

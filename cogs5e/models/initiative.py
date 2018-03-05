@@ -810,8 +810,8 @@ class Effect:
         """
         if self.remaining > 0:
             self._remaining -= 1
-            if self.remaining == 0:
-                return True
+        if self.remaining == 0:
+            return True
         return False
 
     @classmethod

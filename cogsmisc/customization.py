@@ -171,7 +171,11 @@ class Customization:
                 global_vars = ctx.bot.db.jget("global_vars", {})
             return global_vars.get(name, {}).get('value')
 
+        def exists(name):
+            return name in evaluator.names
+
         evaluator.functions['get_gvar'] = get_gvar
+        evaluator.functions['exists'] = exists
 
         def set_value(name, value):
             evaluator.names[name] = value
@@ -486,10 +490,11 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
         _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
                       get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
                       get_cc_min=self.needs_char, mod_cc=self.needs_char,
+                      cc_exists=self.needs_char, create_cc_nx=self.needs_char,
                       get_slots=self.needs_char, get_slots_max=self.needs_char, set_slots=self.needs_char,
                       use_slot=self.needs_char,
                       get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char,
-                      set_cvar=self.needs_char)
+                      set_cvar=self.needs_char, delete_cvar=self.needs_char, set_cvar_nx=self.needs_char)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = {"True": True, "False": False, "currentHp": 0}

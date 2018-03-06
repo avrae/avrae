@@ -14,10 +14,22 @@ log = logging.getLogger(__name__)
 
 
 class DicecloudClient(MeteorClient):
+    instance = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.logged_in = False
         self.user_id = None
+
+    @classmethod
+    def getInstance(cls):
+        if cls.instance is None:
+            try:
+                cls.instance = cls('ws://dicecloud.com/websocket', debug=False)
+                cls.instance.initialize()
+            except:
+                return None
+        return cls.instance
 
     def initialize(self):
         self.connect()
@@ -145,5 +157,4 @@ class DicecloudClient(MeteorClient):
             self.insert('spells', spellData, insert_callback)
 
 
-dicecloud_client = DicecloudClient('ws://dicecloud.com/websocket', debug=False)  # turn debug off later
-dicecloud_client.initialize()
+dicecloud_client = DicecloudClient.getInstance()

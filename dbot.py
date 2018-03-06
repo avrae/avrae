@@ -1,9 +1,7 @@
 import logging
 import os
 import random
-import signal
 import sys
-import time
 import traceback
 
 import discord
@@ -88,14 +86,19 @@ except ImportError:
 
 bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot.credentials.test_database_url)
 
+log_formatter = logging.Formatter(
+    '%(asctime)s s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, 'shard_id', 0)))
 handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(
-    logging.Formatter('%(asctime)s s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, 'shard_id', 0))))
+handler.setFormatter(log_formatter)
+filehandler = logging.FileHandler(f"temp/log_shard_{bot.shard_id}_build_{bot.db.get('build_num')}.log", mode='w')
+filehandler.setFormatter(log_formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
+logger.addHandler(filehandler)
 
 log = logging.getLogger('bot')
+msglog = logging.getLogger('messages')
 
 # -----COGS-----
 diceCog = Dice(bot)
@@ -239,6 +242,12 @@ async def on_command_error(error, ctx):
 
 @bot.event
 async def on_message(message):
+    try:
+        msglog.debug(
+            "chan {0.channel} ({0.channel.id}), serv {0.server} ({0.server.id}), author {0.author} ({0.author.id}): "
+            "{0.content}".format(message))
+    except AttributeError:
+        msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
     if message.author.id in bot.get_cog("AdminUtils").muted:
         return
     if message.content.startswith('avraepls'):
@@ -270,6 +279,7 @@ async def on_command(command, ctx):
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 
+
 for cog in cogs:
     bot.add_cog(cog)
 
@@ -280,4 +290,3 @@ if not TESTING:
     bot.run(bot.credentials.officialToken)  # official token
 else:
     bot.run(bot.credentials.testToken)  # test token
-

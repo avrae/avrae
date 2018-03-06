@@ -252,7 +252,7 @@ async def on_message(message):
         return
     if message.content.startswith('avraepls'):
         log.info("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))
-        random.seed()
+        # random.seed()
     if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
         return
     try:

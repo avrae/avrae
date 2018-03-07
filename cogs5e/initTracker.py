@@ -219,10 +219,20 @@ class InitTracker:
         name_num = 1
         for i in range(recursion):
             name = args.get('name', [monster['name'][:2].upper() + '#'])[-1].replace('#', str(name_num))
+            raw_name = args.get('name', [monster['name'][:2].upper() + '#'])[-1]
+            to_continue = False
 
-            while combat.get_combatant(name):  # keep increasing to avoid duplicates
-                name_num += 1
-                name = args.get('name', [monster['name'][:2].upper() + '#'])[-1].replace('#', str(name_num))
+            while combat.get_combatant(name) and name_num < 1000:  # keep increasing to avoid duplicates
+                if '#' in raw_name:
+                    name_num += 1
+                    name = raw_name.replace('#', str(name_num))
+                else:
+                    out += "Combatant already exists.\n"
+                    to_continue = True
+                    break
+
+            if to_continue:
+                continue
 
             try:
                 check_roll = None  # to make things happy

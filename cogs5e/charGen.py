@@ -5,11 +5,18 @@ from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import c, searchRace, searchClass, searchBackground
-from cogs5e.models.dicecloudClient import DicecloudClient
+from cogs5e.models.dicecloudClient import DicecloudClient, Parent
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils.functions import parse_data_entry, ABILITY_MAP, get_selection, fuzzywuzzy_search_all_3
 
 log = logging.getLogger(__name__)
+
+SKILL_MAP = {'Acrobatics': 'acrobatics', 'Animal Handling': 'animalHandling', 'Arcana': 'arcana',
+             'Athletics': 'athletics', 'Deception': 'deception', 'History': 'history', 'Initiaitve': 'initiative',
+             'Insight': 'insight', 'Intimidation': 'intimidation', 'Investigation': 'investigation',
+             'Medicine': 'medicine', 'Nature': 'nature', 'Perception': 'perception', 'Performance': 'performance',
+             'Persuasion': 'persuasion', 'Religion': 'religion', 'Sleight of Hand': 'sleightOfHand',
+             'Stealth': 'stealth', 'Survival': 'survival'}
 
 
 class CharGenerator:
@@ -285,14 +292,28 @@ class CharGenerator:
             await self.bot.say("Invalid level (must be 1-20).")
             return
 
-        await self.createCharSheet(ctx, level)
+        author = ctx.message.author
+        channel = ctx.message.channel
 
-    async def createCharSheet(self, ctx, final_level, race=None, _class=None, subclass=None, background=None):
+        await self.bot.say(author.mention + " What is your dicecloud username?")
+        user_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
+        if user_response is None: return await self.bot.say("Timed out waiting for a response.")
+        username = user_response.content
+
+        await self.createCharSheet(ctx, level, username)
+
+    async def createCharSheet(self, ctx, final_level, dicecloud_username, race=None, _class=None, subclass=None,
+                              background=None):
         dc = DicecloudClient.getInstance()
+        caveats = []  # a to do list for the user
 
-        char_id = dc.create_character()
+        # Name Gen
+        #    DMG name gen
+        name = self.nameGen()
+
+        char_id = dc.create_character(name=name)
         try:
-            await dc.share_character(char_id, 'zhu.exe')  # TODO: get actual username
+            await dc.share_character(char_id, dicecloud_username)
         except:
             dc.delete_character(char_id)  # clean up
             return await self.bot.say("Invalid dicecloud username.")
@@ -300,38 +321,35 @@ class CharGenerator:
         loadingMessage = await self.bot.send_message(ctx.message.channel, "Generating character, please wait...")
         color = random.randint(0, 0xffffff)
 
-        # Name Gen
-        #    DMG name gen
-        name = self.nameGen()
         # Stat Gen
-        #    4d6d1
-        #        reroll if too low/high
-        stats = self.genStats()
-        await self.bot.send_message(ctx.message.author, "**Stats for {0}:** `{1}`".format(name, stats))
+        # Allow user to enter base values
+        caveats.append("**Base Ability Scores**: Enter your base ability scores (without modifiers) in the feature "
+                       "titled Base Ability Scores.")
+
         # Race Gen
         #    Racial Features
         race = race or random.choice([r for r in c.races if r['source'] in ('PHB', 'VGM')])
 
-        _sizes = {'T': "Tiny", 'S': "Small",
-                  'M': "Medium", 'L': "Large", 'H': "Huge"}
-        embed = EmbedWithAuthor(ctx)
-        embed.title = race['name']
-        embed.description = f"Source: {race.get('source', 'unknown')}"
-        embed.add_field(name="Speed",
-                        value=race['speed'] + ' ft.' if isinstance(race['speed'], str) else \
-                            ', '.join(f"{k} {v} ft." for k, v in race['speed'].items()))
-        embed.add_field(name="Size", value=_sizes.get(race.get('size'), 'unknown'))
+        speed = race['speed'] if isinstance(race['speed'], str) else race['speed'].get('walk', '30')
+        dc.insert_effect(char_id, Parent.race(char_id), 'base', value=int(speed), stat='speed')
+        if race.get('size') == 'S':
+            dc.insert_effect(char_id, Parent.race(char_id), 'max', value=0.5, stat='carryMultiplier')
 
-        ability = []
         for k, v in race['ability'].items():
             if not k == 'choose':
-                ability.append(f"{k} {v}")
+                dc.insert_effect(char_id, Parent.race(char_id), 'add', value=int(v), stat=ABILITY_MAP[k].lower())
             else:
-                ability.append(f"Choose {v[0]['count']} from {', '.join(v[0]['from'])} {v[0].get('amount', 1)}")
+                dc.insert_effect(char_id, Parent.race(char_id), 'add', value=int(v[0].get('amount', 1)))
+                caveats.append(
+                    f"**Racial Ability Bonus ({int(v[0].get('amount', 1)):+})**: In your race (Journal tab), select the"
+                    f" score you want a bonus to (choose {v[0]['count']} from {', '.join(v[0]['from'])}).")
 
-        embed.add_field(name="Ability Bonuses", value=', '.join(ability))
         if race.get('proficiency'):
-            embed.add_field(name="Proficiencies", value=race.get('proficiency', 'none'))
+            for skill in race['proficiency'].split(', '):
+                if skill in SKILL_MAP:
+                    dc.insert_proficiency(char_id, Parent.race(char_id), SKILL_MAP.get(skill))
+                else:
+                    dc.insert_proficiency(char_id, Parent.race(char_id), skill, type_='tool')
 
         traits = []
         if 'trait' in race:
@@ -347,14 +365,9 @@ class CharGenerator:
                 traits.append(temp)
 
         for t in traits:
-            f_text = t['text']
-            f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
-            embed.add_field(name=t['name'], value=f_text[0])
-            for piece in f_text[1:]:
-                embed.add_field(name="\u200b", value=piece)
-
-        embed.colour = color
-        await self.bot.send_message(ctx.message.author, embed=embed)
+            dc.insert_feature(char_id, t['name'], t['text'])
+            caveats.append("**Racial Features**: Check that the number of uses for each feature is correct, and apply "
+                           "any effects they grant.")
 
         # Class Gen
         #    Class Features
@@ -477,7 +490,7 @@ class CharGenerator:
         await self.bot.send_message(ctx.message.author, embed=embed)
 
         out = "{6}\n{0}, {1} {7} {2} {3}. {4} Background.\nStat Array: `{5}`\nI have PM'd you full character details.".format(
-            name, race['name'], _class['name'], final_level, background['name'], stats, ctx.message.author.mention,
+            name, race['name'], _class['name'], final_level, background['name'], 'a', ctx.message.author.mention,
             subclass['name'])
 
         await self.bot.edit_message(loadingMessage, out)

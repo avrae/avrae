@@ -239,8 +239,8 @@ class DicecloudClient(MeteorClient):
         self.insert('proficiencies', data)
         return data['_id']
 
-    def insert_effect(self, charId: str, parent: Parent, operation: str, name: str = None, value: int = None,
-                      calculation: str = None, stat: str = None, enabled: bool = True):
+    def insert_effect(self, charId: str, parent: Parent, operation: str, value: float = None,
+                      calculation: str = None, stat: str = None, enabled: bool = True, name: str = None):
         if not operation in (
                 "base", "proficiency", "add", "mul", "min", "max", "advantage", "disadvantage", "passiveAdd", "fail",
                 "conditional"):

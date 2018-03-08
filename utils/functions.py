@@ -471,12 +471,13 @@ ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
                'int': 'Intelligence', 'wis': 'Wisdom', 'cha': 'Charisma'}
 
 
-def parse_data_entry(text):
+def parse_data_entry(text, md_breaks=False):
     """Parses a list or string from astranauta data.
     :returns str - The final text."""
     if not isinstance(text, list): return str(text)
 
     out = []
+    join_str = '\n' if not md_breaks else '  \n'
 
     for entry in text:
         if not isinstance(entry, dict):
@@ -525,7 +526,7 @@ def parse_data_entry(text):
         else:
             log.warning(f"Unknown astranauta entry: {entry}")
 
-    return parse_data_formatting('\n'.join(out))
+    return parse_data_formatting(join_str.join(out))
 
 
 FORMATTING = {'bold': '**', 'italic': '*'}

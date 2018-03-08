@@ -24,6 +24,10 @@ class Parent:
         self.group = group
 
     @classmethod
+    def character(cls, charId):
+        return cls(charId, 'Characters')
+
+    @classmethod
     def race(cls, charId):
         return cls(charId, 'Characters', 'racial')
 
@@ -195,19 +199,55 @@ class DicecloudClient(MeteorClient):
         valid_characters = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz"
         return "".join(random.choice(valid_characters) for _ in range(17))
 
-    def create_character(self, name: str = "New Character", gender: str = None, race: str = None):
+    def create_character(self, name: str = "New Character", gender: str = None, race: str = None,
+                         backstory: str = None):
         data = {'name': name, 'owner': self.user_id}
         if gender is not None:
             data['gender'] = gender
         if race is not None:
             data['race'] = race
+        if backstory is not None:
+            data['backstory'] = backstory
 
+        data['settings'] = {'viewPermission': 'public'}  # sharing is caring!
         data['_id'] = self._generate_id()
         self.insert('characters', data)
         return data['_id']
 
     def delete_character(self, charId: str):
         self.remove('characters', {'_id': charId})
+
+    async def share_character(self, charId: str, username: str):
+        userId = None
+
+        def get_id_cb(err, data):
+            nonlocal userId
+            if err:
+                raise MeteorClientException("Invalid user.")
+            userId = data
+
+        self.call("getUserId", [username], get_id_cb)
+        for _ in range(50):  # wait 5 sec for user data
+            if not userId:
+                await asyncio.sleep(0.1)
+            else:
+                break
+
+        if userId:
+            def share_callback(error, data):
+                if error:
+                    log.warning(error)
+                    raise MeteorClientException("Could not share character.")
+                else:
+                    log.debug(data)
+
+            self.update('characters', {'_id': charId}, {
+                '$addToSet': {'writers': userId},
+                '$pull': {'readers': userId},
+            }, share_callback)
+            return True
+        else:
+            raise MeteorClientException("Invalid user.")
 
     def insert_feature(self, charId: str, name: str = "New Feature", description: str = None, uses: str = None,
                        used: int = 0, reset: str = 'manual', enabled: bool = True, alwaysEnabled: bool = True):
@@ -288,37 +328,32 @@ class DicecloudClient(MeteorClient):
         self.insert('classes', data)
         return data['_id']
 
-    async def share_character(self, charId: str, username: str):
-        userId = None
+    def insert_item(self, charId: str, parent: Parent, name: str = "New Item", plural: str = None,
+                    description: str = None, quantity: int = 1, weight: float = 0, value: float = 0,
+                    enabled: bool = False, requiresAttunement: bool = False, showIncrement: bool = False):
+        data = {'charId': charId, 'parent': parent.to_dict()}
+        if name is not None:
+            data['name'] = name
+        if plural is not None:
+            data['plural'] = plural
+        if description is not None:
+            data['description'] = description
+        if quantity is not None:
+            data['quantity'] = quantity
+        if weight is not None:
+            data['weight'] = weight
+        if value is not None:
+            data['value'] = value
+        if enabled is not None:
+            data['enabled'] = enabled
+        if requiresAttunement is not None:
+            data['requiresAttunement'] = requiresAttunement
+        if showIncrement is not None:
+            data['settings'] = {'showIncrement': showIncrement}
 
-        def get_id_cb(err, data):
-            nonlocal userId
-            if err:
-                raise MeteorClientException("Invalid user.")
-            userId = data
-
-        self.call("getUserId", [username], get_id_cb)
-        for _ in range(20):  # wait 2 sec for user data
-            if not userId:
-                await asyncio.sleep(0.1)
-            else:
-                break
-
-        if userId:
-            def share_callback(error, data):
-                if error:
-                    log.warning(error)
-                    raise MeteorClientException("Could not share character.")
-                else:
-                    log.debug(data)
-
-            self.update('characters', {'_id': charId}, {
-                '$addToSet': {'writers': userId},
-                '$pull': {'readers': userId},
-            }, share_callback)
-            return True
-        else:
-            raise MeteorClientException("Invalid user.")
+        data['_id'] = self._generate_id()
+        self.insert('items', data)
+        return data['_id']
 
 
 dicecloud_client = DicecloudClient.getInstance()

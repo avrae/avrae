@@ -35,6 +35,10 @@ class Parent:
     def feature(cls, featId):
         return cls(featId, 'Features')
 
+    @classmethod
+    def background(cls, charId):
+        return cls(charId, 'Characters', 'background')
+
     def to_dict(self):
         d = {'id': self.id, 'collection': self.collection}
         if self.group is not None:
@@ -219,6 +223,20 @@ class DicecloudClient(MeteorClient):
 
         data['_id'] = self._generate_id()
         self.insert('features', data)
+        return data['_id']
+
+    def insert_proficiency(self, charId: str, parent: Parent, name: str = None, value: float = 1, type_: str = 'skill',
+                           enabled: bool = True):
+        if not value in (0, 0.5, 1, 2):
+            raise ValueError("Value must be 0, 0.5, 1, or 2")
+        if not type_ in ("skill", "save", "weapon", "armor", "tool", "language"):
+            raise ValueError("Invalid proficiency type")
+        data = {'charId': charId, 'parent': parent.to_dict(), 'value': value, 'type': type_, 'enabled': enabled}
+        if name is not None:
+            data['name'] = name
+
+        data['_id'] = self._generate_id()
+        self.insert('proficiencies', data)
         return data['_id']
 
     def insert_effect(self, charId: str, parent: Parent, operation: str, name: str = None, value: int = None,

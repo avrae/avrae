@@ -7,7 +7,7 @@ def test_roll():
     assert roll("3+4*(9-2)").total == 31
 
 def test_complex_roll():
-    r = roll("10d6rol5kh3mi6ma1[annotation] some comments")
-    assert r.total == 3
+    r = roll("10d6rol5mi6ma1k1[annotation] some comments")
+    assert r.total == 10
     assert r.crit == 0
     assert "some comments" in r.result

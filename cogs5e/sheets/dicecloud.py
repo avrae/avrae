@@ -113,7 +113,8 @@ class DicecloudParser(SheetParser):
                  'skill_effects': skill_effects,
                  'consumables': {},
                  'spellbook': spellbook,
-                 'live': dicecloud_client.user_id in self.character['characters'][0]['writers']}
+                 'live': dicecloud_client.user_id in self.character['characters'][0][
+                     'writers'] or dicecloud_client.user_id == self.character['characters'][0]['owner']}
 
         embed = self.get_embed(sheet)
 
@@ -153,7 +154,7 @@ class DicecloudParser(SheetParser):
 
         savesStr = ''
         for save in (
-        'strengthSave', 'dexteritySave', 'constitutionSave', 'intelligenceSave', 'wisdomSave', 'charismaSave'):
+                'strengthSave', 'dexteritySave', 'constitutionSave', 'intelligenceSave', 'wisdomSave', 'charismaSave'):
             if skill_effects.get(save):
                 skill_effect = f"({skill_effects.get(save)})"
             else:

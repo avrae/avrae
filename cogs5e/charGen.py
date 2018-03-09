@@ -18,6 +18,12 @@ SKILL_MAP = {'Acrobatics': 'acrobatics', 'Animal Handling': 'animalHandling', 'A
              'Persuasion': 'persuasion', 'Religion': 'religion', 'Sleight of Hand': 'sleightOfHand',
              'Stealth': 'stealth', 'Survival': 'survival'}
 
+CLASS_RESOURCE_NAMES = {"Ki Points": "ki", "Rage Damage": "rageDamage", "Rages": "rages",
+                        "Sorcery Points": "sorceryPoints", "Superiority Dice": "superiorityDice",
+                        "1st": "level1SpellSlots", "2nd": "level2SpellSlots", "3rd": "level3SpellSlots",
+                        "4th": "level4SpellSlots", "5th": "level5SpellSlots", "6th": "level6SpellSlots",
+                        "7th": "level7SpellSlots", "8th": "level8SpellSlots", "9th": "level9SpellSlots"}
+
 
 class CharGenerator:
     """Random character generator."""
@@ -283,6 +289,7 @@ class CharGenerator:
 
     @commands.command(pass_context=True)
     async def autochar(self, ctx, level):
+        """Automagically creates a dicecloud sheet for you, with basic character information complete."""
         try:
             level = int(level)
         except:
@@ -295,12 +302,40 @@ class CharGenerator:
         author = ctx.message.author
         channel = ctx.message.channel
 
+        await self.bot.say(author.mention + " What race?")
+        race_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
+        if race_response is None: return await self.bot.say("Race not found.")
+        result = searchRace(race_response.content)
+        race = await resolve(result, ctx)
+
+        await self.bot.say(author.mention + " What class?")
+        class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
+        if class_response is None: return await self.bot.say("Class not found.")
+        result = searchClass(class_response.content)
+        if result is None: return await self.bot.say("Class not found.")
+        _class = await resolve(result, ctx)
+
+        if 'subclasses' in _class:
+            await self.bot.say(author.mention + " What subclass?")
+            subclass_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
+            if subclass_response is None: return await self.bot.say("Subclass not found.")
+            result = fuzzywuzzy_search_all_3(_class['subclasses'], 'name', subclass_response.content)
+            subclass = await resolve(result, ctx)
+        else:
+            subclass = None
+
+        await self.bot.say(author.mention + " What background?")
+        bg_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
+        if bg_response is None: return await self.bot.say("Background not found.")
+        result = searchBackground(bg_response.content)
+        background = await resolve(result, ctx)
+
         await self.bot.say(author.mention + " What is your dicecloud username?")
         user_response = await self.bot.wait_for_message(timeout=60, author=author, channel=channel)
         if user_response is None: return await self.bot.say("Timed out waiting for a response.")
         username = user_response.content
 
-        await self.createCharSheet(ctx, level, username)
+        await self.createCharSheet(ctx, level, username, race, _class, subclass, background)
 
     async def createCharSheet(self, ctx, final_level, dicecloud_username, race=None, _class=None, subclass=None,
                               background=None):
@@ -333,8 +368,6 @@ class CharGenerator:
         #    Racial Features
         speed = race['speed'] if isinstance(race['speed'], str) else race['speed'].get('walk', '30')
         dc.insert_effect(char_id, Parent.race(char_id), 'base', value=int(speed), stat='speed')
-        if race.get('size') == 'S':
-            dc.insert_effect(char_id, Parent.race(char_id), 'max', value=0.5, stat='carryMultiplier')
 
         for k, v in race['ability'].items():
             if not k == 'choose':
@@ -393,7 +426,7 @@ class CharGenerator:
             dc.insert_proficiency(char_id, Parent.class_(class_id), prof, type_='tool')
         for _ in range(int(_class['startingProficiencies']['skills']['choose'])):
             dc.insert_proficiency(char_id, Parent.class_(class_id), type_='skill')  # add placeholders
-        caveats.append(f"**Skill Proficiencies**: You get to choose your skill proficiencies. Under your class"
+        caveats.append(f"**Skill Proficiencies**: You get to choose your skill proficiencies. Under your class "
                        f"in the Journal tab, you may select {_class['startingProficiencies']['skills']['choose']} "
                        f"skills from {', '.join(_class['startingProficiencies']['skills']['from'])}.")
 
@@ -405,14 +438,16 @@ class CharGenerator:
                          f"{gold_alt}"
         caveats.append(f"**Starting Class Equipment**: {starting_items}")
 
-        # level_resources = {}
-        # for table in _class['classTableGroups']:
-        #     relevant_row = table['rows'][final_level - 1]
-        #     for i, col in enumerate(relevant_row):
-        #         level_resources[table['colLabels'][i]] = parse_data_entry([col])
-        #
-        # for res_name, res_value in level_resources.items():
-        #     embed.add_field(name=res_name, value=res_value) TODO: class resources
+        level_resources = {}
+        for table in _class['classTableGroups']:
+            relevant_row = table['rows'][final_level - 1]
+            for i, col in enumerate(relevant_row):
+                level_resources[table['colLabels'][i]] = parse_data_entry([col])
+
+        for res_name, res_value in level_resources.items():
+            stat_name = CLASS_RESOURCE_NAMES.get(res_name)
+            if stat_name:
+                dc.insert_effect(char_id, Parent.class_(class_id), 'base', value=int(res_value), stat=stat_name)
 
         num_subclass_features = 0
         for level in range(1, final_level + 1):
@@ -460,6 +495,12 @@ class CharGenerator:
 
         out = f"Generated {name}! I have PMed you the link."
         await self.bot.send_message(ctx.message.author, f"https://dicecloud.com/character/{char_id}/{name}")
+        await self.bot.send_message(ctx.message.author,
+                                    "**__Caveats__**\nNot everything is automagical! Here are some things you still "
+                                    "have to do manually:\n" + '\n\n'.join(caveats))
+        await self.bot.send_message(ctx.message.author,
+                                    f"When you're ready, load your character into Avrae with the command "
+                                    f"`!dicecloud https://dicecloud.com/character/{char_id}/{name} -cc`")
         await self.bot.edit_message(loadingMessage, out)
 
     def nameGen(self):

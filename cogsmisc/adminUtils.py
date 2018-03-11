@@ -12,6 +12,7 @@ import sys
 import traceback
 import uuid
 
+import discord
 from discord import Server
 from discord.channel import PrivateChannel
 from discord.enums import ChannelType
@@ -349,6 +350,26 @@ class AdminUtils:
             out += 'Shard {}: {}\n'.format(shard, response['response'])
         await self.bot.say(out)
 
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def changepresence(self, status=None, *, msg=None):
+        """Changes Avrae's presence. Status: online, idle, dnd"""
+        statuslevel = {'online': 0, 'idle': 1, 'dnd': 2}
+        status = statuslevel.get(status)
+        req = self.request_presence_update(status, msg)
+        for _ in range(100):  # timeout after 10 sec
+            if len(self.requests[req]) >= self.bot.shard_count:
+                break
+            else:
+                await asyncio.sleep(0.1)
+
+        out = ''
+        data = self.requests.pop(req)
+
+        for shard, response in data.items():
+            out += 'Shard {}: {}\n'.format(shard, response['response'])
+        await self.bot.say(out)
+
     @commands.command(hidden=True, name="mem_debug")
     @checks.is_owner()
     async def _mem_debug(self):
@@ -474,6 +495,13 @@ class AdminUtils:
         self.bot.db.publish('admin-commands', r)
         return request.uuid
 
+    def request_presence_update(self, status, msg):
+        request = CommandRequest(self.bot, 'presence', status=status, msg=msg)
+        self.requests[request.uuid] = {}
+        r = json.dumps(request.to_dict())
+        self.bot.db.publish('admin-commands', r)
+        return request.uuid
+
     async def admin_command(self, ctx, cmd, **kwargs):
         expected_responses = kwargs.pop('_expected_responses', 1)
         request = CommandRequest(ctx.bot, cmd, **kwargs)
@@ -546,7 +574,8 @@ class AdminUtils:
                      'loglevel': self.__handle_log_level_command,
                      'reply': self.__handle_command_reply,
                      'chanSay': self.__handle_chan_say_command,
-                     'ping': self.__handle_ping_command}
+                     'ping': self.__handle_ping_command,
+                     'presence': self.__handle_presence_update_command}
         await _commands.get(_data['command'])(_data)  # ... don't question this.
 
     async def __handle_leave_command(self, data):
@@ -598,6 +627,18 @@ class AdminUtils:
     async def __handle_ping_command(self, data):
         reply_to = data['uuid']
         response = CommandResponse(self.bot, reply_to, "Pong.")
+        r = json.dumps(response.to_dict())
+        self.bot.db.publish('admin-commands', r)
+
+    async def __handle_presence_update_command(self, data):
+        reply_to = data['uuid']
+        _data = data['data']
+        status = _data['status']
+        msg = _data['msg']
+        statuses = {0: discord.Status.online, 1: discord.Status.idle, 2: discord.Status.dnd}
+        status = statuses.get(status, discord.Status.online)
+        await self.bot.change_presence(status=status, game=discord.Game(name=msg or "D&D 5e | !help"))
+        response = CommandResponse(self.bot, reply_to, "Changed presence.")
         r = json.dumps(response.to_dict())
         self.bot.db.publish('admin-commands', r)
 

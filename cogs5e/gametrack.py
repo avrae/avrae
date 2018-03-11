@@ -15,7 +15,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName, searchSpell
 from cogs5e.funcs.sheetFuncs import sheet_cast
 from cogs5e.models.character import Character
-from cogs5e.models.dicecloudClient import dicecloud_client
+from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
 from utils.functions import parse_args_3, strict_search, get_selection, dicecloud_parse
@@ -290,7 +290,7 @@ class GameTrack:
         character = Character.from_ctx(ctx)
         if character.live:
             try:
-                await dicecloud_client.sync_add_spell(character, dicecloud_parse(spell))
+                await DicecloudClient.getInstance().sync_add_spell(character, dicecloud_parse(spell))
             except: # TODO
                 return await self.bot.say("Error connecting to dicecloud this is a placeholder error message please "
                                           "tell the dev if you see this")
@@ -314,7 +314,7 @@ class GameTrack:
             return await self.bot.say("No spells for that class found.")
         level_spells = [s for s in class_spells if str(level) == s['level']]
         try:
-            await dicecloud_client.sync_add_mass_spells(character, [dicecloud_parse(s) for s in level_spells], spell_list)
+            await DicecloudClient.getInstance().sync_add_mass_spells(character, [dicecloud_parse(s) for s in level_spells], spell_list)
         except:  # TODO
             return await self.bot.say("Error connecting to dicecloud this is a placeholder error message please "
                                       "tell the dev if you see this")

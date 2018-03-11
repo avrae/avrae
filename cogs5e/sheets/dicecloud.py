@@ -14,7 +14,7 @@ import numexpr
 from DDPClient import DDPClient
 
 from cogs5e.funcs.lookupFuncs import c
-from cogs5e.models.dicecloudClient import dicecloud_client
+from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import fuzzy_search
 
@@ -113,8 +113,8 @@ class DicecloudParser(SheetParser):
                  'skill_effects': skill_effects,
                  'consumables': {},
                  'spellbook': spellbook,
-                 'live': dicecloud_client.user_id in self.character['characters'][0][
-                     'writers'] or dicecloud_client.user_id == self.character['characters'][0]['owner']}
+                 'live': DicecloudClient.user_id in self.character['characters'][0][
+                     'writers'] or DicecloudClient.user_id == self.character['characters'][0]['owner']}
 
         embed = self.get_embed(sheet)
 

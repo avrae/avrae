@@ -45,7 +45,7 @@ class DicecloudParser(SheetParser):
         client.on('connected', connected)
         while not client.is_connected:
             await asyncio.sleep(1)
-        client.subscribe('singleCharacter', [url])
+        sub_id = client.subscribe('singleCharacter', [url])
 
         def update_character(collection, _id, fields):
             if character.get(collection) is None:
@@ -55,6 +55,7 @@ class DicecloudParser(SheetParser):
 
         client.on('added', update_character)
         await asyncio.sleep(10)
+        client.unsubscribe(sub_id)
         client.close()
         character['id'] = url
         self.character = character

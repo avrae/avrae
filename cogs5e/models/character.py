@@ -25,7 +25,7 @@ from math import *
 import simpleeval
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.dicecloudClient import dicecloud_client
+from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError, InvalidSpellLevel
 from cogs5e.sheets.dicecloud import CLASS_RESOURCES
@@ -445,6 +445,7 @@ class Character:
         if self.live:
             self._sync_hp()
 
+
         return self
 
     def _sync_hp(self):
@@ -457,9 +458,12 @@ class Character:
             else:
                 log.debug(data)
 
-        dicecloud_client.update('characters', {'_id': self.id[10:]},
+        try:
+            DicecloudClient.getInstance().update('characters', {'_id': self.id[10:]},
                                 {'$set': {"hitPoints.adjustment": self.get_current_hp() - self.get_max_hp()}},
                                 callback=update_callback)
+        except:  # TODO: better handling
+            pass
 
     def modify_hp(self, value):
         """Modifies the character's hit points. Returns the Character object."""
@@ -595,6 +599,7 @@ class Character:
         if self.live and sync:
             self._sync_slots()
 
+
         return self
 
     def _sync_slots(self):
@@ -611,9 +616,12 @@ class Character:
         for lvl in range(1, 10):
             spell_dict[f'level{lvl}SpellSlots.adjustment'] = self.get_remaining_slots(lvl) - self.get_max_spellslots(
                 lvl)
-        dicecloud_client.update('characters', {'_id': self.id[10:]},
+        try:
+            DicecloudClient.getInstance().update('characters', {'_id': self.id[10:]},
                                 {'$set': spell_dict},
                                 callback=update_callback)
+        except:  # TODO: better handling
+            pass
 
     def use_slot(self, level: int):
         """Uses one spell slot of level level.
@@ -772,15 +780,17 @@ class Character:
                     self.live = False
             else:
                 log.debug(data)
-
-        if counter['live'] in CLASS_RESOURCES:
-            dicecloud_client.update('characters', {'_id': self.id[10:]},
-                                    {'$set': {f"{counter['live']}.adjustment": -used}},
-                                    callback=update_callback)
-        else:
-            dicecloud_client.update('features', {'_id': counter['live']},
-                                    {'$set': {"used": used}},
-                                    callback=update_callback)
+        try:
+            if counter['live'] in CLASS_RESOURCES:
+                DicecloudClient.getInstance().update('characters', {'_id': self.id[10:]},
+                                        {'$set': {f"{counter['live']}.adjustment": -used}},
+                                        callback=update_callback)
+            else:
+                DicecloudClient.getInstance().update('features', {'_id': counter['live']},
+                                        {'$set': {"used": used}},
+                                        callback=update_callback)
+        except:  # TODO: better handling
+            pass
 
     def get_consumable(self, name):
         """Returns the dict object of the consumable, or raises NoConsumable."""

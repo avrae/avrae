@@ -289,7 +289,11 @@ class GameTrack:
         spell = getSpell(result)
         character = Character.from_ctx(ctx)
         if character.live:
-            await dicecloud_client.sync_add_spell(character, dicecloud_parse(spell))
+            try:
+                await dicecloud_client.sync_add_spell(character, dicecloud_parse(spell))
+            except: # TODO
+                return await self.bot.say("Error connecting to dicecloud this is a placeholder error message please "
+                                          "tell the dev if you see this")
         character.add_known_spell(spell).commit(ctx)
         live = "Spell added to Dicecloud!" if character.live else ''
         await self.bot.say(f"{spell['name']} added to known spell list!\n{live}")
@@ -309,7 +313,11 @@ class GameTrack:
         if len(class_spells) == 0:
             return await self.bot.say("No spells for that class found.")
         level_spells = [s for s in class_spells if str(level) == s['level']]
-        await dicecloud_client.sync_add_mass_spells(character, [dicecloud_parse(s) for s in level_spells], spell_list)
+        try:
+            await dicecloud_client.sync_add_mass_spells(character, [dicecloud_parse(s) for s in level_spells], spell_list)
+        except:  # TODO
+            return await self.bot.say("Error connecting to dicecloud this is a placeholder error message please "
+                                      "tell the dev if you see this")
         await self.bot.say(f"{len(level_spells)} spells added to {character.get_name()}'s spell list on Dicecloud.")
 
     @spellbook.command(pass_context=True, name='remove')

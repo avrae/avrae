@@ -52,11 +52,11 @@ class Parent:
 
 class DicecloudClient(MeteorClient):
     instance = None
+    user_id = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.logged_in = False
-        self.user_id = None
 
     @classmethod
     def getInstance(cls):

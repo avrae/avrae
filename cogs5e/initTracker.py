@@ -564,7 +564,9 @@ class InitTracker:
     @init.command(pass_context=True)
     async def hp(self, ctx, name: str, operator: str, *, hp: str = ''):
         """Modifies the HP of a combatant.
-        Usage: !init hp <NAME> <mod/set/max> <HP>"""
+        Usage: !init hp <NAME> <mod/set/max> <HP>
+        If no operator is supplied, mod is assumed.
+        If max is given with no number, resets combatant to max hp."""
         combat = Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
@@ -581,7 +583,7 @@ class InitTracker:
             combatant.hp = hp_roll.total
         elif 'max' in operator.lower():
             if hp == '':
-                combat.hp = combatant.hpMax
+                combatant.hp = combatant.hpMax
             elif hp_roll.total < 1:
                 return await self.bot.say("You can't have a negative max HP!")
             else:

@@ -18,7 +18,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
-from utils.functions import parse_args_3, strict_search, get_selection, dicecloud_parse
+from utils.functions import parse_args_3, strict_search, get_selection, dicecloud_parse, parse_snippets
 
 log = logging.getLogger(__name__)
 
@@ -291,7 +291,7 @@ class GameTrack:
         if character.live:
             try:
                 await DicecloudClient.getInstance().sync_add_spell(character, dicecloud_parse(spell))
-            except: # TODO
+            except:  # TODO
                 return await self.bot.say("Error connecting to dicecloud this is a placeholder error message please "
                                           "tell the dev if you see this")
         character.add_known_spell(spell).commit(ctx)
@@ -314,7 +314,9 @@ class GameTrack:
             return await self.bot.say("No spells for that class found.")
         level_spells = [s for s in class_spells if str(level) == s['level']]
         try:
-            await DicecloudClient.getInstance().sync_add_mass_spells(character, [dicecloud_parse(s) for s in level_spells], spell_list)
+            await DicecloudClient.getInstance().sync_add_mass_spells(character,
+                                                                     [dicecloud_parse(s) for s in level_spells],
+                                                                     spell_list)
         except:  # TODO
             return await self.bot.say("Error connecting to dicecloud this is a placeholder error message please "
                                       "tell the dev if you see this")
@@ -548,16 +550,7 @@ class GameTrack:
 
         if not char: char = Character.from_ctx(ctx)
 
-        tempargs = list(args)
-        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
-        for index, arg in enumerate(tempargs):  # parse snippets
-            snippet_value = user_snippets.get(arg)
-            if snippet_value:
-                tempargs[index] = snippet_value
-            elif ' ' in arg:
-                tempargs[index] = shlex.quote(arg)
-
-        args = " ".join(tempargs)
+        args = parse_snippets(' '.join(list(args)), ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)
@@ -627,16 +620,7 @@ class GameTrack:
 
         char = Character.from_ctx(ctx)
 
-        tempargs = list(args)
-        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
-        for index, arg in enumerate(tempargs):  # parse snippets
-            snippet_value = user_snippets.get(arg)
-            if snippet_value:
-                tempargs[index] = snippet_value
-            elif ' ' in arg:
-                tempargs[index] = shlex.quote(arg)
-
-        args = " ".join(tempargs)
+        args = parse_snippets(' '.join(list(args)), ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)

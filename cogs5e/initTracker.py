@@ -17,7 +17,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import NoSpellDC, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
-from utils.functions import parse_args_3, confirm, get_selection, parse_args_2, parse_resistances
+from utils.functions import parse_args_3, confirm, get_selection, parse_args_2, parse_resistances, parse_snippets
 
 log = logging.getLogger(__name__)
 
@@ -685,15 +685,7 @@ class InitTracker:
                                          [(a['name'], a) for a in attacks if atk_name.lower() in a['name'].lower()],
                                          message="Select your attack.")
 
-        tempargs = shlex.split(args)  # parse snippets
-        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
-        for index, arg in enumerate(tempargs):  # parse snippets
-            snippet_value = user_snippets.get(arg)
-            if snippet_value:
-                tempargs[index] = snippet_value
-            elif ' ' in arg:
-                tempargs[index] = shlex.quote(arg)
-        args = " ".join(tempargs)
+        args = parse_snippets(args, ctx)
 
         is_player = isinstance(combatant, PlayerCombatant)
 
@@ -773,16 +765,7 @@ class InitTracker:
 
         character = combatant.character
 
-        tempargs = shlex.split(args)
-        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {})
-        for index, arg in enumerate(tempargs):  # parse snippets
-            snippet_value = user_snippets.get(arg)
-            if snippet_value:
-                tempargs[index] = snippet_value
-            elif ' ' in arg:
-                tempargs[index] = shlex.quote(arg)
-
-        args = " ".join(tempargs)
+        args = parse_snippets(args, ctx)
         args = await character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)

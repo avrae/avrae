@@ -32,7 +32,7 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import extract_gsheet_id_from_url
+from utils.functions import extract_gsheet_id_from_url, parse_snippets
 from utils.functions import list_get, get_positivity, a_or_an, get_selection
 from utils.loggers import TextLogger
 
@@ -45,8 +45,6 @@ class SheetManager:
     def __init__(self, bot):
         self.bot = bot
         self.active_characters = self.bot.db.not_json_get('active_characters', {})
-        self.snippets = self.bot.db.not_json_get('damage_snippets', {})
-        # self.cvars = self.bot.db.not_json_get('char_vars', {})
         self.bot.loop.create_task(self.backup_user_data())
         self.logger = TextLogger('dicecloud.txt')
 
@@ -71,7 +69,7 @@ class SheetManager:
             pass
 
     async def new_arg_stuff(self, args, ctx, character):
-        args = self.parse_snippets(args, ctx.message.author.id)
+        args = parse_snippets(args, ctx)
         args = await character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = self.parse_args(args)
@@ -114,17 +112,6 @@ class SheetManager:
             index += 2
             cFlag = True
         return out
-
-    def parse_snippets(self, args, _id):
-        tempargs = shlex.split(args)
-        user_snippets = self.bot.db.not_json_get('damage_snippets', {}).get(_id, {})
-        for index, arg in enumerate(tempargs):  # parse snippets
-            snippet_value = user_snippets.get(arg)
-            if snippet_value:
-                tempargs[index] = snippet_value
-            elif ' ' in arg:
-                tempargs[index] = shlex.quote(arg)
-        return " ".join(tempargs)
 
     @commands.command(pass_context=True, aliases=['a'])
     async def attack(self, ctx, atk_name: str = 'list', *, args: str = ''):
@@ -248,7 +235,7 @@ class SheetManager:
         phrase = args.get('phrase', None)
         formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
                         + ('ro{}'.format(char.get_setting('reroll', 0))
-        if not char.get_setting('reroll', '0') == '0' else '')
+                           if not char.get_setting('reroll', '0') == '0' else '')
 
         if b is not None:
             save_roll = roll(formatted_d20 + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
@@ -317,7 +304,7 @@ class SheetManager:
         phrase = args.get('phrase', None)
         formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
                         + ('ro{}'.format(char.get_setting('reroll', 0))
-        if not char.get_setting('reroll', '0') == '0' else '') \
+                           if not char.get_setting('reroll', '0') == '0' else '') \
                         + ('mi{}'.format(mc) if mc is not None else '')
 
         if b is not None:
@@ -887,8 +874,8 @@ class SheetManager:
         *!snippet [name]* - shows what the snippet is a shortcut for.
         *!snippet remove [name]* - deletes a snippet."""
         user_id = ctx.message.author.id
-        self.snippets = self.bot.db.not_json_get('damage_snippets', {})
-        user_snippets = self.snippets.get(user_id, {})
+        snippets = self.bot.db.not_json_get('damage_snippets', {})
+        user_snippets = snippets.get(user_id, {})
 
         if snipname == 'list':
             return await self.bot.say(
@@ -896,7 +883,8 @@ class SheetManager:
 
         if snippet is None:
             return await self.bot.say(
-                '**' + snipname + f'**:\n(Copy-pastable)```md\n!snippet {snipname} ' + user_snippets.get(snipname, 'Not defined.') + '\n```')
+                '**' + snipname + f'**:\n(Copy-pastable)```md\n!snippet {snipname} ' + user_snippets.get(snipname,
+                                                                                                         'Not defined.') + '\n```')
 
         if snipname == 'remove' or snipname == 'delete':
             try:
@@ -909,8 +897,8 @@ class SheetManager:
             user_snippets[snipname] = snippet
             await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
 
-        self.snippets[user_id] = user_snippets
-        self.bot.db.not_json_set('damage_snippets', self.snippets)
+        snippets[user_id] = user_snippets
+        self.bot.db.not_json_set('damage_snippets', snippets)
 
     @commands.group(pass_context=True, invoke_without_command=True)
     async def cvar(self, ctx, name, *, value=None):

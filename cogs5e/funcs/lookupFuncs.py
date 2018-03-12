@@ -93,6 +93,16 @@ class Compendium:
             self.autospells = json.load(f)
         with open('./res/backgrounds.json', 'r') as f:
             self.backgrounds = json.load(f)
+        self.subclasses = self.load_subclasses()
+
+    def load_subclasses(self):
+        s = []
+        for _class in self.classes:
+            subclasses = _class.get('subclasses', [])
+            for sc in subclasses:
+                sc['name'] = f"{_class['name']}: {sc['name']}"
+            s.extend(subclasses)
+        return s
 
 
 def _resolve_name(entry):
@@ -171,6 +181,13 @@ def searchClass(name):
 
 def getClass(name):
     return strict_search(c.classes, 'name', name)
+
+def searchSubclass(name):
+    return fuzzywuzzy_search_all_3(c.subclasses, 'name', name)
+
+
+def getSubclass(name):
+    return strict_search(c.subclasses, 'name', name)
 
 
 def searchBackground(name):

@@ -429,6 +429,54 @@ class Lookup:
         await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)
+    async def subclass(self, ctx, name: str):
+        """Looks up a subclass."""
+        try:
+            guild_id = ctx.message.server.id
+            pm = self.settings.get(guild_id, {}).get("pm_result", False)
+            srd = self.settings.get(guild_id, {}).get("srd", False)
+        except:
+            pm = False
+            srd = False
+        destination = ctx.message.author if pm else ctx.message.channel
+
+        result = searchSubclass(name)
+        if result is None:
+            return await self.bot.say('Class not found.')
+        strict = result[1]
+        results = result[0]
+
+        if strict:
+            result = results
+        else:
+            if len(results) == 1:
+                result = results[0]
+            else:
+                result = await get_selection(ctx, [(r['name'], r) for r in results])
+                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+
+        if not result.get('srd') and srd:
+            e = EmbedWithAuthor(ctx)
+            e.title = result['name']
+            e.description = "Description not available."
+            return await self.bot.say(embed=e)
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = result['name']
+
+        for level_features in result['subclassFeatures']:
+            for feature in level_features:
+                for entry in feature['entries']:
+                    if not isinstance(entry, dict): continue
+                    if not entry.get('type') == 'entries': continue
+                    text = parse_data_entry(entry['entries'])
+                    embed.add_field(name=entry['name'], value=(text[:1019] + "...") if len(text) > 1023 else text)
+
+        embed.set_footer(text="Use !classfeat to look up a feature if it is cut off.")
+
+        await self.bot.send_message(destination, embed=embed)
+
+    @commands.command(pass_context=True)
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
         try:

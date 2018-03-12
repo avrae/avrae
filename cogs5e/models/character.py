@@ -284,7 +284,7 @@ class Character:
         def cvarrepl(match):
             return f"{match.group(1)}{_vars.get(match.group(2), match.group(2))}"
 
-        for var in re.finditer(r'{{([^{}]+)}}', cstr):
+        for var in re.finditer(r'(?<!\\){{([^{}]+)}}', cstr):
             raw = var.group(0)
             varstr = var.group(1)
 
@@ -297,7 +297,7 @@ class Character:
             except Exception as e:
                 raise EvaluationError(e)
 
-        for var in re.finditer(r'{([^{}]+)}', cstr):
+        for var in re.finditer(r'(?<!\\){([^{}]+)}', cstr):
             raw = var.group(0)
             varstr = var.group(1)
             out = ""
@@ -318,7 +318,7 @@ class Character:
                 temp = substr.strip()
                 out += str(stat_vars.get(temp, temp)) + " "
             cstr = cstr.replace(raw, str(roll(out).total), 1)
-        for var in re.finditer(r'<([^<>]+)>', cstr):
+        for var in re.finditer(r'(?<!\\)<([^<>]+)>', cstr):
             raw = var.group(0)
             if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', raw): continue  # ignore mentions, channels, emotes
             out = var.group(1)

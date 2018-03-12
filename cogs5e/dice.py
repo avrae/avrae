@@ -268,7 +268,10 @@ class Dice:
         if isinstance(_skills, str):
             _skills = _skills.split(', ')
         else:
-            _skills = _skills[0].split(', ')
+            if _skills[0]:
+                _skills = _skills[0].split(', ')
+            else:
+                _skills = []
         monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
         skills = {}
         for s in _skills:

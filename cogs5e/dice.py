@@ -389,7 +389,7 @@ class Dice:
         else:
             save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
 
-        embed.title = args.get('title', '').replace('[mname]', monster_name).replace('[sname]', re.sub(
+        embed.title = args.get('title', [''])[-1].replace('[mname]', monster_name).replace('[sname]', re.sub(
             r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) or \
                       '{} makes {}!'.format(monster_name,
                                             a_or_an(re.sub(

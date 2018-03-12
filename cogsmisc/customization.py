@@ -375,6 +375,59 @@ class Customization:
         snippets[user_id] = user_snippets
         self.bot.db.not_json_set('damage_snippets', snippets)
 
+    @commands.group(pass_context=True, invoke_without_command=True)
+    async def servsnippet(self, ctx, snipname, *, snippet=None):
+        """Creates a snippet to use in attack macros for the entire server.
+        Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
+        If a user and a server have snippets with the same name, the user snippet will take priority.
+        Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
+        server_id = ctx.message.server.id
+        snippets = self.bot.db.jget('server_snippets', {})
+        server_snippets = snippets.get(server_id, {})
+
+        if snippet is None:
+            return await self.bot.say(
+                '**' + snipname + f'**:\n(Copy-pastable)```md\n!snippet {snipname} ' + server_snippets.get(snipname,
+                                                                                                           'Not defined.') + '\n```')
+
+        if self.can_edit_servaliases(ctx):
+            if len(snipname) < 2: return await self.bot.say("Snippets must be at least 2 characters long!")
+            server_snippets[snipname] = snippet
+            await self.bot.say('Server snippet {} added for arguments:\n`{}`'.format(snipname, snippet))
+        else:
+            return await self.bot.say("You do not have permission to edit server snippets. Either __Administrator__ "
+                                      "Discord permissions or a role called \"Server Aliaser\" is required.")
+
+        snippets[server_id] = server_snippets
+        self.bot.db.jset('server_snippets', snippets)
+
+    @servsnippet.command(pass_context=True, name='list')
+    async def servsnippet_list(self, ctx):
+        """Lists this server's snippets."""
+        server_id = ctx.message.server.id
+        snippets = self.bot.db.jget('server_snippets', {})
+        server_snippets = snippets.get(server_id, {})
+        await self.bot.say(
+            'This server\'s snippets:\n{}'.format(', '.join(sorted([name for name in server_snippets.keys()]))))
+
+    @snippet.command(pass_context=True, name='delete', aliases=['remove'])
+    async def snippet_delete(self, ctx, snippet_name):
+        """Deletes a server snippet.
+        Any user that can create a server snippet can delete one."""
+        if not self.can_edit_servaliases(ctx):
+            return await self.bot.say("You do not have permission to edit server snippets. Either __Administrator__ "
+                                      "Discord permissions or a role called \"Server Aliaser\" is required.")
+        server_id = ctx.message.server.id
+        snippets = self.bot.db.jget('server_snippets', {})
+        server_snippets = snippets.get(server_id, {})
+        try:
+            del server_snippets[snippet_name]
+        except KeyError:
+            return await self.bot.say('Snippet not found.')
+        await self.bot.say('Server snippet {} removed.'.format(snippet_name))
+        snippets[server_id] = server_snippets
+        self.bot.db.not_json_set('server_snippets', snippets)
+
     @commands.command(pass_context=True)
     async def test(self, ctx, *, str):
         """Parses `str` as if it were in an alias, for testing."""

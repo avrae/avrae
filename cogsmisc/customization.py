@@ -410,8 +410,8 @@ class Customization:
         await self.bot.say(
             'This server\'s snippets:\n{}'.format(', '.join(sorted([name for name in server_snippets.keys()]))))
 
-    @snippet.command(pass_context=True, name='delete', aliases=['remove'])
-    async def snippet_delete(self, ctx, snippet_name):
+    @servsnippet.command(pass_context=True, name='delete', aliases=['remove'])
+    async def servsnippet_delete(self, ctx, snippet_name):
         """Deletes a server snippet.
         Any user that can create a server snippet can delete one."""
         if not self.can_edit_servaliases(ctx):

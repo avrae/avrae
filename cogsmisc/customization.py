@@ -333,6 +333,48 @@ class Customization:
                'server aliaser' in (r.name.lower() for r in ctx.message.author.roles) or \
                ctx.message.author.id == ctx.bot.owner.id
 
+    @commands.group(pass_context=True, invoke_without_command=True)
+    async def snippet(self, ctx, snipname, *, snippet=None):
+        """Creates a snippet to use in attack macros.
+        Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
+        user_id = ctx.message.author.id
+        snippets = self.bot.db.not_json_get('damage_snippets', {})
+        user_snippets = snippets.get(user_id, {})
+
+        if snippet is None:
+            return await self.bot.say(
+                '**' + snipname + f'**:\n(Copy-pastable)```md\n!snippet {snipname} ' + user_snippets.get(snipname,
+                                                                                                         'Not defined.') + '\n```')
+
+        if len(snipname) < 2: return await self.bot.say("Snippets must be at least 2 characters long!")
+        user_snippets[snipname] = snippet
+        await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
+
+        snippets[user_id] = user_snippets
+        self.bot.db.not_json_set('damage_snippets', snippets)
+
+    @snippet.command(pass_context=True, name='list')
+    async def snippet_list(self, ctx):
+        """Lists your user snippets."""
+        user_id = ctx.message.author.id
+        snippets = self.bot.db.not_json_get('damage_snippets', {})
+        user_snippets = snippets.get(user_id, {})
+        await self.bot.say('Your snippets:\n{}'.format(', '.join(sorted([name for name in user_snippets.keys()]))))
+
+    @snippet.command(pass_context=True, name='delete', aliases=['remove'])
+    async def snippet_delete(self, ctx, snippet_name):
+        """Deletes a snippet."""
+        user_id = ctx.message.author.id
+        snippets = self.bot.db.not_json_get('damage_snippets', {})
+        user_snippets = snippets.get(user_id, {})
+        try:
+            del user_snippets[snippet_name]
+        except KeyError:
+            return await self.bot.say('Snippet not found.')
+        await self.bot.say('Shortcut {} removed.'.format(snippet_name))
+        snippets[user_id] = user_snippets
+        self.bot.db.not_json_set('damage_snippets', snippets)
+
     @commands.command(pass_context=True)
     async def test(self, ctx, *, str):
         """Parses `str` as if it were in an alias, for testing."""

@@ -866,40 +866,6 @@ class SheetManager:
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
         await self.bot.say(out)
 
-    @commands.command(pass_context=True)
-    async def snippet(self, ctx, snipname, *, snippet=None):
-        """Creates a snippet to use in attack macros.
-        Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*.
-        Valid commands: *!snippet list* - lists all user snippets.
-        *!snippet [name]* - shows what the snippet is a shortcut for.
-        *!snippet remove [name]* - deletes a snippet."""
-        user_id = ctx.message.author.id
-        snippets = self.bot.db.not_json_get('damage_snippets', {})
-        user_snippets = snippets.get(user_id, {})
-
-        if snipname == 'list':
-            return await self.bot.say(
-                'Your snippets:\n{}'.format(', '.join(sorted([name for name in user_snippets.keys()]))))
-
-        if snippet is None:
-            return await self.bot.say(
-                '**' + snipname + f'**:\n(Copy-pastable)```md\n!snippet {snipname} ' + user_snippets.get(snipname,
-                                                                                                         'Not defined.') + '\n```')
-
-        if snipname == 'remove' or snipname == 'delete':
-            try:
-                del user_snippets[snippet]
-            except KeyError:
-                return await self.bot.say('Snippet not found.')
-            await self.bot.say('Shortcut {} removed.'.format(snippet))
-        else:
-            if len(snipname) < 2: return await self.bot.say("Snippets must be at least 2 characters long!")
-            user_snippets[snipname] = snippet
-            await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
-
-        snippets[user_id] = user_snippets
-        self.bot.db.not_json_set('damage_snippets', snippets)
-
     @commands.group(pass_context=True, invoke_without_command=True)
     async def cvar(self, ctx, name, *, value=None):
         """Commands to manage character variables for use in snippets and aliases.

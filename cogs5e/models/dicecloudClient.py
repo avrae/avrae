@@ -70,14 +70,16 @@ class DicecloudClient(MeteorClient):
 
     def initialize(self):
         self.connect()
-        while not self.connected:
+        loops = 0
+        while not self.connected and loops < 100:
             time.sleep(0.1)
-        log.info("Connected")
+            loops += 1
+        log.info(f"Connected to Dicecloud in {loops/10} seconds")
 
         def on_login(error, data):
             if data:
                 type(self).user_id = data.get('id')
-                type(self).logged_in = True
+                self.logged_in = True
             else:
                 log.warning(error)
                 raise LoginFailure()

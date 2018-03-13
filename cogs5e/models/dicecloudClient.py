@@ -76,8 +76,8 @@ class DicecloudClient(MeteorClient):
 
         def on_login(error, data):
             if data:
-                self.user_id = data.get('id')
-                self.logged_in = True
+                type(self).user_id = data.get('id')
+                type(self).logged_in = True
             else:
                 log.warning(error)
                 raise LoginFailure()

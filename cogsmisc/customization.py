@@ -375,7 +375,7 @@ class Customization:
         snippets[user_id] = user_snippets
         self.bot.db.not_json_set('damage_snippets', snippets)
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(pass_context=True, invoke_without_command=True, no_pm=True)
     async def servsnippet(self, ctx, snipname, *, snippet=None):
         """Creates a snippet to use in attack macros for the entire server.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
@@ -401,7 +401,7 @@ class Customization:
         snippets[server_id] = server_snippets
         self.bot.db.jset('server_snippets', snippets)
 
-    @servsnippet.command(pass_context=True, name='list')
+    @servsnippet.command(pass_context=True, name='list', no_pm=True)
     async def servsnippet_list(self, ctx):
         """Lists this server's snippets."""
         server_id = ctx.message.server.id
@@ -410,7 +410,7 @@ class Customization:
         await self.bot.say(
             'This server\'s snippets:\n{}'.format(', '.join(sorted([name for name in server_snippets.keys()]))))
 
-    @servsnippet.command(pass_context=True, name='delete', aliases=['remove'])
+    @servsnippet.command(pass_context=True, name='delete', aliases=['remove'], no_pm=True)
     async def servsnippet_delete(self, ctx, snippet_name):
         """Deletes a server snippet.
         Any user that can create a server snippet can delete one."""

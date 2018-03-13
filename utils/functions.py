@@ -634,7 +634,8 @@ def parse_snippets(args: str, ctx) -> str:
     :return: The string, with snippets replaced.
     """
     tempargs = shlex.split(args)
-    snippets = ctx.bot.db.jget('server_snippets', {}).get(ctx.message.server.id, {})
+    snippets = ctx.bot.db.jget('server_snippets', {}).get(ctx.message.server.id,
+                                                          {}) if ctx.message.server is not None else {}
     snippets.update(ctx.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {}))
     for index, arg in enumerate(tempargs):  # parse snippets
         snippet_value = snippets.get(arg)

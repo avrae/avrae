@@ -20,8 +20,8 @@ services:
       - redis
   web:
     image: zhuexe/avraeweb:latest
-    ports:
-      - "80:80"
+    volumes:
+      - ~/socket:/web/socket
     deploy:
       replicas: 1
       resources:

@@ -21,7 +21,7 @@ services:
   web:
     image: zhuexe/avraeweb:latest
     volumes:
-      - ~/socket:/web/socket
+      - /tmp/avraewebsocket:/web/socket
     deploy:
       replicas: 1
       resources:

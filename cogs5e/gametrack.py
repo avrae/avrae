@@ -8,6 +8,7 @@ Most of this module was coded 5 miles in the air. (Aug 8, 2017)
 import logging
 import shlex
 
+import MeteorClient
 import discord
 from discord.ext import commands
 
@@ -291,9 +292,8 @@ class GameTrack:
         if character.live:
             try:
                 await DicecloudClient.getInstance().sync_add_spell(character, dicecloud_parse(spell))
-            except:  # TODO
-                return await self.bot.say("Error connecting to dicecloud this is a placeholder error message please "
-                                          "tell the dev if you see this")
+            except MeteorClient.MeteorClientException:
+                return await self.bot.say("Error: Failed to connect to Dicecloud. The site may be down.")
         character.add_known_spell(spell).commit(ctx)
         live = "Spell added to Dicecloud!" if character.live else ''
         await self.bot.say(f"{spell['name']} added to known spell list!\n{live}")
@@ -317,9 +317,8 @@ class GameTrack:
             await DicecloudClient.getInstance().sync_add_mass_spells(character,
                                                                      [dicecloud_parse(s) for s in level_spells],
                                                                      spell_list)
-        except:  # TODO
-            return await self.bot.say("Error connecting to dicecloud this is a placeholder error message please "
-                                      "tell the dev if you see this")
+        except MeteorClient.MeteorClientException:
+            return await self.bot.say("Error: Failed to connect to Dicecloud. The site may be down.")
         await self.bot.say(f"{len(level_spells)} spells added to {character.get_name()}'s spell list on Dicecloud.")
 
     @spellbook.command(pass_context=True, name='remove')

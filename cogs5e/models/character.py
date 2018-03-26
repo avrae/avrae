@@ -22,6 +22,7 @@ import random
 import re
 from math import *
 
+import MeteorClient
 import simpleeval
 
 from cogs5e.funcs.dice import roll
@@ -445,7 +446,6 @@ class Character:
         if self.live:
             self._sync_hp()
 
-
         return self
 
     def _sync_hp(self):
@@ -460,9 +460,10 @@ class Character:
 
         try:
             DicecloudClient.getInstance().update('characters', {'_id': self.id[10:]},
-                                {'$set': {"hitPoints.adjustment": self.get_current_hp() - self.get_max_hp()}},
-                                callback=update_callback)
-        except:  # TODO: better handling
+                                                 {'$set': {
+                                                     "hitPoints.adjustment": self.get_current_hp() - self.get_max_hp()}},
+                                                 callback=update_callback)
+        except MeteorClient.MeteorClientException:
             pass
 
     def modify_hp(self, value):
@@ -599,7 +600,6 @@ class Character:
         if self.live and sync:
             self._sync_slots()
 
-
         return self
 
     def _sync_slots(self):
@@ -618,9 +618,9 @@ class Character:
                 lvl)
         try:
             DicecloudClient.getInstance().update('characters', {'_id': self.id[10:]},
-                                {'$set': spell_dict},
-                                callback=update_callback)
-        except:  # TODO: better handling
+                                                 {'$set': spell_dict},
+                                                 callback=update_callback)
+        except MeteorClient.MeteorClientException:
             pass
 
     def use_slot(self, level: int):
@@ -780,16 +780,17 @@ class Character:
                     self.live = False
             else:
                 log.debug(data)
+
         try:
             if counter['live'] in CLASS_RESOURCES:
                 DicecloudClient.getInstance().update('characters', {'_id': self.id[10:]},
-                                        {'$set': {f"{counter['live']}.adjustment": -used}},
-                                        callback=update_callback)
+                                                     {'$set': {f"{counter['live']}.adjustment": -used}},
+                                                     callback=update_callback)
             else:
                 DicecloudClient.getInstance().update('features', {'_id': counter['live']},
-                                        {'$set': {"used": used}},
-                                        callback=update_callback)
-        except:  # TODO: better handling
+                                                     {'$set': {"used": used}},
+                                                     callback=update_callback)
+        except MeteorClient.MeteorClientException:
             pass
 
     def get_consumable(self, name):

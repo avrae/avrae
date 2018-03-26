@@ -15,7 +15,7 @@ from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchCharacterSpellName
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import NoSpellDC, InvalidSaveType
+from cogs5e.models.errors import NoSpellDC, InvalidSaveType, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
 from utils.functions import parse_args_3, confirm, get_selection, parse_args_2, parse_resistances, parse_snippets
 
@@ -663,27 +663,36 @@ class InitTracker:
 
     async def _attack(self, ctx, combatant_name, target_name, atk_name, args):
         combat = Combat.from_ctx(ctx)
-        target = await combat.select_combatant(target_name, "Select the target.")
-        if target is None:
-            await self.bot.say("Target not found.")
-            return
+
+        try:
+            target = await combat.select_combatant(target_name, "Select the target.")
+            if target is None:
+                return await self.bot.say("Target not found.")
+        except SelectionException:
+            return await self.bot.say("Target not found.")
 
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
                 return await self.bot.say("You must start combat with `!init next` first.")
         else:
-            combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
-            if combatant is None:
+            try:
+                combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
+                if combatant is None:
+                    return await self.bot.say("Combatant not found.")
+            except SelectionException:
                 return await self.bot.say("Combatant not found.")
 
         attacks = combatant.attacks
         if '-custom' in args:
             attack = {'attackBonus': None, 'damage': None, 'name': atk_name}
         else:
-            attack = await get_selection(ctx,
-                                         [(a['name'], a) for a in attacks if atk_name.lower() in a['name'].lower()],
-                                         message="Select your attack.")
+            try:
+                attack = await get_selection(ctx,
+                                             [(a['name'], a) for a in attacks if atk_name.lower() in a['name'].lower()],
+                                             message="Select your attack.")
+            except SelectionException:
+                return await self.bot.say("Attack not found.")
 
         args = parse_snippets(args, ctx)
 

@@ -53,7 +53,7 @@ if not SHARDED:
                        shard_id=0, shard_count=1, max_messages=500)
 else:
     bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True,
-                       shard_id=int(shard_id), shard_count=int(shard_count), max_messages=500)
+                       shard_id=int(shard_id), shard_count=int(shard_count), max_messages=1000)
 bot.prefix = prefix
 bot.remove_command('help')
 bot.testing = TESTING

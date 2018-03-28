@@ -260,6 +260,9 @@ class Character:
         def exists(name):
             return name in evaluator.names
 
+        def get_raw():
+            return self.character
+
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
         _funcs['vroll'] = verbose_roll
@@ -269,7 +272,8 @@ class Character:
                       get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                       get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
                       set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
-                      get_gvar=get_gvar, exists=exists)
+                      get_gvar=get_gvar, exists=exists,
+                      get_raw=get_raw)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = copy.copy(_vars)

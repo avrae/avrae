@@ -261,7 +261,7 @@ class Character:
             return name in evaluator.names
 
         def get_raw():
-            return self.character
+            return copy.copy(self.character)
 
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll

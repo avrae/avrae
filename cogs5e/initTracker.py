@@ -52,7 +52,8 @@ class InitTracker:
         """Begins combat in the channel the command is invoked.
         Usage: !init begin <ARGS (opt)>
         Valid Arguments: -dyn (dynamic init; rerolls all initiatives at the start of a round)
-                         -name <NAME> (names the combat)"""
+                         -name <NAME> (names the combat)
+                         -turnnotif (notifies the next player)"""
         Combat.ensure_unique_chan(ctx)
 
         options = {}
@@ -67,6 +68,8 @@ class InitTracker:
             except IndexError:
                 await self.bot.say("You must pass in a name with the -name tag.")
                 return
+        if '-turnnotif' in args:
+            options['turnnotif'] = True
 
         temp_summary_msg = await self.bot.say("```Awaiting combatants...```")
         Combat.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
@@ -412,6 +415,9 @@ class InitTracker:
             c.on_remove()
             outStr += "{} automatically removed from combat.\n".format(c.name)
 
+        if combat.options.get('turnnotif'):
+            nextTurn = combat.next_combatant
+            outStr += f"**Next up**: {nextTurn.name} ({nextTurn.controller_mention()})\n"
         await self.bot.say(outStr)
         await combat.final()
 

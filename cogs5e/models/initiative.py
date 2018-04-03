@@ -93,7 +93,21 @@ class Combat:
 
     @property
     def current_combatant(self):
+        """The combatant whose turn it currently is."""
         return next(c for c in self._combatants if c.index == self.index) if self.index is not None else None
+
+    @property
+    def next_combatant(self):
+        """The combatant whose turn it will be when advance_turn() is called."""
+        if len(self._combatants) == 0:
+            return None
+        if self.index is None:
+            index = 0
+        elif self.index + 1 >= len(self._combatants):
+            index = 0
+        else:
+            index = self.index + 1
+        return next(c for c in self._combatants if c.index == index) if index is not None else None
 
     def get_combatants(self, groups=False):
         """
@@ -766,6 +780,9 @@ class CombatantGroup:
     def on_remove(self):
         for c in self.get_combatants():
             c.on_remove()
+
+    def controller_mention(self):
+        return ", ".join({c.controller_mention() for c in self.get_combatants()})
 
     @classmethod
     def from_dict(cls, raw, ctx):

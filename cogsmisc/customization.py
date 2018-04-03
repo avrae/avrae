@@ -541,7 +541,7 @@ class Customization:
                     e.append(user.id)
                     msg = f"Added {user} to the editor list."
                 glob_vars[name]['editors'] = e
-    
+
             self.bot.db.jset("global_vars", glob_vars)
             await self.bot.say(f'Global variable `{name}` edited: {msg}')
         else:

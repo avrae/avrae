@@ -777,7 +777,12 @@ class CombatantGroup:
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        status = f"{self.init}: {self.name} ({len(self.get_combatants())} combatants)"
+        if len(self._combatants) > 7:
+            status = f"{self.init}: {self.name} ({len(self.get_combatants())} combatants)"
+        else:
+            status = f"{self.init}: {self.name}"
+            for c in self.get_combatants():
+                status += f'\n    - {": ".join(c.get_summary().split(": ")[1:])}'
         return status
 
     def get_status(self, private=False):

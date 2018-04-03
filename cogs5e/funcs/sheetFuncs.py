@@ -114,7 +114,8 @@ def sheet_attack(attack, args, embed=None):
             else:  # output wherever was there if error
                 out += "**To Hit**: " + attack.get('attackBonus') + '\n'
         else:
-            out += "**To Hit**: Automatic hit!\n"
+            if args.get('hit'):
+                out += "**To Hit**: Automatic hit!\n"
             if args.get('crit'):
                 itercrit = args.get('crit', 0)
             else:

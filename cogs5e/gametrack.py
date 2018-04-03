@@ -339,7 +339,7 @@ class GameTrack:
                 f"your sheet.")
 
     @commands.group(pass_context=True, invoke_without_command=True, name='customcounter', aliases=['cc'])
-    async def customcounter(self, ctx, name, modifier=None):
+    async def customcounter(self, ctx, name, *, modifier=None):
         """Commands to implement custom counters.
         When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
         If modifier is not supplied, prints the value and metadata of the counter *name*."""
@@ -360,13 +360,24 @@ class GameTrack:
             counterDisplayEmbed.add_field(name=name, value=val)
             return await self.bot.say(embed=counterDisplayEmbed)
 
+        operator = None
+        if ' ' in modifier:
+            m = modifier.split(' ')
+            operator = m[0]
+            modifier = m[-1]
+
         try:
             modifier = int(modifier)
         except ValueError:
             return await self.bot.say(f"Could not modify counter: {modifier} is not a number")
         resultEmbed = EmbedWithCharacter(character)
-        consValue = int(counter.get('value', 0))
-        newValue = consValue + modifier
+        if not operator or operator == 'mod':
+            consValue = int(counter.get('value', 0))
+            newValue = consValue + modifier
+        elif operator == 'set':
+            newValue = modifier
+        else:
+            return await self.bot.say("Invalid operator. Use mod or set.")
         try:
             character.set_consumable(name, newValue).commit(ctx)
             _max = self._get_cc_max(character, counter)

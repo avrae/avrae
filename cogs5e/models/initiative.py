@@ -550,9 +550,9 @@ class MonsterCombatant(Combatant):
         self._monster_name = monster_name
 
     @classmethod
-    def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, opts=None, index=None):
+    def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, opts=None, index=None, hp=None):
         monster_name = monster['name']
-        hp = int(monster['hp'].split(' (')[0])
+        hp = int(monster['hp'].split(' (')[0]) if not hp else int(hp)
         ac = int(monster['ac'].split(' (')[0])
 
         resist = monster.get('resist', '').replace(' ', '').split(',')
@@ -631,7 +631,8 @@ class PlayerCombatant(Combatant):
         self._character = None  # only grab the Character instance if we have to
 
     @classmethod
-    def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, character_id, character_owner):
+    def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, character_id,
+                       character_owner):
         return cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx,
                    character_id=character_id, character_owner=character_owner)
 

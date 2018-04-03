@@ -182,7 +182,8 @@ class InitTracker:
               -name [name scheme, use "#" for auto-numbering, ex. "Orc#"]
               -h (same as !init add, default true)
               -group (same as !init add)
-              -npr (removes physical resistances when added)"""
+              -npr (removes physical resistances when added)
+              -rollhp (rolls monster HP)"""
 
         monster = await searchMonsterFull(monster_name, ctx, pm=True)
         self.bot.db.incr("monsters_looked_up_life")
@@ -202,6 +203,7 @@ class InitTracker:
 
         b = '+'.join(args.get('b', []))
         p = args.get('p', [None])[-1]
+        rollhp = args.get('rollhp', [False])[-1]
 
         opts = {}
         if 'npr' in args:
@@ -210,6 +212,7 @@ class InitTracker:
         combat = Combat.from_ctx(ctx)
 
         out = ''
+        to_pm = ''
         try:
             recursion = int(args.get('n', [1])[-1])
         except ValueError:
@@ -246,7 +249,14 @@ class InitTracker:
                     init = int(p)
                 controller = ctx.message.author.id
 
-                me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, opts)
+                rolled_hp = None
+                if rollhp:
+                    rolled_hp = roll(monster['hp'].split(' (')[1].split(')')[0], inline=True)
+                    to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
+                    rolled_hp = max(rolled_hp.total, 1)
+
+                me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, opts,
+                                                   hp=rolled_hp)
                 if group is None:
                     combat.add_combatant(me)
                     out += "{} was added to combat with initiative {}.\n".format(name,
@@ -262,6 +272,8 @@ class InitTracker:
                 out += "Error adding combatant: {}\n".format(e)
 
         await self.bot.say(out, delete_after=15)
+        if to_pm:
+            await self.bot.send_message(ctx.message.author, to_pm)
         await combat.final()
 
     @init.command(pass_context=True, name='join', aliases=['cadd', 'dcadd'])

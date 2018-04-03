@@ -254,7 +254,7 @@ class InitTracker:
                 else:
                     grp = combat.get_group(group, create=init)
                     grp.add_combatant(me)
-                    out += "{} was added to combat with initiative {} as part of group {}.".format(
+                    out += "{} was added to combat with initiative {} as part of group {}.\n".format(
                         name, grp.init, grp.name)
 
             except Exception as e:
@@ -543,7 +543,7 @@ class InitTracker:
     async def status(self, ctx, name: str, *, args: str = ''):
         """Gets the status of a combatant or group."""
         combat = Combat.from_ctx(ctx)
-        combatant = await combat.select_combatant(name)
+        combatant = await combat.select_combatant(name, select_group=True)
         if combatant is None:
             await self.bot.say("Combatant or group not found.")
             return

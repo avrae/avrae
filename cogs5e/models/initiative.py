@@ -95,13 +95,20 @@ class Combat:
     def current_combatant(self):
         return next(c for c in self._combatants if c.index == self.index) if self.index is not None else None
 
-    def get_combatants(self):
+    def get_combatants(self, groups=False):
+        """
+        Returns a list of all Combatants in a combat.
+        :param groups: Whether to return CombatantGroup objects in the list.
+        :return: A list of all combatants (and optionally groups).
+        """
         combatants = []
         for c in self._combatants:
             if isinstance(c, Combatant):
                 combatants.append(c)
             else:
                 combatants.extend(c.get_combatants())
+                if groups:
+                    combatants.append(c)
         return combatants
 
     def add_combatant(self, combatant):
@@ -150,17 +157,18 @@ class Combat:
             if isinstance(c, CombatantGroup) and len(c.get_combatants()) == 0:
                 self.remove_combatant(c)
 
-    async def select_combatant(self, name, choice_message=None):
+    async def select_combatant(self, name, choice_message=None, select_group=False):
         """
         Opens a prompt for a user to select the combatant they were searching for.
         :param choice_message: The message to pass to the selector.
+        :param select_group: Whether to allow groups to be selected.
         :rtype: Combatant
         :param name: The name of the combatant to search for.
         :return: The selected Combatant, or None if the search failed.
         """
-        matching = [(c.name, c) for c in self.get_combatants() if name.lower() == c.name.lower()]
+        matching = [(c.name, c) for c in self.get_combatants(select_group) if name.lower() == c.name.lower()]
         if not matching:
-            matching = [(c.name, c) for c in self.get_combatants() if name.lower() in c.name.lower()]
+            matching = [(c.name, c) for c in self.get_combatants(select_group) if name.lower() in c.name.lower()]
         return await get_selection(self.ctx, matching, message=choice_message)
 
     def advance_turn(self):

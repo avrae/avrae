@@ -214,6 +214,20 @@ class Combat:
         self._turn = self.current_combatant.init
         return changed_round
 
+    def rewind_turn(self):
+        if len(self._combatants) == 0:
+            raise NoCombatants
+
+        if self.index is None:  # start of combat
+            self._current_index = len(self._combatants) - 1
+        elif self.index == 0:  # new round
+            self._current_index = len(self._combatants) - 1
+            self._round -= 1
+        else:
+            self._current_index -= 1
+
+        self._turn = self.current_combatant.init
+
     @staticmethod
     def ensure_unique_chan(ctx):
         if ctx.bot.db.exists(f"{ctx.message.channel.id}.combat"):

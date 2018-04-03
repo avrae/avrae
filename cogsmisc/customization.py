@@ -13,6 +13,7 @@ import traceback
 import uuid
 from math import floor, ceil
 
+import discord
 import simpleeval
 from discord.ext import commands
 
@@ -511,13 +512,40 @@ class Customization:
         gvar = glob_vars.get(name)
         if gvar is None:
             return await self.bot.say("Global variable not found.")
-        elif gvar['owner'] != ctx.message.author.id:
-            return await self.bot.say("You are not the owner of this variable.")
+        elif gvar['owner'] != ctx.message.author.id and not ctx.message.author.id in gvar.get('editors', []):
+            return await self.bot.say("You are not allowed to edit this variable.")
         else:
             glob_vars[name]['value'] = value
 
         self.bot.db.jset("global_vars", glob_vars)
         await self.bot.say(f'Global variable `{name}` edited.')
+
+    @globalvar.command(pass_context=True, name='editor')
+    async def gvar_editor(self, ctx, name, user: discord.Member = None):
+        """Toggles the editor status of a user."""
+        glob_vars = self.bot.db.jget("global_vars", {})
+
+        gvar = glob_vars.get(name)
+        if gvar is None:
+            return await self.bot.say("Global variable not found.")
+
+        if user is not None:
+            if gvar['owner'] != ctx.message.author.id:
+                return await self.bot.say("You are not the owner of this variable.")
+            else:
+                e = gvar.get('editors', [])
+                if user.id in e:
+                    e.remove(user.id)
+                    msg = f"Removed {user} from the editor list."
+                else:
+                    e.append(user.id)
+                    msg = f"Added {user} to the editor list."
+                glob_vars[name]['editors'] = e
+    
+            self.bot.db.jset("global_vars", glob_vars)
+            await self.bot.say(f'Global variable `{name}` edited: {msg}')
+        else:
+            await self.bot.say(f"Editors: {', '.join(gvar.get('editors', []))}")
 
     @globalvar.command(pass_context=True, name='remove', aliases=['delete'])
     async def gvar_remove(self, ctx, name):

@@ -229,7 +229,7 @@ class DicecloudClient(MeteorClient):
             userId = data
 
         self.call("getUserId", [username], get_id_cb)
-        for _ in range(50):  # wait 5 sec for user data
+        for _ in range(100):  # wait 10 sec for user data
             if not userId:
                 await asyncio.sleep(0.1)
             else:

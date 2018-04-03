@@ -4,6 +4,7 @@ from math import floor
 
 import cachetools
 
+from cogs5e.funcs.dice import roll
 from cogs5e.models.character import Character
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
@@ -171,6 +172,14 @@ class Combat:
             if isinstance(c, CombatantGroup) and len(c.get_combatants()) == 0:
                 self.remove_combatant(c)
 
+    def reroll_dynamic(self):
+        """
+        Rerolls all combatant initiatives.
+        """
+        for c in self._combatants:
+            c.init = roll(f"1d20+{c.initMod}").total
+        self.sort_combatants()
+
     async def select_combatant(self, name, choice_message=None, select_group=False):
         """
         Opens a prompt for a user to select the combatant they were searching for.
@@ -193,7 +202,9 @@ class Combat:
         if self.index is None:  # new round, no dynamic reroll
             self._current_index = 0
             self._round += 1
-        elif self.index + 1 >= len(self._combatants):  # new round, TODO: dynamic reroll
+        elif self.index + 1 >= len(self._combatants):  # new round
+            if self.options.get('dynamic'):
+                self.reroll_dynamic()
             self._current_index = 0
             self._round += 1
             changed_round = True
@@ -726,6 +737,10 @@ class CombatantGroup:
     @property
     def init(self):
         return self._init
+
+    @init.setter
+    def init(self, new_init):
+        self._init = new_init
 
     @property
     def index(self):

@@ -212,13 +212,13 @@ class CustomHelpFormatter(HelpFormatter):
                     _v.append(l)
                     l = ""
                 l += val
-            if l:
+            if not l == '\n':
                 _v.append(l)
             for i, v in enumerate(_v):
                 if i == 0:
                     current_embed.add_field(name=title, value=v, inline=False)
                 else:
-                    current_embed.add_field(name="con't", value=v, inline=False)
+                    current_embed.add_field(name="** **", value=v, inline=False)
 
         if length > 5500:
             current_embed = discord.Embed()

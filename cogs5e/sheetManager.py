@@ -478,7 +478,7 @@ class SheetManager:
     async def playertoken(self, ctx):
         """Generates and sends a token for use on VTTs."""
 
-        def process(img_bytes):
+        def process(img_bytes, color_override):
             b = BytesIO(img_bytes)
             img = Image.open(b)
             template = Image.open('res/template.png')
@@ -492,11 +492,15 @@ class SheetManager:
             img = img.crop(box)
             img = img.resize((260, 260), Image.ANTIALIAS)
 
-            num_pixels = img.size[0] * img.size[1]
-            colors = img.getcolors(num_pixels)
-            rgb = sum(c[0] * c[1][0] for c in colors), sum(c[0] * c[1][1] for c in colors), sum(
-                c[0] * c[1][2] for c in colors)
-            rgb = rgb[0] / num_pixels, rgb[1] / num_pixels, rgb[2] / num_pixels
+            if color_override is None:
+                num_pixels = img.size[0] * img.size[1]
+                colors = img.getcolors(num_pixels)
+                rgb = sum(c[0] * c[1][0] for c in colors), sum(c[0] * c[1][1] for c in colors), sum(
+                    c[0] * c[1][2] for c in colors)
+                rgb = rgb[0] / num_pixels, rgb[1] / num_pixels, rgb[2] / num_pixels
+            else:
+                rgb = ((color_override >> 16) & 255, (color_override >> 8) & 255, color_override & 255)
+
             bands = template.split()
             for i, v in enumerate(rgb):
                 out = bands[i].point(lambda p: int(p * v / 255))
@@ -511,7 +515,9 @@ class SheetManager:
             out_bytes.seek(0)
             return out_bytes
 
-        img_url = Character.from_ctx(ctx).get_image()
+        char = Character.from_ctx(ctx)
+        img_url = char.get_image()
+        color_override = char.get_setting('color')
         if not img_url:
             return await self.bot.send_message(ctx.message.channel, "This character has no image.")
 
@@ -519,7 +525,7 @@ class SheetManager:
             async with aiohttp.ClientSession() as session:
                 async with session.get(img_url) as resp:
                     img_bytes = await resp.read()
-            processed = await asyncio.get_event_loop().run_in_executor(None, process, img_bytes)
+            processed = await asyncio.get_event_loop().run_in_executor(None, process, img_bytes, color_override)
         except Exception as e:
             return await self.bot.send_message(ctx.message.channel, f"Error generating token: {e}")
 

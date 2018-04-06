@@ -11,11 +11,14 @@ import re
 import shlex
 import sys
 import traceback
+from io import BytesIO
 from socket import timeout
 
+import aiohttp
 import discord
 import numexpr
 import pygsheets
+from PIL import Image
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 from googleapiclient.errors import HttpError
@@ -470,6 +473,60 @@ class SheetManager:
         self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
 
         await self.bot.say("Portrait override removed! Use `!update` to return to the old portrait.")
+
+    @commands.command(pass_context=True, hidden=True)  # hidden, as just called by token command
+    async def playertoken(self, ctx):
+        """Generates and sends a token for use on VTTs."""
+
+        def process(img_bytes):
+            b = BytesIO(img_bytes)
+            img = Image.open(b)
+            template = Image.open('res/template.png')
+            transparency_template = Image.open('res/alphatemplate.tif')
+            width, height = img.size
+            is_taller = height >= width
+            if is_taller:
+                box = (0, 0, width, width)
+            else:
+                box = (width / 2 - height / 2, 0, width / 2 + height / 2, height)
+            img = img.crop(box)
+            img = img.resize((260, 260), Image.ANTIALIAS)
+
+            num_pixels = img.size[0] * img.size[1]
+            colors = img.getcolors(num_pixels)
+            rgb = sum(c[0] * c[1][0] for c in colors), sum(c[0] * c[1][1] for c in colors), sum(
+                c[0] * c[1][2] for c in colors)
+            rgb = rgb[0] / num_pixels, rgb[1] / num_pixels, rgb[2] / num_pixels
+            bands = template.split()
+            for i, v in enumerate(rgb):
+                out = bands[i].point(lambda p: int(p * v / 255))
+                bands[i].paste(out)
+
+            img.putalpha(transparency_template)
+            colored_template = Image.merge(template.mode, bands)
+            img.paste(colored_template, mask=colored_template)
+
+            out_bytes = BytesIO()
+            img.save(out_bytes, "PNG")
+            out_bytes.seek(0)
+            return out_bytes
+
+        img_url = Character.from_ctx(ctx).get_image()
+        if not img_url:
+            return await self.bot.send_message(ctx.message.channel, "This character has no image.")
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(img_url) as resp:
+                    img_bytes = await resp.read()
+            processed = await asyncio.get_event_loop().run_in_executor(None, process, img_bytes)
+        except Exception as e:
+            return await self.bot.send_message(ctx.message.channel, f"Error generating token: {e}")
+
+        await self.bot.send_file(ctx.message.channel, processed, content="I generated this token for you! If it seems "
+                                                                         "wrong, you can make your own at "
+                                                                         "<http://rolladvantage.com/tokenstamp/>!",
+                                 filename="image.png")
 
     @commands.command(pass_context=True)
     async def sheet(self, ctx):

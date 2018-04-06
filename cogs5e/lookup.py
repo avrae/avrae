@@ -569,8 +569,14 @@ class Lookup:
         await self.bot.say("Lookup settings set:\n" + out)
 
     @commands.command(pass_context=True)
-    async def token(self, ctx, *, name):
-        """Shows a token for a monster. May not support all monsters."""
+    async def token(self, ctx, *, name=None):
+        """Shows a token for a monster or player. May not support all monsters."""
+
+        if name is None:
+            token_cmd = self.bot.get_command('playertoken')
+            if token_cmd is None:
+                return await self.bot.say("Error: SheetManager cog not loaded.")
+            return await ctx.invoke(token_cmd)
 
         try:
             guild_id = ctx.message.server.id

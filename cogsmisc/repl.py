@@ -1,9 +1,8 @@
-import asyncio
-from contextlib import redirect_stdout
 import inspect
 import io
 import textwrap
 import traceback
+from contextlib import redirect_stdout
 
 import discord
 from discord.ext import commands
@@ -109,7 +108,7 @@ class REPL:
                 pass
             except discord.HTTPException as e:
                 await self.bot.send_message(msg.channel, 'Unexpected error: `{}`'.format(e))
-                
+
     @commands.command(pass_context=True, hidden=True, name='eval')
     @checks.is_owner()
     async def _eval(self, ctx, *, body: str):
@@ -157,4 +156,3 @@ class REPL:
             else:
                 self._last_result = ret
                 await self.bot.say('```py\n{}{}\n```'.format(value, ret))
-    

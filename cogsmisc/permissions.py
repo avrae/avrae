@@ -18,16 +18,16 @@ class Permissions:
 
     def __init__(self, bot):
         self.bot = bot
-        
+
     async def on_ready(self):
         self.bot.global_prefixes = self.bot.db.not_json_get("prefixes", {})
-    
+
     def __check(self, ctx):
         msg = ctx.message
         if checks.is_owner_check(ctx):
             return True
 
-        try: 
+        try:
             entry = self.bot.db.not_json_get("permissions", {})[msg.server.id]
         except (KeyError, AttributeError):
             return True
@@ -37,7 +37,7 @@ class Permissions:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
-    async def prefix(self, ctx, prefix: str=None):
+    async def prefix(self, ctx, prefix: str = None):
         """Sets the bot's prefix for this server.
 
         You must have Manage Server permissions or the
@@ -52,7 +52,7 @@ class Permissions:
         self.bot.global_prefixes[guild_id] = prefix
         self.bot.db.not_json_set("prefixes", self.bot.global_prefixes)
         await self.bot.say("Prefix set to `{}` for this server.".format(prefix))
-        
+
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
     async def disable(self, ctx, *, command: str):

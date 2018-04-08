@@ -11,17 +11,17 @@ import numexpr
 
 
 class SheetParser():
-    
+
     def __init__(self, sheet):
         self.sheet = sheet
-    
+
     def get_character(self):
         return
-    
+
     def get_sheet(self):
         return
-    
-    def get_embed(self):
+
+    def get_embed(self, *args, **kwargs):  # compatibility
         sheet = self.sheet
         stats = sheet['stats']
         hp = sheet['hp']
@@ -32,9 +32,9 @@ class SheetParser():
         armor = sheet['armor']
         resistStr = ''
         try:
-            resist= sheet['resist']
-            immune= sheet['immune']
-            vuln  = sheet['vuln']
+            resist = sheet['resist']
+            immune = sheet['immune']
+            vuln = sheet['vuln']
             if len(resist) > 0:
                 resistStr += "\nResistances: " + ', '.join(resist).title()
             if len(immune) > 0:
@@ -61,17 +61,18 @@ class SheetParser():
                                             "**INT:** {intelligenceSave:+}\n" \
                                             "**WIS:** {wisdomSave:+}\n" \
                                             "**CHA:** {charismaSave:+}".format(**saves))
-        
+
         skillsStr = ''
         tempSkills = {}
         for skill, mod in sorted(skills.items()):
             if 'Save' not in skill:
-                skillsStr += '**{}**: {:+}\n'.format(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill), mod)
+                skillsStr += '**{}**: {:+}\n'.format(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill),
+                                                     mod)
                 tempSkills[skill] = mod
         sheet['skills'] = tempSkills
-                
+
         embed.add_field(name="Skills", value=skillsStr.title())
-        
+
         tempAttacks = []
         for a in attacks:
             if a['attackBonus'] is not None:
@@ -81,7 +82,8 @@ class SheetParser():
                     bonus = a['attackBonus']
                 tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
                                                                               bonus,
-                                                                              a['damage'] if a['damage'] is not None else 'no'))
+                                                                              a['damage'] if a[
+                                                                                                 'damage'] is not None else 'no'))
             else:
                 tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                  a['damage'] if a['damage'] is not None else 'no'))
@@ -93,5 +95,5 @@ class SheetParser():
         if len(a) > 1023:
             a = "Too many attacks, values hidden!"
         embed.add_field(name="Attacks", value=a)
-        
+
         return embed

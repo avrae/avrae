@@ -4,7 +4,6 @@ Created on Feb 14, 2017
 @author: andrew
 """
 
-
 import asyncio
 import io
 import logging
@@ -21,13 +20,13 @@ from pdfminer.psparser import PSLiteral
 from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.sheets.errors import MissingAttribute
-from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)
 
+
 class PDFSheetParser:
-    
+
     def __init__(self, file):
         self.file = file
         self.character = None
@@ -37,7 +36,7 @@ class PDFSheetParser:
         if not file['filename'].endswith('.pdf'): raise Exception('This is not a PDF file!')
         async with aiohttp.get(file['url']) as f:
             fp = io.BytesIO(await f.read())
-        
+
         def parsePDF():
             character = {}
             parser = PDFParser(fp)
@@ -56,14 +55,15 @@ class PDFSheetParser:
                         value = value.decode('iso-8859-1')
                     except:
                         pass
-                    
+
                 character[name.decode('iso-8859-1')] = value
             return character
+
         loop = asyncio.get_event_loop()
         character = await loop.run_in_executor(None, parsePDF)
         self.character = character
         return character
-    
+
     def get_sheet(self):
         """Returns a dict with character sheet data."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -78,23 +78,23 @@ class PDFSheetParser:
             spellbook = self.get_spellbook()
         except:
             raise
-        
+
         saves = {}
         for key in skills:
             if 'Save' in key:
                 saves[key] = skills[key]
-        
+
         stat_vars = {}
         stat_vars.update(stats)
         stat_vars['level'] = int(level)
         stat_vars['hp'] = int(hp)
         stat_vars['armor'] = int(armor)
         stat_vars.update(saves)
-        
+
         sheet = {'type': 'pdf',
-                 'version': 5, #v3: added stat cvars
-                               #v4: consumables
-                               #v5: spellbook
+                 'version': 5,  # v3: added stat cvars
+                 # v4: consumables
+                 # v5: spellbook
                  'stats': stats,
                  'levels': {'level': int(level)},
                  'hp': int(hp),
@@ -108,11 +108,11 @@ class PDFSheetParser:
                  'stat_cvars': stat_vars,
                  'consumables': {},
                  'spellbook': spellbook}
-                
+
         embed = self.get_embed(sheet)
-        
+
         return {'embed': embed, 'sheet': sheet}
-    
+
     def get_embed(self, sheet):
         stats = sheet['stats']
         hp = sheet['hp']
@@ -139,17 +139,18 @@ class PDFSheetParser:
                                             "**INT:** {intelligenceSave:+}\n" \
                                             "**WIS:** {wisdomSave:+}\n" \
                                             "**CHA:** {charismaSave:+}".format(**saves))
-        
+
         skillsStr = ''
         tempSkills = {}
         for skill, mod in sorted(skills.items()):
             if 'Save' not in skill:
-                skillsStr += '**{}**: {:+}\n'.format(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill), mod)
+                skillsStr += '**{}**: {:+}\n'.format(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill),
+                                                     mod)
                 tempSkills[skill] = mod
         sheet['skills'] = tempSkills
-                
+
         embed.add_field(name="Skills", value=skillsStr.title())
-        
+
         tempAttacks = []
         for a in attacks:
             if a is not None:
@@ -157,47 +158,49 @@ class PDFSheetParser:
                     bonus = a['attackBonus']
                     tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
                                                                                   bonus,
-                                                                                  a['damage'] if a['damage'] is not None else 'no'))
+                                                                                  a['damage'] if a[
+                                                                                                     'damage'] is not None else 'no'))
                 else:
                     tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                      a['damage'] if a['damage'] is not None else 'no'))
         if tempAttacks == []:
             tempAttacks = ['No attacks.']
         embed.add_field(name="Attacks", value='\n'.join(tempAttacks))
-        
+
         return embed
-        
+
     def get_stats(self):
         """Returns a dict of stats."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        stats = {"name":"", "image":"", "description":"",
-                 "strength":10, "dexterity":10, "constitution":10, "wisdom":10, "intelligence":10, "charisma":10,
-                 "strengthMod":0, "dexterityMod":0, "constitutionMod":0, "wisdomMod":0, "intelligenceMod":0, "charismaMod":0,
-                 "proficiencyBonus":0}
+        stats = {"name": "", "image": "", "description": "",
+                 "strength": 10, "dexterity": 10, "constitution": 10, "wisdom": 10, "intelligence": 10, "charisma": 10,
+                 "strengthMod": 0, "dexterityMod": 0, "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0,
+                 "charismaMod": 0,
+                 "proficiencyBonus": 0}
         stats['name'] = character.get('CharacterName', "No name") or "Unnamed"
         stats['description'] = "Description is not supported with the PDF loader."
         stats['proficiencyBonus'] = int(character.get('ProfBonus'))
-        
+
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             try:
                 stats[stat] = int(character.get(stat[:3].upper() + 'score'))
                 stats[stat + 'Mod'] = int(character.get(stat[:3].upper() + 'bonus'))
             except TypeError:
                 raise MissingAttribute(stat)
-        
+
         return stats
-            
+
     def get_attack(self, atkIn):
         """Calculates and returns a dict."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        attack = {'attackBonus': '0', 'damage':'0', 'name': ''}
-        
+        attack = {'attackBonus': '0', 'damage': '0', 'name': ''}
+
         attack['name'] = character.get('Attack' + str(atkIn))
         attack['attackBonus'] = character.get('AtkBonus' + str(atkIn))
         attack['damage'] = character.get('Damage' + str(atkIn))
-        
+
         if attack['name'] is None:
             return None
         if attack['damage'] is "":
@@ -213,11 +216,11 @@ class PDFSheetParser:
                 attack['damage'] = dice
                 if comment.strip():
                     attack['details'] = comment.strip()
-        
+
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
-        
+
         return attack
-        
+
     def get_attacks(self):
         """Returns a list of dicts of all of the character's attacks."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -226,7 +229,7 @@ class PDFSheetParser:
             a = self.get_attack(attack + 1)
             if a is not None: attacks.append(a)
         return attacks
-            
+
     def get_skills(self):
         """Returns a dict of all the character's skills."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -246,12 +249,12 @@ class PDFSheetParser:
         skills = {}
         for skill in skillslist:
             skills[skillsMap[skillslist.index(skill)]] = int(character.get(skill))
-             
+
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             skills[stat] = int(character.get(stat[:3].upper() + 'bonus'))
-        
+
         return skills
-    
+
     def get_level(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character

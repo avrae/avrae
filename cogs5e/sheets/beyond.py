@@ -15,13 +15,13 @@ import discord
 from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.sheets.errors import MissingAttribute
-from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import strict_search
 
 log = logging.getLogger(__name__)
 
+
 class BeyondSheetParser:
-    
+
     def __init__(self, url):
         self.url = url
         self.character = None
@@ -32,30 +32,30 @@ class BeyondSheetParser:
             character = await f.json()
         self.character = character
         return character
-    
+
     def get_sheet(self):
         """Returns a dict with character sheet data."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
 
         try:
-            stats = self.get_stats() # TODO
+            stats = self.get_stats()  # TODO
             levels = self.get_levels()
             hp = character.get('hitPoints', {}).get('max', 0)
-            dexArmor = self.calculate_stat('dexterityArmor', base=stats['dexterityMod']) # TODO
-            armor = self.calculate_stat('armor', replacements={'dexterityArmor': dexArmor}) # TODO
-            attacks = self.get_attacks() # TODO
-            skills = self.get_skills() # TODO
-            temp_resist = self.get_resistances() # TODO
+            dexArmor = self.calculate_stat('dexterityArmor', base=stats['dexterityMod'])  # TODO
+            armor = self.calculate_stat('armor', replacements={'dexterityArmor': dexArmor})  # TODO
+            attacks = self.get_attacks()  # TODO
+            skills = self.get_skills()  # TODO
+            temp_resist = self.get_resistances()  # TODO
             resistances = temp_resist['resist']
             immunities = temp_resist['immune']
             vulnerabilities = temp_resist['vuln']
-            skill_effects = self.get_skill_effects() # TODO
-            spellbook = self.get_spellbook() # TODO
+            skill_effects = self.get_skill_effects()  # TODO
+            spellbook = self.get_spellbook()  # TODO
         except:
             raise
 
-        saves = {} # TODO
+        saves = {}  # TODO
         for key in skills:
             if 'Save' in key:
                 saves[key] = skills[key]
@@ -87,7 +87,7 @@ class BeyondSheetParser:
         embed = self.get_embed(sheet)
 
         return {'embed': embed, 'sheet': sheet}
-    
+
     def get_embed(self, sheet):
         stats = sheet['stats']
         hp = sheet['hp']
@@ -114,17 +114,18 @@ class BeyondSheetParser:
                                             "**INT:** {intelligenceSave:+}\n" \
                                             "**WIS:** {wisdomSave:+}\n" \
                                             "**CHA:** {charismaSave:+}".format(**saves))
-        
+
         skillsStr = ''
         tempSkills = {}
         for skill, mod in sorted(skills.items()):
             if 'Save' not in skill:
-                skillsStr += '**{}**: {:+}\n'.format(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill), mod)
+                skillsStr += '**{}**: {:+}\n'.format(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill),
+                                                     mod)
                 tempSkills[skill] = mod
         sheet['skills'] = tempSkills
-                
+
         embed.add_field(name="Skills", value=skillsStr.title())
-        
+
         tempAttacks = []
         for a in attacks:
             if a is not None:
@@ -132,36 +133,39 @@ class BeyondSheetParser:
                     bonus = a['attackBonus']
                     tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
                                                                                   bonus,
-                                                                                  a['damage'] if a['damage'] is not None else 'no'))
+                                                                                  a['damage'] if a[
+                                                                                                     'damage'] is not None else 'no'))
                 else:
                     tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                      a['damage'] if a['damage'] is not None else 'no'))
         if tempAttacks == []:
             tempAttacks = ['No attacks.']
         embed.add_field(name="Attacks", value='\n'.join(tempAttacks))
-        
+
         return embed
-        
+
     def get_stats(self):
         """Returns a dict of stats."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        stats = {"name":"", "image":"", "description":"",
-                 "strength":10, "dexterity":10, "constitution":10, "wisdom":10, "intelligence":10, "charisma":10,
-                 "strengthMod":0, "dexterityMod":0, "constitutionMod":0, "wisdomMod":0, "intelligenceMod":0, "charismaMod":0,
-                 "proficiencyBonus":0}
+        stats = {"name": "", "image": "", "description": "",
+                 "strength": 10, "dexterity": 10, "constitution": 10, "wisdom": 10, "intelligence": 10, "charisma": 10,
+                 "strengthMod": 0, "dexterityMod": 0, "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0,
+                 "charismaMod": 0,
+                 "proficiencyBonus": 0}
         stats['name'] = character.get('name') or "Unnamed"
         stats['description'] = self.get_description()
         stats['image'] = character.get('avatarUrl') or ''
         stats['proficiencyBonus'] = int(character.get('proficiencyBonus'))
-        
+
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             try:
-                stats[stat] = int(character.get('stats', {}).get(stat[:3])) + int(character.get('bonusStats', {}).get(stat[:3]) or 0)
-                stats[stat + 'Mod'] = int(floor((stats[stat]-10)/2))
+                stats[stat] = int(character.get('stats', {}).get(stat[:3])) + int(
+                    character.get('bonusStats', {}).get(stat[:3]) or 0)
+                stats[stat + 'Mod'] = int(floor((stats[stat] - 10) / 2))
             except TypeError:
                 raise MissingAttribute(stat)
-        
+
         return stats
 
     def get_description(self):
@@ -172,7 +176,7 @@ class BeyondSheetParser:
         desc = "{0} is a level {1} {2} {3}. {4} are {5} years old, {6} ft. tall, and appears to weigh about {7} lbs. {4} have {8} eyes, {9} hair, and {10} skin."
         desc = desc.format(n,
                            character.get('level', 0),
-                           character.acell("T7").value, # TODO: get classes
+                           character.acell("T7").value,  # TODO: get classes
                            character.get('race') or 'unknown',
                            pronoun,
                            character.get('age') or "unknown",
@@ -187,7 +191,7 @@ class BeyondSheetParser:
         """Returns a dict with the character's level and class levels."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        levels = {"level":0}
+        levels = {"level": 0}
         for _class in character.get('classes', []):
             levels['level'] += _class.get('level')
             levelName = _class.get('class', {}).get('name') + 'Level'
@@ -201,12 +205,12 @@ class BeyondSheetParser:
         """Calculates and returns a dict."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        attack = {'attackBonus': '0', 'damage':'0', 'name': ''}
-        
+        attack = {'attackBonus': '0', 'damage': '0', 'name': ''}
+
         attack['name'] = character.get('Attack' + str(atkIn))
         attack['attackBonus'] = character.get('AtkBonus' + str(atkIn))
         attack['damage'] = character.get('Damage' + str(atkIn))
-        
+
         if attack['name'] is None:
             return None
         if attack['damage'] is "":
@@ -222,11 +226,11 @@ class BeyondSheetParser:
                 attack['damage'] = dice
                 if comment.strip():
                     attack['details'] = comment.strip()
-        
+
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
-        
+
         return attack
-        
+
     def get_attacks(self):
         """Returns a list of dicts of all of the character's attacks."""
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -272,7 +276,7 @@ class BeyondSheetParser:
             skills[stat] = stats.get(stat + 'Mod')
 
         return skills
-    
+
     def get_level(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character

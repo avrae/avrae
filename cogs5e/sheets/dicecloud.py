@@ -15,7 +15,6 @@ from DDPClient import DDPClient
 
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import DicecloudClient
-from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)

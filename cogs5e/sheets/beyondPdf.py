@@ -20,7 +20,6 @@ from pdfminer.psparser import PSLiteral
 from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.sheets.errors import MissingAttribute
-from cogs5e.sheets.sheetParser import SheetParser
 from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)

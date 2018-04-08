@@ -6,6 +6,7 @@ def test_roll():
     assert 0 < roll("1d20").total < 21
     assert roll("3+4*(9-2)").total == 31
 
+
 def test_complex_roll():
     r = roll("10d6rol5mi6ma1k1[annotation] some comments")
     assert r.total == 10

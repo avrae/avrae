@@ -182,6 +182,7 @@ def searchClass(name):
 def getClass(name):
     return strict_search(c.classes, 'name', name)
 
+
 def searchSubclass(name):
     return fuzzywuzzy_search_all_3(c.subclasses, 'name', name)
 

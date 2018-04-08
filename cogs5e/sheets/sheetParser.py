@@ -21,7 +21,7 @@ class SheetParser():
     def get_sheet(self):
         return
 
-    def get_embed(self, *args, **kwargs):  # compatibility
+    def get_embed(self):
         sheet = self.sheet
         stats = sheet['stats']
         hp = sheet['hp']

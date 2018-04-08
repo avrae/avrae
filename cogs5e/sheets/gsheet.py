@@ -58,7 +58,7 @@ class TempCharacter:
         return self.worksheet.range(rng)
 
 
-class GoogleSheet(SheetParser):
+class GoogleSheet:
     def __init__(self, url, client):
         self.url = url
         self.character = None

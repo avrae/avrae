@@ -20,7 +20,7 @@ from utils.functions import strict_search
 
 log = logging.getLogger(__name__)
 
-class BeyondSheetParser(SheetParser):
+class BeyondSheetParser:
     
     def __init__(self, url):
         self.url = url

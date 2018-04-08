@@ -26,7 +26,7 @@ from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)
 
-class PDFSheetParser(SheetParser):
+class PDFSheetParser:
     
     def __init__(self, file):
         self.file = file

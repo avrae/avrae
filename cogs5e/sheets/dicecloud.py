@@ -27,7 +27,7 @@ CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long
                          "sorceryPoints": 'long', "superiorityDice": 'short'}
 
 
-class DicecloudParser(SheetParser):
+class DicecloudParser:
     def __init__(self, url):
         self.url = url
         self.character = None

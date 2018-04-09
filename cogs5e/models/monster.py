@@ -1,5 +1,15 @@
+class AbilityScores:
+    def __init__(self, str_, dex, con, int_, wis, cha):
+        self.strength = str_
+        self.dexterity = dex
+        self.constitution = con
+        self.intelligence = int_
+        self.wisdom = wis
+        self.charisma = cha
+
+
 class Monster:
-    def __init__(self, name, size, race, alignment, ac, armortype, hp, hitdie, speed, str_, dex, con, int, wis, cha,
+    def __init__(self, name, size, race, alignment, ac, armortype, hp, hitdie, speed, ability_scores,
                  passiveperc, cr, xp,
                  vuln=None, resist=None, immune=None, condition_immune=None, saves=None, skills=None, languages=None,
                  traits=None, actions=None, reactions=None, legactions=None, la_per_round=3):

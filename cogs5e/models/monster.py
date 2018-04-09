@@ -1,5 +1,5 @@
 class Monster:
-    def __init__(self, name, size, race, alignment, ac, armortype, hp, hitdie, speed, str, dex, con, int, wis, cha,
+    def __init__(self, name, size, race, alignment, ac, armortype, hp, hitdie, speed, str_, dex, con, int, wis, cha,
                  passiveperc, cr, xp,
                  vuln=None, resist=None, immune=None, condition_immune=None, saves=None, skills=None, languages=None,
                  traits=None, actions=None, reactions=None, legactions=None, la_per_round=3):

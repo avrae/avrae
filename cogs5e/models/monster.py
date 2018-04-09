@@ -1,5 +1,5 @@
 class AbilityScores:
-    def __init__(self, str_, dex, con, int_, wis, cha):
+    def __init__(self, str_: int, dex: int, con: int, int_: int, wis: int, cha: int):
         self.strength = str_
         self.dexterity = dex
         self.constitution = con
@@ -22,9 +22,9 @@ class Monster:
         if condition_immune is None:
             condition_immune = []
         if saves is None:
-            saves = []  # TODO: generate from stat scores
+            saves = {}  # TODO: generate from stat scores
         if skills is None:
-            skills = []  # TODO: generate from stat scores
+            skills = {}  # TODO: generate from stat scores
         if languages is None:
             languages = []
         if traits is None:

@@ -683,7 +683,7 @@ class Lookup:
 
             desc = "{size} {type}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n".format(
                 **monster)
-            desc += "**STR:** {strStr} **DEX:** {dexStr} **CON:** {conStr}\n**WIS:** {wisStr} **INT:** {intStr} **CHA:** {chaStr}\n".format(
+            desc += "**STR:** {strStr} **DEX:** {dexStr} **CON:** {conStr}\n**INT:** {intStr} **WIS:** {wisStr} **CHA:** {chaStr}\n".format(
                 **monster)
 
             if monster.get('save') is not None:
@@ -836,7 +836,7 @@ class Lookup:
 
             embed_queue[-1].description = "{size} {type}.\n" \
                                           "**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n" \
-                                          "**STR:** {str} **DEX:** {dex} **CON:** {con}\n**WIS:** {wis} **INT:** {int} **CHA:** {cha}\n" \
+                                          "**STR:** {str} **DEX:** {dex} **CON:** {con}\n**INT:** {int} **WIS:** {wis} **CHA:** {cha}\n" \
                                           "**Languages:** {languages}\n".format(**monster)
 
             if "trait" in monster:

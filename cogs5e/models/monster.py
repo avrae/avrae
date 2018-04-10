@@ -43,7 +43,7 @@ class Monster:
                  condition_immune: list = None, raw_saves: str = '', saves: dict = None, raw_skills: str = '',
                  skills: dict = None, languages: list = None, traits: list = None, actions: list = None,
                  reactions: list = None, legactions: list = None, la_per_round=3, srd=True, source='homebrew',
-                 attacks: list = None):
+                 attacks: list = None, proper: bool = False):
         if vuln is None:
             vuln = []
         if resist is None:
@@ -110,6 +110,7 @@ class Monster:
         self.srd = srd
         self.source = source
         self.attacks = attacks
+        self.proper = proper
 
     @classmethod
     def from_data(cls, data):

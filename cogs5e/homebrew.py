@@ -23,37 +23,35 @@ class Homebrew:
 
         if name is None:
             bestiary = Bestiary.from_ctx(ctx)
-            embed = HomebrewEmbedWithAuthor(ctx)
-            embed.title = f"Active Bestiary: {bestiary.name}"
-            embed.description = '\n'.join(m.name for m in bestiary.monsters)
-
-        choices = []
-        for url, bestiary in user_bestiaries.items():
-            if bestiary['name'].lower() == name.lower():
-                choices.append((bestiary, url))
-            elif name.lower() in bestiary['name'].lower():
-                choices.append((bestiary, url))
-
-        if len(choices) > 1:
-            choiceList = [(f"{c[0]['name']} (`{c[1]})`", c) for c in choices]
-
-            result = await get_selection(ctx, choiceList, delete=True)
-            if result is None:
-                return await self.bot.say('Selection timed out or was cancelled.')
-
-            bestiary = result[0]
-            bestiary_url = result[1]
-        elif len(choices) == 0:
-            return await self.bot.say('Bestiary not found.')
         else:
-            bestiary = choices[0][0]
-            bestiary_url = choices[0][1]
+            choices = []
+            for url, bestiary in user_bestiaries.items():
+                if bestiary['name'].lower() == name.lower():
+                    choices.append((bestiary, url))
+                elif name.lower() in bestiary['name'].lower():
+                    choices.append((bestiary, url))
 
-        active_bestiaries = self.bot.db.jget('active_bestiaries', {})
-        active_bestiaries[ctx.message.author.id] = bestiary_url
-        self.bot.db.jset('active_characters', active_bestiaries)
+            if len(choices) > 1:
+                choiceList = [(f"{c[0]['name']} (`{c[1]})`", c) for c in choices]
 
-        bestiary = Bestiary.from_raw(bestiary_url, bestiary)
+                result = await get_selection(ctx, choiceList, delete=True)
+                if result is None:
+                    return await self.bot.say('Selection timed out or was cancelled.')
+
+                bestiary = result[0]
+                bestiary_url = result[1]
+            elif len(choices) == 0:
+                return await self.bot.say('Bestiary not found.')
+            else:
+                bestiary = choices[0][0]
+                bestiary_url = choices[0][1]
+
+            active_bestiaries = self.bot.db.jget('active_bestiaries', {})
+            active_bestiaries[ctx.message.author.id] = bestiary_url
+            self.bot.db.jset('active_characters', active_bestiaries)
+
+            bestiary = Bestiary.from_raw(bestiary_url, bestiary)
         embed = HomebrewEmbedWithAuthor(ctx)
-        embed.title = f"Active Bestiary: {bestiary.name}"
+        embed.title = bestiary.name
         embed.description = '\n'.join(m.name for m in bestiary.monsters)
+        await self.bot.say(embed)

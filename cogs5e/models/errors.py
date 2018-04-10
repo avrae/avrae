@@ -12,6 +12,13 @@ class NoCharacter(AvraeException):
         super().__init__("You have no character active.")
 
 
+class NoBestiary(AvraeException):
+    """Raised when a user has no active bestiary."""
+
+    def __init__(self):
+        super().__init__("You have no bestiary active.")
+
+
 class InvalidArgument(AvraeException):
     """Raised when an argument is invalid."""
     pass

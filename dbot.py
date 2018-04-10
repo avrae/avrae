@@ -11,6 +11,7 @@ from discord.ext.commands.errors import CommandInvokeError
 from cogs5e.charGen import CharGenerator
 from cogs5e.dice import Dice
 from cogs5e.gametrack import GameTrack
+from cogs5e.homebrew import Homebrew
 from cogs5e.initTracker import InitTracker
 from cogs5e.lookup import Lookup
 from cogs5e.models.errors import AvraeException, EvaluationError
@@ -126,7 +127,8 @@ cogs = [diceCog,
         customizationCog,
         REPL(bot),
         Stats(bot),
-        GameTrack(bot)]
+        GameTrack(bot),
+        Homebrew(bot)]
 
 
 @bot.event

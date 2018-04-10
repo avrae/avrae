@@ -25,6 +25,9 @@ class Trait:
         self.desc = desc
         self.attacks = attacks
 
+    def to_dict(self):
+        return {'name': self.name, 'desc': self.desc, 'attacks': self.attacks}
+
 
 SKILL_MAP = {'acrobatics': 'dex', 'animal handling': 'wis', 'arcana': 'int', 'athletics': 'str', 'deception': 'cha',
              'history': 'int', 'initiative': 'dex', 'insight': 'wis', 'intimidation': 'cha', 'investigation': 'int',
@@ -155,6 +158,33 @@ class Monster:
                    data['speed'], scores, data['cr'], xp_by_cr(data['cr']), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, raw_saves, saves, raw_skills, skills, languages, traits,
                    actions, reactions, legactions, 3, data.get('srd', False), source, data.get('attacks', []))
+
+    @classmethod
+    def from_bestiary(cls, data):
+        strength = data.pop('strength')
+        dexterity = data.pop('dexterity')
+        constitution = data.pop('constitution')
+        intelligence = data.pop('intelligence')
+        wisdom = data.pop('wisdom')
+        charisma = data.pop('charisma')
+        data['abilitiy_scores'] = AbilityScores(strength, dexterity, constitution, intelligence, wisdom, charisma)
+        for key in ('traits', 'actions', 'reactions', 'legactions'):
+            data[key] = [Trait(**t) for t in data.pop(key)]
+        return cls(**data)
+
+    def to_dict(self):
+        return {'name': self.name, 'size': self.size, 'race': self.race, 'alignment': self.alignment, 'ac': self.ac,
+                'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
+                'strength': self.strength, 'dexterity': self.dexterity, 'constitution': self.constitution,
+                'intelligence': self.intelligence, 'wisdom': self.wisdom, 'charisma': self.charisma,
+                'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses, 'vuln': self.vuln,
+                'resist': self.resist, 'immune': self.immume, 'condition_immune': self.condition_immune,
+                'raw_saves': self.raw_saves, 'saves': self.saves,
+                'raw_skills': self.raw_skills, 'skills': self.skills, 'languages': self.languages,
+                'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
+                'reactions': [t.to_dict() for t in self.reactions],
+                'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
+                'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper}
 
     def get_stat_array(self):
         """

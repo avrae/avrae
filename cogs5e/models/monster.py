@@ -202,7 +202,7 @@ class Monster:
             else:
                 mod = save['value']
             saves[name] = mod
-            raw_saves.append(f"{skill['name']} {mod:+}")
+            raw_saves.append(f"{save['ability'].title()} {mod:+}")
         raw_saves = ', '.join(raw_saves)
 
         traits = [Trait(t['name'], t['description']) for t in data['stats']['additionalAbilities']]

@@ -18,10 +18,12 @@ class AbilityScores:
 
 
 class Trait:
-    def __init__(self, name, desc, attack=None):
+    def __init__(self, name, desc, attacks=None):
+        if attacks is None:
+            attacks = []
         self.name = name
         self.desc = desc
-        self.attack = attack
+        self.attacks = attacks
 
 
 SKILL_MAP = {'acrobatics': 'dex', 'animal handling': 'wis', 'arcana': 'int', 'athletics': 'str', 'deception': 'cha',
@@ -40,7 +42,8 @@ class Monster:
                  senses: str = '', vuln: list = None, resist: list = None, immune: list = None,
                  condition_immune: list = None, raw_saves: str = '', saves: dict = None, raw_skills: str = '',
                  skills: dict = None, languages: list = None, traits: list = None, actions: list = None,
-                 reactions: list = None, legactions: list = None, la_per_round=3, srd=True, source='homebrew'):
+                 reactions: list = None, legactions: list = None, la_per_round=3, srd=True, source='homebrew',
+                 attacks: list = None):
         if vuln is None:
             vuln = []
         if resist is None:
@@ -63,6 +66,8 @@ class Monster:
             reactions = []
         if legactions is None:
             legactions = []
+        if attacks is None:
+            attacks = []
         for skill, stat in SKILL_MAP.items():
             if skill not in skills:
                 skills[skill] = ability_scores.get_mod(stat)
@@ -104,6 +109,7 @@ class Monster:
         self.la_per_round = la_per_round
         self.srd = srd
         self.source = source
+        self.attacks = attacks
 
     @classmethod
     def from_data(cls, data):
@@ -147,7 +153,7 @@ class Monster:
         return cls(data['name'], parsesize(data['size']), _type, data['alignment'], ac, armortype, hp, hitdice,
                    data['speed'], scores, data['cr'], xp_by_cr(data['cr']), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, raw_saves, saves, raw_skills, skills, languages, traits,
-                   actions, reactions, legactions, 3, data.get('srd', False), source)
+                   actions, reactions, legactions, 3, data.get('srd', False), source, data.get('attacks', []))
 
     def get_stat_array(self):
         """
@@ -196,8 +202,8 @@ class Monster:
         size = self.size
         type_ = self.race
         alignment = self.alignment
-        ac = self.ac
-        hp = f"{self.ac} ({self.hitdice})"
+        ac = str(self.ac) + (f" ({self.armortype})" if self.armortype else "")
+        hp = f"{self.hp} ({self.hitdice})"
         speed = self.speed
 
         desc = f"{size} {type_}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n"
@@ -260,7 +266,14 @@ def parse_traits(data, key):
             text = '\n'.join(t for t in trait['text'] if t is not None)
         else:
             text = trait['text']
-        traits.append(Trait(trait['name'], text))
+        attacks = []
+        if 'attack' in trait:
+            for atk in trait['attack']:
+                name, bonus, damage = atk.split('|')
+                name = name or trait['name']
+                bonus = bonus or None
+                attacks.append({'name': name, 'attackBonus': bonus, 'damage': damage, 'details': text})
+        traits.append(Trait(trait['name'], text, attacks))
     return traits
 
 

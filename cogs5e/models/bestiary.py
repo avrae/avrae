@@ -31,3 +31,10 @@ class Bestiary:
         user_bestiaries[self.id] = self.to_dict()  # commit
         ctx.bot.db.jset(ctx.message.author.id + '.bestiaries', user_bestiaries)
         return self
+
+    def set_active(self, ctx):
+        """Sets the bestiary as active. Returns self."""
+        active_bestiaries = ctx.bot.db.jget('active_bestiaries', {})
+        active_bestiaries[ctx.message.author.id] = self.id
+        ctx.bot.db.jset('active_bestiaries', active_bestiaries)
+        return self

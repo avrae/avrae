@@ -1,5 +1,5 @@
 import re
-from math import floor
+from math import floor, ceil
 
 
 class AbilityScores:
@@ -41,7 +41,7 @@ SAVE_MAP = {'strengthSave': 'str', 'dexteritySave': 'dex', 'constitutionSave': '
 
 class Monster:
     def __init__(self, name: str, size: str, race: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
-                 speed: str, ability_scores: AbilityScores, cr: str, xp: int, passiveperc: int = 10,
+                 speed: str, ability_scores: AbilityScores, cr: str, xp: int, passiveperc: int = None,
                  senses: str = '', vuln: list = None, resist: list = None, immune: list = None,
                  condition_immune: list = None, raw_saves: str = '', saves: dict = None, raw_skills: str = '',
                  skills: dict = None, languages: list = None, traits: list = None, actions: list = None,
@@ -77,6 +77,8 @@ class Monster:
         for save, stat in SAVE_MAP.items():
             if save not in saves:
                 saves[save] = ability_scores.get_mod(stat)
+        if passiveperc is None:
+            passiveperc = 10 + skills['perception']
         self.name = name
         self.size = size
         self.race = race
@@ -123,7 +125,10 @@ class Monster:
         if armortype is not None:
             armortype = armortype.group(1)
         hp = int(data['hp'].split(' (')[0])
-        hitdice = re.search(r'\((.*)\)', data['hp']).group(1)
+        try:
+            hitdice = re.search(r'\((.*)\)', data['hp']).group(1)
+        except AttributeError:
+            hitdice = "Unknown"
         scores = AbilityScores(int(data['str']), int(data['dex']), int(data['con']), int(data['int']), int(data['wis']),
                                int(data['cha']))
         vuln = data.get('vulnerable', '').split(', ') if data.get('vulnerable') else None
@@ -160,6 +165,62 @@ class Monster:
                    actions, reactions, legactions, 3, data.get('srd', False), source, data.get('attacks', []))
 
     @classmethod
+    def from_critterdb(cls, data):
+        ability_scores = AbilityScores(data['stats']['abilityScores']['strength'],
+                                       data['stats']['abilityScores']['dexterity'],
+                                       data['stats']['abilityScores']['constitution'],
+                                       data['stats']['abilityScores']['intelligence'],
+                                       data['stats']['abilityScores']['wisdom'],
+                                       data['stats']['abilityScores']['charisma'])
+        cr = {0.125: '1/8', 0.25: '1/4', 0.5: '1/2'}.get(data['stats']['challengeRating'],
+                                                         str(data['stats']['challengeRating']))
+        num_hit_die = data['stats']['numHitDie']
+        hit_die_size = data['stats']['hitDieSize']
+        con_by_level = num_hit_die * ability_scores.get_mod('con')
+        hp = ceil(((hit_die_size + 1) / 2) * num_hit_die) + con_by_level
+        hitdice = f"{num_hit_die}d{hit_die_size} + {con_by_level}"
+
+        proficiency = data['stats']['proficiencyBonus']
+        skills = {}
+        raw_skills = []
+        for skill in data['stats']['skills']:
+            name = skill['name'].lower()
+            if skill['proficient']:
+                mod = ability_scores.get_mod(SKILL_MAP.get(name)) + proficiency
+            else:
+                mod = skill['value']
+            skills[name] = mod
+            raw_skills.append(f"{skill['name']} {mod:+}")
+        raw_skills = ', '.join(raw_skills)
+
+        saves = {}
+        raw_saves = []
+        for save in data['stats']['savingThrows']:
+            name = save['ability'].lower() + 'Save'
+            if save['proficient']:
+                mod = ability_scores.get_mod(SAVE_MAP.get(name)) + proficiency
+            else:
+                mod = save['value']
+            saves[name] = mod
+            raw_saves.append(f"{skill['name']} {mod:+}")
+        raw_saves = ', '.join(raw_saves)
+
+        traits = [Trait(t['name'], t['description']) for t in data['stats']['additionalAbilities']]
+        actions = [Trait(t['name'], t['description']) for t in data['stats']['actions']]
+        reactions = [Trait(t['name'], t['description']) for t in data['stats']['reactions']]
+        legactions = [Trait(t['name'], t['description']) for t in data['stats']['legendaryActions']]
+
+        return cls(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
+                   data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
+                   ability_scores, cr, data['stats']['experiencePoints'], None,
+                   ', '.join(data['stats']['senses']), data['stats']['damageVulnerabilities'],
+                   data['stats']['damageResistances'], data['stats']['damageImmunities'],
+                   data['stats']['conditionImmunities'], raw_saves, saves, raw_skills, skills,
+                   data['stats']['languages'], traits, actions, reactions, legactions,
+                   data['stats']['legendaryActionsPerRound'], True, 'homebrew', None,
+                   data['flavor']['nameIsProper'])  # TODO: attacks
+
+    @classmethod
     def from_bestiary(cls, data):
         strength = data.pop('strength')
         dexterity = data.pop('dexterity')
@@ -167,7 +228,7 @@ class Monster:
         intelligence = data.pop('intelligence')
         wisdom = data.pop('wisdom')
         charisma = data.pop('charisma')
-        data['abilitiy_scores'] = AbilityScores(strength, dexterity, constitution, intelligence, wisdom, charisma)
+        data['ability_scores'] = AbilityScores(strength, dexterity, constitution, intelligence, wisdom, charisma)
         for key in ('traits', 'actions', 'reactions', 'legactions'):
             data[key] = [Trait(**t) for t in data.pop(key)]
         return cls(**data)
@@ -300,10 +361,11 @@ def parse_traits(data, key):
         attacks = []
         if 'attack' in trait:
             for atk in trait['attack']:
-                name, bonus, damage = atk.split('|')
-                name = name or trait['name']
-                bonus = bonus or None
-                attacks.append({'name': name, 'attackBonus': bonus, 'damage': damage, 'details': text})
+                if atk:
+                    name, bonus, damage = atk.split('|')
+                    name = name or trait['name']
+                    bonus = bonus or None
+                    attacks.append({'name': name, 'attackBonus': bonus, 'damage': damage, 'details': text})
         traits.append(Trait(trait['name'], text, attacks))
     return traits
 

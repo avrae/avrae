@@ -6,6 +6,7 @@ chardet==3.0.4
 discord.py==0.16.12
 fuzzywuzzy==0.15.1
 google-api-python-client==1.6.4
+html2text==2018.1.9
 httplib2==0.10.3
 meteor-ejson==1.1.0
 multidict==3.3.2

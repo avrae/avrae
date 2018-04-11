@@ -1,6 +1,8 @@
 import re
 from math import floor, ceil
 
+import html2text
+
 
 class AbilityScores:
     def __init__(self, str_: int, dex: int, con: int, int_: int, wis: int, cha: int):
@@ -205,10 +207,10 @@ class Monster:
             raw_saves.append(f"{save['ability'].title()} {mod:+}")
         raw_saves = ', '.join(raw_saves)
 
-        traits = [Trait(t['name'], t['description']) for t in data['stats']['additionalAbilities']]
-        actions = [Trait(t['name'], t['description']) for t in data['stats']['actions']]
-        reactions = [Trait(t['name'], t['description']) for t in data['stats']['reactions']]
-        legactions = [Trait(t['name'], t['description']) for t in data['stats']['legendaryActions']]
+        traits = parse_critterdb_traits(data, 'additionalAbilities')
+        actions = parse_critterdb_traits(data, 'actions')
+        reactions = parse_critterdb_traits(data, 'reactions')
+        legactions = parse_critterdb_traits(data, 'legendaryActions')
 
         return cls(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
                    data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
@@ -367,6 +369,15 @@ def parse_traits(data, key):
                     bonus = bonus or None
                     attacks.append({'name': name, 'attackBonus': bonus, 'damage': damage, 'details': text})
         traits.append(Trait(trait['name'], text, attacks))
+    return traits
+
+
+def parse_critterdb_traits(data, key):
+    traits = []
+    for trait in data['stats'][key]:
+        name = trait['name']
+        desc = '\n'.join(html2text.html2text(text, bodywidth=0).strip() for text in trait['description'].split('\n'))
+        traits.append(Trait(name, desc))
     return traits
 
 

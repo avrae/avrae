@@ -99,8 +99,41 @@ class Homebrew:
                 name = raw['name']
 
         parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
-        bestiary = Bestiary(url, name, parsed_creatures).set_active(ctx).commit(ctx)
+        bestiary = Bestiary(bestiary_id, name, parsed_creatures).set_active(ctx).commit(ctx)
         await self.bot.edit_message(loading, f"Imported {name}!")
+        embed = HomebrewEmbedWithAuthor(ctx)
+        embed.title = bestiary.name
+        embed.description = '\n'.join(m.name for m in bestiary.monsters)
+        await self.bot.say(embed=embed)
+
+    @bestiary.command(pass_context=True, name='update')
+    async def bestiary_update(self, ctx):
+        """Updates the active bestiary from CritterDB."""
+        bestiary_id = self.bot.db.jget('active_bestiaries', {}).get(ctx.message.author.id)
+        if bestiary_id is None:
+            return await self.bot.say("You don't have a bestiary active. Add one with `!bestiary import` first!")
+
+        log.info(f"Getting bestiary ID {bestiary_id}...")
+        index = 1
+        creatures = []
+        loading = await self.bot.say("Importing bestiary (this may take a while for large bestiaries)...")
+        async with aiohttp.ClientSession() as session:
+            for _ in range(100):  # 100 pages max
+                log.info(f"Getting page {index} of {bestiary_id}...")
+                async with session.get(
+                        f"http://www.critterdb.com/api/publishedbestiaries/{bestiary_id}/creatures/{index}") as resp:
+                    raw = await resp.json()
+                    if not raw:
+                        break
+                    creatures.extend(raw)
+                    index += 1
+            async with session.get(f"http://www.critterdb.com/api/publishedbestiaries/{bestiary_id}") as resp:
+                raw = await resp.json()
+                name = raw['name']
+
+        parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
+        bestiary = Bestiary(bestiary_id, name, parsed_creatures).set_active(ctx).commit(ctx)
+        await self.bot.edit_message(loading, f"Imported and updated {name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
         embed.description = '\n'.join(m.name for m in bestiary.monsters)

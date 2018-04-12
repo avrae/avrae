@@ -238,6 +238,7 @@ class Dice:
         args = shlex.split(args)
         args = parse_args_2(args)
         args['name'] = monster_name
+        args['image'] = args.get('image') or monster.get_image_url()
         attack['details'] = attack.get('desc')
 
         result = sheet_attack(attack, args)
@@ -290,6 +291,8 @@ class Dice:
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
+        else:
+            embed.set_thumbnail(url=monster.get_image_url())
         await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)
@@ -344,6 +347,8 @@ class Dice:
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
+        else:
+            embed.set_thumbnail(url=monster.get_image_url())
 
         await self.bot.say(embed=embed)
         try:

@@ -6,7 +6,6 @@ Created on Nov 29, 2016
 import copy
 import shlex
 import textwrap
-from urllib import parse
 
 import discord
 from discord.ext import commands
@@ -24,7 +23,6 @@ CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'invocationsknown': "Invocations Known", 'spellslots': "Spell Slots", 'slotlevel': "Slot Level",
                       'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
                       'psipoints': "Psi Points", 'psilimit': "Psi Limit"}
-IMG_BASE_URL = "5etools.com"
 
 
 class Lookup:
@@ -454,8 +452,7 @@ class Lookup:
             e.description = "Token not available."
             return await self.bot.say(embed=e)
 
-        src = parse.quote(monster.source)
-        url = f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(monster.name)}.png"
+        url = monster.get_image_url()
 
         embed = EmbedWithAuthor(ctx)
         embed.title = monster.name
@@ -501,8 +498,6 @@ class Lookup:
             e.title = monster.name
             e.description = "Description not available."
             return await self.bot.say(embed=e)
-
-        src = parse.quote(monster.source)
 
         def safe_append(title, desc):
             if len(desc) < 1024:
@@ -603,7 +598,7 @@ class Lookup:
         if monster.source == 'homebrew':
             embed_queue[-1].set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
         else:
-            embed_queue[0].set_thumbnail(url=f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(monster.name)}.png")
+            embed_queue[0].set_thumbnail(url=monster.get_image_url())
 
         for embed in embed_queue:
             if pm:

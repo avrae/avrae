@@ -1,5 +1,6 @@
 import re
 from math import floor, ceil
+from urllib import parse
 
 import html2text
 
@@ -328,6 +329,11 @@ class Monster:
     def get_title_name(self):
         """Returns a monster's name for use in embed titles."""
         return a_or_an(self.name, upper=True) if not self.proper else self.name
+
+    def get_image_url(self):
+        """Returns a monster's image URL."""
+        if not self.source == 'homebrew':
+            return f"https://5etools.com/img/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
 
 
 def parse_raw_saves(raw):

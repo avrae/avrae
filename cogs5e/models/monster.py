@@ -148,8 +148,8 @@ class Monster:
         legactions = parse_traits(data, 'legendary')
         if 'reaction' in data:
             text = '\n'.join(data['reaction']['text']) if isinstance(data['reaction']['text'], list) else \
-            data['reaction']['text']
-            reactions = Trait(data['reaction']['name'], text)
+                data['reaction']['text']
+            reactions = [Trait(data['reaction']['name'], text)]
         else:
             reactions = None
 

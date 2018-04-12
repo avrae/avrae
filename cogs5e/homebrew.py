@@ -54,7 +54,7 @@ class Homebrew:
 
             active_bestiaries = self.bot.db.jget('active_bestiaries', {})
             active_bestiaries[ctx.message.author.id] = bestiary_url
-            self.bot.db.jset('active_characters', active_bestiaries)
+            self.bot.db.jset('active_bestiaries', active_bestiaries)
 
             bestiary = Bestiary.from_raw(bestiary_url, bestiary)
         embed = HomebrewEmbedWithAuthor(ctx)

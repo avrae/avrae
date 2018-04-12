@@ -334,6 +334,8 @@ class Monster:
         """Returns a monster's image URL."""
         if not self.source == 'homebrew':
             return f"https://5etools.com/img/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
+        else:
+            return ''
 
 
 def parse_raw_saves(raw):

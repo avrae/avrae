@@ -245,6 +245,9 @@ class Dice:
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff)
 
+        if monster.source == 'homebrew':
+            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+
         await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True, aliases=['mc'])
@@ -293,6 +296,10 @@ class Dice:
             embed.set_thumbnail(url=args.get('image'))
         else:
             embed.set_thumbnail(url=monster.get_image_url())
+
+        if monster.source == 'homebrew':
+            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+
         await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)
@@ -349,6 +356,9 @@ class Dice:
             embed.set_thumbnail(url=args.get('image'))
         else:
             embed.set_thumbnail(url=monster.get_image_url())
+
+        if monster.source == 'homebrew':
+            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
 
         await self.bot.say(embed=embed)
         try:

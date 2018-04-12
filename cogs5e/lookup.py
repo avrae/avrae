@@ -3,6 +3,7 @@ Created on Nov 29, 2016
 
 @author: andrew
 """
+import copy
 import shlex
 import textwrap
 from urllib import parse
@@ -10,11 +11,10 @@ from urllib import parse
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs.lookupFuncs import *
+from cogs5e.funcs.lookupFuncs import select_monster_full, c, getSpell
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.monster import Monster
 from utils import checks
-from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP
+from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP, search_and_select
 
 CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'spellsknown': "Spells Known",
@@ -44,20 +44,7 @@ class Lookup:
             pm = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchCondition(name)
-        if result is None:
-            return await self.bot.say('Condition not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.conditions, name, lambda e: e['name'])
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -75,20 +62,7 @@ class Lookup:
             pm = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchRule(name)
-        if result is None:
-            return await self.bot.say('Rule not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.rules, name, lambda e: e['name'])
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -112,26 +86,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchFeat(name)
-        if result is None:
-            return await self.bot.say('Feat not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.feats, name, lambda e: e['name'])
 
         if not result['name'] == 'Grappler' and srd:  # the only SRD feat.
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         text = parse_data_entry(result['entries'])
         prereq = "None"
@@ -183,26 +141,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchRacialFeat(name)
-        if result is None:
-            return await self.bot.say('Race feature not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -226,26 +168,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchRace(name)
-        if result is None:
-            return await self.bot.say('Race not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.races, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         _sizes = {'T': "Tiny", 'S': "Small",
                   'M': "Medium", 'L': "Large", 'H': "Huge"}
@@ -302,26 +228,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchClassFeat(name)
-        if result is None:
-            return await self.bot.say('Class feature not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -348,26 +258,10 @@ class Lookup:
         if level is not None and not 0 < level < 21:
             return await self.bot.say("Invalid level.")
 
-        result = searchClass(name)
-        if result is None:
-            return await self.bot.say('Class not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.classes, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         if level is None:
@@ -440,26 +334,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchSubclass(name)
-        if result is None:
-            return await self.bot.say('Class not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'])
 
         if not result.get('srd') and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -487,26 +365,10 @@ class Lookup:
             pm = False
             srd = False
 
-        result = searchBackground(name)
-        if result is None:
-            return await self.bot.say('Background not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.backgrounds, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -584,34 +446,19 @@ class Lookup:
         except:
             srd = False
 
-        result = searchMonster(name)
-        if result is None:
-            return await self.bot.say('Monster not found.')
-        strict = result[1]
-        results = result[0]
+        monster = await select_monster_full(ctx, name)
 
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
-
-        if not result['srd'] and srd:
+        if not monster.srd and srd:
             e = EmbedWithAuthor(ctx)
-            e.title = result['name']
+            e.title = monster.name
             e.description = "Token not available."
             return await self.bot.say(embed=e)
 
-        monster = Monster.from_data(result)
-
         src = parse.quote(monster.source)
-        url = f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(result['name'])}.png"
+        url = f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(monster.name)}.png"
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
+        embed.title = monster.name
         embed.description = f"{monster.size} monster."
         embed.set_image(url=url)
         embed.set_footer(text="This command may not support all monsters.")
@@ -642,24 +489,10 @@ class Lookup:
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr('monsters_looked_up_life')
 
-        result = searchMonster(name)
-        if result is None:
-            return await self.bot.say('Monster not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        monster = await select_monster_full(ctx, name)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
-        monster = Monster.from_data(result)
 
         embed_queue[-1].title = monster.name
 
@@ -767,7 +600,10 @@ class Lookup:
             if monster.legactions:
                 embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster.legactions)))
 
-        embed_queue[0].set_thumbnail(url=f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(monster.name)}.png")
+        if monster.source == 'homebrew':
+            embed_queue[-1].set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+        else:
+            embed_queue[0].set_thumbnail(url=f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(monster.name)}.png")
 
         for embed in embed_queue:
             if pm:
@@ -790,20 +626,7 @@ class Lookup:
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
 
-        result = searchSpell(name)
-        if result is None:
-            return await self.bot.say('Spell not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r, r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.spells, name, lambda e: e['name'], return_key=True)
         result = getSpell(result)
 
         spellDesc = []
@@ -906,29 +729,13 @@ class Lookup:
         self.bot.botStats["items_looked_up_session"] += 1
         self.bot.db.incr('items_looked_up_life')
 
-        result = searchItem(name)
-        if result is None:
-            return await self.bot.say('Item not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.items, name, lambda e: e['name'])
 
         embed = EmbedWithAuthor(ctx)
         item = result
 
         if not item['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = item['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         def parsetype(_type):
             if _type == "G": return "Adventuring Gear"
@@ -981,9 +788,7 @@ class Lookup:
             if _property == "BF": return "burst fire"
             return "n/a"
 
-        itemDict = {}
-        itemDict['name'] = item['name']
-        itemDict['damage'] = ''
+        itemDict = {'name': item['name'], 'damage': ''}
         if 'type' in item:
             itemDict['type'] = ', '.join(i for i in (
                     [parsetype(t) for t in item['type'].split(',')] + ["Wondrous Item" if item.get('wondrous') else ''])
@@ -1047,3 +852,9 @@ class Lookup:
             await self.bot.send_message(ctx.message.author, embed=embed)
         else:
             await self.bot.say(embed=embed)
+
+    async def send_srd_error(self, ctx, data):
+        e = EmbedWithAuthor(ctx)
+        e.title = data['name']
+        e.description = "Description not available."
+        return await self.bot.say(embed=e)

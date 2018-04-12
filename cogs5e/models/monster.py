@@ -3,6 +3,8 @@ from math import floor, ceil
 
 import html2text
 
+from utils.functions import a_or_an
+
 
 class AbilityScores:
     def __init__(self, str_: int, dex: int, con: int, int_: int, wis: int, cha: int):
@@ -322,6 +324,10 @@ class Monster:
             desc += "**Languages:** --\n"
         desc += f"**CR:** {self.cr} ({self.xp} XP)"
         return desc
+
+    def get_title_name(self):
+        """Returns a monster's name for use in embed titles."""
+        return a_or_an(self.name, upper=True) if not self.proper else self.name
 
 
 def parse_raw_saves(raw):

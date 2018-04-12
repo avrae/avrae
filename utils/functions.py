@@ -247,10 +247,10 @@ def parse_args_3(args):
     return out
 
 
-def a_or_an(string):
+def a_or_an(string, upper=False):
     if re.match('[AEIOUaeiou].*', string):
-        return 'an {0}'.format(string)
-    return 'a {0}'.format(string)
+        return 'an {0}'.format(string) if not upper else f'An {string}'
+    return 'a {0}'.format(string) if not upper else f'A {string}'
 
 
 def camel_to_title(string):

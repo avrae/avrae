@@ -145,8 +145,13 @@ class Monster:
 
         traits = parse_traits(data, 'trait')
         actions = parse_traits(data, 'action')
-        reactions = Trait(data['reaction']['name'], '\n'.join(data['reaction']['text'])) if 'reaction' in data else None
         legactions = parse_traits(data, 'legendary')
+        if 'reaction' in data:
+            text = '\n'.join(data['reaction']['text']) if isinstance(data['reaction']['text'], list) else \
+            data['reaction']['text']
+            reactions = Trait(data['reaction']['name'], text)
+        else:
+            reactions = None
 
         raw_skills = data.get('skill', "")
         skills = parse_raw_skills(raw_skills)

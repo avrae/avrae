@@ -98,71 +98,35 @@ def fuzzy_search(list_to_search: list, key, value):
     return result
 
 
-def fuzzywuzzy_search(list_to_search: list, key, value, cutoff=5):
-    """Fuzzy searches a list for a dict with a key "key" of value "value" """
-    names = [d[key] for d in list_to_search]
-    result = process.extractOne(value, names, score_cutoff=cutoff)
-    if result is None:
-        return None
-    else:
-        return next(a for a in list_to_search if result[0] == a.get(key, ''))
-
-
-def fuzzywuzzy_search_all_old(list_to_search: list, key, value):
-    """Fuzzy searches a list for a dict with all keys "key" of value "value" """
-    names = [d[key] for d in list_to_search]
-    result = process.extract(value, names, scorer=fuzz.ratio)
-    if len(result) is 0:
-        return None
-    else:
-        return result
-
-
-def fuzzywuzzy_search_all(list_to_search: list, key, value):
-    """Fuzzy searches a list for a dict with all keys "key" of value "value" """
-    try:
-        result = next(a for a in list_to_search if value.lower() == a.get(key, '').lower())
-    except StopIteration:
-        try:
-            result = next(a for a in list_to_search if value.lower() in a.get(key, '').lower())
-        except StopIteration:
-            names = [d[key] for d in list_to_search]
-            result = process.extract(value, names, scorer=fuzz.ratio)
-            if len(result) is 0:
-                return None
-            else:
-                return result
-    return [(result[key], 99)]
-
-
-def fuzzywuzzy_search_all_2(list_to_search: list, key, value, cutoff=60):
-    """Fuzzy searches a list for a dict with all keys "key" of value "value" """
-    try:
-        result = next(a for a in list_to_search if value.lower() == a.get(key, '').lower())
-    except StopIteration:
-        try:
-            result = next(a for a in list_to_search if value.lower() in a.get(key, '').lower())
-        except StopIteration:
-            names = [d[key] for d in list_to_search]
-            result = process.extract(value, names, scorer=fuzz.ratio)
-            result = [r for r in result if r[1] >= cutoff]
-            if len(result) is 0:
-                return None
-            else:
-                return next(a for a in list_to_search if result[0][0] == a.get(key, ''))
-    return result
-
-
 def fuzzywuzzy_search_all_3(list_to_search: list, key, value, cutoff=5, return_key=False):
     """Fuzzy searches a list for a dict with all keys "key" of value "value"
     result can be either an object or list of objects
     :returns: A two-tuple (result, strict) or None"""
+    return search(list_to_search, value, lambda e: e[key], cutoff, return_key)
+
+
+def fuzzywuzzy_search_all_3_list(list_to_search: list, value, cutoff=5):
+    """Fuzzy searches a list for a value.
+    result can be either an object or list of objects
+    :returns: A two-tuple (result, strict) or None"""
+    return search(list_to_search, value, lambda e: e)
+
+
+def search(list_to_search: list, value, key, cutoff=5, return_key=False):
+    """Fuzzy searches a list for an object
+    result can be either an object or list of objects
+    :param list_to_search: The list to search.
+    :param value: The value to search for.
+    :param key: A function defining what to search for.
+    :param cutoff: The scorer cutoff value for fuzzy searching.
+    :param return_key: Whether to return the key of the object that matched or the object itself.
+    :returns: A two-tuple (result, strict) or None"""
     try:
-        result = next(a for a in list_to_search if value.lower() == a.get(key, '').lower())
+        result = next(a for a in list_to_search if value.lower() == key(a).lower())
     except StopIteration:
-        result = [a for a in list_to_search if value.lower() in a.get(key, '').lower()]
+        result = [a for a in list_to_search if value.lower() in key(a).lower()]
         if len(result) is 0:
-            names = [d[key] for d in list_to_search]
+            names = [key(d) for d in list_to_search]
             result = process.extract(value, names, scorer=fuzz.ratio)
             result = [r for r in result if r[1] >= cutoff]
             if len(result) is 0:
@@ -171,37 +135,35 @@ def fuzzywuzzy_search_all_3(list_to_search: list, key, value, cutoff=5, return_k
                 if return_key:
                     return [r[0] for r in result], False
                 else:
-                    return [a for a in list_to_search if a.get(key, '') in [r[0] for r in result]], False
+                    return [a for a in list_to_search if key(a) in [r[0] for r in result]], False
         else:
             if return_key:
-                return [r[key] for r in result], False
+                return [key(r) for r in result], False
             else:
                 return result, False
     if return_key:
-        return result[key], True
+        return key(result), True
     else:
         return result, True
 
+async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False):
+    result = search(list_to_search, value, key, cutoff, return_key)
+    if result is None:
+        raise NoSelectionElements("No matches found.")
+    strict = result[1]
+    results = result[0]
 
-def fuzzywuzzy_search_all_3_list(list_to_search: list, value, cutoff=5):
-    """Fuzzy searches a list for a value.
-    result can be either an object or list of objects
-    :returns: A two-tuple (result, strict) or None"""
-    try:
-        result = next(a for a in list_to_search if value.lower() == a.lower())
-    except StopIteration:
-        result = [a for a in list_to_search if value.lower() in a.lower()]
-        if len(result) is 0:
-            names = list_to_search
-            result = process.extract(value, names, scorer=fuzz.ratio)
-            result = [r for r in result if r[1] >= cutoff]
-            if len(result) is 0:
-                return None
-            else:
-                return [r[0] for r in result], False
+    if strict:
+        result = results
+    else:
+        if len(results) == 1:
+            result = results[0]
         else:
-            return result, False
-    return result, True
+            if return_key:
+                result = await get_selection(ctx, [(r, r) for r in results])
+            else:
+                result = await get_selection(ctx, [(key(r), r) for r in results])
+    return result
 
 
 def parse_args(args):
@@ -285,10 +247,10 @@ def parse_args_3(args):
     return out
 
 
-def a_or_an(string):
+def a_or_an(string, upper=False):
     if re.match('[AEIOUaeiou].*', string):
-        return 'an {0}'.format(string)
-    return 'a {0}'.format(string)
+        return 'an {0}'.format(string) if not upper else f'An {string}'
+    return 'a {0}'.format(string) if not upper else f'A {string}'
 
 
 def camel_to_title(string):

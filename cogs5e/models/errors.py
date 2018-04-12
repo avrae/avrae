@@ -12,6 +12,13 @@ class NoCharacter(AvraeException):
         super().__init__("You have no character active.")
 
 
+class NoBestiary(AvraeException):
+    """Raised when a user has no active bestiary."""
+
+    def __init__(self):
+        super().__init__("You have no bestiary active.")
+
+
 class InvalidArgument(AvraeException):
     """Raised when an argument is invalid."""
     pass
@@ -97,8 +104,8 @@ class SelectionException(AvraeException):
 class NoSelectionElements(SelectionException):
     """Raised when get_selection() is called with no choices."""
 
-    def __init__(self):
-        super().__init__("There are no choices to select from.")
+    def __init__(self, msg=None):
+        super().__init__(msg or "There are no choices to select from.")
 
 
 class SelectionCancelled(SelectionException):

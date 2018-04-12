@@ -12,6 +12,14 @@ class EmbedWithAuthor(discord.Embed):
         self.colour = random.randint(0, 0xffffff)
 
 
+class HomebrewEmbedWithAuthor(EmbedWithAuthor):
+    """An embed with author image, nickname, and homebrew footer set."""
+
+    def __init__(self, ctx, **kwargs):
+        super(HomebrewEmbedWithAuthor, self).__init__(ctx, **kwargs)
+        self.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+
+
 class EmbedWithCharacter(discord.Embed):
     """An embed with character image and name set."""
 

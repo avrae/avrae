@@ -3,18 +3,17 @@ Created on Nov 29, 2016
 
 @author: andrew
 """
+import copy
 import shlex
 import textwrap
-from math import floor
-from urllib import parse
 
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs.lookupFuncs import *
+from cogs5e.funcs.lookupFuncs import select_monster_full, c, getSpell
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
-from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP
+from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP, search_and_select
 
 CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'spellsknown': "Spells Known",
@@ -24,7 +23,6 @@ CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'invocationsknown': "Invocations Known", 'spellslots': "Spell Slots", 'slotlevel': "Slot Level",
                       'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
                       'psipoints': "Psi Points", 'psilimit': "Psi Limit"}
-IMG_BASE_URL = "5etools.com"
 
 
 class Lookup:
@@ -44,20 +42,7 @@ class Lookup:
             pm = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchCondition(name)
-        if result is None:
-            return await self.bot.say('Condition not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.conditions, name, lambda e: e['name'])
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -75,20 +60,7 @@ class Lookup:
             pm = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchRule(name)
-        if result is None:
-            return await self.bot.say('Rule not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.rules, name, lambda e: e['name'])
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -112,26 +84,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchFeat(name)
-        if result is None:
-            return await self.bot.say('Feat not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.feats, name, lambda e: e['name'])
 
         if not result['name'] == 'Grappler' and srd:  # the only SRD feat.
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         text = parse_data_entry(result['entries'])
         prereq = "None"
@@ -183,26 +139,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchRacialFeat(name)
-        if result is None:
-            return await self.bot.say('Race feature not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -226,26 +166,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchRace(name)
-        if result is None:
-            return await self.bot.say('Race not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.races, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         _sizes = {'T': "Tiny", 'S': "Small",
                   'M': "Medium", 'L': "Large", 'H': "Huge"}
@@ -302,26 +226,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchClassFeat(name)
-        if result is None:
-            return await self.bot.say('Class feature not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -348,26 +256,10 @@ class Lookup:
         if level is not None and not 0 < level < 21:
             return await self.bot.say("Invalid level.")
 
-        result = searchClass(name)
-        if result is None:
-            return await self.bot.say('Class not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.classes, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         if level is None:
@@ -440,26 +332,10 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = searchSubclass(name)
-        if result is None:
-            return await self.bot.say('Class not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'])
 
         if not result.get('srd') and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -487,26 +363,10 @@ class Lookup:
             pm = False
             srd = False
 
-        result = searchBackground(name)
-        if result is None:
-            return await self.bot.say('Background not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.backgrounds, name, lambda e: e['name'])
 
         if not result['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = result['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -584,33 +444,19 @@ class Lookup:
         except:
             srd = False
 
-        result = searchMonster(name)
-        if result is None:
-            return await self.bot.say('Monster not found.')
-        strict = result[1]
-        results = result[0]
+        monster = await select_monster_full(ctx, name)
 
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
-
-        if not result['srd'] and srd:
+        if not monster.srd and srd:
             e = EmbedWithAuthor(ctx)
-            e.title = result['name']
+            e.title = monster.name
             e.description = "Token not available."
             return await self.bot.say(embed=e)
 
-        src = parse.quote(parsesource(result.get('type', '').split(',')[-1]))
-        url = f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(result['name'])}.png"
+        url = monster.get_image_url()
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        embed.description = f"{parsesize(result['size'])} monster."
+        embed.title = monster.name
+        embed.description = f"{monster.size} monster."
         embed.set_image(url=url)
         embed.set_footer(text="This command may not support all monsters.")
 
@@ -640,218 +486,119 @@ class Lookup:
         self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr('monsters_looked_up_life')
 
-        result = searchMonster(name)
-        if result is None:
-            return await self.bot.say('Monster not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        monster = await select_monster_full(ctx, name)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
-        monster = copy.copy(result)
 
-        embed_queue[-1].title = monster['name']
+        embed_queue[-1].title = monster.name
 
-        if not monster['srd'] and srd:
+        if not monster.srd and srd:
             e = EmbedWithAuthor(ctx)
-            e.title = monster['name']
+            e.title = monster.name
             e.description = "Description not available."
             return await self.bot.say(embed=e)
 
-        src = parse.quote(parsesource(monster.get('type', '').split(',')[-1]))
+        def safe_append(title, desc):
+            if len(desc) < 1024:
+                embed_queue[-1].add_field(name=title, value=desc)
+            elif len(desc) < 2048:
+                # noinspection PyTypeChecker
+                # I'm adding an Embed to a list of Embeds, shut up.
+                embed_queue.append(discord.Embed(colour=color, description=desc, title=title))
+            else:
+                # noinspection PyTypeChecker
+                embed_queue.append(discord.Embed(colour=color, title=title))
+                trait_all = [desc[i:i + 2040] for i in range(0, len(desc), 2040)]
+                embed_queue[-1].description = trait_all[0]
+                for t in trait_all[1:]:
+                    # noinspection PyTypeChecker
+                    embed_queue.append(discord.Embed(colour=color, description=t))
 
         if visible:
-            monster['size'] = parsesize(monster['size'])
-            monster['type'] = ','.join(monster['type'].split(',')[:-1])
-            for stat in ['str', 'dex', 'con', 'wis', 'int', 'cha']:
-                monster[stat + 'Str'] = monster[stat] + " ({:+})".format(floor((int(monster[stat]) - 10) / 2))
-            if monster.get('skill') is not None:
-                monster['skill'] = monster['skill'][0]
-            if monster.get('senses') is None:
-                monster['senses'] = "passive Perception {}".format(monster['passive'])
-            else:
-                monster['senses'] = monster.get('senses') + ", passive Perception {}".format(monster['passive'])
-
-            desc = "{size} {type}. {alignment}.\n**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n".format(
-                **monster)
-            desc += "**STR:** {strStr} **DEX:** {dexStr} **CON:** {conStr}\n**INT:** {intStr} **WIS:** {wisStr} **CHA:** {chaStr}\n".format(
-                **monster)
-
-            if monster.get('save') is not None:
-                desc += "**Saving Throws:** {save}\n".format(**monster)
-            if monster.get('skill') is not None:
-                desc += "**Skills:** {skill}\n".format(**monster)
-            desc += "**Senses:** {senses}.\n".format(**monster)
-            if monster.get('vulnerable', '') is not '':
-                desc += "**Vulnerabilities:** {vulnerable}\n".format(**monster)
-            if monster.get('resist', '') is not '':
-                desc += "**Resistances:** {resist}\n".format(**monster)
-            if monster.get('immune', '') is not '':
-                desc += "**Damage Immunities:** {immune}\n".format(**monster)
-            if monster.get('conditionImmune', '') is not '':
-                desc += "**Condition Immunities:** {conditionImmune}\n".format(**monster)
-            if monster.get('languages', '') is not '':
-                desc += "**Languages:** {languages}\n".format(**monster)
-            else:
-                desc += "**Languages:** --\n".format(**monster)
-            desc += "**CR:** {cr}\n".format(**monster)
-
-            embed_queue[-1].description = desc
-
-            if "trait" in monster:
+            embed_queue[-1].description = monster.get_meta()
+            if monster.traits:
                 trait = ""
-                for a in monster["trait"]:
-                    if isinstance(a['text'], list):
-                        a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-                    trait += "**{name}:** {text}\n".format(**a)
+                for a in monster.traits:
+                    trait += f"**{a.name}:** {a.desc}\n"
                 if trait:
-                    if len(trait) < 1024:
-                        embed_queue[-1].add_field(name="Special Abilities", value=trait)
-                    elif len(trait) < 2048:
-                        embed_queue.append(discord.Embed(colour=color, description=trait, title="Special Abilities"))
-                    else:
-                        embed_queue.append(discord.Embed(colour=color, title="Special Abilities"))
-                        trait_all = [trait[i:i + 2040] for i in range(0, len(trait), 2040)]
-                        embed_queue[-1].description = trait_all[0]
-                        for a in trait_all[1:]:
-                            embed_queue.append(discord.Embed(colour=color, description=a))
-
-            if "action" in monster:
+                    safe_append("Special Abilities", trait)
+            if monster.actions:
                 action = ""
-                for a in monster["action"]:
-                    if isinstance(a['text'], list):
-                        a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-                    action += "**{name}:** {text}\n".format(**a)
+                for a in monster.actions:
+                    action += f"**{a.name}:** {a.desc}\n"
                 if action:
-                    if len(action) < 1024:
-                        embed_queue[-1].add_field(name="Actions", value=action)
-                    elif len(action) < 2048:
-                        embed_queue.append(discord.Embed(colour=color, description=action, title="Actions"))
-                    else:
-                        embed_queue.append(discord.Embed(colour=color, title="Actions"))
-                        action_all = [action[i:i + 2040] for i in range(0, len(action), 2040)]
-                        embed_queue[-1].description = action_all[0]
-                        for a in action_all[1:]:
-                            embed_queue.append(discord.Embed(colour=color, description=a))
-
-            if "reaction" in monster:
+                    safe_append("Actions", action)
+            if monster.reactions:
                 reaction = ""
-                a = monster["reaction"]
-                if isinstance(a['text'], list):
-                    a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-                reaction += "**{name}:** {text}\n".format(**a)
+                for a in monster.reactions:
+                    reaction += f"**{a.name}:** {a.desc}\n"
                 if reaction:
-                    if len(reaction) < 1024:
-                        embed_queue[-1].add_field(name="Reactions", value=reaction)
-                    elif len(reaction) < 2048:
-                        embed_queue.append(discord.Embed(colour=color, description=reaction, title="Reactions"))
-                    else:
-                        embed_queue.append(discord.Embed(colour=color, title="Reactions"))
-                        reaction_all = [reaction[i:i + 2040] for i in range(0, len(reaction), 2040)]
-                        embed_queue[-1].description = reaction_all[0]
-                        for a in reaction_all[1:]:
-                            embed_queue.append(discord.Embed(colour=color, description=a))
-
-            if "legendary" in monster:
+                    safe_append("Reactions", reaction)
+            if monster.legactions:
                 legendary = ""
-                for a in monster["legendary"]:
-                    if isinstance(a['text'], list):
-                        a['text'] = '\n'.join(t for t in a['text'] if t is not None)
-                    if a['name'] is not '':
-                        legendary += "**{name}:** {text}\n".format(**a)
+                for a in monster.legactions:
+                    if a.name:
+                        legendary += f"**{a.name}:** {a.desc}\n"
                     else:
-                        legendary += "{text}\n".format(**a)
+                        legendary += f"{a.desc}\n"
                 if legendary:
-                    if len(legendary) < 1024:
-                        embed_queue[-1].add_field(name="Legendary Actions", value=legendary)
-                    elif len(legendary) < 2048:
-                        embed_queue.append(
-                            discord.Embed(colour=color, description=legendary, title="Legendary Actions"))
-                    else:
-                        embed_queue.append(discord.Embed(colour=color, title="Legendary Actions"))
-                        legendary_all = [legendary[i:i + 2040] for i in range(0, len(legendary), 2040)]
-                        embed_queue[-1].description = legendary_all[0]
-                        for a in legendary_all[1:]:
-                            embed_queue.append(discord.Embed(colour=color, description=a))
+                    safe_append("Legendary Actions", legendary)
 
         else:
-            monster['hp'] = int(monster['hp'].split(' (')[0])
-            monster['ac'] = int(monster['ac'].split(' (')[0])
-            monster['size'] = parsesize(monster['size'])
-            monster['type'] = ','.join(monster['type'].split(',')[:-1])
-            if monster["hp"] < 10:
-                monster["hp"] = "Very Low"
-            elif 10 <= monster["hp"] < 50:
-                monster["hp"] = "Low"
-            elif 50 <= monster["hp"] < 100:
-                monster["hp"] = "Medium"
-            elif 100 <= monster["hp"] < 200:
-                monster["hp"] = "High"
-            elif 200 <= monster["hp"] < 400:
-                monster["hp"] = "Very High"
-            elif 400 <= monster["hp"]:
-                monster["hp"] = "Godly"
+            hp = monster.hp
+            ac = monster.ac
+            size = monster.size
+            _type = monster.race
+            if hp < 10:
+                hp = "Very Low"
+            elif 10 <= hp < 50:
+                hp = "Low"
+            elif 50 <= hp < 100:
+                hp = "Medium"
+            elif 100 <= hp < 200:
+                hp = "High"
+            elif 200 <= hp < 400:
+                hp = "Very High"
+            elif 400 <= hp:
+                hp = "Ludicrous"
 
-            if monster["ac"] < 6:
-                monster["ac"] = "Very Low"
-            elif 6 <= monster["ac"] < 9:
-                monster["ac"] = "Low"
-            elif 9 <= monster["ac"] < 15:
-                monster["ac"] = "Medium"
-            elif 15 <= monster["ac"] < 17:
-                monster["ac"] = "High"
-            elif 17 <= monster["ac"] < 22:
-                monster["ac"] = "Very High"
-            elif 22 <= monster["ac"]:
-                monster["ac"] = "Godly"
+            if ac < 6:
+                ac = "Very Low"
+            elif 6 <= ac < 9:
+                ac = "Low"
+            elif 9 <= ac < 15:
+                ac = "Medium"
+            elif 15 <= ac < 17:
+                ac = "High"
+            elif 17 <= ac < 22:
+                ac = "Very High"
+            elif 22 <= ac:
+                ac = "Untouchable"
 
-            for stat in ["str", "dex", "con", "wis", "int", "cha"]:
-                monster[stat] = int(monster[stat])
-                if monster[stat] <= 3:
-                    monster[stat] = "Very Low"
-                elif 3 < monster[stat] <= 7:
-                    monster[stat] = "Low"
-                elif 7 < monster[stat] <= 15:
-                    monster[stat] = "Medium"
-                elif 15 < monster[stat] <= 21:
-                    monster[stat] = "High"
-                elif 21 < monster[stat] <= 25:
-                    monster[stat] = "Very High"
-                elif 25 < monster[stat]:
-                    monster[stat] = "Godly"
+            languages = len(monster.languages)
 
-            if monster.get("languages"):
-                monster["languages"] = len(monster["languages"].split(", "))
-            else:
-                monster["languages"] = 0
+            embed_queue[-1].description = f"{size} {_type}.\n" \
+                                          f"**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {monster.speed}\n" \
+                                          f"{monster.get_hidden_stat_array()}\n" \
+                                          f"**Languages:** {languages}\n"
 
-            embed_queue[-1].description = "{size} {type}.\n" \
-                                          "**AC:** {ac}.\n**HP:** {hp}.\n**Speed:** {speed}\n" \
-                                          "**STR:** {str} **DEX:** {dex} **CON:** {con}\n**INT:** {int} **WIS:** {wis} **CHA:** {cha}\n" \
-                                          "**Languages:** {languages}\n".format(**monster)
+            if monster.traits:
+                embed_queue[-1].add_field(name="Special Abilities", value=str(len(monster.traits)))
 
-            if "trait" in monster:
-                embed_queue[-1].add_field(name="Special Abilities", value=str(len(monster["trait"])))
+            if monster.actions:
+                embed_queue[-1].add_field(name="Actions", value=str(len(monster.actions)))
 
-            if "action" in monster:
-                embed_queue[-1].add_field(name="Actions", value=str(len(monster["action"])))
+            if monster.reactions:
+                embed_queue[-1].add_field(name="Reactions", value=str(len(monster.reactions)))
 
-            if "reaction" in monster:
-                embed_queue[-1].add_field(name="Reactions", value=str(len(monster["reaction"])))
+            if monster.legactions:
+                embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster.legactions)))
 
-            if "legendary" in monster:
-                embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster["legendary"])))
-
-        embed_queue[0].set_thumbnail(url=f"https://{IMG_BASE_URL}/img/{src}/{parse.quote(monster['name'])}.png")
+        if monster.source == 'homebrew':
+            embed_queue[-1].set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+        else:
+            embed_queue[0].set_thumbnail(url=monster.get_image_url())
 
         for embed in embed_queue:
             if pm:
@@ -874,20 +621,7 @@ class Lookup:
         self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
 
-        result = searchSpell(name)
-        if result is None:
-            return await self.bot.say('Spell not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r, r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.spells, name, lambda e: e['name'], return_key=True)
         result = getSpell(result)
 
         spellDesc = []
@@ -990,29 +724,13 @@ class Lookup:
         self.bot.botStats["items_looked_up_session"] += 1
         self.bot.db.incr('items_looked_up_life')
 
-        result = searchItem(name)
-        if result is None:
-            return await self.bot.say('Item not found.')
-        strict = result[1]
-        results = result[0]
-
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r['name'], r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
+        result = await search_and_select(ctx, c.items, name, lambda e: e['name'])
 
         embed = EmbedWithAuthor(ctx)
         item = result
 
         if not item['srd'] and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = item['name']
-            e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await self.send_srd_error(ctx, result)
 
         def parsetype(_type):
             if _type == "G": return "Adventuring Gear"
@@ -1065,9 +783,7 @@ class Lookup:
             if _property == "BF": return "burst fire"
             return "n/a"
 
-        itemDict = {}
-        itemDict['name'] = item['name']
-        itemDict['damage'] = ''
+        itemDict = {'name': item['name'], 'damage': ''}
         if 'type' in item:
             itemDict['type'] = ', '.join(i for i in (
                     [parsetype(t) for t in item['type'].split(',')] + ["Wondrous Item" if item.get('wondrous') else ''])
@@ -1132,33 +848,8 @@ class Lookup:
         else:
             await self.bot.say(embed=embed)
 
-
-def parsesize(size):
-    if size == "T": size = "Tiny";
-    if size == "S": size = "Small";
-    if size == "M": size = "Medium";
-    if size == "L": size = "Large";
-    if size == "H": size = "Huge";
-    if size == "G": size = "Gargantuan";
-    return size
-
-
-def parsesource(src):
-    source = src.strip()
-    if source == "monster manual": source = "MM";
-    if source == "Volo's Guide": source = "VGM";
-    if source == "elemental evil": source = "PotA";
-    if source == "storm kings thunder": source = "SKT";
-    if source == "tyranny of dragons": source = "ToD";
-    if source == "out of the abyss": source = "OotA";
-    if source == "curse of strahd": source = "CoS";
-    if source == "lost mine of phandelver": source = "LMoP";
-    if source == "Tales from the Yawning Portal": source = "TYP";
-    if source == "tome of beasts": source = "ToB 3pp";
-    if source == "Plane Shift Amonkhet": source = "PSA";
-    if source == "Plane Shift Innistrad": source = "PSI";
-    if source == "Plane Shift Kaladesh": source = "PSK";
-    if source == "Plane Shift Zendikar": source = "PSZ";
-    if source == "Tomb of Annihilation": source = "ToA";
-    if source == "The Tortle Package": source = "TTP";
-    return source
+    async def send_srd_error(self, ctx, data):
+        e = EmbedWithAuthor(ctx)
+        e.title = data['name']
+        e.description = "Description not available."
+        return await self.bot.say(embed=e)

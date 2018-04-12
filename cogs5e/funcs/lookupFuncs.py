@@ -7,8 +7,11 @@ import copy
 import json
 import logging
 
+from cogs5e.models.bestiary import Bestiary
+from cogs5e.models.errors import NoBestiary
+from cogs5e.models.monster import Monster
 from utils.functions import discord_trim, strict_search, fuzzywuzzy_search_all_3, get_selection, \
-    fuzzywuzzy_search_all_3_list, parse_data_entry
+    fuzzywuzzy_search_all_3_list, parse_data_entry, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -84,6 +87,7 @@ class Compendium:
                                         self.cfeats.append(fe)
         with open('./res/bestiary.json', 'r') as f:
             self.monsters = json.load(f)
+            self.monster_mash = [Monster.from_data(m) for m in self.monsters]
         with open('./res/spells.json', 'r') as f:
             self.spells = json.load(f)
         with open('./res/items.json', 'r') as f:
@@ -127,76 +131,16 @@ def _parse_prereqs(entry):
 c = Compendium()
 
 
-def searchCondition(condition):
-    return fuzzywuzzy_search_all_3(c.conditions, 'name', condition)
-
-
-def getCondition(condition):
-    return strict_search(c.conditions, 'name', condition)
-
-
-def searchRule(rule):
-    return fuzzywuzzy_search_all_3(c.rules, 'name', rule)
-
-
-def getRule(rule):
-    return strict_search(c.rules, 'name', rule)
-
-
-def searchFeat(name):
-    return fuzzywuzzy_search_all_3(c.feats, 'name', name)
-
-
-def getFeat(feat):
-    return strict_search(c.feats, 'name', feat)
-
-
-def searchRacialFeat(name):
-    return fuzzywuzzy_search_all_3(c.rfeats, 'name', name)
-
-
-def getRacialFeat(feat):
-    return strict_search(c.rfeats, 'name', feat)
-
-
 def searchRace(name):
     return fuzzywuzzy_search_all_3(c.races, 'name', name)
-
-
-def getRace(name):
-    return strict_search(c.races, 'name', name)
-
-
-def searchClassFeat(name):
-    return fuzzywuzzy_search_all_3(c.cfeats, 'name', name)
-
-
-def getClassFeat(feat):
-    return strict_search(c.cfeats, 'name', feat)
 
 
 def searchClass(name):
     return fuzzywuzzy_search_all_3(c.classes, 'name', name)
 
 
-def getClass(name):
-    return strict_search(c.classes, 'name', name)
-
-
-def searchSubclass(name):
-    return fuzzywuzzy_search_all_3(c.subclasses, 'name', name)
-
-
-def getSubclass(name):
-    return strict_search(c.subclasses, 'name', name)
-
-
 def searchBackground(name):
     return fuzzywuzzy_search_all_3(c.backgrounds, 'name', name)
-
-
-def getBackground(name):
-    return strict_search(c.backgrounds, 'name', name)
 
 
 # ----- Monster stuff
@@ -205,12 +149,17 @@ def old_searchMonster(name):
     return fuzzywuzzy_search_all_3(c.monsters, 'name', name, return_key=True)
 
 
-def searchMonster(name):
-    return fuzzywuzzy_search_all_3(c.monsters, 'name', name)
-
-
-def getMonster(name):
-    return strict_search(c.monsters, 'name', name)
+async def select_monster_full(ctx, name, cutoff=5, return_key=False):
+    """
+    Gets a Monster from the compendium and active bestiary/ies.
+    """
+    choices = c.monster_mash.copy()
+    try:
+        bestiary = Bestiary.from_ctx(ctx)
+        choices.extend(bestiary.monsters)
+    except NoBestiary:
+        pass
+    return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key)
 
 
 async def searchMonsterFull(name, ctx, pm=False):
@@ -321,11 +270,3 @@ async def searchAutoSpellFull(name, ctx):
 
 def getSpell(spellname):
     return strict_search(c.spells, 'name', spellname)
-
-
-def searchItem(name):
-    return fuzzywuzzy_search_all_3(c.items, 'name', name)
-
-
-def getItem(itemname):
-    return strict_search(c.items, 'name', itemname)

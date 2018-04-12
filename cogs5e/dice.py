@@ -1,14 +1,14 @@
 import random
 import re
 import shlex
-from math import floor
 
 import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup, Constant, Operator
-from cogs5e.funcs.lookupFuncs import searchMonsterFull
+from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models.monster import Monster
 from utils import checks
 from utils.functions import fuzzy_search, a_or_an, discord_trim, \
     parse_args_2, parse_args_3
@@ -222,14 +222,10 @@ class Dice:
         except:
             pass
 
-        monster = await searchMonsterFull(monster_name, ctx)
-        self.bot.botStats["monsters_looked_up_session"] += 1
+        monster = await select_monster_full(ctx, monster_name)
         self.bot.db.incr('monsters_looked_up_life')
-        if monster['monster'] is None:
-            return await self.bot.say(monster['string'][0], delete_after=15)
-        monster = monster['monster']
-        attacks = monster.get('attacks')
-        monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
+        attacks = monster.attacks
+        monster_name = monster.get_title_name()
         if atk_name == 'list':
             attacks_string = '\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
                                                                                   a['attackBonus'],
@@ -242,6 +238,7 @@ class Dice:
         args = shlex.split(args)
         args = parse_args_2(args)
         args['name'] = monster_name
+        args['image'] = args.get('image') or monster.get_image_url()
         attack['details'] = attack.get('desc')
 
         result = sheet_attack(attack, args)
@@ -258,45 +255,11 @@ class Dice:
               -phrase [flavor text]
               -title [title] *note: [mname] and [cname] will be replaced automatically*"""
 
-        monster = await searchMonsterFull(monster_name, ctx)
-        self.bot.botStats["monsters_looked_up_session"] += 1
+        monster: Monster = await select_monster_full(ctx, monster_name)
         self.bot.db.incr('monsters_looked_up_life')
-        if monster['monster'] is None:
-            return await self.bot.say(monster['string'][0], delete_after=15)
-        monster = monster['monster']
-        _skills = monster.get('skill', "")
-        if isinstance(_skills, str):
-            _skills = _skills.split(', ')
-        else:
-            if _skills[0]:
-                _skills = _skills[0].split(', ')
-            else:
-                _skills = []
-        monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
-        skills = {}
-        for s in _skills:
-            if s:
-                _name = ' '.join(s.split(' ')[:-1]).lower()
-                _value = int(s.split(' ')[-1])
-                skills[_name] = _value
 
-        skillslist = ['acrobatics', 'animal handling', 'arcana', 'athletics',
-                      'deception', 'history', 'initiative', 'insight',
-                      'intimidation', 'investigation', 'medicine', 'nature',
-                      'perception', 'performance', 'persuasion', 'religion',
-                      'sleight of hand', 'stealth', 'survival',
-                      'strength', 'dexterity', 'constitution', 'intelligence',
-                      'wisdom', 'charisma']
-        skillsmap = ['dex', 'wis', 'int', 'str',
-                     'cha', 'int', 'dex', 'wis',
-                     'cha', 'int', 'wis', 'int',
-                     'wis', 'cha', 'cha', 'int',
-                     'dex', 'dex', 'wis',
-                     'str', 'dex', 'con', 'int',
-                     'wis', 'cha']
-        for i, s in enumerate(skillslist):
-            if not s in skills:
-                skills[s] = floor((int(monster.get(skillsmap[i])) - 10) / 2)
+        monster_name = monster.get_title_name()
+        skills = monster.skills
 
         try:
             skill = next(a for a in skills.keys() if check.lower() == a.lower())
@@ -328,6 +291,8 @@ class Dice:
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
+        else:
+            embed.set_thumbnail(url=monster.get_image_url())
         await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)
@@ -342,33 +307,11 @@ class Dice:
               -phrase [flavor text]
               -title [title] *note: [mname] and [cname] will be replaced automatically*"""
 
-        monster = await searchMonsterFull(monster_name, ctx)
-        self.bot.botStats["monsters_looked_up_session"] += 1
+        monster: Monster = await select_monster_full(ctx, monster_name)
         self.bot.db.incr('monsters_looked_up_life')
-        if monster['monster'] is None:
-            return await self.bot.say(monster['string'][0], delete_after=15)
-        monster = monster['monster']
-        monster_name = a_or_an(monster.get('name'))[0].upper() + a_or_an(monster.get('name'))[1:]
+        monster_name = monster.get_title_name()
 
-        saves = {'strengthSave': floor((int(monster['str']) - 10) / 2),
-                 'dexteritySave': floor((int(monster['dex']) - 10) / 2),
-                 'constitutionSave': floor((int(monster['con']) - 10) / 2),
-                 'intelligenceSave': floor((int(monster['int']) - 10) / 2),
-                 'wisdomSave': floor((int(monster['wis']) - 10) / 2),
-                 'charismaSave': floor((int(monster['cha']) - 10) / 2)}
-        save_overrides = monster.get('save', '').split(', ')
-        for s in save_overrides:
-            try:
-                _type = next(sa for sa in ('strengthSave',
-                                           'dexteritySave',
-                                           'constitutionSave',
-                                           'intelligenceSave',
-                                           'wisdomSave',
-                                           'charismaSave') if s.split(' ')[0].lower() in sa.lower())
-                mod = int(s.split(' ')[1])
-                saves[_type] = mod
-            except:
-                pass
+        saves = monster.saves
 
         try:
             save = next(a for a in saves.keys() if save.lower() == a.lower())
@@ -404,6 +347,8 @@ class Dice:
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
+        else:
+            embed.set_thumbnail(url=monster.get_image_url())
 
         await self.bot.say(embed=embed)
         try:

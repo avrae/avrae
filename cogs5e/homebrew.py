@@ -6,7 +6,7 @@ from discord.ext import commands
 from cogs5e.models.bestiary import Bestiary
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
 from cogs5e.models.monster import Monster
-from utils.functions import get_selection
+from utils.functions import get_selection, confirm
 
 log = logging.getLogger(__name__)
 
@@ -65,12 +65,26 @@ class Homebrew:
     @bestiary.command(pass_context=True, name='list')
     async def bestiary_list(self, ctx):
         """Lists your available bestiaries."""
-        pass  # TODO
+        user_bestiaries = ctx.bot.db.jget(ctx.message.author.id + '.bestiaries', {})
+        await self.bot.say(f"Your bestiaries: {', '.join(b['name'] for b in user_bestiaries.values())}")
 
     @bestiary.command(pass_context=True, name='delete')
     async def bestiary_delete(self, ctx):
-        """Deletes a bestiary from Avrae."""
-        pass  # TODO
+        """Deletes the active bestiary from Avrae."""
+        bestiary = Bestiary.from_ctx(ctx)
+
+        resp = await confirm(ctx, 'Are you sure you want to delete {}? (Reply with yes/no)'.format(bestiary.name))
+
+        if resp:
+            user_bestiaries = ctx.bot.db.jget(ctx.message.author.id + '.bestiaries', {})
+            active_bestiaries = ctx.bot.db.jget('active_bestiaries', {})
+            active_bestiaries[ctx.message.author.id] = None
+            del user_bestiaries[bestiary.id]
+            self.bot.db.jset(ctx.message.author.id + '.bestiaries', user_bestiaries)
+            self.bot.db.not_json_set('active_bestiaries', active_bestiaries)
+            return await self.bot.say('{} has been deleted.'.format(bestiary.name))
+        else:
+            return await self.bot.say("OK, cancelling.")
 
     @bestiary.command(pass_context=True, name='import')
     async def bestiary_import(self, ctx, url):

@@ -6,6 +6,13 @@ import html2text
 
 from utils.functions import a_or_an
 
+AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.+?)\|([+-]?\d+)\|(.*?)</avrae>', re.IGNORECASE)
+ATTACK_RE = re.compile(r'(?:<i>)?\w+ \w+ Attack:(?:</i>)? ([+-]?\d+) to hit, .*?, .*?\. '
+                       r'(?:<i>)?Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[.,]'
+                       r'(?: or [+-]?\d+ \((.+?)\) (\w+) damage .*?[.,])?'
+                       r'(?: plus [+-]?\d+ \((.+?)\) (\w+) damage.)?', re.IGNORECASE)
+JUST_DAMAGE_RE = re.compile(r'[+-]?\d+ \((.+?)\) (\w+) damage', re.IGNORECASE)
+
 
 class AbilityScores:
     def __init__(self, str_: int, dex: int, con: int, int_: int, wis: int, cha: int):
@@ -220,6 +227,11 @@ class Monster:
         reactions = parse_critterdb_traits(data, 'reactions')
         legactions = parse_critterdb_traits(data, 'legendaryActions')
 
+        attacks = []
+        for atk_src in (traits, actions, reactions, legactions):
+            for trait in atk_src:
+                attacks.extend(trait.attacks)
+
         return cls(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
                    data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
                    ability_scores, cr, data['stats']['experiencePoints'], None,
@@ -227,8 +239,8 @@ class Monster:
                    data['stats']['damageResistances'], data['stats']['damageImmunities'],
                    data['stats']['conditionImmunities'], raw_saves, saves, raw_skills, skills,
                    data['stats']['languages'], traits, actions, reactions, legactions,
-                   data['stats']['legendaryActionsPerRound'], True, 'homebrew', None,
-                   data['flavor']['nameIsProper'])  # TODO: attacks
+                   data['stats']['legendaryActionsPerRound'], True, 'homebrew', attacks,
+                   data['flavor']['nameIsProper'])
 
     @classmethod
     def from_bestiary(cls, data):
@@ -395,8 +407,39 @@ def parse_critterdb_traits(data, key):
     traits = []
     for trait in data['stats'][key]:
         name = trait['name']
-        desc = '\n'.join(html2text.html2text(text, bodywidth=0).strip() for text in trait['description'].split('\n'))
-        traits.append(Trait(name, desc))
+        raw = trait['description']
+
+        attacks = []
+        overrides = list(AVRAE_ATTACK_OVERRIDES_RE.finditer(raw))
+        raw_atks = list(ATTACK_RE.finditer(raw))
+        raw_damage = list(JUST_DAMAGE_RE.finditer(raw))
+
+        filtered = AVRAE_ATTACK_OVERRIDES_RE.sub('', raw)
+        desc = '\n'.join(html2text.html2text(text, bodywidth=0).strip() for text in filtered.split('\n')).strip()
+
+        if overrides:
+            for override in overrides:
+                attacks.append({'name': override.group(1) or name,
+                                'attackBonus': override.group(2), 'damage': override.group(3), 'details': desc})
+        elif raw_damage:
+            for atk in raw_atks:
+                if atk.group(4) and atk.group(5):  # versatile
+                    damage = f"{atk.group(4)}[{atk.group(5)}]"
+                    if atk.group(6) and atk.group(7):
+                        damage += f"+{atk.group(6)}[{atk.group(7)}]"
+                    attacks.append({'name': f"{name}2", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
+                                    'details': desc})
+                damage = f"{atk.group(2)}[{atk.group(3)}]"
+                if atk.group(6) and atk.group(7):
+                    damage += f"+{atk.group(6)}[{atk.group(7)}]"
+                attacks.append(
+                    {'name': name, 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage, 'details': desc})
+        else:
+            for dmg in raw_damage:
+                damage = f"{dmg.group(1)}[{dmg.group(2)}]"
+                attacks.append({'name': name, 'attackBonus': None, 'damage': damage, 'details': desc})
+
+        traits.append(Trait(name, desc, attacks))
     return traits
 
 

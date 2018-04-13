@@ -239,7 +239,7 @@ class Dice:
         args = parse_args_2(args)
         args['name'] = monster_name
         args['image'] = args.get('image') or monster.get_image_url()
-        attack['details'] = attack.get('desc')
+        attack['details'] = attack.get('desc') or attack.get('details')
 
         result = sheet_attack(attack, args)
         embed = result['embed']

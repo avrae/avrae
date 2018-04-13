@@ -105,6 +105,8 @@ class Homebrew:
                 log.info(f"Getting page {index} of {bestiary_id}...")
                 async with session.get(
                         f"http://www.critterdb.com/api/publishedbestiaries/{bestiary_id}/creatures/{index}") as resp:
+                    if not 199 < resp.status < 300:
+                        return await self.bot.say("Error importing bestiary. Are you sure the link is right?")
                     raw = await resp.json()
                     if not raw:
                         break

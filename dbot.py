@@ -210,7 +210,7 @@ async def on_command_error(error, ctx):
         if isinstance(original, NotFound):
             return await bot.send_message(ctx.message.channel,
                                           "Error: I tried to edit or delete a message that no longer exists.")
-        if isinstance(original, ValueError) and str(original) == "No closing quotation":
+        if isinstance(original, ValueError) and str(original) in ("No closing quotation", "No escaped character"):
             return await bot.send_message(ctx.message.channel, "Error: No closing quotation.")
         if isinstance(original, HTTPException):
             if original.response.status == 400:

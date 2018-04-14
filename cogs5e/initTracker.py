@@ -10,8 +10,8 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
-from cogs5e.funcs.lookupFuncs import searchMonsterFull, searchCharacterSpellName, searchSpellNameFull, \
-    searchAutoSpellFull
+from cogs5e.funcs.lookupFuncs import searchCharacterSpellName, searchSpellNameFull, \
+    searchAutoSpellFull, select_monster_full
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
@@ -188,12 +188,10 @@ class InitTracker:
               -npr (removes physical resistances when added)
               -rollhp (rolls monster HP)"""
 
-        monster = await searchMonsterFull(monster_name, ctx, pm=True)
+        monster = await select_monster_full(ctx, monster_name, pm=True)
         self.bot.db.incr("monsters_looked_up_life")
-        if monster['monster'] is None:
-            return await self.bot.say(monster['string'][0], delete_after=15)
-        monster = monster['monster']
-        dexMod = floor((int(monster['dex']) - 10) / 2)
+
+        dexMod = monster.skills['dexterity']
 
         args = parse_args_3(args)
         private = not bool(args.get('h', [False])[-1])
@@ -224,8 +222,8 @@ class InitTracker:
 
         name_num = 1
         for i in range(recursion):
-            name = args.get('name', [monster['name'][:2].upper() + '#'])[-1].replace('#', str(name_num))
-            raw_name = args.get('name', [monster['name'][:2].upper() + '#'])[-1]
+            name = args.get('name', [monster.name[:2].upper() + '#'])[-1].replace('#', str(name_num))
+            raw_name = args.get('name', [monster.name[:2].upper() + '#'])[-1]
             to_continue = False
 
             while combat.get_combatant(name) and name_num < 1000:  # keep increasing to avoid duplicates
@@ -254,7 +252,7 @@ class InitTracker:
 
                 rolled_hp = None
                 if rollhp:
-                    rolled_hp = roll(monster['hp'].split(' (')[1].split(')')[0], inline=True)
+                    rolled_hp = roll(monster.hitdice, inline=True)
                     to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 

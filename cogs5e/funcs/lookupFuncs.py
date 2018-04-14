@@ -149,7 +149,7 @@ def old_searchMonster(name):
     return fuzzywuzzy_search_all_3(c.monsters, 'name', name, return_key=True)
 
 
-async def select_monster_full(ctx, name, cutoff=5, return_key=False):
+async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False):
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
@@ -159,7 +159,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False):
         choices.extend(bestiary.monsters)
     except NoBestiary:
         pass
-    return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key)
+    return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm)
 
 
 async def searchMonsterFull(name, ctx, pm=False):

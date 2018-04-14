@@ -146,7 +146,7 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False):
     else:
         return result, True
 
-async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False):
+async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False):
     result = search(list_to_search, value, key, cutoff, return_key)
     if result is None:
         raise NoSelectionElements("No matches found.")
@@ -160,9 +160,9 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
             result = results[0]
         else:
             if return_key:
-                result = await get_selection(ctx, [(r, r) for r in results])
+                result = await get_selection(ctx, [(r, r) for r in results], pm=pm)
             else:
-                result = await get_selection(ctx, [(key(r), r) for r in results])
+                result = await get_selection(ctx, [(key(r), r) for r in results], pm=pm)
     return result
 
 

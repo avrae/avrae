@@ -1,6 +1,5 @@
 import copy
 import shlex
-from math import floor
 
 import cachetools
 
@@ -590,13 +589,13 @@ class MonsterCombatant(Combatant):
 
     @classmethod
     def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, opts=None, index=None, hp=None):
-        monster_name = monster['name']
-        hp = int(monster['hp'].split(' (')[0]) if not hp else int(hp)
-        ac = int(monster['ac'].split(' (')[0])
+        monster_name = monster.name
+        hp = int(monster.hp) if not hp else int(hp)
+        ac = int(monster.ac)
 
-        resist = monster.get('resist', '').replace(' ', '').split(',')
-        immune = monster.get('immune', '').replace(' ', '').split(',')
-        vuln = monster.get('vulnerable', '').replace(' ', '').split(',')
+        resist = monster.resist
+        immune = monster.immume
+        vuln = monster.vuln
         # fix npr and blug/pierc/slash
         if opts.get('npr'):
             for t in (resist, immune, vuln):
@@ -614,31 +613,9 @@ class MonsterCombatant(Combatant):
                         t.append(d)
 
         resists = {'resist': resist, 'immune': immune, 'vuln': vuln}
-        raw_attacks = monster.get('attacks', [])
-        attacks = []
-        for a in raw_attacks:
-            attacks.append({'name': a['name'], 'attackBonus': a.get('attackBonus'), 'damage': a.get('damage'),
-                            'details': a.get('desc')})
+        attacks = monster.attacks
 
-        saves = {'strengthSave': floor((int(monster['str']) - 10) / 2),
-                 'dexteritySave': floor((int(monster['dex']) - 10) / 2),
-                 'constitutionSave': floor((int(monster['con']) - 10) / 2),
-                 'intelligenceSave': floor((int(monster['int']) - 10) / 2),
-                 'wisdomSave': floor((int(monster['wis']) - 10) / 2),
-                 'charismaSave': floor((int(monster['cha']) - 10) / 2)}
-        save_overrides = monster.get('save', '').split(', ')
-        for s in save_overrides:
-            try:
-                _type = next(sa for sa in ('strengthSave',
-                                           'dexteritySave',
-                                           'constitutionSave',
-                                           'intelligenceSave',
-                                           'wisdomSave',
-                                           'charismaSave') if s.split(' ')[0].lower() in sa.lower())
-                mod = int(s.split(' ')[1])
-                saves[_type] = mod
-            except:
-                pass
+        saves = monster.saves
 
         return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, index,
                    monster_name)

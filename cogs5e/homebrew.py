@@ -93,6 +93,8 @@ class Homebrew:
         # http://www.critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
         if not 'critterdb.com' in url:
             return await self.bot.say("This is not a CritterDB link.")
+        if not 'publishedbestiary' in url:
+            return await self.bot.say("This is not a public bestiary. Publish it to import!")
         bestiary_id = url.split('/view')[1].strip('/ \n')
         log.info(f"Getting bestiary ID {bestiary_id}...")
         index = 1
@@ -103,6 +105,8 @@ class Homebrew:
                 log.info(f"Getting page {index} of {bestiary_id}...")
                 async with session.get(
                         f"http://www.critterdb.com/api/publishedbestiaries/{bestiary_id}/creatures/{index}") as resp:
+                    if not 199 < resp.status < 300:
+                        return await self.bot.say("Error importing bestiary. Are you sure the link is right?")
                     raw = await resp.json()
                     if not raw:
                         break

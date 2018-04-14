@@ -6,9 +6,10 @@ import html2text
 
 from utils.functions import a_or_an
 
-AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.+?)\|([+-]?\d+)\|(.*?)</avrae>', re.IGNORECASE)
-ATTACK_RE = re.compile(r'(?:<i>)?\w+ \w+ Attack:(?:</i>)? ([+-]?\d+) to hit, .*?, .*?\. '
-                       r'(?:<i>)?Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[.,]'
+AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
+ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){2,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
+                       r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]'
+                       r'(?:in melee, or [+-]?\d+ \((.+?)\) (\w+) damage at range[,.])?'
                        r'(?: or [+-]?\d+ \((.+?)\) (\w+) damage .*?[.,])?'
                        r'(?: plus [+-]?\d+ \((.+?)\) (\w+) damage.)?', re.IGNORECASE)
 JUST_DAMAGE_RE = re.compile(r'[+-]?\d+ \((.+?)\) (\w+) damage', re.IGNORECASE)
@@ -420,18 +421,25 @@ def parse_critterdb_traits(data, key):
         if overrides:
             for override in overrides:
                 attacks.append({'name': override.group(1) or name,
-                                'attackBonus': override.group(2), 'damage': override.group(3), 'details': desc})
+                                'attackBonus': override.group(2) or None, 'damage': override.group(3) or None,
+                                'details': desc})
         elif raw_damage:
             for atk in raw_atks:
-                if atk.group(4) and atk.group(5):  # versatile
+                if atk.group(6) and atk.group(7):  # versatile
+                    damage = f"{atk.group(6)}[{atk.group(7)}]"
+                    if atk.group(8) and atk.group(8):  # bonus damage
+                        damage += f"+{atk.group(8)}[{atk.group(9)}]"
+                    attacks.append({'name': f"2 Handed {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
+                                    'details': desc})
+                if atk.group(4) and atk.group(5):  # ranged
                     damage = f"{atk.group(4)}[{atk.group(5)}]"
-                    if atk.group(6) and atk.group(7):
-                        damage += f"+{atk.group(6)}[{atk.group(7)}]"
-                    attacks.append({'name': f"{name}2", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
+                    if atk.group(8) and atk.group(8):  # bonus damage
+                        damage += f"+{atk.group(8)}[{atk.group(9)}]"
+                    attacks.append({'name': f"Ranged {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
                                     'details': desc})
                 damage = f"{atk.group(2)}[{atk.group(3)}]"
-                if atk.group(6) and atk.group(7):
-                    damage += f"+{atk.group(6)}[{atk.group(7)}]"
+                if atk.group(8) and atk.group(9):  # bonus damage
+                    damage += f"+{atk.group(8)}[{atk.group(9)}]"
                 attacks.append(
                     {'name': name, 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage, 'details': desc})
         else:

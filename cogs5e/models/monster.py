@@ -195,7 +195,7 @@ class Monster:
         num_hit_die = data['stats']['numHitDie']
         hit_die_size = data['stats']['hitDieSize']
         con_by_level = num_hit_die * ability_scores.get_mod('con')
-        hp = ceil(((hit_die_size + 1) / 2) * num_hit_die) + con_by_level
+        hp = floor(((hit_die_size + 1) / 2) * num_hit_die) + con_by_level
         hitdice = f"{num_hit_die}d{hit_die_size} + {con_by_level}"
 
         proficiency = data['stats']['proficiencyBonus']

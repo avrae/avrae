@@ -13,7 +13,7 @@ from discord.ext import commands
 from cogs5e.funcs.lookupFuncs import select_monster_full, c, getSpell
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
-from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP, search_and_select
+from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP, search_and_select, generate_token
 
 CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'spellsknown': "Spells Known",
@@ -454,13 +454,28 @@ class Lookup:
 
         url = monster.get_image_url()
 
-        embed = EmbedWithAuthor(ctx)
-        embed.title = monster.name
-        embed.description = f"{monster.size} monster."
-        embed.set_image(url=url)
-        embed.set_footer(text="This command may not support all monsters.")
+        if not monster.source == 'homebrew':
+            embed = EmbedWithAuthor(ctx)
+            embed.title = monster.name
+            embed.description = f"{monster.size} monster."
+            embed.set_image(url=url)
+            embed.set_footer(text="This command may not support all monsters.")
 
-        await self.bot.say(embed=embed)
+            await self.bot.say(embed=embed)
+        else:
+            if not url:
+                return await self.bot.send_message(ctx.message.channel, "This monster has no image.")
+
+            try:
+                processed = await generate_token(url)
+            except Exception as e:
+                return await self.bot.send_message(ctx.message.channel, f"Error generating token: {e}")
+
+            await self.bot.send_file(ctx.message.channel, processed,
+                                     content="I generated this token for you! If it seems "
+                                             "wrong, you can make your own at "
+                                             "<http://rolladvantage.com/tokenstamp/>!",
+                                     filename="image.png")
 
     @commands.command(pass_context=True)
     async def monster(self, ctx, *, name: str):
@@ -597,8 +612,8 @@ class Lookup:
 
         if monster.source == 'homebrew':
             embed_queue[-1].set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
-        else:
-            embed_queue[0].set_thumbnail(url=monster.get_image_url())
+
+        embed_queue[0].set_thumbnail(url=monster.get_image_url())
 
         for embed in embed_queue:
             if pm:

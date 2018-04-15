@@ -1,5 +1,5 @@
 import re
-from math import floor, ceil
+from math import floor
 from urllib import parse
 
 import html2text
@@ -59,7 +59,7 @@ class Monster:
                  condition_immune: list = None, raw_saves: str = '', saves: dict = None, raw_skills: str = '',
                  skills: dict = None, languages: list = None, traits: list = None, actions: list = None,
                  reactions: list = None, legactions: list = None, la_per_round=3, srd=True, source='homebrew',
-                 attacks: list = None, proper: bool = False):
+                 attacks: list = None, proper: bool = False, image_url: str = None):
         if vuln is None:
             vuln = []
         if resist is None:
@@ -129,6 +129,7 @@ class Monster:
         self.source = source
         self.attacks = attacks
         self.proper = proper
+        self.image_url = image_url
 
     @classmethod
     def from_data(cls, data):
@@ -241,7 +242,7 @@ class Monster:
                    data['stats']['conditionImmunities'], raw_saves, saves, raw_skills, skills,
                    data['stats']['languages'], traits, actions, reactions, legactions,
                    data['stats']['legendaryActionsPerRound'], True, 'homebrew', attacks,
-                   data['flavor']['nameIsProper'])
+                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'])
 
     @classmethod
     def from_bestiary(cls, data):
@@ -268,7 +269,8 @@ class Monster:
                 'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
                 'reactions': [t.to_dict() for t in self.reactions],
                 'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
-                'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper}
+                'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
+                'image_url': self.image_url}
 
     def get_stat_array(self):
         """
@@ -353,7 +355,7 @@ class Monster:
         if not self.source == 'homebrew':
             return f"https://5etools.com/img/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
         else:
-            return ''
+            return self.image_url or ''
 
 
 def parse_raw_saves(raw):
@@ -429,8 +431,9 @@ def parse_critterdb_traits(data, key):
                     damage = f"{atk.group(6)}[{atk.group(7)}]"
                     if atk.group(8) and atk.group(8):  # bonus damage
                         damage += f"+{atk.group(8)}[{atk.group(9)}]"
-                    attacks.append({'name': f"2 Handed {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
-                                    'details': desc})
+                    attacks.append(
+                        {'name': f"2 Handed {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
+                         'details': desc})
                 if atk.group(4) and atk.group(5):  # ranged
                     damage = f"{atk.group(4)}[{atk.group(5)}]"
                     if atk.group(8) and atk.group(8):  # bonus damage

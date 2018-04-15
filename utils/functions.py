@@ -3,15 +3,19 @@ Created on Oct 29, 2016
 
 @author: andrew
 """
+import asyncio
 import errno
 import logging
 import os
 import random
 import re
 import shlex
+from io import BytesIO
 from itertools import zip_longest
 
+import aiohttp
 import discord
+from PIL import Image
 from fuzzywuzzy import process, fuzz
 from pygsheets import NoValidUrlKeyFound
 
@@ -145,6 +149,7 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False):
         return key(result), True
     else:
         return result, True
+
 
 async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False):
     result = search(list_to_search, value, key, cutoff, return_key)
@@ -606,3 +611,52 @@ def parse_snippets(args: str, ctx) -> str:
         elif ' ' in arg:
             tempargs[index] = shlex.quote(arg)
     return " ".join(tempargs)
+
+
+async def generate_token(img_url, color_override=None):
+    def process_img(img_bytes, color_override):
+        b = BytesIO(img_bytes)
+        img = Image.open(b)
+        template = Image.open('res/template.png')
+        transparency_template = Image.open('res/alphatemplate.tif')
+        width, height = img.size
+        is_taller = height >= width
+        if is_taller:
+            box = (0, 0, width, width)
+        else:
+            box = (width / 2 - height / 2, 0, width / 2 + height / 2, height)
+        img = img.crop(box)
+        img = img.resize((260, 260), Image.ANTIALIAS)
+
+        if color_override is None:
+            num_pixels = img.size[0] * img.size[1]
+            colors = img.getcolors(num_pixels)
+            rgb = sum(c[0] * c[1][0] for c in colors), sum(c[0] * c[1][1] for c in colors), sum(
+                c[0] * c[1][2] for c in colors)
+            rgb = rgb[0] / num_pixels, rgb[1] / num_pixels, rgb[2] / num_pixels
+        else:
+            rgb = ((color_override >> 16) & 255, (color_override >> 8) & 255, color_override & 255)
+
+        bands = template.split()
+        for i, v in enumerate(rgb):
+            out = bands[i].point(lambda p: int(p * v / 255))
+            bands[i].paste(out)
+
+        img.putalpha(transparency_template)
+        colored_template = Image.merge(template.mode, bands)
+        img.paste(colored_template, mask=colored_template)
+
+        out_bytes = BytesIO()
+        img.save(out_bytes, "PNG")
+        out_bytes.seek(0)
+        return out_bytes
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(img_url) as resp:
+                img_bytes = await resp.read()
+        processed = await asyncio.get_event_loop().run_in_executor(None, process_img, img_bytes, color_override)
+    except Exception:
+        raise
+
+    return processed

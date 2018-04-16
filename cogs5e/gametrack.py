@@ -621,7 +621,6 @@ class GameTrack:
 
     async def _old_cast(self, ctx, spell_name, *args):
         spell = getSpell(spell_name)
-        self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
         if spell is None:
             return await self.bot.say("Spell not found.", delete_after=15)

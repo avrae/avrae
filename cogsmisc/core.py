@@ -73,11 +73,12 @@ class Core:
     @commands.command(aliases=['stats', 'info'])
     async def about(self, detail=None):
         """Information about the bot."""
+        botStats = {}
         statKeys = ["dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life",
                     "items_looked_up_life",
                     "rounds_init_tracked_life", "turns_init_tracked_life"]
         for k in statKeys:
-            self.bot.botStats[k] = int(self.bot.db.get(k, "0"))
+            botStats[k] = int(self.bot.db.get(k, "0"))
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808"
@@ -105,7 +106,7 @@ class Core:
             text='{} | Build {} | Cluster {} | Shard {}'.format(motd, self.bot.db.get('build_num'), cluster_num,
                                                                 getattr(self.bot, 'shard_id', 0)))
         commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n{items_looked_up_life} items looked up\n{rounds_init_tracked_life} rounds of initiative tracked ({turns_init_tracked_life} turns)".format(
-            **self.bot.botStats)
+            **botStats)
         embed.add_field(name="Commands Run", value=commands_run)
         embed.add_field(name="Servers", value=str(len(self.bot.servers)) + ' on this shard\n' + str(
             sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values())) + ' total')

@@ -498,7 +498,6 @@ class Lookup:
             pm = False
             srd = False
 
-        self.bot.botStats["monsters_looked_up_session"] += 1
         self.bot.db.incr('monsters_looked_up_life')
 
         monster = await select_monster_full(ctx, name)
@@ -633,7 +632,6 @@ class Lookup:
             pm = False
             srd = False
 
-        self.bot.botStats["spells_looked_up_session"] += 1
         self.bot.db.incr('spells_looked_up_life')
 
         result = await search_and_select(ctx, c.spells, name, lambda e: e['name'], return_key=True)
@@ -736,7 +734,6 @@ class Lookup:
             pm = False
             srd = False
 
-        self.bot.botStats["items_looked_up_session"] += 1
         self.bot.db.incr('items_looked_up_life')
 
         result = await search_and_select(ctx, c.items, name, lambda e: e['name'])

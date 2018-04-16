@@ -22,7 +22,6 @@ class Dice:
 
     async def on_message(self, message):
         if message.content.startswith('!d20'):
-            self.bot.botStats["dice_rolled_session"] += 1
             self.bot.db.incr('dice_rolled_life')
             rollStr = message.content.replace('!', '1').split(' ')[0]
             try:
@@ -44,7 +43,6 @@ class Dice:
     @commands.command(name='2', hidden=True, pass_context=True)
     async def quick_roll(self, ctx, *, mod: str = '0'):
         """Quickly rolls a d20."""
-        self.bot.botStats["dice_rolled_session"] += 1
         self.bot.db.incr('dice_rolled_life')
         rollStr = '1d20+' + mod
         adv = 0
@@ -84,7 +82,6 @@ class Dice:
             return await self.bot.say("What do you expect me to do, destroy the universe?")
 
         adv = 0
-        self.bot.botStats["dice_rolled_session"] += 1
         self.bot.db.incr('dice_rolled_life')
         if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
             adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
@@ -107,7 +104,6 @@ class Dice:
     @checks.is_owner()
     async def debug_roll(self, ctx, *, rollStr: str):
         adv = 0
-        self.bot.botStats["dice_rolled_session"] += 1
         self.bot.db.incr('dice_rolled_life')
         if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
             adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
@@ -147,7 +143,6 @@ class Dice:
         Usage: !rrr <iterations> <xdy> [args]"""
         if iterations < 1 or iterations > 500:
             return await self.bot.say("Too many or too few iterations.")
-        self.bot.botStats["dice_rolled_session"] += iterations
         self.bot.db.incr('dice_rolled_life')
         adv = 0
         out = []
@@ -176,7 +171,6 @@ class Dice:
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
         if iterations < 1 or iterations > 500:
             return await self.bot.say("Too many or too few iterations.")
-        self.bot.botStats["dice_rolled_session"] += iterations
         self.bot.db.incr('dice_rolled_life')
         adv = 0
         out = []

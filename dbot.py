@@ -145,16 +145,6 @@ async def enter():
     await bot.wait_until_ready()
     appInfo = await bot.application_info()
     bot.owner = appInfo.owner
-    bot.botStats = {}
-    statKeys = ["dice_rolled_session", "spells_looked_up_session", "monsters_looked_up_session",
-                "commands_used_session", "dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life",
-                "commands_used_life", "items_looked_up_life", "items_looked_up_session"]
-    for k in statKeys:
-        if not bot.db.exists(k): bot.db.set(k, 0)
-        bot.botStats[k] = int(bot.db.get(k, 0))
-    bot.botStats["items_looked_up_session"] = bot.botStats["items_looked_up_session"] = bot.botStats[
-        "dice_rolled_session"] = bot.botStats["spells_looked_up_session"] = bot.botStats["monsters_looked_up_session"] = \
-        bot.botStats["commands_used_session"] = 0
     if not bot.db.exists('build_num'): bot.db.set('build_num', 114)  # this was added in build 114
     if getattr(bot, "shard_id", 0) == 0: bot.db.incr('build_num')
     await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
@@ -271,7 +261,6 @@ async def on_message(message):
 
 @bot.event
 async def on_command(command, ctx):
-    bot.botStats['commands_used_session'] += 1
     bot.db.incr('commands_used_life')
     try:
         log.debug(

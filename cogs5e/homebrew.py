@@ -3,10 +3,9 @@ import logging
 import aiohttp
 from discord.ext import commands
 
-from cogs5e.models import errors
 from cogs5e.models.bestiary import Bestiary
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
-from cogs5e.models.errors import NoBestiary, SelectionCancelled, NoSelectionElements
+from cogs5e.models.errors import NoBestiary, SelectionCancelled, NoSelectionElements, ExternalImportError
 from cogs5e.models.monster import Monster
 from utils.functions import get_selection, confirm
 
@@ -148,7 +147,7 @@ class Homebrew:
                 async with session.get(
                         f"http://www.critterdb.com/api/publishedbestiaries/{url}/creatures/{index}") as resp:
                     if not 199 < resp.status < 300:
-                        raise errors.ImportError("Error importing bestiary. Are you sure the link is right?")
+                        raise ExternalImportError("Error importing bestiary. Are you sure the link is right?")
                     raw = await resp.json()
                     if not raw:
                         break

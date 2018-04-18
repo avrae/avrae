@@ -19,6 +19,13 @@ class NoBestiary(AvraeException):
         super().__init__("You have no bestiary active.")
 
 
+class ImportError(AvraeException):
+    """Raised when somethine fails to import."""
+
+    def __init__(self, msg):
+        super().__init__(msg)
+
+
 class InvalidArgument(AvraeException):
     """Raised when an argument is invalid."""
     pass

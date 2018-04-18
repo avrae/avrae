@@ -3,8 +3,10 @@ import logging
 import aiohttp
 from discord.ext import commands
 
+from cogs5e.models import errors
 from cogs5e.models.bestiary import Bestiary
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
+from cogs5e.models.errors import NoBestiary, SelectionCancelled, NoSelectionElements
 from cogs5e.models.monster import Monster
 from utils.functions import get_selection, confirm
 
@@ -30,33 +32,12 @@ class Homebrew:
         if name is None:
             bestiary = Bestiary.from_ctx(ctx)
         else:
-            choices = []
-            for url, bestiary in user_bestiaries.items():
-                if bestiary['name'].lower() == name.lower():
-                    choices.append((bestiary, url))
-                elif name.lower() in bestiary['name'].lower():
-                    choices.append((bestiary, url))
-
-            if len(choices) > 1:
-                choiceList = [(f"{c[0]['name']} (`{c[1]})`", c) for c in choices]
-
-                result = await get_selection(ctx, choiceList, delete=True)
-                if result is None:
-                    return await self.bot.say('Selection timed out or was cancelled.')
-
-                bestiary = result[0]
-                bestiary_url = result[1]
-            elif len(choices) == 0:
-                return await self.bot.say('Bestiary not found.')
-            else:
-                bestiary = choices[0][0]
-                bestiary_url = choices[0][1]
-
-            active_bestiaries = self.bot.db.jget('active_bestiaries', {})
-            active_bestiaries[ctx.message.author.id] = bestiary_url
-            self.bot.db.jset('active_bestiaries', active_bestiaries)
-
-            bestiary = Bestiary.from_raw(bestiary_url, bestiary)
+            try:
+                bestiary = await self.select_bestiary(ctx, name)
+            except NoBestiary:
+                return await self.bot.say("You have no bestiaries. Use `!bestiary import` to import one!")
+            except NoSelectionElements:
+                return await self.bot.say("Bestiary not found.")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
         embed.description = '\n'.join(m.name for m in bestiary.monsters)
@@ -69,9 +50,14 @@ class Homebrew:
         await self.bot.say(f"Your bestiaries: {', '.join(b['name'] for b in user_bestiaries.values())}")
 
     @bestiary.command(pass_context=True, name='delete')
-    async def bestiary_delete(self, ctx):
-        """Deletes the active bestiary from Avrae."""
-        bestiary = Bestiary.from_ctx(ctx)
+    async def bestiary_delete(self, ctx, *, name):
+        """Deletes a bestiary from Avrae."""
+        try:
+            bestiary = await self.select_bestiary(ctx, name)
+        except NoBestiary:
+            return await self.bot.say("You have no bestiaries. Use `!bestiary import` to import one!")
+        except NoSelectionElements:
+            return await self.bot.say("Bestiary not found.")
 
         resp = await confirm(ctx, 'Are you sure you want to delete {}? (Reply with yes/no)'.format(bestiary.name))
 
@@ -95,30 +81,14 @@ class Homebrew:
             return await self.bot.say("This is not a CritterDB link.")
         if not 'publishedbestiary' in url:
             return await self.bot.say("This is not a public bestiary. Publish it to import!")
-        bestiary_id = url.split('/view')[1].strip('/ \n')
-        log.info(f"Getting bestiary ID {bestiary_id}...")
-        index = 1
-        creatures = []
-        loading = await self.bot.say("Importing bestiary (this may take a while for large bestiaries)...")
-        async with aiohttp.ClientSession() as session:
-            for _ in range(100):  # 100 pages max
-                log.info(f"Getting page {index} of {bestiary_id}...")
-                async with session.get(
-                        f"http://www.critterdb.com/api/publishedbestiaries/{bestiary_id}/creatures/{index}") as resp:
-                    if not 199 < resp.status < 300:
-                        return await self.bot.say("Error importing bestiary. Are you sure the link is right?")
-                    raw = await resp.json()
-                    if not raw:
-                        break
-                    creatures.extend(raw)
-                    index += 1
-            async with session.get(f"http://www.critterdb.com/api/publishedbestiaries/{bestiary_id}") as resp:
-                raw = await resp.json()
-                name = raw['name']
 
-        parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
-        bestiary = Bestiary(bestiary_id, name, parsed_creatures).set_active(ctx).commit(ctx)
-        await self.bot.edit_message(loading, f"Imported {name}!")
+        loading = await self.bot.say("Importing bestiary (this may take a while for large bestiaries)...")
+        bestiary_id = url.split('/view')[1].strip('/ \n')
+
+        bestiary = await self.bestiary_from_critterdb(bestiary_id)
+
+        bestiary.set_active(ctx).commit(ctx)
+        await self.bot.edit_message(loading, f"Imported {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
         embed.description = '\n'.join(m.name for m in bestiary.monsters)
@@ -130,29 +100,62 @@ class Homebrew:
         bestiary_id = self.bot.db.jget('active_bestiaries', {}).get(ctx.message.author.id)
         if bestiary_id is None:
             return await self.bot.say("You don't have a bestiary active. Add one with `!bestiary import` first!")
+        loading = await self.bot.say("Importing bestiary (this may take a while for large bestiaries)...")
 
-        log.info(f"Getting bestiary ID {bestiary_id}...")
+        bestiary = await self.bestiary_from_critterdb(bestiary_id)
+
+        await self.bot.edit_message(loading, f"Imported and updated {bestiary.name}!")
+        embed = HomebrewEmbedWithAuthor(ctx)
+        embed.title = bestiary.name
+        embed.description = '\n'.join(m.name for m in bestiary.monsters)
+        await self.bot.say(embed=embed)
+
+    async def select_bestiary(self, ctx, name):
+        user_bestiaries = self.bot.db.jget(ctx.message.author.id + '.bestiaries', None)
+
+        if user_bestiaries is None:
+            raise NoBestiary()
+        choices = []
+        for url, bestiary in user_bestiaries.items():
+            if bestiary['name'].lower() == name.lower():
+                choices.append((bestiary, url))
+            elif name.lower() in bestiary['name'].lower():
+                choices.append((bestiary, url))
+
+        if len(choices) > 1:
+            choiceList = [(f"{c[0]['name']} (`{c[1]})`", c) for c in choices]
+
+            result = await get_selection(ctx, choiceList, delete=True)
+            if result is None:
+                raise SelectionCancelled()
+
+            bestiary = result[0]
+            bestiary_url = result[1]
+        elif len(choices) == 0:
+            raise NoSelectionElements()
+        else:
+            bestiary = choices[0][0]
+            bestiary_url = choices[0][1]
+        return Bestiary.from_raw(bestiary_url, bestiary)
+
+    async def bestiary_from_critterdb(self, url):
+        log.info(f"Getting bestiary ID {url}...")
         index = 1
         creatures = []
-        loading = await self.bot.say("Importing bestiary (this may take a while for large bestiaries)...")
         async with aiohttp.ClientSession() as session:
             for _ in range(100):  # 100 pages max
-                log.info(f"Getting page {index} of {bestiary_id}...")
+                log.info(f"Getting page {index} of {url}...")
                 async with session.get(
-                        f"http://www.critterdb.com/api/publishedbestiaries/{bestiary_id}/creatures/{index}") as resp:
+                        f"http://www.critterdb.com/api/publishedbestiaries/{url}/creatures/{index}") as resp:
+                    if not 199 < resp.status < 300:
+                        raise errors.ImportError("Error importing bestiary. Are you sure the link is right?")
                     raw = await resp.json()
                     if not raw:
                         break
                     creatures.extend(raw)
                     index += 1
-            async with session.get(f"http://www.critterdb.com/api/publishedbestiaries/{bestiary_id}") as resp:
+            async with session.get(f"http://www.critterdb.com/api/publishedbestiaries/{url}") as resp:
                 raw = await resp.json()
                 name = raw['name']
-
         parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
-        bestiary = Bestiary(bestiary_id, name, parsed_creatures).set_active(ctx).commit(ctx)
-        await self.bot.edit_message(loading, f"Imported and updated {name}!")
-        embed = HomebrewEmbedWithAuthor(ctx)
-        embed.title = bestiary.name
-        embed.description = '\n'.join(m.name for m in bestiary.monsters)
-        await self.bot.say(embed=embed)
+        return Bestiary(url, name, parsed_creatures)

@@ -4,7 +4,6 @@ import random
 import re
 import shlex
 import traceback
-from math import floor
 
 import discord
 from discord.ext import commands

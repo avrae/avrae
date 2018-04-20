@@ -511,13 +511,10 @@ class SheetManager:
         except:
             pass
 
-    @commands.command(pass_context=True, aliases=['char'])
-    async def character(self, ctx, name: str = None, *, args: str = ''):
+    @commands.group(pass_context=True, aliases=['char'], invoke_without_command=True)
+    async def character(self, ctx, *, name: str = None):
         """Switches the active character.
-        Breaks for characters created before Jan. 20, 2017.
-        Valid arguments:
-        `delete` - deletes a character.
-        `list` - lists all of your characters."""
+        Breaks for characters created before Jan. 20, 2017."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
         self.active_characters = self.bot.db.not_json_get('active_characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
@@ -529,11 +526,6 @@ class SheetManager:
                 return await self.bot.say('You have no character active.')
             return await self.bot.say(
                 'Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')))
-
-        if name == 'list':
-            return await self.bot.say('Your characters:\n{}'.format(
-                ', '.join([user_characters[c].get('stats', {}).get('name', '') for c in user_characters])))
-        args = shlex.split(args)
 
         choices = []
         for url, character in user_characters.items():
@@ -559,21 +551,6 @@ class SheetManager:
 
         name = char_name
 
-        if 'delete' in args:
-            await self.bot.say('Are you sure you want to delete {}? (Reply with yes/no)'.format(name))
-            reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
-            reply = get_positivity(reply.content) if reply is not None else None
-            if reply is None:
-                return await self.bot.say('Timed out waiting for a response or invalid response.')
-            elif reply:
-                self.active_characters[ctx.message.author.id] = None
-                del user_characters[char_url]
-                self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
-                self.bot.db.not_json_set('active_characters', self.active_characters)
-                return await self.bot.say('{} has been deleted.'.format(name))
-            else:
-                return await self.bot.say("OK, cancelling.")
-
         self.active_characters[ctx.message.author.id] = char_url
         self.bot.db.not_json_set('active_characters', self.active_characters)
 
@@ -583,6 +560,61 @@ class SheetManager:
             pass
 
         await self.bot.say("Active character changed to {}.".format(name), delete_after=20)
+
+    @character.command(pass_context=True, name='list')
+    async def character_list(self, ctx):
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
+        if user_characters is None:
+            return await self.bot.say('You have no characters.')
+
+        await self.bot.say('Your characters:\n{}'.format(
+            ', '.join([user_characters[c].get('stats', {}).get('name', '') for c in user_characters])))
+
+    @character.command(pass_context=True, name='delete')
+    async def character_delete(self, ctx, *, name):
+        """Deletes a character."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
+        self.active_characters = self.bot.db.not_json_get('active_characters', {})
+        if user_characters is None:
+            return await self.bot.say('You have no characters.')
+
+        choices = []
+        for url, character in user_characters.items():
+            if character.get('stats', {}).get('name', '').lower() == name.lower():
+                choices.append((character, url))
+            elif name.lower() in character.get('stats', {}).get('name', '').lower():
+                choices.append((character, url))
+
+        if len(choices) > 1:
+            choiceList = [(f"{c[0].get('stats', {}).get('name', 'Unnamed')} (`{c[1]})`", c) for c in choices]
+
+            char = await get_selection(ctx, choiceList, delete=True)
+            if char is None:
+                return await self.bot.say('Selection timed out or was cancelled.')
+
+            char_name = char[0].get('stats', {}).get('name', 'Unnamed')
+            char_url = char[1]
+        elif len(choices) == 0:
+            return await self.bot.say('Character not found.')
+        else:
+            char_name = choices[0][0].get('stats', {}).get('name', 'Unnamed')
+            char_url = choices[0][1]
+
+        name = char_name
+
+        await self.bot.say('Are you sure you want to delete {}? (Reply with yes/no)'.format(name))
+        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
+        reply = get_positivity(reply.content) if reply is not None else None
+        if reply is None:
+            return await self.bot.say('Timed out waiting for a response or invalid response.')
+        elif reply:
+            self.active_characters[ctx.message.author.id] = None
+            del user_characters[char_url]
+            self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+            self.bot.db.not_json_set('active_characters', self.active_characters)
+            return await self.bot.say('{} has been deleted.'.format(name))
+        else:
+            return await self.bot.say("OK, cancelling.")
 
     @commands.command(pass_context=True)
     @commands.cooldown(1, 15, BucketType.user)

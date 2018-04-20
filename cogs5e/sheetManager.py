@@ -563,6 +563,7 @@ class SheetManager:
 
     @character.command(pass_context=True, name='list')
     async def character_list(self, ctx):
+        """Lists your characters."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
         if user_characters is None:
             return await self.bot.say('You have no characters.')

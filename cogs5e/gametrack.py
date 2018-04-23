@@ -132,6 +132,8 @@ class GameTrack:
                 character.modify_hp(hp_roll.total)
             elif 'set' in operator.lower():
                 character.set_hp(hp_roll.total)
+            elif 'max' in operator.lower() and not hp:
+                character.set_hp(character.get_max_hp())
             elif hp == '':
                 hp_roll = roll(operator, inline=True, show_blurbs=False)
                 hp = operator

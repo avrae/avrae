@@ -23,6 +23,7 @@ class DataIO:
                              password=credentials.db_pass)
         else:
             self._db = redis.from_url(test_database_url)
+            # self._db = Redis(host="127.0.0.1", db=0, socket_connect_timeout=2, socket_timeout=2)
         self.pubsub = self._db.pubsub(ignore_subscribe_messages=True)
 
     def get(self, key, default=None):

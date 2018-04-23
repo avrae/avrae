@@ -241,7 +241,7 @@ class Combat:
             raise RequiresContext
         self.ctx.bot.db.jsetex(self.get_db_key(), self.to_dict(), COMBAT_TTL)
 
-    def get_summary(self):
+    def get_summary(self, private=False):
         """Returns the generated summary message content."""
         combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
         outStr = "```markdown\n{}: {} (round {})\n".format(
@@ -250,7 +250,7 @@ class Combat:
         outStr += '=' * (len(outStr) - 13)
         outStr += '\n'
         for c in combatants:
-            outStr += ("# " if self.index == c.index else "  ") + c.get_summary() + "\n"
+            outStr += ("# " if self.index == c.index else "  ") + c.get_summary(private) + "\n"
         outStr += "```"
         return outStr
 
@@ -506,14 +506,14 @@ class Combatant:
             if e.on_turn():
                 self.remove_effect(e)
 
-    def get_summary(self):
+    def get_summary(self, private=False):
         """
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
         status = "{}: {} {}({})".format(self.init,
                                         self.name,
-                                        self.get_hp_str() + ' ' if self.get_hp_str() is not '' else '',
+                                        self.get_hp_str(private) + ' ' if self.get_hp_str() is not '' else '',
                                         self.get_effects_and_notes())
         return status
 
@@ -764,17 +764,17 @@ class CombatantGroup:
         self._combatants.remove(combatant)
         combatant.group = None
 
-    def get_summary(self):
+    def get_summary(self, private=False):
         """
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        if len(self._combatants) > 7:
+        if len(self._combatants) > 7 and not private:
             status = f"{self.init}: {self.name} ({len(self.get_combatants())} combatants)"
         else:
             status = f"{self.init}: {self.name}"
             for c in self.get_combatants():
-                status += f'\n    - {": ".join(c.get_summary().split(": ")[1:])}'
+                status += f'\n    - {": ".join(c.get_summary(private).split(": ")[1:])}'
         return status
 
     def get_status(self, private=False):

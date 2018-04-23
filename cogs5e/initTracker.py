@@ -265,7 +265,7 @@ class InitTracker:
                     rolled_hp = max(rolled_hp.total, 1)
 
                 me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, opts,
-                                                   hp=hp or rolled_hp, ac=ac or None)
+                                                   hp=hp or rolled_hp, ac=ac)
                 if group is None:
                     combat.add_combatant(me)
                     out += "{} was added to combat with initiative {}.\n".format(name,
@@ -1155,6 +1155,9 @@ class InitTracker:
         msg = await self.bot.say("OK, ending...")
 
         try:
+            await self.bot.send_message(ctx.message.author, f"End of combat report: {combat.round_num} rounds "
+                                                            f"{combat.get_summary(True)}")
+
             summary = await combat.get_summary_msg()
             await self.bot.edit_message(summary,
                                         combat.get_summary() + " ```-----COMBAT ENDED-----```")

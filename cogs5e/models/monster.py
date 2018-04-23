@@ -178,10 +178,15 @@ class Monster:
 
         source = parsesource(data['type'].split(',')[-1])
 
+        attacks = []
+        for a in data.get('attacks', []):
+            atk = {'attackBonus': a['attackBonus'], 'damage': a['damage'], 'name': a['name'], 'details': a['desc']}
+            attacks.append(atk)
+
         return cls(data['name'], parsesize(data['size']), _type, data['alignment'], ac, armortype, hp, hitdice,
                    data['speed'], scores, data['cr'], xp_by_cr(data['cr']), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, raw_saves, saves, raw_skills, skills, languages, traits,
-                   actions, reactions, legactions, 3, data.get('srd', False), source, data.get('attacks', []))
+                   actions, reactions, legactions, 3, data.get('srd', False), source, attacks)
 
     @classmethod
     def from_critterdb(cls, data):

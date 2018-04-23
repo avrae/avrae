@@ -185,7 +185,9 @@ class InitTracker:
               -h (same as !init add, default true)
               -group (same as !init add)
               -npr (removes physical resistances when added)
-              -rollhp (rolls monster HP)"""
+              -rollhp (rolls monster HP)
+              -hp [starting hp]
+              -ac [starting ac]"""
 
         monster = await select_monster_full(ctx, monster_name, pm=True)
         self.bot.db.incr("monsters_looked_up_life")
@@ -204,6 +206,13 @@ class InitTracker:
         b = '+'.join(args.get('b', []))
         p = args.get('p', [None])[-1]
         rollhp = args.get('rollhp', [False])[-1]
+
+        try:
+            hp = args.get('hp', [None])[-1]
+            ac = args.get('ac', [None])[-1]
+        except (ValueError, TypeError):
+            hp = None
+            ac = None
 
         opts = {}
         if 'npr' in args:
@@ -256,7 +265,7 @@ class InitTracker:
                     rolled_hp = max(rolled_hp.total, 1)
 
                 me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, opts,
-                                                   hp=rolled_hp)
+                                                   hp=hp or rolled_hp, ac=ac or None)
                 if group is None:
                     combat.add_combatant(me)
                     out += "{} was added to combat with initiative {}.\n".format(name,

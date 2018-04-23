@@ -588,10 +588,11 @@ class MonsterCombatant(Combatant):
         self._monster_name = monster_name
 
     @classmethod
-    def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, opts=None, index=None, hp=None):
+    def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, opts=None, index=None, hp=None,
+                     ac=None):
         monster_name = monster.name
         hp = int(monster.hp) if not hp else int(hp)
-        ac = int(monster.ac)
+        ac = int(monster.ac) if not ac else int(ac)
 
         resist = monster.resist
         immune = monster.immume

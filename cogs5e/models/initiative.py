@@ -227,6 +227,18 @@ class Combat:
 
         self._turn = self.current_combatant.init
 
+    def goto_turn(self, init_num):
+        if len(self._combatants) == 0:
+            raise NoCombatants
+
+        target = next((c for c in self._combatants if c.init <= init_num), None)
+        if target:
+            self._current_index = target.index
+        else:
+            self._current_index = 0
+
+        self._turn = self.current_combatant.init
+
     @staticmethod
     def ensure_unique_chan(ctx):
         if ctx.bot.db.exists(f"{ctx.message.channel.id}.combat"):

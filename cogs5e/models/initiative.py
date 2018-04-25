@@ -414,7 +414,20 @@ class Combatant:
 
     @property
     def ac(self):
-        return self._ac
+        _ac = self._ac
+        for e in self.get_effects():
+            if e.effect:
+                args = parse_args_3(shlex.split(e.effect))
+                if 'ac' in args:
+                    modi = args['ac'][-1]
+                    try:
+                        if modi.startswith(('+', '-')):
+                            _ac += int(modi)
+                        else:
+                            _ac = int(modi)
+                    except (ValueError, TypeError):
+                        continue
+        return _ac
 
     @ac.setter
     def ac(self, new_ac):

@@ -37,6 +37,9 @@ class Homebrew:
                 return await self.bot.say("You have no bestiaries. Use `!bestiary import` to import one!")
             except NoSelectionElements:
                 return await self.bot.say("Bestiary not found.")
+            active_bestiaries = self.bot.db.jget('active_bestiaries', {})
+            active_bestiaries[ctx.message.author.id] = bestiary.id
+            self.bot.db.jset('active_bestiaries', active_bestiaries)
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
         embed.description = '\n'.join(m.name for m in bestiary.monsters)

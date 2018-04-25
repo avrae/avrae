@@ -514,7 +514,7 @@ class Combatant:
         A method called at the start of each of the combatant's turns.
         :return: None
         """
-        for e in self.get_effects():
+        for e in self.get_effects().copy():
             if e.on_turn():
                 self.remove_effect(e)
 

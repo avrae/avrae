@@ -936,10 +936,11 @@ def simple_roll(rollStr):
 
 
 class SimpleRollResult:
-    def __init__(self, dice, total, full):
+    def __init__(self, dice, total, full, raw):
         self.dice = dice.strip()
         self.total = total
         self.full = full.strip()
+        self.raw = raw
 
     def __str__(self):
         return self.full
@@ -947,4 +948,5 @@ class SimpleRollResult:
 
 def verbose_roll(rollStr):
     rolled = roll(rollStr, inline=True)
-    return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton)
+    return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
+                            [part.to_dict() for part in rolled.raw_dice.parts])

@@ -360,6 +360,11 @@ class SingleDiceGroup(Part):
         return "{0.num_dice}d{0.max_value}{1} ({2}) {0.annotation}".format(
             self, ''.join(self.operators), ', '.join(str(r) for r in self.rolled))
 
+    def to_dict(self):
+        return {'type': 'dice', 'dice': [d.to_dict() for d in self.rolled], 'annotation': self.annotation,
+                'value': self.get_total(), 'is_crit': self.get_crit(), 'num_kept': self.get_num_kept(),
+                'text': str(self), 'num_dice': self.num_dice, 'dice_size': self.max_value, 'operators': self.operators}
+
 
 class SingleDice:
     def __init__(self, value: int = 0, max_value: int = 0, kept: bool = True, exploded: bool = False):
@@ -394,6 +399,10 @@ class SingleDice:
         return "<SingleDice object: value={0.value}, max_value={0.max_value}, kept={0.kept}, rolls={0.rolls}>".format(
             self)
 
+    def to_dict(self):
+        return {'type': 'single_dice', 'value': self.value, 'size': self.max_value, 'is_kept': self.kept,
+                'rolls': self.rolls, 'exploded': self.exploded}
+
 
 class Constant(Part):
     def __init__(self, value: int = 0, annotation: str = ""):
@@ -405,6 +414,9 @@ class Constant(Part):
 
     def get_eval(self):
         return str(self.value)
+
+    def to_dict(self):
+        return {'type': 'constant', 'value': self.value, 'annotation': self.annotation}
 
 
 class Operator(Part):
@@ -418,6 +430,9 @@ class Operator(Part):
     def get_eval(self):
         return self.op
 
+    def to_dict(self):
+        return {'type': 'operator', 'value': self.op, 'annotation': self.annotation}
+
 
 class Comment(Part):
     def __init__(self, comment: str = ""):
@@ -425,6 +440,9 @@ class Comment(Part):
 
     def __str__(self):
         return self.comment.strip()
+
+    def to_dict(self):
+        return {'type': 'comment', 'value': self.comment}
 
 
 def parse_selectors(opts, res, greedy=False):

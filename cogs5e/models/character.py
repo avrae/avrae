@@ -125,6 +125,17 @@ class Character:
 
         return self.character.get('spellbook', {}).get('spells', [])
 
+    def get_cached_spell_list_id(self):
+        """Gets the Dicecloud ID of the most recently used spell list ID.
+        Returns None if v12 or earlier, not a DC sheet, or not set."""
+        return self.character.get('spellbook', {}).get('dicecloud_id')
+
+    def update_cached_spell_list_id(self, new_id):
+        """Updates the cached Dicecloud spell list ID."""
+        if not 'spellbook' in self.character:
+            raise OutdatedSheet()
+        self.character['spellbook']['dicecloud_id'] = new_id
+
     def get_save_dc(self):
         """@:returns int - the character's spell save DC.
         @:raises OutdatedSheet if character does not have spellbook."""

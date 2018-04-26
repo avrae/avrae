@@ -91,10 +91,12 @@ class DicecloudClient(MeteorClient):
 
     async def _get_list_id(self, character, list_name=None):
         """
-        :param character: (dict) the character to get the spell list ID of.
+        :param character: (Character) the character to get the spell list ID of.
         :param list_name: (str) The name of the spell list to look for. Returns default if not passed.
         :return: (str) The default list id.
         """
+        if character.get_cached_spell_list_id():
+            return character.get_cached_spell_list_id()
         list_id = None
 
         def on_add(collection, _id, fields):
@@ -114,6 +116,7 @@ class DicecloudClient(MeteorClient):
                 await asyncio.sleep(0.1)
             else:
                 break
+        character.update_cached_spell_list_id(list_id)
         return list_id
 
     async def sync_add_spell(self, character, spell):
@@ -122,7 +125,7 @@ class DicecloudClient(MeteorClient):
         list_id = await self._get_list_id(character)
         log.info(list_id)
         if not list_id:  # still
-            raise InsertFailure("No spell lists on origin sheet.")
+            raise InsertFailure("No spell lists on origin sheet. Run `!update` if this seems incorrect.")
 
         def insert_callback(error, data):
             if error:
@@ -164,14 +167,15 @@ class DicecloudClient(MeteorClient):
         list_id = await self._get_list_id(character, spell_list)
         log.info(list_id)
         if not list_id:  # still
-            raise InsertFailure("No spell lists on origin sheet.")
-        for spell in spells:
-            def insert_callback(error, data):
-                if error:
-                    log.warning(str(error))
-                else:
-                    log.debug(data)
+            raise InsertFailure("No spell lists on origin sheet. Run `!update` if this seems incorrect.")
 
+        def insert_callback(error, data):
+            if error:
+                log.warning(str(error))
+            else:
+                log.debug(data)
+
+        for spell in spells:
             spellData = {
                 'name': spell['name'],
                 'description': spell['description'],

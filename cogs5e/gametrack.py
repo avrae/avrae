@@ -319,6 +319,7 @@ class GameTrack:
             await DicecloudClient.getInstance().sync_add_mass_spells(character,
                                                                      [dicecloud_parse(s) for s in level_spells],
                                                                      spell_list)
+            character.commit(ctx)
         except MeteorClient.MeteorClientException:
             return await self.bot.say("Error: Failed to connect to Dicecloud. The site may be down.")
         await self.bot.say(f"{len(level_spells)} spells added to {character.get_name()}'s spell list on Dicecloud.")

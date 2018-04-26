@@ -51,6 +51,7 @@ class DicecloudParser:
                 character[collection] = []
             fields['id'] = _id
             character.get(collection).append(fields)
+            log.debug(f"collection {collection}: {fields}")
 
         client.on('added', update_character)
         await asyncio.sleep(10)
@@ -93,12 +94,13 @@ class DicecloudParser:
         stat_vars.update(saves)
 
         sheet = {'type': 'dicecloud',
-                 'version': 11,  # v6: added stat cvars
+                 'version': 12,  # v6: added stat cvars
                  # v7: added check effects (adv/dis)
                  # v8: consumables
                  # v9: spellbook
                  # v10: live tracking
                  # v11: save effects (adv/dis)
+                 # v12: add cached dicecloud spell list id
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -523,7 +525,9 @@ class DicecloudParser:
         spellbook = {'spellslots': {},
                      'spells': [],
                      'dc': 0,
-                     'attackBonus': 0}
+                     'attackBonus': 0,
+                     'dicecloud_id': next(
+                         (sl['id'] for sl in self.character.get('spellLists', []) if not sl.get('removed')), None)}
 
         spells = self.character.get('spells', [])
         spellnames = [s.get('name', '') for s in spells if not s.get('removed', False)]

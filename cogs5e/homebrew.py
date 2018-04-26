@@ -106,6 +106,7 @@ class Homebrew:
 
         bestiary = await self.bestiary_from_critterdb(bestiary_id)
 
+        bestiary.commit(ctx)
         await self.bot.edit_message(loading, f"Imported and updated {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name

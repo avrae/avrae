@@ -40,7 +40,8 @@ log = logging.getLogger(__name__)
 
 
 class SheetManager:
-    """Commands to import a character sheet from Dicecloud (https://dicecloud.com) or the fillable Wizards character PDF."""
+    """Commands to import a character sheet from [Dicecloud](https://dicecloud.com),
+    a [Google Sheet](https://gsheet.avrae.io), or a D&D Beyond PDF."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -1037,7 +1038,7 @@ class SheetManager:
             await self.bot.say(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, hidden=True)
     async def pdfsheet(self, ctx):
         """Loads a character sheet from [this](http://andrew-zhu.com/avrae/PDFSheet.pdf) PDF, resetting all settings."""
 

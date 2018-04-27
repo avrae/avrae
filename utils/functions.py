@@ -151,7 +151,14 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False):
         return result, True
 
 
-async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False):
+async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False,
+                            message=None, list_filter=None, srd=False):
+    if srd:
+        if list_filter: list_filter = lambda e: list_filter(e) and e.get('srd')
+        else: list_filter = lambda e: e.get('srd')
+        message = "This server only shows results from the 5e SRD."
+    if list_filter:
+        list_to_search = list(filter(list_filter, list_to_search))
     result = search(list_to_search, value, key, cutoff, return_key)
     if result is None:
         raise NoSelectionElements("No matches found.")
@@ -165,9 +172,9 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
             result = results[0]
         else:
             if return_key:
-                result = await get_selection(ctx, [(r, r) for r in results], pm=pm)
+                result = await get_selection(ctx, [(r, r) for r in results], pm=pm, message=message)
             else:
-                result = await get_selection(ctx, [(key(r), r) for r in results], pm=pm)
+                result = await get_selection(ctx, [(key(r), r) for r in results], pm=pm, message=message)
     return result
 
 

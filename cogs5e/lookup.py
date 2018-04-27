@@ -139,7 +139,7 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'])
+        result = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'], srd=srd)
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -166,7 +166,7 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = await search_and_select(ctx, c.races, name, lambda e: e['name'])
+        result = await search_and_select(ctx, c.races, name, lambda e: e['name'], srd=srd)
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -226,7 +226,7 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'])
+        result = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'], srd=srd)
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -256,7 +256,7 @@ class Lookup:
         if level is not None and not 0 < level < 21:
             return await self.bot.say("Invalid level.")
 
-        result = await search_and_select(ctx, c.classes, name, lambda e: e['name'])
+        result = await search_and_select(ctx, c.classes, name, lambda e: e['name'], srd=srd)
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -332,7 +332,7 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'])
+        result = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'], srd=srd)
 
         if not result.get('srd') and srd:
             return await self.send_srd_error(ctx, result)
@@ -363,7 +363,7 @@ class Lookup:
             pm = False
             srd = False
 
-        result = await search_and_select(ctx, c.backgrounds, name, lambda e: e['name'])
+        result = await search_and_select(ctx, c.backgrounds, name, lambda e: e['name'], srd=srd)
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -443,8 +443,7 @@ class Lookup:
             srd = self.settings.get(guild_id, {}).get("srd", False)
         except:
             srd = False
-
-        monster = await select_monster_full(ctx, name)
+        monster = await select_monster_full(ctx, name, srd=srd)
 
         if not monster.srd and srd:
             e = EmbedWithAuthor(ctx)
@@ -499,8 +498,7 @@ class Lookup:
             srd = False
 
         self.bot.db.incr('monsters_looked_up_life')
-
-        monster = await select_monster_full(ctx, name)
+        monster = await select_monster_full(ctx, name, srd=srd)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -634,7 +632,7 @@ class Lookup:
 
         self.bot.db.incr('spells_looked_up_life')
 
-        result = await search_and_select(ctx, c.spells, name, lambda e: e['name'], return_key=True)
+        result = await search_and_select(ctx, c.spells, name, lambda e: e['name'], return_key=True, srd=srd)
         result = getSpell(result)
 
         spellDesc = []
@@ -736,7 +734,7 @@ class Lookup:
 
         self.bot.db.incr('items_looked_up_life')
 
-        result = await search_and_select(ctx, c.items, name, lambda e: e['name'])
+        result = await search_and_select(ctx, c.items, name, lambda e: e['name'], srd=srd)
 
         embed = EmbedWithAuthor(ctx)
         item = result

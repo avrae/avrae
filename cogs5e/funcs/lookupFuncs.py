@@ -162,7 +162,8 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
         pass
     if srd:
         if list_filter:
-            list_filter = lambda e: list_filter(e) and e.srd
+            old = list_filter
+            list_filter = lambda e: old(e) and e.srd
         else:
             list_filter = lambda e: e.srd
         message = "This server only shows results from the 5e SRD."

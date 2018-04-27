@@ -154,7 +154,9 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False):
 async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False,
                             message=None, list_filter=None, srd=False):
     if srd:
-        if list_filter: list_filter = lambda e: list_filter(e) and e.get('srd')
+        if list_filter:
+            old = list_filter
+            list_filter = lambda e: old(e) and e.get('srd')
         else: list_filter = lambda e: e.get('srd')
         message = "This server only shows results from the 5e SRD."
     if list_filter:

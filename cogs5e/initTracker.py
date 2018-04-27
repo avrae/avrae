@@ -10,13 +10,14 @@ from discord.ext import commands
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.funcs.lookupFuncs import searchCharacterSpellName, searchSpellNameFull, \
-    searchAutoSpellFull, select_monster_full
+    select_monster_full, getSpell, c
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import NoSpellDC, InvalidSaveType, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
-from utils.functions import parse_args_3, confirm, get_selection, parse_args_2, parse_resistances, parse_snippets
+from utils.functions import parse_args_3, confirm, get_selection, parse_args_2, parse_resistances, parse_snippets, \
+    strict_search
 
 log = logging.getLogger(__name__)
 
@@ -892,7 +893,8 @@ class InitTracker:
         if spell_name is None: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
                                                                              description="The spell was not found or is not supported."))
 
-        spell = await searchAutoSpellFull(spell_name, ctx)
+        spell = strict_search(c.autospells, 'name', spell_name)
+        if spell is None: return await self._old_cast(ctx, spell_name, *args)  # fall back to old cast
 
         can_cast = True
         spell_level = int(spell.get('level', 0))
@@ -1151,6 +1153,92 @@ class InitTracker:
         embed.set_footer(text=embed_footer)
         await self.bot.say(embed=embed)
         await combat.final()
+
+    async def _old_cast(self, ctx, spell_name, *args):
+        spell = getSpell(spell_name)
+        self.bot.db.incr('spells_looked_up_life')
+        if spell is None:
+            return await self.bot.say("Spell not found.", delete_after=15)
+        if spell.get('source') == "UAMystic":
+            return await self.bot.say("Mystic talents are not supported.")
+
+        char = Character.from_ctx(ctx)
+
+        args = parse_snippets(' '.join(list(args)), ctx)
+        args = await char.parse_cvars(args, ctx)
+        args = shlex.split(args)
+        args = parse_args_3(args)
+
+        can_cast = True
+        spell_level = int(spell.get('level', 0))
+        try:
+            cast_level = int(args.get('l', [spell_level])[-1])
+            assert spell_level <= cast_level <= 9
+        except (AssertionError, ValueError):
+            return await self.bot.say("Invalid spell level.")
+
+        # make sure we can cast it
+        try:
+            assert char.get_remaining_slots(cast_level) > 0
+            assert spell_name in char.get_spell_list()
+        except AssertionError:
+            can_cast = False
+
+        if args.get('i'):
+            can_cast = True
+
+        if not can_cast:
+            embed = EmbedWithCharacter(char)
+            embed.title = "Cannot cast spell!"
+            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
+                                "Use `!game longrest` to restore all spell slots, or pass `-i` to ignore restrictions."
+            if cast_level > 0:
+                embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
+            return await self.bot.say(embed=embed)
+
+        if len(args) == 0:
+            rolls = spell.get('roll', None)
+            if isinstance(rolls, list):
+                active_character = self.bot.db.not_json_get('active_characters', {}).get(
+                    ctx.message.author.id)  # get user's active
+                if active_character is not None:
+                    rolls = '\n'.join(rolls).replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                        .replace('PROF', str(char.get_prof_bonus()))
+                    rolls = rolls.split('\n')
+                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(
+                    roll(r, inline=True).skeleton for r in rolls)
+            elif rolls is not None:
+                active_character = self.bot.db.not_json_get('active_characters', {}).get(
+                    ctx.message.author.id)  # get user's active
+                if active_character is not None:
+                    rolls = rolls.replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                        .replace('PROF', str(char.get_prof_bonus()))
+                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls,
+                                                                                                   inline=True).skeleton
+            else:
+                out = "**{} casts {}!** ".format(ctx.message.author.mention, spell['name'])
+        else:
+            rolls = args.get('r', [])
+            roll_results = ""
+            for r in rolls:
+                res = roll(r, inline=True)
+                if res.total is not None:
+                    roll_results += res.result + '\n'
+                else:
+                    roll_results += "**Effect:** " + r
+            out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
+
+        if not args.get('i'):
+            char.use_slot(cast_level)
+        if cast_level > 0:
+            out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"
+
+        out = "Spell not supported by new cast, falling back to old cast.\n" + out
+        char.commit(ctx)  # make sure we save changes
+        await self.bot.say(out)
+        spell_cmd = self.bot.get_command('spell')
+        if spell_cmd is None: return await self.bot.say("Lookup cog not loaded.")
+        await ctx.invoke(spell_cmd, name=spell['name'])
 
     @init.command(pass_context=True, name='remove')
     async def remove_combatant(self, ctx, *, name: str):

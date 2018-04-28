@@ -281,10 +281,10 @@ class InitTracker:
                 log.error('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
                 out += "Error adding combatant: {}\n".format(e)
 
+        await combat.final()
         await self.bot.say(out, delete_after=15)
         if to_pm:
             await self.bot.send_message(ctx.message.author, to_pm)
-        await combat.final()
 
     @init.command(pass_context=True, name='join', aliases=['cadd', 'dcadd'])
     async def join(self, ctx, *, args: str = ''):
@@ -307,11 +307,6 @@ class InitTracker:
         if skills is None:
             return await self.bot.say('You must update your character sheet first.')
         skill = 'initiative'
-        combat = Combat.from_ctx(ctx)
-
-        if combat.get_combatant(char.get_name()) is not None:
-            await self.bot.say("Combatant already exists.")
-            return
 
         embed = EmbedWithCharacter(char, False)
         embed.colour = char.get_color()
@@ -353,6 +348,12 @@ class InitTracker:
         me = PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
                                             char.get_resists(), ctx, char.id, ctx.message.author.id)
 
+        combat = Combat.from_ctx(ctx)
+
+        if combat.get_combatant(char.get_name()) is not None:
+            await self.bot.say("Combatant already exists.")
+            return
+
         if group is None:
             combat.add_combatant(me)
             embed.set_footer(text="Added to combat!")
@@ -361,8 +362,8 @@ class InitTracker:
             grp.add_combatant(me)
             embed.set_footer(text=f"Joined group {grp.name}!")
 
-        await self.bot.say(embed=embed)
         await combat.final()
+        await self.bot.say(embed=embed)
         char.join_combat(ctx.message.channel.id).commit(ctx)
 
     @init.command(pass_context=True, name="next", aliases=['n'])

@@ -386,12 +386,12 @@ class InitTracker:
         toRemove = []
         if combat.current_combatant is not None:
             if isinstance(combat.current_combatant, CombatantGroup):
-                thisTurn = [c for c in combat.current_combatant.get_combatants()]
+                thisTurn = [co for co in combat.current_combatant.get_combatants()]
             else:
                 thisTurn = [combat.current_combatant]
-            for c in thisTurn:
-                if isinstance(c, MonsterCombatant) and c.hp <= 0:
-                    toRemove.append(c)
+            for co in thisTurn:
+                if isinstance(co, MonsterCombatant) and co.hp <= 0:
+                    toRemove.append(co)
 
         advanced_round = combat.advance_turn()
         self.bot.db.incr('turns_init_tracked_life')
@@ -402,14 +402,14 @@ class InitTracker:
 
         if isinstance(nextCombatant, CombatantGroup):
             thisTurn = nextCombatant.get_combatants()
-            for c in thisTurn:
-                c.on_turn()
+            for co in thisTurn:
+                co.on_turn()
             outStr = "**Initiative {} (round {})**: {} ({})\n{}"
             outStr = outStr.format(combat.turn_num,
                                    combat.round_num,
                                    nextCombatant.name,
-                                   ", ".join({c.controller_mention() for c in thisTurn}),
-                                   '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
+                                   ", ".join({co.controller_mention() for co in thisTurn}),
+                                   '```markdown\n' + "\n".join([co.get_status() for co in thisTurn]) + '```')
         else:
             nextCombatant.on_turn()
             outStr = "**Initiative {} (round {})**: {}\n{}"
@@ -418,10 +418,10 @@ class InitTracker:
                                    "{} ({})".format(nextCombatant.name, nextCombatant.controller_mention()),
                                    '```markdown\n' + nextCombatant.get_status() + '```')
 
-        for c in toRemove:
-            combat.remove_combatant(c)
-            c.on_remove()
-            outStr += "{} automatically removed from combat.\n".format(c.name)
+        for co in toRemove:
+            combat.remove_combatant(co)
+            co.on_remove()
+            outStr += "{} automatically removed from combat.\n".format(co.name)
 
         if combat.options.get('turnnotif'):
             nextTurn = combat.next_combatant
@@ -449,8 +449,8 @@ class InitTracker:
             outStr = outStr.format(combat.turn_num,
                                    combat.round_num,
                                    nextCombatant.name,
-                                   ", ".join({c.controller_mention() for c in thisTurn}),
-                                   '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
+                                   ", ".join({co.controller_mention() for co in thisTurn}),
+                                   '```markdown\n' + "\n".join([co.get_status() for co in thisTurn]) + '```')
         else:
             outStr = "**Initiative {} (round {})**: {}\n{}"
             outStr = outStr.format(combat.turn_num,
@@ -484,8 +484,8 @@ class InitTracker:
             outStr = outStr.format(combat.turn_num,
                                    combat.round_num,
                                    nextCombatant.name,
-                                   ", ".join({c.controller_mention() for c in thisTurn}),
-                                   '```markdown\n' + "\n".join([c.get_status() for c in thisTurn]) + '```')
+                                   ", ".join({co.controller_mention() for co in thisTurn}),
+                                   '```markdown\n' + "\n".join([co.get_status() for co in thisTurn]) + '```')
         else:
             outStr = "**Initiative {} (round {})**: {}\n{}"
             outStr = outStr.format(combat.turn_num,
@@ -649,7 +649,7 @@ class InitTracker:
             private = private and ctx.message.author.id == combatant.controller
             status = combatant.get_status(private=private)
         else:
-            status = "\n".join([c.get_status(private=private and ctx.message.author.id == c.controller) for c in
+            status = "\n".join([co.get_status(private=private and ctx.message.author.id == co.controller) for co in
                                 combatant.get_combatants()])
         if 'private' in args.lower():
             await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
@@ -1109,7 +1109,7 @@ class InitTracker:
                             except:
                                 pass
                     else:
-                        embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
+                        embed_footer += "Dealt {} damage to {}!".format(result['total_damage'], target.name)
                 else:  # special spell (MM)
                     outargs = copy.copy(args)  # just make an attack for it
                     outargs['d'] = "+".join(args.get('d', [])) or None
@@ -1141,7 +1141,7 @@ class InitTracker:
                             except:
                                 pass
                     else:
-                        embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
+                        embed_footer += "Dealt {} damage to {}!".format(result['total_damage'], target.name)
 
         spell_ctx = spell_context(spell)
         if spell_ctx:

@@ -9,7 +9,7 @@ services:
       resources:
         limits:
           cpus: "1.8"
-          memory: 3500M
+          memory: 3700M
       restart_policy:
         condition: on-failure
       placement:
@@ -21,7 +21,7 @@ services:
   web:
     image: zhuexe/avraeweb:latest
     volumes:
-      - /tmp/avraewebsocket:/web/socket
+      - /tmp:/web/tmp
     deploy:
       replicas: 1
       resources:

@@ -4,7 +4,6 @@ import shlex
 import cachetools
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.character import Character
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
 from utils.functions import get_selection, parse_args_3
@@ -684,6 +683,7 @@ class PlayerCombatant(Combatant):
     @property
     def character(self):
         if self._character is None:
+            from cogs5e.models.character import Character
             c = Character.from_bot_and_ids(self.ctx.bot, self._character_owner, self._character_id)
 
             def new_commit(ctx):

@@ -35,7 +35,7 @@ class SimpleCombat:
         self.combatants = [SimpleCombatant(c) for c in self._combat.get_combatants()]
         self.current = SimpleCombatant(self._combat.current_combatant) if isinstance(
             self._combat.current_combatant, Combatant) else SimpleGroup(self._combat.current_combatant)
-        self.me = SimpleCombatant(me, True)
+        self.me = SimpleCombatant(me, False)
         self.round_num = self._combat.round_num
         self.turn_num = self._combat.turn_num
 
@@ -52,10 +52,16 @@ class SimpleCombat:
 
     # public methods
     def get_combatant(self, name):
-        return self._combat.get_combatant(name, False)
+        combatant = self._combat.get_combatant(name, False)
+        if combatant:
+            return SimpleCombatant(combatant)
+        return None
 
     def get_group(self, name):
-        return self._combat.get_group(name)
+        group = self._combat.get_group(name)
+        if group:
+            return SimpleGroup(group)
+        return None
 
     # private functions
     def func_commit(self):
@@ -63,11 +69,11 @@ class SimpleCombat:
 
 
 class SimpleCombatant:
-    def __init__(self, combatant: Combatant, hidestats=False):
+    def __init__(self, combatant: Combatant, hidestats=True):
         self._combatant = combatant
-        self._hidden = not hidestats and self._combatant.isPrivate
+        self._hidden = hidestats and self._combatant.isPrivate
 
-        if self._hidden:
+        if not self._hidden:
             self.ac = self._combatant.ac
             self.hp = self._combatant.hp
             self.maxhp = self._combatant.hpMax
@@ -93,4 +99,7 @@ class SimpleGroup:
         self._group = group
 
     def get_combatant(self, name):
-        return next((c for c in self._group.get_combatants() if name.lower() in c.name.lower()), None)
+        combatant = next((c for c in self._group.get_combatants() if name.lower() in c.name.lower()), None)
+        if combatant:
+            return SimpleCombatant(combatant)
+        return None

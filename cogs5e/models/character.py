@@ -348,7 +348,7 @@ class Character:
             if changed and ctx:
                 self.commit(ctx)
             if 'combat' in _cache:
-                _cache['combat'].func_commit(ctx)  # private commit, simpleeval will not show
+                _cache['combat'].func_commit()  # private commit, simpleeval will not show
             return cstr
 
         return await asyncio.get_event_loop().run_in_executor(None, process, cstr)

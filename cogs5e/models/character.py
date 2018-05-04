@@ -16,6 +16,7 @@
  'cvars': {}}
 """
 import ast
+import asyncio
 import copy
 import logging
 import random
@@ -176,183 +177,170 @@ class Character:
         :param ctx: The Context the cvar is parsed in.
         :param cstr: The string to parse.
         :returns string - the parsed string."""
-        character = self.character
-        ops = r"([-+*/().<>=])"
-        cvars = character.get('cvars', {})
-        stat_vars = character.get('stat_cvars', {})
-        stat_vars['color'] = hex(self.get_color())[2:]
-        user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
+        def process(cstr):
+            character = self.character
+            ops = r"([-+*/().<>=])"
+            cvars = character.get('cvars', {})
+            stat_vars = character.get('stat_cvars', {})
+            stat_vars['color'] = hex(self.get_color())[2:]
+            user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
 
-        _vars = user_vars
-        _vars.update(cvars)
-        global_vars = None  # we'll load them if we need them
+            _vars = user_vars
+            _vars.update(cvars)
+            global_vars = None  # we'll load them if we need them
 
-        changed = False
+            changed = False
 
-        # define our weird functions here
-        def get_cc(name):
-            return self.get_consumable_value(name)
+            # define our weird functions here
+            def get_cc(name):
+                return self.get_consumable_value(name)
 
-        def get_cc_max(name):
-            return self.evaluate_cvar(self.get_consumable(name).get('max', str(2 ** 32 - 1)))
+            def get_cc_max(name):
+                return self.evaluate_cvar(self.get_consumable(name).get('max', str(2 ** 32 - 1)))
 
-        def get_cc_min(name):
-            return self.evaluate_cvar(self.get_consumable(name).get('min', str(-(2 ** 32))))
+            def get_cc_min(name):
+                return self.evaluate_cvar(self.get_consumable(name).get('min', str(-(2 ** 32))))
 
-        def set_cc(name, value: int, strict=False):
-            self.set_consumable(name, value, strict)
-            nonlocal changed
-            changed = True
-
-        def mod_cc(name, val: int, strict=False):
-            return set_cc(name, get_cc(name) + val, strict)
-
-        def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None, dispType: str = None):
-            if not name in self.get_all_consumables():
-                self.create_consumable(name, minValue=minVal, maxValue=maxVal, reset=reset, displayType=dispType)
+            def set_cc(name, value: int, strict=False):
+                self.set_consumable(name, value, strict)
                 nonlocal changed
                 changed = True
 
-        def cc_exists(name):
-            return name in self.get_all_consumables()
+            def mod_cc(name, val: int, strict=False):
+                return set_cc(name, get_cc(name) + val, strict)
 
-        def get_slots(level: int):
-            return self.get_remaining_slots(level)
+            def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None, dispType: str = None):
+                if not name in self.get_all_consumables():
+                    self.create_consumable(name, minValue=minVal, maxValue=maxVal, reset=reset, displayType=dispType)
+                    nonlocal changed
+                    changed = True
 
-        def get_slots_max(level: int):
-            return self.get_max_spellslots(level)
+            def cc_exists(name):
+                return name in self.get_all_consumables()
 
-        def set_slots(level: int, value: int):
-            self.set_remaining_slots(level, value)
-            nonlocal changed
-            changed = True
+            def get_slots(level: int):
+                return self.get_remaining_slots(level)
 
-        def use_slot(level: int):
-            self.use_slot(level)
-            nonlocal changed
-            changed = True
+            def get_slots_max(level: int):
+                return self.get_max_spellslots(level)
 
-        def get_hp():
-            return self.get_current_hp()
-
-        def set_hp(val: int):
-            self.set_hp(val)
-            nonlocal changed
-            changed = True
-
-        def mod_hp(val: int, overflow: bool = True):
-            if not overflow:
-                return set_hp(min(self.get_current_hp() + val, self.get_max_hp()))
-            else:
-                return set_hp(self.get_current_hp() + val)
-
-        def set_cvar(name, val: str):
-            self.set_cvar(name, val)
-            _names[name] = str(val)
-            nonlocal changed
-            changed = True
-
-        def set_cvar_nx(name, val: str):
-            if not name in self.get_cvars():
-                set_cvar(name, val)
-
-        def delete_cvar(name):
-            if name in self.get_cvars():
-                del self.get_cvars()[name]
+            def set_slots(level: int, value: int):
+                self.set_remaining_slots(level, value)
                 nonlocal changed
                 changed = True
 
-        def get_gvar(name):
-            nonlocal global_vars
-            if global_vars is None:  # load only if needed
-                global_vars = ctx.bot.db.jget("global_vars", {})
-            return global_vars.get(name, {}).get('value')
+            def use_slot(level: int):
+                self.use_slot(level)
+                nonlocal changed
+                changed = True
 
-        def exists(name):
-            return name in evaluator.names
+            def get_hp():
+                return self.get_current_hp()
 
-        def get_raw():
-            return copy.copy(self.character)
+            def set_hp(val: int):
+                self.set_hp(val)
+                nonlocal changed
+                changed = True
 
-        _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
-        _funcs['roll'] = simple_roll
-        _funcs['vroll'] = verbose_roll
-        _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
-                      get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
-                      cc_exists=cc_exists, create_cc_nx=create_cc_nx,
-                      get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
-                      get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
-                      set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
-                      get_gvar=get_gvar, exists=exists,
-                      get_raw=get_raw)
-        _ops = simpleeval.DEFAULT_OPERATORS.copy()
-        _ops.pop(ast.Pow)  # no exponents pls
-        _names = copy.copy(_vars)
-        _names.update(stat_vars)
-        _names.update({"True": True, "False": False, "currentHp": self.get_current_hp()})
-        evaluator = simpleeval.EvalWithCompoundTypes(functions=_funcs, operators=_ops, names=_names)
+            def mod_hp(val: int, overflow: bool = True):
+                if not overflow:
+                    return set_hp(min(self.get_current_hp() + val, self.get_max_hp()))
+                else:
+                    return set_hp(self.get_current_hp() + val)
 
-        def set_value(name, value):
-            evaluator.names[name] = value
+            def set_cvar(name, val: str):
+                self.set_cvar(name, val)
+                _names[name] = str(val)
+                nonlocal changed
+                changed = True
 
-        evaluator.functions['set'] = set_value
+            def set_cvar_nx(name, val: str):
+                if not name in self.get_cvars():
+                    set_cvar(name, val)
 
-        def cvarrepl(match):
-            return f"{match.group(1)}{_vars.get(match.group(2), match.group(2))}"
+            def delete_cvar(name):
+                if name in self.get_cvars():
+                    del self.get_cvars()[name]
+                    nonlocal changed
+                    changed = True
 
-        for var in re.finditer(r'(?<!\\){{([^{}]+)}}', cstr):
-            raw = var.group(0)
-            varstr = var.group(1)
+            def get_gvar(name):
+                nonlocal global_vars
+                if global_vars is None:  # load only if needed
+                    global_vars = ctx.bot.db.jget("global_vars", {})
+                return global_vars.get(name, {}).get('value')
 
-            for cvar, value in _vars.items():
-                varstr = re.sub(r'(^|\s)(' + re.escape(cvar) + r')(?=\s|$)', cvarrepl, varstr)
+            def exists(name):
+                return name in evaluator.names
+
+            def get_raw():
+                return copy.copy(self.character)
+
+            _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
+            _funcs['roll'] = simple_roll
+            _funcs['vroll'] = verbose_roll
+            _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
+                          get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
+                          cc_exists=cc_exists, create_cc_nx=create_cc_nx,
+                          get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
+                          get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
+                          set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
+                          get_gvar=get_gvar, exists=exists,
+                          get_raw=get_raw)
+            _ops = simpleeval.DEFAULT_OPERATORS.copy()
+            _ops.pop(ast.Pow)  # no exponents pls
+            _names = copy.copy(_vars)
+            _names.update(stat_vars)
+            _names.update({"True": True, "False": False, "currentHp": self.get_current_hp()})
+            evaluator = simpleeval.EvalWithCompoundTypes(functions=_funcs, operators=_ops, names=_names)
+
+            def set_value(name, value):
+                evaluator.names[name] = value
+
+            evaluator.functions['set'] = set_value
+
+            def evalrepl(match):
+                if match.group(1):  # {{}}
+                    evalresult = evaluator.eval(match.group(1))
+                elif match.group(2):  # <>
+                    if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
+                        return match.group(0)
+                    out = match.group(2)
+                    if out.startswith('/'):
+                        _last = character
+                        for path in out.split('/'):
+                            if path:
+                                try:
+                                    _last = _last.get(path, {})
+                                except AttributeError:
+                                    break
+                        out = str(_last)
+                    out = str(_vars.get(out, out))
+                    evalresult = str(stat_vars.get(out, out))
+                elif match.group(3):  # {}
+                    varstr = match.group(3)
+                    out = ""
+                    tempout = ''
+                    for substr in re.split(ops, varstr):
+                        temp = substr.strip()
+                        tempout += str(_vars.get(temp, temp)) + " "
+                    for substr in re.split(ops, tempout):
+                        temp = substr.strip()
+                        out += str(stat_vars.get(temp, temp)) + " "
+                    evalresult = str(roll(out).total)
+                else:
+                    evalresult = None
+                return str(evalresult) if evalresult is not None else ''
 
             try:
-                res = evaluator.eval(varstr)
-                cstr = cstr.replace(raw, str(res) if res is not None else '', 1)
-            except Exception as e:
-                raise EvaluationError(e)
+                cstr = re.sub(SCRIPTING_RE, evalrepl, cstr)  # evaluate
+            except Exception as ex:
+                raise EvaluationError(ex)
 
-        for var in re.finditer(r'(?<!\\){([^{}]+)}', cstr):
-            raw = var.group(0)
-            varstr = var.group(1)
-            out = ""
-            tempout = ''
-            for substr in re.split(ops, varstr):
-                temp = substr.strip()
-                # if temp.startswith('/'):
-                #     _last = character
-                #     for path in out.split('/'):
-                #         if path:
-                #             try:
-                #                 _last = _last.get(path, {})
-                #             except AttributeError:
-                #                 break
-                #     temp = str(_last)
-                tempout += str(_vars.get(temp, temp)) + " "
-            for substr in re.split(ops, tempout):
-                temp = substr.strip()
-                out += str(stat_vars.get(temp, temp)) + " "
-            cstr = cstr.replace(raw, str(roll(out).total), 1)
-        for var in re.finditer(r'(?<!\\)<([^<>]+)>', cstr):
-            raw = var.group(0)
-            if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', raw): continue  # ignore mentions, channels, emotes
-            out = var.group(1)
-            if out.startswith('/'):
-                _last = character
-                for path in out.split('/'):
-                    if path:
-                        try:
-                            _last = _last.get(path, {})
-                        except AttributeError:
-                            break
-                out = str(_last)
-            out = str(_vars.get(out, out))
-            out = str(stat_vars.get(out, out))
-            cstr = cstr.replace(raw, out, 1)
-        if changed and ctx:
-            self.commit(ctx)
-        return cstr
+            if changed and ctx:
+                self.commit(ctx)
+            return cstr
+        return await asyncio.get_event_loop().run_in_executor(None, process, cstr)
 
     def evaluate_cvar(self, varstr):
         """Evaluates a cvar.
@@ -942,6 +930,9 @@ class Character:
 
 
 # helper methods
+SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
+
+
 def simple_roll(rollStr):
     return roll(rollStr).total
 

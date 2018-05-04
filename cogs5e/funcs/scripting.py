@@ -2,7 +2,7 @@ import re
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import CombatNotFound
-from cogs5e.models.initiative import Combat, Combatant
+from cogs5e.models.initiative import Combat, Combatant, CombatantGroup
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
 
@@ -35,7 +35,7 @@ class SimpleCombat:
         self.combatants = [SimpleCombatant(c) for c in self._combat.get_combatants()]
         self.current = SimpleCombatant(self._combat.current_combatant) if isinstance(
             self._combat.current_combatant, Combatant) else SimpleGroup(self._combat.current_combatant)
-        self.me = SimpleCombatant(me)
+        self.me = SimpleCombatant(me, True)
         self.round_num = self._combat.round_num
         self.turn_num = self._combat.turn_num
 
@@ -60,3 +60,37 @@ class SimpleCombat:
     # private functions
     def func_commit(self):
         self._combat.commit()
+
+
+class SimpleCombatant:
+    def __init__(self, combatant: Combatant, hidestats=False):
+        self._combatant = combatant
+        self._hidden = not hidestats and self._combatant.isPrivate
+
+        if self._hidden:
+            self.ac = self._combatant.ac
+            self.hp = self._combatant.hp
+            self.maxhp = self._combatant.hpMax
+            self.initmod = self._combatant.initMod
+        else:
+            self.ac = None
+            self.hp = None
+            self.maxhp = None
+            self.initmod = None
+        self.init = self._combatant.init
+        self.name = self._combatant.name
+        self.note = self._combatant.notes
+
+    def set_hp(self, newhp: int):
+        self._combatant.hp = int(newhp)
+
+    def mod_hp(self, mod: int):
+        self._combatant.hp += int(mod)
+
+
+class SimpleGroup:
+    def __init__(self, group: CombatantGroup):
+        self._group = group
+
+    def get_combatant(self, name):
+        return next((c for c in self._group.get_combatants() if name.lower() in c.name.lower()), None)

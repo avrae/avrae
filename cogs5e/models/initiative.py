@@ -144,8 +144,11 @@ class Combat:
             c.index = n
         self._current_index = current.index if current is not None else None
 
-    def get_combatant(self, name):
-        return next((c for c in self.get_combatants() if c.name == name), None)
+    def get_combatant(self, name, strict=True):
+        if strict:
+            return next((c for c in self.get_combatants() if c.name == name), None)
+        else:
+            return next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
 
     def get_group(self, name, create=None):
         """
@@ -713,6 +716,10 @@ class PlayerCombatant(Combatant):
     @property
     def saves(self):
         return self.character.get_saves()
+
+    @property
+    def character_id(self):
+        return self._character_id
 
     def on_remove(self):
         super(PlayerCombatant, self).on_remove()

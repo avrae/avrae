@@ -27,6 +27,7 @@ import MeteorClient
 import simpleeval
 
 from cogs5e.funcs.dice import roll
+from cogs5e.funcs.scripting import simple_roll, verbose_roll, SCRIPTING_RE, SimpleCombat
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError, InvalidSpellLevel
@@ -177,6 +178,7 @@ class Character:
         :param ctx: The Context the cvar is parsed in.
         :param cstr: The string to parse.
         :returns string - the parsed string."""
+
         def process(cstr):
             character = self.character
             ops = r"([-+*/().<>=])"
@@ -187,7 +189,8 @@ class Character:
 
             _vars = user_vars
             _vars.update(cvars)
-            global_vars = None  # we'll load them if we need them
+
+            _cache = {}  # load gvars, combat into cache
 
             changed = False
 
@@ -209,7 +212,8 @@ class Character:
             def mod_cc(name, val: int, strict=False):
                 return set_cc(name, get_cc(name) + val, strict)
 
-            def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None, dispType: str = None):
+            def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
+                             dispType: str = None):
                 if not name in self.get_all_consumables():
                     self.create_consumable(name, minValue=minVal, maxValue=maxVal, reset=reset, displayType=dispType)
                     nonlocal changed
@@ -265,16 +269,20 @@ class Character:
                     changed = True
 
             def get_gvar(name):
-                nonlocal global_vars
-                if global_vars is None:  # load only if needed
-                    global_vars = ctx.bot.db.jget("global_vars", {})
-                return global_vars.get(name, {}).get('value')
+                if not 'gvars' in _cache:  # load only if needed
+                    _cache['gvars'] = ctx.bot.db.jget("global_vars", {})
+                return _cache['gvars'].get(name, {}).get('value')
 
             def exists(name):
                 return name in evaluator.names
 
             def get_raw():
                 return copy.copy(self.character)
+
+            def combat():
+                if not 'combat' in _cache:
+                    _cache['combat'] = SimpleCombat.from_character(self, ctx)
+                return _cache['combat']
 
             _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
             _funcs['roll'] = simple_roll
@@ -286,7 +294,7 @@ class Character:
                           get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
                           set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
                           get_gvar=get_gvar, exists=exists,
-                          get_raw=get_raw)
+                          get_raw=get_raw, combat=combat)
             _ops = simpleeval.DEFAULT_OPERATORS.copy()
             _ops.pop(ast.Pow)  # no exponents pls
             _names = copy.copy(_vars)
@@ -339,7 +347,10 @@ class Character:
 
             if changed and ctx:
                 self.commit(ctx)
+            if 'combat' in _cache:
+                _cache['combat'].func_commit(ctx)  # private commit, simpleeval will not show
             return cstr
+
         return await asyncio.get_event_loop().run_in_executor(None, process, cstr)
 
     def evaluate_cvar(self, varstr):
@@ -927,28 +938,3 @@ class Character:
         :return: The channel id if the character is in combat, or None.
         """
         return self.character.get('combat')
-
-
-# helper methods
-SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
-
-
-def simple_roll(rollStr):
-    return roll(rollStr).total
-
-
-class SimpleRollResult:
-    def __init__(self, dice, total, full, raw):
-        self.dice = dice.strip()
-        self.total = total
-        self.full = full.strip()
-        self.raw = raw
-
-    def __str__(self):
-        return self.full
-
-
-def verbose_roll(rollStr):
-    rolled = roll(rollStr, inline=True)
-    return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
-                            [part.to_dict() for part in rolled.raw_dice.parts])

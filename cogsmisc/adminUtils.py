@@ -47,8 +47,8 @@ class AdminUtils:
         self.requests = {}
         self.command_mem = {}
         self.mem_debug = self.bot.db.get("mem_debug", False)
-        self.bot.loop.create_task(self.update_mem_state())
-        self.bot.loop.create_task(self.collect_garbage())
+        # self.bot.loop.create_task(self.update_mem_state())
+        # self.bot.loop.create_task(self.collect_garbage())
 
         loglevels = self.bot.db.jget('loglevels', {})
         for logger, level in loglevels.items():

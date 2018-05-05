@@ -98,13 +98,9 @@ class Core:
         motd = random.choice(["May the RNG be with you", "May your rolls be high",
                               "Will give higher rolls for cookies", ">:3",
                               "Does anyone even read these?", "Someone told me to mention 12 guns. Here you go, Mac."])
-        CLUSTER_MAP = {0: (0, 2),
-                       1: (3, 6),
-                       2: (7, 10)}
-        cluster_num = next((i for i, v in CLUSTER_MAP.items() if v[0] <= self.bot.shard_id <= v[1]), "Unknown")
         embed.set_footer(
-            text='{} | Build {} | Cluster {} | Shard {}'.format(motd, self.bot.db.get('build_num'), cluster_num,
-                                                                getattr(self.bot, 'shard_id', 0)))
+            text='{} | Build {} | Shard {}'.format(motd, self.bot.db.get('build_num'),
+                                                   getattr(self.bot, 'shard_id', 0)))
         commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n{items_looked_up_life} items looked up\n{rounds_init_tracked_life} rounds of initiative tracked ({turns_init_tracked_life} turns)".format(
             **botStats)
         embed.add_field(name="Commands Run", value=commands_run)

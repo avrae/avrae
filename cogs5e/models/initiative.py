@@ -4,7 +4,6 @@ import shlex
 import cachetools
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.character import Character
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
 from utils.functions import get_selection, parse_args_3
@@ -144,8 +143,11 @@ class Combat:
             c.index = n
         self._current_index = current.index if current is not None else None
 
-    def get_combatant(self, name):
-        return next((c for c in self.get_combatants() if c.name == name), None)
+    def get_combatant(self, name, strict=True):
+        if strict:
+            return next((c for c in self.get_combatants() if c.name == name), None)
+        else:
+            return next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
 
     def get_group(self, name, create=None):
         """
@@ -681,6 +683,7 @@ class PlayerCombatant(Combatant):
     @property
     def character(self):
         if self._character is None:
+            from cogs5e.models.character import Character
             c = Character.from_bot_and_ids(self.ctx.bot, self._character_owner, self._character_id)
 
             def new_commit(ctx):
@@ -713,6 +716,10 @@ class PlayerCombatant(Combatant):
     @property
     def saves(self):
         return self.character.get_saves()
+
+    @property
+    def character_id(self):
+        return self._character_id
 
     def on_remove(self):
         super(PlayerCombatant, self).on_remove()

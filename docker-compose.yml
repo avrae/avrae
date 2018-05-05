@@ -8,8 +8,8 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: "1.8"
-          memory: 3700M
+          cpus: "3.8"
+          memory: 7700M
       restart_policy:
         condition: on-failure
       placement:

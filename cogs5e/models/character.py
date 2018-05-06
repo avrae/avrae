@@ -347,7 +347,7 @@ class Character:
 
             if changed and ctx:
                 self.commit(ctx)
-            if 'combat' in _cache:
+            if 'combat' in _cache and _cache['combat'] is not None:
                 _cache['combat'].func_commit()  # private commit, simpleeval will not show
             return cstr
 

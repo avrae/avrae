@@ -179,7 +179,7 @@ class Character:
         :param cstr: The string to parse.
         :returns string - the parsed string."""
 
-        def process(cstr):
+        def process(to_process):
             character = self.character
             ops = r"([-+*/().<>=])"
             cvars = character.get('cvars', {})
@@ -341,7 +341,7 @@ class Character:
                 return str(evalresult) if evalresult is not None else ''
 
             try:
-                cstr = re.sub(SCRIPTING_RE, evalrepl, cstr)  # evaluate
+                output = re.sub(SCRIPTING_RE, evalrepl, to_process)  # evaluate
             except Exception as ex:
                 raise EvaluationError(ex)
 
@@ -349,7 +349,7 @@ class Character:
                 self.commit(ctx)
             if 'combat' in _cache and _cache['combat'] is not None:
                 _cache['combat'].func_commit()  # private commit, simpleeval will not show
-            return cstr
+            return output
 
         return await asyncio.get_event_loop().run_in_executor(None, process, cstr)
 

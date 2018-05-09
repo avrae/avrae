@@ -131,9 +131,9 @@ class GameTrack:
             if 'mod' in operator.lower():
                 character.modify_hp(hp_roll.total)
             elif 'set' in operator.lower():
-                character.set_hp(hp_roll.total)
+                character.set_hp(hp_roll.total, True)
             elif 'max' in operator.lower() and not hp:
-                character.set_hp(character.get_max_hp())
+                character.set_hp(character.get_max_hp(), True)
             elif hp == '':
                 hp_roll = roll(operator, inline=True, show_blurbs=False)
                 hp = operator
@@ -143,10 +143,10 @@ class GameTrack:
                 return
 
             character.commit(ctx)
-            out = "{}: {}/{}".format(character.get_name(), character.get_current_hp(), character.get_max_hp())
+            out = "{}: {}".format(character.get_name(), character.get_hp_str())
             if 'd' in hp: out += '\n' + hp_roll.skeleton
         else:
-            out = "{}: {}/{}".format(character.get_name(), character.get_current_hp(), character.get_max_hp())
+            out = "{}: {}".format(character.get_name(), character.get_hp_str())
 
         await self.bot.say(out)
 

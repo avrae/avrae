@@ -439,6 +439,9 @@ class Character:
         except AssertionError:
             self.character['consumables']['hp'] = {'value': self.get_max_hp(), 'reset': 'long',
                                                    'max': self.get_max_hp(), 'min': 0}
+        if self.character['consumables'].get('temphp') is None:
+            self.character['consumables']['temphp'] = {'value': 0, 'reset': 'long',
+                                                       'max': None, 'min': 0}
 
     def get_hp(self):
         """Returns the Counter dictionary."""
@@ -449,10 +452,25 @@ class Character:
         """Returns the integer value of the remaining HP."""
         return self.get_hp()['value']
 
-    def set_hp(self, newValue):
+    def get_hp_str(self):
+        hp = self.get_current_hp() - self.get_temp_hp()
+        out = f"{hp}/{self.get_max_hp()}"
+        if self.get_temp_hp():
+            out += f' ({self.get_temp_hp()} temp)'
+        return out
+
+    def set_hp(self, newValue, ignore_temp=False):
         """Sets the character's hit points. Returns the Character object."""
         self._initialize_hp()
         hp = self.get_hp()
+        if not ignore_temp:
+            if self.get_temp_hp():
+                delta = newValue - hp['value']  # hp includes all temp hp
+                if delta < 0:  # don't add thp by adding to hp
+                    self.set_temp_hp(max(self.get_temp_hp() + delta, 0))
+        else:
+            if self.get_temp_hp():
+                newValue = newValue + self.get_temp_hp()
         self.character['consumables']['hp']['value'] = max(hp['min'], int(newValue))  # bounding
 
         self.on_hp()
@@ -473,22 +491,36 @@ class Character:
                 log.debug(data)
 
         try:
-            DicecloudClient.getInstance().update('characters', {'_id': self.id[10:]},
+            DicecloudClient.getInstance().update('characters',
+                                                 {'_id': self.id[10:]},
                                                  {'$set': {
-                                                     "hitPoints.adjustment": self.get_current_hp() - self.get_max_hp()}},
-                                                 callback=update_callback)
+                                                     "hitPoints.adjustment":
+                                                         (self.get_current_hp() - self.get_max_hp())
+                                                         - self.get_temp_hp()}
+                                                 }, callback=update_callback)
         except MeteorClient.MeteorClientException:
             pass
 
-    def modify_hp(self, value):
+    def modify_hp(self, value, ignore_temp=False):
         """Modifies the character's hit points. Returns the Character object."""
-        self.set_hp(self.get_current_hp() + value)
+        self.set_hp(self.get_current_hp() + value, ignore_temp)
         return self
 
     def reset_hp(self):
-        """Resets the character's HP to max. Returns the Character object."""
+        """Resets the character's HP to max and THP to 0. Returns the Character object."""
+        self.set_temp_hp(0)
         self.set_hp(self.get_max_hp())
         return self
+
+    def get_temp_hp(self):
+        self._initialize_hp()
+        return self.character['consumables']['temphp']['value']
+
+    def set_temp_hp(self, temp_hp):
+        self._initialize_hp()
+        delta = temp_hp - (self.get_temp_hp() or 0)
+        self.character['consumables']['temphp']['value'] = temp_hp
+        self.modify_hp(delta, True)  # hp includes thp
 
     def _initialize_deathsaves(self):
         try:

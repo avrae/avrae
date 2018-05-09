@@ -736,11 +736,18 @@ class PlayerCombatant(Combatant):
 
     @hp.setter
     def hp(self, new_hp):
-        if self._temphp:  # TODO: move this to the character model
-            delta = new_hp - self._hp  # _hp includes all temp hp
-            if delta < 0:  # don't add thp by adding to hp
-                self._temphp = min(self._temphp - delta, 0)
         self.character.set_hp(new_hp).commit(self.ctx)
+
+    def set_hp(self, new_hp):
+        self.character.set_hp(new_hp, False).commit(self.ctx)
+
+    @property
+    def temphp(self):
+        return self.character.get_temp_hp()
+
+    @temphp.setter
+    def temphp(self, new_hp):
+        self.character.set_temp_hp(new_hp).commit(self.ctx)
 
     @property
     def attacks(self):

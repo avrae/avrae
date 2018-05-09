@@ -400,6 +400,12 @@ class Combatant:
                 self._temphp = max(self._temphp + delta, 0)
         self._hp = new_hp
 
+    def set_hp(self, new_hp):  # set hp before temp hp
+        if self._temphp:
+            self._hp = new_hp + self._temphp
+        else:
+            self._hp = new_hp
+
     def get_hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''

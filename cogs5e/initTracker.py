@@ -676,10 +676,10 @@ class InitTracker:
                 combatant.hp = 0
             combatant.hp += hp_roll.total
         elif 'set' in operator.lower():
-            combatant.hp = hp_roll.total
+            combatant.set_hp(hp_roll.total)
         elif 'max' in operator.lower():
             if hp == '':
-                combatant.hp = combatant.hpMax
+                combatant.set_hp(combatant.hpMax)
             elif hp_roll.total < 1:
                 return await self.bot.say("You can't have a negative max HP!")
             else:

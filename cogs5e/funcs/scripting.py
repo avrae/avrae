@@ -75,14 +75,16 @@ class SimpleCombatant:
 
         if not self._hidden:
             self.ac = self._combatant.ac
-            self.hp = self._combatant.hp
+            self.hp = self._combatant.hp - (self._combatant.temphp or 0)
             self.maxhp = self._combatant.hpMax
             self.initmod = self._combatant.initMod
+            self.temphp = self._combatant.temphp
         else:
             self.ac = None
             self.hp = None
             self.maxhp = None
             self.initmod = None
+            self.temphp = None
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes

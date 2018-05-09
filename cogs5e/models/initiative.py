@@ -340,7 +340,8 @@ class Combatant:
         effects = [Effect.from_dict(e) for e in raw['effects']]
         return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, index=raw['index'],
-                   notes=raw['notes'], effects=effects, group=raw['group'], temphp=raw['temphp'])
+                   notes=raw['notes'], effects=effects, group=raw['group'],  # begin backwards compatibility
+                   temphp=raw.get('temphp'))
 
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
@@ -392,23 +393,27 @@ class Combatant:
         return self._hp
 
     @hp.setter
-    def hp(self, new_hp):
+    def hp(self, new_hp):  # may have odd side effects with temp hp
+        if self._temphp:
+            delta = new_hp - self._hp  # _hp includes all temp hp
+            if delta < 0:  # don't add thp by adding to hp
+                self._temphp = max(self._temphp + delta, 0)
         self._hp = new_hp
 
     def get_hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''
         if self.temphp and self.temphp > 0:
-            hp = self.hp + self.temphp
+            hp = self.hp - self.temphp
         else:
             hp = self.hp
         if not self.isPrivate or private:
-            hpStr = '<{}/{} HP>'.format(self.hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
-                self.hp) if self.hp is not None else ''
+            hpStr = '<{}/{} HP>'.format(hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
+                hp) if hp is not None else ''
             if self.temphp and self.temphp > 0:
-                hpStr += f'<{self.temphp} THP>'
+                hpStr += f' <{self.temphp} THP>'
         elif self.hpMax is not None and self.hpMax > 0:
-            ratio = hp / self.hpMax
+            ratio = self.hp / self.hpMax
             if ratio >= 1:
                 hpStr = "<Healthy>"
             elif 0.5 < ratio < 1:
@@ -427,7 +432,9 @@ class Combatant:
 
     @temphp.setter
     def temphp(self, new_hp):
+        delta = new_hp - (self._temphp or 0)
         self._temphp = new_hp
+        self._hp += delta  # hp includes thp
 
     @property
     def ac(self):
@@ -723,6 +730,10 @@ class PlayerCombatant(Combatant):
 
     @hp.setter
     def hp(self, new_hp):
+        if self._temphp:  # TODO: move this to the character model
+            delta = new_hp - self._hp  # _hp includes all temp hp
+            if delta < 0:  # don't add thp by adding to hp
+                self._temphp = min(self._temphp - delta, 0)
         self.character.set_hp(new_hp).commit(self.ctx)
 
     @property

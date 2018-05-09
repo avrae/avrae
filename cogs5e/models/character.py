@@ -239,10 +239,10 @@ class Character:
                 changed = True
 
             def get_hp():
-                return self.get_current_hp()
+                return self.get_current_hp() - self.get_temp_hp()
 
             def set_hp(val: int):
-                self.set_hp(val)
+                self.set_hp(val, True)
                 nonlocal changed
                 changed = True
 
@@ -521,6 +521,7 @@ class Character:
         delta = temp_hp - (self.get_temp_hp() or 0)
         self.character['consumables']['temphp']['value'] = temp_hp
         self.modify_hp(delta, True)  # hp includes thp
+        return self
 
     def _initialize_deathsaves(self):
         try:

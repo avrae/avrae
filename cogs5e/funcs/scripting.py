@@ -86,6 +86,10 @@ class SimpleCombatant:
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes
+        if self.hp is not None and self.maxhp is not None:
+            self.ratio = self.hp / self.maxhp
+        else:
+            self.ratio = 0
 
     def set_hp(self, newhp: int):
         self._combatant.hp = int(newhp)

@@ -519,8 +519,8 @@ class Character:
     def set_temp_hp(self, temp_hp):
         self._initialize_hp()
         delta = temp_hp - (self.get_temp_hp() or 0)
-        self.character['consumables']['temphp']['value'] = temp_hp
         self.modify_hp(delta, True)  # hp includes thp
+        self.character['consumables']['temphp']['value'] = temp_hp
         return self
 
     def _initialize_deathsaves(self):

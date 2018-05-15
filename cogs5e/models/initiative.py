@@ -306,7 +306,7 @@ class Combat:
 
 class Combatant:
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 index=None, notes=None, effects=None, group=None, *args, **kwargs):
+                 index=None, notes=None, effects=None, group=None, temphp=None, *args, **kwargs):
         if resists is None:
             resists = {}
         if attacks is None:
@@ -329,6 +329,7 @@ class Combatant:
         self._notes = notes
         self._effects = effects
         self._group = group
+        self._temphp = temphp
 
     @classmethod
     def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx):
@@ -339,14 +340,15 @@ class Combatant:
         effects = [Effect.from_dict(e) for e in raw['effects']]
         return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, index=raw['index'],
-                   notes=raw['notes'], effects=effects, group=raw['group'])
+                   notes=raw['notes'], effects=effects, group=raw['group'],  # begin backwards compatibility
+                   temphp=raw.get('temphp'))
 
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
                 'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
                 'resists': self.resists, 'attacks': self._attacks, 'saves': self._saves, 'index': self.index,
                 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
-                'type': 'common'}
+                'temphp': self.temphp, 'type': 'common'}
 
     @property
     def name(self):
@@ -391,15 +393,31 @@ class Combatant:
         return self._hp
 
     @hp.setter
-    def hp(self, new_hp):
+    def hp(self, new_hp):  # may have odd side effects with temp hp
+        if self._temphp:
+            delta = new_hp - self._hp  # _hp includes all temp hp
+            if delta < 0:  # don't add thp by adding to hp
+                self._temphp = max(self._temphp + delta, 0)
         self._hp = new_hp
+
+    def set_hp(self, new_hp):  # set hp before temp hp
+        if self._temphp:
+            self._hp = new_hp + self._temphp
+        else:
+            self._hp = new_hp
 
     def get_hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''
+        if self.temphp and self.temphp > 0:
+            hp = self.hp - self.temphp
+        else:
+            hp = self.hp
         if not self.isPrivate or private:
-            hpStr = '<{}/{} HP>'.format(self.hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
-                self.hp) if self.hp is not None else ''
+            hpStr = '<{}/{} HP>'.format(hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
+                hp) if hp is not None else ''
+            if self.temphp and self.temphp > 0:
+                hpStr += f' <{self.temphp} THP>'
         elif self.hpMax is not None and self.hpMax > 0:
             ratio = self.hp / self.hpMax
             if ratio >= 1:
@@ -413,6 +431,16 @@ class Combatant:
             elif ratio <= 0:
                 hpStr = "<Dead>"
         return hpStr
+
+    @property
+    def temphp(self):
+        return self._temphp
+
+    @temphp.setter
+    def temphp(self, new_hp):
+        delta = new_hp - (self._temphp or 0)
+        self._temphp = new_hp
+        self._hp += delta  # hp includes thp
 
     @property
     def ac(self):
@@ -609,9 +637,9 @@ class Combatant:
 
 class MonsterCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 index=None, monster_name=None, notes=None, effects=None, group=None):
+                 index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None):
         super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                               attacks, saves, ctx, index, notes, effects, group)
+                                               attacks, saves, ctx, index, notes, effects, group, temphp)
         self._monster_name = monster_name
 
     @classmethod
@@ -667,9 +695,10 @@ class MonsterCombatant(Combatant):
 
 class PlayerCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None):
+                 index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None,
+                 temphp=None):
         super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                              attacks, saves, ctx, index, notes, effects, group)
+                                              attacks, saves, ctx, index, notes, effects, group, temphp)
         self._character_id = character_id
         self._character_owner = character_owner
         self._character = None  # only grab the Character instance if we have to
@@ -708,6 +737,17 @@ class PlayerCombatant(Combatant):
     @hp.setter
     def hp(self, new_hp):
         self.character.set_hp(new_hp).commit(self.ctx)
+
+    def set_hp(self, new_hp):
+        self.character.set_hp(new_hp, False).commit(self.ctx)
+
+    @property
+    def temphp(self):
+        return self.character.get_temp_hp()
+
+    @temphp.setter
+    def temphp(self, new_hp):
+        self.character.set_temp_hp(new_hp).commit(self.ctx)
 
     @property
     def attacks(self):

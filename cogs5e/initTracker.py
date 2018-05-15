@@ -676,10 +676,10 @@ class InitTracker:
                 combatant.hp = 0
             combatant.hp += hp_roll.total
         elif 'set' in operator.lower():
-            combatant.hp = hp_roll.total
+            combatant.set_hp(hp_roll.total)
         elif 'max' in operator.lower():
             if hp == '':
-                combatant.hp = combatant.hpMax
+                combatant.set_hp(combatant.hpMax)
             elif hp_roll.total < 1:
                 return await self.bot.say("You can't have a negative max HP!")
             else:
@@ -700,7 +700,33 @@ class InitTracker:
         if combatant.isPrivate:
             try:
                 await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
-                                            "{}'s HP: {}/{}".format(combatant.name, combatant.hp, combatant.hpMax))
+                                            "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
+            except:
+                pass
+        await combat.final()
+
+    @init.command(pass_context=True)
+    async def thp(self, ctx, name: str, *, thp: int):
+        """Modifies the temportay HP of a combatant.
+        Usage: !init thp <NAME> <HP>
+        Sets the combatant's THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP)."""
+        combat = Combat.from_ctx(ctx)
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            await self.bot.say("Combatant not found.")
+            return
+
+        if thp > 0:
+            combatant.temphp = thp
+        else:
+            combatant.temphp += thp
+
+        out = "{}: {}".format(combatant.name, combatant.get_hp_str())
+        await self.bot.say(out, delete_after=10)
+        if combatant.isPrivate:
+            try:
+                await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
+                                            "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
             except:
                 pass
         await combat.final()
@@ -825,7 +851,7 @@ class InitTracker:
                 if target.isPrivate:
                     try:
                         await self.bot.send_message(ctx.message.server.get_member(target.controller),
-                                                    "{}'s HP: {}/{}".format(target.name, target.hp, target.hpMax))
+                                                    "{}'s HP: {}".format(target.name, target.get_hp_str(True)))
                     except:
                         pass
             else:
@@ -1039,8 +1065,8 @@ class InitTracker:
                             if target.isPrivate:
                                 try:
                                     await self.bot.send_message(ctx.message.server.get_member(target.controller),
-                                                                "{}'s HP: {}/{}".format(target.name, target.hp,
-                                                                                        target.hpMax))
+                                                                "{}'s HP: {}".format(target.name,
+                                                                                     target.get_hp_str(True)))
                                 except:
                                     pass
                         else:
@@ -1104,8 +1130,7 @@ class InitTracker:
                         if target.isPrivate:
                             try:
                                 await self.bot.send_message(ctx.message.server.get_member(target.controller),
-                                                            "{}'s HP: {}/{}".format(target.name, target.hp,
-                                                                                    target.hpMax))
+                                                            "{}'s HP: {}".format(target.name, target.get_hp_str(True)))
                             except:
                                 pass
                     else:
@@ -1136,8 +1161,7 @@ class InitTracker:
                         if target.isPrivate:
                             try:
                                 await self.bot.send_message(ctx.message.server.get_member(target.controller),
-                                                            "{}'s HP: {}/{}".format(target.name, target.hp,
-                                                                                    target.hpMax))
+                                                            "{}'s HP: {}".format(target.name, target.get_hp_str(True)))
                             except:
                                 pass
                     else:

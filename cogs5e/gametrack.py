@@ -131,9 +131,9 @@ class GameTrack:
             if 'mod' in operator.lower():
                 character.modify_hp(hp_roll.total)
             elif 'set' in operator.lower():
-                character.set_hp(hp_roll.total)
+                character.set_hp(hp_roll.total, True)
             elif 'max' in operator.lower() and not hp:
-                character.set_hp(character.get_max_hp())
+                character.set_hp(character.get_max_hp(), True)
             elif hp == '':
                 hp_roll = roll(operator, inline=True, show_blurbs=False)
                 hp = operator
@@ -143,11 +143,27 @@ class GameTrack:
                 return
 
             character.commit(ctx)
-            out = "{}: {}/{}".format(character.get_name(), character.get_current_hp(), character.get_max_hp())
+            out = "{}: {}".format(character.get_name(), character.get_hp_str())
             if 'd' in hp: out += '\n' + hp_roll.skeleton
         else:
-            out = "{}: {}/{}".format(character.get_name(), character.get_current_hp(), character.get_max_hp())
+            out = "{}: {}".format(character.get_name(), character.get_hp_str())
 
+        await self.bot.say(out)
+
+    @game.command(pass_context=True, name='thp')
+    async def game_thp(self, ctx, thp:int=0):
+        """Modifies the temp HP of a the current active character.
+        If positive, assumes set; if negative, assumes mod."""
+        character = Character.from_ctx(ctx)
+
+        if thp > 0:
+            character.set_temp_hp(thp)
+        else:
+            character.set_temp_hp(character.get_temp_hp() + thp)
+
+        character.commit(ctx)
+
+        out = "{}: {}".format(character.get_name(), character.get_hp_str())
         await self.bot.say(out)
 
     @game.group(pass_context=True, name='deathsave', aliases=['ds'], invoke_without_command=True)

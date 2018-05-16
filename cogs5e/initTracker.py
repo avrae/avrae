@@ -707,7 +707,7 @@ class InitTracker:
 
     @init.command(pass_context=True)
     async def thp(self, ctx, name: str, *, thp: int):
-        """Modifies the temportay HP of a combatant.
+        """Modifies the temporary HP of a combatant.
         Usage: !init thp <NAME> <HP>
         Sets the combatant's THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP)."""
         combat = Combat.from_ctx(ctx)

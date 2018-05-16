@@ -151,17 +151,18 @@ class GameTrack:
         await self.bot.say(out)
 
     @game.command(pass_context=True, name='thp')
-    async def game_thp(self, ctx, thp:int=0):
+    async def game_thp(self, ctx, thp:int=None):
         """Modifies the temp HP of a the current active character.
         If positive, assumes set; if negative, assumes mod."""
         character = Character.from_ctx(ctx)
 
-        if thp >= 0:
-            character.set_temp_hp(thp)
-        else:
-            character.set_temp_hp(character.get_temp_hp() + thp)
+        if thp is not None:
+            if thp >= 0:
+                character.set_temp_hp(thp)
+            else:
+                character.set_temp_hp(character.get_temp_hp() + thp)
 
-        character.commit(ctx)
+            character.commit(ctx)
 
         out = "{}: {}".format(character.get_name(), character.get_hp_str())
         await self.bot.say(out)

@@ -716,7 +716,7 @@ class InitTracker:
             await self.bot.say("Combatant not found.")
             return
 
-        if thp > 0:
+        if thp >= 0:
             combatant.temphp = thp
         else:
             combatant.temphp += thp

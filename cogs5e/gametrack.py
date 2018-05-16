@@ -156,7 +156,7 @@ class GameTrack:
         If positive, assumes set; if negative, assumes mod."""
         character = Character.from_ctx(ctx)
 
-        if thp > 0:
+        if thp >= 0:
             character.set_temp_hp(thp)
         else:
             character.set_temp_hp(character.get_temp_hp() + thp)

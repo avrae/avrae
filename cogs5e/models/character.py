@@ -27,7 +27,7 @@ import MeteorClient
 import simpleeval
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.scripting import simple_roll, verbose_roll, SCRIPTING_RE, SimpleCombat
+from cogs5e.funcs.scripting import simple_roll, verbose_roll, SCRIPTING_RE, SimpleCombat, ScriptingEvaluator
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError, InvalidSpellLevel
@@ -300,7 +300,7 @@ class Character:
             _names = copy.copy(_vars)
             _names.update(stat_vars)
             _names.update({"True": True, "False": False, "currentHp": self.get_current_hp()})
-            evaluator = simpleeval.EvalWithCompoundTypes(functions=_funcs, operators=_ops, names=_names)
+            evaluator = ScriptingEvaluator(functions=_funcs, operators=_ops, names=_names)
 
             def set_value(name, value):
                 evaluator.names[name] = value

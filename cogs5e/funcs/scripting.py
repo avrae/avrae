@@ -1,10 +1,64 @@
+import ast
 import re
+
+from simpleeval import EvalWithCompoundTypes
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import CombatNotFound
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
+
+
+class ScriptingEvaluator(EvalWithCompoundTypes):
+    def __init__(self, operators=None, functions=None, names=None):
+        super(EvalWithCompoundTypes, self).__init__(operators, functions, names)
+
+        # self.nodes.update({
+        #     ast.JoinedStr: self._eval_joinedstr  # f-string
+        # })
+
+    def eval(self, expr):  # allow for ast.Assign to set names
+        """ evaluate an expression, using the operators, functions and
+            names previously set up. """
+
+        # set a copy of the expression aside, so we can give nice errors...
+
+        self.expr = expr
+
+        # and evaluate:
+        expression = ast.parse(expr.strip()).body[0]
+        if isinstance(expression, ast.Expr):
+            return self._eval(expression.value)
+        elif isinstance(expression, ast.Assign):
+            return self._eval_assign(expression)
+        else:
+            raise ValueError("Unknown ast body type")
+
+    def _eval_assign(self, node):
+        names = node.targets[0]
+        values = node.value
+        if isinstance(names, ast.Tuple):  # unpacking variables
+            names = [n.id for n in names.elts]  # turn ast into str
+            if not isinstance(values, ast.Tuple):
+                raise ValueError(f"unequal unpack: {len(names)} names, 1 value")
+            values = [self._eval(n) for n in values.elts]  # get what we actually want to assign
+            if not len(values) == len(names):
+                raise ValueError(f"unequal unpack: {len(names)} names, {len(values)} values")
+            else:
+                if not isinstance(self.names, dict):
+                    raise ValueError("cannot set name: incorrect name type")
+                else:
+                    for name, value in zip(names, values):
+                        self.names[name] = value  # and assign it
+        else:
+            if not isinstance(self.names, dict):
+                raise ValueError("cannot set name: incorrect name type")
+            else:
+                self.names[names.id] = self._eval(values)
+
+    def _eval_joinedstr(self, node):
+        pass
 
 
 def simple_roll(rollStr):

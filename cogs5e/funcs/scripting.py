@@ -12,11 +12,12 @@ SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+
 
 class ScriptingEvaluator(EvalWithCompoundTypes):
     def __init__(self, operators=None, functions=None, names=None):
-        super(EvalWithCompoundTypes, self).__init__(operators, functions, names)
+        super(ScriptingEvaluator, self).__init__(operators, functions, names)
 
-        # self.nodes.update({
-        #     ast.JoinedStr: self._eval_joinedstr  # f-string
-        # })
+        self.nodes.update({
+            ast.JoinedStr: self._eval_joinedstr,  # f-string
+            ast.FormattedValue: self._eval_formattedvalue,  # things in f-strings
+        })
 
     def eval(self, expr):  # allow for ast.Assign to set names
         """ evaluate an expression, using the operators, functions and
@@ -33,7 +34,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         elif isinstance(expression, ast.Assign):
             return self._eval_assign(expression)
         else:
-            raise ValueError("Unknown ast body type")
+            raise TypeError("Unknown ast body type")
 
     def _eval_assign(self, node):
         names = node.targets[0]
@@ -58,7 +59,14 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                 self.names[names.id] = self._eval(values)
 
     def _eval_joinedstr(self, node):
-        pass
+        return ''.join(str(self._eval(n)) for n in node.values)
+
+    def _eval_formattedvalue(self, node):
+        if node.format_spec:
+            fmt = "{:" + self._eval(node.format_spec) + "}"
+            return fmt.format(self._eval(node.value))
+        else:
+            return self._eval(node.value)
 
 
 def simple_roll(rollStr):

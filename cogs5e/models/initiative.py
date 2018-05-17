@@ -438,7 +438,7 @@ class Combatant:
 
     @temphp.setter
     def temphp(self, new_hp):
-        delta = max(new_hp - (self._temphp or 0), -self._temphp)
+        delta = max(new_hp - (self._temphp or 0), -(self._temphp or 0))
         self._temphp = max(new_hp, 0)
         self._hp += delta  # hp includes thp
 

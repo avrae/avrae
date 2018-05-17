@@ -48,13 +48,13 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                 raise ValueError(f"unequal unpack: {len(names)} names, {len(values)} values")
             else:
                 if not isinstance(self.names, dict):
-                    raise ValueError("cannot set name: incorrect name type")
+                    raise TypeError("cannot set name: incorrect name type")
                 else:
                     for name, value in zip(names, values):
                         self.names[name] = value  # and assign it
         else:
             if not isinstance(self.names, dict):
-                raise ValueError("cannot set name: incorrect name type")
+                raise TypeError("cannot set name: incorrect name type")
             else:
                 self.names[names.id] = self._eval(values)
 

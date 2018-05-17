@@ -29,7 +29,7 @@ python-Levenshtein==0.12.0
 python-meteor==0.1.6
 redis==2.10.6
 rsa==3.4.2
-simpleeval==0.9.5
+git+https://github.com/danthedeckie/simpleeval.git@84a4b2ba938d8382e6bc3ff34203262d451c01cd
 six==1.11.0
 uritemplate==3.0.0
 websockets==3.4

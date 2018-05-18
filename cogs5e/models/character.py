@@ -252,6 +252,14 @@ class Character:
                 else:
                     return set_hp(self.get_current_hp() + val)
 
+            def get_temphp():
+                return self.get_temp_hp()
+
+            def set_temphp(val: int):
+                self.set_temp_hp(val)
+                nonlocal changed
+                changed = True
+
             def set_cvar(name, val: str):
                 self.set_cvar(name, val)
                 _names[name] = str(val)
@@ -291,7 +299,7 @@ class Character:
                           get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                           cc_exists=cc_exists, create_cc_nx=create_cc_nx,
                           get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
-                          get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp,
+                          get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, get_temphp=get_temphp, set_temphp=set_temphp,
                           set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
                           get_gvar=get_gvar, exists=exists,
                           get_raw=get_raw, combat=combat)

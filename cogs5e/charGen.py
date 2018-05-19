@@ -253,7 +253,7 @@ class CharGenerator:
         await self.bot.send_message(ctx.message.author, embed=embed)
 
         out = "{6}\n{0}, {1} {7} {2} {3}. {4} Background.\nStat Array: `{5}`\nI have PM'd you full character details.".format(
-            name, race['name'], _class['name'], final_level, background['name'], stats, ctx.message.author.mention,
+            name, race.name, _class['name'], final_level, background['name'], stats, ctx.message.author.mention,
             subclass['name'])
 
         await self.bot.edit_message(loadingMessage, out)

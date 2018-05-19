@@ -170,12 +170,16 @@ class Monster:
         for skill, stat in SKILL_MAP.items():
             if skill not in skills:
                 skills[skill] = scores.get_mod(stat)
+            else:
+                skills[skill] = int(skills[skill])
 
         saves = parse_raw_saves(data.get('save', {}))
         save_text = parse_save_text(data.get('save', {}))
         for save, stat in SAVE_MAP.items():
             if save not in saves:
                 saves[save] = scores.get_mod(stat)
+            else:
+                saves[save] = int(saves[save])
 
         source = data['source']
 

@@ -87,9 +87,13 @@ class Monster:
         for skill, stat in SKILL_MAP.items():
             if skill not in skills:
                 skills[skill] = ability_scores.get_mod(stat)
+            else:
+                skills[skill] = int(skills[skill])
         for save, stat in SAVE_MAP.items():
             if save not in saves:
                 saves[save] = ability_scores.get_mod(stat)
+            else:
+                saves[save] = int(saves[save])
         if passiveperc is None:
             passiveperc = 10 + skills['perception']
         self.name = name
@@ -145,8 +149,8 @@ class Monster:
             hp = data['hp']['average']
             hitdice = data['hp']['formula']
         else:
-            hp = data['hp']['special']
-            hitdice = None
+            hp = 0
+            hitdice = data['hp']['special']
         scores = AbilityScores(data['str'], data['dex'], data['con'], data['int'], data['wis'], data['cha'])
         if isinstance(data['cr'], dict):
             cr = data['cr']['cr']
@@ -167,19 +171,12 @@ class Monster:
 
         skills = data.get('skill', {})
         skill_text = parse_skill_text(skills)
-        for skill, stat in SKILL_MAP.items():
-            if skill not in skills:
-                skills[skill] = scores.get_mod(stat)
-            else:
-                skills[skill] = int(skills[skill])
+        for skill in skills.copy():
+            if not skill in SKILL_MAP:
+                del skills[skill]
 
         saves = parse_raw_saves(data.get('save', {}))
         save_text = parse_save_text(data.get('save', {}))
-        for save, stat in SAVE_MAP.items():
-            if save not in saves:
-                saves[save] = scores.get_mod(stat)
-            else:
-                saves[save] = int(saves[save])
 
         source = data['source']
 
@@ -407,7 +404,11 @@ def parse_speed(speed):
 
 
 def parse_skill_text(skills):
-    return ', '.join(f"{skill.title()} {mod}" for skill, mod in skills.items())
+    out = []
+    for skill, mod in skills.items():
+        if not isinstance(mod, dict):
+            out.append(f"{skill.title()} {mod}")
+    return ', '.join(out)
 
 
 def parse_save_text(saves):

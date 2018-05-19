@@ -133,59 +133,57 @@ class Monster:
 
     @classmethod
     def from_data(cls, data):
-        _type = ','.join(data['type'].split(',')[:-1])
-        ac = int(data['ac'].split(' (')[0])
+        # print(f"Parsing {data['name']}")
+        _type = parse_type(data['type'])
+        alignment = parse_alignment(data['alignment'])
+        speed = parse_speed(data['speed'])
+        ac = int(re.search(r'\d+', data['ac']).group(0))
         armortype = re.search(r'\((.*)\)', data['ac'])
         if armortype is not None:
             armortype = armortype.group(1)
-        hp = int(data['hp'].split(' (')[0])
-        try:
-            hitdice = re.search(r'\((.*)\)', data['hp']).group(1)
-        except AttributeError:
-            hitdice = "Unknown"
-        scores = AbilityScores(int(data['str']), int(data['dex']), int(data['con']), int(data['int']), int(data['wis']),
-                               int(data['cha']))
-        vuln = data.get('vulnerable', '').split(', ') if data.get('vulnerable') else None
-        resist = data.get('resist', '').split(', ') if data.get('resist') else None
-        immune = data.get('immune', '').split(', ') if data.get('immune') else None
-        condition_immune = data.get('conditionImmune', '').split(', ') if data.get('condiitonImmune') else None
-
-        languages = data.get('languages', '').split(', ') if data.get('languages') else None
-
-        traits = parse_traits(data, 'trait')
-        actions = parse_traits(data, 'action')
-        legactions = parse_traits(data, 'legendary')
-        if 'reaction' in data:
-            text = '\n'.join(data['reaction']['text']) if isinstance(data['reaction']['text'], list) else \
-                data['reaction']['text']
-            reactions = [Trait(data['reaction']['name'], text)]
+        if not 'special' in data['hp']:
+            hp = data['hp']['average']
+            hitdice = data['hp']['formula']
         else:
-            reactions = None
+            hp = data['hp']['special']
+            hitdice = None
+        scores = AbilityScores(data['str'], data['dex'], data['con'], data['int'], data['wis'], data['cha'])
+        if isinstance(data['cr'], dict):
+            cr = data['cr']['cr']
+        else:
+            cr = data['cr']
 
-        raw_skills = data.get('skill', "")
-        skills = parse_raw_skills(raw_skills)
-        if isinstance(raw_skills, list):
-            raw_skills = raw_skills[0]
+        vuln = parse_resists(data['vulnerable']) if 'vulnerable' in data else None
+        resist = parse_resists(data['resist']) if 'resist' in data else None
+        immune = parse_resists(data['immune']) if 'immune' in data else None
+        condition_immune = data.get('conditionImmune', []) if 'condiitonImmune' in data else None
+
+        languages = data.get('languages', '').split(', ') if 'languages' in data else None
+
+        traits = [Trait(t['name'], t['text']) for t in data.get('trait', [])]
+        actions = [Trait(t['name'], t['text']) for t in data.get('action', [])]
+        legactions = [Trait(t['name'], t['text']) for t in data.get('legendary', [])]
+        reactions = [Trait(t['name'], t['text']) for t in data.get('reaction', [])]
+
+        skills = data.get('skill', {})
+        skill_text = parse_skill_text(skills)
         for skill, stat in SKILL_MAP.items():
             if skill not in skills:
                 skills[skill] = scores.get_mod(stat)
 
-        raw_saves = data.get('save', "")
-        saves = parse_raw_saves(raw_saves)
+        saves = parse_raw_saves(data.get('save', {}))
+        save_text = parse_save_text(data.get('save', {}))
         for save, stat in SAVE_MAP.items():
             if save not in saves:
                 saves[save] = scores.get_mod(stat)
 
-        source = parsesource(data['type'].split(',')[-1])
+        source = data['source']
 
-        attacks = []
-        for a in data.get('attacks', []):
-            atk = {'attackBonus': a['attackBonus'], 'damage': a['damage'], 'name': a['name'], 'details': a['desc']}
-            attacks.append(atk)
+        attacks = data.get('attacks', [])
 
-        return cls(data['name'], parsesize(data['size']), _type, data['alignment'], ac, armortype, hp, hitdice,
-                   data['speed'], scores, data['cr'], xp_by_cr(data['cr']), data['passive'], data.get('senses', ''),
-                   vuln, resist, immune, condition_immune, raw_saves, saves, raw_skills, skills, languages, traits,
+        return cls(data['name'], parsesize(data['size']), _type, alignment, ac, armortype, hp, hitdice,
+                   speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
+                   vuln, resist, immune, condition_immune, save_text, saves, skill_text, skills, languages, traits,
                    actions, reactions, legactions, 3, data.get('srd', False), source, attacks)
 
     @classmethod
@@ -363,52 +361,64 @@ class Monster:
             return self.image_url or ''
 
 
+def parse_type(_type):
+    if isinstance(_type, dict):
+        if 'tags' in _type:
+            tags = []
+            for tag in _type['tags']:
+                if isinstance(tag, str):
+                    tags.append(tag)
+                else:
+                    tags.append(f"{tag['prefix']} {tag['tag']}")
+            return f"{_type['type']} ({', '.join(tags)})"
+        elif 'swarmSize' in _type:
+            return f"swarm of {parsesize(_type['swarmSize'])} {_type['type']}"
+    return str(_type)
+
+
+def parse_alignment(alignment):
+    aligndict = {'U': 'unaligned', 'L': 'lawful', 'N': 'neutral', 'C': 'chaotic', 'G': 'good', 'E': 'evil',
+                 'A': 'any', 'NX': 'neutral', 'NY': 'neutral'}
+    out = []
+    for a in alignment:
+        if not isinstance(a, dict):
+            out.append(aligndict.get(a))
+        elif 'chance' in a:
+            out.append(f"{a['chance']}% chance to be {parse_alignment(a['alignment'])}")
+        elif 'special' in a:
+            out.append(a['special'])
+    return ' '.join(out)
+
+
+def parse_speed(speed):
+    out = []
+    for movetype, movespeed in speed.items():
+        if isinstance(movespeed, dict):
+            movespeed = f"{movespeed['number']}{movespeed['condition']}"
+        if not movetype == 'walk':
+            out.append(f"{movetype} {movespeed} ft.")
+        else:
+            out.append(f"{movespeed} ft.")
+    return ', '.join(out)
+
+
+def parse_skill_text(skills):
+    return ', '.join(f"{skill.title()} {mod}" for skill, mod in skills.items())
+
+
+def parse_save_text(saves):
+    return ', '.join(f"{save.title()} {mod}" for save, mod in saves.items())
+
+
 def parse_raw_saves(raw):
     saves = {}
-    for save in raw.split(', '):
+    for save, mod in raw.items():
         try:
-            _type = next(sa for sa in SAVE_MAP if save.split(' ')[0].lower() in sa.lower())
-            mod = int(save.split(' ')[1])
-            saves[_type] = mod
+            _type = next(sa for sa in SAVE_MAP if save.lower() in sa.lower())
+            saves[_type] = int(mod)
         except (StopIteration, IndexError, ValueError):
             pass
     return saves
-
-
-def parse_raw_skills(raw_skills):
-    if isinstance(raw_skills, str):
-        raw_skills = raw_skills.split(', ')
-    else:
-        if raw_skills[0]:
-            raw_skills = raw_skills[0].split(', ')
-        else:
-            raw_skills = []
-    skills = {}
-    for s in raw_skills:
-        if s:
-            _name = ' '.join(s.split(' ')[:-1]).lower()
-            _value = int(s.split(' ')[-1])
-            skills[_name] = _value
-    return skills
-
-
-def parse_traits(data, key):
-    traits = []
-    for trait in data.get(key, []):
-        if isinstance(trait['text'], list):
-            text = '\n'.join(t for t in trait['text'] if t is not None)
-        else:
-            text = trait['text']
-        attacks = []
-        if 'attack' in trait:
-            for atk in trait['attack']:
-                if atk:
-                    name, bonus, damage = atk.split('|')
-                    name = name or trait['name']
-                    bonus = bonus or None
-                    attacks.append({'name': name, 'attackBonus': bonus, 'damage': damage, 'details': text})
-        traits.append(Trait(trait['name'], text, attacks))
-    return traits
 
 
 def parse_critterdb_traits(data, key):
@@ -430,7 +440,7 @@ def parse_critterdb_traits(data, key):
                 attacks.append({'name': override.group(1) or name,
                                 'attackBonus': override.group(2) or None, 'damage': override.group(3) or None,
                                 'details': desc})
-        elif raw_damage:
+        elif raw_atks:
             for atk in raw_atks:
                 if atk.group(6) and atk.group(7):  # versatile
                     damage = f"{atk.group(6)}[{atk.group(7)}]"
@@ -459,6 +469,21 @@ def parse_critterdb_traits(data, key):
     return traits
 
 
+def parse_resists(resists):
+    out = []
+    for dmgtype in resists:
+        if isinstance(dmgtype, str):
+            out.append(dmgtype)
+        elif isinstance(dmgtype, dict):
+            if 'special' in dmgtype:
+                out.append(dmgtype['special'])
+            else:
+                out.append(
+                    f"{', '.join(parse_resists(dmgtype.get('resist') or dmgtype.get('immune') or dmgtype.get('vulnerable')))} "
+                    f"{dmgtype.get('note')}")
+    return out
+
+
 def parsesize(size):
     if size == "T": size = "Tiny"
     if size == "S": size = "Small"
@@ -467,27 +492,6 @@ def parsesize(size):
     if size == "H": size = "Huge"
     if size == "G": size = "Gargantuan"
     return size
-
-
-def parsesource(src):
-    source = src.strip()
-    if source == "monster manual": source = "MM";
-    if source == "Volo's Guide": source = "VGM";
-    if source == "elemental evil": source = "PotA";
-    if source == "storm kings thunder": source = "SKT";
-    if source == "tyranny of dragons": source = "ToD";
-    if source == "out of the abyss": source = "OotA";
-    if source == "curse of strahd": source = "CoS";
-    if source == "lost mine of phandelver": source = "LMoP";
-    if source == "Tales from the Yawning Portal": source = "TYP";
-    if source == "tome of beasts": source = "ToB";
-    if source == "Plane Shift Amonkhet": source = "PSA";
-    if source == "Plane Shift Innistrad": source = "PSI";
-    if source == "Plane Shift Kaladesh": source = "PSK";
-    if source == "Plane Shift Zendikar": source = "PSZ";
-    if source == "Tomb of Annihilation": source = "ToA";
-    if source == "The Tortle Package": source = "TTP";
-    return source
 
 
 def xp_by_cr(cr):

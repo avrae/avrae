@@ -10,7 +10,7 @@ import logging
 from cogs5e.models.bestiary import Bestiary
 from cogs5e.models.errors import NoBestiary
 from cogs5e.models.monster import Monster
-from utils.functions import discord_trim, strict_search, fuzzywuzzy_search_all_3, get_selection, \
+from utils.functions import strict_search, fuzzywuzzy_search_all_3, get_selection, \
     fuzzywuzzy_search_all_3_list, parse_data_entry, search_and_select
 
 log = logging.getLogger(__name__)
@@ -144,11 +144,6 @@ def searchBackground(name):
 
 
 # ----- Monster stuff
-
-def old_searchMonster(name):
-    return fuzzywuzzy_search_all_3(c.monsters, 'name', name, return_key=True)
-
-
 async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
                               srd=False):
     """
@@ -168,41 +163,6 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
             list_filter = lambda e: e.srd
         message = "This server only shows results from the 5e SRD."
     return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter)
-
-
-async def searchMonsterFull(name, ctx, pm=False):
-    result = old_searchMonster(name)
-    if result is None:
-        return {'monster': None, 'string': ["Monster does not exist or is misspelled."]}
-    strict = result[1]
-    results = result[0]
-
-    if strict:
-        result = results
-    else:
-        if len(results) == 1:
-            result = results[0]
-        else:
-            result = await get_selection(ctx, [(r, r) for r in results], pm=pm)
-            if result is None:
-                return {'monster': None, 'string': ["Selection timed out or was cancelled."]}
-
-    result = old_getMonster(result, visible=True, return_monster=True)
-    return result
-
-
-def old_getMonster(monstername, visible=True, return_monster=False):
-    monsterDesc = []
-    monster = strict_search(c.monsters, 'name', monstername)
-    if monster is None:
-        monsterDesc.append("Monster does not exist or is misspelled.")
-        if return_monster: return {'monster': None, 'string': monsterDesc}
-        return monsterDesc
-
-    if return_monster:
-        return {'monster': monster, 'string': 'deprecated'}
-    else:
-        return discord_trim('deprecated')
 
 
 def searchSpell(name):

@@ -5,7 +5,8 @@ def main():
     with open('races.json') as f:
         monsters = json.load(f)
     # with open('srd-backgrounds.txt') as f:
-    srd = ''
+    srd = ['Dragonborn', 'Half-Elf', 'Half-Orc', 'Elf (High)', 'Dwarf (Hill)', 'Human', 'Human (Variant)',
+           'Halfling (Lightfoot)', 'Gnome (Rock)', 'Tiefling (Infernal)']
 
     for monster in monsters:
         if monster['name'].lower() in srd:

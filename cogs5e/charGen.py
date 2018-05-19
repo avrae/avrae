@@ -4,10 +4,10 @@ import random
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import c, searchRace, searchClass, searchBackground
+from cogs5e.funcs.lookupFuncs import c, searchClass, searchBackground
 from cogs5e.models.dicecloudClient import DicecloudClient, Parent
 from cogs5e.models.embeds import EmbedWithAuthor
-from utils.functions import parse_data_entry, ABILITY_MAP, get_selection, fuzzywuzzy_search_all_3
+from utils.functions import parse_data_entry, ABILITY_MAP, get_selection, fuzzywuzzy_search_all_3, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -51,8 +51,8 @@ class CharGenerator:
 
         await self.genChar(ctx, level)
 
-    @commands.command(pass_context=True, name="randname")
-    async def randname(self, ctx):
+    @commands.command(name="randname")
+    async def randname(self):
         """Generates a random name, as per DMG rules."""
         await self.bot.say(f"Your random name: {self.nameGen()}")
 
@@ -74,8 +74,7 @@ class CharGenerator:
         await self.bot.say(author.mention + " What race?")
         race_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
         if race_response is None: return await self.bot.say("Race not found.")
-        result = searchRace(race_response.content)
-        race = await resolve(result, ctx)
+        race = await search_and_select(ctx, c.fancyraces, race_response.content, lambda e: e.name)
 
         await self.bot.say(author.mention + " What class?")
         class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
@@ -115,48 +114,20 @@ class CharGenerator:
         await self.bot.send_message(ctx.message.author, "**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
-        race = race or random.choice([r for r in c.races if r['source'] in ('PHB', 'VGM')])
+        race = race or random.choice([r for r in c.fancyraces if r.source in ('PHB', 'VGM', 'MTF')])
 
-        _sizes = {'T': "Tiny", 'S': "Small",
-                  'M': "Medium", 'L': "Large", 'H': "Huge"}
         embed = EmbedWithAuthor(ctx)
-        embed.title = race['name']
-        embed.description = f"Source: {race.get('source', 'unknown')}"
-        embed.add_field(name="Speed",
-                        value=race['speed'] + ' ft.' if isinstance(race['speed'], str) else \
-                            ', '.join(f"{k} {v} ft." for k, v in race['speed'].items()))
-        embed.add_field(name="Size", value=_sizes.get(race.get('size'), 'unknown'))
-
-        ability = []
-        for k, v in race['ability'].items():
-            if not k == 'choose':
-                ability.append(f"{k} {v}")
-            else:
-                ability.append(f"Choose {v[0]['count']} from {', '.join(v[0]['from'])} {v[0].get('amount', 1)}")
-
-        embed.add_field(name="Ability Bonuses", value=', '.join(ability))
-        if race.get('proficiency'):
-            embed.add_field(name="Proficiencies", value=race.get('proficiency', 'none'))
-
-        traits = []
-        if 'trait' in race:
-            one_rfeats = race.get('trait', [])
-            for rfeat in one_rfeats:
-                temp = {'name': rfeat['name'],
-                        'text': parse_data_entry(rfeat['text'])}
-                traits.append(temp)
-        else:  # assume entries
-            for entry in race['entries']:
-                temp = {'name': entry['name'],
-                        'text': parse_data_entry(entry['entries'])}
-                traits.append(temp)
-
-        for t in traits:
+        embed.title = race.name
+        embed.description = f"Source: {race.source}"
+        embed.add_field(name="Speed", value=race.get_speed_str())
+        embed.add_field(name="Size", value=race.size)
+        embed.add_field(name="Ability Bonuses", value=race.get_asi_str())
+        for t in race.get_traits():
             f_text = t['text']
             f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
             embed.add_field(name=t['name'], value=f_text[0])
             for piece in f_text[1:]:
-                embed.add_field(name="\u200b", value=piece)
+                embed.add_field(name="** **", value=piece)
 
         embed.colour = color
         await self.bot.send_message(ctx.message.author, embed=embed)
@@ -305,8 +276,7 @@ class CharGenerator:
         await self.bot.say(author.mention + " What race?")
         race_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
         if race_response is None: return await self.bot.say("Race not found.")
-        result = searchRace(race_response.content)
-        race = await resolve(result, ctx)
+        race = await search_and_select(ctx, c.fancyraces, race_response.content, lambda e: e.name)
 
         await self.bot.say(author.mention + " What class?")
         class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
@@ -345,7 +315,7 @@ class CharGenerator:
         # Name Gen + Setup
         #    DMG name gen
         name = self.nameGen()
-        race = race or random.choice([r for r in c.races if r['source'] in ('PHB', 'VGM')])
+        race = race or random.choice([r for r in c.fancyraces if r['source'] in ('PHB', 'VGM', 'MTF')])
         _class = _class or random.choice([cl for cl in c.classes if not 'UA' in cl.get('source')])
         subclass = subclass or random.choice([s for s in _class['subclasses'] if not 'UA' in s['source']])
         background = background or random.choice(c.backgrounds)
@@ -366,10 +336,10 @@ class CharGenerator:
 
         # Race Gen
         #    Racial Features
-        speed = race['speed'] if isinstance(race['speed'], str) else race['speed'].get('walk', '30')
+        speed = race.speed if isinstance(race.speed, int) else race.speed.get('walk', '30')
         dc.insert_effect(char_id, Parent.race(char_id), 'base', value=int(speed), stat='speed')
 
-        for k, v in race['ability'].items():
+        for k, v in race.ability.items():
             if not k == 'choose':
                 dc.insert_effect(char_id, Parent.race(char_id), 'add', value=int(v), stat=ABILITY_MAP[k].lower())
             else:
@@ -378,27 +348,7 @@ class CharGenerator:
                     f"**Racial Ability Bonus ({int(v[0].get('amount', 1)):+})**: In your race (Journal tab), select the"
                     f" score you want a bonus to (choose {v[0]['count']} from {', '.join(v[0]['from'])}).")
 
-        if race.get('proficiency'):
-            for skill in race['proficiency'].split(', '):
-                if skill in SKILL_MAP:
-                    dc.insert_proficiency(char_id, Parent.race(char_id), SKILL_MAP.get(skill))
-                else:
-                    dc.insert_proficiency(char_id, Parent.race(char_id), skill, type_='tool')
-
-        traits = []
-        if 'trait' in race:
-            one_rfeats = race.get('trait', [])
-            for rfeat in one_rfeats:
-                temp = {'name': rfeat['name'],
-                        'text': parse_data_entry(rfeat['text'], True)}
-                traits.append(temp)
-        else:  # assume entries
-            for entry in race['entries']:
-                temp = {'name': entry['name'],
-                        'text': parse_data_entry(entry['entries'], True)}
-                traits.append(temp)
-
-        for t in traits:
+        for t in race.get_traits():
             dc.insert_feature(char_id, t['name'], t['text'])
         caveats.append("**Racial Features**: Check that the number of uses for each feature is correct, and apply "
                        "any effects they grant.")

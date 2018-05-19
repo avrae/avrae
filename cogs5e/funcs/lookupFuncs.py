@@ -10,6 +10,7 @@ import logging
 from cogs5e.models.bestiary import Bestiary
 from cogs5e.models.errors import NoBestiary
 from cogs5e.models.monster import Monster
+from cogs5e.models.race import Race
 from utils.functions import strict_search, fuzzywuzzy_search_all_3, get_selection, \
     fuzzywuzzy_search_all_3_list, parse_data_entry, search_and_select
 
@@ -28,15 +29,10 @@ class Compendium:
             _raw = json.load(f)
             self.rfeats = []
             self.races = copy.deepcopy(_raw)
+            self.fancyraces = [Race.from_data(r) for r in self.races]
             for race in _raw:
-                if 'trait' in race:
-                    one_rfeats = race.get('trait', [])
-                    for rfeat in one_rfeats:
-                        temp = {'name': "{}: {}".format(race['name'], rfeat['name']),
-                                'text': parse_data_entry(rfeat['text']), 'srd': race['srd']}
-                        self.rfeats.append(temp)
-                else:  # assume entries
-                    for entry in race['entries']:
+                for entry in race['entries']:
+                    if isinstance(entry, dict) and 'name' in entry:
                         temp = {'name': "{}: {}".format(race['name'], entry['name']),
                                 'text': parse_data_entry(entry['entries']), 'srd': race['srd']}
                         self.rfeats.append(temp)
@@ -129,10 +125,6 @@ def _parse_prereqs(entry):
 
 
 c = Compendium()
-
-
-def searchRace(name):
-    return fuzzywuzzy_search_all_3(c.races, 'name', name)
 
 
 def searchClass(name):

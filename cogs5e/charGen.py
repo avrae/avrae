@@ -320,7 +320,7 @@ class CharGenerator:
         subclass = subclass or random.choice([s for s in _class['subclasses'] if not 'UA' in s['source']])
         background = background or random.choice(c.backgrounds)
 
-        char_id = dc.create_character(name=name, race=race['name'], backstory=background['name'])
+        char_id = dc.create_character(name=name, race=race.name, backstory=background['name'])
         try:
             await dc.share_character(char_id, dicecloud_username)
         except:

@@ -29,6 +29,7 @@ damage_snippets-backup.json
 /test/output/*
 /test/input/*
 /.cache/
+/.pytest_cache/
 
 test/test.pdf
 

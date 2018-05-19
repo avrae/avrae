@@ -166,46 +166,18 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = await search_and_select(ctx, c.races, name, lambda e: e['name'], srd=srd)
+        result = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name, srd=srd)
 
-        if not result['srd'] and srd:
+        if not result.srd and srd:
             return await self.send_srd_error(ctx, result)
 
-        _sizes = {'T': "Tiny", 'S': "Small",
-                  'M': "Medium", 'L': "Large", 'H': "Huge"}
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        embed.description = f"Source: {result.get('source', 'unknown')}"
-        embed.add_field(name="Speed",
-                        value=result['speed'] + ' ft.' if isinstance(result['speed'], str) else \
-                            ', '.join(f"{k} {v} ft." for k, v in result['speed'].items()))
-        embed.add_field(name="Size", value=_sizes.get(result.get('size'), 'unknown'))
-
-        ability = []
-        for k, v in result['ability'].items():
-            if not k == 'choose':
-                ability.append(f"{k} {v}")
-            else:
-                ability.append(f"Choose {v[0]['count']} from {', '.join(v[0]['from'])} {v[0].get('amount', 1)}")
-
-        embed.add_field(name="Ability Bonuses", value=', '.join(ability))
-        if result.get('proficiency'):
-            embed.add_field(name="Proficiencies", value=result.get('proficiency', 'none'))
-
-        traits = []
-        if 'trait' in result:
-            one_rfeats = result.get('trait', [])
-            for rfeat in one_rfeats:
-                temp = {'name': rfeat['name'],
-                        'text': parse_data_entry(rfeat['text'])}
-                traits.append(temp)
-        else:  # assume entries
-            for entry in result['entries']:
-                temp = {'name': entry['name'],
-                        'text': parse_data_entry(entry['entries'])}
-                traits.append(temp)
-
-        for t in traits:
+        embed.title = result.name
+        embed.description = f"Source: {result.source}"
+        embed.add_field(name="Speed", value=result.get_speed_str())
+        embed.add_field(name="Size", value=result.size)
+        embed.add_field(name="Ability Bonuses", value=result.get_asi_str())
+        for t in result.get_traits():
             f_text = t['text']
             f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
             embed.add_field(name=t['name'], value=f_text[0])

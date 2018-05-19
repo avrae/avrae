@@ -511,7 +511,7 @@ FORMATTING = {'bold': '**', 'italic': '*'}
 
 def parse_data_formatting(text):
     """Parses a {@format } string."""
-    exp = re.compile(r'{@(\w+) (.+)}')
+    exp = re.compile(r'{@(\w+) (.+?)}')
 
     def sub(match):
         f = FORMATTING.get(match.group(1), '')

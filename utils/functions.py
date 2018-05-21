@@ -506,7 +506,7 @@ def parse_data_entry(text, md_breaks=False):
     return parse_data_formatting(join_str.join(out))
 
 
-FORMATTING = {'bold': '**', 'italic': '*'}
+FORMATTING = {'bold': '**', 'italic': '*', 'b': '**', 'i': '*'}
 
 
 def parse_data_formatting(text):

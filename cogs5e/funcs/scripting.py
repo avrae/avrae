@@ -1,10 +1,105 @@
+import ast
 import re
+
+from simpleeval import EvalWithCompoundTypes, IterableTooLong
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import CombatNotFound
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
+MAX_ITER_LENGTH = 100
+
+
+class ScriptingEvaluator(EvalWithCompoundTypes):
+    def __init__(self, operators=None, functions=None, names=None):
+        super(ScriptingEvaluator, self).__init__(operators, functions, names)
+
+        self.nodes.update({
+            ast.JoinedStr: self._eval_joinedstr,  # f-string
+            ast.FormattedValue: self._eval_formattedvalue,  # things in f-strings
+            ast.ListComp: self._eval_listcomp,
+            ast.SetComp: self._eval_setcomp,
+            ast.DictComp: self._eval_dictcomp,
+            ast.comprehension: self._eval_comprehension
+        })
+
+    def eval(self, expr):  # allow for ast.Assign to set names
+        """ evaluate an expression, using the operators, functions and
+            names previously set up. """
+
+        # set a copy of the expression aside, so we can give nice errors...
+
+        self.expr = expr
+
+        # and evaluate:
+        expression = ast.parse(expr.strip()).body[0]
+        if isinstance(expression, ast.Expr):
+            return self._eval(expression.value)
+        elif isinstance(expression, ast.Assign):
+            return self._eval_assign(expression)
+        else:
+            raise TypeError("Unknown ast body type")
+
+    def _eval_assign(self, node):
+        names = node.targets[0]
+        values = node.value
+        self._assign(names, values)
+
+    def _assign(self, names, values, eval_values=True):
+        if isinstance(names, ast.Tuple):  # unpacking variables
+            names = [n.id for n in names.elts]  # turn ast into str
+            if not isinstance(values, ast.Tuple):
+                raise ValueError(f"unequal unpack: {len(names)} names, 1 value")
+            if eval_values:
+                values = [self._eval(n) for n in values.elts]  # get what we actually want to assign
+            else:
+                values = values.elts
+            if not len(values) == len(names):
+                raise ValueError(f"unequal unpack: {len(names)} names, {len(values)} values")
+            else:
+                if not isinstance(self.names, dict):
+                    raise TypeError("cannot set name: incorrect name type")
+                else:
+                    for name, value in zip(names, values):
+                        self.names[name] = value  # and assign it
+        else:
+            if not isinstance(self.names, dict):
+                raise TypeError("cannot set name: incorrect name type")
+            else:
+                if eval_values:
+                    self.names[names.id] = self._eval(values)
+                else:
+                    self.names[names.id] = values
+
+    def _eval_joinedstr(self, node):
+        return ''.join(str(self._eval(n)) for n in node.values)
+
+    def _eval_formattedvalue(self, node):
+        if node.format_spec:
+            fmt = "{:" + self._eval(node.format_spec) + "}"
+            return fmt.format(self._eval(node.value))
+        else:
+            return self._eval(node.value)
+
+    def _eval_listcomp(self, node):
+        return list(self._eval(node.elt) for generator in node.generators for _ in self._eval(generator))
+
+    def _eval_setcomp(self, node):
+        return set(self._eval(node.elt) for generator in node.generators for _ in self._eval(generator))
+
+    def _eval_dictcomp(self, node):
+        return {self._eval(node.key): self._eval(node.value) for generator in node.generators for _ in
+                self._eval(generator)}
+
+    def _eval_comprehension(self, node):
+        iterable = self._eval(node.iter)
+        if len(iterable) > MAX_ITER_LENGTH:
+            raise IterableTooLong("This iterable is too long.")
+        for item in iterable:
+            self._assign(node.target, item, False)
+            if all(self._eval(stmt) for stmt in node.ifs):
+                yield item
 
 
 def simple_roll(rollStr):

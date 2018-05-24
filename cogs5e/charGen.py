@@ -1,6 +1,7 @@
 import logging
 import random
 
+from MeteorClient import MeteorClientException
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
@@ -320,7 +321,11 @@ class CharGenerator:
         subclass = subclass or random.choice([s for s in _class['subclasses'] if not 'UA' in s['source']])
         background = background or random.choice(c.backgrounds)
 
-        char_id = dc.create_character(name=name, race=race.name, backstory=background['name'])
+        try:
+            char_id = dc.create_character(name=name, race=race.name, backstory=background['name'])
+        except MeteorClientException:
+            return await self.bot.say("I am having problems connecting to Dicecloud. Please try again later.")
+
         try:
             await dc.share_character(char_id, dicecloud_username)
         except:

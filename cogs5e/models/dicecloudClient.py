@@ -85,8 +85,10 @@ class DicecloudClient(MeteorClient):
                 raise LoginFailure()
 
         self.login(UNAME, PWD, callback=on_login)
-        while not self.logged_in:
+        loops = 0
+        while not self.logged_in and loops < 100:
             time.sleep(0.1)
+            loops += 1
         log.info(f"Logged in as {self.user_id}")
 
     async def _get_list_id(self, character, list_name=None):

@@ -357,7 +357,7 @@ class Monster:
     def get_image_url(self):
         """Returns a monster's image URL."""
         if not self.source == 'homebrew':
-            return f"https://5etools.com/img/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
+            return f"https://static.5etools.com/img/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
         else:
             return self.image_url or ''
 

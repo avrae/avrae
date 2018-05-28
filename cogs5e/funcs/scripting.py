@@ -8,7 +8,7 @@ from cogs5e.models.errors import CombatNotFound
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
-MAX_ITER_LENGTH = 100
+MAX_ITER_LENGTH = 10000
 
 
 class ScriptingEvaluator(EvalWithCompoundTypes):

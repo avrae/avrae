@@ -1135,6 +1135,8 @@ class SheetManager:
         except HttpError:
             return await self.bot.edit_message(loading,
                                                "Error: Google returned an error. Please ensure your sheet is shared with `avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
+        except Exception as e:
+            return await self.bot.edit_message(loading, 'Error: Could not load character sheet.\n' + str(e))
 
         try:
             sheet = await parser.get_sheet()

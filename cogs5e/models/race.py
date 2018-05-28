@@ -21,8 +21,18 @@ class Race:
                    data['entries'], data['srd'], data.get('darkvision', 0))
 
     def get_speed_str(self):
-        return f"{self.speed} ft." if isinstance(self.speed, int) else \
-            ', '.join(f"{k} {v} ft." for k, v in self.speed.items())
+        if isinstance(self.speed, int):
+            return f"{self.speed} ft."
+        elif isinstance(self.speed, dict):
+            return ', '.join(f"{k} {v} ft." for k, v in self.speed.items())
+        return str(self.speed)
+
+    def get_speed_int(self):
+        if isinstance(self.speed, int):
+            return self.speed
+        elif isinstance(self.speed, dict):
+            return self.speed.get('walk', '30')
+        return None
 
     def get_asi_str(self):
         ability = []

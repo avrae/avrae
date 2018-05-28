@@ -341,8 +341,9 @@ class CharGenerator:
 
         # Race Gen
         #    Racial Features
-        speed = race.speed if isinstance(race.speed, int) else race.speed.get('walk', '30')
-        dc.insert_effect(char_id, Parent.race(char_id), 'base', value=int(speed), stat='speed')
+        speed = race.get_speed_int()
+        if speed:
+            dc.insert_effect(char_id, Parent.race(char_id), 'base', value=int(speed), stat='speed')
 
         for k, v in race.ability.items():
             if not k == 'choose':

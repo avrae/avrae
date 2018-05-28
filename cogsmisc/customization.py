@@ -18,6 +18,7 @@ import simpleeval
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
+from cogs5e.funcs.scripting import ScriptingEvaluator, SCRIPTING_RE
 from cogs5e.models.character import Character, simple_roll, verbose_roll
 from cogs5e.models.errors import NoCharacter, EvaluationError, FunctionRequiresCharacter, \
     AvraeException
@@ -37,8 +38,8 @@ class Customization:
 
     async def on_ready(self):
         if getattr(self.bot, "shard_id", 0) == 0:
-            commands = list(self.bot.commands.keys())
-            self.bot.db.jset('default_commands', commands)
+            cmds = list(self.bot.commands.keys())
+            self.bot.db.jset('default_commands', cmds)
 
     async def update_aliases(self):
         try:
@@ -63,7 +64,7 @@ class Customization:
         await self.handle_aliases(message)
 
     @commands.command(pass_context=True)
-    async def multiline(self, ctx, *, commands: str):
+    async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.
         Usage:
         "!multiline
@@ -71,8 +72,8 @@ class Customization:
         !spell Fly
         !monster Rat"
         """
-        commands = commands.splitlines()
-        for c in commands:
+        cmds = cmds.splitlines()
+        for c in cmds:
             ctx.message.content = c
             if not hasattr(self.bot, 'global_prefixes'):  # bot's still starting up!
                 return
@@ -152,72 +153,70 @@ class Customization:
     async def parse_no_char(self, cstr, ctx):
         """
         Parses cvars and whatnot without an active character.
-        :param string: The string to parse.
+        :param cstr: The string to parse.
         :param ctx: The Context to parse the string in.
         :return: The parsed string.
         :rtype: str
         """
-        ops = r"([-+*/().<>=])"
-        user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
 
-        _vars = user_vars
-        global_vars = None  # we'll load them if we need them
+        def process(to_process):
+            ops = r"([-+*/().<>=])"
+            user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
 
-        evaluator = self.nochar_eval
-        evaluator.reset()
+            _vars = user_vars
+            global_vars = None  # we'll load them if we need them
 
-        def get_gvar(name):
-            nonlocal global_vars
-            if global_vars is None:  # load only if needed
-                global_vars = ctx.bot.db.jget("global_vars", {})
-            return global_vars.get(name, {}).get('value')
+            evaluator = self.nochar_eval
+            evaluator.reset()
 
-        def exists(name):
-            return name in evaluator.names
+            def get_gvar(name):
+                nonlocal global_vars
+                if global_vars is None:  # load only if needed
+                    global_vars = ctx.bot.db.jget("global_vars", {})
+                return global_vars.get(name, {}).get('value')
 
-        evaluator.functions['get_gvar'] = get_gvar
-        evaluator.functions['exists'] = exists
+            def exists(name):
+                return name in evaluator.names
 
-        def set_value(name, value):
-            evaluator.names[name] = value
-            return ''
+            evaluator.functions['get_gvar'] = get_gvar
+            evaluator.functions['exists'] = exists
 
-        evaluator.functions['set'] = set_value
-        evaluator.names.update(_vars)
+            def set_value(name, value):
+                evaluator.names[name] = value
+                return ''
 
-        def cvarrepl(match):
-            return f"{match.group(1)}{_vars.get(match.group(2), match.group(2))}"
+            evaluator.functions['set'] = set_value
+            evaluator.names.update(_vars)
 
-        for var in re.finditer(r'{{([^{}]+)}}', cstr):
-            raw = var.group(0)
-            varstr = var.group(1)
-
-            for cvar, value in _vars.items():
-                varstr = re.sub(r'(^|\s)(' + cvar + r')(?=\s|$)', cvarrepl, varstr)
+            def evalrepl(match):
+                if match.group(1):  # {{}}
+                    evalresult = evaluator.eval(match.group(1))
+                elif match.group(2):  # <>
+                    if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
+                        return match.group(0)
+                    out = match.group(2)
+                    evalresult = str(_vars.get(out, out))
+                elif match.group(3):  # {}
+                    varstr = match.group(3)
+                    out = ""
+                    for substr in re.split(ops, varstr):
+                        temp = substr.strip()
+                        out += str(_vars.get(temp, temp)) + " "
+                    evalresult = str(roll(out).total)
+                else:
+                    evalresult = None
+                return str(evalresult) if evalresult is not None else ''
 
             try:
-                cstr = cstr.replace(raw, str(evaluator.eval(varstr)), 1)
-            except Exception as e:
-                raise EvaluationError(e)
+                output = re.sub(SCRIPTING_RE, evalrepl, to_process)  # evaluate
+            except Exception as ex:
+                raise EvaluationError(ex)
+            return output
 
-        for var in re.finditer(r'{([^{}]+)}', cstr):
-            raw = var.group(0)
-            varstr = var.group(1)
-            out = ""
-            for substr in re.split(ops, varstr):
-                temp = substr.strip()
-                out += str(_vars.get(temp, temp)) + " "
-            cstr = cstr.replace(raw, str(roll(out).total), 1)
-        for var in re.finditer(r'<([^<>]+)>', cstr):
-            raw = var.group(0)
-            if re.match(r'<([@#]|:.+:)[&!]{0,2}\d+>', raw): continue  # ignore mentions, channels, emotes
-            out = var.group(1)
-            out = str(_vars.get(out, out))
-            cstr = cstr.replace(raw, out, 1)
-        return cstr
+        return await asyncio.get_event_loop().run_in_executor(None, process, cstr)
 
     @commands.group(pass_context=True, invoke_without_command=True)
-    async def alias(self, ctx, alias_name, *, commands=None):
+    async def alias(self, ctx, alias_name, *, cmds=None):
         """Adds an alias for a long command.
         After an alias has been added, you can instead run the aliased command with !<alias_name>.
         If a user and a server have aliases with the same name, the user alias will take priority."""
@@ -227,7 +226,7 @@ class Customization:
         if alias_name in self.bot.commands:
             return await self.bot.say('There is already a built-in command with that name!')
 
-        if commands is None:
+        if cmds is None:
             alias = user_aliases.get(alias_name)
             if alias is None:
                 alias = 'Not defined.'
@@ -235,8 +234,8 @@ class Customization:
                 alias = f'!alias {alias_name} ' + alias
             return await self.bot.say('**' + alias_name + f'**:\n(Copy-pastable)\n```md\n' + alias + "\n```")
 
-        user_aliases[alias_name] = commands.lstrip('!')
-        await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, commands.lstrip('!')))
+        user_aliases[alias_name] = cmds.lstrip('!')
+        await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)
@@ -605,7 +604,7 @@ class Context:
         self.message = message
 
 
-class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
+class NoCharacterEvaluator(ScriptingEvaluator):
     def __init__(self, operators=None, functions=None, names=None):
         _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
         _funcs['roll'] = simple_roll
@@ -617,7 +616,9 @@ class NoCharacterEvaluator(simpleeval.EvalWithCompoundTypes):
                       get_slots=self.needs_char, get_slots_max=self.needs_char, set_slots=self.needs_char,
                       use_slot=self.needs_char,
                       get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char,
-                      set_cvar=self.needs_char, delete_cvar=self.needs_char, set_cvar_nx=self.needs_char)
+                      get_temphp=self.needs_char, set_temphp=self.needs_char,
+                      set_cvar=self.needs_char, delete_cvar=self.needs_char, set_cvar_nx=self.needs_char,
+                      get_raw=self.needs_char, combat=self.needs_char)
         _ops = simpleeval.DEFAULT_OPERATORS.copy()
         _ops.pop(ast.Pow)  # no exponents pls
         _names = {"True": True, "False": False, "currentHp": 0}

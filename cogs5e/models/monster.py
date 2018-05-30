@@ -59,7 +59,7 @@ class Monster:
                  condition_immune: list = None, raw_saves: str = '', saves: dict = None, raw_skills: str = '',
                  skills: dict = None, languages: list = None, traits: list = None, actions: list = None,
                  reactions: list = None, legactions: list = None, la_per_round=3, srd=True, source='homebrew',
-                 attacks: list = None, proper: bool = False, image_url: str = None):
+                 attacks: list = None, proper: bool = False, image_url: str = None, spellcasting=None):
         if vuln is None:
             vuln = []
         if resist is None:
@@ -84,6 +84,8 @@ class Monster:
             legactions = []
         if attacks is None:
             attacks = []
+        if spellcasting is None:
+            spellcasting = {}
         for skill, stat in SKILL_MAP.items():
             if skill not in skills:
                 skills[skill] = ability_scores.get_mod(stat)
@@ -134,6 +136,7 @@ class Monster:
         self.attacks = attacks
         self.proper = proper
         self.image_url = image_url
+        self.spellcasting = spellcasting
 
     @classmethod
     def from_data(cls, data):
@@ -181,11 +184,12 @@ class Monster:
         source = data['source']
 
         attacks = data.get('attacks', [])
+        spellcasting = data.get('spellcasting', {})
 
         return cls(data['name'], parsesize(data['size']), _type, alignment, ac, armortype, hp, hitdice,
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, save_text, saves, skill_text, skills, languages, traits,
-                   actions, reactions, legactions, 3, data.get('srd', False), source, attacks)
+                   actions, reactions, legactions, 3, data.get('srd', False), source, attacks, spellcasting)
 
     @classmethod
     def from_critterdb(cls, data):
@@ -274,7 +278,7 @@ class Monster:
                 'reactions': [t.to_dict() for t in self.reactions],
                 'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
                 'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
-                'image_url': self.image_url}
+                'image_url': self.image_url, 'spellcasting': self.spellcasting}
 
     def get_stat_array(self):
         """

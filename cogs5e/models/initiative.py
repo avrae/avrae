@@ -306,7 +306,7 @@ class Combat:
 
 class Combatant:
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 index=None, notes=None, effects=None, group=None, temphp=None, *args, **kwargs):
+                 index=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None, *args, **kwargs):
         if resists is None:
             resists = {}
         if attacks is None:
@@ -330,6 +330,7 @@ class Combatant:
         self._effects = effects
         self._group = group
         self._temphp = temphp
+        self._spellcasting = spellcasting
 
     @classmethod
     def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx):
@@ -341,14 +342,14 @@ class Combatant:
         return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, index=raw['index'],
                    notes=raw['notes'], effects=effects, group=raw['group'],  # begin backwards compatibility
-                   temphp=raw.get('temphp'))
+                   temphp=raw.get('temphp'), spellcasting=Spellcasting.from_dict(raw.get('spellcasting', {})))
 
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
                 'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
                 'resists': self.resists, 'attacks': self._attacks, 'saves': self._saves, 'index': self.index,
                 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
-                'temphp': self.temphp, 'type': 'common'}
+                'temphp': self.temphp, 'spellcasting': self.spellcasting.to_dict(), 'type': 'common'}
 
     @property
     def name(self):
@@ -510,6 +511,10 @@ class Combatant:
     def group(self, value):
         self._group = value
 
+    @property
+    def spellcasting(self):
+        return self._spellcasting
+
     def add_effect(self, effect):
         self._effects.append(effect)
 
@@ -551,6 +556,33 @@ class Combatant:
 
     def controller_mention(self):
         return f"<@{self.controller}>"
+
+    def can_cast(self, spell, level) -> bool:
+        """
+        Checks whether a combatant can cast a certain spell at a certain level.
+        :param spell: The spell to check.
+        :param level: The level to cast it at.
+        :return: Whether the combatant can cast the spell.
+        """
+        return spell['name'].lower() in [s.lower() for s in
+                                         self.spellcasting.spells]  # TODO: care about monster slots
+
+    def cast(self, spell, level):
+        """
+        Casts a spell at a certain level, using the necessary resources.
+        :param spell: The spell
+        :param level: The level
+        :return: None
+        """
+        pass  # again, don't care about monsters
+
+    def remaining_casts_of(self, spell, level):
+        """
+        Gets the string representing how many more times this combatant can cast this spell.
+        :param spell: The spell
+        :param level: The level
+        """
+        return "Slots are not yet tracked for non-player combatants."
 
     def on_turn(self):
         """
@@ -637,9 +669,9 @@ class Combatant:
 
 class MonsterCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None):
+                 index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None):
         super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                               attacks, saves, ctx, index, notes, effects, group, temphp)
+                                               attacks, saves, ctx, index, notes, effects, group, temphp, spellcasting)
         self._monster_name = monster_name
 
     @classmethod
@@ -670,11 +702,12 @@ class MonsterCombatant(Combatant):
 
         resists = {'resist': resist, 'immune': immune, 'vuln': vuln}
         attacks = monster.attacks
-
         saves = monster.saves
+        spellcasting = Spellcasting(monster.spellcasting['spells'], monster.spellcasting['dc'],
+                                    monster.spellcasting['attackBonus'], monster.spellcasting['casterLevel'])
 
         return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, index,
-                   monster_name)
+                   monster_name, spellcasting=spellcasting)
 
     @classmethod
     def from_dict(cls, raw, ctx):
@@ -696,9 +729,9 @@ class MonsterCombatant(Combatant):
 class PlayerCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
                  index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None,
-                 temphp=None):
+                 temphp=None, spellcasting=None):
         super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                              attacks, saves, ctx, index, notes, effects, group, temphp)
+                                              attacks, saves, ctx, index, notes, effects, group, temphp, spellcasting)
         self._character_id = character_id
         self._character_owner = character_owner
         self._character = None  # only grab the Character instance if we have to
@@ -760,6 +793,20 @@ class PlayerCombatant(Combatant):
     @property
     def character_id(self):
         return self._character_id
+
+    @property
+    def spellcasting(self):
+        return Spellcasting(self.character.get_spell_list(), self.character.get_save_dc(),
+                            self.character.get_spell_ab(), self.character.get_level())
+
+    def can_cast(self, spell, level) -> bool:
+        return self.character.get_remaining_slots(level) > 0 and spell['name'] in self.spellcasting.spells
+
+    def cast(self, spell, level):
+        self.character.use_slot(level).commit(self.ctx)
+
+    def remaining_casts_of(self, spell, level):
+        return self.character.get_remaining_slots_str(level)
 
     def on_remove(self):
         super(PlayerCombatant, self).on_remove()
@@ -930,3 +977,21 @@ class Effect:
 
     def to_dict(self):
         return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect}
+
+
+class Spellcasting:
+    def __init__(self, spells=None, dc=0, sab=0, casterLevel=0):
+        if spells is None:
+            spells = []
+        self.spells = spells
+        self.dc = dc
+        self.sab = sab
+        self.casterLevel = casterLevel
+
+    @classmethod
+    def from_dict(cls, spelldict):
+        return cls(spelldict.get('spells', []), spelldict.get('dc', 0), spelldict.get('attackBonus', 0),
+                   spelldict.get('casterLevel', 0))
+
+    def to_dict(self):
+        return {'spells': self.spells, 'dc': self.dc, 'attackBonus': self.sab, 'casterLevel': self.casterLevel}

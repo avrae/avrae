@@ -918,7 +918,10 @@ class InitTracker:
                                                                              description="The spell was not found or is not supported."))
 
         spell = strict_search(c.autospells, 'name', spell_name)
-        if spell is None: return await self._old_cast(ctx, spell_name, *args)  # fall back to old cast
+        if spell is None:
+            if is_character:
+                return await self._old_cast(ctx, spell_name, *args)  # fall back to old cast
+            return await self.bot.say("Spell not supported by casting system.")
 
         can_cast = True
         spell_level = int(spell.get('level', 0))
@@ -1113,7 +1116,7 @@ class InitTracker:
                             "SPELL") or combatant.spellcasting.sab - combatant.character.get_prof_bonus())
                     else:
                         spellmod = combatant.spellcasting.sab  # well, hope for the best I suppose
-                    attack['damage'] = attack['damage'].replace("SPELL", spellmod)
+                    attack['damage'] = attack['damage'].replace("SPELL", str(spellmod))
 
                     result = sheet_attack(attack, outargs)
                     out = ""
@@ -1145,7 +1148,7 @@ class InitTracker:
                     else:
                         spellmod = combatant.spellcasting.sab  # well, hope for the best I suppose
                     attack = {"name": spell['name'],
-                              "damage": spell.get("damage", "0").replace('SPELL', spellmod),
+                              "damage": spell.get("damage", "0").replace('SPELL', str(spellmod)),
                               "attackBonus": None}
                     if upcast_dmg:
                         attack['damage'] = attack['damage'] + '+' + upcast_dmg

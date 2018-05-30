@@ -189,7 +189,8 @@ class Monster:
         return cls(data['name'], parsesize(data['size']), _type, alignment, ac, armortype, hp, hitdice,
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, save_text, saves, skill_text, skills, languages, traits,
-                   actions, reactions, legactions, 3, data.get('srd', False), source, attacks, spellcasting)
+                   actions, reactions, legactions, 3, data.get('srd', False), source, attacks,
+                   spellcasting=spellcasting)
 
     @classmethod
     def from_critterdb(cls, data):

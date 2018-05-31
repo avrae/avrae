@@ -1,6 +1,9 @@
 import ast
+import json
 import re
+from math import floor, ceil
 
+import simpleeval
 from simpleeval import EvalWithCompoundTypes, IterableTooLong
 
 from cogs5e.funcs.dice import roll
@@ -123,6 +126,14 @@ def verbose_roll(rollStr):
                             [part.to_dict() for part in rolled.raw_dice.parts])
 
 
+def load_json(jsonstr):
+    return json.loads(jsonstr)
+
+
+def dump_json(obj):
+    return json.dumps(obj)
+
+
 class SimpleCombat:
     def __init__(self, combat, me):
         self._combat: Combat = combat
@@ -204,3 +215,10 @@ class SimpleGroup:
         if combatant:
             return SimpleCombatant(combatant)
         return None
+
+
+DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
+DEFAULT_OPERATORS.pop(ast.Pow)
+DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
+DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
+                          'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json})

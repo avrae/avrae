@@ -15,19 +15,17 @@
  'overrides': {},
  'cvars': {}}
 """
-import ast
 import asyncio
 import copy
 import logging
 import random
 import re
-from math import *
 
 import MeteorClient
-import simpleeval
 
+from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.scripting import simple_roll, verbose_roll, SCRIPTING_RE, SimpleCombat, ScriptingEvaluator
+from cogs5e.funcs.scripting import SCRIPTING_RE, SimpleCombat, ScriptingEvaluator
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError, InvalidSpellLevel
@@ -292,19 +290,15 @@ class Character:
                     _cache['combat'] = SimpleCombat.from_character(self, ctx)
                 return _cache['combat']
 
-            _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
-            _funcs['roll'] = simple_roll
-            _funcs['vroll'] = verbose_roll
-            _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
-                          get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
+            _funcs = scripting.DEFAULT_FUNCTIONS.copy()
+            _funcs.update(get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                           cc_exists=cc_exists, create_cc_nx=create_cc_nx,
                           get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                           get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, get_temphp=get_temphp, set_temphp=set_temphp,
                           set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
                           get_gvar=get_gvar, exists=exists,
                           get_raw=get_raw, combat=combat)
-            _ops = simpleeval.DEFAULT_OPERATORS.copy()
-            _ops.pop(ast.Pow)  # no exponents pls
+            _ops = scripting.DEFAULT_OPERATORS.copy()
             _names = copy.copy(_vars)
             _names.update(stat_vars)
             _names.update({"True": True, "False": False, "currentHp": self.get_current_hp()})

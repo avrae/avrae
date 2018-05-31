@@ -236,6 +236,11 @@ class SimpleCombatant:
         return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,
                                 [part.to_dict() for part in save_roll.raw_dice.parts])
 
+    def wouldhit(self, to_hit: int):
+        if self._combatant.ac:
+            return to_hit >= self._combatant.ac
+        return None
+
 
 class SimpleGroup:
     def __init__(self, group: CombatantGroup):

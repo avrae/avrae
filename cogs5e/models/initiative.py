@@ -705,8 +705,9 @@ class MonsterCombatant(Combatant):
         resists = {'resist': resist, 'immune': immune, 'vuln': vuln}
         attacks = monster.attacks
         saves = monster.saves
-        spellcasting = Spellcasting(monster.spellcasting['spells'], monster.spellcasting['dc'],
-                                    monster.spellcasting['attackBonus'], monster.spellcasting['casterLevel'])
+        spellcasting = Spellcasting(monster.spellcasting.get('spells', []), monster.spellcasting.get('dc', 0),
+                                    monster.spellcasting.get('attackBonus', 0),
+                                    monster.spellcasting.get('casterLevel', 0))
 
         return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, index,
                    monster_name, spellcasting=spellcasting)

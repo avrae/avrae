@@ -313,6 +313,8 @@ class Combatant:
             attacks = []
         if effects is None:
             effects = []
+        if spellcasting is None:
+            spellcasting = Spellcasting()
         self._name = name
         self._controller = controllerId
         self._init = init

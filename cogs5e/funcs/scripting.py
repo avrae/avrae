@@ -7,7 +7,7 @@ import simpleeval
 from simpleeval import EvalWithCompoundTypes, IterableTooLong
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.errors import CombatNotFound
+from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
@@ -126,6 +126,23 @@ def verbose_roll(rollStr):
                             [part.to_dict() for part in rolled.raw_dice.parts])
 
 
+def safe_range(start, stop=None, step=None):
+    if stop is None and step is None:
+        if start > MAX_ITER_LENGTH:
+            raise IterableTooLong("This range is too large.")
+        return list(range(start))
+    elif stop is not None and step is None:
+        if stop - start > MAX_ITER_LENGTH:
+            raise IterableTooLong("This range is too large.")
+        return list(range(start, stop))
+    elif stop is not None and step is not None:
+        if (stop - start) / step > MAX_ITER_LENGTH:
+            raise IterableTooLong("This range is too large.")
+        return list(range(start, stop, step))
+    else:
+        raise ValueError("Invalid arguments passed to range()")
+
+
 def load_json(jsonstr):
     return json.loads(jsonstr)
 
@@ -205,6 +222,20 @@ class SimpleCombatant:
     def mod_hp(self, mod: int):
         self._combatant.hp += int(mod)
 
+    def save(self, ability: str, adv: bool = None):
+        try:
+            save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',
+                                          'intelligenceSave', 'wisdomSave', 'charismaSave') if
+                              ability.lower() in s.lower())
+        except StopIteration:
+            raise InvalidSaveType
+        save_roll_mod = self._combatant.saves.get(save_skill, 0)
+        adv = 0 if adv is None else 1 if adv else -1
+        save_roll = roll('1d20{:+}'.format(save_roll_mod), adv=adv,
+                         rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
+        return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,
+                                [part.to_dict() for part in save_roll.raw_dice.parts])
+
 
 class SimpleGroup:
     def __init__(self, group: CombatantGroup):
@@ -221,4 +252,5 @@ DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
 DEFAULT_OPERATORS.pop(ast.Pow)
 DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
+                          'range': safe_range,
                           'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json})

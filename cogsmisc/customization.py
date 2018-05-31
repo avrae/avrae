@@ -3,7 +3,6 @@ Created on Jan 30, 2017
 
 @author: andrew
 """
-import ast
 import asyncio
 import copy
 import re
@@ -11,15 +10,14 @@ import shlex
 import textwrap
 import traceback
 import uuid
-from math import floor, ceil
 
 import discord
-import simpleeval
 from discord.ext import commands
 
+from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import ScriptingEvaluator, SCRIPTING_RE
-from cogs5e.models.character import Character, simple_roll, verbose_roll
+from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter, EvaluationError, FunctionRequiresCharacter, \
     AvraeException
 from utils.functions import confirm
@@ -606,11 +604,8 @@ class Context:
 
 class NoCharacterEvaluator(ScriptingEvaluator):
     def __init__(self, operators=None, functions=None, names=None):
-        _funcs = simpleeval.DEFAULT_FUNCTIONS.copy()
-        _funcs['roll'] = simple_roll
-        _funcs['vroll'] = verbose_roll
-        _funcs.update(floor=floor, ceil=ceil, round=round, len=len, max=max, min=min,
-                      get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
+        _funcs = scripting.DEFAULT_FUNCTIONS.copy()
+        _funcs.update(get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
                       get_cc_min=self.needs_char, mod_cc=self.needs_char,
                       cc_exists=self.needs_char, create_cc_nx=self.needs_char,
                       get_slots=self.needs_char, get_slots_max=self.needs_char, set_slots=self.needs_char,
@@ -619,8 +614,7 @@ class NoCharacterEvaluator(ScriptingEvaluator):
                       get_temphp=self.needs_char, set_temphp=self.needs_char,
                       set_cvar=self.needs_char, delete_cvar=self.needs_char, set_cvar_nx=self.needs_char,
                       get_raw=self.needs_char, combat=self.needs_char)
-        _ops = simpleeval.DEFAULT_OPERATORS.copy()
-        _ops.pop(ast.Pow)  # no exponents pls
+        _ops = scripting.DEFAULT_OPERATORS.copy()
         _names = {"True": True, "False": False, "currentHp": 0}
 
         if operators:

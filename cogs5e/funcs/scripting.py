@@ -222,6 +222,9 @@ class SimpleCombatant:
     def mod_hp(self, mod: int):
         self._combatant.hp += int(mod)
 
+    def hp_str(self):
+        return self._combatant.get_hp_str()
+
     def save(self, ability: str, adv: bool = None):
         try:
             save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',

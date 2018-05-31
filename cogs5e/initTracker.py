@@ -9,15 +9,15 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
-from cogs5e.funcs.lookupFuncs import searchCharacterSpellName, searchSpellNameFull, \
+from cogs5e.funcs.lookupFuncs import searchSpellNameFull, \
     select_monster_full, getSpell, c
 from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithCharacter
+from cogs5e.models.embeds import EmbedWithCharacter, EmbedWithAuthor
 from cogs5e.models.errors import NoSpellDC, InvalidSaveType, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
 from utils.functions import parse_args_3, confirm, get_selection, parse_args_2, parse_resistances, parse_snippets, \
-    strict_search
+    strict_search, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -892,13 +892,10 @@ class InitTracker:
             return await self.bot.say("You must begin combat with !init next first.")
 
         is_character = isinstance(combatant, PlayerCombatant)
-        if not is_character: return await self.bot.say(
-            "This command requires a SheetManager integrated combatant.")  # TODO
-
-        character = combatant.character
 
         args = parse_snippets(args, ctx)
-        args = await character.parse_cvars(args, ctx)
+        if is_character:
+            args = await combatant.character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)
 
@@ -913,7 +910,7 @@ class InitTracker:
             embed.description = '~~' + ' ' * 500 + '~~'
 
         if not args.get('i'):
-            spell_name = await searchCharacterSpellName(spell_name, ctx, character)
+            spell_name = await search_and_select(ctx, combatant.spellcasting.spells, spell_name, lambda e: e)
         else:
             spell_name = await searchSpellNameFull(spell_name, ctx)
 
@@ -921,7 +918,10 @@ class InitTracker:
                                                                              description="The spell was not found or is not supported."))
 
         spell = strict_search(c.autospells, 'name', spell_name)
-        if spell is None: return await self._old_cast(ctx, spell_name, *args)  # fall back to old cast
+        if spell is None:
+            if is_character:
+                return await self._old_cast(ctx, spell_name, *args)  # fall back to old cast
+            return await self.bot.say("Spell not supported by casting system.")
 
         can_cast = True
         spell_level = int(spell.get('level', 0))
@@ -931,28 +931,23 @@ class InitTracker:
         except (AssertionError, ValueError):
             return await self.bot.say("Invalid spell level.")
 
-        if is_character:
-            # make sure we can cast it
-            try:
-                assert character.get_remaining_slots(cast_level) > 0
-                assert spell['name'] in character.get_spell_list()
-            except AssertionError:
-                can_cast = False
-            else:
-                # use a spell slot
-                if not args.get('i'):
-                    character.use_slot(cast_level).commit(ctx)
+        if not combatant.can_cast(spell, cast_level):  # TODO - check available slots / innate casting
+            can_cast = False
+        else:
+            if not args.get('i'):
+                combatant.cast(spell, cast_level)  # TODO - use available slot / innate casting
 
         if args.get('i'):
             can_cast = True
 
         if not can_cast:
-            embed = EmbedWithCharacter(character)
+            embed = EmbedWithAuthor(ctx)
             embed.title = "Cannot cast spell!"
             embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                                "Use `!game longrest` to restore all spell slots, or pass `-i` to ignore restrictions."
+                                "Use `!game longrest` to restore all spell slots if this is a character, " \
+                                "or pass `-i` to ignore restrictions."
             if cast_level > 0:
-                embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str(cast_level))
+                embed.add_field(name="Spell Slots", value=combatant.remaining_casts_of(spell, cast_level))  # TODO
             return await self.bot.say(embed=embed)
 
         upcast_dmg = None
@@ -973,7 +968,10 @@ class InitTracker:
                 spell_type = spell.get('type')
                 if spell_type == 'save':  # save spell
                     out = ''
-                    calculated_dc = character.evaluate_cvar('dc') or character.get_save_dc()
+                    if is_character:
+                        calculated_dc = combatant.character.evaluate_cvar('dc') or combatant.spellcasting.dc
+                    else:
+                        calculated_dc = combatant.spellcasting.dc
                     dc = args.get('dc', [None])[-1] or calculated_dc
                     if not dc:
                         raise NoSpellDC
@@ -1014,7 +1012,7 @@ class InitTracker:
 
                             if is_character and spell['level'] == '0' and spell.get('scales', True):
                                 def lsub(matchobj):
-                                    level = character.get_level()
+                                    level = combatant.spellcasting.casterLevel  # TODO
                                     if level < 5:
                                         levelDice = "1"
                                     elif level < 11:
@@ -1072,9 +1070,6 @@ class InitTracker:
                         else:
                             embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
                 elif spell['type'] == 'attack':  # attack spell
-                    if not is_character: return await self.bot.say(embed=discord.Embed(title="Unsupported spell!",
-                                                                                       description="Attack spells are only supported for combatants added with `cadd`."))
-
                     outargs = copy.copy(args)
                     outargs['t'] = target.name
                     if target.ac is not None: outargs['ac'] = target.ac
@@ -1082,13 +1077,17 @@ class InitTracker:
                     outargs['immune'] = '|'.join(args.get('immune', [])) or '|'.join(target.resists['immune'])
                     outargs['vuln'] = '|'.join(args.get('vuln', [])) or '|'.join(target.resists['vuln'])
                     outargs['d'] = "+".join(args.get('d', [])) or None
-                    outargs['crittype'] = character.get_setting('crittype', 'default')
+                    if is_character:
+                        outargs['crittype'] = combatant.character.get_setting('crittype', 'default')
                     for _arg, _value in outargs.items():
                         if isinstance(_value, list):
                             outargs[_arg] = _value[-1]
                     attack = copy.copy(spell['atk'])
-                    attack['attackBonus'] = str(
-                        character.evaluate_cvar(attack['attackBonus']) or character.get_spell_ab())
+                    if is_character:
+                        attack['attackBonus'] = str(
+                            combatant.character.evaluate_cvar(attack['attackBonus']) or combatant.spellcasting.sab)
+                    else:
+                        attack['attackBonus'] = str(combatant.spellcasting.sab)
 
                     if not attack['attackBonus']:
                         return await self.bot.say(embed=discord.Embed(title="Error: Casting ability not found.",
@@ -1096,7 +1095,7 @@ class InitTracker:
 
                     if is_character and spell['level'] == '0' and spell.get('scales', True):
                         def lsub(matchobj):
-                            level = character.get_level()
+                            level = combatant.spellcasting.casterLevel
                             if level < 5:
                                 levelDice = "1"
                             elif level < 11:
@@ -1112,10 +1111,12 @@ class InitTracker:
                     if upcast_dmg:
                         attack['damage'] = attack['damage'] + '+' + upcast_dmg
 
-                    attack['damage'] = attack['damage'].replace("SPELL",
-                                                                str(
-                                                                    character.evaluate_cvar(
-                                                                        "SPELL") or character.get_spell_ab() - character.get_prof_bonus()))
+                    if is_character:
+                        spellmod = str(combatant.character.evaluate_cvar(
+                            "SPELL") or combatant.spellcasting.sab - combatant.character.get_prof_bonus())
+                    else:
+                        spellmod = combatant.spellcasting.sab  # well, hope for the best I suppose
+                    attack['damage'] = attack['damage'].replace("SPELL", str(spellmod))
 
                     result = sheet_attack(attack, outargs)
                     out = ""
@@ -1141,10 +1142,13 @@ class InitTracker:
                     for _arg, _value in outargs.items():
                         if isinstance(_value, list):
                             outargs[_arg] = _value[-1]
+                    if is_character:
+                        spellmod = str(combatant.character.evaluate_cvar(
+                            "SPELL") or combatant.spellcasting.sab - combatant.character.get_prof_bonus())
+                    else:
+                        spellmod = combatant.spellcasting.sab  # well, hope for the best I suppose
                     attack = {"name": spell['name'],
-                              "damage": spell.get("damage", "0").replace('SPELL', str(
-                                  character.evaluate_cvar(
-                                      "SPELL") or character.get_spell_ab() - character.get_prof_bonus())),
+                              "damage": spell.get("damage", "0").replace('SPELL', str(spellmod)),
                               "attackBonus": None}
                     if upcast_dmg:
                         attack['damage'] = attack['damage'] + '+' + upcast_dmg
@@ -1171,8 +1175,8 @@ class InitTracker:
         if spell_ctx:
             embed.add_field(name='Effect', value=spell_ctx)
 
-        if cast_level > 0:  # TODO: monster casters
-            embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str(cast_level))
+        if cast_level > 0:
+            embed.add_field(name="Spell Slots", value=combatant.remaining_casts_of(spell, cast_level))
 
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
         embed.set_footer(text=embed_footer)

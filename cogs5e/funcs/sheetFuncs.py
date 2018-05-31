@@ -273,7 +273,7 @@ def sheet_cast(spell, args, embed=None):
 
             dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
             embed.add_field(name="Damage/DC",
-                            value=dmgroll.result + "\n**DC**: {}\n{} Save".format(str(dc), save_skill[:3].upper()))
+                            value=dmgroll.result + "\n**DC:** {}\n{} Save".format(str(dc), save_skill[:3].upper()))
             total_damage = dmgroll.total
     elif spell['type'] == 'attack':  # attack spell
         outargs = copy.copy(args)

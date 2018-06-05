@@ -125,14 +125,20 @@ class Customization:
     def handle_alias_arguments(self, command, message):
         """Takes an alias name, alias value, and message and handles percent-encoded args.
         Returns: string"""
-        args = " ".join(self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[1:])
-        s = shlex.shlex(args, posix=True)
+        rawargs = " ".join(self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[1:])
+        s = shlex.shlex(rawargs)
         s.whitespace = ' '  # doofy workaround
         s.whitespace_split = True
         s.commenters = ''
         args = list(s)
         tempargs = args[:]
         new_command = command
+        if '%*%' in command:
+            new_command = new_command.replace('%*%', shlex.quote(rawargs) if ' ' in rawargs else rawargs)
+            tempargs = []
+        if '&*&' in command:
+            new_command = new_command.replace('&*&', rawargs.replace("\"", "\\\"").replace("'", "\\'"))
+            tempargs = []
         for index, value in enumerate(args):
             key = '%{}%'.format(index + 1)
             to_remove = False
@@ -144,7 +150,10 @@ class Customization:
                 new_command = new_command.replace(key, value.replace("\"", "\\\"").replace("'", "\\'"))
                 to_remove = True
             if to_remove:
-                tempargs.remove(value)
+                try:
+                    tempargs.remove(value)
+                except ValueError:
+                    pass
 
         return self.bot.prefix + new_command + " " + ' '.join(tempargs)
 

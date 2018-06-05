@@ -126,6 +126,7 @@ class SheetManager:
                          -rr [times to reroll]
                          -t [target]
                          -c [damage bonus on crit]
+                         -criton [a number to crit on if rolled on or above]
                          -phrase [flavor text]
                          -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
                          -resist [damage resistance]

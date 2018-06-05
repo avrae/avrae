@@ -403,7 +403,10 @@ class CharGenerator:
         for res_name, res_value in level_resources.items():
             stat_name = CLASS_RESOURCE_NAMES.get(res_name)
             if stat_name:
-                dc.insert_effect(char_id, Parent.class_(class_id), 'base', value=int(res_value), stat=stat_name)
+                try:
+                    dc.insert_effect(char_id, Parent.class_(class_id), 'base', value=int(res_value), stat=stat_name)
+                except ValueError:  # edge case: level 20 barb rage
+                    pass
 
         num_subclass_features = 0
         for level in range(1, final_level + 1):

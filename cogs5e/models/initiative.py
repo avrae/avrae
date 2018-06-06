@@ -688,10 +688,12 @@ class MonsterCombatant(Combatant):
         vuln = monster.vuln
         # fix npr and blug/pierc/slash
         if opts.get('npr'):
-            for t in (resist, immune, vuln):
-                for e in t:
-                    for d in ('bludgeoning', 'piercing', 'slashing'):
-                        if d in e.lower(): t.remove(e)
+            if resist:
+                resist = [r for r in resist if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
+            if immune:
+                immune = [r for r in immune if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
+            if vuln:
+                vuln = [r for r in vuln if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
         for t in (resist, immune, vuln):
             for e in t:
                 for d in ('bludgeoning', 'piercing', 'slashing'):

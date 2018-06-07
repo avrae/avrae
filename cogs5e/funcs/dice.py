@@ -200,7 +200,7 @@ class Roll(object):
             ops = [a for a in ops if a is not None]
 
         # dice repair/modification
-        if numDice > 300 or diceVal < 1 or numDice == 0:
+        if numDice > 300 or diceVal < 1:
             raise Exception('Too many dice rolled.')
 
         result.max_value = diceVal

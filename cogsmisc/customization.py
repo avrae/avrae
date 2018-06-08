@@ -273,6 +273,24 @@ class Customization:
         self.aliases[user_id] = user_aliases
         self.bot.db.not_json_set('cmd_aliases', self.aliases)
 
+    @alias.command(pass_context=True, name='deleteall', aliases=['removeall'])
+    async def alias_deleteall(self, ctx):
+        """Deletes ALL user aliases."""
+        user_id = ctx.message.author.id
+        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+
+        await self.bot.say("This will delete **ALL** of your user aliases. "
+                           "Are you *absolutely sure* you want to continue?\n"
+                           "Type `Yes, I am sure` to confirm.")
+        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+        if not reply.content == "Yes, I am sure":
+            return await self.bot.say("Unconfirmed. Aborting.")
+
+        del self.aliases[user_id]
+        self.bot.db.not_json_set('cmd_aliases', self.aliases)
+
+        return await self.bot.say("OK. I have deleted all your aliases.")
+
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'], no_pm=True)
     async def servalias(self, ctx, alias_name, *, commands=None):
         """Adds an alias that the entire server can use.
@@ -381,6 +399,23 @@ class Customization:
         await self.bot.say('Shortcut {} removed.'.format(snippet_name))
         snippets[user_id] = user_snippets
         self.bot.db.not_json_set('damage_snippets', snippets)
+
+    @snippet.command(pass_context=True, name='deleteall', aliases=['removeall'])
+    async def snippet_deleteall(self, ctx):
+        """Deletes ALL user snippets."""
+        user_id = ctx.message.author.id
+        snippets = self.bot.db.not_json_get('damage_snippets', {})
+
+        await self.bot.say("This will delete **ALL** of your user snippets. "
+                           "Are you *absolutely sure* you want to continue?\n"
+                           "Type `Yes, I am sure` to confirm.")
+        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+        if not reply.content == "Yes, I am sure":
+            return await self.bot.say("Unconfirmed. Aborting.")
+
+        del snippets[user_id]
+        self.bot.db.not_json_set('damage_snippets', snippets)
+        return await self.bot.say("OK. I have deleted all your snippets.")
 
     @commands.group(pass_context=True, invoke_without_command=True, no_pm=True)
     async def servsnippet(self, ctx, snipname, *, snippet=None):

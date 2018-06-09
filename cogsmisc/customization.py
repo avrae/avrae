@@ -160,7 +160,7 @@ class Customization:
                 except ValueError:
                     pass
 
-        return self.bot.prefix + new_command + " " + ' '.join(tempargs)
+        return self.bot.prefix + new_command + " " + ' '.join((shlex.quote(v) if ' ' in v else v) for v in tempargs)
 
     async def parse_no_char(self, cstr, ctx):
         """

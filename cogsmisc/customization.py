@@ -13,6 +13,8 @@ import uuid
 
 import discord
 from discord.ext import commands
+from discord.ext.commands import UserInputError
+from discord.ext.commands.view import quoted_word, StringView
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
@@ -95,7 +97,10 @@ class Customization:
             else:
                 command = self.aliases.get(message.author.id, {}).get(alias)
             if command:
-                message.content = self.handle_alias_arguments(command, message)
+                try:
+                    message.content = self.handle_alias_arguments(command, message)
+                except UserInputError as e:
+                    return await self.bot.send_message(message.channel, f"Invalid input: {e}")
                 # message.content = message.content.replace(alias, command, 1)
                 ctx = Context(self.bot, message)
                 char = None
@@ -126,11 +131,11 @@ class Customization:
         """Takes an alias name, alias value, and message and handles percent-encoded args.
         Returns: string"""
         rawargs = " ".join(self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[1:])
-        s = shlex.shlex(rawargs)
-        s.whitespace = ' '  # doofy workaround
-        s.whitespace_split = True
-        s.commenters = ''
-        args = list(s)
+        view = StringView(rawargs)
+        args = []
+        while not view.eof:
+            view.skip_ws()
+            args.append(quoted_word(view))
         tempargs = args[:]
         new_command = command
         if '%*%' in command:

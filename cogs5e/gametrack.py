@@ -355,8 +355,8 @@ class GameTrack:
             await self.bot.say(f"{spell} removed from spellbook override.")
         else:
             await self.bot.say(
-                f"Spell not in spellbook override. To remove a spell on your sheet, just delete it from "
-                f"your sheet.")
+                f"Spell not in spellbook override. Make sure you typed the full spell name. "
+                f"To remove a spell on your sheet, just delete it from your sheet.")
 
     @commands.group(pass_context=True, invoke_without_command=True, name='customcounter', aliases=['cc'])
     async def customcounter(self, ctx, name, *, modifier=None):

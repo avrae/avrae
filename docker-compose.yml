@@ -9,7 +9,7 @@ services:
       resources:
         limits:
           cpus: "3.8"
-          memory: 7700M
+          memory: 6500M
       restart_policy:
         condition: on-failure
       placement:
@@ -27,7 +27,7 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 400M
+          memory: 600M
       restart_policy:
         condition: on-failure
     networks:

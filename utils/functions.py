@@ -471,10 +471,13 @@ def parse_data_entry(text, md_breaks=False):
             elif entry['type'] == 'entries':
                 out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
                     entry['entries']))  # oh gods here we goooooooo
+            elif entry['type'] == 'item':
+                out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
+                    entry['entry']))  # oh gods here we goooooooo
             elif entry['type'] == 'options':
                 pass  # parsed separately in classfeat
             elif entry['type'] == 'list':
-                out.append('\n'.join(f"- {t}" for t in entry['items']))
+                out.append('\n'.join(f"- {parse_data_entry([t])}" for t in entry['items']))
             elif entry['type'] == 'table':
                 temp = f"**{entry['caption']}**\n" if 'caption' in entry else ''
                 temp += ' - '.join(f"**{cl}**" for cl in entry['colLabels']) + '\n'
@@ -499,7 +502,6 @@ def parse_data_entry(text, md_breaks=False):
                 out.append(f"{entry['value']} feet")
             else:
                 log.warning(f"Missing astranauta entry type parse: {entry}")
-
         else:
             log.warning(f"Unknown astranauta entry: {entry}")
 

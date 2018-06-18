@@ -24,6 +24,19 @@ CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
                       'psipoints': "Psi Points", 'psilimit': "Psi Limit"}
 
+ITEM_TYPES = {"G": "Adventuring Gear", "SCF": "Spellcasting Focus", "AT": "Artisan Tool", "T": "Tool",
+              "GS": "Gaming Set", "INS": "Instrument", "A": "Ammunition", "M": "Melee Weapon", "R": "Ranged Weapon",
+              "LA": "Light Armor", "MA": "Medium Armor", "HA": "Heavy Armor", "S": "Shield", "W": "Wondrous Item",
+              "P": "Potion", "ST": "Staff", "RD": "Rod", "RG": "Ring", "WD": "Wand", "SC": "Scroll", "EXP": "Explosive",
+              "GUN": "Firearm", "SIMW": "Simple Weapon", "MARW": "Martial Weapon", "$": "Valuable Object",
+              'TAH': "Tack and Harness", 'TG': "Trade Goods", 'MNT': "Mount", 'VEH': "Vehicle", 'SHP': "Ship",
+              'GV': "Generic Variant", 'AF': "Futuristic"}
+
+DMGTYPES = {"B": "bludgeoning", "P": "piercing", "S": "slashing", "N": "necrotic", "R": "radiant"}
+
+PROPS = {"A": "ammunition", "LD": "loading", "L": "light", "F": "finesse", "T": "thrown", "H": "heavy", "R": "reach",
+         "2H": "two-handed", "V": "versatile", "S": "special", "RLD": "reload", "BF": "burst fire"}
+
 
 class Lookup:
     """Commands to help look up items, status effects, rules, etc."""
@@ -714,53 +727,23 @@ class Lookup:
         if not item['srd'] and srd:
             return await self.send_srd_error(ctx, result)
 
-        TYPES_ = {"G": "Adventuring Gear", "SCF": "Spellcasting Focus", "AT": "Artisan Tool", "T": "Tool",
-                  "GS": "Gaming Set", "INS": "Instrument", "A": "Ammunition", "M": "Melee Weapon",
-                  "R": "Ranged Weapon", "LA": "Light Armor", "MA": "Medium Armor", "HA": "Heavy Armor", "S": "Shield",
-                  "W": "Wondrous Item", "P": "Potion", "ST": "Staff", "RD": "Rod", "RG": "Ring", "WD": "Wand",
-                  "SC": "Scroll", "EXP": "Explosive", "GUN": "Firearm", "SIMW": "Simple Weapon",
-                  "MARW": "Martial Weapon", "$": "Valuable Object", 'TAH': "Tack and Harness", 'TG': "Trade Goods",
-                  'MNT': "Mount", 'VEH': "Vehicle", 'SHP': "Ship", 'GV': "Generic Variant", 'AF': "Futuristic"}
-
-        def parsedamagetype(damagetype):
-            if damagetype == "B": return "bludgeoning"
-            if damagetype == "P": return "piercing"
-            if damagetype == "S": return "slashing"
-            if damagetype == "N": return "necrotic"
-            if damagetype == "R": return "radiant"
-            return 'n/a'
-
-        def parseproperty(_property):
-            if _property == "A": return "ammunition"
-            if _property == "LD": return "loading"
-            if _property == "L": return "light"
-            if _property == "F": return "finesse"
-            if _property == "T": return "thrown"
-            if _property == "H": return "heavy"
-            if _property == "R": return "reach"
-            if _property == "2H": return "two-handed"
-            if _property == "V": return "versatile"
-            if _property == "S": return "special"
-            if _property == "RLD": return "reload"
-            if _property == "BF": return "burst fire"
-            return "n/a"
-
         name = item['name']
         damage = ''
+        extras = ''
 
         if 'type' in item:
             type_ = ', '.join(
-                i for i in ([TYPES_.get(t, 'n/a') for t in item.get('type', '').split(',')] +
+                i for i in ([ITEM_TYPES.get(t, 'n/a') for t in item.get('type', '').split(',')] +
                             ["Wondrous Item" if item.get('wondrous') else ''])
                 if i)
             for iType in item['type'].split(','):
                 if iType in ('M', 'R', 'GUN'):
-                    damage = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(
-                        item.get('dmgType', 'n/a'))) if 'dmg1' in item and 'dmgType' in item else ''
+                    damage = (f"{item.get('dmg1', 'n/a')} {DMGTYPES.get(item.get('dmgType'), 'n/a')}") \
+                        if 'dmg1' in item and 'dmgType' in item else ''
                     type_ += f', {item.get("weaponCategory")}'
                 if iType == 'S': damage = f"AC +{item.get('ac', 'n/a')}"
-                if iType == 'LA': damage = f"AC {item.get('ac', 'n/a')}+ DEX"
-                if iType == 'MA': damage = f"AC {item.get('ac', 'n/a')}+ DEX (Max 2)"
+                if iType == 'LA': damage = f"AC {item.get('ac', 'n/a')} + DEX"
+                if iType == 'MA': damage = f"AC {item.get('ac', 'n/a')} + DEX (Max 2)"
                 if iType == 'HA': damage = f"AC {item.get('ac', 'n/a')}"
         else:
             type_ = ', '.join(
@@ -777,10 +760,13 @@ class Lookup:
             if 'weight' in item else ''
         weight_and_value = value + weight
         properties = []
+        proptext = ""
         for prop in item.get('property', []):
             if not prop: continue
             a = b = prop
-            a = parseproperty(a)
+            a = PROPS.get(a, 'n/a')
+            if b in c.itemprops:
+                proptext += f"**{a.title()}**: {c.itemprops[b]}\n"
             if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
             if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
             if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
@@ -791,12 +777,14 @@ class Lookup:
             damage_and_properties
 
         embed.title = name
-        embed.description = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}"
+        embed.description = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n{extras}"
 
         if 'reqAttune' in item:
             embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune'].replace('YES', '')}")
 
         text = parse_data_entry(item.get('entries', []))
+        if proptext:
+            text = f"{text}\n{proptext}"
         if len(text) > 5500:
             text = text[:5500] + "..."
 

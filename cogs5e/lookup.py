@@ -24,6 +24,19 @@ CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
                       'psipoints': "Psi Points", 'psilimit': "Psi Limit"}
 
+ITEM_TYPES = {"G": "Adventuring Gear", "SCF": "Spellcasting Focus", "AT": "Artisan Tool", "T": "Tool",
+              "GS": "Gaming Set", "INS": "Instrument", "A": "Ammunition", "M": "Melee Weapon", "R": "Ranged Weapon",
+              "LA": "Light Armor", "MA": "Medium Armor", "HA": "Heavy Armor", "S": "Shield", "W": "Wondrous Item",
+              "P": "Potion", "ST": "Staff", "RD": "Rod", "RG": "Ring", "WD": "Wand", "SC": "Scroll", "EXP": "Explosive",
+              "GUN": "Firearm", "SIMW": "Simple Weapon", "MARW": "Martial Weapon", "$": "Valuable Object",
+              'TAH': "Tack and Harness", 'TG': "Trade Goods", 'MNT': "Mount", 'VEH': "Vehicle", 'SHP': "Ship",
+              'GV': "Generic Variant", 'AF': "Futuristic"}
+
+DMGTYPES = {"B": "bludgeoning", "P": "piercing", "S": "slashing", "N": "necrotic", "R": "radiant"}
+
+PROPS = {"A": "ammunition", "LD": "loading", "L": "light", "F": "finesse", "T": "thrown", "H": "heavy", "R": "reach",
+         "2H": "two-handed", "V": "versatile", "S": "special", "RLD": "reload", "BF": "burst fire"}
+
 
 class Lookup:
     """Commands to help look up items, status effects, rules, etc."""
@@ -714,107 +727,64 @@ class Lookup:
         if not item['srd'] and srd:
             return await self.send_srd_error(ctx, result)
 
-        def parsetype(_type):
-            if _type == "G": return "Adventuring Gear"
-            if _type == "SCF": return "Spellcasting Focus"
-            if _type == "AT": return "Artisan Tool"
-            if _type == "T": return "Tool"
-            if _type == "GS": return "Gaming Set"
-            if _type == "INS": return "Instrument"
-            if _type == "A": return "Ammunition"
-            if _type == "M": return "Melee Weapon"
-            if _type == "R": return "Ranged Weapon"
-            if _type == "LA": return "Light Armor"
-            if _type == "MA": return "Medium Armor"
-            if _type == "HA": return "Heavy Armor"
-            if _type == "S": return "Shield"
-            if _type == "W": return "Wondrous Item"
-            if _type == "P": return "Potion"
-            if _type == "ST": return "Staff"
-            if _type == "RD": return "Rod"
-            if _type == "RG": return "Ring"
-            if _type == "WD": return "Wand"
-            if _type == "SC": return "Scroll"
-            if _type == "EXP": return "Explosive"
-            if _type == "GUN": return "Firearm"
-            if _type == "SIMW": return "Simple Weapon"
-            if _type == "MARW": return "Martial Weapon"
-            if _type == "$": return "Valuable Object"
-            return "n/a"
+        name = item['name']
+        damage = ''
+        extras = ''
 
-        def parsedamagetype(damagetype):
-            if damagetype == "B": return "bludgeoning"
-            if damagetype == "P": return "piercing"
-            if damagetype == "S": return "slashing"
-            if damagetype == "N": return "necrotic"
-            if damagetype == "R": return "radiant"
-            return 'n/a'
-
-        def parseproperty(_property):
-            if _property == "A": return "ammunition"
-            if _property == "LD": return "loading"
-            if _property == "L": return "light"
-            if _property == "F": return "finesse"
-            if _property == "T": return "thrown"
-            if _property == "H": return "heavy"
-            if _property == "R": return "reach"
-            if _property == "2H": return "two-handed"
-            if _property == "V": return "versatile"
-            if _property == "S": return "special"
-            if _property == "RLD": return "reload"
-            if _property == "BF": return "burst fire"
-            return "n/a"
-
-        itemDict = {'name': item['name'], 'damage': ''}
         if 'type' in item:
-            itemDict['type'] = ', '.join(i for i in (
-                    [parsetype(t) for t in item['type'].split(',')] + ["Wondrous Item" if item.get('wondrous') else ''])
-                                         if
-                                         i)
+            type_ = ', '.join(
+                i for i in ([ITEM_TYPES.get(t, 'n/a') for t in item.get('type', '').split(',')] +
+                            ["Wondrous Item" if item.get('wondrous') else ''])
+                if i)
             for iType in item['type'].split(','):
                 if iType in ('M', 'R', 'GUN'):
-                    itemDict['damage'] = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(
-                        item.get('dmgType', 'n/a'))) if 'dmg1' in item and 'dmgType' in item else ''
-                if iType == 'S': itemDict['damage'] = "AC +" + item.get('ac', 'n/a')
-                if iType == 'LA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX'
-                if iType == 'MA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX (Max 2)'
-                if iType == 'HA': itemDict['damage'] = "AC " + item.get('ac', 'n/a')
+                    damage = (f"{item.get('dmg1', 'n/a')} {DMGTYPES.get(item.get('dmgType'), 'n/a')}") \
+                        if 'dmg1' in item and 'dmgType' in item else ''
+                    type_ += f', {item.get("weaponCategory")}'
+                if iType == 'S': damage = f"AC +{item.get('ac', 'n/a')}"
+                if iType == 'LA': damage = f"AC {item.get('ac', 'n/a')} + DEX"
+                if iType == 'MA': damage = f"AC {item.get('ac', 'n/a')} + DEX (Max 2)"
+                if iType == 'HA': damage = f"AC {item.get('ac', 'n/a')}"
         else:
-            itemDict['type'] = ', '.join(
+            type_ = ', '.join(
                 i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)
-        itemDict['rarity'] = item.get('rarity')
-        itemDict['type_and_rarity'] = itemDict['type'] + (
-            (', ' + itemDict['rarity']) if itemDict['rarity'] is not None else '')
-        itemDict['value'] = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
-        itemDict['weight'] = (item.get('weight', 'n/a') + (
-            ' lb.' if item.get('weight', 'n/a') == '1' else ' lbs.')) if 'weight' in item else ''
-        itemDict['weight_and_value'] = itemDict['value'] + itemDict['weight']
-        itemDict['properties'] = ""
-        for prop in item.get('property', '').split(','):
-            if prop == '': continue
+        rarity = str(item.get('rarity')).replace('None', '')
+        if 'tier' in item:
+            if rarity:
+                rarity += f', {item["tier"]}'
+            else:
+                rarity = item['tier']
+        type_and_rarity = type_ + (f", {rarity}" if rarity else '')
+        value = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
+        weight = (item.get('weight', 'n/a') + (' lb.' if item.get('weight') == '1' else ' lbs.')) \
+            if 'weight' in item else ''
+        weight_and_value = value + weight
+        properties = []
+        proptext = ""
+        for prop in item.get('property', []):
+            if not prop: continue
             a = b = prop
-            a = parseproperty(a)
+            a = PROPS.get(a, 'n/a')
+            if b in c.itemprops:
+                proptext += f"**{a.title()}**: {c.itemprops[b]}\n"
             if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
             if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
             if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
-            if len(itemDict['properties']): a = ', ' + a
-            itemDict['properties'] += a
-        itemDict['damage_and_properties'] = (itemDict['damage'] + ' - ' + itemDict['properties']) if itemDict[
-                                                                                                         'properties'] is not '' else \
-            itemDict['damage']
-        itemDict['damage_and_properties'] = (' --- ' + itemDict['damage_and_properties']) if itemDict[
-                                                                                                 'weight_and_value'] is not '' and \
-                                                                                             itemDict[
-                                                                                                 'damage_and_properties'] is not '' else \
-            itemDict['damage_and_properties']
+            properties.append(a)
+        properties = ', '.join(properties)
+        damage_and_properties = f"{damage} - {properties}" if properties else damage
+        damage_and_properties = (' --- ' + damage_and_properties) if weight_and_value and damage_and_properties else \
+            damage_and_properties
 
-        embed.title = itemDict['name']
-        embed.description = f"*{itemDict['type_and_rarity']}*\n{itemDict['weight_and_value']}{itemDict['damage_and_properties']}"
+        embed.title = name
+        embed.description = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n{extras}"
 
         if 'reqAttune' in item:
             embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune'].replace('YES', '')}")
 
-        text = '\n'.join(a for a in item['text'] if a is not None and 'Rarity:' not in a and 'Source:' not in a)
+        text = parse_data_entry(item.get('entries', []))
+        if proptext:
+            text = f"{text}\n{proptext}"
         if len(text) > 5500:
             text = text[:5500] + "..."
 
@@ -823,7 +793,7 @@ class Lookup:
             embed.add_field(name=field_name, value=piece)
             field_name = "** **"
 
-        # embed.set_footer(text=f"Source: {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
+        embed.set_footer(text=f"Item | {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
 
         if pm:
             await self.bot.send_message(ctx.message.author, embed=embed)

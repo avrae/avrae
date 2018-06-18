@@ -94,6 +94,8 @@ class Compendium:
         with open('./res/backgrounds.json', 'r') as f:
             self.backgrounds = json.load(f)
         self.subclasses = self.load_subclasses()
+        with open('./res/itemprops.json', 'r') as f:
+            self.itemprops = json.load(f)
 
     def load_subclasses(self):
         s = []

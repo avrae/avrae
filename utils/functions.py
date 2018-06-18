@@ -157,7 +157,8 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
         if list_filter:
             old = list_filter
             list_filter = lambda e: old(e) and e.get('srd')
-        else: list_filter = lambda e: e.get('srd')
+        else:
+            list_filter = lambda e: e.get('srd')
         message = "This server only shows results from the 5e SRD."
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))
@@ -509,6 +510,7 @@ def parse_data_entry(text, md_breaks=False):
 
 
 FORMATTING = {'bold': '**', 'italic': '*', 'b': '**', 'i': '*'}
+PARSING = {'creature': lambda e: e.split('|')[-1], 'item': lambda e: e.split('|')[0]}
 
 
 def parse_data_formatting(text):
@@ -516,8 +518,14 @@ def parse_data_formatting(text):
     exp = re.compile(r'{@(\w+) (.+?)}')
 
     def sub(match):
-        f = FORMATTING.get(match.group(1), '')
-        return f"{f}{match.group(2)}{f}"
+        if match.group(1) in PARSING:
+            f = PARSING.get(match.group(1), lambda e: e)
+            return f(match.group(2))
+        else:
+            f = FORMATTING.get(match.group(1), '')
+            if not match.group(1) in FORMATTING:
+                log.warning(f"Unknown tag: {match.group(1)}")
+            return f"{f}{match.group(2)}{f}"
 
     while exp.search(text):
         text = exp.sub(sub, text)

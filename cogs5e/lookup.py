@@ -714,33 +714,13 @@ class Lookup:
         if not item['srd'] and srd:
             return await self.send_srd_error(ctx, result)
 
-        def parsetype(_type):
-            if _type == "G": return "Adventuring Gear"
-            if _type == "SCF": return "Spellcasting Focus"
-            if _type == "AT": return "Artisan Tool"
-            if _type == "T": return "Tool"
-            if _type == "GS": return "Gaming Set"
-            if _type == "INS": return "Instrument"
-            if _type == "A": return "Ammunition"
-            if _type == "M": return "Melee Weapon"
-            if _type == "R": return "Ranged Weapon"
-            if _type == "LA": return "Light Armor"
-            if _type == "MA": return "Medium Armor"
-            if _type == "HA": return "Heavy Armor"
-            if _type == "S": return "Shield"
-            if _type == "W": return "Wondrous Item"
-            if _type == "P": return "Potion"
-            if _type == "ST": return "Staff"
-            if _type == "RD": return "Rod"
-            if _type == "RG": return "Ring"
-            if _type == "WD": return "Wand"
-            if _type == "SC": return "Scroll"
-            if _type == "EXP": return "Explosive"
-            if _type == "GUN": return "Firearm"
-            if _type == "SIMW": return "Simple Weapon"
-            if _type == "MARW": return "Martial Weapon"
-            if _type == "$": return "Valuable Object"
-            return "n/a"
+        TYPES_ = {"G": "Adventuring Gear", "SCF": "Spellcasting Focus", "AT": "Artisan Tool", "T": "Tool",
+                  "GS": "Gaming Set", "INS": "Instrument", "A": "Ammunition", "M": "Melee Weapon",
+                  "R": "Ranged Weapon", "LA": "Light Armor", "MA": "Medium Armor", "HA": "Heavy Armor", "S": "Shield",
+                  "W": "Wondrous Item", "P": "Potion", "ST": "Staff", "RD": "Rod", "RG": "Ring", "WD": "Wand",
+                  "SC": "Scroll", "EXP": "Explosive", "GUN": "Firearm", "SIMW": "Simple Weapon",
+                  "MARW": "Martial Weapon", "$": "Valuable Object", 'TAH': "Tack and Harness", 'TG': "Trade Goods",
+                  'MNT': "Mount", 'VEH': "Vehicle", 'SHP': "Ship", 'GV': "Generic Variant", 'AF': "Futuristic"}
 
         def parsedamagetype(damagetype):
             if damagetype == "B": return "bludgeoning"
@@ -767,31 +747,32 @@ class Lookup:
 
         itemDict = {'name': item['name'], 'damage': ''}
         if 'type' in item:
-            itemDict['type'] = ', '.join(i for i in (
-                    [parsetype(t) for t in item['type'].split(',')] + ["Wondrous Item" if item.get('wondrous') else ''])
-                                         if
-                                         i)
+            itemDict['type'] = ', '.join(
+                i for i in ([TYPES_.get(t, 'n/a') for t in item.get('type', '').split(',')] +
+                            ["Wondrous Item" if item.get('wondrous') else ''])
+                if i)
             for iType in item['type'].split(','):
                 if iType in ('M', 'R', 'GUN'):
                     itemDict['damage'] = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(
                         item.get('dmgType', 'n/a'))) if 'dmg1' in item and 'dmgType' in item else ''
-                if iType == 'S': itemDict['damage'] = "AC +" + item.get('ac', 'n/a')
-                if iType == 'LA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX'
-                if iType == 'MA': itemDict['damage'] = "AC " + item.get('ac', 'n/a') + '+ DEX (Max 2)'
-                if iType == 'HA': itemDict['damage'] = "AC " + item.get('ac', 'n/a')
+                    itemDict['type'] += f', {item.get("weaponCategory")}'
+                if iType == 'S': itemDict['damage'] = f"AC +{item.get('ac', 'n/a')}"
+                if iType == 'LA': itemDict['damage'] = f"AC {item.get('ac', 'n/a')}+ DEX"
+                if iType == 'MA': itemDict['damage'] = f"AC {item.get('ac', 'n/a')}+ DEX (Max 2)"
+                if iType == 'HA': itemDict['damage'] = f"AC {item.get('ac', 'n/a')}"
         else:
             itemDict['type'] = ', '.join(
                 i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)
         itemDict['rarity'] = item.get('rarity')
         itemDict['type_and_rarity'] = itemDict['type'] + (
-            (', ' + itemDict['rarity']) if itemDict['rarity'] is not None else '')
+            (', ' + itemDict['rarity']) if not str(itemDict.get('rarity')) == 'None' else '')
         itemDict['value'] = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
         itemDict['weight'] = (item.get('weight', 'n/a') + (
             ' lb.' if item.get('weight', 'n/a') == '1' else ' lbs.')) if 'weight' in item else ''
         itemDict['weight_and_value'] = itemDict['value'] + itemDict['weight']
         itemDict['properties'] = ""
-        for prop in item.get('property', '').split(','):
-            if prop == '': continue
+        for prop in item.get('property', []):
+            if not prop: continue
             a = b = prop
             a = parseproperty(a)
             if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
@@ -814,7 +795,7 @@ class Lookup:
         if 'reqAttune' in item:
             embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune'].replace('YES', '')}")
 
-        text = '\n'.join(a for a in item['text'] if a is not None and 'Rarity:' not in a and 'Source:' not in a)
+        text = parse_data_entry(item.get('entries', []))
         if len(text) > 5500:
             text = text[:5500] + "..."
 

@@ -765,8 +765,13 @@ class Lookup:
         else:
             type_ = ', '.join(
                 i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)
-        rarity = item.get('rarity')
-        type_and_rarity = type_ + ((', ' + rarity) if not str(rarity) == 'None' else '')
+        rarity = str(item.get('rarity')).replace('None', '')
+        if 'tier' in item:
+            if rarity:
+                rarity += f', {item["tier"]}'
+            else:
+                rarity = item['tier']
+        type_and_rarity = type_ + (f", {rarity}" if rarity else '')
         value = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
         weight = (item.get('weight', 'n/a') + (' lb.' if item.get('weight') == '1' else ' lbs.')) \
             if 'weight' in item else ''
@@ -786,7 +791,7 @@ class Lookup:
             damage_and_properties
 
         embed.title = name
-        embed.description = f"*{type_and_rarity}*\n{weight_and_value]}{damage_and_properties]}"
+        embed.description = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}"
 
         if 'reqAttune' in item:
             embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune'].replace('YES', '')}")

@@ -745,32 +745,33 @@ class Lookup:
             if _property == "BF": return "burst fire"
             return "n/a"
 
-        itemDict = {'name': item['name'], 'damage': ''}
+        name = item['name']
+        damage = ''
+
         if 'type' in item:
-            itemDict['type'] = ', '.join(
+            type_ = ', '.join(
                 i for i in ([TYPES_.get(t, 'n/a') for t in item.get('type', '').split(',')] +
                             ["Wondrous Item" if item.get('wondrous') else ''])
                 if i)
             for iType in item['type'].split(','):
                 if iType in ('M', 'R', 'GUN'):
-                    itemDict['damage'] = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(
+                    damage = (item.get('dmg1', 'n/a') + ' ' + parsedamagetype(
                         item.get('dmgType', 'n/a'))) if 'dmg1' in item and 'dmgType' in item else ''
-                    itemDict['type'] += f', {item.get("weaponCategory")}'
-                if iType == 'S': itemDict['damage'] = f"AC +{item.get('ac', 'n/a')}"
-                if iType == 'LA': itemDict['damage'] = f"AC {item.get('ac', 'n/a')}+ DEX"
-                if iType == 'MA': itemDict['damage'] = f"AC {item.get('ac', 'n/a')}+ DEX (Max 2)"
-                if iType == 'HA': itemDict['damage'] = f"AC {item.get('ac', 'n/a')}"
+                    type_ += f', {item.get("weaponCategory")}'
+                if iType == 'S': damage = f"AC +{item.get('ac', 'n/a')}"
+                if iType == 'LA': damage = f"AC {item.get('ac', 'n/a')}+ DEX"
+                if iType == 'MA': damage = f"AC {item.get('ac', 'n/a')}+ DEX (Max 2)"
+                if iType == 'HA': damage = f"AC {item.get('ac', 'n/a')}"
         else:
-            itemDict['type'] = ', '.join(
+            type_ = ', '.join(
                 i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)
-        itemDict['rarity'] = item.get('rarity')
-        itemDict['type_and_rarity'] = itemDict['type'] + (
-            (', ' + itemDict['rarity']) if not str(itemDict.get('rarity')) == 'None' else '')
-        itemDict['value'] = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
-        itemDict['weight'] = (item.get('weight', 'n/a') + (
-            ' lb.' if item.get('weight', 'n/a') == '1' else ' lbs.')) if 'weight' in item else ''
-        itemDict['weight_and_value'] = itemDict['value'] + itemDict['weight']
-        itemDict['properties'] = ""
+        rarity = item.get('rarity')
+        type_and_rarity = type_ + ((', ' + rarity) if not str(rarity) == 'None' else '')
+        value = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
+        weight = (item.get('weight', 'n/a') + (' lb.' if item.get('weight') == '1' else ' lbs.')) \
+            if 'weight' in item else ''
+        weight_and_value = value + weight
+        properties = []
         for prop in item.get('property', []):
             if not prop: continue
             a = b = prop
@@ -778,19 +779,14 @@ class Lookup:
             if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
             if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
             if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
-            if len(itemDict['properties']): a = ', ' + a
-            itemDict['properties'] += a
-        itemDict['damage_and_properties'] = (itemDict['damage'] + ' - ' + itemDict['properties']) if itemDict[
-                                                                                                         'properties'] is not '' else \
-            itemDict['damage']
-        itemDict['damage_and_properties'] = (' --- ' + itemDict['damage_and_properties']) if itemDict[
-                                                                                                 'weight_and_value'] is not '' and \
-                                                                                             itemDict[
-                                                                                                 'damage_and_properties'] is not '' else \
-            itemDict['damage_and_properties']
+            properties.append(a)
+        properties = ', '.join(properties)
+        damage_and_properties = f"{damage} - {properties}" if properties else damage
+        damage_and_properties = (' --- ' + damage_and_properties) if weight_and_value and damage_and_properties else \
+            damage_and_properties
 
-        embed.title = itemDict['name']
-        embed.description = f"*{itemDict['type_and_rarity']}*\n{itemDict['weight_and_value']}{itemDict['damage_and_properties']}"
+        embed.title = name
+        embed.description = f"*{type_and_rarity}*\n{weight_and_value]}{damage_and_properties]}"
 
         if 'reqAttune' in item:
             embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune'].replace('YES', '')}")

@@ -805,7 +805,7 @@ class Lookup:
             embed.add_field(name=field_name, value=piece)
             field_name = "** **"
 
-        # embed.set_footer(text=f"Source: {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
+        embed.set_footer(text=f"Item | {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
 
         if pm:
             await self.bot.send_message(ctx.message.author, embed=embed)

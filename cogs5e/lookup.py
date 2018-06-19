@@ -30,9 +30,11 @@ ITEM_TYPES = {"G": "Adventuring Gear", "SCF": "Spellcasting Focus", "AT": "Artis
               "P": "Potion", "ST": "Staff", "RD": "Rod", "RG": "Ring", "WD": "Wand", "SC": "Scroll", "EXP": "Explosive",
               "GUN": "Firearm", "SIMW": "Simple Weapon", "MARW": "Martial Weapon", "$": "Valuable Object",
               'TAH': "Tack and Harness", 'TG': "Trade Goods", 'MNT': "Mount", 'VEH': "Vehicle", 'SHP': "Ship",
-              'GV': "Generic Variant", 'AF': "Futuristic"}
+              'GV': "Generic Variant", 'AF': "Futuristic", 'siege weapon': "Siege Weapon", 'generic': "Generic"}
 
 DMGTYPES = {"B": "bludgeoning", "P": "piercing", "S": "slashing", "N": "necrotic", "R": "radiant"}
+
+SIZES = {"T": "Tiny", "S": "Small", "M": "Medium", "L": "Large", "H": "Huge", "G": "Gargantuan"}
 
 PROPS = {"A": "ammunition", "LD": "loading", "L": "light", "F": "finesse", "T": "thrown", "H": "heavy", "R": "reach",
          "2H": "two-handed", "V": "versatile", "S": "special", "RLD": "reload", "BF": "burst fire", "CREW": "Crew",
@@ -756,6 +758,10 @@ class Lookup:
                              f"Crew {item.get('crew')}, AC {item.get('vehAc')}, HP {item.get('vehHp')}"
                     if 'vehDmgThresh' in item:
                         extras += f", Damage Threshold {item['vehDmgThresh']}"
+                if iType == 'siege weapon':
+                    extras = f"Size: {SIZES.get(item.get('size'), 'Unknown')}\n" \
+                             f"AC {item.get('ac')}, HP {item.get('hp')}\n" \
+                             f"Immunities: {item.get('immune')}"
         else:
             type_ = ', '.join(
                 i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)

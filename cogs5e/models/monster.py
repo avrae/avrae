@@ -495,13 +495,8 @@ def parse_resists(resists):
 
 
 def parsesize(size):
-    if size == "T": size = "Tiny"
-    if size == "S": size = "Small"
-    if size == "M": size = "Medium"
-    if size == "L": size = "Large"
-    if size == "H": size = "Huge"
-    if size == "G": size = "Gargantuan"
-    return size
+    s = {"T": "Tiny", "S": "Small", "M": "Medium", "L": "Large", "H": "Huge", "G": "Gargantuan"}
+    return s.get(size, "Unknown")
 
 
 def xp_by_cr(cr):

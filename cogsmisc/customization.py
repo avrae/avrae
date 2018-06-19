@@ -299,10 +299,12 @@ class Customization:
         return await self.bot.say("OK. I have deleted all your aliases.")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'], no_pm=True)
-    async def servalias(self, ctx, alias_name, *, commands=None):
+    async def servalias(self, ctx, alias_name=None, *, commands=None):
         """Adds an alias that the entire server can use.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
         If a user and a server have aliases with the same name, the user alias will take priority."""
+        if alias_name is None:
+            return await ctx.invoke(self.bot.get_command("servalias list"))
         server_id = ctx.message.server.id
         self.serv_aliases = self.bot.db.not_json_get('serv_aliases', {})
         server_aliases = self.serv_aliases.get(server_id, {})
@@ -427,11 +429,13 @@ class Customization:
         return await self.bot.say("OK. I have deleted all your snippets.")
 
     @commands.group(pass_context=True, invoke_without_command=True, no_pm=True)
-    async def servsnippet(self, ctx, snipname, *, snippet=None):
+    async def servsnippet(self, ctx, snipname=None, *, snippet=None):
         """Creates a snippet to use in attack macros for the entire server.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
         If a user and a server have snippets with the same name, the user snippet will take priority.
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
+        if snipname is None:
+            return await ctx.invoke(self.bot.get_command("servsnippet list"))
         server_id = ctx.message.server.id
         snippets = self.bot.db.jget('server_snippets', {})
         server_snippets = snippets.get(server_id, {})

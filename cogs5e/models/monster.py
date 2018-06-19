@@ -163,7 +163,7 @@ class Monster:
         vuln = parse_resists(data['vulnerable']) if 'vulnerable' in data else None
         resist = parse_resists(data['resist']) if 'resist' in data else None
         immune = parse_resists(data['immune']) if 'immune' in data else None
-        condition_immune = data.get('conditionImmune', []) if 'condiitonImmune' in data else None
+        condition_immune = data.get('conditionImmune', []) if 'conditionImmune' in data else None
 
         languages = data.get('languages', '').split(', ') if 'languages' in data else None
 

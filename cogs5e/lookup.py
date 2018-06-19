@@ -35,7 +35,8 @@ ITEM_TYPES = {"G": "Adventuring Gear", "SCF": "Spellcasting Focus", "AT": "Artis
 DMGTYPES = {"B": "bludgeoning", "P": "piercing", "S": "slashing", "N": "necrotic", "R": "radiant"}
 
 PROPS = {"A": "ammunition", "LD": "loading", "L": "light", "F": "finesse", "T": "thrown", "H": "heavy", "R": "reach",
-         "2H": "two-handed", "V": "versatile", "S": "special", "RLD": "reload", "BF": "burst fire"}
+         "2H": "two-handed", "V": "versatile", "S": "special", "RLD": "reload", "BF": "burst fire", "CREW": "Crew",
+         "PASS": "Passengers", "CARGO": "Cargo", "DMGT": "Damage Threshold", "SHPREP": "Ship Repairs"}
 
 
 class Lookup:
@@ -730,21 +731,31 @@ class Lookup:
         name = item['name']
         damage = ''
         extras = ''
+        properties = []
+        proptext = ""
 
         if 'type' in item:
             type_ = ', '.join(
-                i for i in ([ITEM_TYPES.get(t, 'n/a') for t in item.get('type', '').split(',')] +
+                i for i in ([ITEM_TYPES.get(t, 'n/a') for t in item['type'].split(',')] +
                             ["Wondrous Item" if item.get('wondrous') else ''])
                 if i)
             for iType in item['type'].split(','):
                 if iType in ('M', 'R', 'GUN'):
-                    damage = (f"{item.get('dmg1', 'n/a')} {DMGTYPES.get(item.get('dmgType'), 'n/a')}") \
+                    damage = f"{item.get('dmg1', 'n/a')} {DMGTYPES.get(item.get('dmgType'), 'n/a')}" \
                         if 'dmg1' in item and 'dmgType' in item else ''
                     type_ += f', {item.get("weaponCategory")}'
                 if iType == 'S': damage = f"AC +{item.get('ac', 'n/a')}"
                 if iType == 'LA': damage = f"AC {item.get('ac', 'n/a')} + DEX"
                 if iType == 'MA': damage = f"AC {item.get('ac', 'n/a')} + DEX (Max 2)"
                 if iType == 'HA': damage = f"AC {item.get('ac', 'n/a')}"
+                if iType == 'SHP':  # ships
+                    for p in ("CREW", "PASS", "CARGO", "DMGT", "SHPREP"):
+                        a = PROPS.get(p, 'n/a')
+                        proptext += f"**{a.title()}**: {c.itemprops[p]}\n"
+                    extras = f"Speed: {item.get('speed')}\nCarrying Capacity: {item.get('carryingcapacity')}\n" \
+                             f"Crew {item.get('crew')}, AC {item.get('vehAc')}, HP {item.get('vehHp')}"
+                    if 'vehDmgThresh' in item:
+                        extras += f", Damage Threshold {item['vehDmgThresh']}"
         else:
             type_ = ', '.join(
                 i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)
@@ -759,8 +770,6 @@ class Lookup:
         weight = (item.get('weight', 'n/a') + (' lb.' if item.get('weight') == '1' else ' lbs.')) \
             if 'weight' in item else ''
         weight_and_value = value + weight
-        properties = []
-        proptext = ""
         for prop in item.get('property', []):
             if not prop: continue
             a = b = prop

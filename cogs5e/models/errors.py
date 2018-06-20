@@ -20,7 +20,7 @@ class NoBestiary(AvraeException):
 
 
 class ExternalImportError(AvraeException):
-    """Raised when somethine fails to import."""
+    """Raised when something fails to import."""
 
     def __init__(self, msg):
         super().__init__(msg)

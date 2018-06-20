@@ -5,25 +5,32 @@ Created on Jan 19, 2017
 """
 import asyncio
 import logging
+import os
 import random
 import re
-from math import *
+import sys
+from math import floor, ceil
 
+import aiohttp
 import discord
 import numexpr
-from DDPClient import DDPClient
 
+import credentials
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import DicecloudClient
+from cogs5e.models.errors import ExternalImportError
 from utils.functions import fuzzy_search
 
 log = logging.getLogger(__name__)
 
+TESTING = (os.environ.get("TESTING", False) or 'test' in sys.argv)
 CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiorityDice")
 CLASS_RESOURCE_NAMES = {"expertiseDice": "Expertise Dice", "ki": "Ki", "rages": "Rages",
                         "sorceryPoints": "Sorcery Points", "superiorityDice": "Superiority Dice"}
 CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long',
                          "sorceryPoints": 'long', "superiorityDice": 'short'}
+API_BASE = "https://dicecloud.com/character/"
+KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
 
 
 class DicecloudParser:
@@ -33,31 +40,21 @@ class DicecloudParser:
 
     async def get_character(self):
         url = self.url
-        character = {}
-        client = DDPClient('ws://dicecloud.com/websocket', auto_reconnect=False)
-        client.is_connected = False
-        client.connect()
-
-        def connected():
-            client.is_connected = True
-
-        client.on('connected', connected)
-        while not client.is_connected:
-            await asyncio.sleep(1)
-        sub_id = client.subscribe('singleCharacter', [url])
-
-        def update_character(collection, _id, fields):
-            if character.get(collection) is None:
-                character[collection] = []
-            fields['id'] = _id
-            character.get(collection).append(fields)
-            log.debug(f"collection {collection}: {fields}")
-
-        client.on('added', update_character)
-        await asyncio.sleep(10)
-        client.unsubscribe(sub_id)
-        client.close()
-        character['id'] = url
+        character = None
+        async with aiohttp.ClientSession() as session:
+            for _ in range(10):  # 10 retries
+                async with session.get(f"{API_BASE}{url}/json?key={KEY}") as resp:
+                    log.debug(f"Dicecloud returned {resp.status}")
+                    if resp.status == 200:
+                        character = await resp.json()
+                        break
+                    elif resp.status == 429:
+                        timeout = await resp.json()
+                        log.info(f"Ratelimit hit getting character - resets in {timeout}ms")
+                        await asyncio.sleep(timeout['timeToReset'] / 1000)  # rate-limited, just wait
+                    else:
+                        raise ExternalImportError(f"Dicecloud returned an error: {resp.status} - {resp.reason}")
+        character['_id'] = url
         self.character = character
         return character
 
@@ -527,7 +524,7 @@ class DicecloudParser:
                      'dc': 0,
                      'attackBonus': 0,
                      'dicecloud_id': next(
-                         (sl['id'] for sl in self.character.get('spellLists', []) if not sl.get('removed')), None)}
+                         (sl['_id'] for sl in self.character.get('spellLists', []) if not sl.get('removed')), None)}
 
         spells = self.character.get('spells', [])
         spellnames = [s.get('name', '') for s in spells if not s.get('removed', False)]
@@ -587,6 +584,6 @@ class DicecloudParser:
             elif 'long rest' in desc:
                 reset = 'long'
             c = {'name': f['name'], 'max': f['uses'], 'min': 0,
-                 'reset': reset, 'live': f['id']}
+                 'reset': reset, 'live': f['_id']}
             counters.append(c)
         return counters

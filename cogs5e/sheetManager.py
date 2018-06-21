@@ -1009,7 +1009,7 @@ class SheetManager:
         try:
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(
                 character.get('characters')[0].get('name')))
-        except TypeError:
+        except (TypeError, IndexError):
             return await self.bot.edit_message(loading,
                                                'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
 

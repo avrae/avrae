@@ -20,7 +20,6 @@ from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 from googleapiclient.errors import HttpError
 from pygsheets.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
-from ws4py.exc import HandshakeError
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
@@ -1003,13 +1002,12 @@ class SheetManager:
         parser = DicecloudParser(url)
         try:
             character = await parser.get_character()
-        except (timeout, HandshakeError):
-            return await self.bot.say(
-                "I'm having some issues connecting to Dicecloud right now. Please try again in a few minutes.")
+        except Exception as eep:
+            return await self.bot.say(f"Dicecloud returned an error: {eep}")
         try:
             await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(
                 character.get('characters')[0].get('name')))
-        except (TypeError, IndexError, ValueError):
+        except (TypeError, IndexError):
             return await self.bot.edit_message(loading,
                                                'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
 

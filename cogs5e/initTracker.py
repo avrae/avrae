@@ -851,7 +851,8 @@ class InitTracker:
                 if target.isPrivate:
                     try:
                         await self.bot.send_message(ctx.message.server.get_member(target.controller),
-                                                    "{}'s HP: {}".format(target.name, target.get_hp_str(True)))
+                                                    f"{combatant.name} attacked with a {attack['name']}!"
+                                                    f"\n{target.name}'s HP: {target.get_hp_str(True)}")
                     except:
                         pass
             else:
@@ -960,6 +961,13 @@ class InitTracker:
         embed.title = '{} casts {} at...'.format(combatant.name, spell['name'])
 
         damage_save = None
+        damage_msgs = {}
+
+        def add_dmg_msg(user, msg):
+            usermsgs = damage_msgs.get(user, [])
+            usermsgs.append(msg)
+            damage_msgs[user] = usermsgs
+
         for i, t in enumerate(args.get('t', [])):
             target: Combatant = await combat.select_combatant(t, f"Select target #{i+1}.")
             if target is None:
@@ -1064,12 +1072,7 @@ class InitTracker:
                             target.hp -= dmgroll.total
                             embed_footer += "{}: {}\n".format(target.name, target.get_hp_str())
                             if target.isPrivate:
-                                try:
-                                    await self.bot.send_message(ctx.message.server.get_member(target.controller),
-                                                                "{}'s HP: {}".format(target.name,
-                                                                                     target.get_hp_str(True)))
-                                except:
-                                    pass
+                                add_dmg_msg(target.controller, f"{target.name}'s HP: {target.get_hp_str(True)}")
                         else:
                             embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
                 elif spell['type'] == 'attack':  # attack spell
@@ -1132,11 +1135,7 @@ class InitTracker:
                         target.hp -= result['total_damage']
                         embed_footer += "{}: {}\n".format(target.name, target.get_hp_str())
                         if target.isPrivate:
-                            try:
-                                await self.bot.send_message(ctx.message.server.get_member(target.controller),
-                                                            "{}'s HP: {}".format(target.name, target.get_hp_str(True)))
-                            except:
-                                pass
+                            add_dmg_msg(target.controller, f"{target.name}'s HP: {target.get_hp_str(True)}")
                     else:
                         embed_footer += "Dealt {} damage to {}!".format(result['total_damage'], target.name)
                 else:  # special spell (MM)
@@ -1166,14 +1165,16 @@ class InitTracker:
                         target.hp -= result['total_damage']
                         embed_footer += "{}: {}\n".format(target.name, target.get_hp_str())
                         if target.isPrivate:
-                            try:
-                                await self.bot.send_message(ctx.message.server.get_member(target.controller),
-                                                            "{}'s HP: {}".format(target.name, target.get_hp_str(True)))
-                            except:
-                                pass
+                            add_dmg_msg(target.controller, f"{target.name}'s HP: {target.get_hp_str(True)}")
                     else:
                         embed_footer += "Dealt {} damage to {}!".format(result['total_damage'], target.name)
 
+        for userId, msgs in damage_msgs.items():
+            try:
+                await self.bot.send_message(ctx.message.server.get_member(userId),
+                                            f"{combatant.name} cast {spell['name']}!" + '\n'.join(msgs))
+            except:
+                pass
         spell_ctx = spell_context(spell)
         if spell_ctx:
             embed.add_field(name='Effect', value=spell_ctx)

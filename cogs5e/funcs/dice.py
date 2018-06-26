@@ -296,7 +296,7 @@ class SingleDiceGroup(Part):
         for _roll in self.rolled:
             if not _roll.value in rolls_to_keep:
                 _roll.kept = False
-            else:
+            elif _roll.kept:
                 rolls_to_keep.remove(_roll.value)
 
     def reroll(self, rerollList, iterations=250, greedy=False, keep_rerolled=False, unique=False):
@@ -449,15 +449,15 @@ def parse_selectors(opts, res, greedy=False):
     """Returns a list of ints."""
     for o in range(len(opts)):
         if opts[o][0] is 'h':
-            opts[o] = nlargest(int(opts[o].split('h')[1]), (d.value for d in res.rolled))
+            opts[o] = nlargest(int(opts[o].split('h')[1]), (d.value for d in res.rolled if d.kept))
         if opts[o][0] is 'l':
-            opts[o] = nsmallest(int(opts[o].split('l')[1]), (d.value for d in res.rolled))
+            opts[o] = nsmallest(int(opts[o].split('l')[1]), (d.value for d in res.rolled if d.kept))
     out = []
     for o in opts:
         if isinstance(o, list):
             out += [int(l) for l in o]
         elif not greedy:
-            out += [int(o) for a in res.rolled if a.value is int(o)]
+            out += [int(o) for a in res.rolled if a.value is int(o) and a.kept]
         else:
             out += [int(o)]
     return out
@@ -481,3 +481,8 @@ class DiceResult:
 
     def __repr__(self):
         return '<DiceResult object: total={}>'.format(self.total)
+
+
+if __name__ == '__main__':
+    while True:
+        print(roll(input().strip()))

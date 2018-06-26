@@ -26,13 +26,14 @@ from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument
+from cogs5e.models.initiative import Combat
 from cogs5e.sheets.beyondPdf import BeyondPDFSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import extract_gsheet_id_from_url, parse_snippets, generate_token
-from utils.functions import list_get, get_positivity, a_or_an, get_selection
+from utils.functions import extract_gsheet_id_from_url, parse_snippets, generate_token, search_and_select
+from utils.functions import list_get, get_positivity, a_or_an
 from utils.loggers import TextLogger
 
 log = logging.getLogger(__name__)
@@ -528,27 +529,12 @@ class SheetManager:
             return await self.bot.say(
                 'Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')))
 
-        choices = []
-        for url, character in user_characters.items():
-            if character.get('stats', {}).get('name', '').lower() == name.lower():
-                choices.append((character, url))
-            elif name.lower() in character.get('stats', {}).get('name', '').lower():
-                choices.append((character, url))
+        _character = await search_and_select(ctx, list(user_characters.items()), name,
+                                             lambda e: e[1].get('stats', {}).get('name', ''),
+                                             selectkey=lambda e: f"{e[1].get('stats', {}).get('name', '')} (`{e[0]}`)")
 
-        if len(choices) > 1:
-            choiceList = [(f"{c[0].get('stats', {}).get('name', 'Unnamed')} (`{c[1]})`", c) for c in choices]
-
-            char = await get_selection(ctx, choiceList, delete=True)
-            if char is None:
-                return await self.bot.say('Selection timed out or was cancelled.')
-
-            char_name = char[0].get('stats', {}).get('name', 'Unnamed')
-            char_url = char[1]
-        elif len(choices) == 0:
-            return await self.bot.say('Character not found.')
-        else:
-            char_name = choices[0][0].get('stats', {}).get('name', 'Unnamed')
-            char_url = choices[0][1]
+        char_name = _character[1].get('stats', {}).get('name', 'Unnamed')
+        char_url = _character[0]
 
         name = char_name
 
@@ -580,27 +566,12 @@ class SheetManager:
         if user_characters is None:
             return await self.bot.say('You have no characters.')
 
-        choices = []
-        for url, character in user_characters.items():
-            if character.get('stats', {}).get('name', '').lower() == name.lower():
-                choices.append((character, url))
-            elif name.lower() in character.get('stats', {}).get('name', '').lower():
-                choices.append((character, url))
+        _character = await search_and_select(ctx, list(user_characters.items()), name,
+                                             lambda e: e[1].get('stats', {}).get('name', ''),
+                                             selectkey=lambda e: f"{e[1].get('stats', {}).get('name', '')} (`{e[0]}`)")
 
-        if len(choices) > 1:
-            choiceList = [(f"{c[0].get('stats', {}).get('name', 'Unnamed')} (`{c[1]})`", c) for c in choices]
-
-            char = await get_selection(ctx, choiceList, delete=True)
-            if char is None:
-                return await self.bot.say('Selection timed out or was cancelled.')
-
-            char_name = char[0].get('stats', {}).get('name', 'Unnamed')
-            char_url = char[1]
-        elif len(choices) == 0:
-            return await self.bot.say('Character not found.')
-        else:
-            char_name = choices[0][0].get('stats', {}).get('name', 'Unnamed')
-            char_url = choices[0][1]
+        char_name = _character[1].get('stats', {}).get('name', 'Unnamed')
+        char_url = _character[0]
 
         name = char_name
 
@@ -610,10 +581,18 @@ class SheetManager:
         if reply is None:
             return await self.bot.say('Timed out waiting for a response or invalid response.')
         elif reply:
-            self.active_characters[ctx.message.author.id] = None
+            _character = Character(_character[1], char_url)
+            if _character.get_combat_id() is not None:
+                combat = Combat.from_id(_character.get_combat_id(), ctx)
+                me = next((c for c in combat.get_combatants() if getattr(c, 'character_id', None) == char_url),
+                          None)
+                if me:
+                    combat.remove_combatant(me, True).commit()
             del user_characters[char_url]
             self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
-            self.bot.db.not_json_set('active_characters', self.active_characters)
+            if self.active_characters[ctx.message.author.id] == char_url:
+                self.active_characters[ctx.message.author.id] = None
+                self.bot.db.not_json_set('active_characters', self.active_characters)
             return await self.bot.say('{} has been deleted.'.format(name))
         else:
             return await self.bot.say("OK, cancelling.")

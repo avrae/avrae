@@ -57,6 +57,13 @@ class Combat:
         return cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, combatants, raw['round'],
                    raw['turn'], raw['current'])
 
+    @classmethod
+    def from_id(cls, _id, ctx):
+        raw = ctx.bot.db.jget(f"{_id}.combat")
+        if raw is None:
+            raise CombatNotFound
+        return cls.from_dict(raw, ctx)
+
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
                 'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
@@ -93,7 +100,7 @@ class Combat:
     @property
     def current_combatant(self):
         """The combatant whose turn it currently is."""
-        return next(c for c in self._combatants if c.index == self.index) if self.index is not None else None
+        return next((c for c in self._combatants if c.index == self.index), None) if self.index is not None else None
 
     @property
     def next_combatant(self):
@@ -128,13 +135,16 @@ class Combat:
         self._combatants.append(combatant)
         self.sort_combatants()
 
-    def remove_combatant(self, combatant):
+    def remove_combatant(self, combatant, ignore_callback=False):
+        if not ignore_callback:
+            combatant.on_remove()
         if not combatant.group:
             self._combatants.remove(combatant)
             self.sort_combatants()
         else:
             self.get_group(combatant.group).remove_combatant(combatant)
             self.check_empty_groups()
+        return self
 
     def sort_combatants(self):
         current = self.current_combatant

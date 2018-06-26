@@ -420,7 +420,6 @@ class InitTracker:
 
         for co in toRemove:
             combat.remove_combatant(co)
-            co.on_remove()
             outStr += "{} automatically removed from combat.\n".format(co.name)
 
         if combat.options.get('turnnotif'):
@@ -1292,7 +1291,6 @@ class InitTracker:
                 return await self.bot.say(
                     "You cannot remove a combatant if they are the only remaining combatant in this turn.")
         combat.remove_combatant(combatant)
-        combatant.on_remove()
         await self.bot.say("{} removed from combat.".format(combatant.name), delete_after=10)
         await combat.final()
 

@@ -152,7 +152,22 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False):
 
 
 async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False,
-                            message=None, list_filter=None, srd=False):
+                            message=None, list_filter=None, srd=False, selectkey=None):
+    """
+    Searches a list for an object matching the key, and prompts user to select on multiple matches.
+    :param ctx: The context of the search.
+    :param list_to_search: The list of objects to search.
+    :param value: The value to search for.
+    :param key: How to search - compares key(obj) to value
+    :param cutoff: The cutoff percentage of fuzzy searches.
+    :param return_key: Whether to return key(match) or match.
+    :param pm: Whether to PM the user the select prompt.
+    :param message: A message to add to the select prompt.
+    :param list_filter: A filter to filter the list to search by.
+    :param srd: Whether to only search items that have a property ['srd'] set to true.
+    :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
+    :return:
+    """
     if srd:
         if list_filter:
             old = list_filter
@@ -174,7 +189,9 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
         if len(results) == 1:
             result = results[0]
         else:
-            if return_key:
+            if selectkey:
+                result = await get_selection(ctx, [(selectkey(r), r) for r in results], pm=pm, message=message)
+            elif return_key:
                 result = await get_selection(ctx, [(r, r) for r in results], pm=pm, message=message)
             else:
                 result = await get_selection(ctx, [(key(r), r) for r in results], pm=pm, message=message)

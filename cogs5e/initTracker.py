@@ -891,6 +891,9 @@ class InitTracker:
         if combatant is None:
             return await self.bot.say("You must begin combat with !init next first.")
 
+        if isinstance(combatant, CombatantGroup):
+            return await self.bot.say("Groups cannot cast spells.")
+
         is_character = isinstance(combatant, PlayerCombatant)
 
         args = parse_snippets(args, ctx)

@@ -1029,6 +1029,7 @@ class SheetManager:
                 except InvalidArgument:
                     pass
 
+        del parser  # uh. maybe some weird instance things going on here.
         c.commit(ctx).set_active(ctx)
         embed = sheet['embed']
         try:

@@ -225,7 +225,7 @@ class DicecloudClient(MeteorClient):
     def delete_character(self, charId: str):
         self.remove('characters', {'_id': charId})
 
-    async def share_character(self, charId: str, username: str):
+    async def get_user_id(self, username: str):
         userId = None
 
         def get_id_cb(err, data):
@@ -240,6 +240,9 @@ class DicecloudClient(MeteorClient):
                 await asyncio.sleep(0.1)
             else:
                 break
+        return userId
+
+    async def share_character(self, charId: str, userId: str):
 
         if userId:
             def share_callback(error, data):

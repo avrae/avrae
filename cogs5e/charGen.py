@@ -301,14 +301,25 @@ class CharGenerator:
         result = searchBackground(bg_response.content)
         background = await resolve(result, ctx)
 
-        await self.bot.say(author.mention + " What is your dicecloud username?")
-        user_response = await self.bot.wait_for_message(timeout=60, author=author, channel=channel)
-        if user_response is None: return await self.bot.say("Timed out waiting for a response.")
-        username = user_response.content
+        userId = None
+        for _ in range(2):
+            await self.bot.say(author.mention + " What is your dicecloud username?")
+            user_response = await self.bot.wait_for_message(timeout=60, author=author, channel=channel)
+            if user_response is None: return await self.bot.say("Timed out waiting for a response.")
+            username = user_response.content
+            try:
+                userId = await DicecloudClient.getInstance().get_user_id(username)
+            except MeteorClientException:
+                pass
+            if userId: break
+            await self.bot.say("Dicecloud user not found. Maybe try your email, or putting it all lowercase if applicable.")
 
-        await self.createCharSheet(ctx, level, username, race, _class, subclass, background)
+        if userId is None:
+            return await self.bot.say("Invalid dicecloud username.")
 
-    async def createCharSheet(self, ctx, final_level, dicecloud_username, race=None, _class=None, subclass=None,
+        await self.createCharSheet(ctx, level, userId, race, _class, subclass, background)
+
+    async def createCharSheet(self, ctx, final_level, dicecloud_userId, race=None, _class=None, subclass=None,
                               background=None):
         dc = DicecloudClient.getInstance()
         caveats = []  # a to do list for the user
@@ -327,7 +338,7 @@ class CharGenerator:
             return await self.bot.say("I am having problems connecting to Dicecloud. Please try again later.")
 
         try:
-            await dc.share_character(char_id, dicecloud_username)
+            await dc.share_character(char_id, dicecloud_userId)
         except:
             dc.delete_character(char_id)  # clean up
             return await self.bot.say("Invalid dicecloud username.")

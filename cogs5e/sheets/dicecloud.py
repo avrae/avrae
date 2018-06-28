@@ -52,6 +52,10 @@ class DicecloudParser:
                         timeout = await resp.json()
                         log.info(f"Ratelimit hit getting character - resets in {timeout}ms")
                         await asyncio.sleep(timeout['timeToReset'] / 1000)  # rate-limited, just wait
+                    elif resp.status == 403:
+                        raise ExternalImportError("Error: I do not have permission to view this character sheet. Make "
+                                                  "sure it's either shared with `avrae` on Dicecloud or set so "
+                                                  "anyone with link can view.")
                     else:
                         raise ExternalImportError(f"Dicecloud returned an error: {resp.status} - {resp.reason}")
         character['_id'] = url

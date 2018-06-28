@@ -363,14 +363,14 @@ class DicecloudParser:
         if atkIn.get('parent', {}).get('collection') == 'Spells':
             spellParentID = atkIn.get('parent', {}).get('id')
             try:
-                spellObj = next(s for s in self.character.get('spells', {}) if s.get('id') == spellParentID)
+                spellObj = next(s for s in self.character.get('spells', {}) if s.get('_id') == spellParentID)
             except StopIteration:
                 pass
             else:
                 spellListParentID = spellObj.get('parent', {}).get('id')
                 try:
                     spellListObj = next(
-                        s for s in self.character.get('spellLists', {}) if s.get('id') == spellListParentID)
+                        s for s in self.character.get('spellLists', {}) if s.get('_id') == spellListParentID)
                 except StopIteration:
                     pass
                 else:

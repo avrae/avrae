@@ -1,7 +1,7 @@
 import ast
 import json
 import re
-from math import floor, ceil
+from math import floor, ceil, sqrt
 
 import simpleeval
 from simpleeval import EvalWithCompoundTypes, IterableTooLong
@@ -260,5 +260,5 @@ DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
 DEFAULT_OPERATORS.pop(ast.Pow)
 DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
-                          'range': safe_range,
+                          'range': safe_range, 'sqrt': sqrt,
                           'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json})

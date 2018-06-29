@@ -21,7 +21,7 @@ VALID_OPERATORS = 'k|rr|ro|mi|ma|ra|e'
 VALID_OPERATORS_2 = re.compile('|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')]))
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
 DICE_PATTERN = re.compile(
-    r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:[lh<>]?\d+))?|(\d+)|([-+*/().=])*)\s*(\[.*\])?)(.*?)\s*$',
+    r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:[lh<>]?\d+))*|(\d+)|([-+*/().=])?)\s*(\[.*\])?)(.*?)\s*$',
     IGNORECASE)
 
 

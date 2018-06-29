@@ -21,7 +21,7 @@ VALID_OPERATORS = 'k|rr|ro|mi|ma|ra|e'
 VALID_OPERATORS_2 = re.compile('|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')]))
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
 DICE_PATTERN = re.compile(
-    r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:\d+|l\d+|h\d+))*|(\d+)|([-+*/().<>=])?)\s*(\[.*\])?)(.*?)\s*$',
+    r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:[lh<>]?\d+))?|(\d+)|([-+*/().=])?)\s*(\[.*\])?)(.*?)\s*$',
     IGNORECASE)
 
 
@@ -44,7 +44,7 @@ def get_roll_comment(rollStr):
     try:
         comment = ''
         no_comment = ''
-        dice_set = re.split('([-+*/().<>=])', rollStr)
+        dice_set = re.split('([-+*/().=])', rollStr)
         dice_set = [d for d in dice_set if not d in (None, '')]
         log.debug("Found dice set: " + str(dice_set))
         for index, dice in enumerate(dice_set):
@@ -89,7 +89,7 @@ class Roll(object):
             # split roll string into XdYoptsSel [comment] or Op
             # set remainder to comment
             # parse each, returning a SingleDiceResult
-            dice_set = re.split('([-+*/().<>=])', rollStr)
+            dice_set = re.split('([-+*/().=])', rollStr)
             dice_set = [d for d in dice_set if not d in (None, '')]
             log.debug("Found dice set: " + str(dice_set))
             for index, dice in enumerate(dice_set):
@@ -450,16 +450,23 @@ def parse_selectors(opts, res, greedy=False):
     for o in range(len(opts)):
         if opts[o][0] is 'h':
             opts[o] = nlargest(int(opts[o].split('h')[1]), (d.value for d in res.rolled if d.kept))
-        if opts[o][0] is 'l':
+        elif opts[o][0] is 'l':
             opts[o] = nsmallest(int(opts[o].split('l')[1]), (d.value for d in res.rolled if d.kept))
+        elif opts[o][0] is '>':
+            opts[o] = list(range(int(opts[o].split('>')[1]) + 1, res.max_value + 1))
+        elif opts[o][0] is '<':
+            opts[o] = list(range(1, int(opts[o].split('<')[1])))
     out = []
     for o in opts:
         if isinstance(o, list):
-            out += [int(l) for l in o]
+            if greedy:
+                out.extend(int(l) for l in o)
+            else:
+                out.extend(d.value for d in res.rolled if d.value in o and d.kept)
         elif not greedy:
-            out += [int(o) for a in res.rolled if a.value is int(o) and a.kept]
+            out.extend(int(o) for a in res.rolled if a.value is int(o) and a.kept)
         else:
-            out += [int(o)]
+            out.append(int(o))
     return out
 
 

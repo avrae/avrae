@@ -23,6 +23,27 @@ def test_complex_rolls():
     assert len([p for p in r.raw_dice.parts[0].rolled if p.kept]) == 7
     assert len([p for p in r.raw_dice.parts[0].rolled if not p.kept]) == 3
 
+def test_gt_lt_selectors():
+    r = roll("10d6k>6")
+    assert r.total == 0
+    assert len([p for p in r.raw_dice.parts[0].rolled if p.kept]) == 0
+    assert len([p for p in r.raw_dice.parts[0].rolled if not p.kept]) == 10
+
+    r = roll("10d6k<1")
+    assert r.total == 0
+    assert len([p for p in r.raw_dice.parts[0].rolled if p.kept]) == 0
+    assert len([p for p in r.raw_dice.parts[0].rolled if not p.kept]) == 10
+
+    r = roll("10d6rr<6")
+    assert r.total == 60
+
+    r = roll("10d6rr>1")
+    assert r.total == 10
+
+    r = roll("10d6k<6")
+    assert 10 <= r.total <= 50
+    assert len([p for p in r.raw_dice.parts[0].rolled if p.kept]) <= 10
+    assert all(p.value < 6 for p in r.raw_dice.parts[0].rolled if p.kept)
 
 def test_infinite_loops():
     r = roll("1d1e1")

@@ -453,16 +453,19 @@ def parse_selectors(opts, res, greedy=False):
         elif opts[o][0] is 'l':
             opts[o] = nsmallest(int(opts[o].split('l')[1]), (d.value for d in res.rolled if d.kept))
         elif opts[o][0] is '>':
-            opts[o] = list(range(int(opts[o].split('>')[1]) + 1, res.max_value + 1))
+            if greedy:
+                opts[o] = list(range(int(opts[o].split('>')[1]) + 1, res.max_value + 1))
+            else:
+                opts[o] = [d.value for d in res.rolled if d.value > int(opts[o].split('>')[1])]
         elif opts[o][0] is '<':
-            opts[o] = list(range(1, int(opts[o].split('<')[1])))
+            if greedy:
+                opts[o] = list(range(1, int(opts[o].split('<')[1])))
+            else:
+                opts[o] = [d.value for d in res.rolled if d.value < int(opts[o].split('<')[1])]
     out = []
     for o in opts:
         if isinstance(o, list):
-            if greedy:
-                out.extend(int(l) for l in o)
-            else:
-                out.extend(d.value for d in res.rolled if d.value in o and d.kept)
+            out.extend(int(l) for l in o)
         elif not greedy:
             out.extend(int(o) for a in res.rolled if a.value is int(o) and a.kept)
         else:

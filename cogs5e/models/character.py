@@ -220,6 +220,21 @@ class Character:
             def cc_exists(name):
                 return name in self.get_all_consumables()
 
+            def cc_str(name):
+                counter = self.get_consumable(name)
+                _max = counter.get('max')
+                val = str(counter.get('value', 0))
+                if counter.get('type') == 'bubble':
+                    if _max is not None:
+                        numEmpty = _max - counter.get('value', 0)
+                        filled = '\u25c9' * counter.get('value', 0)
+                        empty = '\u3007' * numEmpty
+                        val = f"{filled}{empty}\n"
+                else:
+                    if _max is not None:
+                        val = f"{counter.get('value')} / {_max}"
+                return val
+
             def get_slots(level: int):
                 return self.get_remaining_slots(level)
 
@@ -292,7 +307,7 @@ class Character:
 
             _funcs = scripting.DEFAULT_FUNCTIONS.copy()
             _funcs.update(get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
-                          cc_exists=cc_exists, create_cc_nx=create_cc_nx,
+                          cc_exists=cc_exists, create_cc_nx=create_cc_nx, cc_str=cc_str,
                           get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                           get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, get_temphp=get_temphp, set_temphp=set_temphp,
                           set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,

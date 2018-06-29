@@ -89,6 +89,9 @@ class DataIO:
     def hset(self, key, field, value):
         return self._db.hset(key, field, value)
 
+    def hdel(self, key, *fields):
+        return self._db.hdel(key, *fields)
+
     def jhget(self, key, field, default=None):
         data = self.hget(key, field)
         return json.loads(data) if data is not None else default

@@ -534,6 +534,22 @@ class Customization:
 
         await self.bot.say('Your user variables:\n{}'.format(', '.join(sorted([name for name in user_vars.keys()]))))
 
+    @uservar.command(pass_context=True, name='deleteall', aliases=['removeall'])
+    async def uvar_deleteall(self, ctx):
+        """Deletes ALL user variables."""
+        user_id = ctx.message.author.id
+
+        await self.bot.say("This will delete **ALL** of your user variables (uvars). "
+                           "Are you *absolutely sure* you want to continue?\n"
+                           "Type `Yes, I am sure` to confirm.")
+        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+        if (not reply) or (not reply.content == "Yes, I am sure"):
+            return await self.bot.say("Unconfirmed. Aborting.")
+
+        self.bot.db.hdel("user_vars", user_id)
+
+        return await self.bot.say("OK. I have deleted all your uvars.")
+
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['gvar'])
     async def globalvar(self, ctx, name):
         """Commands to manage global, community variables for use in snippets and aliases.

@@ -941,6 +941,28 @@ class SheetManager:
 
         await self.bot.say('Character variable {} removed.'.format(name))
 
+    @cvar.command(pass_context=True, name='deleteall', aliases=['removeall'])
+    async def cvar_deleteall(self, ctx):
+        """Deletes ALL character variables for the active character."""
+        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        if active_character is None:
+            return await self.bot.say('You have no character active.')
+        character = user_characters[active_character]
+
+        await self.bot.say(f"This will delete **ALL** of your character variables for {character['stats']['name']}. "
+                           "Are you *absolutely sure* you want to continue?\n"
+                           "Type `Yes, I am sure` to confirm.")
+        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+        if (not reply) or (not reply.content == "Yes, I am sure"):
+            return await self.bot.say("Unconfirmed. Aborting.")
+
+        character['cvars'] = {}
+        user_characters[active_character] = character  # commit
+        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+
+        return await self.bot.say(f"OK. I have deleted all of {character['stats']['name']}'s cvars.")
+
     @cvar.command(pass_context=True, name='list')
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""

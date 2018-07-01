@@ -226,12 +226,14 @@ class Character:
                 val = str(counter.get('value', 0))
                 if counter.get('type') == 'bubble':
                     if _max is not None:
+                        _max = self.evaluate_cvar(_max)
                         numEmpty = _max - counter.get('value', 0)
                         filled = '\u25c9' * counter.get('value', 0)
                         empty = '\u3007' * numEmpty
-                        val = f"{filled}{empty}\n"
+                        val = f"{filled}{empty}"
                 else:
                     if _max is not None:
+                        _max = self.evaluate_cvar(_max)
                         val = f"{counter.get('value')} / {_max}"
                 return val
 

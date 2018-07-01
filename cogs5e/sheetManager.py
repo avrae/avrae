@@ -27,7 +27,6 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.initiative import Combat
-from cogs5e.sheets.beyondPdf import BeyondPDFSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
@@ -1074,40 +1073,6 @@ class SheetManager:
         embed = sheet['embed']
         await self.bot.say(embed=embed)
 
-    @commands.command(pass_context=True)
-    async def beyond(self, ctx):
-        """Loads a character sheet from a D&D Beyond-generated PDF, resetting all settings."""
-
-        if not 0 < len(ctx.message.attachments) < 2:
-            return await self.bot.say('You must call this command in the same message you upload the sheet.')
-
-        file = ctx.message.attachments[0]
-
-        override = await self._confirm_overwrite(ctx, file['filename'])
-        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
-
-        loading = await self.bot.say('Loading character data from Beyond PDF...')
-        parser = BeyondPDFSheetParser(file)
-        try:
-            await parser.get_character()
-        except Exception as e:
-            log.error("Error loading BeyondPDF sheet:")
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
-
-        try:
-            sheet = parser.get_sheet()
-            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(
-                sheet['sheet'].get('stats', {}).get('name')))
-        except Exception as e:
-            log.error("Error loading BeyondPDF sheet:")
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
-
-        Character(sheet['sheet'], f"beyondpdf-{file['filename']}").initialize_consumables().commit(ctx).set_active(ctx)
-
-        embed = sheet['embed']
-        await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True)
     async def gsheet(self, ctx, url: str):

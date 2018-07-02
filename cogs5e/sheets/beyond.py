@@ -13,23 +13,49 @@ import aiohttp
 import discord
 
 from cogs5e.funcs.dice import get_roll_comment
-from cogs5e.funcs.lookupFuncs import c
-from cogs5e.sheets.errors import MissingAttribute
+from cogs5e.models.errors import ExternalImportError
 from utils.functions import strict_search
 
 log = logging.getLogger(__name__)
 
+API_BASE = "https://www.dndbeyond.com/character/"
+CUSTOM_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/60.0.3112.113 Safari/537.36"
+}
+SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'intelligence', 'athletics': 'strength',
+             'deception': 'charisma', 'history': 'intelligence', 'initiative': 'dexterity', 'insight': 'wisdom',
+             'intimidation': 'charisma', 'investigation': 'intelligence', 'medicine': 'wisdom',
+             'nature': 'intelligence', 'perception': 'wisdom', 'performance': 'charisma',
+             'persuasion': 'charisma', 'religion': 'intelligence', 'sleightOfHand': 'dexterity', 'stealth': 'dexterity',
+             'survival': 'wisdom', 'strengthSave': 'strength', 'dexteritySave': 'dexterity',
+             'constitutionSave': 'constitution', 'intelligenceSave': 'intelligence', 'wisdomSave': 'wisdom',
+             'charismaSave': 'charisma'}
+
 
 class BeyondSheetParser:
 
-    def __init__(self, url):
-        self.url = url
+    def __init__(self, charId):
+        self.url = charId
         self.character = None
 
+        self.stats = None
+        self.levels = None
+
     async def get_character(self):
-        url = self.url
-        async with aiohttp.get(url) as f:
-            character = await f.json()
+        charId = self.url
+        character = None
+        async with aiohttp.ClientSession(headers=CUSTOM_HEADERS) as session:
+            async with session.get(f"{API_BASE}{charId}/json") as resp:
+                log.debug(f"DDB returned {resp.status}")
+                if resp.status == 200:
+                    character = await resp.json()
+                elif resp.status == 403:
+                    raise ExternalImportError("Error: I do not have permission to view this character sheet. "
+                                              "Make sure you've generated a sharable link for your character.")
+                else:
+                    raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
+        character['_id'] = charId
         self.character = character
         return character
 
@@ -39,13 +65,13 @@ class BeyondSheetParser:
         character = self.character
 
         try:
-            stats = self.get_stats()  # TODO
+            stats = self.get_stats()
             levels = self.get_levels()
-            hp = character.get('hitPoints', {}).get('max', 0)
-            dexArmor = self.calculate_stat('dexterityArmor', base=stats['dexterityMod'])  # TODO
-            armor = self.calculate_stat('armor', replacements={'dexterityArmor': dexArmor})  # TODO
+            hp = character['baseHitPoints'] + (
+                    (self.get_stat('hit-points-per-level', base=stats['constitutionMod'])) * levels['level'])
+            armor = self.get_ac()
             attacks = self.get_attacks()  # TODO
-            skills = self.get_skills()  # TODO
+            skills = self.get_skills()
             temp_resist = self.get_resistances()  # TODO
             resistances = temp_resist['resist']
             immunities = temp_resist['immune']
@@ -138,7 +164,7 @@ class BeyondSheetParser:
                 else:
                     tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                      a['damage'] if a['damage'] is not None else 'no'))
-        if tempAttacks == []:
+        if not tempAttacks:
             tempAttacks = ['No attacks.']
         embed.add_field(name="Attacks", value='\n'.join(tempAttacks))
 
@@ -147,69 +173,92 @@ class BeyondSheetParser:
     def get_stats(self):
         """Returns a dict of stats."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if self.stats: return self.stats
         character = self.character
-        stats = {"name": "", "image": "", "description": "",
-                 "strength": 10, "dexterity": 10, "constitution": 10, "wisdom": 10, "intelligence": 10, "charisma": 10,
-                 "strengthMod": 0, "dexterityMod": 0, "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0,
-                 "charismaMod": 0,
-                 "proficiencyBonus": 0}
-        stats['name'] = character.get('name') or "Unnamed"
-        stats['description'] = self.get_description()
-        stats['image'] = character.get('avatarUrl') or ''
-        stats['proficiencyBonus'] = int(character.get('proficiencyBonus'))
+        stats = {"name": "", "image": "", "description": "", "strength": 10, "dexterity": 10, "constitution": 10,
+                 "wisdom": 10, "intelligence": 10, "charisma": 10, "strengthMod": 0, "dexterityMod": 0,
+                 "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0, "charismaMod": 0, "proficiencyBonus": 0,
+                 'name': character.get('name') or "Unnamed", 'description': self.get_description(),
+                 'image': character.get('avatarUrl') or ''}
 
-        for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
-            try:
-                stats[stat] = int(character.get('stats', {}).get(stat[:3])) + int(
-                    character.get('bonusStats', {}).get(stat[:3]) or 0)
-                stats[stat + 'Mod'] = int(floor((stats[stat] - 10) / 2))
-            except TypeError:
-                raise MissingAttribute(stat)
+        profByLevel = floor(self.get_levels()['level'] / 4 + 1.75)
+        stats['proficiencyBonus'] = self.get_stat('proficiency-bonus', base=int(profByLevel))
 
+        for i, stat in enumerate(('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma')):
+            base = next(s for s in character['stats'] if s['id'] == i + 1)['value']
+            bonus = next(s for s in character['bonusStats'] if s['id'] == i + 1)['value'] or 0
+            override = next(s for s in character['overrideStats'] if s['id'] == i + 1)['value']
+            stats[stat] = override or self.get_stat(f"{stat}-score", base=base + bonus)
+            stats[f"{stat}Mod"] = floor((int(stats[stat]) - 10) / 2)
+
+        self.stats = stats
         return stats
+
+    def get_stat(self, stat, base=0):
+        """Calculates the final value of a stat, based on modifiers and feats."""
+        bonus = 0
+        for modtype in self.character['modifiers'].values():
+            for mod in modtype:
+                if not mod['subType'] == stat: continue
+                if mod['type'] == 'bonus':
+                    bonus += mod['value'] or self.stat_from_id(mod['statId'])
+                elif mod['type'] == 'set':
+                    base = mod['value'] or self.stat_from_id(mod['statId'])
+
+        return base + bonus
+
+    def stat_from_id(self, _id):
+        return self.get_stats()[('strengthMod', 'dexterityMod', 'constitutionMod',
+                                 'intelligenceMod', 'wisdomMod', 'charismaMod')[_id + 1]]
+
+    def get_ac(self):
+        base = 10
+        armortype = None
+        for item in self.character['inventory']:
+            if item['equipped'] and item['definition']['filterType'] == 'Armor':
+                base = item['definition']['armorClass']
+                armortype = item['definition']['type']
+        base = self.get_stat('armor-class', base=base)
+        dexBonus = self.get_stats()['dexterityMod']
+        unarmoredBonus = self.get_stat('unarmored-armor-class')
+        if armortype is None:
+            return base + dexBonus + unarmoredBonus
+        elif armortype == 'Light Armor':
+            return base + dexBonus
+        elif armortype == 'Medium Armor':
+            return base + min(dexBonus, 2)
+        else:
+            return base
 
     def get_description(self):
         if self.character is None: raise Exception('You must call get_character() first.')
-        character = self.character
-        n = character.get('name') or "Unnamed"
-        pronoun = "They"
-        desc = "{0} is a level {1} {2} {3}. {4} are {5} years old, {6} ft. tall, and appears to weigh about {7} lbs. {4} have {8} eyes, {9} hair, and {10} skin."
-        desc = desc.format(n,
-                           character.get('level', 0),
-                           character.acell("T7").value,  # TODO: get classes
-                           character.get('race') or 'unknown',
-                           pronoun,
-                           character.get('age') or "unknown",
-                           character.get('height') or "unknown",
-                           character.get('weight') or "unknown",
-                           character.get('eyes') or "unknown",
-                           character.get('hair') or "unknown",
-                           character.get('skin') or "unknown")
-        return desc
+        return "TODO"  # TODO
 
     def get_levels(self):
         """Returns a dict with the character's level and class levels."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if self.levels: return self.levels
         character = self.character
         levels = {"level": 0}
         for _class in character.get('classes', []):
             levels['level'] += _class.get('level')
-            levelName = _class.get('class', {}).get('name') + 'Level'
+            levelName = _class.get('definition', {}).get('name') + 'Level'
             if levels.get(levelName) is None:
                 levels[levelName] = _class.get('level')
             else:
                 levels[levelName] += _class.get('level')
+        self.levels = levels  # cache for further use
         return levels
 
     def get_attack(self, atkIn):
         """Calculates and returns a dict."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        attack = {'attackBonus': '0', 'damage': '0', 'name': ''}
-
-        attack['name'] = character.get('Attack' + str(atkIn))
-        attack['attackBonus'] = character.get('AtkBonus' + str(atkIn))
-        attack['damage'] = character.get('Damage' + str(atkIn))
+        attack = {
+            'attackBonus': character.get('AtkBonus' + str(atkIn)),
+            'damage': character.get('Damage' + str(atkIn)),
+            'name': character.get('Attack' + str(atkIn))
+        }
 
         if attack['name'] is None:
             return None
@@ -245,46 +294,46 @@ class BeyondSheetParser:
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
         stats = self.get_stats()
-        skillslist = ['acrobatics', 'animalHandling',
-                      'arcana', 'athletics',
-                      'charismaSave', 'constitutionSave',
-                      'deception', 'dexteritySave',
-                      'history', 'initiative',
-                      'insight', 'intelligenceSave',
-                      'intimidation', 'investigation',
-                      'medicine', 'nature',
-                      'perception', 'performance',
-                      'persuasion', 'religion',
-                      'sleightOfHand', 'stealth',
-                      'strengthSave', 'survival',
-                      'wisdomSave']
+
         skills = {}
         profs = {}
-        for skill in skillslist:
-            skills[skill] = stats.get(character.get('characters', [])[0].get(skill, {}).get('ability') + 'Mod', 0)
-        for prof in character.get('proficiencies', []):
-            if prof.get('enabled', False) and not prof.get('removed', False):
-                profs[prof.get('name')] = prof.get('value') \
-                    if prof.get('value') > profs.get(prof.get('name', 'None'), 0) \
-                    else profs[prof.get('name')]
+        bonuses = {}
+        for skill, stat in SKILL_MAP.items():
+            skills[skill] = stats.get(f"{stat}Mod", 0)
+
+        for modtype in character['modifiers'].values():
+            for mod in modtype:
+                mod['subType'] = mod['subType'].replace("-saving-throws", "Save")
+                if mod['type'] == 'half-proficiency':
+                    profs[mod['subType']] = max(profs.get(mod['subType'], 0), 0.5)
+                elif mod['type'] == 'proficiency':
+                    profs[mod['subType']] = max(profs.get(mod['subType'], 0), 1)
+                elif mod['type'] == 'expertise':
+                    profs[mod['subType']] = 2
+                elif mod['type'] == 'bonus':
+                    bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + mod['value']
+
+        profs['animalHandling'] = profs.get('animal-handling', 0)
+        profs['sleightOfHand'] = profs.get('sleight-of-hand', 0)
 
         for skill in skills:
-            skills[skill] = floor(skills[skill] + stats.get('proficiencyBonus') * profs.get(skill, 0))
-            skills[skill] = int(self.calculate_stat(skill, base=skills[skill]))
+            relevantprof = profs.get(skill, 0)
+            relevantbonus = bonuses.get(skill, 0)
+            if 'ability-checks' in profs and not 'Save' in skill:
+                relevantprof = max(relevantprof, profs['ability-checks'])
+            if 'saving-throws' in profs and 'Save' in skill:
+                relevantprof = max(relevantprof, profs['saving-throws'])
+            if 'ability-checks' in bonuses and not 'Save' in skill:
+                relevantbonus += bonuses['ability-checks']
+            if 'saving-throws' in bonuses and 'Save' in skill:
+                relevantbonus += bonuses['saving-throws']
+            skills[skill] = floor(
+                skills[skill] + (stats.get('proficiencyBonus') * relevantprof) + relevantbonus)
 
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             skills[stat] = stats.get(stat + 'Mod')
 
         return skills
-
-    def get_level(self):
-        if self.character is None: raise Exception('You must call get_character() first.')
-        character = self.character
-        level = 0
-        classlevel = character.get("ClassLevel", "")
-        for l in re.finditer(r'\d+', classlevel):
-            level += int(l.group(0))
-        return level
 
     def get_spellbook(self):
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -319,3 +368,13 @@ class BeyondSheetParser:
 
         log.debug(f"Completed parsing spellbook: {spellbook}")
         return spellbook
+
+
+if __name__ == '__main__':
+    import asyncio
+
+    while True:
+        url = input("DDB Character ID: ").strip()
+        parser = BeyondSheetParser(url)
+        asyncio.get_event_loop().run_until_complete(parser.get_character())
+        print(parser.get_sheet())

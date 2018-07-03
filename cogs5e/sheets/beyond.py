@@ -11,10 +11,9 @@ from math import floor
 
 import aiohttp
 import discord
+import html2text
 
-from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.models.errors import ExternalImportError
-from utils.functions import strict_search
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +30,21 @@ SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'i
              'survival': 'wisdom', 'strengthSave': 'strength', 'dexteritySave': 'dexterity',
              'constitutionSave': 'constitution', 'intelligenceSave': 'intelligence', 'wisdomSave': 'wisdom',
              'charismaSave': 'charisma'}
+DAMAGE_TYPES = {1: "bludgeoning", 2: "piercing", 3: "slashing", 4: "necrotic", 5: "acid", 6: "cold", 7: "fire",
+                8: "lightning", 9: "thunder", 10: "poison", 11: "psychic", 12: "radiant", 13: "force"}
+CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.334, "Monk": 0, "Paladin": 0.5,
+                "Ranger": 0.5, "Rogue": 0.334, "Sorcerer": 1, "Warlock": 0, "Wizard": 1}
+SLOTS_PER_LEVEL = {
+    1: lambda l: min(l + 1, 4),
+    2: lambda l: 0 if l < 3 else min(l - 1, 3),
+    3: lambda l: 0 if l < 5 else min(l - 3, 3),
+    4: lambda l: 0 if l < 7 else min(l - 6, 3),
+    5: lambda l: 0 if l < 9 else min(l - 8, 3),
+    6: lambda l: 0 if l < 11 else 1 if l < 19 else 2,
+    7: lambda l: 0 if l < 13 else 1 if l < 20 else 2,
+    8: lambda l: int(l >= 15),
+    9: lambda l: int(l >= 17)
+}
 
 
 class BeyondSheetParser:
@@ -41,6 +55,7 @@ class BeyondSheetParser:
 
         self.stats = None
         self.levels = None
+        self.prof = None
 
     async def get_character(self):
         charId = self.url
@@ -70,18 +85,17 @@ class BeyondSheetParser:
             hp = character['baseHitPoints'] + (
                     (self.get_stat('hit-points-per-level', base=stats['constitutionMod'])) * levels['level'])
             armor = self.get_ac()
-            attacks = self.get_attacks()  # TODO
+            attacks = self.get_attacks()
             skills = self.get_skills()
-            temp_resist = self.get_resistances()  # TODO
+            temp_resist = self.get_resistances()
             resistances = temp_resist['resist']
             immunities = temp_resist['immune']
             vulnerabilities = temp_resist['vuln']
-            skill_effects = self.get_skill_effects()  # TODO
-            spellbook = self.get_spellbook()  # TODO
+            spellbook = self.get_spellbook()
         except:
             raise
 
-        saves = {}  # TODO
+        saves = {}
         for key in skills:
             if 'Save' in key:
                 saves[key] = skills[key]
@@ -106,7 +120,6 @@ class BeyondSheetParser:
                  'vuln': vulnerabilities,
                  'saves': saves,
                  'stat_cvars': stat_vars,
-                 'skill_effects': skill_effects,
                  'consumables': {},
                  'spellbook': spellbook}
 
@@ -208,8 +221,10 @@ class BeyondSheetParser:
         return base + bonus
 
     def stat_from_id(self, _id):
-        return self.get_stats()[('strengthMod', 'dexterityMod', 'constitutionMod',
-                                 'intelligenceMod', 'wisdomMod', 'charismaMod')[_id + 1]]
+        if _id in range(1, 6):
+            return self.get_stats()[('strengthMod', 'dexterityMod', 'constitutionMod',
+                                     'intelligenceMod', 'wisdomMod', 'charismaMod')[_id - 1]]
+        return 0
 
     def get_ac(self):
         base = 10
@@ -232,7 +247,26 @@ class BeyondSheetParser:
 
     def get_description(self):
         if self.character is None: raise Exception('You must call get_character() first.')
-        return "TODO"  # TODO
+        character = self.character
+        g = character['gender']
+        n = character['name']
+        pronoun = "She" if g == "female" else "He" if g == "male" else "They"
+        verb = "is" if not pronoun == 'They' else "are"
+        desc = "{0} is a level {1} {2} {3}. {4} {5} {6} years old, {7} tall, and appears to weigh about {8}. " \
+               "{4} has {9} eyes, {10} hair, and {11} skin."
+        desc = desc.format(n,
+                           self.get_levels()['level'],
+                           character['race']['fullName'],
+                           '/'.join(c['definition']['name'] for c in character['classes']),
+                           pronoun,
+                           verb,
+                           character['age'] or "unknown",
+                           character['height'] or "unknown",
+                           character['weight'] or "unknown",
+                           (character['eyes'] or "unknown").lower(),
+                           (character['hair'] or "unknown").lower(),
+                           (character['skin'] or "unknown").lower())
+        return desc
 
     def get_levels(self):
         """Returns a dict with the character's level and class levels."""
@@ -250,31 +284,58 @@ class BeyondSheetParser:
         self.levels = levels  # cache for further use
         return levels
 
-    def get_attack(self, atkIn):
+    def get_attack(self, atkIn, atkType):
         """Calculates and returns a dict."""
         if self.character is None: raise Exception('You must call get_character() first.')
-        character = self.character
+        stats = self.get_stats()
+        prof = stats['proficiencyBonus']
         attack = {
-            'attackBonus': character.get('AtkBonus' + str(atkIn)),
-            'damage': character.get('Damage' + str(atkIn)),
-            'name': character.get('Attack' + str(atkIn))
+            'attackBonus': None,
+            'damage': None,
+            'name': None,
+            'details': None
         }
+        if atkType == 'action':
+            attack = {
+                'attackBonus': None,
+                'damage': f"{atkIn['dice']['diceString']}[{parse_dmg_type(atkIn)}]",
+                'name': atkIn['name'],
+                'details': atkIn['snippet']
+            }
+        elif atkType == 'customAction':
+            isProf = atkIn['isProficient']
+            dmgBonus = (atkIn['fixedValue'] or 0) + (atkIn['damageBonus'] or 0)
+            atkBonus = None
+            if atkIn['statId']:
+                atkBonus = str(
+                    self.stat_from_id(atkIn['statId']) + (prof if isProf else 0) + (atkIn['toHitBonus'] or 0))
+                dmgBonus = (atkIn['fixedValue'] or 0) + self.stat_from_id(atkIn['statId']) + (atkIn['damageBonus'] or 0)
+            attack = {
+                'attackBonus': atkBonus,
+                'damage': f"{atkIn['diceCount']}d{atkIn['diceType']}+{dmgBonus}"
+                          f"[{parse_dmg_type(atkIn)}]",
+                'name': atkIn['name'],
+                'details': atkIn['snippet']
+            }
+        elif atkType == 'item':
+            itemdef = atkIn['definition']
+            isProf = self.get_prof(itemdef['type'])
+            magicBonus = sum(
+                m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
+            dmgBonus = self.get_relevant_atkmod(itemdef) + magicBonus
+            toHitBonus = (prof if isProf else 0) + magicBonus
+            attack = {
+                'attackBonus': str(self.get_relevant_atkmod(itemdef) + toHitBonus),
+                'damage': f"{itemdef['damage']['diceString']}+{dmgBonus}"
+                          f"[{itemdef['damageType'].lower()}{'^' if itemdef['magic'] else ''}]",
+                'name': itemdef['name'],
+                'details': html2text.html2text(itemdef['description'], bodywidth=0).strip()
+            }
 
         if attack['name'] is None:
             return None
         if attack['damage'] is "":
             attack['damage'] = None
-        else:
-            damageTypes = ['acid', 'bludgeoning', 'cold', 'fire', 'force',
-                           'lightning', 'necrotic', 'piercing', 'poison',
-                           'psychic', 'radiant', 'slashing', 'thunder']
-            dice, comment = get_roll_comment(attack['damage'])
-            if any(d in comment.lower() for d in damageTypes):
-                attack['damage'] = "{}[{}]".format(dice, comment)
-            else:
-                attack['damage'] = dice
-                if comment.strip():
-                    attack['details'] = comment.strip()
 
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
 
@@ -284,9 +345,15 @@ class BeyondSheetParser:
         """Returns a list of dicts of all of the character's attacks."""
         if self.character is None: raise Exception('You must call get_character() first.')
         attacks = []
-        for attack in range(3):
-            a = self.get_attack(attack + 1)
-            if a is not None: attacks.append(a)
+        for src in self.character['actions'].values():
+            for action in src:
+                if action['displayAsAttack']:
+                    attacks.append(self.get_attack(action, "action"))
+        for action in self.character['customActions']:
+            attacks.append(self.get_attack(action, "customAction"))
+        for item in self.character['inventory']:
+            if item['equipped'] and (item['definition']['filterType'] == "Weapon" or item.get('displayAsAttack')):
+                attacks.append(self.get_attack(item, "item"))
         return attacks
 
     def get_skills(self):
@@ -335,39 +402,69 @@ class BeyondSheetParser:
 
         return skills
 
+    def get_resistances(self):
+        resist = {
+            'resist': [],
+            'immune': [],
+            'vuln': []
+        }
+        for modtype in self.character['modifiers'].values():
+            for mod in modtype:
+                if mod['type'] == 'resistance':
+                    resist['resist'].append(mod['subType'])
+                elif mod['type'] == 'immunity':
+                    resist['immune'].append(mod['subType'])
+                elif mod['type'] == 'vulnerability':
+                    resist['vuln'].append(mod['subType'])
+        return resist
+
     def get_spellbook(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         spellbook = {'spellslots': {},
                      'spells': [],
                      'dc': 0,
                      'attackBonus': 0}
+        spellcasterLevel = 0
+        spellMod = 0
+        for _class in self.character['classes']:
+            if _class['definition']['spellCastingAbilityId']:
+                spellcasterLevel += floor(_class['level'] * CASTER_TYPES.get(_class['definition']['name'], 1))
+                spellMod = max(spellMod, self.stat_from_id(_class['definition']['spellCastingAbilityId']))
 
         for lvl in range(1, 10):
-            try:
-                numSlots = int(self.character.get(f"SlotsTot{lvl}") or 0)
-            except ValueError:
-                numSlots = 0
-            spellbook['spellslots'][str(lvl)] = numSlots
+            spellbook['spellslots'][lvl] = SLOTS_PER_LEVEL[lvl](spellcasterLevel)
 
-        spellnames = set([self.character.get(f"Spells{n}") for n in range(1, 101) if self.character.get(f"Spells{n}")])
+        prof = self.get_stats()['proficiencyBonus']
+        spellbook['dc'] = 8 + spellMod + prof
+        spellbook['attackBonus'] = spellMod + prof
 
-        for spell in spellnames:
-            s = strict_search(c.spells, 'name', spell)
-            if s:
-                spellbook['spells'].append(s.get('name'))
+        for src in self.character['classSpells']:
+            spellbook['spells'].extend(s['definition']['name'] for s in src['spells'])
+        spellbook['spells'] = list(set(spellbook['spells']))
 
-        try:
-            spellbook['dc'] = int(self.character.get('SpellSaveDC', 0) or 0)
-        except ValueError:
-            pass
-
-        try:
-            spellbook['attackBonus'] = int(self.character.get('SAB', 0) or 0)
-        except ValueError:
-            pass
-
-        log.debug(f"Completed parsing spellbook: {spellbook}")
         return spellbook
+
+    def get_prof(self, proftype):
+        if not self.prof:
+            p = []
+            for modtype in self.character['modifiers'].values():
+                for mod in modtype:
+                    if mod['type'] == 'proficiency':
+                        p.append(mod['friendlySubtypeName'])
+            self.prof = p
+        return proftype in self.prof
+
+    def get_relevant_atkmod(self, itemdef):
+        if itemdef['attackType'] == 2:  # ranged, dex
+            return self.stat_from_id(2)
+        elif itemdef['attackType'] == 1:  # melee
+            if 'Finesse' in [p['name'] for p in itemdef['properties']]:  # finesse
+                return max(self.stat_from_id(1), self.stat_from_id(2))
+        return self.stat_from_id(1)  # strength
+
+
+def parse_dmg_type(attack):
+    return DAMAGE_TYPES.get(attack['damageTypeId'], "damage")
 
 
 if __name__ == '__main__':

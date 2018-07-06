@@ -45,6 +45,13 @@ SLOTS_PER_LEVEL = {
     8: lambda l: int(l >= 15),
     9: lambda l: int(l >= 17)
 }
+SIMPLE_WEAPONS = ["Club", "Dagger", "Greatclub", "Handaxe", "Javelin", "Light Hammer", "Mace", "Quarterstaff", "Sickle",
+                  "Spear", "Crossbow, Light", "Dart", "Shortbow", "Sling"]
+MARTIAL_WEAPONS = ['Battleaxe', 'Blowgun', 'Flail', 'Glaive', 'Greataxe', 'Greatsword', 'Halberd', 'Hand Crossbow',
+                   'Heavy Crossbow', 'Lance', 'Longbow', 'Longsword', 'Maul', 'Morningstar', 'Net', 'Pike', 'Rapier',
+                   'Scimitar', 'Shortsword', 'Trident', 'War Pick', 'Warhammer', 'Whip', 'Pistol', 'Musket',
+                   'Automatic Pistol', 'Revolver', 'Hunting Rifle', 'Automatic Rifle', 'Shotgun', 'Laser Pistol',
+                   'Antimatter Rifle', 'Laser Rifle']
 
 
 class BeyondSheetParser:
@@ -252,8 +259,9 @@ class BeyondSheetParser:
         n = character['name']
         pronoun = "She" if g == "female" else "He" if g == "male" else "They"
         verb = "is" if not pronoun == 'They' else "are"
+        verb2 = "has" if not pronoun == 'They' else "have"
         desc = "{0} is a level {1} {2} {3}. {4} {5} {6} years old, {7} tall, and appears to weigh about {8}. " \
-               "{4} has {9} eyes, {10} hair, and {11} skin."
+               "{4} {12} {9} eyes, {10} hair, and {11} skin."
         desc = desc.format(n,
                            self.get_levels()['level'],
                            character['race']['fullName'],
@@ -265,7 +273,8 @@ class BeyondSheetParser:
                            character['weight'] or "unknown",
                            (character['eyes'] or "unknown").lower(),
                            (character['hair'] or "unknown").lower(),
-                           (character['skin'] or "unknown").lower())
+                           (character['skin'] or "unknown").lower(),
+                           verb2)
         return desc
 
     def get_levels(self):
@@ -319,15 +328,18 @@ class BeyondSheetParser:
             }
         elif atkType == 'item':
             itemdef = atkIn['definition']
-            isProf = self.get_prof(itemdef['type'])
+            weirdBonuses = self.get_specific_item_bonuses(atkIn['id'])
+            isProf = self.get_prof(itemdef['type']) or weirdBonuses['isPact']
             magicBonus = sum(
                 m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
-            dmgBonus = self.get_relevant_atkmod(itemdef) + magicBonus
-            toHitBonus = (prof if isProf else 0) + magicBonus
+            dmgBonus = self.get_relevant_atkmod(itemdef) + magicBonus + weirdBonuses['damage']
+            toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
             attack = {
-                'attackBonus': str(self.get_relevant_atkmod(itemdef) + toHitBonus),
+                'attackBonus': weirdBonuses['attackBonusOverride'] or str(
+                    self.get_relevant_atkmod(itemdef) + toHitBonus),
                 'damage': f"{itemdef['damage']['diceString']}+{dmgBonus}"
-                          f"[{itemdef['damageType'].lower()}{'^' if itemdef['magic'] else ''}]",
+                          f"[{itemdef['damageType'].lower()}"
+                          f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",
                 'name': itemdef['name'],
                 'details': html2text.html2text(itemdef['description'], bodywidth=0).strip()
             }
@@ -426,20 +438,29 @@ class BeyondSheetParser:
                      'attackBonus': 0}
         spellcasterLevel = 0
         spellMod = 0
+        pactSlots = 0
+        pactLevel = 1
         for _class in self.character['classes']:
             if _class['definition']['spellCastingAbilityId']:
                 spellcasterLevel += floor(_class['level'] * CASTER_TYPES.get(_class['definition']['name'], 1))
                 spellMod = max(spellMod, self.stat_from_id(_class['definition']['spellCastingAbilityId']))
+            if _class['definition']['name'] == 'Warlock':
+                pactSlots = pact_slots_by_level(_class['level'])
+                pactLevel = pact_level_by_level(_class['level'])
 
         for lvl in range(1, 10):
             spellbook['spellslots'][lvl] = SLOTS_PER_LEVEL[lvl](spellcasterLevel)
+
+        spellbook['spellslots'][pactLevel] += pactSlots
 
         prof = self.get_stats()['proficiencyBonus']
         spellbook['dc'] = 8 + spellMod + prof
         spellbook['attackBonus'] = spellMod + prof
 
         for src in self.character['classSpells']:
-            spellbook['spells'].extend(s['definition']['name'] for s in src['spells'])
+            spellbook['spells'].extend(s['definition']['name'].replace('\u2019', "'") for s in src['spells'])
+        for src in self.character['spells']:
+            spellbook['spells'].extend(s['definition']['name'].replace('\u2019', "'") for s in src)
         spellbook['spells'] = list(set(spellbook['spells']))
 
         return spellbook
@@ -450,6 +471,10 @@ class BeyondSheetParser:
             for modtype in self.character['modifiers'].values():
                 for mod in modtype:
                     if mod['type'] == 'proficiency':
+                        if mod['subType'] == 'simple-weapons':
+                            p.extend(SIMPLE_WEAPONS)
+                        elif mod['subType'] == 'martial-weapons':
+                            p.extend(MARTIAL_WEAPONS)
                         p.append(mod['friendlySubtypeName'])
             self.prof = p
         return proftype in self.prof
@@ -462,9 +487,41 @@ class BeyondSheetParser:
                 return max(self.stat_from_id(1), self.stat_from_id(2))
         return self.stat_from_id(1)  # strength
 
+    def get_specific_item_bonuses(self, itemId):
+        out = {
+            'attackBonus': 0,
+            'attackBonusOverride': 0,
+            'damage': 0,
+            'isPact': False
+        }
+        for val in self.character['characterValues']:
+            if not val['valueId'] == itemId: continue
+            if val['typeId'] == 10:  # damage bonus
+                out['damage'] += val['value']
+            elif val['typeId'] == 12:  # to hit bonus
+                out['attackBonus'] += val['value']
+            elif val['typeId'] == 13:  # to hit override
+                out['attackBonusOverride'] = max(val['value'], out['attackBonusOverride'])
+            elif val['typeId'] == 28:  # pact weapon
+                out['isPact'] = True
+        return out
+
 
 def parse_dmg_type(attack):
     return DAMAGE_TYPES.get(attack['damageTypeId'], "damage")
+
+
+def pact_slots_by_level(level):
+    return {
+        1: 1,
+        2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 7: 2, 8: 2, 9: 2, 10: 2,
+        11: 3, 12: 3, 13: 3, 14: 3, 15: 3, 16: 3,
+        17: 4, 18: 4, 19: 4, 20: 4
+    }.get(level, 0)
+
+
+def pact_level_by_level(level):
+    return min(floor((level + 1) / 2), 5)
 
 
 if __name__ == '__main__':

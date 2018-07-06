@@ -335,8 +335,8 @@ class BeyondSheetParser:
             dmgBonus = self.get_relevant_atkmod(itemdef) + magicBonus + weirdBonuses['damage']
             toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
             attack = {
-                'attackBonus': str(weirdBonuses['attackBonusOverride']) or str(
-                    self.get_relevant_atkmod(itemdef) + toHitBonus),
+                'attackBonus': str(
+                    weirdBonuses['attackBonusOverride'] or self.get_relevant_atkmod(itemdef) + toHitBonus),
                 'damage': f"{itemdef['damage']['diceString']}+{dmgBonus}"
                           f"[{itemdef['damageType'].lower()}"
                           f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",
@@ -459,7 +459,7 @@ class BeyondSheetParser:
 
         for src in self.character['classSpells']:
             spellbook['spells'].extend(s['definition']['name'].replace('\u2019', "'") for s in src['spells'])
-        for src in self.character['spells']:
+        for src in self.character['spells'].values():
             spellbook['spells'].extend(s['definition']['name'].replace('\u2019', "'") for s in src)
         spellbook['spells'] = list(set(spellbook['spells']))
 

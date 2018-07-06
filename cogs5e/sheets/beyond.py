@@ -335,7 +335,7 @@ class BeyondSheetParser:
             dmgBonus = self.get_relevant_atkmod(itemdef) + magicBonus + weirdBonuses['damage']
             toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
             attack = {
-                'attackBonus': weirdBonuses['attackBonusOverride'] or str(
+                'attackBonus': str(weirdBonuses['attackBonusOverride']) or str(
                     self.get_relevant_atkmod(itemdef) + toHitBonus),
                 'damage': f"{itemdef['damage']['diceString']}+{dmgBonus}"
                           f"[{itemdef['damageType'].lower()}"

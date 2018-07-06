@@ -27,6 +27,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument
 from cogs5e.models.initiative import Combat
+from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
@@ -608,7 +609,7 @@ class SheetManager:
             return await self.bot.say('You have no character active.')
         url = active_character
         old_character = user_characters[url]
-        prefixes = 'dicecloud-', 'pdf-', 'google-', 'beyondpdf-'
+        prefixes = 'dicecloud-', 'pdf-', 'google-', 'beyond-'
         _id = copy.copy(url)
         for p in prefixes:
             if url.startswith(p):
@@ -633,14 +634,9 @@ class SheetManager:
             except AssertionError:
                 return await self.bot.say("I am still connecting to Google. Try again in 15-30 seconds.")
             loading = await self.bot.say('Updating character data from Google...')
-        elif sheet_type == 'beyond-pdf':
-            if not 0 < len(ctx.message.attachments) < 2:
-                return await self.bot.say('You must call this command in the same message you upload a PDF sheet.')
-
-            file = ctx.message.attachments[0]
-
-            loading = await self.bot.say('Updating character data from Beyond PDF...')
-            parser = BeyondPDFSheetParser(file)
+        elif sheet_type == 'beyond':
+            loading = await self.bot.say('Updating character data from Beyond...')
+            parser = BeyondSheetParser(_id)
         else:
             return await self.bot.say("Error: Unknown sheet type.")
         try:
@@ -666,8 +662,8 @@ class SheetManager:
             elif sheet_type == 'google':
                 fmt = character.cell("C6").value
                 sheet = await parser.get_sheet()
-            elif sheet_type == 'beyond-pdf':
-                fmt = character.get('CharacterName')
+            elif sheet_type == 'beyond':
+                fmt = character['name']
                 sheet = parser.get_sheet()
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
         except TypeError as e:
@@ -1073,7 +1069,6 @@ class SheetManager:
         embed = sheet['embed']
         await self.bot.say(embed=embed)
 
-
     @commands.command(pass_context=True)
     async def gsheet(self, ctx, url: str):
         """Loads a character sheet from [this Google sheet](https://docs.google.com/spreadsheets/d/1etrBJ0qCDXACovYHUM4XvjE0erndThwRLcUQzX6ts8w/edit?usp=sharing), resetting all settings. The sheet must be shared with Avrae (see specific command help) for this to work.
@@ -1118,6 +1113,43 @@ class SheetManager:
                                                'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
 
         Character(sheet['sheet'], f"google-{url}").initialize_consumables().commit(ctx).set_active(ctx)
+
+        embed = sheet['embed']
+        try:
+            await self.bot.say(embed=embed)
+        except:
+            await self.bot.say(
+                "...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
+
+    @commands.command(pass_context=True)
+    async def beyond(self, ctx, url: str):
+        """Loads a character sheet from D&D Beyond, resetting all settings."""
+
+        loading = await self.bot.say('Loading character data from Beyond...')
+        url = re.search(r"/characters/(\d+)", url)
+        if url is None:
+            return await self.bot.edit_message(loading, "This is not a D&D Beyond link.")
+        url = url.group(1)
+
+        override = await self._confirm_overwrite(ctx, f"beyond-{url}")
+        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
+
+        parser = BeyondSheetParser(url)
+
+        try:
+            character = await parser.get_character()
+        except Exception as e:
+            return await self.bot.edit_message(loading, 'Error: Could not load character sheet.\n' + str(e))
+
+        try:
+            sheet = parser.get_sheet()
+        except Exception as e:
+            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+
+        await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character['name']))
+
+        Character(sheet['sheet'], f"beyond-{url}").initialize_consumables().commit(ctx).set_active(ctx)
 
         embed = sheet['embed']
         try:

@@ -294,10 +294,11 @@ class BeyondSheetParser:
         return levels
 
     def get_attack(self, atkIn, atkType):
-        """Calculates and returns a dict."""
+        """Calculates and returns a list of dicts."""
         if self.character is None: raise Exception('You must call get_character() first.')
         stats = self.get_stats()
         prof = stats['proficiencyBonus']
+        out = []
         attack = {
             'attackBonus': None,
             'damage': None,
@@ -334,6 +335,7 @@ class BeyondSheetParser:
                 m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
             dmgBonus = self.get_relevant_atkmod(itemdef) + magicBonus + weirdBonuses['damage']
             toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
+
             attack = {
                 'attackBonus': str(
                     weirdBonuses['attackBonusOverride'] or self.get_relevant_atkmod(itemdef) + toHitBonus),
@@ -344,28 +346,54 @@ class BeyondSheetParser:
                 'details': html2text.html2text(itemdef['description'], bodywidth=0).strip()
             }
 
+            if 'Versatile' in [p['name'] for p in itemdef['properties']]:
+                versDmg = next(p['notes'] for p in itemdef['properties'] if p['name'] == 'Versatile')
+                out.append(
+                    {
+                        'attackBonus': attack['attackBonus'],
+                        'damage': f"{versDmg}+{dmgBonus}"
+                                  f"[{itemdef['damageType'].lower()}"
+                                  f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",
+                        'name': f"{itemdef['name']} 2H",
+                        'details': attack['details']
+                    }
+                )
+
         if attack['name'] is None:
             return None
         if attack['damage'] is "":
             attack['damage'] = None
 
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
+        out.insert(0, attack)
 
-        return attack
+        return out
 
     def get_attacks(self):
         """Returns a list of dicts of all of the character's attacks."""
         if self.character is None: raise Exception('You must call get_character() first.')
         attacks = []
+        used_names = []
+
+        def extend(parsed_attacks):
+            for atk in parsed_attacks:
+                if atk['name'] in used_names:
+                    num = 2
+                    while f"{atk['name']}{num}" in used_names:
+                        num += 1
+                    atk['name'] = f"{atk['name']}{num}"
+            attacks.extend(parsed_attacks)
+            used_names.extend(a['name'] for a in parsed_attacks)
+
         for src in self.character['actions'].values():
             for action in src:
                 if action['displayAsAttack']:
-                    attacks.append(self.get_attack(action, "action"))
+                    extend(self.get_attack(action, "action"))
         for action in self.character['customActions']:
-            attacks.append(self.get_attack(action, "customAction"))
+            extend(self.get_attack(action, "customAction"))
         for item in self.character['inventory']:
             if item['equipped'] and (item['definition']['filterType'] == "Weapon" or item.get('displayAsAttack')):
-                attacks.append(self.get_attack(item, "item"))
+                extend(self.get_attack(item, "item"))
         return attacks
 
     def get_skills(self):

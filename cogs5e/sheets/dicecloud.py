@@ -46,7 +46,7 @@ class DicecloudParser:
                 async with session.get(f"{API_BASE}{url}/json?key={KEY}") as resp:
                     log.debug(f"Dicecloud returned {resp.status}")
                     if resp.status == 200:
-                        character = await resp.json()
+                        character = await resp.json(encoding='utf-8')
                         break
                     elif resp.status == 429:
                         timeout = await resp.json()

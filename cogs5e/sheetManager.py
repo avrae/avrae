@@ -648,6 +648,7 @@ class SheetManager:
             return await self.bot.edit_message(loading,
                                                "Google returned an error trying to access your sheet. Please ensure your sheet is shared and try again in a few minutes.")
         except Exception as e:
+            del parser
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         try:
@@ -667,6 +668,7 @@ class SheetManager:
                 sheet = parser.get_sheet()
             await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
         except TypeError as e:
+            del parser
             log.info(f"Exception in parser.get_sheet: {e}")
             log.debug('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
             return await self.bot.edit_message(loading,
@@ -675,6 +677,7 @@ class SheetManager:
                                                'make sure you have shared the sheet so that anyone with the '
                                                'link can view.')
         except Exception as e:
+            del parser
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         embed = sheet['embed']

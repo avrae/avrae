@@ -228,7 +228,7 @@ class BeyondSheetParser:
         return base + bonus
 
     def stat_from_id(self, _id):
-        if _id in range(1, 6):
+        if _id in range(1, 7):
             return self.get_stats()[('strengthMod', 'dexterityMod', 'constitutionMod',
                                      'intelligenceMod', 'wisdomMod', 'charismaMod')[_id - 1]]
         return 0

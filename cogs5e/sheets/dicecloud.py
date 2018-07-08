@@ -328,9 +328,7 @@ class DicecloudParser:
                         safe_dict = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round}
                         safe_dict.update(replacements)
                         value = eval(calculation.lower(), {"__builtins__": None}, safe_dict)
-                    except SyntaxError:
-                        continue
-                    except KeyError:
+                    except (KeyError, SyntaxError):
                         raise
                 if operation == 'base' and value > base:
                     base = value

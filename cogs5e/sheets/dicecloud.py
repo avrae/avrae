@@ -14,7 +14,7 @@ from math import floor, ceil
 import aiohttp
 import discord
 import numexpr
-from simpleeval import SimpleEval
+from simpleeval import SimpleEval, NameNotDefined
 
 import credentials
 from cogs5e.funcs.lookupFuncs import c
@@ -369,14 +369,15 @@ class DicecloudParser:
                     pass
                 else:
                     try:
-                        temp_names['attackBonus'] = str(
+                        temp_names['attackBonus'] = int(
                             self.evaluator.eval(spellListObj.get('attackBonus')))
-                        temp_names['DC'] = str(self.evaluator.eval(spellListObj.get('saveDC')))
+                        temp_names['DC'] = int(self.evaluator.eval(spellListObj.get('saveDC')))
                     except Exception as e:
                         log.debug(f"Exception parsing spellvars: {e}")
 
         old_names = self.evaluator.names.copy()
         self.evaluator.names.update(temp_names)
+        log.debug(f"evaluator tempnames: {temp_names}")
         attack = {'attackBonus': atkIn.get('attackBonus', '').replace('{', '').replace('}', ''), 'damage': '0',
                   'name': atkIn.get('name'), 'details': None}
 
@@ -584,3 +585,12 @@ class DicecloudEvaluator(SimpleEval):
         if not functions:
             functions = self.DEFAULT_FUNCTIONS
         super(DicecloudEvaluator, self).__init__(operators, functions, names)
+
+    def _eval_name(self, node):
+        lowernames = {k.lower(): v for k, v in self.names.items()}
+        try:
+            return lowernames[node.id.lower()]
+        except KeyError:
+            if node.id in self.functions:
+                return self.functions[node.id]
+        raise NameNotDefined(node.id, self.expr)

@@ -3,6 +3,7 @@ Created on Jan 19, 2017
 
 @author: andrew
 """
+import ast
 import asyncio
 import logging
 import os
@@ -14,7 +15,7 @@ from math import floor, ceil
 import aiohttp
 import discord
 import numexpr
-from simpleeval import SimpleEval, NameNotDefined
+from simpleeval import SimpleEval, NameNotDefined, FunctionNotDefined
 
 import credentials
 from cogs5e.funcs.lookupFuncs import c
@@ -594,3 +595,19 @@ class DicecloudEvaluator(SimpleEval):
             if node.id in self.functions:
                 return self.functions[node.id]
         raise NameNotDefined(node.id, self.expr)
+
+    def _eval_call(self, node):
+        if isinstance(node.func, ast.Attribute):
+            func = self._eval(node.func)
+        elif isinstance(node.func, ast.Num):
+            func = lambda n: n * self._eval(node.func)
+        else:
+            try:
+                func = self.functions[node.func.id]
+            except KeyError:
+                raise FunctionNotDefined(node.func.id, self.expr)
+
+        return func(
+            *(self._eval(a) for a in node.args),
+            **dict(self._eval(k) for k in node.keywords)
+        )

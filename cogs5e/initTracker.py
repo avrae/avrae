@@ -1171,7 +1171,7 @@ class InitTracker:
         for userId, msgs in damage_msgs.items():
             try:
                 await self.bot.send_message(ctx.message.server.get_member(userId),
-                                            f"{combatant.name} cast {spell['name']}!" + '\n'.join(msgs))
+                                            f"{combatant.name} cast {spell['name']}!\n" + '\n'.join(msgs))
             except:
                 pass
         spell_ctx = spell_context(spell)

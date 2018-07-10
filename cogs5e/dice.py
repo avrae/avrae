@@ -141,7 +141,7 @@ class Dice:
     async def rr(self, ctx, iterations: int, rollStr, *, args=''):
         """Rolls dice in xdy format a given number of times.
         Usage: !rrr <iterations> <xdy> [args]"""
-        if iterations < 1 or iterations > 500:
+        if iterations < 1 or iterations > 100:
             return await self.bot.say("Too many or too few iterations.")
         self.bot.db.incr('dice_rolled_life')
         adv = 0
@@ -169,7 +169,7 @@ class Dice:
     async def rrr(self, ctx, iterations: int, rollStr, dc: int = 0, *, args=''):
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
-        if iterations < 1 or iterations > 500:
+        if iterations < 1 or iterations > 100:
             return await self.bot.say("Too many or too few iterations.")
         self.bot.db.incr('dice_rolled_life')
         adv = 0

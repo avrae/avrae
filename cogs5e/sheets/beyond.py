@@ -72,7 +72,7 @@ class BeyondSheetParser:
                 log.debug(f"DDB returned {resp.status}")
                 if resp.status == 200:
                     character = await resp.json()
-                elif resp.status == 403:
+                elif resp.status == 404:
                     raise ExternalImportError("Error: I do not have permission to view this character sheet. "
                                               "Make sure you've generated a sharable link for your character.")
                 else:

@@ -240,6 +240,9 @@ class Customization:
         if alias_name in self.bot.commands:
             return await self.bot.say('There is already a built-in command with that name!')
 
+        if ' ' in alias_name or not alias_name:
+            return await self.bot.say('Invalid alias name.')
+
         if cmds is None:
             alias = user_aliases.get(alias_name)
             if alias is None:

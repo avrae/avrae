@@ -303,6 +303,8 @@ class SingleDiceGroup(Part):
         if not rerollList: return  # don't reroll nothing - minor optimization
         if unique:
             rerollList = list(set(rerollList))  # remove duplicates
+        if len(rerollList) > 100:
+            raise OverflowError("Too many dice to reroll (max 100)")
         for i in range(iterations):  # let's only iterate 250 times for sanity
             temp = copy(rerollList)
             breakCheck = True

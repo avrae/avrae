@@ -3,6 +3,7 @@ Created on Jan 19, 2017
 
 @author: andrew
 """
+import ast
 import asyncio
 import logging
 import os
@@ -14,6 +15,7 @@ from math import floor, ceil
 import aiohttp
 import discord
 import numexpr
+from simpleeval import SimpleEval, NameNotDefined, FunctionNotDefined
 
 import credentials
 from cogs5e.funcs.lookupFuncs import c
@@ -37,6 +39,7 @@ class DicecloudParser:
     def __init__(self, url):
         self.url = url
         self.character = None
+        self.evaluator = DicecloudEvaluator()
 
     async def get_character(self):
         url = self.url
@@ -69,8 +72,10 @@ class DicecloudParser:
             stats = self.get_stats()
             levels = self.get_levels()
             hp = self.calculate_stat('hitPoints')
-            dexArmor = self.calculate_stat('dexterityArmor', base=stats['dexterityMod'])
-            armor = self.calculate_stat('armor', replacements={'dexterityArmor': dexArmor})
+
+            self.evaluator.names['dexterityArmor'] = self.calculate_stat('dexterityArmor', base=stats['dexterityMod'])
+            armor = self.calculate_stat('armor')
+
             attacks = self.get_attacks()
             skills = self.get_skills()
             temp_resist = self.get_resistances()
@@ -197,7 +202,7 @@ class DicecloudParser:
             else:
                 tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                  a['damage'] if a['damage'] is not None else 'no'))
-        if tempAttacks == []:
+        if not tempAttacks:
             tempAttacks = ['No attacks.']
         a = '\n'.join(tempAttacks)
         if len(a) > 1023:
@@ -272,20 +277,20 @@ class DicecloudParser:
         """Returns a dict of stats."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        stats = {"name": "", "image": "", "description": "",
-                 "strength": 10, "dexterity": 10, "constitution": 10, "wisdom": 10, "intelligence": 10, "charisma": 10,
-                 "strengthMod": 0, "dexterityMod": 0, "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0,
-                 "charismaMod": 0,
-                 "proficiencyBonus": 0}
-        stats['name'] = character.get('characters')[0].get('name')
-        stats['description'] = character.get('characters')[0].get('description')
-        stats['image'] = character.get('characters')[0].get('picture', '')
+        stats = {"name": "", "image": "", "description": "", "strength": 10, "dexterity": 10, "constitution": 10,
+                 "wisdom": 10, "intelligence": 10, "charisma": 10, "strengthMod": 0, "dexterityMod": 0,
+                 "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0, "charismaMod": 0, "proficiencyBonus": 0,
+                 'name': character.get('characters')[0].get('name'),
+                 'description': character.get('characters')[0].get('description'),
+                 'image': character.get('characters')[0].get('picture', '')}
         profByLevel = floor(self.get_levels()['level'] / 4 + 1.75)
         stats['proficiencyBonus'] = self.get_stat('proficiencyBonus', base=int(profByLevel))
 
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             stats[stat] = self.get_stat(stat)
             stats[stat + 'Mod'] = floor((int(stats[stat]) - 10) / 2)
+
+        self.evaluator.names.update(stats)
 
         return stats
 
@@ -302,15 +307,13 @@ class DicecloudParser:
                 levels[levelName] = level.get('level')
             else:
                 levels[levelName] += level.get('level')
+        self.evaluator.names.update(levels)
         return levels
 
-    def calculate_stat(self, stat, base=0, replacements: dict = {}):
+    def calculate_stat(self, stat, base=0):
         """Calculates and returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        replacements.update(self.get_stats())
-        replacements.update(self.get_levels())
-        replacements = dict((k.lower(), v) for k, v in replacements.items())
         effects = character.get('effects', [])
         add = 0
         mult = 1
@@ -322,15 +325,11 @@ class DicecloudParser:
                 if effect.get('value') is not None:
                     value = effect.get('value')
                 else:
-                    calculation = effect.get('calculation', '').replace('{', '').replace('}', '').lower()
-                    if calculation == '': continue
+                    calculation = effect.get('calculation', '').replace('{', '').replace('}', '').strip()
+                    if not calculation: continue
                     try:
-                        safe_dict = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round}
-                        safe_dict.update(replacements)
-                        value = eval(calculation.lower(), {"__builtins__": None}, safe_dict)
-                    except SyntaxError:
-                        continue
-                    except KeyError:
+                        value = self.evaluator.eval(calculation)
+                    except (KeyError, SyntaxError):
                         raise
                 if operation == 'base' and value > base:
                     base = value
@@ -352,14 +351,10 @@ class DicecloudParser:
     def get_attack(self, atkIn):
         """Calculates and returns a dict."""
         if self.character is None: raise Exception('You must call get_character() first.')
-        replacements = self.get_stats()
-        replacements.update(self.get_levels())
 
         log.debug(f"Processing attack {atkIn.get('name')}")
 
-        safe_dict = {'ceil': ceil, 'floor': floor, 'round': round, 'max': max, 'min': min}
-        safe_dict.update(replacements)
-
+        temp_names = {}
         if atkIn.get('parent', {}).get('collection') == 'Spells':
             spellParentID = atkIn.get('parent', {}).get('id')
             try:
@@ -375,37 +370,37 @@ class DicecloudParser:
                     pass
                 else:
                     try:
-                        replacements['attackBonus'] = str(
-                            eval(spellListObj.get('attackBonus'), {"__builtins__": None}, safe_dict))
-                        replacements['DC'] = str(eval(spellListObj.get('saveDC'), {"__builtins__": None}, safe_dict))
+                        temp_names['attackBonus'] = int(
+                            self.evaluator.eval(spellListObj.get('attackBonus')))
+                        temp_names['DC'] = int(self.evaluator.eval(spellListObj.get('saveDC')))
                     except Exception as e:
                         log.debug(f"Exception parsing spellvars: {e}")
 
-        safe_dict.update(replacements)
-        attack = {'attackBonus': '0', 'damage': '0', 'name': atkIn.get('name'), 'details': None}
+        old_names = self.evaluator.names.copy()
+        self.evaluator.names.update(temp_names)
+        log.debug(f"evaluator tempnames: {temp_names}")
+        attack = {'attackBonus': atkIn.get('attackBonus', '').replace('{', '').replace('}', ''), 'damage': '0',
+                  'name': atkIn.get('name'), 'details': None}
 
-        attackBonus = re.split('([-+*/^().<>= ])', atkIn.get('attackBonus', '').replace('{', '').replace('}', ''))
-        attack['attackBonus'] = ''.join(str(replacements.get(word, word)) for word in attackBonus)
         if attack['attackBonus'] == '':
             attack['attackBonus'] = None
         else:
             try:
-                attack['attackBonus'] = str(eval(attack['attackBonus'], {"__builtins__": None}, safe_dict))
+                attack['attackBonus'] = str(self.evaluator.eval(attack['attackBonus']))
             except:
                 pass
 
         def damage_sub(match):
             out = match.group(1)
             try:
-                log.debug(f"damage_sub: evaluating {out.lower()}")
-                return str(eval(out.lower(), {"__builtins__": None}, {k.lower(): v for k, v in safe_dict.items()}))
+                log.debug(f"damage_sub: evaluating {out}")
+                return str(self.evaluator.eval(out))
             except Exception as ex:
                 log.debug(f"exception in damage_sub: {ex}")
                 return match.group(0)
 
         damage = re.sub(r'{(.*?)}', damage_sub, atkIn.get('damage', ''))
-        damage = re.split('([-+*/^().<>= ])', damage.replace('{', '').replace('}', ''))
-        attack['damage'] = ''.join(str(replacements.get(word, word)) for word in damage)
+        attack['damage'] = damage.replace('{', '').replace('}', '')
         if not attack['damage']:
             attack['damage'] = None
         else:
@@ -416,6 +411,8 @@ class DicecloudParser:
         if details:
             details = re.sub(r'{([^{}]*)}', damage_sub, details)
             attack['details'] = details
+
+        self.evaluator.names = old_names
 
         return attack
 
@@ -542,22 +539,11 @@ class DicecloudParser:
             if s:
                 spellbook['spells'].append(s.get('name'))
 
-        replacements = self.get_stats()
-        replacements.update(self.get_levels())
-
-        # make a list of safe functions
-        safe_list = ['ceil', 'floor']
-        # use the list to filter the local namespace
-        safe_dict = dict([(k, locals().get(k, None)) for k in safe_list])
-        safe_dict['max'] = max
-        safe_dict['min'] = min
-        safe_dict.update(replacements)
-
         sls = [(0, 0)]  # ab, dc
         for sl in self.character.get('spellLists', []):
             try:
-                ab = int(eval(sl.get('attackBonus'), {"__builtins__": None}, safe_dict))
-                dc = int(eval(sl.get('saveDC'), {"__builtins__": None}, safe_dict))
+                ab = int(self.evaluator.eval(sl.get('attackBonus')))
+                dc = int(self.evaluator.eval(sl.get('saveDC')))
                 sls.append((ab, dc))
             except:
                 pass
@@ -591,3 +577,37 @@ class DicecloudParser:
                  'reset': reset, 'live': f['_id']}
             counters.append(c)
         return counters
+
+
+class DicecloudEvaluator(SimpleEval):
+    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round}
+
+    def __init__(self, operators=None, functions=None, names=None):
+        if not functions:
+            functions = self.DEFAULT_FUNCTIONS
+        super(DicecloudEvaluator, self).__init__(operators, functions, names)
+
+    def _eval_name(self, node):
+        lowernames = {k.lower(): v for k, v in self.names.items()}
+        try:
+            return lowernames[node.id.lower()]
+        except KeyError:
+            if node.id in self.functions:
+                return self.functions[node.id]
+        raise NameNotDefined(node.id, self.expr)
+
+    def _eval_call(self, node):
+        if isinstance(node.func, ast.Attribute):
+            func = self._eval(node.func)
+        elif isinstance(node.func, ast.Num):
+            func = lambda n: n * self._eval(node.func)
+        else:
+            try:
+                func = self.functions[node.func.id]
+            except KeyError:
+                raise FunctionNotDefined(node.func.id, self.expr)
+
+        return func(
+            *(self._eval(a) for a in node.args),
+            **dict(self._eval(k) for k in node.keywords)
+        )

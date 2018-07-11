@@ -322,6 +322,8 @@ class DicecloudParser:
         for effect in effects:
             if effect.get('stat') == stat and effect.get('enabled', True) and not effect.get('removed', False):
                 operation = effect.get('operation', 'base')
+                if operation not in ('base', 'add', 'mul', 'min', 'max'):
+                    continue
                 if effect.get('value') is not None:
                     value = effect.get('value')
                 else:
@@ -329,7 +331,9 @@ class DicecloudParser:
                     if not calculation: continue
                     try:
                         value = self.evaluator.eval(calculation)
-                    except (KeyError, SyntaxError):
+                    except SyntaxError:
+                        continue
+                    except KeyError:
                         raise
                 if operation == 'base' and value > base:
                     base = value

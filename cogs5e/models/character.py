@@ -243,6 +243,9 @@ class Character:
             def get_slots_max(level: int):
                 return self.get_max_spellslots(level)
 
+            def slots_str(level: int):
+                return self.get_remaining_slots_str(level).strip()
+
             def set_slots(level: int, value: int):
                 self.set_remaining_slots(level, value)
                 nonlocal changed
@@ -311,6 +314,7 @@ class Character:
             _funcs.update(get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
                           cc_exists=cc_exists, create_cc_nx=create_cc_nx, cc_str=cc_str,
                           get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
+                          slots_str=slots_str,
                           get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, get_temphp=get_temphp, set_temphp=set_temphp,
                           set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
                           get_gvar=get_gvar, exists=exists,

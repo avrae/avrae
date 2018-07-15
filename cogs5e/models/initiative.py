@@ -164,7 +164,7 @@ class Combat:
         Gets a combatant group.
         :rtype: CombatantGroup
         :param name: The name of the combatant group.
-        :param create: The initiaitve to create a group at if a group is not found.
+        :param create: The initiative to create a group at if a group is not found.
         :return: The combatant group.
         """
         grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
@@ -239,17 +239,52 @@ class Combat:
 
         self._turn = self.current_combatant.init
 
-    def goto_turn(self, init_num):
+    def goto_turn(self, init_num, is_combatant=False):
         if len(self._combatants) == 0:
             raise NoCombatants
 
-        target = next((c for c in self._combatants if c.init <= init_num), None)
-        if target:
-            self._current_index = target.index
+        if is_combatant:
+            if init_num.group:
+                init_num = self.get_group(init_num.group)
+            self._current_index = init_num.index
         else:
-            self._current_index = 0
+            target = next((c for c in self._combatants if c.init <= init_num), None)
+            if target:
+                self._current_index = target.index
+            else:
+                self._current_index = 0
 
         self._turn = self.current_combatant.init
+
+    def skip_rounds(self, num_rounds):
+        self._round += num_rounds
+        for com in self.get_combatants():
+            com.on_turn(num_rounds)
+        if self.options.get('dynamic'):
+            self.reroll_dynamic()
+
+    def get_turn_str(self):
+        nextCombatant = self.current_combatant
+
+        if isinstance(nextCombatant, CombatantGroup):
+            thisTurn = nextCombatant.get_combatants()
+            outStr = "**Initiative {} (round {})**: {} ({})\n{}"
+            outStr = outStr.format(self.turn_num,
+                                   self.round_num,
+                                   nextCombatant.name,
+                                   ", ".join({co.controller_mention() for co in thisTurn}),
+                                   '```markdown\n' + "\n".join([co.get_status() for co in thisTurn]) + '```')
+        else:
+            outStr = "**Initiative {} (round {})**: {}\n{}"
+            outStr = outStr.format(self.turn_num,
+                                   self.round_num,
+                                   "{} ({})".format(nextCombatant.name, nextCombatant.controller_mention()),
+                                   '```markdown\n' + nextCombatant.get_status() + '```')
+
+        if self.options.get('turnnotif'):
+            nextTurn = self.next_combatant
+            outStr += f"**Next up**: {nextTurn.name} ({nextTurn.controller_mention()})\n"
+        return outStr
 
     @staticmethod
     def ensure_unique_chan(ctx):
@@ -596,13 +631,14 @@ class Combatant:
         """
         return "Slots are not yet tracked for non-player combatants."
 
-    def on_turn(self):
+    def on_turn(self, num_turns=1):
         """
         A method called at the start of each of the combatant's turns.
+        :param num_turns: The number of turns that just passed.
         :return: None
         """
         for e in self.get_effects().copy():
-            if e.on_turn():
+            if e.on_turn(num_turns):
                 self.remove_effect(e)
 
     def get_summary(self, private=False):
@@ -919,9 +955,9 @@ class CombatantGroup:
         """
         return '\n'.join(c.get_status(private) for c in self.get_combatants())
 
-    def on_turn(self):
+    def on_turn(self, num_turns=1):
         for c in self.get_combatants():
-            c.on_turn()
+            c.on_turn(num_turns)
 
     def on_remove(self):
         for c in self.get_combatants():
@@ -976,14 +1012,14 @@ class Effect:
     def effect(self):
         return self._effect
 
-    def on_turn(self):
+    def on_turn(self, num_turns=1):
         """
         :return: Whether to remove the effect.
         """
         if self.remaining > 0:
-            self._remaining -= 1
-        if self.remaining == 0:
-            return True
+            if self.remaining - num_turns <= 0:
+                return True
+            self._remaining -= num_turns
         return False
 
     @classmethod

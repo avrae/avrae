@@ -398,34 +398,13 @@ class InitTracker:
         if advanced_round:
             self.bot.db.incr('rounds_init_tracked_life')
 
-        nextCombatant = combat.current_combatant
-
-        if isinstance(nextCombatant, CombatantGroup):
-            thisTurn = nextCombatant.get_combatants()
-            for co in thisTurn:
-                co.on_turn()
-            outStr = "**Initiative {} (round {})**: {} ({})\n{}"
-            outStr = outStr.format(combat.turn_num,
-                                   combat.round_num,
-                                   nextCombatant.name,
-                                   ", ".join({co.controller_mention() for co in thisTurn}),
-                                   '```markdown\n' + "\n".join([co.get_status() for co in thisTurn]) + '```')
-        else:
-            nextCombatant.on_turn()
-            outStr = "**Initiative {} (round {})**: {}\n{}"
-            outStr = outStr.format(combat.turn_num,
-                                   combat.round_num,
-                                   "{} ({})".format(nextCombatant.name, nextCombatant.controller_mention()),
-                                   '```markdown\n' + nextCombatant.get_status() + '```')
+        out = combat.get_turn_str()
 
         for co in toRemove:
             combat.remove_combatant(co)
-            outStr += "{} automatically removed from combat.\n".format(co.name)
+            out += "{} automatically removed from combat.\n".format(co.name)
 
-        if combat.options.get('turnnotif'):
-            nextTurn = combat.next_combatant
-            outStr += f"**Next up**: {nextTurn.name} ({nextTurn.controller_mention()})\n"
-        await self.bot.say(outStr)
+        await self.bot.say(out)
         await combat.final()
 
     @init.command(pass_context=True, name="prev", aliases=['previous', 'rewind'])
@@ -440,32 +419,39 @@ class InitTracker:
 
         combat.rewind_turn()
 
-        nextCombatant = combat.current_combatant
-
-        if isinstance(nextCombatant, CombatantGroup):
-            thisTurn = nextCombatant.get_combatants()
-            outStr = "**Initiative {} (round {})**: {} ({})\n{}"
-            outStr = outStr.format(combat.turn_num,
-                                   combat.round_num,
-                                   nextCombatant.name,
-                                   ", ".join({co.controller_mention() for co in thisTurn}),
-                                   '```markdown\n' + "\n".join([co.get_status() for co in thisTurn]) + '```')
-        else:
-            outStr = "**Initiative {} (round {})**: {}\n{}"
-            outStr = outStr.format(combat.turn_num,
-                                   combat.round_num,
-                                   "{} ({})".format(nextCombatant.name, nextCombatant.controller_mention()),
-                                   '```markdown\n' + nextCombatant.get_status() + '```')
-
-        if combat.options.get('turnnotif'):
-            nextTurn = combat.next_combatant
-            outStr += f"**Next up**: {nextTurn.name} ({nextTurn.controller_mention()})\n"
-        await self.bot.say(outStr)
+        await self.bot.say(combat.get_turn_str())
         await combat.final()
 
     @init.command(pass_context=True, name="move", aliases=['goto'])
-    async def movesInit(self, ctx, init: int):
-        """Moves to a certain initiative."""
+    async def moveInit(self, ctx, target=None):
+        """Moves to a certain initiative.
+        `target` can be either a number, to go to that initiative, or a name.
+        If not supplied, goes to the first combatant that the user controls."""
+        combat = Combat.from_ctx(ctx)
+
+        if len(combat.get_combatants()) == 0:
+            await self.bot.say("There are no combatants.")
+            return
+
+        if target is None:
+            combatant = next((c for c in combat.get_combatants() if c.controller == ctx.message.author.id), None)
+            if combatant is None:
+                return await self.bot.say("You do not control any combatants.")
+            combat.goto_turn(combatant, True)
+        else:
+            try:
+                target = int(target)
+                combat.goto_turn(target)
+            except ValueError:
+                combatant = await combat.select_combatant(target)
+                combat.goto_turn(combatant, True)
+
+        await self.bot.say(combat.get_turn_str())
+        await combat.final()
+
+    @init.command(pass_context=True, name="skipround", aliases=['round', 'skiprounds'])
+    async def skipround(self, ctx, numrounds: int = 1):
+        """Skips one or more rounds of initiative."""
 
         combat = Combat.from_ctx(ctx)
 
@@ -473,29 +459,9 @@ class InitTracker:
             await self.bot.say("There are no combatants.")
             return
 
-        combat.goto_turn(init)
+        combat.skip_rounds(numrounds)
 
-        nextCombatant = combat.current_combatant
-
-        if isinstance(nextCombatant, CombatantGroup):
-            thisTurn = nextCombatant.get_combatants()
-            outStr = "**Initiative {} (round {})**: {} ({})\n{}"
-            outStr = outStr.format(combat.turn_num,
-                                   combat.round_num,
-                                   nextCombatant.name,
-                                   ", ".join({co.controller_mention() for co in thisTurn}),
-                                   '```markdown\n' + "\n".join([co.get_status() for co in thisTurn]) + '```')
-        else:
-            outStr = "**Initiative {} (round {})**: {}\n{}"
-            outStr = outStr.format(combat.turn_num,
-                                   combat.round_num,
-                                   "{} ({})".format(nextCombatant.name, nextCombatant.controller_mention()),
-                                   '```markdown\n' + nextCombatant.get_status() + '```')
-
-        if combat.options.get('turnnotif'):
-            nextTurn = combat.next_combatant
-            outStr += f"**Next up**: {nextTurn.name} ({nextTurn.controller_mention()})\n"
-        await self.bot.say(outStr)
+        await self.bot.say(combat.get_turn_str())
         await combat.final()
 
     @init.command(pass_context=True, name="list", aliases=['summary'])

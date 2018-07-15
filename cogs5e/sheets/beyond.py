@@ -236,21 +236,26 @@ class BeyondSheetParser:
     def get_ac(self):
         base = 10
         armortype = None
+        shield = 0
         for item in self.character['inventory']:
             if item['equipped'] and item['definition']['filterType'] == 'Armor':
                 base = item['definition']['armorClass']
-                armortype = item['definition']['type']
+                _type = item['definition']['type']
+                if _type == "Shield":
+                    shield = 2
+                else:
+                    armortype = _type
         base = self.get_stat('armor-class', base=base)
         dexBonus = self.get_stats()['dexterityMod']
         unarmoredBonus = self.get_stat('unarmored-armor-class')
         if armortype is None:
-            return base + dexBonus + unarmoredBonus
+            return base + dexBonus + unarmoredBonus + shield
         elif armortype == 'Light Armor':
-            return base + dexBonus
+            return base + dexBonus + shield
         elif armortype == 'Medium Armor':
-            return base + min(dexBonus, 2)
+            return base + min(dexBonus, 2) + shield
         else:
-            return base
+            return base + shield
 
     def get_description(self):
         if self.character is None: raise Exception('You must call get_character() first.')

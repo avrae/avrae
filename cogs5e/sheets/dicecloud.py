@@ -39,6 +39,8 @@ class DicecloudParser:
     def __init__(self, url):
         self.url = url
         self.character = None
+        self.stats = None
+        self.levels = None
         self.evaluator = DicecloudEvaluator()
 
     async def get_character(self):
@@ -276,6 +278,8 @@ class DicecloudParser:
     def get_stats(self):
         """Returns a dict of stats."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if self.stats:
+            return self.stats
         character = self.character
         stats = {"name": "", "image": "", "description": "", "strength": 10, "dexterity": 10, "constitution": 10,
                  "wisdom": 10, "intelligence": 10, "charisma": 10, "strengthMod": 0, "dexterityMod": 0,
@@ -291,12 +295,15 @@ class DicecloudParser:
             stats[stat + 'Mod'] = floor((int(stats[stat]) - 10) / 2)
 
         self.evaluator.names.update(stats)
+        self.stats = stats
 
         return stats
 
     def get_levels(self):
         """Returns a dict with the character's level and class levels."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if self.levels:
+            return self.levels
         character = self.character
         levels = {"level": 0}
         for level in character.get('classes', []):
@@ -308,6 +315,7 @@ class DicecloudParser:
             else:
                 levels[levelName] += level.get('level')
         self.evaluator.names.update(levels)
+        self.levels = levels
         return levels
 
     def calculate_stat(self, stat, base=0):

@@ -394,7 +394,7 @@ class BeyondSheetParser:
             dmg += self.get_stat('natural-attacks', bonus_tags=['damage'])
 
             attack = {
-                'attackBonus': self.stat_from_id(1) + atkBonus,
+                'attackBonus': str(self.stat_from_id(1) + atkBonus),
                 'damage': f"{dmg}[bludgeoning]",
                 'name': "Unarmed Strike",
                 'details': None
@@ -462,7 +462,7 @@ class BeyondSheetParser:
                 elif mod['type'] == 'expertise':
                     profs[mod['subType']] = 2
                 elif mod['type'] == 'bonus':
-                    bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + mod['value']
+                    bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + (mod['value'] or 0)
 
         profs['animalHandling'] = profs.get('animal-handling', 0)
         profs['sleightOfHand'] = profs.get('sleight-of-hand', 0)

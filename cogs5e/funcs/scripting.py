@@ -217,7 +217,7 @@ class SimpleCombatant:
             self.ratio = 0
 
     def set_hp(self, newhp: int):
-        self._combatant.hp = int(newhp)
+        self._combatant.set_hp(int(newhp))
 
     def mod_hp(self, mod: int):
         self._combatant.hp += int(mod)
@@ -243,6 +243,36 @@ class SimpleCombatant:
         if self._combatant.ac:
             return to_hit >= self._combatant.ac
         return None
+
+    def set_ac(self, ac: int):
+        if not isinstance(ac, int) and ac is not None:
+            raise ValueError("AC must be an integer or None.")
+        self._combatant.ac = ac
+
+    def set_maxhp(self, maxhp: int):
+        if not isinstance(maxhp, int) and maxhp is not None:
+            raise ValueError("Max HP must be an integer or None.")
+        self._combatant.hpMax = maxhp
+
+    def set_thp(self, thp: int):
+        if not isinstance(thp, int):
+            raise ValueError("Temp HP must be an integer.")
+        self._combatant.temphp = thp
+
+    def set_init(self, init: int):
+        if not isinstance(init, int):
+            raise ValueError("Initiative must be an integer.")
+        self._combatant.init = init
+
+    def set_name(self, name: str):
+        if not name:
+            raise ValueError("Combatants must have a name.")
+        self._combatant.name = str(name)
+
+    def set_note(self, note: str):
+        if note is not None:
+            note = str(note)
+        self._combatant.notes = note
 
 
 class SimpleGroup:

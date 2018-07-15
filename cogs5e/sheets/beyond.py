@@ -63,6 +63,7 @@ class BeyondSheetParser:
         self.stats = None
         self.levels = None
         self.prof = None
+        self.calculated_stats = {}
 
     async def get_character(self):
         charId = self.url
@@ -214,17 +215,23 @@ class BeyondSheetParser:
         self.stats = stats
         return stats
 
-    def get_stat(self, stat, base=0):
+    def get_stat(self, stat, base=0, bonus_tags=None):
         """Calculates the final value of a stat, based on modifiers and feats."""
+        if bonus_tags is None:
+            bonus_tags = ['bonus']
+        if stat in self.calculated_stats and bonus_tags == ['bonus']:
+            return self.calculated_stats[stat]
         bonus = 0
         for modtype in self.character['modifiers'].values():
             for mod in modtype:
                 if not mod['subType'] == stat: continue
-                if mod['type'] == 'bonus':
+                if mod['type'] in bonus_tags:
                     bonus += mod['value'] or self.stat_from_id(mod['statId'])
                 elif mod['type'] == 'set':
                     base = mod['value'] or self.stat_from_id(mod['statId'])
 
+        if bonus_tags == ['bonus']:
+            self.calculated_stats[stat] = base + bonus
         return base + bonus
 
     def stat_from_id(self, _id):
@@ -338,8 +345,18 @@ class BeyondSheetParser:
             isProf = self.get_prof(itemdef['type']) or weirdBonuses['isPact']
             magicBonus = sum(
                 m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
+
             dmgBonus = self.get_relevant_atkmod(itemdef) + magicBonus + weirdBonuses['damage']
             toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
+
+            is_melee = not 'Range' in [p['name'] for p in itemdef['properties']]
+            is_one_handed = not 'Two-Handed' in [p['name'] for p in itemdef['properties']]
+            is_weapon = itemdef['filterType'] == 'Weapon'
+
+            if is_melee and is_one_handed:
+                dmgBonus += self.get_stat('one-handed-melee-attacks', bonus_tags=['damage'])
+            if not is_melee and is_weapon:
+                toHitBonus += self.get_stat('ranged-weapon-attacks')
 
             attack = {
                 'attackBonus': str(

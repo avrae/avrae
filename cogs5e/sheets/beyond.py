@@ -332,6 +332,12 @@ class BeyondSheetParser:
                 atkBonus = str(
                     self.stat_from_id(atkIn['statId']) + (prof if isProf else 0) + (atkIn['toHitBonus'] or 0))
                 dmgBonus = (atkIn['fixedValue'] or 0) + self.stat_from_id(atkIn['statId']) + (atkIn['damageBonus'] or 0)
+
+            if atkIn['attackSubtype'] == 3:  # natural weapons
+                if atkBonus is not None:
+                    atkBonus += self.get_stat('natural-attacks')
+                dmgBonus += self.get_stat('natural-attacks', bonus_tags=['damage'])
+
             attack = {
                 'attackBonus': atkBonus,
                 'damage': f"{atkIn['diceCount']}d{atkIn['diceType']}+{dmgBonus}"
@@ -380,6 +386,19 @@ class BeyondSheetParser:
                         'details': attack['details']
                     }
                 )
+        elif atkType == 'unarmed':
+            dmg = 1 + self.stat_from_id(1)
+            atkBonus = self.get_stats()['proficiencyBonus']
+
+            atkBonus += self.get_stat('natural-attacks')
+            dmg += self.get_stat('natural-attacks', bonus_tags=['damage'])
+
+            attack = {
+                'attackBonus': self.stat_from_id(1) + atkBonus,
+                'damage': f"{dmg}[bludgeoning]",
+                'name': "Unarmed Strike",
+                'details': None
+            }
 
         if attack['name'] is None:
             return None
@@ -416,6 +435,9 @@ class BeyondSheetParser:
         for item in self.character['inventory']:
             if item['equipped'] and (item['definition']['filterType'] == "Weapon" or item.get('displayAsAttack')):
                 extend(self.get_attack(item, "item"))
+
+        if 'Unarmed Strike' not in [a['name'] for a in attacks]:
+            extend(self.get_attack(None, 'unarmed'))
         return attacks
 
     def get_skills(self):
@@ -533,7 +555,8 @@ class BeyondSheetParser:
         if itemdef['attackType'] == 2:  # ranged, dex
             return self.stat_from_id(2)
         elif itemdef['attackType'] == 1:  # melee
-            if 'Finesse' in [p['name'] for p in itemdef['properties']]:  # finesse
+            if 'Finesse' in [p['name'] for p in itemdef['properties']] or \
+                    (itemdef['isMonkWeapon'] and self.get_levels().get('MonkLevel')):  # finesse, monk weapon
                 return max(self.stat_from_id(1), self.stat_from_id(2))
         return self.stat_from_id(1)  # strength
 

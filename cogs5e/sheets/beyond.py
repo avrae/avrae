@@ -329,8 +329,7 @@ class BeyondSheetParser:
             dmgBonus = (atkIn['fixedValue'] or 0) + (atkIn['damageBonus'] or 0)
             atkBonus = None
             if atkIn['statId']:
-                atkBonus = str(
-                    self.stat_from_id(atkIn['statId']) + (prof if isProf else 0) + (atkIn['toHitBonus'] or 0))
+                atkBonus = self.stat_from_id(atkIn['statId']) + (prof if isProf else 0) + (atkIn['toHitBonus'] or 0)
                 dmgBonus = (atkIn['fixedValue'] or 0) + self.stat_from_id(atkIn['statId']) + (atkIn['damageBonus'] or 0)
 
             if atkIn['attackSubtype'] == 3:  # natural weapons
@@ -339,7 +338,7 @@ class BeyondSheetParser:
                 dmgBonus += self.get_stat('natural-attacks', bonus_tags=['damage'])
 
             attack = {
-                'attackBonus': atkBonus,
+                'attackBonus': str(atkBonus),
                 'damage': f"{atkIn['diceCount']}d{atkIn['diceType']}+{dmgBonus}"
                           f"[{parse_dmg_type(atkIn)}]",
                 'name': atkIn['name'],

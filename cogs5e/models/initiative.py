@@ -223,6 +223,7 @@ class Combat:
             self._current_index += 1
 
         self._turn = self.current_combatant.init
+        self.current_combatant.on_turn()
         return changed_round
 
     def rewind_turn(self):

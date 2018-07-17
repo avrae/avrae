@@ -203,6 +203,8 @@ async def on_command_error(error, ctx):
                                           "Error: I tried to edit or delete a message that no longer exists.")
         if isinstance(original, ValueError) and str(original) in ("No closing quotation", "No escaped character"):
             return await bot.send_message(ctx.message.channel, "Error: No closing quotation.")
+        if isinstance(original, AttributeError) and str(original) in ("'NoneType' object has no attribute 'name'",):
+            return await bot.send_message(ctx.message.channel, "Error in Discord API. Please try again.")
         if isinstance(original, HTTPException):
             if original.response.status == 400:
                 return await bot.send_message(ctx.message.channel, "Error: Message is too long, malformed, or empty.")

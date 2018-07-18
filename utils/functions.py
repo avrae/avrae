@@ -169,7 +169,7 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
     :return:
     """
     if srd:
-        if not isinstance(srd, function):
+        if isinstance(srd, bool):
             srd = lambda e: e.get('srd')
         if list_filter:
             old = list_filter

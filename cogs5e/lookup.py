@@ -182,7 +182,7 @@ class Lookup:
             srd = False
         destination = ctx.message.author if pm else ctx.message.channel
 
-        result = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name, srd=srd)
+        result = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name, srd=lambda e: e.srd)
 
         if not result.srd and srd:
             return await self.send_srd_error(ctx, result)

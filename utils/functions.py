@@ -164,16 +164,18 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
     :param pm: Whether to PM the user the select prompt.
     :param message: A message to add to the select prompt.
     :param list_filter: A filter to filter the list to search by.
-    :param srd: Whether to only search items that have a property ['srd'] set to true.
+    :param srd: Whether to only search items that have a property ['srd'] set to true, or a search function.
     :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
     :return:
     """
     if srd:
+        if not isinstance(srd, function):
+            srd = lambda e: e.get('srd')
         if list_filter:
             old = list_filter
-            list_filter = lambda e: old(e) and e.get('srd')
+            list_filter = lambda e: old(e) and srd(e)
         else:
-            list_filter = lambda e: e.get('srd')
+            list_filter = srd
         message = "This server only shows results from the 5e SRD."
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))

@@ -359,10 +359,12 @@ class GameTrack:
                 f"To remove a spell on your sheet, just delete it from your sheet.")
 
     @commands.group(pass_context=True, invoke_without_command=True, name='customcounter', aliases=['cc'])
-    async def customcounter(self, ctx, name, *, modifier=None):
+    async def customcounter(self, ctx, name=None, *, modifier=None):
         """Commands to implement custom counters.
         When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
         If modifier is not supplied, prints the value and metadata of the counter *name*."""
+        if name is None:
+            return await ctx.invoke(self.bot.get_command("customcounter list"))
         character = Character.from_ctx(ctx)
         sel = await character.select_consumable(ctx, name)
         if sel is None:

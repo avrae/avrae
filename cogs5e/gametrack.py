@@ -550,7 +550,7 @@ class GameTrack:
         return _reset
 
     @commands.command(pass_context=True)
-    async def cast(self, ctx, spell_name, *args):
+    async def cast(self, ctx, spell_name, *, args=''):
         """Casts a spell.
         __Valid Arguments:__
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
@@ -582,7 +582,7 @@ class GameTrack:
 
         if not char: char = Character.from_ctx(ctx)
 
-        args = parse_snippets(' '.join(list(args)), ctx)
+        args = parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)
@@ -641,7 +641,7 @@ class GameTrack:
         char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)
 
-    async def _old_cast(self, ctx, spell_name, *args):
+    async def _old_cast(self, ctx, spell_name, args):
         spell = getSpell(spell_name)
         self.bot.db.incr('spells_looked_up_life')
         if spell is None:
@@ -651,7 +651,7 @@ class GameTrack:
 
         char = Character.from_ctx(ctx)
 
-        args = parse_snippets(' '.join(list(args)), ctx)
+        args = parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)

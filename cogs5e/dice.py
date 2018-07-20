@@ -8,6 +8,7 @@ from discord.ext import commands
 from cogs5e.funcs.dice import roll, SingleDiceGroup, Constant, Operator
 from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models import embeds
 from cogs5e.models.monster import Monster
 from utils import checks
 from utils.functions import fuzzy_search, a_or_an, discord_trim, \
@@ -238,6 +239,7 @@ class Dice:
         result = sheet_attack(attack, args)
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff)
+        embeds.add_fields_from_args(embed, args.get('f', []))
 
         if monster.source == 'homebrew':
             embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
@@ -250,7 +252,9 @@ class Dice:
         Args: adv/dis
               -b [conditional bonus]
               -phrase [flavor text]
-              -title [title] *note: [mname] and [cname] will be replaced automatically*"""
+              -title [title] *note: [mname] and [cname] will be replaced automatically*
+              -dc [dc]
+              -rr [iterations]"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
         self.bot.db.incr('monsters_looked_up_life')
@@ -275,16 +279,39 @@ class Dice:
         b = "+".join(args.get('b', [])) or None
         phrase = '\n'.join(args.get('phrase', [])) or None
         formatted_d20 = '1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')
+        iterations = min(int(args.get('rr', [1])[-1]), 25)
+        try:
+            dc = int(args.get('dc', [None])[-1])
+        except (ValueError, TypeError):
+            dc = None
+        num_successes = 0
 
         if b is not None:
-            check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
+            roll_str = formatted_d20 + '{:+}'.format(skills[skill]) + '+' + b
         else:
-            check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]), adv=adv, inline=True)
+            roll_str = formatted_d20 + '{:+}'.format(skills[skill])
 
         embed.title = args.get('title', [''])[-1].replace('[mname]', monster_name).replace('[cname]', skill.title()) \
                       or '{} makes {} check!'.format(monster_name,
                                                      a_or_an(skill.title()))
-        embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+
+        if iterations > 1:
+            embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
+            for i in range(iterations):
+                result = roll(roll_str, adv=adv, inline=True)
+                if dc and result.total >= dc:
+                    num_successes += 1
+                embed.add_field(name=f"Check {i+1}", value=result.skeleton)
+            if dc:
+                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
+        else:
+            result = roll(roll_str, adv=adv, inline=True)
+            if dc:
+                embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
+            embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
+                '\n*' + phrase + '*' if phrase is not None else '')
+
+        embeds.add_fields_from_args(embed, args.get('f', []))
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
@@ -306,7 +333,9 @@ class Dice:
         Args: adv/dis
               -b [conditional bonus]
               -phrase [flavor text]
-              -title [title] *note: [mname] and [cname] will be replaced automatically*"""
+              -title [title] *note: [mname] and [cname] will be replaced automatically*
+              -dc [dc]
+              -rr [iterations]"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
         self.bot.db.incr('monsters_looked_up_life')
@@ -330,11 +359,17 @@ class Dice:
             'dis', False) else 0
         b = "+".join(args.get('b', [])) or None
         phrase = '\n'.join(args.get('phrase', [])) or None
+        iterations = min(int(args.get('rr', [1])[-1]), 25)
+        try:
+            dc = int(args.get('dc', [None])[-1])
+        except (ValueError, TypeError):
+            dc = None
+        num_successes = 0
 
         if b is not None:
-            save_roll = roll('1d20' + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
+            roll_str = '1d20{:+}'.format(saves[save]) + '+' + b
         else:
-            save_roll = roll('1d20' + '{:+}'.format(saves[save]), adv=adv, inline=True)
+            roll_str = '1d20{:+}'.format(saves[save])
 
         embed.title = args.get('title', [''])[-1].replace('[mname]', monster_name).replace('[sname]', re.sub(
             r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) or \
@@ -344,7 +379,23 @@ class Dice:
                                                 r' \1',
                                                 save).title()))
 
-        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
+        if iterations > 1:
+            embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
+            for i in range(iterations):
+                result = roll(roll_str, adv=adv, inline=True)
+                if dc and result.total >= dc:
+                    num_successes += 1
+                embed.add_field(name=f"Check {i+1}", value=result.skeleton)
+            if dc:
+                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
+        else:
+            result = roll(roll_str, adv=adv, inline=True)
+            if dc:
+                embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
+            embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
+                '\n*' + phrase + '*' if phrase is not None else '')
+
+        embeds.add_fields_from_args(embed, args.get('f', []))
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))

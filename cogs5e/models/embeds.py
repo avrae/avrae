@@ -30,3 +30,17 @@ class EmbedWithCharacter(discord.Embed):
         if character.get_setting('embedimage', True):
             self.set_thumbnail(url=character.get_image())
         self.colour = character.get_color()
+
+def add_fields_from_args(embed, _fields):
+    """
+    Adds fields to an embed.
+    :param embed: The embed.
+    :param _fields: A list of strings detailing the fields to add, separated by a |.
+    :return:
+    """
+    if type(_fields) == list:
+        for f in _fields:
+            title = f.split('|')[0] if '|' in f else '\u200b'
+            value = "|".join(f.split('|')[1:]) if '|' in f else f
+            embed.add_field(name=title, value=value)
+    return embed

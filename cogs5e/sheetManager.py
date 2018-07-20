@@ -23,6 +23,7 @@ from pygsheets.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument
@@ -185,11 +186,7 @@ class SheetManager:
         embed = result['embed']
 
         _fields = args.get('f', [])
-        if type(_fields) == list:
-            for f in _fields:
-                title = f.split('|')[0] if '|' in f else '\u200b'
-                value = "|".join(f.split('|')[1:]) if '|' in f else f
-                embed.add_field(name=title, value=value)
+        embeds.add_fields_from_args(embed, _fields)
 
         await self.bot.say(embed=embed)
         try:
@@ -205,7 +202,8 @@ class SheetManager:
               -phrase [flavor text]
               -title [title] *note: [charname] and [sname] will be replaced automatically*
               -image [image URL]
-              -dc [dc] (does not apply to Death Saves)"""
+              -dc [dc] (does not apply to Death Saves)
+              -rr [iterations] (does not apply to Death Saves)"""
         if skill == 'death':
             ds_cmd = self.bot.get_command('game deathsave')
             if ds_cmd is None:
@@ -239,10 +237,17 @@ class SheetManager:
                         + ('ro{}'.format(char.get_setting('reroll', 0))
                            if not char.get_setting('reroll', '0') == '0' else '')
 
+        iterations = min(int(args.get('rr', 1)), 25)
+        try:
+            dc = int(args.get('dc', None))
+        except (ValueError, TypeError):
+            dc = None
+        num_successes = 0
+
         if b is not None:
-            save_roll = roll(formatted_d20 + '{:+}'.format(saves[save]) + '+' + b, adv=adv, inline=True)
+            roll_str = formatted_d20 + '{:+}'.format(saves[save]) + '+' + b
         else:
-            save_roll = roll(formatted_d20 + '{:+}'.format(saves[save]), adv=adv, inline=True)
+            roll_str = formatted_d20 + '{:+}'.format(saves[save])
 
         embed.title = args.get('title', '').replace('[charname]', char.get_name()).replace('[sname]', re.sub(
             r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) \
@@ -250,17 +255,23 @@ class SheetManager:
                                                a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1',
                                                               save).title()))
 
-        try:
-            dc = int(args.get('dc', None))
-        except (ValueError, TypeError):
-            dc = None
-        dc_phrase = None
-        if dc:
-            dc_phrase = f"**DC {dc}**"
-            embed.set_footer(text="Success!" if save_roll.total >= dc else "Failure!")
+        if iterations > 1:
+            embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
+            for i in range(iterations):
+                result = roll(roll_str, adv=adv, inline=True)
+                if dc and result.total >= dc:
+                    num_successes += 1
+                embed.add_field(name=f"Save {i+1}", value=result.skeleton)
+            if dc:
+                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
+        else:
+            result = roll(roll_str, adv=adv, inline=True)
+            if dc:
+                embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
+            embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
+                '\n*' + phrase + '*' if phrase is not None else '')
 
-        embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + save_roll.skeleton + (
-            '\n*' + phrase + '*' if phrase is not None else '')
+        embeds.add_fields_from_args(embed, args.get('f', []))
 
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
@@ -279,7 +290,8 @@ class SheetManager:
               -mc [minimum roll]
               -phrase [flavor text]
               -title [title] *note: [charname] and [cname] will be replaced automatically*
-              -dc [dc]"""
+              -dc [dc]
+              -rr [iterations]"""
         char = Character.from_ctx(ctx)
         skills = char.get_skills()
         if not skills:
@@ -308,11 +320,17 @@ class SheetManager:
                         + ('ro{}'.format(char.get_setting('reroll', 0))
                            if not char.get_setting('reroll', '0') == '0' else '') \
                         + ('mi{}'.format(mc) if mc is not None else '')
+        iterations = min(int(args.get('rr', 1)), 25)
+        try:
+            dc = int(args.get('dc', None))
+        except (ValueError, TypeError):
+            dc = None
+        num_successes = 0
 
         if b is not None:
-            check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]) + '+' + b, adv=adv, inline=True)
+            roll_str = formatted_d20 + '{:+}'.format(skills[skill]) + '+' + b
         else:
-            check_roll = roll(formatted_d20 + '{:+}'.format(skills[skill]), adv=adv, inline=True)
+            roll_str = formatted_d20 + '{:+}'.format(skills[skill])
 
         embed.title = args.get('title', '').replace('[charname]', char.get_name()).replace('[cname]', re.sub(
             r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()) \
@@ -320,17 +338,24 @@ class SheetManager:
                                                      a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1',
                                                                     skill).title()))
 
-        try:
-            dc = int(args.get('dc', None))
-        except (ValueError, TypeError):
-            dc = None
-        dc_phrase = None
-        if dc:
-            dc_phrase = f"**DC {dc}**"
-            embed.set_footer(text="Success!" if check_roll.total >= dc else "Failure!")
+        if iterations > 1:
+            embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
+            for i in range(iterations):
+                result = roll(roll_str, adv=adv, inline=True)
+                if dc and result.total >= dc:
+                    num_successes += 1
+                embed.add_field(name=f"Check {i+1}", value=result.skeleton)
+            if dc:
+                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
+        else:
+            result = roll(roll_str, adv=adv, inline=True)
+            if dc:
+                embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
+            embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
+                '\n*' + phrase + '*' if phrase is not None else '')
 
-        embed.description = (f"{dc_phrase}\n" if dc_phrase is not None else '') + check_roll.skeleton + (
-            '\n*' + phrase + '*' if phrase is not None else '')
+        embeds.add_fields_from_args(embed, args.get('f', []))
+
         if args.get('image') is not None:
             embed.set_thumbnail(url=args.get('image'))
         await self.bot.say(embed=embed)

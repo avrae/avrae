@@ -5,7 +5,8 @@ import traceback
 
 import discord
 import redis
-from discord.errors import Forbidden, NotFound, HTTPException
+from aiohttp import ClientResponseError
+from discord.errors import Forbidden, NotFound, HTTPException, InvalidArgument
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
@@ -205,6 +206,8 @@ async def on_command_error(error, ctx):
             return await bot.send_message(ctx.message.channel, "Error: No closing quotation.")
         if isinstance(original, AttributeError) and str(original) in ("'NoneType' object has no attribute 'name'",):
             return await bot.send_message(ctx.message.channel, "Error in Discord API. Please try again.")
+        if isinstance(original, (ClientResponseError, InvalidArgument)):
+            return await bot.send_message(ctx.message.channel, "Error in Discord API. Please try again.")
         if isinstance(original, HTTPException):
             if original.response.status == 400:
                 return await bot.send_message(ctx.message.channel, "Error: Message is too long, malformed, or empty.")
@@ -213,7 +216,7 @@ async def on_command_error(error, ctx):
                                               "Error: Internal server error on Discord's end. Please try again.")
         if isinstance(original, redis.ResponseError):
             await bot.send_message(ctx.message.channel,
-                                          "Error: I am having an issue writing to my database. Please report this to the dev!")
+                                   "Error: I am having an issue writing to my database. Please report this to the dev!")
             return await bot.send_message(bot.owner, f"Database error!\n{repr(original)}")
 
     error_msg = gen_error_message()

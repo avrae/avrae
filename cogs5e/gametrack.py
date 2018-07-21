@@ -578,7 +578,7 @@ class GameTrack:
         if spell_name is None: return
 
         spell = strict_search(c.autospells, 'name', spell_name)
-        if spell is None: return await self._old_cast(ctx, spell_name, *args)  # fall back to old cast
+        if spell is None: return await self._old_cast(ctx, spell_name, args)  # fall back to old cast
 
         if not char: char = Character.from_ctx(ctx)
 

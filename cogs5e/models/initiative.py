@@ -784,8 +784,8 @@ class PlayerCombatant(Combatant):
                  temphp=None, spellcasting=None):
         super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
                                               attacks, saves, ctx, index, notes, effects, group, temphp, spellcasting)
-        self._character_id = character_id
-        self._character_owner = character_owner
+        self.character_id = character_id
+        self.character_owner = character_owner
         self._character = None  # only grab the Character instance if we have to
 
     @classmethod
@@ -798,10 +798,10 @@ class PlayerCombatant(Combatant):
     def character(self):
         if self._character is None:
             from cogs5e.models.character import Character
-            c = Character.from_bot_and_ids(self.ctx.bot, self._character_owner, self._character_id)
+            c = Character.from_bot_and_ids(self.ctx.bot, self.character_owner, self.character_id)
 
             def new_commit(ctx):
-                c.manual_commit(ctx.bot, self._character_owner)
+                c.manual_commit(ctx.bot, self.character_owner)
 
             c.commit = new_commit
             self._character = c
@@ -843,10 +843,6 @@ class PlayerCombatant(Combatant):
         return self.character.get_saves()
 
     @property
-    def character_id(self):
-        return self._character_id
-
-    @property
     def spellcasting(self):
         return Spellcasting(self.character.get_spell_list(), self.character.get_save_dc(),
                             self.character.get_spell_ab(), self.character.get_level())
@@ -867,14 +863,14 @@ class PlayerCombatant(Combatant):
     @classmethod
     def from_dict(cls, raw, ctx):
         inst = super(PlayerCombatant, cls).from_dict(raw, ctx)
-        inst._character_id = raw['character_id']
-        inst._character_owner = raw['character_owner']
+        inst.character_id = raw['character_id']
+        inst.character_owner = raw['character_owner']
         return inst
 
     def to_dict(self):
         raw = super(PlayerCombatant, self).to_dict()
-        raw['character_id'] = self._character_id
-        raw['character_owner'] = self._character_owner
+        raw['character_id'] = self.character_id
+        raw['character_owner'] = self.character_owner
         raw['type'] = 'player'
         return raw
 

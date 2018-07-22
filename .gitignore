@@ -3,33 +3,18 @@
 
 *.log
 
-*.ragnarok
-
 *.avrae
 
 /venv/
 /testenv/
 /.idea/
 
-cmd_aliases-backup.json
 
-char_vars-backup.json
-
-damage_snippets-backup.json
-/dicecloud.txt
-
-.idea/vcs.xml
-
-.idea/inspectionProfiles/Project_Default.xml
-
-/stdout.txt
-/resources.txt
-/raspi.md
-/saves/
-/test/output/*
-/test/input/*
 /.cache/
 /.pytest_cache/
 
-test/test.pdf
+*.json
+*.pdf
+
+credentials.py
 

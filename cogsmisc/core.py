@@ -63,7 +63,7 @@ class Core:
     async def invite(self):
         """Prints a link to invite Avrae to your server."""
         await self.bot.say(
-            "You can invite Avrae to your server here:\nhttps://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808")
+            "You can invite Avrae to your server here:\nhttps://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808")
 
     @commands.command()
     async def donate(self):
@@ -81,7 +81,7 @@ class Core:
             botStats[k] = int(self.bot.db.get(k, "0"))
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
         embed.title = "Invite Avrae to your server!"
-        embed.url = "https://discordapp.com/oauth2/authorize?&client_id=***REMOVED***&scope=bot&permissions=36727808"
+        embed.url = "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808"
         embed.colour = 0x7289da
         embed.set_author(name=str(self.bot.owner), icon_url=self.bot.owner.avatar_url)
         total_members = sum(len(s.members) for s in self.bot.servers)

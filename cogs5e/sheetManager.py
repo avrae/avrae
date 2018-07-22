@@ -55,7 +55,7 @@ class SheetManager:
 
     async def init_gsheet_client(self):
         def _():
-            return pygsheets.authorize(service_file='avrae-0b82f09d7ab3.json')
+            return pygsheets.authorize(service_file='avrae-google.json')
 
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
 

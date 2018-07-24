@@ -3,3 +3,7 @@ python:
   - "3.6"
 script:
   - pytest
+after_failure:
+  - "wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh"
+  - "chmod +x send.sh"
+  - "./send.sh failure $WEBHOOK_URL"

@@ -202,12 +202,14 @@ class SimpleCombatant:
             self.maxhp = self._combatant.hpMax
             self.initmod = self._combatant.initMod
             self.temphp = self._combatant.temphp
+            self.resists = self._combatant.resists
         else:
             self.ac = None
             self.hp = None
             self.maxhp = None
             self.initmod = None
             self.temphp = None
+            self.resists = None
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes

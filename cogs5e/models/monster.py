@@ -144,10 +144,8 @@ class Monster:
         _type = parse_type(data['type'])
         alignment = parse_alignment(data['alignment'])
         speed = parse_speed(data['speed'])
-        ac = int(re.search(r'\d+', data['ac']).group(0))
-        armortype = re.search(r'\((.*)\)', data['ac'])
-        if armortype is not None:
-            armortype = armortype.group(1)
+        ac = data['ac']['ac']
+        armortype = data['ac'].get('armortype') or None
         if not 'special' in data['hp']:
             hp = data['hp']['average']
             hitdice = data['hp']['formula']

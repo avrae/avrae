@@ -246,11 +246,11 @@ class BeyondSheetParser:
         shield = 0
         for item in self.character['inventory']:
             if item['equipped'] and item['definition']['filterType'] == 'Armor':
-                base = item['definition']['armorClass']
                 _type = item['definition']['type']
                 if _type == "Shield":
                     shield = 2
                 else:
+                    base = item['definition']['armorClass']
                     armortype = _type
         base = self.get_stat('armor-class', base=base)
         dexBonus = self.get_stats()['dexterityMod']

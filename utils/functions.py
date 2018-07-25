@@ -529,7 +529,13 @@ def parse_data_entry(text, md_breaks=False):
 
 
 FORMATTING = {'bold': '**', 'italic': '*', 'b': '**', 'i': '*'}
-PARSING = {'creature': lambda e: e.split('|')[-1], 'item': lambda e: e.split('|')[0]}
+PARSING = {
+    'creature': lambda e: e.split('|')[-1],
+    'item': lambda e: e.split('|')[0],
+    'filter': lambda e: e.split('|')[0],
+    'condition': lambda e: e,
+    'spell': lambda e: e.split('|')[0]
+}
 
 
 def parse_data_formatting(text):

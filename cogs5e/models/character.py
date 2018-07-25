@@ -210,6 +210,11 @@ class Character:
             def mod_cc(name, val: int, strict=False):
                 return set_cc(name, get_cc(name) + val, strict)
 
+            def delete_cc(name):
+                self.delete_consumable(name)
+                nonlocal changed
+                changed = True
+
             def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                              dispType: str = None):
                 if not name in self.get_all_consumables():
@@ -312,7 +317,7 @@ class Character:
 
             _funcs = scripting.DEFAULT_FUNCTIONS.copy()
             _funcs.update(get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
-                          cc_exists=cc_exists, create_cc_nx=create_cc_nx, cc_str=cc_str,
+                          delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, cc_str=cc_str,
                           get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
                           slots_str=slots_str,
                           get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, get_temphp=get_temphp, set_temphp=set_temphp,

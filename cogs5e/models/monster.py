@@ -7,8 +7,8 @@ import html2text
 from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
-ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){2,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
-                       r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]?'
+ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
+                       r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]??'
                        r'(?:in melee, or [+-]?\d+ \((.+?)\) (\w+) damage at range[,.]?)?'
                        r'(?: or [+-]?\d+ \((.+?)\) (\w+) damage .*?[.,]?)?'
                        r'(?: plus [+-]?\d+ \((.+?)\) (\w+) damage.)?', re.IGNORECASE)
@@ -144,10 +144,8 @@ class Monster:
         _type = parse_type(data['type'])
         alignment = parse_alignment(data['alignment'])
         speed = parse_speed(data['speed'])
-        ac = int(re.search(r'\d+', data['ac']).group(0))
-        armortype = re.search(r'\((.*)\)', data['ac'])
-        if armortype is not None:
-            armortype = armortype.group(1)
+        ac = data['ac']['ac']
+        armortype = data['ac'].get('armortype') or None
         if not 'special' in data['hp']:
             hp = data['hp']['average']
             hitdice = data['hp']['formula']

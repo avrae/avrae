@@ -211,7 +211,9 @@ class Character:
                 return set_cc(name, get_cc(name) + val, strict)
 
             def delete_cc(name):
-                return self.delete_consumable(name)
+                self.delete_consumable(name)
+                nonlocal changed
+                changed = True
 
             def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                              dispType: str = None):

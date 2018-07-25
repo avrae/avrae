@@ -8,7 +8,7 @@ from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
 ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){2,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
-                       r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]?'
+                       r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]??'
                        r'(?:in melee, or [+-]?\d+ \((.+?)\) (\w+) damage at range[,.]?)?'
                        r'(?: or [+-]?\d+ \((.+?)\) (\w+) damage .*?[.,]?)?'
                        r'(?: plus [+-]?\d+ \((.+?)\) (\w+) damage.)?', re.IGNORECASE)

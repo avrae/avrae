@@ -123,7 +123,7 @@ def sheet_attack(attack, args, embed=None):
             else:
                 itercrit = 0
 
-        out += sheet_damage(args.get('damage'), args, itercrit, dnum)
+        out += sheet_damage(attack.get('damage'), args, itercrit, dnum)['damage']
 
         if out is not '':
             if (args.get('rr', 1) or 1) > 1:
@@ -198,10 +198,10 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
 
         # actual roll
         if itercrit == 2 and not args.get('showmiss', False):
-            out += '**Miss!**\n'
+            out = '**Miss!**\n'
         else:
             dmgroll = roll(damage, rollFor=rollFor, inline=True, show_blurbs=False)
-            out += dmgroll.result + '\n'
+            out = dmgroll.result + '\n'
             if not itercrit == 2:  # if we actually hit
                 total_damage += dmgroll.total
     return {'damage': out, 'total': total_damage}

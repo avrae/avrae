@@ -228,7 +228,7 @@ class Customization:
         return await asyncio.get_event_loop().run_in_executor(None, process, cstr)
 
     @commands.group(pass_context=True, invoke_without_command=True)
-    async def alias(self, ctx, alias_name=None, *, cmds=None):
+    async def alias(self, ctx, cmds=None, *, alias_name=None):
         """Adds an alias for a long command.
         After an alias has been added, you can instead run the aliased command with !<alias_name>.
         If a user and a server have aliases with the same name, the user alias will take priority."""

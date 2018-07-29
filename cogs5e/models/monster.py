@@ -226,7 +226,7 @@ class Monster:
             if save['proficient']:
                 mod = ability_scores.get_mod(SAVE_MAP.get(name)) + proficiency
             else:
-                mod = save['value']
+                mod = save.get('value') or ability_scores.get_mod(SAVE_MAP.get(name))
             saves[name] = mod
             raw_saves.append(f"{save['ability'].title()} {mod:+}")
         raw_saves = ', '.join(raw_saves)

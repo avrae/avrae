@@ -7,6 +7,7 @@ import simpleeval
 from simpleeval import EvalWithCompoundTypes, IterableTooLong
 
 from cogs5e.funcs.dice import roll
+from cogs5e.funcs.sheetFuncs import sheet_damage
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup
 
@@ -245,6 +246,20 @@ class SimpleCombatant:
         if self._combatant.ac:
             return to_hit >= self._combatant.ac
         return None
+
+    def damage(self, dice_str: str, crit=False, d=None, c=None, hocrit=False):
+        args = {
+            'd': d,
+            'c': c,
+            'hocrit': hocrit,
+            'resist': '|'.join(self._combatant.resists['resist']),
+            'immune': '|'.join(self._combatant.resists['immune']),
+            'vuln': '|'.join(self._combatant.resists['vuln'])
+        }
+        result = sheet_damage(dice_str, args, 1 if crit else 0)
+        result['damage'] = result['damage'].strip()
+        self.mod_hp(-result['total'])
+        return result
 
     def set_ac(self, ac: int):
         if not isinstance(ac, int) and ac is not None:

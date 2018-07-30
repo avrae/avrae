@@ -499,6 +499,9 @@ class Customization:
         User variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
         See http://avrae.io/cheatsheets/aliasing for more help."""
+        if name is None:
+            return await ctx.invoke(self.bot.get_command("uservar list"))
+
         user_vars = self.bot.db.jhget("user_vars", ctx.message.author.id, {})
 
         if value is None:  # display value
@@ -560,6 +563,9 @@ class Customization:
         Global variables are readable by all users, but only editable by the creator.
         Global variables must be accessed through scripting, with `get_gvar(gvar_id)`.
         See http://avrae.io/cheatsheets/aliasing for more help."""
+        if name is None:
+            return await ctx.invoke(self.bot.get_command("uvar list"))
+
         glob_vars = self.bot.db.jget("global_vars", {})
 
         gvar = glob_vars.get(name)

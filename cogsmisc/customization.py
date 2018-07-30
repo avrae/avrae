@@ -564,7 +564,7 @@ class Customization:
         Global variables must be accessed through scripting, with `get_gvar(gvar_id)`.
         See http://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
-            return await ctx.invoke(self.bot.get_command("uvar list"))
+            return await ctx.invoke(self.bot.get_command("globalvar list"))
 
         glob_vars = self.bot.db.jget("global_vars", {})
 

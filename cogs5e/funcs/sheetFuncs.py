@@ -123,7 +123,9 @@ def sheet_attack(attack, args, embed=None):
             else:
                 itercrit = 0
 
-        out += sheet_damage(attack.get('damage'), args, itercrit, dnum)['damage']
+        res = sheet_damage(attack.get('damage'), args, itercrit, dnum)
+        out += res['damage']
+        total_damage += res['total']
 
         if out is not '':
             if (args.get('rr', 1) or 1) > 1:

@@ -1,1 +1,5 @@
-skips: ['B110']
+# B110 = try, except, pass
+# B322 = input() in py2
+# B311 = use of random()
+
+skips: ['B110', 'B322', 'B311']

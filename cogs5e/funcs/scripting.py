@@ -28,6 +28,12 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             ast.comprehension: self._eval_comprehension
         })
 
+        self.assign_nodes = {
+            ast.Name: self._assign_name,
+            ast.Tuple: self._assign_tuple,
+            ast.Subscript: self._assign_subscript
+        }
+
     def eval(self, expr):  # allow for ast.Assign to set names
         """ evaluate an expression, using the operators, functions and
             names previously set up. """
@@ -51,30 +57,47 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         self._assign(names, values)
 
     def _assign(self, names, values, eval_values=True):
-        if isinstance(names, ast.Tuple):  # unpacking variables
-            names = [n.id for n in names.elts]  # turn ast into str
-            if not isinstance(values, ast.Tuple):
-                raise ValueError(f"unequal unpack: {len(names)} names, 1 value")
-            if eval_values:
-                values = [self._eval(n) for n in values.elts]  # get what we actually want to assign
-            else:
-                values = values.elts
-            if not len(values) == len(names):
-                raise ValueError(f"unequal unpack: {len(names)} names, {len(values)} values")
-            else:
-                if not isinstance(self.names, dict):
-                    raise TypeError("cannot set name: incorrect name type")
-                else:
-                    for name, value in zip(names, values):
-                        self.names[name] = value  # and assign it
+        try:
+            handler = self.assign_nodes[type(names)]
+        except KeyError:
+            raise TypeError(f"Assignment to {type(names).__name__} is not allowed")
+        return handler(names, values, eval_values)
+
+    def _assign_name(self, name, value, eval_value=True):
+        if not isinstance(self.names, dict):
+            raise TypeError("cannot set name: incorrect name type")
+        else:
+            if eval_value:
+                value = self._eval(value)
+            self.names[name.id] = value
+
+    def _assign_tuple(self, names, values, eval_values=True):
+        if not all(isinstance(n, ast.Name) for n in names.elts):
+            raise TypeError("Assigning to multiple non-names via unpack is not allowed")
+        names = [n.id for n in names.elts]  # turn ast into str
+        if not isinstance(values, ast.Tuple):
+            raise ValueError(f"unequal unpack: {len(names)} names, 1 value")
+        if eval_values:
+            values = [self._eval(n) for n in values.elts]  # get what we actually want to assign
+        else:
+            values = values.elts
+        if not len(values) == len(names):
+            raise ValueError(f"unequal unpack: {len(names)} names, {len(values)} values")
         else:
             if not isinstance(self.names, dict):
                 raise TypeError("cannot set name: incorrect name type")
             else:
-                if eval_values:
-                    self.names[names.id] = self._eval(values)
-                else:
-                    self.names[names.id] = values
+                for name, value in zip(names, values):
+                    self.names[name] = value  # and assign it
+
+    def _assign_subscript(self, name, value, eval_value=True):
+        if eval_value:
+            value = self._eval(value)
+
+        container = self._eval(name.value)
+        key = self._eval(name.slice)
+        container[key] = value
+        self._assign(name.value, container, eval_values=False)
 
     def _eval_joinedstr(self, node):
         return ''.join(str(self._eval(n)) for n in node.values)
@@ -309,3 +332,13 @@ DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
                           'range': safe_range, 'sqrt': sqrt,
                           'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json})
+
+if __name__ == '__main__':
+    evaluator = ScriptingEvaluator()
+    while True:
+        try:
+            evaluator.eval(input("Evaluate: ").strip())
+        except Exception as e:
+            print(e)
+            continue
+        print(evaluator.names)

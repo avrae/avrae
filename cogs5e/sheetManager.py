@@ -929,6 +929,9 @@ class SheetManager:
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
         See http://avrae.io/cheatsheets/aliasing for more help.
         Dicecloud `statMod` and `stat` variables are also available."""
+        if name is None:
+            return await ctx.invoke(self.bot.get_command("cvar list"))
+
         character = Character.from_ctx(ctx)
 
         if value is None:  # display value

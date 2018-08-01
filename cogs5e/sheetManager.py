@@ -923,7 +923,7 @@ class SheetManager:
         await self.bot.say(out)
 
     @commands.group(pass_context=True, invoke_without_command=True)
-    async def cvar(self, ctx, name, *, value=None):
+    async def cvar(self, ctx, name=None, *, value=None):
         """Commands to manage character variables for use in snippets and aliases.
         Character variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Arguments surrounded with `{{}}` will be evaluated as a custom script.

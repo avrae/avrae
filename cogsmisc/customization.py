@@ -494,7 +494,7 @@ class Customization:
         await self.bot.say(f"{ctx.message.author.display_name}: {parsed}")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['uvar'])
-    async def uservar(self, ctx, name, *, value=None):
+    async def uservar(self, ctx, name=None, *, value=None):
         """Commands to manage user variables for use in snippets and aliases.
         User variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
@@ -557,7 +557,7 @@ class Customization:
         return await self.bot.say("OK. I have deleted all your uvars.")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['gvar'])
-    async def globalvar(self, ctx, name):
+    async def globalvar(self, ctx, name=None):
         """Commands to manage global, community variables for use in snippets and aliases.
         If run without a subcommand, shows the value of a global variable.
         Global variables are readable by all users, but only editable by the creator.

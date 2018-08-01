@@ -102,7 +102,7 @@ logger.addHandler(filehandler)
 log = logging.getLogger('bot')
 msglog = logging.getLogger('messages')
 
-# -----COGS-----
+# -----COGS----- TODO dynamically load/unload instead of instantiating here
 diceCog = Dice(bot)
 charGenCog = CharGenerator(bot)
 initiativeTrackerCog = InitTracker(bot)

@@ -1013,7 +1013,7 @@ class Effect:
         """
         :return: Whether to remove the effect.
         """
-        if self.remaining > 0:
+        if self.remaining >= 0:
             if self.remaining - num_turns <= 0:
                 return True
             self._remaining -= num_turns

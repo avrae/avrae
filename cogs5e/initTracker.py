@@ -569,6 +569,7 @@ class InitTracker:
                 out += "\u274c You must pass in a name with the -name tag.\n"
         if 'resist' in args:
             for resist in args.get('resist'):
+                resist = resist.lower()
                 if resist in combatant.resists['resist']:
                     combatant.resists['resist'].remove(resist)
                     out += "\u2705 {} removed from combatant resistances.\n".format(resist)
@@ -577,6 +578,7 @@ class InitTracker:
                     out += "\u2705 {} added to combatant resistances.\n".format(resist)
         if 'immune' in args:
             for immune in args.get('immune'):
+                immune = immune.lower()
                 if immune in combatant.resists['immune']:
                     combatant.resists['immune'].remove(immune)
                     out += "\u2705 {} removed from combatant immunities.\n".format(immune)
@@ -585,6 +587,7 @@ class InitTracker:
                     out += "\u2705 {} added to combatant immunities.\n".format(immune)
         if 'vuln' in args:
             for vuln in args.get('vuln'):
+                vuln = vuln.lower()
                 if vuln in combatant.resists['vuln']:
                     combatant.resists['vuln'].remove(vuln)
                     out += "\u2705 {} removed from combatant vulnerabilities.\n".format(vuln)

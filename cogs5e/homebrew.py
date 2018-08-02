@@ -149,7 +149,7 @@ class Homebrew:
             for _ in range(100):  # 100 pages max
                 log.info(f"Getting page {index} of {url}...")
                 async with session.get(
-                        f"http://www.critterdb.com/api/publishedbestiaries/{url}/creatures/{index}") as resp:
+                        f"http://critterdb.com/api/publishedbestiaries/{url}/creatures/{index}") as resp:
                     if not 199 < resp.status < 300:
                         raise ExternalImportError("Error importing bestiary. Are you sure the link is right?")
                     raw = await resp.json()
@@ -157,7 +157,7 @@ class Homebrew:
                         break
                     creatures.extend(raw)
                     index += 1
-            async with session.get(f"http://www.critterdb.com/api/publishedbestiaries/{url}") as resp:
+            async with session.get(f"http://critterdb.com/api/publishedbestiaries/{url}") as resp:
                 raw = await resp.json()
                 name = raw['name']
         parsed_creatures = [Monster.from_critterdb(c) for c in creatures]

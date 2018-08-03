@@ -411,3 +411,7 @@ class Dice:
             await self.bot.delete_message(ctx.message)
         except:
             pass
+
+
+def setup(bot):
+    bot.add_cog(Dice(bot))

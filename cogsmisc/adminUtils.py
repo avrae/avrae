@@ -731,3 +731,7 @@ class ServerInfoResponse(PubSubMessage):
         d['reply-to'] = self.reply_to
         d['data'] = self.data
         return d
+
+
+def setup(bot):
+    bot.add_cog(AdminUtils(bot))

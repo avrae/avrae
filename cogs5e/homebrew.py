@@ -162,3 +162,7 @@ class Homebrew:
                 name = raw['name']
         parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
         return Bestiary(url, name, parsed_creatures)
+
+
+def setup(bot):
+    bot.add_cog(Homebrew(bot))

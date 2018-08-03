@@ -664,6 +664,10 @@ class Customization:
             await self.bot.say(m)
 
 
+def setup(bot):
+    bot.add_cog(Customization(bot))
+
+
 STAT_VAR_NAMES = ("armor",
                   "charisma", "charismaMod", "charismaSave",
                   "constitution", "constitutionMod", "constitutionSave",

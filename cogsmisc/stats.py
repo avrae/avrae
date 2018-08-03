@@ -60,3 +60,7 @@ class Stats:
         cpm = total / minutes
         await self.bot.say('{0} bytes of socket events observed on this shard ({1:.2f}/minute):\n{2}'.format(total, cpm,
                                                                                                              self.socket_bandwidth))
+
+
+def setup(bot):
+    bot.add_cog(Stats(bot))

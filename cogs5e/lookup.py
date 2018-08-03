@@ -820,3 +820,7 @@ class Lookup:
         e.title = data['name']
         e.description = "Description not available."
         return await self.bot.say(embed=e)
+
+
+def setup(bot):
+    bot.add_cog(Lookup(bot))

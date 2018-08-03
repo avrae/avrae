@@ -120,3 +120,7 @@ class PBPUtils:
     async def pythag(self, num1: int, num2: int):
         """Performs a pythagorean theorem calculation to calculate diagonals."""
         await self.bot.say(sqrt(num1 ** 2 + num2 ** 2))
+
+
+def setup(bot):
+    bot.add_cog(PBPUtils(bot))

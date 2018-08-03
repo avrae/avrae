@@ -16,6 +16,7 @@ You'll need to create a few files first.
 
 `credentials.py` should include, at the very least, variables as such:
 - `officialToken` - Empty string.
+- `owner_id` - The Discord User ID of the bot owner (you, if testing).
 - `test_database_url` - The URI of a Redis cache (probably `redis://localhost:6379/0`)
 - `testToken` - A valid Discord Bot token.
 - `test_dicecloud_user` - A Dicecloud username.

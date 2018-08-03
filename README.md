@@ -3,6 +3,7 @@
 
 Avrae is a bot to facilitate running Dungeons & Dragons 5e online over Discord.
 
+You can join the Avrae Development Discord [here](https://discord.gg/pQbd4s6)!
 
 ## Contributing
 

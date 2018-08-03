@@ -7,6 +7,8 @@ Avrae is a bot to facilitate running Dungeons & Dragons 5e online over Discord.
 ## Contributing
 
 #### How to run Avrae locally
+###### Support File Package
+You can download templates of all the required files at https://andrew-zhu.com/avrae/avrae-files.zip.
 ##### Creating Support Files
 Avrae is a large project, and can be a bit daunting to get running.
 You'll need to create a few files first.
@@ -39,12 +41,13 @@ These files should just contain an empty JSON array (`[]`) for testing.
 Files marked with a * can be obtained by running the [data parsers](https://github.com/avrae/avrae-data).
 
 ##### Actually Running Avrae
+###### Redis
+You will need to run a Redis cache to serve as Avrae's database. Download [Redis 4.0](https://redis.io/download) and run a redis server locally **before** launching Avrae.
+###### Avrae
 To actually run Avrae, you need Python version >= 3.6.0 < 3.7.
 First, install the dependencies with `pip install -r requirements.txt`.
 
-If running Avrae in unsharded+unsupervised mode (**recommended for testing**), you can just run `python dbot.py test`.
-
-If running Avrae in sharded+unsupervised mode, launch each shard with `SHARDS=[NUM_SHARDS] python dbot.py test -s [SHARD_ID]`.
-
-If running Avrae in sharded+supervised mode, run `SHARDS=[NUM_SHARDS] python overseer.py test 0 [NUM_SHARDS-1]`.
+- If running Avrae in unsharded+unsupervised mode (**recommended for testing**), you can just run `python dbot.py test`.
+- If running Avrae in sharded+unsupervised mode, launch each shard with `SHARDS=[NUM_SHARDS] python dbot.py test -s [SHARD_ID]`.
+- If running Avrae in sharded+supervised mode, run `SHARDS=[NUM_SHARDS] python overseer.py test 0 [NUM_SHARDS-1]`.
 

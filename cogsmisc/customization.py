@@ -73,9 +73,7 @@ class Customization:
         !monster Rat"
         """
         cmds = cmds.splitlines()
-        hardLimit = 100
-        ct = 1
-        for c in cmds:
+        for c in cmds[:30]:
             ctx.message.content = c
             if not hasattr(self.bot, 'global_prefixes'):  # bot's still starting up!
                 return
@@ -89,10 +87,6 @@ class Customization:
                 return
             await self.bot.process_commands(ctx.message)
             await asyncio.sleep(1)
-            if (ct == hardLimit):
-                break
-            else:
-                ct = ct + 1
 
     async def handle_aliases(self, message):
         if message.content.startswith(self.bot.prefix):

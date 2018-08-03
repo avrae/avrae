@@ -73,7 +73,7 @@ class Customization:
         !monster Rat"
         """
         cmds = cmds.splitlines()
-        for c in cmds:
+        for c in cmds[:30]:
             ctx.message.content = c
             if not hasattr(self.bot, 'global_prefixes'):  # bot's still starting up!
                 return

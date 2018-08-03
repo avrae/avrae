@@ -570,6 +570,7 @@ class InitTracker:
         if 'resist' in args:
             for resist in args.get('resist'):
                 resist = resist.lower()
+                combatant.resists['resist'] = list(set(i.lower() for i in combatant.resists['resist']))
                 if resist in combatant.resists['resist']:
                     combatant.resists['resist'].remove(resist)
                     out += "\u2705 {} removed from combatant resistances.\n".format(resist)
@@ -579,6 +580,7 @@ class InitTracker:
         if 'immune' in args:
             for immune in args.get('immune'):
                 immune = immune.lower()
+                combatant.resists['immune'] = list(set(i.lower() for i in combatant.resists['immune']))
                 if immune in combatant.resists['immune']:
                     combatant.resists['immune'].remove(immune)
                     out += "\u2705 {} removed from combatant immunities.\n".format(immune)
@@ -588,6 +590,7 @@ class InitTracker:
         if 'vuln' in args:
             for vuln in args.get('vuln'):
                 vuln = vuln.lower()
+                combatant.resists['vuln'] = list(set(i.lower() for i in combatant.resists['vuln']))
                 if vuln in combatant.resists['vuln']:
                     combatant.resists['vuln'].remove(vuln)
                     out += "\u2705 {} removed from combatant vulnerabilities.\n".format(vuln)

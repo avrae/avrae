@@ -133,6 +133,8 @@ class SheetManager:
                          -resist [damage resistance]
                          -immune [damage immunity]
                          -vuln [damage vulnerability]
+                         -hit (automatically hits)
+                         -miss (automatically misses)
                          crit (automatically crit)
                          ea (Elven Accuracy double advantage)
                          -f "Field Title|Field Text" (see !embed)

@@ -70,12 +70,13 @@ def sheet_attack(attack, args, embed=None):
     args['adv'] = 2 if args.get('ea', False) and not args.get('dis', False) else args['adv']
     args['crit'] = 1 if args.get('crit', False) else None
     args['hit'] = 1 if args.get('hit', False) else None
+    args['miss'] = 1 if args.get('miss', False) and not args.get('hit') else None
     for r in range(args.get('rr', 1) or 1):  # start rolling attacks
         out = ''
         itercrit = 0
         if attack.get('attackBonus') is None and args.get('b') is not None:
             attack['attackBonus'] = '0'
-        if attack.get('attackBonus') is not None and not args.get('hit'):
+        if attack.get('attackBonus') is not None and not args.get('hit') and not args.get('miss'):
             adv = args.get('adv')
             for _adv, numHits in advnum.items():
                 if numHits > 0:
@@ -118,6 +119,9 @@ def sheet_attack(attack, args, embed=None):
         else:
             if args.get('hit'):
                 out += "**To Hit**: Automatic hit!\n"
+            elif args.get('miss'):
+                out += "**To Hit**: Automatic miss!\n"
+                itercrit = 2 # miss?
             if args.get('crit'):
                 itercrit = args.get('crit', 0)
             else:

@@ -47,7 +47,6 @@ class SheetManager:
     def __init__(self, bot):
         self.bot = bot
         self.active_characters = self.bot.db.not_json_get('active_characters', {})
-        self.bot.loop.create_task(self.backup_user_data())
         self.logger = TextLogger('dicecloud.txt')
 
         self.gsheet_client = None
@@ -58,17 +57,6 @@ class SheetManager:
             return pygsheets.authorize(service_file='avrae-google.json')
 
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
-
-    async def backup_user_data(self):
-        try:
-            await self.bot.wait_until_ready()
-            while not self.bot.is_closed:
-                await asyncio.sleep(7200)  # every 2 hours
-                self.bot.db.jset('active_characters_backup', self.bot.db.jget('active_characters', {}))
-                self.bot.db.jset('damage_snippets_backup', self.bot.db.jget('damage_snippets', {}))
-                # self.bot.db.jset('char_vars_backup', self.bot.db.jget('char_vars', {}))
-        except asyncio.CancelledError:
-            pass
 
     async def new_arg_stuff(self, args, ctx, character):
         args = parse_snippets(args, ctx)
@@ -1190,3 +1178,7 @@ class SheetManager:
         except:
             await self.bot.say(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
+
+
+def setup(bot):
+    bot.add_cog(SheetManager(bot))

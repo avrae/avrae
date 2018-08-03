@@ -96,3 +96,7 @@ class Permissions:
         else:
             self.bot.db.not_json_set("permissions", global_entries)
             await self.bot.say('"%s" command enabled in this server.' % command)
+
+
+def setup(bot):
+    bot.add_cog(Permissions(bot))

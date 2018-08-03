@@ -10,27 +10,11 @@ from discord.errors import Forbidden, NotFound, HTTPException, InvalidArgument
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
-from cogs5e.charGen import CharGenerator
-from cogs5e.dice import Dice
-from cogs5e.gametrack import GameTrack
-from cogs5e.homebrew import Homebrew
-from cogs5e.initTracker import InitTracker
-from cogs5e.lookup import Lookup
 from cogs5e.models.errors import AvraeException, EvaluationError
-from cogs5e.pbpUtils import PBPUtils
-from cogs5e.sheetManager import SheetManager
-from cogsmisc.adminUtils import AdminUtils
-from cogsmisc.core import Core
-from cogsmisc.customization import Customization
-from cogsmisc.permissions import Permissions
-from cogsmisc.publicity import Publicity
-from cogsmisc.repl import REPL
-from cogsmisc.stats import Stats
 from utils.dataIO import DataIO
 from utils.functions import discord_trim, get_positivity, list_get, gen_error_message
-from utils.help import Help
 
-INITIALIZING = True
+STATE = "init"
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
@@ -68,23 +52,18 @@ class Credentials:
 
 # CREDENTIALS
 try:
+    # noinspection PyUnresolvedReferences
     import credentials
 
     bot.credentials = Credentials()
-    bot.credentials.testToken = credentials.testToken
-    bot.credentials.officialToken = credentials.officialToken
-    bot.credentials.discord_bots_key = credentials.discord_bots_key
-    bot.credentials.carbon_key = credentials.carbon_key
+    bot.credentials.token = credentials.officialToken
     bot.credentials.test_database_url = credentials.test_database_url
+    if TESTING:
+        bot.credentials.token = credentials.testToken
     if 'ALPHA_TOKEN' in os.environ:
-        bot.credentials.testToken = os.environ.get("ALPHA_TOKEN")
+        bot.credentials.token = os.environ.get("ALPHA_TOKEN")
 except ImportError:
-    bot.credentials = Credentials()
-    bot.credentials.testToken = os.environ.get('TEST_TOKEN')
-    bot.credentials.officialToken = os.environ.get('OFFICIAL_TOKEN')
-    bot.credentials.discord_bots_key = os.environ.get('DISCORD_BOTS_KEY')
-    bot.credentials.carbon_key = os.environ.get('CARBON_KEY')
-    bot.credentials.test_database_url = os.environ.get('TEST_DATABASE_URL')
+    raise Exception("Credentials not found.")
 
 bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot.credentials.test_database_url)
 
@@ -102,35 +81,11 @@ logger.addHandler(filehandler)
 log = logging.getLogger('bot')
 msglog = logging.getLogger('messages')
 
-# -----COGS----- TODO dynamically load/unload instead of instantiating here
-diceCog = Dice(bot)
-charGenCog = CharGenerator(bot)
-initiativeTrackerCog = InitTracker(bot)
-adminUtilsCog = AdminUtils(bot)
-lookupCog = Lookup(bot)
-coreCog = Core(bot)
-permissionsCog = Permissions(bot)
-publicityCog = Publicity(bot)
-pbpCog = PBPUtils(bot)
-helpCog = Help(bot)
-sheetCog = SheetManager(bot)
-customizationCog = Customization(bot)
-cogs = [diceCog,
-        charGenCog,
-        initiativeTrackerCog,
-        adminUtilsCog,
-        lookupCog,
-        coreCog,
-        permissionsCog,
-        publicityCog,
-        pbpCog,
-        helpCog,
-        sheetCog,
-        customizationCog,
-        REPL(bot),
-        Stats(bot),
-        GameTrack(bot),
-        Homebrew(bot)]
+# -----COGS-----
+DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.gametrack", "cogs5e.homebrew", "cogs5e.initTracker",
+                "cogs5e.lookup", "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization"]
+STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.core", "cogsmisc.permissions", "cogsmisc.publicity", "cogsmisc.repl",
+               "cogsmisc.stats"]
 
 
 @bot.event
@@ -251,9 +206,6 @@ async def on_message(message):
         msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
     if message.author.id in bot.get_cog("AdminUtils").muted:
         return
-    if message.content.startswith('avraepls'):
-        log.info("Shard {} reseeding RNG...".format(getattr(bot, 'shard_id', 0)))
-        # random.seed()
     if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
         return
     try:
@@ -264,8 +216,8 @@ async def on_message(message):
         message.content = message.content.replace(guild_prefix, bot.prefix, 1)
     elif message.content.startswith(bot.prefix):
         return
-    if message.content.startswith(bot.prefix) and INITIALIZING: return await bot.send_message(message.channel,
-                                                                                              "Bot is initializing, try again in a few seconds!")
+    if message.content.startswith(bot.prefix) and STATE == "init":
+        return await bot.send_message(message.channel, "Bot is initializing, try again in a few seconds!")
     await bot.process_commands(message)
 
 
@@ -280,13 +232,13 @@ async def on_command(command, ctx):
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 
 
-for cog in cogs:
-    bot.add_cog(cog)
+for cog in DYNAMIC_COGS:
+    bot.load_extension(cog)
+
+for cog in STATIC_COGS:
+    bot.load_extension(cog)
 
 if SHARDED: log.info("I am shard {} of {}.".format(str(int(bot.shard_id) + 1), str(bot.shard_count)))
 
-INITIALIZING = False
-if not TESTING:
-    bot.run(bot.credentials.officialToken)  # official token
-else:
-    bot.run(bot.credentials.testToken)  # test token
+STATE = "run"
+bot.run(bot.credentials.token)

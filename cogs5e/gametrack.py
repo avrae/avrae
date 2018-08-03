@@ -151,7 +151,7 @@ class GameTrack:
         await self.bot.say(out)
 
     @game.command(pass_context=True, name='thp')
-    async def game_thp(self, ctx, thp:int=None):
+    async def game_thp(self, ctx, thp: int = None):
         """Modifies the temp HP of a the current active character.
         If positive, assumes set; if negative, assumes mod."""
         character = Character.from_ctx(ctx)
@@ -726,3 +726,7 @@ class GameTrack:
         spell_cmd = self.bot.get_command('spell')
         if spell_cmd is None: return await self.bot.say("Lookup cog not loaded.")
         await ctx.invoke(spell_cmd, name=spell['name'])
+
+
+def setup(bot):
+    bot.add_cog(GameTrack(bot))

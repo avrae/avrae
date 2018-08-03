@@ -228,3 +228,7 @@ class CustomHelpFormatter(HelpFormatter):
         ending_note = self.get_ending_note()
         current_embed.add_field(name='More Help', value=ending_note, inline=False)
         return self.embeds
+
+
+def setup(bot):
+    bot.add_cog(Help(bot))

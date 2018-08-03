@@ -1290,3 +1290,7 @@ class InitTracker:
         combat.end()
 
         await self.bot.edit_message(msg, "Combat ended.")
+
+
+def setup(bot):
+    bot.add_cog(InitTracker(bot))

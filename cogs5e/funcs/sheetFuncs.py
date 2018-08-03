@@ -119,11 +119,11 @@ def sheet_attack(attack, args, embed=None):
         else:
             if args.get('hit'):
                 out += "**To Hit**: Automatic hit!\n"
-            if args.get('crit'):
-                itercrit = args.get('crit', 0)
-            if args.get('miss'):
+            elif args.get('miss'):
                 out += "**To Hit**: Automatic miss!\n"
                 itercrit = 2 # miss?
+            if args.get('crit'):
+                itercrit = args.get('crit', 0)
             else:
                 itercrit = 0
 

@@ -168,7 +168,8 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
                 else:
                     def critSub(matchobj):
                         hocrit = 1 if args.get('hocrit') and wep else 0
-                        return str(int(matchobj.group(1)) * 2 + hocrit) + 'd' + matchobj.group(2)
+                        brutalcrit = args.get('brutalcrit') if args.get('brutalcrit') and wep else 0
+                        return str(int(matchobj.group(1)) * 2 + hocrit + brutalcrit) + 'd' + matchobj.group(2)
 
                     critDice = re.sub(r'(\d+)d(\d+)', critSub, damage_str)
             else:

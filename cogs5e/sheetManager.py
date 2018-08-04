@@ -168,6 +168,7 @@ class SheetManager:
         args['criton'] = args.get('criton') or char.get_setting('criton', 20)
         args['hocrit'] = char.get_setting('hocrit', False)
         args['reroll'] = char.get_setting('reroll', 0)
+        args['brutalcrit'] = char.get_setting('brutalcrit', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
             attack['details'] = await char.parse_cvars(attack['details'], ctx)
@@ -763,7 +764,8 @@ class SheetManager:
         `hocrit true/false` - Enables/disables a half-orc's Brutal Critical.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
-        `crittype 2x/default` - Sets whether crits double damage or dice."""
+        `crittype 2x/default` - Sets whether crits double damage or dice.
+        `brutalcrit <number>` - Adds additional dice for Barbarians Brutal Critical."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -866,6 +868,26 @@ class SheetManager:
                         character['settings']['hocrit'] = hocrit
                         out += "\u2705 Half-orc crits {}.\n".format(
                             "enabled" if character['settings'].get('hocrit') else "disabled")
+            if arg == 'brutalcrit':
+                brutalcrit = list_get(index + 1, None, args)
+                if brutalcrit is None:
+                    out += '\u2139 Barbarian brutal crits are currently set to {}. Use "!csettings brutalcrit reset" to reset it.\n' \
+                        .format(str(character['settings'].get('brutalcrit')) if character['settings'].get(
+                        'brutalcrit') is not '0' else "0")
+                elif brutalcrit.lower() == 'reset':
+                    character['settings']['brutalcrit'] = '0'
+                    out += "\u2705 Brutal Crit reset.\n"
+                else:
+                    try:
+                        brutalcrit = int(brutalcrit)
+                    except (ValueError, TypeError):
+                        out += '\u274c Invalid number. Use "!csettings brutalcrit reset" to reset it.\n'
+                    else:
+                        if not 1 <= brutalcrit <= 20:
+                            out += '\u274c Brutal Crit must be between 1 and 20.\n'
+                        else:
+                            character['settings']['brutalcrit'] = brutalcrit
+                            out += "\u2705 Brutal Crit set to {}.\n".format(brutalcrit)
             if arg == 'srslots':
                 srslots = list_get(index + 1, None, args)
                 if srslots is None:

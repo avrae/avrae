@@ -807,6 +807,7 @@ class InitTracker:
             args['hocrit'] = combatant.character.get_setting('hocrit') or False
             args['reroll'] = combatant.character.get_setting('reroll') or 0
             args['crittype'] = combatant.character.get_setting('crittype') or 'default'
+            args['brutalcrit'] = combatant.character.get_setting('brutalcrit') or 0
 
         result = sheet_attack(attack, args)
         embed = result['embed']

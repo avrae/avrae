@@ -854,7 +854,7 @@ class SheetManager:
                     out += "\u2705 Critdmg set to {}.\n".format(critdmg)
             if arg == 'critdice':
                 critdice = list_get(index + 1, None, args)
-                if 'hocrit' in character['settings']
+                if 'hocrit' in character['settings']:
                     character['settings']['critdice'] += int(character['settings']['hocrit'])
                     character['settings']['hocrit'] = False
                 if critdice is None:

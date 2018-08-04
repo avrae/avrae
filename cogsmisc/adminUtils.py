@@ -228,7 +228,7 @@ class AdminUtils:
         def _():
             import subprocess
             output = subprocess.check_output(["git", "pull"])
-            return output
+            return output.decode()
 
         if pull_git:
             out = await self.bot.loop.run_in_executor(None, _)

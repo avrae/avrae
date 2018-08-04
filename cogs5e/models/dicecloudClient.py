@@ -11,7 +11,7 @@ import credentials
 from cogs5e.models.errors import LoginFailure, InsertFailure, MeteorClientException
 
 TESTING = (os.environ.get("TESTING", False) or 'test' in sys.argv)
-UNAME = 'avrae' if not TESTING else 'zhu.alt'
+UNAME = 'avrae' if not TESTING else credentials.test_dicecloud_user
 PWD = credentials.dicecloud_pass.encode() if not TESTING else credentials.test_dicecloud_pass.encode()
 
 log = logging.getLogger(__name__)

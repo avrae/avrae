@@ -569,6 +569,8 @@ class InitTracker:
                 out += "\u274c You must pass in a name with the -name tag.\n"
         if 'resist' in args:
             for resist in args.get('resist'):
+                resist = resist.lower()
+                combatant.resists['resist'] = list(set(i.lower() for i in combatant.resists['resist']))
                 if resist in combatant.resists['resist']:
                     combatant.resists['resist'].remove(resist)
                     out += "\u2705 {} removed from combatant resistances.\n".format(resist)
@@ -577,6 +579,8 @@ class InitTracker:
                     out += "\u2705 {} added to combatant resistances.\n".format(resist)
         if 'immune' in args:
             for immune in args.get('immune'):
+                immune = immune.lower()
+                combatant.resists['immune'] = list(set(i.lower() for i in combatant.resists['immune']))
                 if immune in combatant.resists['immune']:
                     combatant.resists['immune'].remove(immune)
                     out += "\u2705 {} removed from combatant immunities.\n".format(immune)
@@ -585,6 +589,8 @@ class InitTracker:
                     out += "\u2705 {} added to combatant immunities.\n".format(immune)
         if 'vuln' in args:
             for vuln in args.get('vuln'):
+                vuln = vuln.lower()
+                combatant.resists['vuln'] = list(set(i.lower() for i in combatant.resists['vuln']))
                 if vuln in combatant.resists['vuln']:
                     combatant.resists['vuln'].remove(vuln)
                     out += "\u2705 {} removed from combatant vulnerabilities.\n".format(vuln)
@@ -889,7 +895,7 @@ class InitTracker:
         spell = strict_search(c.autospells, 'name', spell_name)
         if spell is None:
             if is_character:
-                return await self._old_cast(ctx, combatant, spell_name, *args)  # fall back to old cast
+                return await self._old_cast(ctx, combatant, spell_name, args)  # fall back to old cast
             return await self.bot.say("Spell not supported by casting system.")
 
         can_cast = True
@@ -1152,7 +1158,7 @@ class InitTracker:
         await self.bot.say(embed=embed)
         await combat.final()
 
-    async def _old_cast(self, ctx, combatant, spell_name, *args):
+    async def _old_cast(self, ctx, combatant, spell_name, args):
         spell = getSpell(spell_name)
         self.bot.db.incr('spells_looked_up_life')
         if spell is None:
@@ -1161,12 +1167,6 @@ class InitTracker:
             return await self.bot.say("Mystic talents are not supported.")
 
         char = combatant.character
-
-        args = parse_snippets(' '.join(list(args)), ctx)
-        if combatant.character_owner == ctx.message.author.id:
-            args = await char.parse_cvars(args, ctx)
-        args = shlex.split(args)
-        args = parse_args_3(args)
 
         can_cast = True
         spell_level = int(spell.get('level', 0))
@@ -1290,3 +1290,7 @@ class InitTracker:
         combat.end()
 
         await self.bot.edit_message(msg, "Combat ended.")
+
+
+def setup(bot):
+    bot.add_cog(InitTracker(bot))

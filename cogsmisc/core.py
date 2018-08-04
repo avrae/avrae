@@ -71,7 +71,7 @@ class Core:
         await self.bot.say("You can donate to me here:\n<https://www.paypal.me/avrae>\n\u2764")
 
     @commands.command(aliases=['stats', 'info'])
-    async def about(self, detail=None):
+    async def about(self):
         """Information about the bot."""
         botStats = {}
         statKeys = ["dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life",
@@ -97,7 +97,7 @@ class Core:
         embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
         motd = random.choice(["May the RNG be with you", "May your rolls be high",
                               "Will give higher rolls for cookies", ">:3",
-                              "Does anyone even read these?", "Someone told me to mention 12 guns. Here you go, Mac."])
+                              "Does anyone even read these?"])
         embed.set_footer(
             text='{} | Build {} | Shard {}'.format(motd, self.bot.db.get('build_num'),
                                                    getattr(self.bot, 'shard_id', 0)))
@@ -112,8 +112,9 @@ class Core:
                                             'Help me buy a cup of coffee [here](https://www.paypal.me/avrae)!\n'
                                             'Join the official testing server [here](https://discord.gg/pQbd4s6)!',
                         inline=False)
-        if detail == 'art':
-            embed.add_field(name="Art",
-                            value="Someone made me art! Thanks, [blind](https://blindprofits.portfoliobox.net/)!")
 
         await self.bot.say(embed=embed)
+
+
+def setup(bot):
+    bot.add_cog(Core(bot))

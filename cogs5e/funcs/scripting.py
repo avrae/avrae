@@ -7,6 +7,7 @@ import simpleeval
 from simpleeval import EvalWithCompoundTypes, IterableTooLong
 
 from cogs5e.funcs.dice import roll
+from cogs5e.funcs.sheetFuncs import sheet_damage
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup
 
@@ -26,6 +27,12 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             ast.DictComp: self._eval_dictcomp,
             ast.comprehension: self._eval_comprehension
         })
+
+        self.assign_nodes = {
+            ast.Name: self._assign_name,
+            ast.Tuple: self._assign_tuple,
+            ast.Subscript: self._assign_subscript
+        }
 
     def eval(self, expr):  # allow for ast.Assign to set names
         """ evaluate an expression, using the operators, functions and
@@ -50,30 +57,47 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         self._assign(names, values)
 
     def _assign(self, names, values, eval_values=True):
-        if isinstance(names, ast.Tuple):  # unpacking variables
-            names = [n.id for n in names.elts]  # turn ast into str
-            if not isinstance(values, ast.Tuple):
-                raise ValueError(f"unequal unpack: {len(names)} names, 1 value")
-            if eval_values:
-                values = [self._eval(n) for n in values.elts]  # get what we actually want to assign
-            else:
-                values = values.elts
-            if not len(values) == len(names):
-                raise ValueError(f"unequal unpack: {len(names)} names, {len(values)} values")
-            else:
-                if not isinstance(self.names, dict):
-                    raise TypeError("cannot set name: incorrect name type")
-                else:
-                    for name, value in zip(names, values):
-                        self.names[name] = value  # and assign it
+        try:
+            handler = self.assign_nodes[type(names)]
+        except KeyError:
+            raise TypeError(f"Assignment to {type(names).__name__} is not allowed")
+        return handler(names, values, eval_values)
+
+    def _assign_name(self, name, value, eval_value=True):
+        if not isinstance(self.names, dict):
+            raise TypeError("cannot set name: incorrect name type")
+        else:
+            if eval_value:
+                value = self._eval(value)
+            self.names[name.id] = value
+
+    def _assign_tuple(self, names, values, eval_values=True):
+        if not all(isinstance(n, ast.Name) for n in names.elts):
+            raise TypeError("Assigning to multiple non-names via unpack is not allowed")
+        names = [n.id for n in names.elts]  # turn ast into str
+        if not isinstance(values, ast.Tuple):
+            raise ValueError(f"unequal unpack: {len(names)} names, 1 value")
+        if eval_values:
+            values = [self._eval(n) for n in values.elts]  # get what we actually want to assign
+        else:
+            values = values.elts
+        if not len(values) == len(names):
+            raise ValueError(f"unequal unpack: {len(names)} names, {len(values)} values")
         else:
             if not isinstance(self.names, dict):
                 raise TypeError("cannot set name: incorrect name type")
             else:
-                if eval_values:
-                    self.names[names.id] = self._eval(values)
-                else:
-                    self.names[names.id] = values
+                for name, value in zip(names, values):
+                    self.names[name] = value  # and assign it
+
+    def _assign_subscript(self, name, value, eval_value=True):
+        if eval_value:
+            value = self._eval(value)
+
+        container = self._eval(name.value)
+        key = self._eval(name.slice)
+        container[key] = value
+        self._assign(name.value, container, eval_values=False)
 
     def _eval_joinedstr(self, node):
         return ''.join(str(self._eval(n)) for n in node.values)
@@ -202,12 +226,14 @@ class SimpleCombatant:
             self.maxhp = self._combatant.hpMax
             self.initmod = self._combatant.initMod
             self.temphp = self._combatant.temphp
+            self.resists = self._combatant.resists
         else:
             self.ac = None
             self.hp = None
             self.maxhp = None
             self.initmod = None
             self.temphp = None
+            self.resists = None
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes
@@ -243,6 +269,20 @@ class SimpleCombatant:
         if self._combatant.ac:
             return to_hit >= self._combatant.ac
         return None
+
+    def damage(self, dice_str: str, crit=False, d=None, c=None, hocrit=False):
+        args = {
+            'd': d,
+            'c': c,
+            'hocrit': hocrit,
+            'resist': '|'.join(self._combatant.resists['resist']),
+            'immune': '|'.join(self._combatant.resists['immune']),
+            'vuln': '|'.join(self._combatant.resists['vuln'])
+        }
+        result = sheet_damage(dice_str, args, 1 if crit else 0)
+        result['damage'] = result['damage'].strip()
+        self.mod_hp(-result['total'])
+        return result
 
     def set_ac(self, ac: int):
         if not isinstance(ac, int) and ac is not None:
@@ -292,3 +332,13 @@ DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
                           'range': safe_range, 'sqrt': sqrt,
                           'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json})
+
+if __name__ == '__main__':
+    evaluator = ScriptingEvaluator()
+    while True:
+        try:
+            evaluator.eval(input("Evaluate: ").strip())
+        except Exception as e:
+            print(e)
+            continue
+        print(evaluator.names)

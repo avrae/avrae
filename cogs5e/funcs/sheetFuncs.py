@@ -22,8 +22,18 @@ def sheet_attack(attack, args, embed=None):
     # print(args)
     if embed is None:
         embed = discord.Embed()
+
     total_damage = 0
-    dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)]  # ['d1', 'd2'...]
+
+    advnum_keys = [k for k in args.keys() if re.match(r'(adv|dis)\d+', k)]
+    advnum = {}
+    for k in advnum_keys:  # parse adv# args
+        m = re.match(r'(adv|dis)(\d+)', k)
+        _adv = m.group(1)
+        num = int(m.group(2))
+        advnum[_adv] = num
+
+    dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)]  # ['d1', 'd2'...] TODO should probably move this
     dnum = {}
     for k in dnum_keys:  # parse d# args
         for dmg in args[k].split('|'):
@@ -34,14 +44,6 @@ def sheet_attack(attack, args, embed=None):
                 embed.colour = 0xff0000
                 embed.description = "Malformed tag: {}".format(k)
                 return {"embed": embed, "total_damage": 0}
-
-    advnum_keys = [k for k in args.keys() if re.match(r'(adv|dis)\d+', k)]
-    advnum = {}
-    for k in advnum_keys:  # parse adv# args
-        m = re.match(r'(adv|dis)(\d+)', k)
-        _adv = m.group(1)
-        num = int(m.group(2))
-        advnum[_adv] = num
 
     if args.get('phrase') is not None:  # parse phrase
         embed.description = '*' + args.get('phrase') + '*'
@@ -68,12 +70,13 @@ def sheet_attack(attack, args, embed=None):
     args['adv'] = 2 if args.get('ea', False) and not args.get('dis', False) else args['adv']
     args['crit'] = 1 if args.get('crit', False) else None
     args['hit'] = 1 if args.get('hit', False) else None
+    args['miss'] = 1 if args.get('miss', False) and not args.get('hit') else None
     for r in range(args.get('rr', 1) or 1):  # start rolling attacks
         out = ''
         itercrit = 0
         if attack.get('attackBonus') is None and args.get('b') is not None:
             attack['attackBonus'] = '0'
-        if attack.get('attackBonus') is not None and not args.get('hit'):
+        if attack.get('attackBonus') is not None and not args.get('hit') and not args.get('miss'):
             adv = args.get('adv')
             for _adv, numHits in advnum.items():
                 if numHits > 0:
@@ -116,66 +119,17 @@ def sheet_attack(attack, args, embed=None):
         else:
             if args.get('hit'):
                 out += "**To Hit**: Automatic hit!\n"
+            elif args.get('miss'):
+                out += "**To Hit**: Automatic miss!\n"
+                itercrit = 2 # miss?
             if args.get('crit'):
                 itercrit = args.get('crit', 0)
             else:
                 itercrit = 0
 
-        if attack.get('damage') is None and args.get('d') is not None:
-            attack['damage'] = '0'
-        if attack.get('damage') is not None:
-
-            def parsecrit(damage_str, wep=False):
-                if itercrit == 1:
-                    if args.get('crittype') == '2x':
-                        critDice = f"({damage_str})*2"
-                        if args.get('c') is not None:
-                            critDice += '+' + args.get('c', '')
-                    else:
-                        def critSub(matchobj):
-                            hocrit = 1 if args.get('hocrit') and wep else 0
-                            return str(int(matchobj.group(1)) * 2 + hocrit) + 'd' + matchobj.group(2)
-
-                        critDice = re.sub(r'(\d+)d(\d+)', critSub, damage_str)
-                else:
-                    critDice = damage_str
-                return critDice
-
-            # -d, -d# parsing
-            if args.get('d') is not None:
-                damage = parsecrit(attack.get('damage'), wep=True) + '+' + parsecrit(args.get('d'))
-            else:
-                damage = parsecrit(attack.get('damage'), wep=True)
-
-            for dice, numHits in dnum.items():
-                if not itercrit == 2 and numHits > 0:
-                    damage += '+' + parsecrit(dice)
-                    dnum[dice] -= 1
-
-            # crit parsing
-            rollFor = "Damage"
-            if itercrit == 1:
-                if args.get('c') is not None:
-                    damage += '+' + args.get('c', '')
-                rollFor = "Damage (CRIT!)"
-            elif itercrit == 2:
-                rollFor = "Damage (Miss!)"
-
-            # resist parsing
-            if 'resist' in args or 'immune' in args or 'vuln' in args:
-                resistances = args.get('resist', '').split('|')
-                immunities = args.get('immune', '').split('|')
-                vulnerabilities = args.get('vuln', '').split('|')
-                damage = parse_resistances(damage, resistances, immunities, vulnerabilities)
-
-            # actual roll
-            if itercrit == 2 and not args.get('showmiss', False):
-                out += '**Miss!**\n'
-            else:
-                dmgroll = roll(damage, rollFor=rollFor, inline=True, show_blurbs=False)
-                out += dmgroll.result + '\n'
-                if not itercrit == 2:  # if we actually hit
-                    total_damage += dmgroll.total
+        res = sheet_damage(attack.get('damage'), args, itercrit, dnum)
+        out += res['damage']
+        total_damage += res['total']
 
         if out is not '':
             if (args.get('rr', 1) or 1) > 1:
@@ -193,6 +147,70 @@ def sheet_attack(attack, args, embed=None):
         embed.set_thumbnail(url=args.get('image'))
 
     return {'embed': embed, 'total_damage': total_damage}
+
+
+def sheet_damage(damage_str, args, itercrit=0, dnum=None):
+    total_damage = 0
+    out = ""
+    if dnum is None:
+        dnum = {}
+
+    if damage_str is None and args.get('d') is not None:
+        damage_str = '0'
+    if damage_str is not None:
+
+        def parsecrit(damage_str, wep=False):
+            if itercrit == 1:
+                if args.get('crittype') == '2x':
+                    critDice = f"({damage_str})*2"
+                    if args.get('c') is not None:
+                        critDice += '+' + args.get('c', '')
+                else:
+                    def critSub(matchobj):
+                        hocrit = 1 if args.get('hocrit') and wep else 0
+                        return str(int(matchobj.group(1)) * 2 + hocrit) + 'd' + matchobj.group(2)
+
+                    critDice = re.sub(r'(\d+)d(\d+)', critSub, damage_str)
+            else:
+                critDice = damage_str
+            return critDice
+
+        # -d, -d# parsing
+        if args.get('d') is not None:
+            damage = parsecrit(damage_str, wep=True) + '+' + parsecrit(args.get('d'))
+        else:
+            damage = parsecrit(damage_str, wep=True)
+
+        for dice, numHits in dnum.items():
+            if not itercrit == 2 and numHits > 0:
+                damage += '+' + parsecrit(dice)
+                dnum[dice] -= 1
+
+        # crit parsing
+        rollFor = "Damage"
+        if itercrit == 1:
+            if args.get('c') is not None:
+                damage += '+' + args.get('c', '')
+            rollFor = "Damage (CRIT!)"
+        elif itercrit == 2:
+            rollFor = "Damage (Miss!)"
+
+        # resist parsing
+        if 'resist' in args or 'immune' in args or 'vuln' in args:
+            resistances = args.get('resist', '').split('|')
+            immunities = args.get('immune', '').split('|')
+            vulnerabilities = args.get('vuln', '').split('|')
+            damage = parse_resistances(damage, resistances, immunities, vulnerabilities)
+
+        # actual roll
+        if itercrit == 2 and not args.get('showmiss', False):
+            out = '**Miss!**\n'
+        else:
+            dmgroll = roll(damage, rollFor=rollFor, inline=True, show_blurbs=False)
+            out = dmgroll.result + '\n'
+            if not itercrit == 2:  # if we actually hit
+                total_damage += dmgroll.total
+    return {'damage': out, 'total': total_damage}
 
 
 def sheet_cast(spell, args, embed=None):

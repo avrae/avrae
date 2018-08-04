@@ -69,15 +69,16 @@ class Dice:
                !r 4d6mi2[fire] Elemental Adept, Fire
                !r 2d6e6 Explode on 6
                !r 10d6ra6 Spell Bombardment
+               !r 4d6ro<3 Great Weapon Master
         Supported Operators: k (keep)
                              ro (reroll once)
                              rr (reroll infinitely)
                              mi/ma (min/max result)
-                             >/< (test if result is greater than/less than)
                              e (explode dice of value)
                              ra (reroll and add)
         Supported Selectors: lX (lowest X)
-                             hX (highest X)"""
+                             hX (highest X)
+                             >X/<X (greater than or less than X)"""
 
         if rollStr == '0/0':  # easter eggs
             return await self.bot.say("What do you expect me to do, destroy the universe?")
@@ -410,3 +411,7 @@ class Dice:
             await self.bot.delete_message(ctx.message)
         except:
             pass
+
+
+def setup(bot):
+    bot.add_cog(Dice(bot))

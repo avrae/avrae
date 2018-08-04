@@ -156,3 +156,7 @@ class REPL:
             else:
                 self._last_result = ret
                 await self.bot.say('```py\n{}{}\n```'.format(value, ret))
+
+
+def setup(bot):
+    bot.add_cog(REPL(bot))

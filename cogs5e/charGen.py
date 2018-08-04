@@ -312,7 +312,8 @@ class CharGenerator:
             except MeteorClientException:
                 pass
             if userId: break
-            await self.bot.say("Dicecloud user not found. Maybe try your email, or putting it all lowercase if applicable.")
+            await self.bot.say(
+                "Dicecloud user not found. Maybe try your email, or putting it all lowercase if applicable.")
 
         if userId is None:
             return await self.bot.say("Invalid dicecloud username.")
@@ -504,3 +505,7 @@ async def resolve(result, ctx):
         else:
             result = await get_selection(ctx, [(r['name'], r) for r in results])
     return result
+
+
+def setup(bot):
+    bot.add_cog(CharGenerator(bot))

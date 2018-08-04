@@ -166,8 +166,8 @@ class SheetManager:
         args = await self.new_arg_stuff(args, ctx, char)
         args['name'] = char.get_name()
         args['criton'] = args.get('criton') or char.get_setting('criton', 20)
-        args['hocrit'] = char.get_setting('hocrit', False)
         args['reroll'] = char.get_setting('reroll', 0)
+        args['critdice'] = int(char.get_setting('hocrit',False)) + char.get_setting('critdice', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
             attack['details'] = await char.parse_cvars(attack['details'], ctx)
@@ -760,10 +760,10 @@ class SheetManager:
         `color <hex color>` - Colors all embeds this color.
         `criton <number>` - Makes attacks crit on something other than a 20.
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
-        `hocrit true/false` - Enables/disables a half-orc's Brutal Critical.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
-        `crittype 2x/default` - Sets whether crits double damage or dice."""
+        `crittype 2x/default` - Sets whether crits double damage or dice.
+        `critdice <number>` - Adds additional dice for to critical attacks."""
         user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
         active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
@@ -852,20 +852,29 @@ class SheetManager:
                 else:
                     character['settings']['critdmg'] = critdmg
                     out += "\u2705 Critdmg set to {}.\n".format(critdmg)
-            if arg == 'hocrit':
-                hocrit = list_get(index + 1, None, args)
-                if hocrit is None:
-                    out += '\u2139 Half-orc crits are currently {}.\n' \
-                        .format("enabled" if character['settings'].get('hocrit') else "disabled")
+            if arg == 'critdice':
+                critdice = list_get(index + 1, None, args)
+                if 'hocrit' in character['settings']
+                    character['settings']['critdice'] += int(character['settings']['hocrit'])
+                    character['settings']['hocrit'] = False
+                if critdice is None:
+                    out += '\u2139 Extra crit dice are currently set to {}. Use "!csettings critdice reset" to reset it.\n' \
+                        .format(str(character['settings'].get('critdice')) if character['settings'].get(
+                        'critdice') is not '0' else "0")
+                elif critdice.lower() == 'reset':
+                    character['settings']['critdice'] = 0
+                    out += "\u2705 Extra crit dice reset.\n"
                 else:
                     try:
-                        hocrit = get_positivity(hocrit)
-                    except AttributeError:
-                        out += '\u274c Invalid input. Use "!csettings hocrit false" to reset it.\n'
+                        critdice = int(critdice)
+                    except (ValueError, TypeError):
+                        out += '\u274c Invalid number. Use "!csettings critdice reset" to reset it.\n'
                     else:
-                        character['settings']['hocrit'] = hocrit
-                        out += "\u2705 Half-orc crits {}.\n".format(
-                            "enabled" if character['settings'].get('hocrit') else "disabled")
+                        if not 0 <= critdice <= 20:
+                            out += '\u274c Extra crit dice must be between 1 and 20. Use "!csettings critdice reset" to reset it.\n'
+                        else:
+                            character['settings']['critdice'] = critdice
+                            out += "\u2705 Extra crit dice set to {}.\n".format(critdice)
             if arg == 'srslots':
                 srslots = list_get(index + 1, None, args)
                 if srslots is None:

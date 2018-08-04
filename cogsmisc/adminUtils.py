@@ -4,12 +4,8 @@ Created on Sep 23, 2016
 @author: andrew
 """
 import asyncio
-import gc
 import json
 import logging
-import re
-import sys
-import traceback
 import uuid
 
 import discord
@@ -19,12 +15,10 @@ from discord.enums import ChannelType
 from discord.errors import NotFound
 from discord.ext import commands
 
-import credentials
 from utils import checks
-from utils.dataIO import DataIO
+from utils.functions import discord_trim
 
 log = logging.getLogger(__name__)
-memlog = logging.getLogger("memory")
 
 
 class AdminUtils:
@@ -35,8 +29,6 @@ class AdminUtils:
     def __init__(self, bot):
         self.bot = bot
         self.muted = self.bot.db.not_json_get('muted', [])
-        self.assume_dir_control_chan = None
-        self.assume_dir_control_controller = None
         self.blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
 
         self.bot.loop.create_task(self.handle_pubsub())
@@ -45,10 +37,6 @@ class AdminUtils:
                                      'asdc'  # assume direct control
                                      )
         self.requests = {}
-        self.command_mem = {}
-        self.mem_debug = self.bot.db.get("mem_debug", False)
-        # self.bot.loop.create_task(self.update_mem_state())
-        # self.bot.loop.create_task(self.collect_garbage())
 
         loglevels = self.bot.db.jget('loglevels', {})
         for logger, level in loglevels.items():
@@ -57,15 +45,6 @@ class AdminUtils:
             except:
                 log.warning(f"Failed to reset loglevel of {logger}")
 
-    async def update_mem_state(self):
-        try:
-            await self.bot.wait_until_ready()
-            while not self.bot.is_closed:
-                await asyncio.sleep(10)
-                self.mem_debug = self.bot.db.get("mem_debug", False)
-        except asyncio.CancelledError:
-            pass
-
     @commands.command(hidden=True)
     @checks.is_owner()
     async def blacklist(self, _id):
@@ -73,21 +52,6 @@ class AdminUtils:
         self.blacklisted_serv_ids.append(_id)
         self.bot.db.not_json_set('blacklist', self.blacklisted_serv_ids)
         await self.bot.say(':ok_hand:')
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def restart(self):
-        """Restarts Avrae. May fail sometimes due to bad programming on zhu.exe's end.
-        Requires: Owner"""
-        print("Shard {} going down for restart!".format(getattr(self.bot, 'shard_id', 0)))
-        await self.bot.say("Byeeeeeee!")
-        await self.bot.logout()
-        sys.exit()
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def kill(self):
-        await self.bot.say("I'm afraid I can't let you do that, Zhu.")
 
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
@@ -153,7 +117,7 @@ class AdminUtils:
                 out += "\n{} members, {} bot".format(data['members'], data['bots'])
                 for c in data['channels']:
                     out += '\n|- {} ({})'.format(c['name'], c['id'])
-        out = self.discord_trim(out)
+        out = discord_trim(out)
         if page is None:
             for m in out:
                 await self.bot.say(m)
@@ -190,79 +154,6 @@ class AdminUtils:
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def clean_combat_keys(self):
-        keys = self.bot.db._db.keys("*")
-        keys = [k.decode() for k in keys]
-        combat_keys = [k for k in keys if re.match(r'\d{18}\.avrae', k)]
-        deleted = 0
-        for k in combat_keys:
-            self.bot.db.delete(k)
-            print("deleted", k)
-            deleted += 1
-        await self.bot.say("Done! Deleted {} keys".format(deleted))
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def migrate_cvars(self):
-        cvars = self.bot.db.not_json_get('char_vars', {})
-        num_users = 0
-        num_cvars = 0
-        for user_id, user_cvars in cvars.items():
-            print("migrating cvars for {}...".format(user_id))
-            user_chars = self.bot.db.not_json_get(user_id + '.characters', {})
-            num_users += 1
-            for character_id in user_cvars:
-                print("  migrating character {}...".format(character_id))
-                try:
-                    stat_vars = {}
-                    stat_vars.update(user_chars[character_id]['stats'])
-                    stat_vars.update(user_chars[character_id]['levels'])
-                    stat_vars['hp'] = user_chars[character_id]['hp']
-                    stat_vars['armor'] = user_chars[character_id]['armor']
-                    stat_vars.update(user_chars[character_id]['saves'])
-                    user_chars[character_id]['stat_cvars'] = stat_vars
-                except KeyError:
-                    print("  error character not found")
-                num_cvars += 1
-            self.bot.db.not_json_set(user_id + '.characters', user_chars)
-        await self.bot.say("Migrated {} cvars for {} users".format(num_cvars, num_users))
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def backup_key(self, key):
-        data = self.bot.db.get(key)
-        if data:
-            self.bot.db.set(f"{key}-backup", data)
-            await self.bot.say('done')
-        else:
-            await self.bot.say('fail')
-
-    @commands.command(pass_context=True, hidden=True)
-    @checks.is_owner()
-    async def code(self, ctx, *, code: str):
-        """Arbitrarily runs code."""
-        here = ctx.message.channel
-        this = ctx.message
-
-        def echo(out):
-            self.msg(here, out)
-
-        def rep(out):
-            self.replace(this, out)
-
-        def coro(coro):
-            asyncio.ensure_future(coro)
-
-        try:
-            exec(code, globals(), locals())
-        except:
-            traceback.print_exc()
-            out = self.discord_trim(traceback.format_exc())
-            for o in out:
-                await self.bot.send_message(ctx.message.channel, o)
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
     async def mute(self, target):
         """Mutes a person by ID."""
         self.muted = self.bot.db.not_json_get('muted', [])
@@ -277,56 +168,6 @@ class AdminUtils:
             self.muted.append(target)
             await self.bot.say("{} ({}) muted.".format(target, target_user))
         self.bot.db.not_json_set('muted', self.muted)
-
-    @commands.command(hidden=True, pass_context=True)
-    @checks.is_owner()
-    async def assume_direct_control(self, ctx, chan: str):
-        """Assumes direct control of Avrae."""
-
-        def cleanup_code(content):
-            """Automatically removes code blocks from the code."""
-            # remove ```py\n```
-            if content.startswith('```') and content.endswith('```'):
-                return '\n'.join(content.split('\n')[1:-1])
-
-            # remove `foo`
-            return content.strip('` \n')
-
-        self.assume_dir_control_chan = self.bot.get_channel(chan)
-        self.assume_dir_control_controller = ctx.message.channel
-        if self.assume_dir_control_chan is None:
-            self.assume_dir_control_chan = await self.bot.get_user_info(chan)
-        while True:
-            response = await self.bot.wait_for_message(author=ctx.message.author, channel=ctx.message.channel,
-                                                       check=lambda m: m.content.startswith('`'))
-            cleaned = cleanup_code(response.content)
-            if cleaned in ('quit', 'exit', 'exit()'):
-                await self.bot.say('Exiting.')
-                self.assume_dir_control_chan = None
-                return
-            else:
-                await self.bot.send_message(self.assume_dir_control_chan, cleaned)
-
-    @commands.command(hidden=True, name="migrate_db", pass_context=True)
-    @checks.is_owner()
-    async def migrate_db(self, ctx):
-        """Migrates entire db."""
-        await self.bot.say("Are you absolutely, 100% sure you want to do this? **This will overwrite existing keys**.")
-        msg = await self.bot.wait_for_message(author=ctx.message.author)
-        if not msg.content == 'yes': return await self.bot.say("Aborting.")
-
-        def _():
-            old_db = DataIO(testing=True, test_database_url=credentials.old_database_url)
-            for key in old_db._db.keys():
-                try:
-                    key = key.decode()
-                    self.bot.db.set(key, old_db.get(key))
-                    print(f"Migrated {key}")
-                except Exception as e:
-                    print(f"Error migrating {key}: {e}")
-
-        await self.bot.loop.run_in_executor(None, _)
-        await self.bot.say('done.')
 
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -370,12 +211,57 @@ class AdminUtils:
             out += 'Shard {}: {}\n'.format(shard, response['response'])
         await self.bot.say(out)
 
-    @commands.command(hidden=True, name="mem_debug")
+    @commands.command(hidden=True)
     @checks.is_owner()
-    async def _mem_debug(self):
-        """Toggles global memory debug."""
-        self.bot.db.set("mem_debug", not self.bot.db.get("mem_debug", False))
-        await self.bot.say('done.')
+    async def updatebot(self, pull_git: bool = True):
+        successful = True
+        self.bot.state = "updating"
+
+        for cog in self.bot.dynamic_cog_list:
+            try:
+                self.bot.unload_extension(cog)
+                log.info(f"Unloaded {cog}")
+            except Exception as e:
+                log.critical(f"Failed to unload {cog}: {type(e).__name__}: {e}")
+                return await self.bot.say(f"Failed to unload {cog} - update aborted but cogs unloaded!")
+
+        def _():
+            import subprocess
+            output = subprocess.check_output(["git", "pull"])
+            return output
+
+        if pull_git:
+            out = await self.bot.loop.run_in_executor(None, _)
+            await self.bot.say(f"```\n{out}\n```")
+
+        for cog in self.bot.dynamic_cog_list:
+            try:
+                self.bot.load_extension(cog)
+                log.info(f"Loaded {cog}")
+            except Exception as e:
+                log.critical(f"Failed to load {cog}: {type(e).__name__}: {e}")
+                successful = False
+                await self.bot.say(f"Failed to load {cog} - update continuing on this shard only!")
+
+        build = self.bot.db.incr("build_num")
+        await self.bot.say(f"Okay, shard {self.bot.shard_id} has updated. Now on build {build}.")
+        self.bot.state = "run"
+
+        if successful:
+            req = self.request_bot_update(self.bot.shard_id)
+            for _ in range(100):  # timeout after 10 sec
+                if len(self.requests[req]) >= self.bot.shard_count - 1:
+                    break
+                else:
+                    await asyncio.sleep(0.1)
+
+            out = ''
+            data = self.requests.pop(req)
+
+            for shard, response in data.items():
+                out += 'Shard {}: {}\n'.format(shard, response['response'])
+            if out:
+                await self.bot.say(out)
 
     async def on_message(self, message):
         if message.author.id in self.muted:
@@ -383,14 +269,6 @@ class AdminUtils:
                 await self.bot.delete_message(message)
             except:
                 pass
-        if self.assume_dir_control_chan is not None:
-            if isinstance(message.channel, PrivateChannel):
-                if message.channel.user.id == self.assume_dir_control_chan.id:
-                    await self.bot.send_message(self.assume_dir_control_controller,
-                                                "**" + message.author.display_name + "**: " + message.content)
-            elif message.channel.id == self.assume_dir_control_chan.id:
-                await self.bot.send_message(self.assume_dir_control_controller,
-                                            "**" + message.author.display_name + "**: " + message.content)
 
     async def on_server_join(self, server):
         if server.id in self.blacklisted_serv_ids: await self.bot.leave_server(server)
@@ -408,71 +286,6 @@ class AdminUtils:
                 pass
             await asyncio.sleep(members / 200)
             await self.bot.leave_server(server)
-
-    async def collect_garbage(self):
-        try:
-            await self.bot.wait_until_ready()
-            while not self.bot.is_closed:
-                await asyncio.sleep(3600)
-                gc.collect()
-        except asyncio.CancelledError:
-            pass
-
-    # async def on_command(self, command, ctx):
-    #     if self.mem_debug:
-    #         mem = psutil.Process().memory_full_info().uss
-    #         if len(self.command_mem) > 30: self.command_mem = {} # let's not overflow
-    #         self.command_mem[ctx.message.id] = mem # store mem usage before
-    #         memlog.debug(f"Memory usage before processing command {command.qualified_name}: {mem}B")
-    #
-    # async def on_command_completion(self, command, ctx):
-    #     if self.mem_debug:
-    #         mem_before = self.command_mem[ctx.message.id]
-    #         del self.command_mem[ctx.message.id]
-    #         mem = psutil.Process().memory_full_info().uss
-    #         mem_usage = mem - mem_before
-    #         memlog.info(f"Total memory usage processing command {command.qualified_name}: {mem_usage}B")
-    #
-    # async def on_command_error(self, error, ctx):
-    #     if self.mem_debug:
-    #         mem_before = self.command_mem[ctx.message.id]
-    #         del self.command_mem[ctx.message.id]
-    #         mem = psutil.Process().memory_full_info().uss
-    #         mem_usage = mem - mem_before
-    #         memlog.info(f"Total memory usage processing command {ctx.command.qualified_name} (error): {mem_usage}B")
-
-    def msg(self, dest, out):
-        coro = self.bot.send_message(dest, out)
-        asyncio.ensure_future(coro)
-
-    def replace(self, msg, out):
-        coro1 = self.bot.delete_message(msg)
-        coro2 = self.bot.send_message(msg.channel, out)
-        asyncio.ensure_future(coro1)
-        asyncio.ensure_future(coro2)
-
-    def discord_trim(self, str):
-        result = []
-        trimLen = 0
-        lastLen = 0
-        while trimLen <= len(str):
-            trimLen += 1999
-            result.append(str[lastLen:trimLen])
-            lastLen += 1999
-        return result
-
-    async def send_logs(self):
-        try:
-            await self.bot.wait_until_ready()
-            chan = self.bot.get_channel('298542945479557120')
-            if chan is None: return
-            while not self.bot.is_closed:
-                await asyncio.sleep(3600)  # every hour
-                await self.bot.send_file(chan, 'dicecloud.txt')
-        except FileNotFoundError:
-            pass
-        except asyncio.CancelledError:
-            pass
 
     def request_server_info(self, serv_id):
         request = ServerInfoRequest(self.bot, serv_id)
@@ -497,6 +310,13 @@ class AdminUtils:
 
     def request_presence_update(self, status, msg):
         request = CommandRequest(self.bot, 'presence', status=status, msg=msg)
+        self.requests[request.uuid] = {}
+        r = json.dumps(request.to_dict())
+        self.bot.db.publish('admin-commands', r)
+        return request.uuid
+
+    def request_bot_update(self, origin_shard):
+        request = CommandRequest(self.bot, 'bot_update', origin_shard=origin_shard)
         self.requests[request.uuid] = {}
         r = json.dumps(request.to_dict())
         self.bot.db.publish('admin-commands', r)
@@ -575,7 +395,8 @@ class AdminUtils:
                      'reply': self.__handle_command_reply,
                      'chanSay': self.__handle_chan_say_command,
                      'ping': self.__handle_ping_command,
-                     'presence': self.__handle_presence_update_command}
+                     'presence': self.__handle_presence_update_command,
+                     'bot_update': self.__handle_bot_update_command}
         await _commands.get(_data['command'])(_data)  # ... don't question this.
 
     async def __handle_leave_command(self, data):
@@ -618,7 +439,7 @@ class AdminUtils:
             try:
                 await self.bot.send_message(channel, msg)
             except Exception as e:
-                repsonse = CommandResponse(self.bot, reply_to, 'Failed to send message: ' + e)
+                response = CommandResponse(self.bot, reply_to, f'Failed to send message: {e}')
             else:
                 response = CommandResponse(self.bot, reply_to, "Sent message.")
             r = json.dumps(response.to_dict())
@@ -642,6 +463,23 @@ class AdminUtils:
         r = json.dumps(response.to_dict())
         self.bot.db.publish('admin-commands', r)
 
+    async def __handle_bot_update_command(self, data):
+        reply_to = data['uuid']
+        _data = data['data']
+        origin_shard = _data['origin_shard']
+        if origin_shard == self.bot.shard_id:
+            return  # we've already updated
+
+        self.bot.state = "updating"
+        for cog in self.bot.dynamic_cog_list:  # this *should* be safe if the first shard updated fine, right?
+            self.bot.unload_extension(cog)
+            self.bot.load_extension(cog)
+
+        self.bot.state = "run"
+        response = CommandResponse(self.bot, reply_to, "Updated!")
+        r = json.dumps(response.to_dict())
+        self.bot.db.publish('admin-commands', r)
+
 
 class PubSubMessage(object):
     def __init__(self, bot):
@@ -649,9 +487,7 @@ class PubSubMessage(object):
         self.uuid = str(uuid.uuid4())
 
     def to_dict(self):
-        d = {}
-        d['shard'] = self.shard_id
-        d['uuid'] = self.uuid
+        d = {'shard': self.shard_id, 'uuid': self.uuid}
         return d
 
 

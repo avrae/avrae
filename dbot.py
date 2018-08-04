@@ -14,7 +14,6 @@ from cogs5e.models.errors import AvraeException, EvaluationError
 from utils.dataIO import DataIO
 from utils.functions import discord_trim, get_positivity, list_get, gen_error_message
 
-STATE = "init"
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
@@ -44,6 +43,7 @@ else:
 bot.prefix = prefix
 bot.remove_command('help')
 bot.testing = TESTING
+bot.state = "init"
 
 
 class Credentials:
@@ -216,7 +216,7 @@ async def on_message(message):
         message.content = message.content.replace(guild_prefix, bot.prefix, 1)
     elif message.content.startswith(bot.prefix):
         return
-    if message.content.startswith(bot.prefix) and STATE == "init":
+    if message.content.startswith(bot.prefix) and bot.state in ("init", "updating"):
         return await bot.send_message(message.channel, "Bot is initializing, try again in a few seconds!")
     await bot.process_commands(message)
 
@@ -234,11 +234,12 @@ async def on_command(command, ctx):
 
 for cog in DYNAMIC_COGS:
     bot.load_extension(cog)
+bot.dynamic_cog_list = DYNAMIC_COGS
 
 for cog in STATIC_COGS:
     bot.load_extension(cog)
 
 if SHARDED: log.info("I am shard {} of {}.".format(str(int(bot.shard_id) + 1), str(bot.shard_count)))
 
-STATE = "run"
+bot.state = "run"
 bot.run(bot.credentials.token)

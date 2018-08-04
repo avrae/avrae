@@ -270,12 +270,11 @@ class SimpleCombatant:
             return to_hit >= self._combatant.ac
         return None
 
-    def damage(self, dice_str: str, crit=False, d=None, c=None, hocrit=False, brutalcrit=0):
+    def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0):
         args = {
             'd': d,
             'c': c,
-            'hocrit': hocrit,
-            'brutalcrit' : brutalcrit,
+            'critdice' : critdice,
             'resist': '|'.join(self._combatant.resists['resist']),
             'immune': '|'.join(self._combatant.resists['immune']),
             'vuln': '|'.join(self._combatant.resists['vuln'])

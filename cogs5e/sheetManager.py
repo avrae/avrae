@@ -167,7 +167,7 @@ class SheetManager:
         args['name'] = char.get_name()
         args['criton'] = args.get('criton') or char.get_setting('criton', 20)
         args['reroll'] = char.get_setting('reroll', 0)
-        args['critdice'] = int(char.get_setting('hocrit',False)==True) + char.get_setting('critdice', 0)
+        args['critdice'] = int(char.get_setting('hocrit',False)) + char.get_setting('critdice', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
             attack['details'] = await char.parse_cvars(attack['details'], ctx)
@@ -854,16 +854,15 @@ class SheetManager:
                     out += "\u2705 Critdmg set to {}.\n".format(critdmg)
             if arg == 'critdice':
                 critdice = list_get(index + 1, None, args)
-
-                if critdice is None:
-                    character['settings']['critdice'] += int(character['settings']['hocrit'] == True)
+                if 'hocrit' in char['settings']
+                    character['settings']['critdice'] += int(character['settings']['hocrit'])
                     character['settings']['hocrit'] = False
+                if critdice is None:
                     out += '\u2139 Extra crit dice are currently set to {}. Use "!csettings critdice reset" to reset it.\n' \
                         .format(str(character['settings'].get('critdice')) if character['settings'].get(
                         'critdice') is not '0' else "0")
                 elif critdice.lower() == 'reset':
                     character['settings']['critdice'] = 0
-                    character['settings']['hocrit'] = False
                     out += "\u2705 Extra crit dice reset.\n"
                 else:
                     try:
@@ -871,11 +870,10 @@ class SheetManager:
                     except (ValueError, TypeError):
                         out += '\u274c Invalid number. Use "!csettings critdice reset" to reset it.\n'
                     else:
-                        if not 1 <= critdice <= 20:
-                            out += '\u274c Extra crit dice must be between 1 and 20.\n'
+                        if not 0 <= critdice <= 20:
+                            out += '\u274c Extra crit dice must be between 1 and 20. Use "!csettings critdice reset" to reset it.\n'
                         else:
                             character['settings']['critdice'] = critdice
-                            character['settings']['hocrit'] = False
                             out += "\u2705 Extra crit dice set to {}.\n".format(critdice)
             if arg == 'srslots':
                 srslots = list_get(index + 1, None, args)

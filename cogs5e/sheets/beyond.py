@@ -355,8 +355,9 @@ class BeyondSheetParser:
             isProf = self.get_prof(itemdef['type']) or weirdBonuses['isPact']
             magicBonus = sum(
                 m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
+            modBonus = self.get_relevant_atkmod(itemdef) if not weirdBonuses['isHex'] else self.get_relevant_atkmod(6)
 
-            dmgBonus = self.get_relevant_atkmod(itemdef) + magicBonus + weirdBonuses['damage']
+            dmgBonus = modBonus + magicBonus + weirdBonuses['damage']
             toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
 
             is_melee = not 'Range' in [p['name'] for p in itemdef['properties']]
@@ -370,7 +371,7 @@ class BeyondSheetParser:
 
             attack = {
                 'attackBonus': str(
-                    weirdBonuses['attackBonusOverride'] or self.get_relevant_atkmod(itemdef) + toHitBonus),
+                    weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus),
                 'damage': f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}"
                           f"[{itemdef['damageType'].lower()}"
                           f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",
@@ -571,7 +572,8 @@ class BeyondSheetParser:
             'attackBonus': 0,
             'attackBonusOverride': 0,
             'damage': 0,
-            'isPact': False
+            'isPact': False,
+            'isHex': False
         }
         for val in self.character['characterValues']:
             if not val['valueId'] == itemId: continue
@@ -583,6 +585,8 @@ class BeyondSheetParser:
                 out['attackBonusOverride'] = max(val['value'], out['attackBonusOverride'])
             elif val['typeId'] == 28:  # pact weapon
                 out['isPact'] = True
+            elif val['typeId'] == 29:  # hex weapon
+                out['isHex'] = True
         return out
 
 

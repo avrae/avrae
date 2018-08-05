@@ -6,6 +6,7 @@ Created on Sep 23, 2016
 import asyncio
 import json
 import logging
+import os
 import uuid
 
 import discord
@@ -17,6 +18,8 @@ from discord.ext import commands
 
 from utils import checks
 from utils.functions import discord_trim
+
+GITPATH = os.environ.get("GITPATH", "git")
 
 log = logging.getLogger(__name__)
 
@@ -227,7 +230,7 @@ class AdminUtils:
 
         def _():
             import subprocess
-            output = subprocess.check_output(["git", "pull"])
+            output = subprocess.check_output([GITPATH, "pull"])
             return output.decode()
 
         if pull_git:

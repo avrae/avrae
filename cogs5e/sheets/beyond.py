@@ -256,14 +256,28 @@ class BeyondSheetParser:
         dexBonus = self.get_stats()['dexterityMod']
         unarmoredBonus = self.get_stat('unarmored-armor-class')
         armoredBonus = self.get_stat('armored-armor-class')
+        miscBonus = 0
+
+        baseWithDex = base + dexBonus
+
+        for val in self.character['characterValues']:
+            if val['typeId'] == 1:  # AC override
+                return val['value']
+            elif val['typeId'] == 2:  # AC magic bonus
+                miscBonus += val['value']
+            elif val['typeId'] == 3:  # AC misc bonus
+                miscBonus += val['value']
+            elif val['typeId'] == 4:  # AC+DEX override
+                baseWithDex = val['value']
+
         if armortype is None:
-            return base + dexBonus + unarmoredBonus + shield
+            return baseWithDex + unarmoredBonus + shield + miscBonus
         elif armortype == 'Light Armor':
-            return base + dexBonus + shield + armoredBonus
+            return baseWithDex + shield + armoredBonus + miscBonus
         elif armortype == 'Medium Armor':
-            return base + min(dexBonus, 2) + shield + armoredBonus
+            return base + min(dexBonus, 2) + shield + armoredBonus + miscBonus
         else:
-            return base + shield + armoredBonus
+            return base + shield + armoredBonus + miscBonus
 
     def get_description(self):
         if self.character is None: raise Exception('You must call get_character() first.')

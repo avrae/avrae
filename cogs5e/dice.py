@@ -21,42 +21,12 @@ class Dice:
     def __init__(self, bot):
         self.bot = bot
 
-    async def on_message(self, message):
-        if message.content.startswith('!d20'):
-            self.bot.db.incr('dice_rolled_life')
-            rollStr = message.content.replace('!', '1').split(' ')[0]
-            try:
-                rollFor = ' '.join(message.content.split(' ')[1:])
-            except:
-                rollFor = ''
-            adv = 0
-            if re.search('(^|\s+)(adv|dis)(\s+|$)', rollFor) is not None:
-                adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollFor) is not None else -1
-                rollFor = re.sub('(adv|dis)(\s+|$)', '', rollFor)
-            out = roll(rollStr, adv=adv, rollFor=rollFor, inline=True)
-            out = out.result
-            try:
-                await self.bot.delete_message(message)
-            except:
-                pass
-            await self.bot.send_message(message.channel, message.author.mention + '  :game_die:\n' + out)
-
     @commands.command(name='2', hidden=True, pass_context=True)
     async def quick_roll(self, ctx, *, mod: str = '0'):
         """Quickly rolls a d20."""
         self.bot.db.incr('dice_rolled_life')
         rollStr = '1d20+' + mod
-        adv = 0
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
-            rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
-        out = roll(rollStr, adv=adv, inline=True)
-        out = out.result
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            pass
-        await self.bot.say(ctx.message.author.mention + '  :game_die:\n' + out)
+        await ctx.invoke(self.bot.get_command("roll"), rollStr)
 
     @commands.command(pass_context=True, name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):

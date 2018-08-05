@@ -121,11 +121,13 @@ def sheet_attack(attack, args, embed=None):
                 out += "**To Hit**: Automatic hit!\n"
             elif args.get('miss'):
                 out += "**To Hit**: Automatic miss!\n"
-                itercrit = 2 # miss?
             if args.get('crit'):
                 itercrit = args.get('crit', 0)
             else:
-                itercrit = 0
+                if args.get("miss"):
+                    itercrit = 2
+                else:
+                    itercrit = 0
 
         res = sheet_damage(attack.get('damage'), args, itercrit, dnum)
         out += res['damage']

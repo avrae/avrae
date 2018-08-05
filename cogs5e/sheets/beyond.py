@@ -319,8 +319,12 @@ class BeyondSheetParser:
             'details': None
         }
         if atkType == 'action':
+            isProf = atkIn['isProficient']
+            atkBonus = None
+            if atkIn["abilityModifierStatId"]:
+                atkBonus = self.stat_from_id(atkIn['abilityModifierStatId']) + (prof if isProf else 0)
             attack = {
-                'attackBonus': None,
+                'attackBonus': str(atkBonus),
                 'damage': f"{atkIn['dice']['diceString']}[{parse_dmg_type(atkIn)}]",
                 'name': atkIn['name'],
                 'details': atkIn['snippet']
@@ -404,6 +408,8 @@ class BeyondSheetParser:
             return None
         if attack['damage'] is "":
             attack['damage'] = None
+        if attack['details']:
+            attack['details'] = attack['details'].replace("{", "").replace("}", "")  # bah
 
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
         out.insert(0, attack)

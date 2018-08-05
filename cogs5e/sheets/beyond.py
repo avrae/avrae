@@ -370,8 +370,7 @@ class BeyondSheetParser:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
 
             attack = {
-                'attackBonus': str(
-                    weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus),
+                'attackBonus': str(weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus),
                 'damage': f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}"
                           f"[{itemdef['damageType'].lower()}"
                           f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",

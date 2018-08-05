@@ -230,7 +230,12 @@ class AdminUtils:
 
         def _():
             import subprocess
-            output = subprocess.check_output([GITPATH, "pull"])
+            try:
+                output = subprocess.check_output([GITPATH, "pull"], stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as err:
+                output = err.output
+                nonlocal successful
+                successful = False
             return output.decode()
 
         if pull_git:

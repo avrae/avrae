@@ -105,7 +105,7 @@ def sheet_attack(attack, args, embed=None):
                                isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
                 except StopIteration:
                     raw = 0
-                if raw >= (int(args.get('criton', 20)) or 20):
+                if raw >= int(args.get('criton', 20) or 20):
                     itercrit = 1
                 else:
                     itercrit = toHit.crit

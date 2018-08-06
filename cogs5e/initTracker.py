@@ -808,10 +808,7 @@ class InitTracker:
             args['crittype'] = combatant.character.get_setting('crittype') or 'default'
             args['critdice'] = (combatant.character.get_setting('critdice') or 0) + int(
                 combatant.character.get_setting('hocrit', False))
-            if args.get('criton'):
-                args['criton'] = args.get('criton')
-            else:
-                args['criton'] = combatant.character.get_setting('criton',0)
+            args['criton'] = combatant.character.get_setting('criton') or args.get('criton')
 
         result = sheet_attack(attack, args)
         embed = result['embed']

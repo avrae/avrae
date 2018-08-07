@@ -4,8 +4,10 @@ Created on Sep 23, 2016
 @author: andrew
 """
 import asyncio
+import importlib
 import json
 import logging
+import sys
 import uuid
 
 import discord
@@ -19,6 +21,13 @@ from utils import checks
 from utils.functions import discord_trim
 
 log = logging.getLogger(__name__)
+
+RELOADABLE_MODULES = (
+    "cogs5e.funcs.dice", "cogs5e.funcs.lookupFuncs", "cogs5e.funcs.scripting", "cogs5e.funcs.sheetFuncs",
+    "cogs5e.models.bestiary", "cogs5e.models.character", "cogs5e.models.embeds", "cogs5e.models.initiative",
+    "cogs5e.models.monster", "cogs5e.models.race", "cogs5e.sheets.beyond", "cogs5e.sheets.dicecloud",
+    "cogs5e.sheets.errors", "cogs5e.sheets.gsheet", "cogs5e.sheets.sheetParser", "utils.functions"
+)
 
 
 class AdminUtils:
@@ -233,6 +242,13 @@ class AdminUtils:
         if pull_git:
             out = await self.bot.loop.run_in_executor(None, _)
             await self.bot.say(f"```\n{out}\n```")
+
+        for module in RELOADABLE_MODULES:
+            mod = sys.modules.get(module)
+            if mod is None:
+                continue
+            log.info(f"Reloading module {module}")
+            importlib.reload(mod)
 
         for cog in self.bot.dynamic_cog_list:
             try:
@@ -473,6 +489,15 @@ class AdminUtils:
         self.bot.state = "updating"
         for cog in self.bot.dynamic_cog_list:  # this *should* be safe if the first shard updated fine, right?
             self.bot.unload_extension(cog)
+
+        for module in RELOADABLE_MODULES:
+            mod = sys.modules.get(module)
+            if mod is None:
+                continue
+            log.info(f"Reloading module {module}")
+            importlib.reload(mod)
+
+        for cog in self.bot.dynamic_cog_list:
             self.bot.load_extension(cog)
 
         self.bot.state = "run"

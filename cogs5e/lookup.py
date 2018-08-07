@@ -192,7 +192,8 @@ class Lookup:
         embed.description = f"Source: {result.source}"
         embed.add_field(name="Speed", value=result.get_speed_str())
         embed.add_field(name="Size", value=result.size)
-        embed.add_field(name="Ability Bonuses", value=result.get_asi_str())
+        if result.ability:
+            embed.add_field(name="Ability Bonuses", value=result.get_asi_str())
         for t in result.get_traits():
             f_text = t['text']
             f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]

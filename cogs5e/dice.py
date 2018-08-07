@@ -5,14 +5,12 @@ import shlex
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs.dice import roll, SingleDiceGroup, Constant, Operator
+from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.monster import Monster
-from utils import checks
-from utils.functions import fuzzy_search, a_or_an, discord_trim, \
-    parse_args_2, parse_args_3
+from utils.functions import fuzzy_search, a_or_an, parse_args_2, parse_args_3
 
 
 class Dice:
@@ -21,42 +19,12 @@ class Dice:
     def __init__(self, bot):
         self.bot = bot
 
-    async def on_message(self, message):
-        if message.content.startswith('!d20'):
-            self.bot.db.incr('dice_rolled_life')
-            rollStr = message.content.replace('!', '1').split(' ')[0]
-            try:
-                rollFor = ' '.join(message.content.split(' ')[1:])
-            except:
-                rollFor = ''
-            adv = 0
-            if re.search('(^|\s+)(adv|dis)(\s+|$)', rollFor) is not None:
-                adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollFor) is not None else -1
-                rollFor = re.sub('(adv|dis)(\s+|$)', '', rollFor)
-            out = roll(rollStr, adv=adv, rollFor=rollFor, inline=True)
-            out = out.result
-            try:
-                await self.bot.delete_message(message)
-            except:
-                pass
-            await self.bot.send_message(message.channel, message.author.mention + '  :game_die:\n' + out)
-
     @commands.command(name='2', hidden=True, pass_context=True)
     async def quick_roll(self, ctx, *, mod: str = '0'):
         """Quickly rolls a d20."""
         self.bot.db.incr('dice_rolled_life')
         rollStr = '1d20+' + mod
-        adv = 0
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
-            rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
-        out = roll(rollStr, adv=adv, inline=True)
-        out = out.result
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            pass
-        await self.bot.say(ctx.message.author.mention + '  :game_die:\n' + out)
+        await ctx.invoke(self.bot.get_command("roll"), rollStr)
 
     @commands.command(pass_context=True, name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
@@ -101,43 +69,6 @@ class Dice:
                     res.plain))
         else:
             await self.bot.say(outStr)
-
-    @commands.command(pass_context=True, name='debugroll', aliases=['dr'], hidden=True)
-    @checks.is_owner()
-    async def debug_roll(self, ctx, *, rollStr: str):
-        adv = 0
-        self.bot.db.incr('dice_rolled_life')
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
-            rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
-        res = roll(rollStr, adv=adv, debug=True)
-        out = res.result
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            pass
-        outStr = ctx.message.author.mention + '  :game_die:\n' + out
-        if len(outStr) > 1999:
-            await self.bot.say(
-                ctx.message.author.mention + '  :game_die:\n[Output truncated due to length]\n**Result:** ' + str(
-                    res.plain))
-        else:
-            await self.bot.say(outStr)
-
-        debug = ""
-        for p in res.raw_dice.parts:
-            if isinstance(p, SingleDiceGroup):
-                debug += "SingleDiceGroup:\nnum_dice={0.num_dice}, max_value={0.max_value}, annotation={0.annotation}, operators={0.operators}".format(
-                    p) + \
-                         "\nrolled={}\n\n".format(', '.join(repr(r) for r in p.rolled))
-            elif isinstance(p, Constant):
-                debug += "Constant:\nvalue={0.value}, annotation={0.annotation}\n\n".format(p)
-            elif isinstance(p, Operator):
-                debug += "Operator:\nop={0.op}, annotation={0.annotation}\n\n".format(p)
-            else:
-                debug += "Comment:\ncomment={0.comment}\n\n".format(p)
-        for t in discord_trim(debug):
-            await self.bot.say(t)
 
     @commands.command(pass_context=True, name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations: int, rollStr, *, args=''):

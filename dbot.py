@@ -27,6 +27,40 @@ if '-s' in sys.argv:
         shard_count = os.environ.get('SHARDS', 1)
         shard_id = temp_shard_id if int(temp_shard_id) < int(shard_count) else 0
         SHARDED = True
+# -----COGS-----
+DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.gametrack", "cogs5e.homebrew", "cogs5e.initTracker",
+                "cogs5e.lookup", "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization"]
+STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.core", "cogsmisc.permissions", "cogsmisc.publicity", "cogsmisc.repl",
+               "cogsmisc.stats"]
+
+
+class Avrae(commands.Bot):
+    def __init__(self, command_prefix, formatter=None, description=None, pm_help=False, testing=False,
+                 **options):
+        super(Avrae, self).__init__(command_prefix, formatter, description, pm_help, **options)
+        self.prefix = prefix
+        self.remove_command("help")
+        self.testing = testing
+        self.state = "init"
+        self.credentials = Credentials()
+        self.db = DataIO() if not TESTING else DataIO(testing=True,
+                                                      test_database_url=self.credentials.test_database_url)
+        self.dynamic_cog_list = DYNAMIC_COGS
+
+
+class Credentials:
+    def __init__(self):
+        try:
+            import credentials
+        except ImportError:
+            raise Exception("Credentials not found.")
+        self.token = credentials.officialToken
+        self.test_database_url = credentials.test_database_url
+        if TESTING:
+            self.token = credentials.testToken
+        if 'ALPHA_TOKEN' in os.environ:
+            self.token = os.environ.get("ALPHA_TOKEN")
+
 
 description = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.
 A full command list can be found [here](https://avrae.io/commands)!
@@ -35,37 +69,11 @@ Join the official testing server [here](https://discord.gg/pQbd4s6)!
 Love the bot? Donate to me [here](https://www.paypal.me/avrae)! \u2764
 '''
 if not SHARDED:
-    bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True,
-                       shard_id=0, shard_count=1, max_messages=1000)
+    bot = Avrae(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True,
+                shard_id=0, shard_count=1, max_messages=1000, testing=TESTING)
 else:
-    bot = commands.Bot(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True,
-                       shard_id=int(shard_id), shard_count=int(shard_count), max_messages=1000)
-bot.prefix = prefix
-bot.remove_command('help')
-bot.testing = TESTING
-bot.state = "init"
-
-
-class Credentials:
-    pass
-
-
-# CREDENTIALS
-try:
-    # noinspection PyUnresolvedReferences
-    import credentials
-
-    bot.credentials = Credentials()
-    bot.credentials.token = credentials.officialToken
-    bot.credentials.test_database_url = credentials.test_database_url
-    if TESTING:
-        bot.credentials.token = credentials.testToken
-    if 'ALPHA_TOKEN' in os.environ:
-        bot.credentials.token = os.environ.get("ALPHA_TOKEN")
-except ImportError:
-    raise Exception("Credentials not found.")
-
-bot.db = DataIO() if not TESTING else DataIO(testing=True, test_database_url=bot.credentials.test_database_url)
+    bot = Avrae(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True,
+                shard_id=int(shard_id), shard_count=int(shard_count), max_messages=1000, testing=TESTING)
 
 log_formatter = logging.Formatter(
     '%(asctime)s s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, 'shard_id', 0)))
@@ -80,12 +88,6 @@ logger.addHandler(filehandler)
 
 log = logging.getLogger('bot')
 msglog = logging.getLogger('messages')
-
-# -----COGS-----
-DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.gametrack", "cogs5e.homebrew", "cogs5e.initTracker",
-                "cogs5e.lookup", "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization"]
-STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.core", "cogsmisc.permissions", "cogsmisc.publicity", "cogsmisc.repl",
-               "cogsmisc.stats", "utils.help"]
 
 
 @bot.event
@@ -234,7 +236,6 @@ async def on_command(command, ctx):
 
 for cog in DYNAMIC_COGS:
     bot.load_extension(cog)
-bot.dynamic_cog_list = DYNAMIC_COGS
 
 for cog in STATIC_COGS:
     bot.load_extension(cog)

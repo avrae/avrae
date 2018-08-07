@@ -105,7 +105,7 @@ def sheet_attack(attack, args, embed=None):
                                isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
                 except StopIteration:
                     raw = 0
-                if raw >= (int(args.get('criton', 20)) or 20):
+                if raw >= int(args.get('criton', 20) or 20):
                     itercrit = 1
                 else:
                     itercrit = toHit.crit
@@ -121,11 +121,13 @@ def sheet_attack(attack, args, embed=None):
                 out += "**To Hit**: Automatic hit!\n"
             elif args.get('miss'):
                 out += "**To Hit**: Automatic miss!\n"
-                itercrit = 2 # miss?
             if args.get('crit'):
                 itercrit = args.get('crit', 0)
             else:
-                itercrit = 0
+                if args.get("miss"):
+                    itercrit = 2
+                else:
+                    itercrit = 0
 
         res = sheet_damage(attack.get('damage'), args, itercrit, dnum)
         out += res['damage']

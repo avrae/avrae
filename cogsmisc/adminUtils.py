@@ -8,6 +8,7 @@ import importlib
 import json
 import logging
 import sys
+import os
 import uuid
 
 import discord
@@ -19,6 +20,8 @@ from discord.ext import commands
 
 from utils import checks
 from utils.functions import discord_trim
+
+GITPATH = os.environ.get("GITPATH", "git")
 
 log = logging.getLogger(__name__)
 
@@ -236,7 +239,12 @@ class AdminUtils:
 
         def _():
             import subprocess
-            output = subprocess.check_output(["git", "pull"])
+            try:
+                output = subprocess.check_output([GITPATH, "pull"], stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as err:
+                output = err.output
+                nonlocal successful
+                successful = False
             return output.decode()
 
         if pull_git:

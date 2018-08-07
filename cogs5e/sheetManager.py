@@ -3,7 +3,6 @@ Created on Jan 19, 2017
 
 @author: andrew
 """
-import asyncio
 import copy
 import logging
 import random
@@ -26,7 +25,7 @@ from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument
+from cogs5e.models.errors import InvalidArgument, AvraeException
 from cogs5e.models.initiative import Combat
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
@@ -167,10 +166,13 @@ class SheetManager:
         args['name'] = char.get_name()
         args['criton'] = args.get('criton') or char.get_setting('criton', 20)
         args['reroll'] = char.get_setting('reroll', 0)
-        args['critdice'] = int(char.get_setting('hocrit',False)) + char.get_setting('critdice', 0)
+        args['critdice'] = int(char.get_setting('hocrit', False)) + char.get_setting('critdice', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
         if attack.get('details') is not None:
-            attack['details'] = await char.parse_cvars(attack['details'], ctx)
+            try:
+                attack['details'] = await char.parse_cvars(attack['details'], ctx)
+            except AvraeException:
+                pass  # failed to eval, probably DDB nonsense
 
         result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
         embed = result['embed']

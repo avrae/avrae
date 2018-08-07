@@ -256,14 +256,28 @@ class BeyondSheetParser:
         dexBonus = self.get_stats()['dexterityMod']
         unarmoredBonus = self.get_stat('unarmored-armor-class')
         armoredBonus = self.get_stat('armored-armor-class')
+        miscBonus = 0
+
+        baseWithDex = base + dexBonus
+
+        for val in self.character['characterValues']:
+            if val['typeId'] == 1:  # AC override
+                return val['value']
+            elif val['typeId'] == 2:  # AC magic bonus
+                miscBonus += val['value']
+            elif val['typeId'] == 3:  # AC misc bonus
+                miscBonus += val['value']
+            elif val['typeId'] == 4:  # AC+DEX override
+                baseWithDex = val['value']
+
         if armortype is None:
-            return base + dexBonus + unarmoredBonus + shield
+            return baseWithDex + unarmoredBonus + shield + miscBonus
         elif armortype == 'Light Armor':
-            return base + dexBonus + shield + armoredBonus
+            return baseWithDex + shield + armoredBonus + miscBonus
         elif armortype == 'Medium Armor':
-            return base + min(dexBonus, 2) + shield + armoredBonus
+            return base + min(dexBonus, 2) + shield + armoredBonus + miscBonus
         else:
-            return base + shield + armoredBonus
+            return base + shield + armoredBonus + miscBonus
 
     def get_description(self):
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -319,8 +333,14 @@ class BeyondSheetParser:
             'details': None
         }
         if atkType == 'action':
+            if atkIn['dice'] is None:
+                return None  # thanks DDB
+            isProf = atkIn['isProficient']
+            atkBonus = None
+            if atkIn["abilityModifierStatId"]:
+                atkBonus = self.stat_from_id(atkIn['abilityModifierStatId']) + (prof if isProf else 0)
             attack = {
-                'attackBonus': None,
+                'attackBonus': str(atkBonus),
                 'damage': f"{atkIn['dice']['diceString']}[{parse_dmg_type(atkIn)}]",
                 'name': atkIn['name'],
                 'details': atkIn['snippet']
@@ -351,8 +371,9 @@ class BeyondSheetParser:
             isProf = self.get_prof(itemdef['type']) or weirdBonuses['isPact']
             magicBonus = sum(
                 m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
+            modBonus = self.get_relevant_atkmod(itemdef) if not weirdBonuses['isHex'] else self.get_relevant_atkmod(6)
 
-            dmgBonus = self.get_relevant_atkmod(itemdef) + magicBonus + weirdBonuses['damage']
+            dmgBonus = modBonus + magicBonus + weirdBonuses['damage']
             toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
 
             is_melee = not 'Range' in [p['name'] for p in itemdef['properties']]
@@ -365,8 +386,7 @@ class BeyondSheetParser:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
 
             attack = {
-                'attackBonus': str(
-                    weirdBonuses['attackBonusOverride'] or self.get_relevant_atkmod(itemdef) + toHitBonus),
+                'attackBonus': str(weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus),
                 'damage': f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}"
                           f"[{itemdef['damageType'].lower()}"
                           f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",
@@ -402,8 +422,10 @@ class BeyondSheetParser:
 
         if attack['name'] is None:
             return None
-        if attack['damage'] is "":
+        if attack['damage'] == "":
             attack['damage'] = None
+        if attack['details']:
+            attack['details'] = attack['details'].replace("{", "").replace("}", "")  # bah
 
         attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not None else None
         out.insert(0, attack)
@@ -418,6 +440,9 @@ class BeyondSheetParser:
 
         def extend(parsed_attacks):
             for atk in parsed_attacks:
+                if atk is None:
+                    parsed_attacks.remove(atk)
+                    continue
                 if atk['name'] in used_names:
                     num = 2
                     while f"{atk['name']}{num}" in used_names:
@@ -565,7 +590,8 @@ class BeyondSheetParser:
             'attackBonus': 0,
             'attackBonusOverride': 0,
             'damage': 0,
-            'isPact': False
+            'isPact': False,
+            'isHex': False
         }
         for val in self.character['characterValues']:
             if not val['valueId'] == itemId: continue
@@ -577,6 +603,8 @@ class BeyondSheetParser:
                 out['attackBonusOverride'] = max(val['value'], out['attackBonusOverride'])
             elif val['typeId'] == 28:  # pact weapon
                 out['isPact'] = True
+            elif val['typeId'] == 29:  # hex weapon
+                out['isHex'] = True
         return out
 
 

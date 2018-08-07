@@ -353,10 +353,10 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
                 if immunity.lower() in comment.lower() and len(immunity) > 0:
                     roll_string = '({0}) * 0'.format(roll_string)
                     break
-            for vulnerability in vulnerabilities:
-                if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
-                    roll_string = '({0}) * 2'.format(roll_string)
-                    break
+        for vulnerability in vulnerabilities:
+            if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
+                roll_string = '({0}) * 2'.format(roll_string)
+                break
         formatted_roll_strings[index] = '{0}{1}{2}'.format(preop, roll_string,
                                                            "[{}]".format(comment) if comment is not '' else "")
     if formatted_roll_strings:

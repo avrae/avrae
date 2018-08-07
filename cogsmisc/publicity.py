@@ -23,6 +23,10 @@ class Publicity:
         self.bot.loop.create_task(self.background_update())
 
     async def backup(self):
+        shard_servers = self.bot.db.jget('shard_servers', {0: len(self.bot.servers)})
+        shard_servers[self.bot.shard_id] = len(self.bot.servers)
+        self.bot.db.jset('shard_servers', shard_servers)
+
         backup_chan = self.bot.get_channel('298542945479557120')
         if backup_chan is None or self.bot.testing: return
         await self.bot.send_message(backup_chan, '{0} - {1}'.format(time.time(), sum(

@@ -125,11 +125,6 @@ class PBPUtils:
 
 def clean_content(content, ctx):
     transformations = {
-        re.escape('<#{0.id}>'.format(channel)): '#' + channel.name
-        for channel in ctx.message.channel_mentions
-    }
-
-    mention_transforms = {
         re.escape('<@{0.id}>'.format(member)): '@' + member.display_name
         for member in ctx.message.mentions
     }
@@ -140,7 +135,6 @@ def clean_content(content, ctx):
         for member in ctx.message.mentions
     }
 
-    transformations.update(mention_transforms)
     transformations.update(second_mention_transforms)
 
     if ctx.message.server is not None:

@@ -303,6 +303,21 @@ class Character:
                 if not 'gvars' in _cache:  # load only if needed
                     _cache['gvars'] = ctx.bot.db.jget("global_vars", {})
                 return _cache['gvars'].get(name, {}).get('value')
+               
+            def set_gvar(name,value: str):
+                """Edits a global variable."""
+                glob_vars = ctx.bot.db.jget("global_vars", {})
+
+                gvar = glob_vars.get(name)
+                if gvar is None:
+                    return None
+                elif gvar['owner'] != ctx.message.author.id and not ctx.message.author.id in gvar.get('editors', []):
+                    return False
+                else:
+                    glob_vars[name]['value'] = value
+                    return True
+
+                ctx.bot.db.jset("global_vars", glob_vars)
 
             def exists(name):
                 return name in evaluator.names

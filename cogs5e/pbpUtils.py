@@ -3,6 +3,7 @@ Created on Jan 13, 2017
 
 @author: andrew
 """
+import re
 import shlex
 from math import sqrt
 
@@ -44,7 +45,7 @@ class PBPUtils:
         except:
             pass
 
-        await self.bot.say(ctx.message.author.display_name + ": " + msg)
+        await self.bot.say(ctx.message.author.display_name + ": " + clean_content(msg, ctx))
 
     @commands.command(pass_context=True)
     async def techo(self, ctx, seconds: int, *, msg):
@@ -56,7 +57,7 @@ class PBPUtils:
 
         seconds = min(max(0, seconds), 600)
 
-        await self.bot.say(ctx.message.author.display_name + ": " + msg, delete_after=seconds)
+        await self.bot.say(ctx.message.author.display_name + ": " + clean_content(msg, ctx), delete_after=seconds)
 
     @commands.command(pass_context=True)
     async def embed(self, ctx, *, args):
@@ -120,6 +121,51 @@ class PBPUtils:
     async def pythag(self, num1: int, num2: int):
         """Performs a pythagorean theorem calculation to calculate diagonals."""
         await self.bot.say(sqrt(num1 ** 2 + num2 ** 2))
+
+
+def clean_content(content, ctx):
+    transformations = {
+        re.escape('<#{0.id}>'.format(channel)): '#' + channel.name
+        for channel in ctx.message.channel_mentions
+    }
+
+    mention_transforms = {
+        re.escape('<@{0.id}>'.format(member)): '@' + member.display_name
+        for member in ctx.message.mentions
+    }
+
+    # add the <@!user_id> cases as well..
+    second_mention_transforms = {
+        re.escape('<@!{0.id}>'.format(member)): '@' + member.display_name
+        for member in ctx.message.mentions
+    }
+
+    transformations.update(mention_transforms)
+    transformations.update(second_mention_transforms)
+
+    if ctx.message.server is not None:
+        role_transforms = {
+            re.escape('<@&{0.id}>'.format(role)): '@' + role.name
+            for role in ctx.message.role_mentions
+        }
+        transformations.update(role_transforms)
+
+    def repl(obj):
+        return transformations.get(re.escape(obj.group(0)), '')
+
+    pattern = re.compile('|'.join(transformations.keys()))
+    result = pattern.sub(repl, content)
+
+    transformations = {
+        '@everyone': '@\u200beveryone',
+        '@here': '@\u200bhere'
+    }
+
+    def repl2(obj):
+        return transformations.get(obj.group(0), '')
+
+    pattern = re.compile('|'.join(transformations.keys()))
+    return pattern.sub(repl2, result)
 
 
 def setup(bot):

@@ -13,7 +13,7 @@ import uuid
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import UserInputError
+from discord.ext.commands import UserInputError, BucketType
 from discord.ext.commands.view import quoted_word, StringView
 
 from cogs5e.funcs import scripting
@@ -61,11 +61,15 @@ class Customization:
             pass
 
     async def on_message(self, message):
+        if message.author.id in self.bot.get_cog("AdminUtils").muted:
+            return
         await self.handle_aliases(message)
 
     @commands.command(pass_context=True)
+    @commands.cooldown(1, 20, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.
+        Limited to 1 multiline every 20 seconds due to abuse.
         Usage:
         "!multiline
         !roll 1d20
@@ -73,7 +77,7 @@ class Customization:
         !monster Rat"
         """
         cmds = cmds.splitlines()
-        for c in cmds[:30]:
+        for c in cmds[:20]:
             ctx.message.content = c
             if not hasattr(self.bot, 'global_prefixes'):  # bot's still starting up!
                 return

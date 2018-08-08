@@ -22,7 +22,7 @@ from cogs5e.funcs.scripting import ScriptingEvaluator, SCRIPTING_RE
 from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter, EvaluationError, FunctionRequiresCharacter, \
     AvraeException
-from utils.functions import confirm
+from utils.functions import confirm, clean_content
 
 
 class Customization:
@@ -495,6 +495,7 @@ class Customization:
         """Parses `str` as if it were in an alias, for testing."""
         char = Character.from_ctx(ctx)
         parsed = await char.parse_cvars(str, ctx)
+        parsed = clean_content(parsed, ctx)
         await self.bot.say(f"{ctx.message.author.display_name}: {parsed}")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['uvar'])

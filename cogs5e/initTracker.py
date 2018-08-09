@@ -882,32 +882,15 @@ class InitTracker:
 
 
     async def _cast(self, ctx, combatant_name, spell_name, args):
-        """Casts a spell against another combatant.
-        __Valid Arguments__
-        -t [target (chainable)] - Required
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
-        -l [level] - Specifies the level to cast the spell at.
-        **__Save Spells__**
-        -dc [Save DC] - Default: Pulls a cvar called `dc`.
-        -save [Save type] - Default: The spell's default save.
-        -d [damage] - adds additional damage.
-        adv/dis - forces all saves to be at adv/dis.
-        **__Attack Spells__**
-        See `!a`.
-        **__All Spells__**
-        -phrase [phrase] - adds flavor text."""
         combat = Combat.from_ctx(ctx)
 
-       # combatant = combat.current_combatant
-       # if combatant is None:
-       #     return await self.bot.say("You must begin combat with !init next first.")
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
                 return await self.bot.say("You must start combat with `!init next` first.")
         else:
             try:
-                combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
+                combatant = await combat.select_combatant(combatant_name, "Select the caster.")
                 if combatant is None:
                     return await self.bot.say("Combatant not found.")
             except SelectionException:

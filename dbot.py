@@ -29,9 +29,9 @@ if '-s' in sys.argv:
         SHARDED = True
 # -----COGS-----
 DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.gametrack", "cogs5e.homebrew", "cogs5e.initTracker",
-                "cogs5e.lookup", "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization", "utils.help"]
+                "cogs5e.lookup", "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization"]
 STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.core", "cogsmisc.permissions", "cogsmisc.publicity", "cogsmisc.repl",
-               "cogsmisc.stats"]
+               "cogsmisc.stats", "utils.help"]
 
 
 class Avrae(commands.Bot):

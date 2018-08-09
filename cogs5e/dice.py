@@ -24,7 +24,7 @@ class Dice:
         """Quickly rolls a d20."""
         self.bot.db.incr('dice_rolled_life')
         rollStr = '1d20+' + mod
-        await ctx.invoke(self.bot.get_command("roll"), rollStr)
+        await ctx.invoke(self.bot.get_command("roll"), rollStr=rollStr)
 
     @commands.command(pass_context=True, name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):

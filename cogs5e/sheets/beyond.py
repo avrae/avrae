@@ -334,7 +334,7 @@ class BeyondSheetParser:
         }
         if atkType == 'action':
             if atkIn['dice'] is None:
-                return None  # thanks DDB
+                return []  # thanks DDB
             isProf = atkIn['isProficient']
             atkBonus = None
             if atkIn["abilityModifierStatId"]:
@@ -421,7 +421,7 @@ class BeyondSheetParser:
             }
 
         if attack['name'] is None:
-            return None
+            return []
         if attack['damage'] == "":
             attack['damage'] = None
         if attack['details']:
@@ -440,9 +440,6 @@ class BeyondSheetParser:
 
         def extend(parsed_attacks):
             for atk in parsed_attacks:
-                if atk is None:
-                    parsed_attacks.remove(atk)
-                    continue
                 if atk['name'] in used_names:
                     num = 2
                     while f"{atk['name']}{num}" in used_names:

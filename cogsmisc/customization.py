@@ -69,22 +69,28 @@ class Customization:
     @commands.cooldown(1, 20, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.
-        Limited to 1 multiline every 20 seconds due to abuse.
         Usage:
         "!multiline
         !roll 1d20
         !spell Fly
         !monster Rat"
         """
+        try:
+            guild_prefix = self.bot.global_prefixes.get(ctx.message.server.id, self.bot.prefix)
+        except:
+            guild_prefix = self.bot.prefix
         cmds = cmds.splitlines()
+        output = []
+        for cmd in cmds:
+            if cmd.startswith(guild_prefix) or cmd.startswith(self.bot.prefix) or not output:
+                output.append(cmd)
+            else:
+                output[-1] += "\n" + cmd
+        cmds = output
         for c in cmds[:20]:
             ctx.message.content = c
             if not hasattr(self.bot, 'global_prefixes'):  # bot's still starting up!
                 return
-            try:
-                guild_prefix = self.bot.global_prefixes.get(ctx.message.server.id, self.bot.prefix)
-            except:
-                guild_prefix = self.bot.prefix
             if ctx.message.content.startswith(guild_prefix):
                 ctx.message.content = ctx.message.content.replace(guild_prefix, self.bot.prefix, 1)
             elif ctx.message.content.startswith(self.bot.prefix):

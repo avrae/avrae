@@ -371,7 +371,7 @@ class BeyondSheetParser:
             isProf = self.get_prof(itemdef['type']) or weirdBonuses['isPact']
             magicBonus = sum(
                 m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
-            modBonus = self.get_relevant_atkmod(itemdef) if not weirdBonuses['isHex'] else self.get_relevant_atkmod(6)
+            modBonus = self.get_relevant_atkmod(itemdef) if not weirdBonuses['isHex'] else self.stat_from_id(6)
 
             dmgBonus = modBonus + magicBonus + weirdBonuses['damage']
             toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']

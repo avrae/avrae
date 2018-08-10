@@ -859,7 +859,7 @@ class InitTracker:
         See `!a`.
         **__All Spells__**
         -phrase [phrase] - adds flavor text."""
-        return await self._cast(ctx, None, target_name, spell_name, args)
+        return await self._cast(ctx, None, spell_name, args)
 
     @init.command(pass_context=True)
     async def reactcast(self, ctx, combatant_name, spell_name, *, args=''):

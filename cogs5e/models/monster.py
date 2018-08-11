@@ -364,6 +364,20 @@ class Monster:
         else:
             return self.image_url or ''
 
+    def get_mod(self, stat):
+        """
+        Gets the monster's stat modifier for a core stat.
+        :param stat: The core stat to get. Can be of the form "cha", "charisma", or "charismaMod".
+        :return: The monster's relevant stat modifier.
+        """
+        valid = ["strengthMod", "dexterityMod", "constitutionMod", "intelligenceMod", "wisdomMod", "charismaMod"]
+        stat = next((s for s in valid if stat in s), None)
+        if stat is None:
+            raise ValueError(f"{stat} is not a valid stat.")
+        score = (self.strength, self.dexterity, self.constitution, self.intelligence, self.wisdom, self.charisma)[
+            valid.index(stat)]
+        return int(floor((score - 10) / 2))
+
 
 def parse_type(_type):
     if isinstance(_type, dict):

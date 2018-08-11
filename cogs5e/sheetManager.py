@@ -23,7 +23,7 @@ from pygsheets.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
-from cogs5e.models.character import Character
+from cogs5e.models.character import Character, SKILL_MAP
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, AvraeException
 from cogs5e.models.initiative import Combat
@@ -32,7 +32,8 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
-from utils.functions import extract_gsheet_id_from_url, parse_snippets, generate_token, search_and_select
+from utils.functions import extract_gsheet_id_from_url, parse_snippets, generate_token, search_and_select, \
+    camel_to_title, verbose_stat
 from utils.functions import list_get, get_positivity, a_or_an
 from utils.loggers import TextLogger
 
@@ -283,7 +284,8 @@ class SheetManager:
               -phrase [flavor text]
               -title [title] *note: [charname] and [cname] will be replaced automatically*
               -dc [dc]
-              -rr [iterations]"""
+              -rr [iterations]
+              str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))"""
         char = Character.from_ctx(ctx)
         skills = char.get_skills()
         if not skills:
@@ -319,16 +321,25 @@ class SheetManager:
             dc = None
         num_successes = 0
 
-        if b is not None:
-            roll_str = formatted_d20 + '{:+}'.format(skills[skill]) + '+' + b
-        else:
-            roll_str = formatted_d20 + '{:+}'.format(skills[skill])
+        mod = skills[skill]
+        skill_name = skill
+        if any(args.get(s) for s in ("str", "dex", "con", "int", "wis", "cha")):
+            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.get(s))
+            mod = mod - char.get_mod(SKILL_MAP[skill]) + char.get_mod(base)
+            skill_name = f"{verbose_stat(base)} ({skill})"
 
-        embed.title = args.get('title', '').replace('[charname]', char.get_name()).replace('[cname]', re.sub(
-            r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill).title()) \
-                      or '{} makes {} check!'.format(char.get_name(),
-                                                     a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1',
-                                                                    skill).title()))
+        skill_name = camel_to_title(skill_name)
+        default_title = '{} makes {} check!'.format(char.get_name(), a_or_an(skill_name))
+
+        if b is not None:
+            roll_str = formatted_d20 + '{:+}'.format(mod) + '+' + b
+        else:
+            roll_str = formatted_d20 + '{:+}'.format(mod)
+
+        embed.title = args.get('title', '') \
+                          .replace('[charname]', char.get_name()) \
+                          .replace('[cname]', skill_name) \
+                      or default_title
 
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')

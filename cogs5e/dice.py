@@ -9,8 +9,8 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
-from cogs5e.models.monster import Monster
-from utils.functions import fuzzy_search, a_or_an, parse_args_2, parse_args_3
+from cogs5e.models.monster import Monster, SKILL_MAP
+from utils.functions import fuzzy_search, a_or_an, parse_args_2, parse_args_3, verbose_stat
 
 
 class Dice:
@@ -186,7 +186,8 @@ class Dice:
               -phrase [flavor text]
               -title [title] *note: [mname] and [cname] will be replaced automatically*
               -dc [dc]
-              -rr [iterations]"""
+              -rr [iterations]
+              str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
         self.bot.db.incr('monsters_looked_up_life')
@@ -218,14 +219,25 @@ class Dice:
             dc = None
         num_successes = 0
 
-        if b is not None:
-            roll_str = formatted_d20 + '{:+}'.format(skills[skill]) + '+' + b
-        else:
-            roll_str = formatted_d20 + '{:+}'.format(skills[skill])
+        mod = skills[skill]
+        skill_name = skill
+        if any(args.get(s) for s in ("str", "dex", "con", "int", "wis", "cha")):
+            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.get(s))
+            mod = mod - monster.get_mod(SKILL_MAP[skill]) + monster.get_mod(base)
+            skill_name = f"{verbose_stat(base)} ({skill})"
 
-        embed.title = args.get('title', [''])[-1].replace('[mname]', monster_name).replace('[cname]', skill.title()) \
-                      or '{} makes {} check!'.format(monster_name,
-                                                     a_or_an(skill.title()))
+        skill_name = skill_name.title()
+        default_title = '{} makes {} check!'.format(monster_name, a_or_an(skill_name))
+
+        if b is not None:
+            roll_str = formatted_d20 + '{:+}'.format(mod) + '+' + b
+        else:
+            roll_str = formatted_d20 + '{:+}'.format(mod)
+
+        embed.title = args.get('title', '') \
+                          .replace('[mname]', monster_name) \
+                          .replace('[cname]', skill_name) \
+                      or default_title
 
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')

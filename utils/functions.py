@@ -24,16 +24,6 @@ from cogs5e.models.errors import SelectionCancelled, NoSelectionElements
 log = logging.getLogger(__name__)
 
 
-def print_table(table):
-    tableStr = ''
-    col_width = [max(len(x) for x in col) for col in zip(*table)]
-    for line in table:
-        tableStr += "| " + " | ".join("{:{}}".format(x, col_width[i])
-                                      for i, x in enumerate(line)) + " |"
-        tableStr += '\n'
-    return tableStr
-
-
 def discord_trim(str):
     result = []
     trimLen = 0
@@ -42,17 +32,6 @@ def discord_trim(str):
         trimLen += 1999
         result.append(str[lastLen:trimLen])
         lastLen += 1999
-    return result
-
-
-def embed_trim(str):
-    result = []
-    trimLen = 0
-    lastLen = 0
-    while trimLen <= len(str):
-        trimLen += 1023
-        result.append(str[lastLen:trimLen])
-        lastLen += 1023
     return result
 
 
@@ -200,25 +179,6 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
     return result
 
 
-def parse_args(args):
-    out = {}
-    index = 0
-    for a in args:
-        if a == '-b' or a == '-d':
-            if out.get(a.replace('-', '')) is None:
-                out[a.replace('-', '')] = list_get(index + 1, None, args)
-            else:
-                out[a.replace('-', '')] += ' + ' + list_get(index + 1, None, args)
-        elif a.startswith('-'):
-            nextArg = list_get(index + 1, None, args)
-            if nextArg is None or nextArg.startswith('-'): nextArg = True
-            out[a.replace('-', '')] = nextArg
-        else:
-            out[a] = "True"
-        index += 1
-    return out
-
-
 def parse_args_2(args):
     out = {}
     index = 0
@@ -289,25 +249,6 @@ def a_or_an(string, upper=False):
 
 def camel_to_title(string):
     return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
-
-
-def text_to_numbers(string):
-    numbers = {'one': '1',
-               'two': '2',
-               'three': '3',
-               'four': '4',
-               'five': '5',
-               'six': '6',
-               'seven': '7',
-               'eight': '8',
-               'nine': '9',
-               'ten': '10',
-               'once': '1',
-               'twice': '2',
-               'thrice': '3'}
-    for t, i in numbers.items():
-        string = string.replace(t, i)
-    return string
 
 
 def parse_resistances(damage, resistances, immunities, vulnerabilities):
@@ -466,6 +407,10 @@ def gen_error_message():
 
 ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
                'int': 'Intelligence', 'wis': 'Wisdom', 'cha': 'Charisma'}
+
+
+def verbose_stat(stat):
+    return ABILITY_MAP[stat]
 
 
 def parse_data_entry(text, md_breaks=False):

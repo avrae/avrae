@@ -13,6 +13,7 @@ import aiohttp
 import discord
 import html2text
 
+from cogs5e.models.character import SKILL_MAP
 from cogs5e.models.errors import ExternalImportError
 
 log = logging.getLogger(__name__)
@@ -22,14 +23,6 @@ CUSTOM_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                   "Chrome/60.0.3112.113 Safari/537.36"
 }
-SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'intelligence', 'athletics': 'strength',
-             'deception': 'charisma', 'history': 'intelligence', 'initiative': 'dexterity', 'insight': 'wisdom',
-             'intimidation': 'charisma', 'investigation': 'intelligence', 'medicine': 'wisdom',
-             'nature': 'intelligence', 'perception': 'wisdom', 'performance': 'charisma',
-             'persuasion': 'charisma', 'religion': 'intelligence', 'sleightOfHand': 'dexterity', 'stealth': 'dexterity',
-             'survival': 'wisdom', 'strengthSave': 'strength', 'dexteritySave': 'dexterity',
-             'constitutionSave': 'constitution', 'intelligenceSave': 'intelligence', 'wisdomSave': 'wisdom',
-             'charismaSave': 'charisma'}
 DAMAGE_TYPES = {1: "bludgeoning", 2: "piercing", 3: "slashing", 4: "necrotic", 5: "acid", 6: "cold", 7: "fire",
                 8: "lightning", 9: "thunder", 10: "poison", 11: "psychic", 12: "radiant", 13: "force"}
 CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.334, "Monk": 0, "Paladin": 0.5,

@@ -34,6 +34,17 @@ from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
 
+SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'intelligence', 'athletics': 'strength',
+             'deception': 'charisma', 'history': 'intelligence', 'initiative': 'dexterity', 'insight': 'wisdom',
+             'intimidation': 'charisma', 'investigation': 'intelligence', 'medicine': 'wisdom',
+             'nature': 'intelligence', 'perception': 'wisdom', 'performance': 'charisma',
+             'persuasion': 'charisma', 'religion': 'intelligence', 'sleightOfHand': 'dexterity', 'stealth': 'dexterity',
+             'survival': 'wisdom', 'strengthSave': 'strength', 'dexteritySave': 'dexterity',
+             'constitutionSave': 'constitution', 'intelligenceSave': 'intelligence', 'wisdomSave': 'wisdom',
+             'charismaSave': 'charisma',
+             'strength': 'strength', 'dexterity': 'dexterity', 'constitution': 'constitution',
+             'intelligence': 'intelligence', 'charisma': 'charisma'}
+
 
 class Character:
     def __init__(self, _dict, _id):
@@ -87,6 +98,21 @@ class Character:
     def get_prof_bonus(self):
         """@:returns int - the character's proficiency bonus."""
         return self.character.get('stats', {}).get('proficiencyBonus', 0)
+
+    def get_stats(self):
+        """@:returns dict - the character's stats."""
+        return self.character.get('stats', {})
+
+    def get_mod(self, stat):
+        """
+        Gets the character's stat modifier for a core stat.
+        :param stat: The core stat to get. Can be of the form "cha", "charisma", or "charismaMod".
+        :return: The character's relevant stat modifier.
+        """
+        valid = ["strengthMod", "dexterityMod", "constitutionMod", "intelligenceMod", "wisdomMod", "charismaMod"]
+        if not any(stat in s for s in valid):
+            raise ValueError(f"{stat} is not a valid stat.")
+        return self.get_stats()[next(s for s in valid if stat in s)]
 
     def get_saves(self):
         """@:returns dict - the character's saves and modifiers."""

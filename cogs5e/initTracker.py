@@ -11,7 +11,7 @@ from discord.ext import commands
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.funcs.lookupFuncs import searchSpellNameFull, \
     select_monster_full, getSpell, c
-from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context
+from cogs5e.funcs.sheetFuncs import sheet_attack, spell_context, parsemax
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter, EmbedWithAuthor
 from cogs5e.models.errors import NoSpellDC, InvalidSaveType, SelectionException
@@ -884,6 +884,8 @@ class InitTracker:
     async def _cast(self, ctx, combatant_name, spell_name, args):
         combat = Combat.from_ctx(ctx)
 
+
+
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
@@ -906,6 +908,9 @@ class InitTracker:
             args = await combatant.character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = parse_args_3(args)
+
+        if args.get('max') is not None:
+            maxdice = 1
 
         if not args.get('t'):
             return await self.bot.say("You must pass in targets with `-t target`.", delete_after=15)
@@ -1046,6 +1051,7 @@ class InitTracker:
                             if args.get('d') is not None:
                                 dmg = dmg + '+' + "+".join(args.get('d', []))
 
+                            dmg = parsemax(dmg, maxdice)
                             dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
                             embed.add_field(name="Damage/DC", value=dmgroll.result + "\n**DC**: {}".format(str(dc)))
                             d = ""

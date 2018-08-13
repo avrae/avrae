@@ -179,7 +179,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
             critDice = parsemax(critDice,maxdice)
             return critDice
 
-        if args.get('max') is not None:
+        if if not args.get("max"):
             maxdice = 1
         else:
             maxdice = 0
@@ -239,8 +239,10 @@ def sheet_cast(spell, args, embed=None):
     crittype = args.get('crittype', ['default'])[-1]  # char.get_setting('crittype', 'default')
     spell_ab = sum(int(b) for b in args.get('ab', [0]))
     casting_mod = sum(int(b) for b in args.get('SPELL', [0]))
-    if args.get('max') is not None:
+    if if not args.get("max"):
         maxdice = 1
+    else:
+        maxdice = 0
     total_damage = 0
 
     upcast_dmg = None

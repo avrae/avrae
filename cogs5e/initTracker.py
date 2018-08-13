@@ -911,6 +911,8 @@ class InitTracker:
 
         if args.get('max') is not None:
             maxdice = 1
+        else:
+            maxdice = 0
 
         if not args.get('t'):
             return await self.bot.say("You must pass in targets with `-t target`.", delete_after=15)

@@ -412,7 +412,7 @@ def parsemax(damage_str, max=None):
     if max is not None:
         def maxSub(matchobj):
             return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
-        MaxDice = re.sub(r'(\d+)d(\d+)', maxSub, damage_str)
+        maxDice = re.sub(r'(\d+)d(\d+)', maxSub, damage_str)
     else:
-        MaxDice = damage_str
-    return MaxDice
+        maxDice = damage_str
+    return maxDice

@@ -181,6 +181,8 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
 
         if args.get('max') is not None:
             maxdice = 1
+        else:
+            maxdice = 0
 
         # -d, -d# parsing
         if args.get('d') is not None:
@@ -408,8 +410,8 @@ def spell_context(spell):
 
     return context
 
-def parsemax(damage_str, max=None):
-    if max is not None:
+def parsemax(damage_str, max=0):
+    if max == 0 :
         def maxSub(matchobj):
             return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
         maxDice = re.sub(r'(\d+)d(\d+)', maxSub, damage_str)

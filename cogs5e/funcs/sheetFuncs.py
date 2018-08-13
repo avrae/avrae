@@ -161,6 +161,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
         damage_str = '0'
     if damage_str is not None:
 
+
         def parsecrit(damage_str, wep=False):
             if itercrit == 1:
                 if args.get('crittype') == '2x':
@@ -177,6 +178,13 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
                 critDice = damage_str
             return critDice
 
+        if if not args.get("max"):
+            maxdice = 1
+        else:
+            maxdice = 0
+
+        damage_str = parsemax(damage_str, maxdice)
+            
         # -d, -d# parsing
         if args.get('d') is not None:
             damage = parsecrit(damage_str, wep=True) + '+' + parsecrit(args.get('d'))
@@ -232,7 +240,10 @@ def sheet_cast(spell, args, embed=None):
     crittype = args.get('crittype', ['default'])[-1]  # char.get_setting('crittype', 'default')
     spell_ab = sum(int(b) for b in args.get('ab', [0]))
     casting_mod = sum(int(b) for b in args.get('SPELL', [0]))
-
+    if if not args.get("max"):
+        maxdice = 1
+    else:
+        maxdice = 0
     total_damage = 0
 
     upcast_dmg = None
@@ -290,7 +301,7 @@ def sheet_cast(spell, args, embed=None):
 
             if d:
                 dmg = dmg + '+' + d
-
+            dmg = parsemax(dmg,maxdice)
             dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
             embed.add_field(name="Damage/DC",
                             value=dmgroll.result + "\n**DC:** {}\n{} Save".format(str(dc), save_skill[:3].upper()))
@@ -401,3 +412,12 @@ def spell_context(spell):
             context = spell['short']
 
     return context
+
+def parsemax(damage_str, max=0):
+    if max == 0 :
+        def maxSub(matchobj):
+            return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
+        maxDice = re.sub(r'(\d+)d(\d+)', maxSub, damage_str)
+    else:
+        maxDice = damage_str
+    return maxDice

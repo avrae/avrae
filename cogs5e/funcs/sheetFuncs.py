@@ -176,7 +176,6 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
                     critDice = re.sub(r'(\d+)d(\d+)', critSub, damage_str)
             else:
                 critDice = damage_str
-            critDice = parsemax(critDice,maxdice)
             return critDice
 
         if if not args.get("max"):
@@ -184,6 +183,8 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
         else:
             maxdice = 0
 
+        damage_str = parsemax(damage_str, maxdice)
+            
         # -d, -d# parsing
         if args.get('d') is not None:
             damage = parsecrit(damage_str, wep=True) + '+' + parsecrit(args.get('d'))

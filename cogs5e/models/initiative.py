@@ -307,12 +307,18 @@ class Combat:
         outStr = "```markdown\n{}: {} (round {})\n".format(
             self.options.get('name') if self.options.get('name') else "Current initiative",
             self.turn_num, self.round_num)
-        outStr += '=' * (len(outStr) - 13)
-        outStr += '\n'
+        outStr += f"{'=' * (len(outStr) - 13)}\n"
+
+        combatantStr = ""
         for c in combatants:
-            outStr += ("# " if self.index == c.index else "  ") + c.get_summary(private) + "\n"
-        outStr += "```"
-        return outStr
+            combatantStr += ("# " if self.index == c.index else "  ") + c.get_summary(private) + "\n"
+
+        outStr += "{}```"  # format place for combatatstr
+        if len(outStr.format(combatantStr)) > 2000:
+            combatantStr = ""
+            for c in combatants:
+                combatantStr += ("# " if self.index == c.index else "  ") + c.get_summary(private, no_notes=True) + "\n"
+        return outStr.format(combatantStr)
 
     async def update_summary(self):
         """Edits the summary message with the latest summary."""
@@ -642,16 +648,16 @@ class Combatant:
             if e.on_turn(num_turns):
                 self.remove_effect(e)
 
-    def get_summary(self, private=False):
+    def get_summary(self, private=False, no_notes=False):
         """
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        status = "{}: {} {}({})".format(self.init,
-                                        self.name,
-                                        self.get_hp_str(private) + ' ' if self.get_hp_str() is not '' else '',
-                                        self.get_effects_and_notes())
-        return status
+        hpStr = f"{self.get_hp_str(private)} " if self.get_hp_str(private) else ''
+        if not no_notes:
+            return f"{self.init}: {self.name} {hpStr}({self.get_effects_and_notes()})"
+        else:
+            return f"{self.init}: {self.name} {hpStr}"
 
     def get_status(self, private=False):
         """

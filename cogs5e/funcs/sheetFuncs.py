@@ -25,7 +25,7 @@ def sheet_attack(attack, args, embed=None):
 
     total_damage = 0
 
-    advnum_keys = [k for k in args.keys() if re.match(r'(adv|dis)\d+', k)]
+    advnum_keys = [k for k in args if re.match(r'(adv|dis)\d+', k) and args.last(k, type_=bool)]
     advnum = {}
     for k in advnum_keys:  # parse adv# args
         m = re.match(r'(adv|dis)(\d+)', k)
@@ -33,10 +33,10 @@ def sheet_attack(attack, args, embed=None):
         num = int(m.group(2))
         advnum[_adv] = num
 
-    dnum_keys = [k for k in args.keys() if re.match(r'd\d+', k)]  # ['d1', 'd2'...] TODO should probably move this
+    dnum_keys = [k for k in args if re.match(r'd\d+', k)]  # ['d1', 'd2'...]
     dnum = {}
     for k in dnum_keys:  # parse d# args
-        for dmg in args[k].split('|'):
+        for dmg in args.get(k):
             try:
                 dnum[dmg] = int(k.split('d')[-1])
             except ValueError:
@@ -45,52 +45,59 @@ def sheet_attack(attack, args, embed=None):
                 embed.description = "Malformed tag: {}".format(k)
                 return {"embed": embed, "total_damage": 0}
 
-    if args.get('phrase') is not None:  # parse phrase
-        embed.description = '*' + args.get('phrase') + '*'
+    if args.get('phrase'):  # parse phrase
+        embed.description = '*' + args.join('phrase', '\n') + '*'
     else:
         embed.description = '~~' + ' ' * 500 + '~~'
 
-    if args.get('title') is not None:
-        embed.title = args.get('title').replace('[charname]', args.get('name')).replace('[aname]',
-                                                                                        attack.get('name')).replace(
-            '[target]', args.get('t', ''))
-    elif args.get('t') is not None:  # parse target
-        embed.title = '{} attacks with {} at {}!'.format(args.get('name'), a_or_an(attack.get('name')), args.get('t'))
+    if args.last('title') is not None:
+        embed.title = args.last('title') \
+            .replace('[charname]', args.last('name')) \
+            .replace('[aname]', attack.get('name')) \
+            .replace('[target]', args.last('t'))
+    elif args.last('t') is not None:  # parse target
+        embed.title = '{} attacks with {} at {}!'.format(args.last('name'), a_or_an(attack.get('name')), args.last('t'))
     else:
-        embed.title = '{} attacks with {}!'.format(args.get('name'), a_or_an(attack.get('name')))
+        embed.title = '{} attacks with {}!'.format(args.last('name'), a_or_an(attack.get('name')))
 
-    for arg in ('rr', 'ac'):  # parse reroll/ac
-        try:
-            args[arg] = int(args.get(arg, None))
-        except (ValueError, TypeError):
-            args[arg] = None
-    args['adv'] = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
-                                                                                            False) else -1 if args.get(
-        'dis', False) else 0
-    args['adv'] = 2 if args.get('ea', False) and not args.get('dis', False) else args['adv']
-    args['crit'] = 1 if args.get('crit', False) else None
-    args['hit'] = 1 if args.get('hit', False) else None
-    args['miss'] = 1 if args.get('miss', False) and not args.get('hit') else None
-    for r in range(args.get('rr', 1) or 1):  # start rolling attacks
+    adv = args.adv(True)
+    crit = args.last('crit', None, bool) and 1
+    hit = args.last('hit', None, bool) and 1
+    miss = (args.last('miss', None, bool) and not hit) and 1
+    ac = args.last('ac', type_=int)
+    criton = args.last('criton', 20, int)
+    rr = min(args.last('rr', 1, int), 25)
+    reroll = args.last('reroll', 0, int)
+    b = args.join('b', '+')
+
+    for r in range(rr):  # start rolling attacks
         out = ''
         itercrit = 0
-        if attack.get('attackBonus') is None and args.get('b') is not None:
+        if attack.get('attackBonus') is None and b:
             attack['attackBonus'] = '0'
-        if attack.get('attackBonus') is not None and not args.get('hit') and not args.get('miss'):
-            adv = args.get('adv')
+        if attack.get('attackBonus') is not None and not (hit or miss):
+            iteradv = adv
             for _adv, numHits in advnum.items():
                 if numHits > 0:
-                    adv = 1 if _adv == 'adv' else -1
+                    iteradv = 1 if _adv == 'adv' else -1
                     advnum[_adv] -= 1
-            formatted_d20 = ('1d20' if adv == 0 else '2d20' + (
-                'kh1' if adv == 1 else 'kl1') if not adv == 2 else '3d20kh1') \
-                            + ('ro{}'.format(args.get('reroll', 0))
-                               if int(args.get('reroll', 0)) else '')
-            if args.get('b') is not None:
-                toHit = roll(f'{formatted_d20}+' + attack.get('attackBonus') + '+' + args.get('b'),
+
+            formatted_d20 = '1d20'
+            if iteradv == 1:
+                formatted_d20 = '2d20kh1'
+            elif iteradv == 2:
+                formatted_d20 = '3d20kh1'
+            elif iteradv == -1:
+                formatted_d20 = '2d20kl1'
+
+            if reroll:
+                formatted_d20 = f"{formatted_d20}ro{reroll}"
+
+            if b:
+                toHit = roll(f"{formatted_d20}+{attack.get('attackBonus')}+{b}",
                              rollFor='To Hit', inline=True, show_blurbs=False)
             else:
-                toHit = roll(f'{formatted_d20}+' + attack.get('attackBonus'), rollFor='To Hit', inline=True,
+                toHit = roll(f"{formatted_d20}+{attack.get('attackBonus')}", rollFor='To Hit', inline=True,
                              show_blurbs=False)
 
             try:
@@ -105,26 +112,26 @@ def sheet_attack(attack, args, embed=None):
                                isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
                 except StopIteration:
                     raw = 0
-                if raw >= int(args.get('criton', 20) or 20):
+                if raw >= criton:
                     itercrit = 1
                 else:
                     itercrit = toHit.crit
-                if args.get('ac') is not None:
-                    if toHit.total < args.get('ac') and itercrit == 0:
+                if ac is not None:
+                    if toHit.total < ac and itercrit == 0:
                         itercrit = 2  # miss!
-                if args.get('crit') and itercrit < 2:
-                    itercrit = args.get('crit', 0)
+                if crit and itercrit < 2:
+                    itercrit = crit
             else:  # output wherever was there if error
                 out += "**To Hit**: " + attack.get('attackBonus') + '\n'
         else:
-            if args.get('hit'):
+            if hit:
                 out += "**To Hit**: Automatic hit!\n"
-            elif args.get('miss'):
+            elif miss:
                 out += "**To Hit**: Automatic miss!\n"
-            if args.get('crit'):
-                itercrit = args.get('crit', 0)
+            if crit:
+                itercrit = crit
             else:
-                if args.get("miss"):
+                if miss:
                     itercrit = 2
                 else:
                     itercrit = 0
@@ -134,19 +141,19 @@ def sheet_attack(attack, args, embed=None):
         total_damage += res['total']
 
         if out is not '':
-            if (args.get('rr', 1) or 1) > 1:
+            if rr > 1:
                 embed.add_field(name='Attack {}'.format(r + 1), value=out, inline=False)
             else:
                 embed.add_field(name='Attack', value=out, inline=False)
 
-    if (args.get('rr', 1) or 1) > 1 and attack.get('damage') is not None:
+    if rr > 1 and attack.get('damage') is not None:
         embed.add_field(name='Total Damage', value=str(total_damage))
 
     if attack.get('details') is not None:
         embed.add_field(name='Effect', value=(attack.get('details', '')))
 
-    if args.get('image') is not None:
-        embed.set_thumbnail(url=args.get('image'))
+    if args.last('image') is not None:
+        embed.set_thumbnail(url=args.last('image'))
 
     return {'embed': embed, 'total_damage': total_damage}
 
@@ -157,20 +164,29 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
     if dnum is None:
         dnum = {}
 
-    if damage_str is None and args.get('d') is not None:
+    d = args.join('d', '+')
+    crittype = args.last('crittype', 'default')
+    c = args.join('c', '+')
+    critdice = args.last('critdice', 0, int)
+    showmiss = args.last('showmiss', False, bool)
+    resist = args.get('resist')
+    immune = args.get('immune')
+    vuln = args.get('vuln')
+
+    if damage_str is None and d:
         damage_str = '0'
     if damage_str is not None:
 
         def parsecrit(damage_str, wep=False):
             if itercrit == 1:
-                if args.get('crittype') == '2x':
+                if crittype == '2x':
                     critDice = f"({damage_str})*2"
-                    if args.get('c') is not None:
-                        critDice += '+' + args.get('c', '')
+                    if c:
+                        critDice += '+' + c
                 else:
                     def critSub(matchobj):
-                        critdice = args.get('critdice') if args.get('critdice') and wep else 0
-                        return str(int(matchobj.group(1)) * 2 + critdice) + 'd' + matchobj.group(2)
+                        extracritdice = critdice if critdice and wep else 0
+                        return str(int(matchobj.group(1)) * 2 + extracritdice) + 'd' + matchobj.group(2)
 
                     critDice = re.sub(r'(\d+)d(\d+)', critSub, damage_str)
             else:
@@ -178,8 +194,8 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
             return critDice
 
         # -d, -d# parsing
-        if args.get('d') is not None:
-            damage = parsecrit(damage_str, wep=True) + '+' + parsecrit(args.get('d'))
+        if d:
+            damage = parsecrit(damage_str, wep=True) + '+' + parsecrit(d)
         else:
             damage = parsecrit(damage_str, wep=True)
 
@@ -191,21 +207,17 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
         # crit parsing
         rollFor = "Damage"
         if itercrit == 1:
-            if args.get('c') is not None:
-                damage += '+' + args.get('c', '')
+            if c:
+                damage += '+' + c
             rollFor = "Damage (CRIT!)"
         elif itercrit == 2:
             rollFor = "Damage (Miss!)"
 
         # resist parsing
-        if 'resist' in args or 'immune' in args or 'vuln' in args:
-            resistances = args.get('resist', '').split('|')
-            immunities = args.get('immune', '').split('|')
-            vulnerabilities = args.get('vuln', '').split('|')
-            damage = parse_resistances(damage, resistances, immunities, vulnerabilities)
+        damage = parse_resistances(damage, resist, immune, vuln)
 
         # actual roll
-        if itercrit == 2 and not args.get('showmiss', False):
+        if itercrit == 2 and not showmiss:
             out = '**Miss!**\n'
         else:
             dmgroll = roll(damage, rollFor=rollFor, inline=True, show_blurbs=False)
@@ -222,16 +234,15 @@ def sheet_cast(spell, args, embed=None):
     spell_level = int(spell.get('level', 0))
     spell_type = spell.get('type')  # save, attack, special
 
-    cast_level = int(args.get('l', [spell_level])[-1])
-    caster_name = args.get('name', ['Unnamed'])[-1]
-    phrase = '\n'.join(args.get('phrase', []))
-    dc = args.get('dc', [None])[-1]  # save DC (int)
-    save_skill = args.get('save', [None])[-1] or spell.get('save', {}).get('save')  # str, dex, etc (optional)
-    caster_level = int(args.get('casterlevel', [1])[-1])  # for cantrip scaling
-    d = "+".join(args.get('d', []))
-    crittype = args.get('crittype', ['default'])[-1]  # char.get_setting('crittype', 'default')
-    spell_ab = sum(int(b) for b in args.get('ab', [0]))
-    casting_mod = sum(int(b) for b in args.get('SPELL', [0]))
+    cast_level = args.last('l', spell_level, int)
+    caster_name = args.last('name', 'Unnamed')
+    phrase = args.join('phrase', '\n')
+    dc = args.last('dc', type_=int)  # save DC (int)
+    save_skill = args.last('save') or spell.get('save', {}).get('save')  # str, dex, etc (optional)
+    caster_level = args.last('casterlevel', 1, int)  # for cantrip scaling
+    d = args.join('d', '+')
+    spell_ab = sum(args.get('ab', type_=int))
+    casting_mod = sum(args.get('SPELL', type_=int))
 
     total_damage = 0
 
@@ -248,10 +259,6 @@ def sheet_cast(spell, args, embed=None):
 
     if spell_type == 'save':  # save spell
         if not dc:
-            raise NoSpellDC
-        try:
-            dc = int(dc)
-        except:
             raise NoSpellDC
 
         try:
@@ -296,12 +303,6 @@ def sheet_cast(spell, args, embed=None):
                             value=dmgroll.result + "\n**DC:** {}\n{} Save".format(str(dc), save_skill[:3].upper()))
             total_damage = dmgroll.total
     elif spell['type'] == 'attack':  # attack spell
-        outargs = copy.copy(args)
-        outargs['crittype'] = crittype
-        outargs['d'] = d or None
-        for _arg, _value in outargs.items():
-            if isinstance(_value, list):
-                outargs[_arg] = _value[-1]
         attack = copy.copy(spell['atk'])
         attack['attackBonus'] = str(spell_ab)
 
@@ -328,23 +329,18 @@ def sheet_cast(spell, args, embed=None):
 
         attack['damage'] = attack['damage'].replace("SPELL", str(casting_mod))
 
-        result = sheet_attack(attack, outargs)
+        result = sheet_attack(attack, args)
         total_damage = result['total_damage']
         for f in result['embed'].fields:
             embed.add_field(name=f.name, value=f.value, inline=f.inline)
     else:  # special spell (MM/heal)
-        outargs = copy.copy(args)  # just make an attack for it
-        outargs['d'] = "+".join(args.get('d', [])) or None
-        for _arg, _value in outargs.items():
-            if isinstance(_value, list):
-                outargs[_arg] = _value[-1]
         attack = {"name": spell['name'],
                   "damage": spell.get("damage", "0").replace('SPELL',
                                                              str(casting_mod)),
                   "attackBonus": None}
         if upcast_dmg:
             attack['damage'] = attack['damage'] + '+' + upcast_dmg
-        result = sheet_attack(attack, outargs)
+        result = sheet_attack(attack, args)
         total_damage = result['total_damage']
         for f in result['embed'].fields:
             embed.add_field(name=f.name, value=f.value, inline=f.inline)

@@ -19,7 +19,8 @@ from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
-from utils.functions import parse_args_3, strict_search, get_selection, dicecloud_parse, parse_snippets
+from utils.argparser import argparse
+from utils.functions import strict_search, get_selection, dicecloud_parse, parse_snippets
 
 log = logging.getLogger(__name__)
 
@@ -173,12 +174,10 @@ class GameTrack:
         __Valid Arguments__
         See `!help save`."""
         character = Character.from_ctx(ctx)
-        args = parse_args_3(args)
-        adv = 0 if args.get('adv', [False])[-1] and args.get('dis', [False])[-1] else \
-            1 if args.get('adv', [False])[-1] else \
-                -1 if args.get('dis', [False])[-1] else 0
-        b = '+'.join(args.get('b', []))
-        phrase = '\n'.join(args.get('phrase', []))
+        args = argparse(args)
+        adv = args.adv()
+        b = args.join('b', '+')
+        phrase = args.join('phrase', '\n')
 
         if b:
             save_roll = roll('1d20+' + b, adv=adv, inline=True)
@@ -186,8 +185,10 @@ class GameTrack:
             save_roll = roll('1d20', adv=adv, inline=True)
 
         embed = discord.Embed()
-        embed.title = args.get('title', '').replace('[charname]', character.get_name()).replace(
-            '[sname]', 'Death') or '{} makes {}!'.format(character.get_name(), "a Death Save")
+        embed.title = args.last('title', '') \
+                          .replace('[charname]', character.get_name()) \
+                          .replace('[sname]', 'Death') \
+                      or '{} makes {}!'.format(character.get_name(), "a Death Save")
         embed.colour = character.get_color()
 
         death_phrase = ''
@@ -210,8 +211,8 @@ class GameTrack:
 
         embed.add_field(name="Death Saves", value=character.get_ds_str())
 
-        if args.get('image') is not None:
-            embed.set_thumbnail(url=args.get('image'))
+        if args.last('image') is not None:
+            embed.set_thumbnail(url=args.last('image'))
 
         await self.bot.say(embed=embed)
 
@@ -437,11 +438,11 @@ class GameTrack:
         `-min <min value>` - The minimum value of the counter.
         `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers."""
         character = Character.from_ctx(ctx)
-        args = parse_args_3(args)
-        _reset = args.get('reset', [None])[-1]
-        _max = args.get('max', [None])[-1]
-        _min = args.get('min', [None])[-1]
-        _type = args.get('type', [None])[-1]
+        args = argparse(args)
+        _reset = args.last('reset')
+        _max = args.last('max')
+        _min = args.last('min')
+        _type = args.last('type')
         try:
             character.create_consumable(name, maxValue=_max, minValue=_min, reset=_reset, displayType=_type).commit(ctx)
         except InvalidArgument as e:
@@ -585,24 +586,19 @@ class GameTrack:
         args = parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
-        args = parse_args_3(args)
+        args = argparse(args)
 
         can_cast = True
         spell_level = int(spell.get('level', 0))
-        try:
-            cast_level = int(args.get('l', [spell_level])[-1])
-            assert spell_level <= cast_level <= 9
-        except (AssertionError, ValueError):
+        cast_level = args.last('l', spell_level, int)
+        if not spell_level <= cast_level <= 9:
             return await self.bot.say("Invalid spell level.")
 
         # make sure we can cast it
-        try:
-            assert char.get_remaining_slots(cast_level) > 0
-            assert spell_name in char.get_spell_list()
-        except AssertionError:
+        if not char.get_remaining_slots(cast_level) > 0 and spell_name in char.get_spell_list():
             can_cast = False
 
-        if args.get('i'):
+        if args.last('i', type_=bool):
             can_cast = True
 
         if not can_cast:
@@ -626,14 +622,14 @@ class GameTrack:
 
         embed = result['embed']
 
-        _fields = args.get('f', [])
+        _fields = args.get('f')
         if type(_fields) == list:
             for f in _fields:
                 title = f.split('|')[0] if '|' in f else '\u200b'
                 value = "|".join(f.split('|')[1:]) if '|' in f else f
                 embed.add_field(name=title, value=value)
 
-        if not args.get('i'):
+        if not args.last('i', type_=bool):
             char.use_slot(cast_level)
         if cast_level > 0:
             embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
@@ -654,24 +650,19 @@ class GameTrack:
         args = parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
-        args = parse_args_3(args)
+        args = argparse(args)
 
         can_cast = True
         spell_level = int(spell.get('level', 0))
-        try:
-            cast_level = int(args.get('l', [spell_level])[-1])
-            assert spell_level <= cast_level <= 9
-        except (AssertionError, ValueError):
+        cast_level = args.last('l', spell_level, int)
+        if not spell_level <= cast_level <= 9:
             return await self.bot.say("Invalid spell level.")
 
         # make sure we can cast it
-        try:
-            assert char.get_remaining_slots(cast_level) > 0
-            assert spell_name in char.get_spell_list()
-        except AssertionError:
+        if not char.get_remaining_slots(cast_level) > 0 and spell_name in char.get_spell_list():
             can_cast = False
 
-        if args.get('i'):
+        if args.last('i', type_=bool):
             can_cast = True
 
         if not can_cast:
@@ -705,7 +696,7 @@ class GameTrack:
             else:
                 out = "**{} casts {}!** ".format(ctx.message.author.mention, spell['name'])
         else:
-            rolls = args.get('r', [])
+            rolls = args.get('r')
             roll_results = ""
             for r in rolls:
                 res = roll(r, inline=True)
@@ -715,7 +706,7 @@ class GameTrack:
                     roll_results += "**Effect:** " + r
             out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
 
-        if not args.get('i'):
+        if not args.last('i', type_=bool):
             char.use_slot(cast_level)
         if cast_level > 0:
             out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"

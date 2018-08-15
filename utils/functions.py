@@ -179,51 +179,6 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
     return result
 
 
-def parse_args_2(args):
-    out = {}
-    index = 0
-    cFlag = False
-    for a in args:
-        if cFlag:
-            cFlag = False
-            continue
-        if a == '-b' or a == '-d' or a == '-c':
-            if out.get(a.replace('-', '')) is None:
-                out[a.replace('-', '')] = list_get(index + 1, '0', args)
-            else:
-                out[a.replace('-', '')] += ' + ' + list_get(index + 1, '0', args)
-        elif re.match(r'-d\d+', a) or a.strip('-') in ('resist', 'immune', 'vuln'):
-            if out.get(a.replace('-', '')) is None:
-                out[a.replace('-', '')] = list_get(index + 1, '0', args)
-            else:
-                out[a.replace('-', '')] += '|' + list_get(index + 1, '0', args)
-        elif a in ('-phrase',):
-            if out.get(a.replace('-', '')) is None:
-                out[a.replace('-', '')] = list_get(index + 1, '0', args)
-            else:
-                out[a.replace('-', '')] += '\n' + list_get(index + 1, '0', args)
-        elif a == '-f':
-            if out.get(a.replace('-', '')) is None:
-                out[a.replace('-', '')] = [list_get(index + 1, '0', args)]
-            else:
-                out[a.replace('-', '')].append(list_get(index + 1, '0', args))
-        elif a.startswith('-'):
-            if list_get(index + 1, 'MISSING_ARGUMENT', args).startswith('-'):
-                out[a.replace('-', '')] = 'True'
-                index += 1
-                continue
-            else:
-                out[a.replace('-', '')] = list_get(index + 1, 'MISSING_ARGUMENT', args)
-        else:
-            out[a] = 'True'
-            index += 1
-            continue
-        index += 2
-        cFlag = True
-    return out
-
-
-
 def a_or_an(string, upper=False):
     if re.match('[AEIOUaeiou].*', string):
         return 'an {0}'.format(string) if not upper else f'An {string}'

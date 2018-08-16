@@ -106,22 +106,31 @@ class Lookup:
             return await self.send_srd_error(ctx, result)
 
         text = parse_data_entry(result['entries'])
-        prereq = "None"
+        prereq = []
 
         if 'prerequisite' in result:
             for entry in result['prerequisite']:
                 if 'race' in entry:
-                    prereq = ' or '.join(
-                        f"{r['name']}" + (f" ({r['subrace']})" if 'subrace' in r else '') for r in entry['race'])
+                    prereq.append(' or '.join(
+                        f"{r['name']}" + (f" ({r['subrace']})" if 'subrace' in r else '') for r in entry['race']))
                 if 'ability' in entry:
                     abilities = []
                     for ab in entry['ability']:
                         abilities.extend(f"{ABILITY_MAP.get(a)} {s}" for a, s in ab.items())
-                    prereq = ' or '.join(abilities)
+                    prereq.append(' or '.join(abilities))
                 if 'spellcasting' in entry:
-                    prereq = "The ability to cast at least one spell"
+                    prereq.append("The ability to cast at least one spell")
                 if 'proficiency' in entry:
-                    prereq = f"Proficiency with {entry['proficiency'][0]['armor']} armor"
+                    prereq.append(f"Proficiency with {entry['proficiency'][0]['armor']} armor")
+                if 'level' in entry:
+                    prereq.append(f"Level {entry['level']}")
+                if 'special' in entry:
+                    prereq.append(entry['special'])
+
+        if prereq:
+            prereq = '\n'.join(prereq)
+        else:
+            prereq = "None"
 
         ability = None
         if 'ability' in result:

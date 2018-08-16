@@ -87,8 +87,6 @@ class Customization:
                 guild_prefix = self.bot.prefix
             if ctx.message.content.startswith(guild_prefix):
                 ctx.message.content = ctx.message.content.replace(guild_prefix, self.bot.prefix, 1)
-            elif ctx.message.content.startswith(self.bot.prefix):
-                return
             await self.bot.process_commands(ctx.message)
             await asyncio.sleep(1)
 

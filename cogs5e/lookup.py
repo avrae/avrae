@@ -802,10 +802,14 @@ class Lookup:
             damage_and_properties
 
         embed.title = name
-        embed.description = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n{extras}"
+        desc = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n{extras}"
+        embed.description = parse_data_entry(desc)
 
         if 'reqAttune' in item:
-            embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune'].replace('YES', '')}")
+            if item['reqAttune'] is True:  # can be truthy, but not true
+                embed.add_field(name="Attunement", value=f"Requires Attunement")
+            else:
+                embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune']}")
 
         text = parse_data_entry(item.get('entries', []))
         if proptext:

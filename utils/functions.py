@@ -414,9 +414,10 @@ def verbose_stat(stat):
 
 
 def parse_data_entry(text, md_breaks=False):
-    """Parses a list or string from astranauta data.
+    """Parses a list or string from... data.
     :returns str - The final text."""
-    if not isinstance(text, list): return str(text)
+    if not isinstance(text, list):
+        return parse_data_formatting(str(text))
 
     out = []
     join_str = '\n' if not md_breaks else '  \n'

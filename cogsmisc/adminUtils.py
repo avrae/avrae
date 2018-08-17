@@ -65,6 +65,14 @@ class AdminUtils:
         self.bot.db.not_json_set('blacklist', self.blacklisted_serv_ids)
         await self.bot.say(':ok_hand:')
 
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def whitelist(self, _id):
+        whitelist = self.bot.db.not_json_get('server-whitelist', [])
+        whitelist.append(_id)
+        self.bot.db.not_json_set('server-whitelist', whitelist)
+        await self.bot.say(':ok_hand:')
+
     @commands.command(pass_context=True, hidden=True)
     @checks.is_owner()
     async def chanSay(self, ctx, channel: str, *, message: str):
@@ -296,6 +304,7 @@ class AdminUtils:
 
     async def on_server_join(self, server):
         if server.id in self.blacklisted_serv_ids: await self.bot.leave_server(server)
+        if server.id in self.bot.db.jget('server-whitelist', []): return
         bots = sum(1 for m in server.members if m.bot)
         members = len(server.members)
         ratio = bots / members

@@ -4,6 +4,7 @@ Created on Sep 23, 2016
 @author: andrew
 """
 import asyncio
+import gc
 import importlib
 import json
 import logging
@@ -251,17 +252,12 @@ class AdminUtils:
             out = await self.bot.loop.run_in_executor(None, _)
             await self.bot.say(f"```\n{out}\n```")
 
-        unloaded_modules = []
         for module in RELOADABLE_MODULES:
-            if module not in sys.modules:
+            mod = sys.modules.get(module)
+            if mod is None:
                 continue
-            log.info(f"Unloading module {module}")
-            unloaded_modules.append(module)
-            del sys.modules[module]
-        for module in unloaded_modules:
-            log.info(f"Loading module {module}")
-            importlib.import_module(module)
-
+            log.info(f"Reloading module {module}")
+            importlib.reload(mod)
 
         for cog in self.bot.dynamic_cog_list:
             try:
@@ -272,6 +268,7 @@ class AdminUtils:
                 successful = False
                 await self.bot.say(f"Failed to load {cog} - update continuing on this shard only!")
 
+        gc.collect()
         build = self.bot.db.incr("build_num")
         await self.bot.say(f"Okay, shard {self.bot.shard_id} has updated. Now on build {build}.")
         self.bot.state = "run"
@@ -513,6 +510,7 @@ class AdminUtils:
         for cog in self.bot.dynamic_cog_list:
             self.bot.load_extension(cog)
 
+        gc.collect()
         self.bot.state = "run"
         response = CommandResponse(self.bot, reply_to, "Updated!")
         r = json.dumps(response.to_dict())

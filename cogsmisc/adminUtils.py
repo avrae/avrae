@@ -251,12 +251,17 @@ class AdminUtils:
             out = await self.bot.loop.run_in_executor(None, _)
             await self.bot.say(f"```\n{out}\n```")
 
+        unloaded_modules = []
         for module in RELOADABLE_MODULES:
-            mod = sys.modules.get(module)
-            if mod is None:
+            if module not in sys.modules:
                 continue
-            log.info(f"Reloading module {module}")
-            importlib.reload(mod)
+            log.info(f"Unloading module {module}")
+            unloaded_modules.append(module)
+            del sys.modules[module]
+        for module in unloaded_modules:
+            log.info(f"Loading module {module}")
+            importlib.import_module(module)
+
 
         for cog in self.bot.dynamic_cog_list:
             try:

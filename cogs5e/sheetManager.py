@@ -30,7 +30,6 @@ from cogs5e.models.initiative import Combat
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
-from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.argparser import argparse
 from utils.functions import extract_gsheet_id_from_url, parse_snippets, generate_token, search_and_select, \
@@ -593,14 +592,6 @@ class SheetManager:
             parser = DicecloudParser(_id)
             loading = await self.bot.say('Updating character data from Dicecloud...')
             self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(_id))
-        elif sheet_type == 'pdf':
-            if not 0 < len(ctx.message.attachments) < 2:
-                return await self.bot.say('You must call this command in the same message you upload a PDF sheet.')
-
-            file = ctx.message.attachments[0]
-
-            loading = await self.bot.say('Updating character data from PDF...')
-            parser = PDFSheetParser(file)
         elif sheet_type == 'google':
             try:
                 parser = GoogleSheet(_id, self.gsheet_client)
@@ -1022,40 +1013,6 @@ class SheetManager:
             await self.bot.say(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
 
-    @commands.command(pass_context=True, hidden=True)
-    async def pdfsheet(self, ctx):
-        """Loads a character sheet from [this](http://andrew-zhu.com/avrae/PDFSheet.pdf) PDF, resetting all settings."""
-
-        if not 0 < len(ctx.message.attachments) < 2:
-            return await self.bot.say('You must call this command in the same message you upload the sheet.')
-
-        file = ctx.message.attachments[0]
-
-        override = await self._confirm_overwrite(ctx, file['filename'])
-        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
-
-        loading = await self.bot.say('Loading character data from PDF...')
-        parser = PDFSheetParser(file)
-        try:
-            await parser.get_character()
-        except Exception as e:
-            log.error("Error loading PDFChar sheet:")
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
-
-        try:
-            sheet = parser.get_sheet()
-            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(
-                sheet['sheet'].get('stats', {}).get('name')))
-        except Exception as e:
-            log.error("Error loading PDFChar sheet:")
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
-
-        Character(sheet['sheet'], f"pdf-{file['filename']}").initialize_consumables().commit(ctx).set_active(ctx)
-
-        embed = sheet['embed']
-        await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True)
     async def gsheet(self, ctx, url: str):

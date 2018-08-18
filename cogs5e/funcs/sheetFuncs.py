@@ -54,7 +54,7 @@ def sheet_attack(attack, args, embed=None):
         embed.title = args.last('title') \
             .replace('[charname]', args.last('name')) \
             .replace('[aname]', attack.get('name')) \
-            .replace('[target]', args.last('t'))
+            .replace('[target]', args.last('t', ''))
     elif args.last('t') is not None:  # parse target
         embed.title = '{} attacks with {} at {}!'.format(args.last('name'), a_or_an(attack.get('name')), args.last('t'))
     else:

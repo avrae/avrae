@@ -591,13 +591,21 @@ class DicecloudParser:
         return counters
 
 
+def func_if(condition, t, f):
+    return t if condition else f
+
+
 class DicecloudEvaluator(SimpleEval):
-    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round}
+    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round, 'func_if': func_if}
 
     def __init__(self, operators=None, functions=None, names=None):
         if not functions:
             functions = self.DEFAULT_FUNCTIONS
         super(DicecloudEvaluator, self).__init__(operators, functions, names)
+
+    def eval(self, expr):
+        expr = re.sub(r'if\s*\(', 'func_if(', expr)  # 0.5ms avg
+        return super().eval(expr)
 
     def _eval_name(self, node):
         lowernames = {k.lower(): v for k, v in self.names.items()}

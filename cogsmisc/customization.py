@@ -10,6 +10,8 @@ import shlex
 import textwrap
 import traceback
 import uuid
+import aiohttp
+import io
 
 import discord
 from discord.ext import commands
@@ -24,6 +26,7 @@ from cogs5e.models.errors import NoCharacter, EvaluationError, FunctionRequiresC
     AvraeException
 from utils.functions import confirm, clean_content
 
+MAX_FILE_ALIAS_SIZE = 4000
 
 class Customization:
     """Commands to help streamline using the bot."""
@@ -226,18 +229,43 @@ class Customization:
         if ' ' in alias_name or not alias_name:
             return await self.bot.say('Invalid alias name.')
 
+        largeAlias = False
         user_aliases = await scripting.get_aliases(ctx)
         if cmds is None:
             alias = user_aliases.get(alias_name)
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = f'!alias {alias_name} {alias}'
+                alias = f'!alias {alias_name} ' + alias
             return await self.bot.say(f'**{alias_name}**:\n(Copy-pastable)\n```md\n{alias}\n```')
+        
+        if cmds[:4] == 'file':
+            largeAlias = True
+            if not 0 < len(ctx.message.attachments) < 2:
+                return await self.bot.say('You must attach a plain text file to use a file as the alias source.')
+            file = ctx.message.attachments[0]
+            async with aiohttp.get(file['url']) as f:
+              cmds = await f.read()
+              if len(cmds) > MAX_FILE_ALIAS_SIZE:
+                  return await self.bot.say('Alias file upload is limited to {} characters.'.format(MAX_FILE_ALIAS_SIZE))
+            cmds = cmds.decode("utf-8")
+        
+        if cmds[:4] == 'gvar':
+            largeAlias = True
+            name = cmds[5:]
+            glob_vars = self.bot.db.jget("global_vars", {})
 
+            gvar = glob_vars.get(name)
+            if gvar is None:
+                return await self.bot.say('Blank gvar is not valid for alias.')
+            cmds = gvar['value']
+
+        cmdsRaw = cmds.lstrip('!')
         await self.bot.mdb.aliases.update_one({"owner": ctx.message.author.id, "name": alias_name},
-                                              {"$set": {"commands": cmds.lstrip('!')}}, True)
-        await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
+                                              {"$set": {"commands": cmdsRaw}}, True)
+        if largeAlias:
+            cmdsRaw = cmdsRaw[:1000] + (('.'*5 + '.\n')*3 if len(cmds) > 1000 else '')
+        await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, cmdsRaw))
 
     @alias.command(pass_context=True, name='list')
     async def alias_list(self, ctx):
@@ -292,9 +320,34 @@ class Customization:
             return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
 
+        if cmds[:4] == 'file':
+            largeAlias = True
+            if not 0 < len(ctx.message.attachments) < 2:
+                return await self.bot.say('You must attach a plain text file to use a file as the alias source.')
+            file = ctx.message.attachments[0]
+            async with aiohttp.get(file['url']) as f:
+              cmds = await f.read()
+              if len(cmds) > MAX_FILE_ALIAS_SIZE:
+                  return await self.bot.say('Alias file upload is limited to {} characters.'.format(MAX_FILE_ALIAS_SIZE))
+            cmds = cmds.decode("utf-8")
+        
+        if cmds[:4] == 'gvar':
+            largeAlias = True
+            name = cmds[5:]
+            glob_vars = self.bot.db.jget("global_vars", {})
+
+            gvar = glob_vars.get(name)
+            if gvar is None:
+                return await self.bot.say('Blank gvar is not valid for alias.')
+            cmds = gvar['value']
+                                      
+        server_aliases[alias_name] = cmds.lstrip('!')
+        cmdsRaw = cmds.lstrip('!')
         await self.bot.mdb.servaliases.update_one({"server": ctx.message.server.id, "name": alias_name},
-                                                  {"$set": {"commands": cmds.lstrip('!')}}, True)
-        await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
+                                                  {"$set": {"commands": cmdsRaw}}, True)
+        if largeAlias:
+            cmdsRaw = cmdsRaw[:1000] + (('.'*5 +'.\n')*3 if len(cmds) > 1000 else '')
+        await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, cmdsRaw))
 
     @servalias.command(pass_context=True, name='list', no_pm=True)
     async def servalias_list(self, ctx):

@@ -142,7 +142,7 @@ def sheet_attack(attack, args, embed=None):
     if (args.get('rr', 1) or 1) > 1 and attack.get('damage') is not None:
         embed.add_field(name='Total Damage', value=str(total_damage))
 
-    if attack.get('details') is not None:
+    if attack.get('details'):
         embed.add_field(name='Effect', value=(attack.get('details', '')))
 
     if args.get('image') is not None:

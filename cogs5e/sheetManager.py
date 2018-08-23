@@ -30,8 +30,8 @@ from cogs5e.models.initiative import Combat
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
-from cogs5e.sheets.pdfsheet import PDFSheetParser
 from cogs5e.sheets.sheetParser import SheetParser
+from utils.argparser import argparse
 from utils.functions import extract_gsheet_id_from_url, parse_snippets, generate_token, search_and_select, \
     camel_to_title, verbose_stat
 from utils.functions import list_get, get_positivity, a_or_an
@@ -62,46 +62,8 @@ class SheetManager:
         args = parse_snippets(args, ctx)
         args = await character.parse_cvars(args, ctx)
         args = shlex.split(args)
-        args = self.parse_args(args)
+        args = argparse(args)
         return args
-
-    def parse_args(self, args):
-        out = {}
-        index = 0
-        cFlag = False
-        for a in args:
-            if cFlag:
-                cFlag = False
-                continue
-            if a == '-b' or a == '-d' or a == '-c':
-                if out.get(a.replace('-', '')) is None:
-                    out[a.replace('-', '')] = list_get(index + 1, '0', args)
-                else:
-                    out[a.replace('-', '')] += ' + ' + list_get(index + 1, '0', args)
-            elif re.match(r'-d\d+', a) or a in ('-resist', '-immune', '-vuln'):
-                if out.get(a.replace('-', '')) is None:
-                    out[a.replace('-', '')] = list_get(index + 1, '0', args)
-                else:
-                    out[a.replace('-', '')] += '|' + list_get(index + 1, '0', args)
-            elif a in ('-phrase',):
-                if out.get(a.replace('-', '')) is None:
-                    out[a.replace('-', '')] = list_get(index + 1, '0', args)
-                else:
-                    out[a.replace('-', '')] += '\n' + list_get(index + 1, '0', args)
-            elif a == '-f':
-                if out.get(a.replace('-', '')) is None:
-                    out[a.replace('-', '')] = [list_get(index + 1, '0', args)]
-                else:
-                    out[a.replace('-', '')].append(list_get(index + 1, '0', args))
-            elif a.startswith('-'):
-                out[a.replace('-', '')] = list_get(index + 1, 'MISSING_ARGUMENT', args)
-            else:
-                out[a] = 'True'
-                index += 1
-                continue
-            index += 2
-            cFlag = True
-        return out
 
     @commands.command(pass_context=True, aliases=['a'])
     async def attack(self, ctx, atk_name: str = 'list', *, args: str = ''):
@@ -165,7 +127,7 @@ class SheetManager:
 
         args = await self.new_arg_stuff(args, ctx, char)
         args['name'] = char.get_name()
-        args['criton'] = args.get('criton') or char.get_setting('criton', 20)
+        args['criton'] = args.last('criton') or char.get_setting('criton', 20)
         args['reroll'] = char.get_setting('reroll', 0)
         args['critdice'] = int(char.get_setting('hocrit', False)) + char.get_setting('critdice', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
@@ -178,7 +140,7 @@ class SheetManager:
         result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
         embed = result['embed']
 
-        _fields = args.get('f', [])
+        _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)
 
         await self.bot.say(embed=embed)
@@ -221,20 +183,12 @@ class SheetManager:
         args += ' ' + skill_effects.get(save, '')  # dicecloud v11 - autoadv
 
         args = await self.new_arg_stuff(args, ctx, char)
-        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
-                                                                                        False) else -1 if args.get(
-            'dis', False) else 0
-        b = args.get('b', None)
-        phrase = args.get('phrase', None)
-        formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
-                        + ('ro{}'.format(char.get_setting('reroll', 0))
-                           if not char.get_setting('reroll', '0') == '0' else '')
-
-        iterations = min(int(args.get('rr', 1)), 25)
-        try:
-            dc = int(args.get('dc', None))
-        except (ValueError, TypeError):
-            dc = None
+        adv = args.adv()
+        b = args.join('b', '+')
+        phrase = args.join('phrase', '\n')
+        formatted_d20 = '1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')
+        iterations = min(args.last('rr', 1, int), 25)
+        dc = args.last('dc', type_=int)
         num_successes = 0
 
         if b is not None:
@@ -242,11 +196,10 @@ class SheetManager:
         else:
             roll_str = formatted_d20 + '{:+}'.format(saves[save])
 
-        embed.title = args.get('title', '').replace('[charname]', char.get_name()).replace('[sname]', re.sub(
-            r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) \
-                      or '{} makes {}!'.format(char.get_name(),
-                                               a_or_an(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1',
-                                                              save).title()))
+        embed.title = args.last('title', '') \
+                          .replace('[charname]', char.get_name()) \
+                          .replace('[sname]', camel_to_title(save)) \
+                      or '{} makes {}!'.format(char.get_name(), camel_to_title(save))
 
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
@@ -264,10 +217,10 @@ class SheetManager:
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
                 '\n*' + phrase + '*' if phrase is not None else '')
 
-        embeds.add_fields_from_args(embed, args.get('f', []))
+        embeds.add_fields_from_args(embed, args.get('f'))
 
-        if args.get('image') is not None:
-            embed.set_thumbnail(url=args.get('image'))
+        if args.last('image') is not None:
+            embed.set_thumbnail(url=args.last('image'))
 
         await self.bot.say(embed=embed)
         try:
@@ -304,27 +257,18 @@ class SheetManager:
         args += ' ' + skill_effects.get(skill, '')  # dicecloud v7 - autoadv
 
         args = await self.new_arg_stuff(args, ctx, char)
-        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
-                                                                                        False) else -1 if args.get(
-            'dis', False) else 0
-        b = args.get('b', None)
-        mc = args.get('mc', None)
-        phrase = args.get('phrase', None)
-        formatted_d20 = ('1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')) \
-                        + ('ro{}'.format(char.get_setting('reroll', 0))
-                           if not char.get_setting('reroll', '0') == '0' else '') \
-                        + ('mi{}'.format(mc) if mc is not None else '')
-        iterations = min(int(args.get('rr', 1)), 25)
-        try:
-            dc = int(args.get('dc', None))
-        except (ValueError, TypeError):
-            dc = None
+        adv = args.adv()
+        b = args.join('b', '+')
+        phrase = args.join('phrase', '\n')
+        formatted_d20 = '1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')
+        iterations = min(args.last('rr', 1, int), 25)
+        dc = args.last('dc', type_=int)
         num_successes = 0
 
         mod = skills[skill]
         skill_name = skill
-        if any(args.get(s) for s in ("str", "dex", "con", "int", "wis", "cha")):
-            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.get(s))
+        if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
+            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
             mod = mod - char.get_mod(SKILL_MAP[skill]) + char.get_mod(base)
             skill_name = f"{verbose_stat(base)} ({skill})"
 
@@ -336,7 +280,7 @@ class SheetManager:
         else:
             roll_str = formatted_d20 + '{:+}'.format(mod)
 
-        embed.title = args.get('title', '') \
+        embed.title = args.last('title', '') \
                           .replace('[charname]', char.get_name()) \
                           .replace('[cname]', skill_name) \
                       or default_title
@@ -357,10 +301,10 @@ class SheetManager:
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
                 '\n*' + phrase + '*' if phrase is not None else '')
 
-        embeds.add_fields_from_args(embed, args.get('f', []))
+        embeds.add_fields_from_args(embed, args.get('f'))
 
-        if args.get('image') is not None:
-            embed.set_thumbnail(url=args.get('image'))
+        if args.last('image') is not None:
+            embed.set_thumbnail(url=args.last('image'))
         await self.bot.say(embed=embed)
         try:
             await self.bot.delete_message(ctx.message)
@@ -648,14 +592,6 @@ class SheetManager:
             parser = DicecloudParser(_id)
             loading = await self.bot.say('Updating character data from Dicecloud...')
             self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(_id))
-        elif sheet_type == 'pdf':
-            if not 0 < len(ctx.message.attachments) < 2:
-                return await self.bot.say('You must call this command in the same message you upload a PDF sheet.')
-
-            file = ctx.message.attachments[0]
-
-            loading = await self.bot.say('Updating character data from PDF...')
-            parser = PDFSheetParser(file)
         elif sheet_type == 'google':
             try:
                 parser = GoogleSheet(_id, self.gsheet_client)
@@ -1077,40 +1013,6 @@ class SheetManager:
             await self.bot.say(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
 
-    @commands.command(pass_context=True, hidden=True)
-    async def pdfsheet(self, ctx):
-        """Loads a character sheet from [this](http://andrew-zhu.com/avrae/PDFSheet.pdf) PDF, resetting all settings."""
-
-        if not 0 < len(ctx.message.attachments) < 2:
-            return await self.bot.say('You must call this command in the same message you upload the sheet.')
-
-        file = ctx.message.attachments[0]
-
-        override = await self._confirm_overwrite(ctx, file['filename'])
-        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
-
-        loading = await self.bot.say('Loading character data from PDF...')
-        parser = PDFSheetParser(file)
-        try:
-            await parser.get_character()
-        except Exception as e:
-            log.error("Error loading PDFChar sheet:")
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
-
-        try:
-            sheet = parser.get_sheet()
-            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(
-                sheet['sheet'].get('stats', {}).get('name')))
-        except Exception as e:
-            log.error("Error loading PDFChar sheet:")
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
-
-        Character(sheet['sheet'], f"pdf-{file['filename']}").initialize_consumables().commit(ctx).set_active(ctx)
-
-        embed = sheet['embed']
-        await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True)
     async def gsheet(self, ctx, url: str):

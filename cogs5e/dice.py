@@ -10,7 +10,8 @@ from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.monster import Monster, SKILL_MAP
-from utils.functions import fuzzy_search, a_or_an, parse_args_2, parse_args_3, verbose_stat
+from utils.argparser import argparse
+from utils.functions import fuzzy_search, a_or_an, verbose_stat, camel_to_title
 
 
 class Dice:
@@ -163,15 +164,15 @@ class Dice:
             return await self.bot.say("No attack with that name found.", delete_after=15)
 
         args = shlex.split(args)
-        args = parse_args_2(args)
-        args['name'] = monster_name
-        args['image'] = args.get('image') or monster.get_image_url()
+        args = argparse(args)
+        args['name'] = [monster_name]
+        args['image'] = args.get('image') or [monster.get_image_url()]
         attack['details'] = attack.get('desc') or attack.get('details')
 
         result = sheet_attack(attack, args)
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff)
-        embeds.add_fields_from_args(embed, args.get('f', []))
+        embeds.add_fields_from_args(embed, args.get('f'))
 
         if monster.source == 'homebrew':
             embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
@@ -206,23 +207,19 @@ class Dice:
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
 
-        args = parse_args_3(args)
-        adv = 0 if args.get('adv', []) and args.get('dis', []) else 1 if args.get('adv', False) else -1 if args.get(
-            'dis', False) else 0
-        b = "+".join(args.get('b', [])) or None
-        phrase = '\n'.join(args.get('phrase', [])) or None
+        args = argparse(args)
+        adv = args.adv()
+        b = args.join('b', '+')
+        phrase = args.join('phrase', '\n')
         formatted_d20 = '1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')
-        iterations = min(int(args.get('rr', [1])[-1]), 25)
-        try:
-            dc = int(args.get('dc', [None])[-1])
-        except (ValueError, TypeError):
-            dc = None
+        iterations = min(args.last('rr', 1, int), 25)
+        dc = args.last('dc', type_=int)
         num_successes = 0
 
         mod = skills[skill]
         skill_name = skill
-        if any(args.get(s) for s in ("str", "dex", "con", "int", "wis", "cha")):
-            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.get(s))
+        if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
+            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
             mod = mod - monster.get_mod(SKILL_MAP[skill]) + monster.get_mod(base)
             skill_name = f"{verbose_stat(base)} ({skill})"
 
@@ -234,7 +231,7 @@ class Dice:
         else:
             roll_str = formatted_d20 + '{:+}'.format(mod)
 
-        embed.title = args.get('title', '') \
+        embed.title = args.last('title', '') \
                           .replace('[mname]', monster_name) \
                           .replace('[cname]', skill_name) \
                       or default_title
@@ -255,10 +252,10 @@ class Dice:
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
                 '\n*' + phrase + '*' if phrase is not None else '')
 
-        embeds.add_fields_from_args(embed, args.get('f', []))
+        embeds.add_fields_from_args(embed, args.get('f'))
 
-        if args.get('image') is not None:
-            embed.set_thumbnail(url=args.get('image'))
+        if args.last('image') is not None:
+            embed.set_thumbnail(url=args.last('image'))
         else:
             embed.set_thumbnail(url=monster.get_image_url())
 
@@ -298,16 +295,12 @@ class Dice:
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
 
-        args = parse_args_3(args)
-        adv = 0 if args.get('adv', []) and args.get('dis', []) else 1 if args.get('adv', False) else -1 if args.get(
-            'dis', False) else 0
-        b = "+".join(args.get('b', [])) or None
-        phrase = '\n'.join(args.get('phrase', [])) or None
-        iterations = min(int(args.get('rr', [1])[-1]), 25)
-        try:
-            dc = int(args.get('dc', [None])[-1])
-        except (ValueError, TypeError):
-            dc = None
+        args = argparse(args)
+        adv = args.adv()
+        b = args.join('b', '+')
+        phrase = args.join('phrase', '\n')
+        iterations = min(args.last('rr', 1, int), 25)
+        dc = args.last('dc', type_=int)
         num_successes = 0
 
         if b is not None:
@@ -315,13 +308,12 @@ class Dice:
         else:
             roll_str = '1d20{:+}'.format(saves[save])
 
-        embed.title = args.get('title', [''])[-1].replace('[mname]', monster_name).replace('[sname]', re.sub(
-            r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', save).title()) or \
-                      '{} makes {}!'.format(monster_name,
-                                            a_or_an(re.sub(
-                                                r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))',
-                                                r' \1',
-                                                save).title()))
+        default_title = f'{monster_name} makes {a_or_an(camel_to_title(save))}!'
+
+        embed.title = args.last('title', '') \
+                          .replace('[mname]', monster_name) \
+                          .replace('[sname]', camel_to_title(save)) \
+                      or default_title
 
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
@@ -339,10 +331,10 @@ class Dice:
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
                 '\n*' + phrase + '*' if phrase is not None else '')
 
-        embeds.add_fields_from_args(embed, args.get('f', []))
+        embeds.add_fields_from_args(embed, args.get('f'))
 
-        if args.get('image') is not None:
-            embed.set_thumbnail(url=args.get('image'))
+        if args.last('image') is not None:
+            embed.set_thumbnail(url=args.last('image'))
         else:
             embed.set_thumbnail(url=monster.get_image_url())
 

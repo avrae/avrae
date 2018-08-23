@@ -4,6 +4,7 @@ Created on Sep 23, 2016
 @author: andrew
 """
 import asyncio
+import gc
 import importlib
 import json
 import logging
@@ -29,7 +30,7 @@ RELOADABLE_MODULES = (
     "cogs5e.funcs.dice", "cogs5e.funcs.lookupFuncs", "cogs5e.funcs.scripting", "cogs5e.funcs.sheetFuncs",
     "cogs5e.models.bestiary", "cogs5e.models.character", "cogs5e.models.embeds", "cogs5e.models.initiative",
     "cogs5e.models.monster", "cogs5e.models.race", "cogs5e.sheets.beyond", "cogs5e.sheets.dicecloud",
-    "cogs5e.sheets.errors", "cogs5e.sheets.gsheet", "cogs5e.sheets.sheetParser", "utils.functions"
+    "cogs5e.sheets.errors", "cogs5e.sheets.gsheet", "cogs5e.sheets.sheetParser", "utils.functions", "utils.argparser"
 )
 
 
@@ -275,6 +276,7 @@ class AdminUtils:
                 successful = False
                 await self.bot.say(f"Failed to load {cog} - update continuing on this shard only!")
 
+        gc.collect()
         build = self.bot.db.incr("build_num")
         await self.bot.say(f"Okay, shard {self.bot.shard_id} has updated. Now on build {build}.")
         self.bot.state = "run"
@@ -517,6 +519,7 @@ class AdminUtils:
         for cog in self.bot.dynamic_cog_list:
             self.bot.load_extension(cog)
 
+        gc.collect()
         self.bot.state = "run"
         response = CommandResponse(self.bot, reply_to, "Updated!")
         r = json.dumps(response.to_dict())

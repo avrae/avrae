@@ -2,6 +2,8 @@
 # B322 = input() in py2
 # B311 = use of random()
 # B603 = use of subprocess
+# B404 = import of subprocess
 # B607 = partial path subprocess
+# B101 = use of assert
 
-skips: ['B110', 'B322', 'B311', 'B603', 'B607']
+skips: ['B110', 'B322', 'B311', 'B603', 'B607', 'B404', 'B101']

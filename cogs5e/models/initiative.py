@@ -6,7 +6,8 @@ import cachetools
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
-from utils.functions import get_selection, parse_args_3
+from utils.argparser import argparse
+from utils.functions import get_selection
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
@@ -502,9 +503,9 @@ class Combatant:
         _ac = self._ac
         for e in self.get_effects():
             if e.effect:
-                args = parse_args_3(shlex.split(e.effect))
+                args = argparse(shlex.split(e.effect))
                 if 'ac' in args:
-                    modi = args['ac'][-1]
+                    modi = args.last('ac')
                     try:
                         if modi.startswith(('+', '-')):
                             _ac += int(modi)
@@ -600,12 +601,12 @@ class Combatant:
         for e in self.get_effects():
             if e.effect:
                 to_parse += f' {e.effect}'
-        args = parse_args_3(shlex.split(to_parse))
+        args = argparse(shlex.split(to_parse))
         for a in at:
             if a['attackBonus'] is not None:
-                a['attackBonus'] += f' + {"+".join(args["b"])}' if 'b' in args else ''
+                a['attackBonus'] += f" + {args.join('b', '+')}" if 'b' in args else ''
             if a['damage'] is not None:
-                a['damage'] += f' + {"+".join(args["d"])}' if 'd' in args else ''
+                a['damage'] += f" + {args.join('d', '+')}" if 'd' in args else ''
         return at
 
     def controller_mention(self):

@@ -3,14 +3,14 @@ Created on Jan 13, 2017
 
 @author: andrew
 """
-import re
 import shlex
 from math import sqrt
 
 import discord
 from discord.ext import commands
 
-from utils.functions import list_get, clean_content
+from utils.argparser import argparse
+from utils.functions import clean_content
 
 
 class PBPUtils:
@@ -18,24 +18,6 @@ class PBPUtils:
 
     def __init__(self, bot):
         self.bot = bot
-
-    def parse_args(self, args):
-        out = {}
-        index = 0
-        for a in args:
-            if a == '-f':
-                if out.get(a.replace('-', '')) is None:
-                    out[a.replace('-', '')] = [list_get(index + 1, None, args)]
-                else:
-                    out[a.replace('-', '')].append(list_get(index + 1, None, args))
-            elif a.startswith('-'):
-                nextArg = list_get(index + 1, None, args)
-                if nextArg is None or nextArg.startswith('-'): nextArg = True
-                out[a.replace('-', '')] = nextArg
-            else:
-                out[a] = 'True'
-            index += 1
-        return out
 
     @commands.command(pass_context=True)
     async def echo(self, ctx, *, msg):
@@ -79,17 +61,17 @@ class PBPUtils:
         embed = discord.Embed()
         embed.set_author(name=ctx.message.author.display_name, icon_url=ctx.message.author.avatar_url)
         args = shlex.split(args)
-        args = self.parse_args(args)
-        embed.title = args.get('title')
-        embed.description = args.get('desc')
-        embed.set_thumbnail(url=args.get('thumb', '') if 'http' in str(args.get('thumb')) else '')
-        embed.set_image(url=args.get('image', '') if 'http' in str(args.get('image')) else '')
-        embed.set_footer(text=args.get('footer', ''))
+        args = argparse(args)
+        embed.title = args.last('title')
+        embed.description = args.last('desc')
+        embed.set_thumbnail(url=args.last('thumb', '') if 'http' in str(args.last('thumb')) else '')
+        embed.set_image(url=args.last('image', '') if 'http' in str(args.last('image')) else '')
+        embed.set_footer(text=args.last('footer', ''))
         try:
-            embed.colour = int(args.get('color', "0").strip('#'), base=16)
+            embed.colour = int(args.last('color', "0").strip('#'), base=16)
         except:
             pass
-        for f in args.get('f', []):
+        for f in args.get('f'):
             if f:
                 title = f.split('|')[0] if '|' in f else '\u200b'
                 value = "|".join(f.split('|')[1:]) if '|' in f else f
@@ -98,7 +80,7 @@ class PBPUtils:
         timeout = 0
         if 't' in args:
             try:
-                timeout = min(max(int(args['t']), 0), 600)
+                timeout = min(max(args.last('t', type_=int), 0), 600)
             except:
                 pass
 

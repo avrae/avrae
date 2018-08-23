@@ -16,7 +16,8 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter, EmbedWithAuthor
 from cogs5e.models.errors import NoSpellDC, InvalidSaveType, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
-from utils.functions import parse_args_3, confirm, get_selection, parse_args_2, parse_resistances, parse_snippets, \
+from utils.argparser import argparse
+from utils.functions import confirm, get_selection, parse_resistances, parse_snippets, \
     strict_search, search_and_select
 
 log = logging.getLogger(__name__)
@@ -105,45 +106,29 @@ class InitTracker:
         hp = None
         ac = None
         resists = {}
-        args = parse_args_3(args)
+        args = argparse(args)
 
-        if 'h' in args:
+        if args.last('h', type_=bool):
             private = True
-        if 'p' in args:
+        if args.last('p', type_=bool):
             place = True
-        if 'controller' in args:
-            try:
-                controllerStr = args['controller'][0]
-                controllerEscaped = controllerStr.replace('<', '').replace('>', '').replace('@', '').replace('!', '')
-                a = ctx.message.server.get_member(controllerEscaped)
-                b = ctx.message.server.get_member_named(controllerStr)
-                controller = a.id if a is not None else b.id if b is not None else controller
-            except IndexError:
-                await self.bot.say("You must pass in a controller with the --controller tag.")
-                return
-        if 'group' in args:
-            try:
-                group = args['group'][0]
-            except IndexError:
-                await self.bot.say("You must pass in a group with the --group tag.")
-                return
-        if 'hp' in args:
-            try:
-                hp = int(args['hp'][0])
-                if hp < 1:
-                    raise Exception
-            except:
-                await self.bot.say("You must pass in a positive, nonzero HP with the --hp tag.")
-                return
-        if 'ac' in args:
-            try:
-                ac = int(args['ac'][0])
-            except:
-                await self.bot.say("You must pass in an AC with the --ac tag.")
-                return
+        if args.last('controller'):
+            controllerStr = args.last('controller')
+            controllerEscaped = controllerStr.strip('<>@!')
+            a = ctx.message.server.get_member(controllerEscaped)
+            b = ctx.message.server.get_member_named(controllerStr)
+            controller = a.id if a is not None else b.id if b is not None else controller
+        if args.last('group'):
+            group = args.last('group')
+        if args.last('hp'):
+            hp = args.last('hp', type_=int)
+            if hp < 1:
+                return await self.bot.say("You must pass in a positive, nonzero HP with the -hp tag.")
+        if args.last('ac'):
+            ac = args.last('ac', type_=int)
 
         for k in ('resist', 'immune', 'vuln'):
-            resists[k] = args.get(k, [])
+            resists[k] = args.get(k)
 
         combat = Combat.from_ctx(ctx)
 
@@ -195,47 +180,37 @@ class InitTracker:
 
         dexMod = monster.skills['dexterity']
 
-        args = parse_args_3(args)
-        private = not bool(args.get('h', [False])[-1])
+        args = argparse(args)
+        private = not args.last('h', type_=bool)
 
-        group = args.get('group', [None])[-1]
-
-        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
-                                                                                        False) else -1 if args.get(
-            'dis', False) else 0
-
-        b = '+'.join(args.get('b', []))
-        p = args.get('p', [None])[-1]
-        rollhp = args.get('rollhp', [False])[-1]
-
-        try:
-            hp = args.get('hp', [None])[-1]
-            ac = args.get('ac', [None])[-1]
-        except (ValueError, TypeError):
-            hp = None
-            ac = None
+        group = args.last('group')
+        adv = args.adv()
+        b = args.join('b', '+')
+        p = args.last('p', type_=int)
+        rollhp = args.last('rollhp', False, bool)
+        hp = args.last('hp', type_=int)
+        ac = args.last('ac', type_=int)
+        npr = args.last('npr', type_=bool)
+        n = args.last('n', 1, int)
+        name_template = args.last('name', monster.name[:2].upper() + '#')
 
         opts = {}
-        if 'npr' in args:
+        if npr:
             opts['npr'] = True
 
         combat = Combat.from_ctx(ctx)
 
         out = ''
         to_pm = ''
-        try:
-            recursion = int(args.get('n', [1])[-1])
-        except ValueError:
-            return await self.bot.say(args.get('n', [1])[-1] + " is not a number.")
-        recursion = 25 if recursion > 25 else 1 if recursion < 1 else recursion
+        recursion = 25 if n > 25 else 1 if n < 1 else n
 
         name_num = 1
         for i in range(recursion):
-            name = args.get('name', [monster.name[:2].upper() + '#'])[-1].replace('#', str(name_num))
-            raw_name = args.get('name', [monster.name[:2].upper() + '#'])[-1]
+            name = name_template.replace('#', str(name_num))
+            raw_name = name_template
             to_continue = False
 
-            while combat.get_combatant(name) and name_num < 1000:  # keep increasing to avoid duplicates
+            while combat.get_combatant(name) and name_num < 100:  # keep increasing to avoid duplicates
                 if '#' in raw_name:
                     name_num += 1
                     name = raw_name.replace('#', str(name_num))
@@ -315,13 +290,11 @@ class InitTracker:
         args += ' ' + skill_effects.get(skill, '')  # dicecloud v7 - autoadv
 
         args = shlex.split(args)
-        args = parse_args_3(args)
-        adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
-                                                                                        False) else -1 if args.get(
-            'dis', False) else 0
-        b = '+'.join(args.get('b', [])) or None
-        p = args.get('p', [None])[-1]
-        phrase = '\n'.join(args.get('phrase', [])) or None
+        args = argparse(args)
+        adv = args.adv()
+        b = args.join('b', '+') or None
+        p = args.last('p', type_=int)
+        phrase = args.join('phrase', '\n') or None
 
         if p is None:
             if b:
@@ -335,14 +308,14 @@ class InitTracker:
             embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
             init = check_roll.total
         else:
-            init = int(p)
+            init = p
             bonus = 0
             embed.title = "{} already rolled initiative!".format(char.get_name())
             embed.description = "Placed at initiative `{}`.".format(init)
 
-        group = args.get('group', [None])[-1]
+        group = args.last('group')
         controller = ctx.message.author.id
-        private = bool(args.get('h', [False])[-1])
+        private = args.last('h', type_=bool)
         bonus = roll(bonus).total
 
         me = PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
@@ -508,16 +481,16 @@ class InitTracker:
 
         private = combatant.isPrivate
         controller = combatant.controller
-        args = parse_args_3(args)
+        args = argparse(args)
         out = ''
 
-        if args.get('h'):
+        if args.last('h', type_=bool):
             private = not private
             combatant.isPrivate = private
             out += "\u2705 Combatant {}.\n".format('hidden' if private else 'unhidden')
         if 'controller' in args:
             try:
-                controllerStr = args.get('controller')[-1]
+                controllerStr = args.last('controller')
                 controllerEscaped = controllerStr.strip('<>@!')
                 a = ctx.message.server.get_member(controllerEscaped)
                 b = ctx.message.server.get_member_named(controllerStr)
@@ -528,7 +501,7 @@ class InitTracker:
                 out += "\u274c You must pass in a controller with the --controller tag.\n"
         if 'ac' in args:
             try:
-                ac = int(args.get('ac')[-1])
+                ac = args.last('ac', type_=int)
                 combatant.ac = ac
                 out += "\u2705 Combatant AC set to {}.\n".format(ac)
             except:
@@ -538,7 +511,7 @@ class InitTracker:
                 out += "\u274c You cannot change a combatant's initiative on their own turn.\n"
             else:
                 try:
-                    p = int(args.get('p')[-1])
+                    p = args.last('p', type_=int)
                     combatant.init = p
                     combat.sort_combatants()
                     out += "\u2705 Combatant initiative set to {}.\n".format(p)
@@ -548,7 +521,7 @@ class InitTracker:
             if combatant is combat.current_combatant:
                 out += "\u274c You cannot change a combatant's group on their own turn.\n"
             else:
-                group = args.get('group')[-1]
+                group = args.last('group')
                 if group.lower() == 'none':
                     combat.remove_combatant(combatant)
                     combat.add_combatant(combatant)
@@ -559,7 +532,7 @@ class InitTracker:
                     group.add_combatant(combatant)
                     out += "\u2705 Combatant group set to {}.\n".format(group.name)
         if 'name' in args:
-            name = args.get('name')[-1]
+            name = args.last('name')
             if combat.get_combatant(name) is not None:
                 out += "\u274c There is already another combatant with that name.\n"
             elif name:
@@ -795,13 +768,13 @@ class InitTracker:
         if is_player and combatant.character_owner == ctx.message.author.id:
             args = await combatant.character.parse_cvars(args, ctx)
 
-        args = parse_args_2(shlex.split(args))  # set up all the arguments
+        args = argparse(shlex.split(args))  # set up all the arguments
         args['name'] = combatant.name
         if target.ac is not None: args['ac'] = target.ac
         args['t'] = target.name
-        args['resist'] = args.get('resist') or '|'.join(target.resists['resist'])
-        args['immune'] = args.get('immune') or '|'.join(target.resists['immune'])
-        args['vuln'] = args.get('vuln') or '|'.join(target.resists['vuln'])
+        args['resist'] = args.get('resist') or target.resists['resist']
+        args['immune'] = args.get('immune') or target.resists['immune']
+        args['vuln'] = args.get('vuln') or target.resists['vuln']
         if is_player:
             args['c'] = combatant.character.get_setting('critdmg') or args.get('c')
             args['reroll'] = combatant.character.get_setting('reroll') or 0
@@ -879,8 +852,6 @@ class InitTracker:
         -phrase [phrase] - adds flavor text."""
         return await self._cast(ctx, combatant_name, spell_name, args)
 
-
-
     async def _cast(self, ctx, combatant_name, spell_name, args):
         combat = Combat.from_ctx(ctx)
 
@@ -905,19 +876,19 @@ class InitTracker:
         if is_character and combatant.character_owner == ctx.message.author.id:
             args = await combatant.character.parse_cvars(args, ctx)
         args = shlex.split(args)
-        args = parse_args_3(args)
+        args = argparse(args)
 
         if not args.get('t'):
             return await self.bot.say("You must pass in targets with `-t target`.", delete_after=15)
 
         embed = discord.Embed()
         embed_footer = ''
-        if args.get('phrase') is not None:  # parse phrase
-            embed.description = '*' + '\n'.join(args.get('phrase')) + '*'
+        if args.get('phrase'):  # parse phrase
+            embed.description = '*' + args.join('phrase', '\n') + '*'
         else:
             embed.description = '~~' + ' ' * 500 + '~~'
 
-        if not args.get('i'):
+        if not args.last('i', type_=bool):
             spell_name = await search_and_select(ctx, combatant.spellcasting.spells, spell_name, lambda e: e)
         else:
             spell_name = await searchSpellNameFull(spell_name, ctx)
@@ -930,22 +901,30 @@ class InitTracker:
             if is_character:
                 return await self._old_cast(ctx, combatant, spell_name, args)  # fall back to old cast
             return await self.bot.say("Spell not supported by casting system.")
+        spell_level = int(spell.get('level', 0))
+
+        l = args.last('l', spell_level, int)
+        i = args.last('i', type_=bool)
+        dc = args.last('dc', type_=int)
+        save = args.last('save')
+        adv = args.adv(True)  # hopefully no one EAs a save spell?
+        d = args.join('d', '+')
+        resist = args.get('resist')
+        immune = args.get('immune')
+        vuln = args.get('vuln')
 
         can_cast = True
-        spell_level = int(spell.get('level', 0))
-        try:
-            cast_level = int(args.get('l', [spell_level])[-1])
-            assert spell_level <= cast_level <= 9
-        except (AssertionError, ValueError):
+        cast_level = l
+        if not spell_level <= cast_level <= 9:
             return await self.bot.say("Invalid spell level.")
 
         if not combatant.can_cast(spell, cast_level):  # TODO - check available slots / innate casting
             can_cast = False
         else:
-            if not args.get('i'):
+            if not i:
                 combatant.cast(spell, cast_level)  # TODO - use available slot / innate casting
 
-        if args.get('i'):
+        if i:
             can_cast = True
 
         if not can_cast:
@@ -972,7 +951,7 @@ class InitTracker:
             usermsgs.append(msg)
             damage_msgs[user] = usermsgs
 
-        for i, t in enumerate(args.get('t', [])):
+        for i, t in enumerate(args.get('t')):
             target: Combatant = await combat.select_combatant(t, f"Select target #{i+1}.")
             if target is None:
                 embed.add_field(name="{} not found!".format(t), value="Target not found.")
@@ -987,15 +966,11 @@ class InitTracker:
                         calculated_dc = combatant.character.evaluate_cvar('dc') or combatant.spellcasting.dc
                     else:
                         calculated_dc = combatant.spellcasting.dc
-                    dc = args.get('dc', [None])[-1] or calculated_dc
+                    dc = dc or calculated_dc
                     if not dc:
                         raise NoSpellDC
-                    try:
-                        dc = int(dc)
-                    except:
-                        raise NoSpellDC
 
-                    save_skill = args.get('save', [None])[-1] or spell.get('save', {}).get('save')
+                    save_skill = save or spell.get('save', {}).get('save')
                     try:
                         save_skill = next(s for s in ('strengthSave',
                                                       'dexteritySave',
@@ -1005,25 +980,21 @@ class InitTracker:
                                                       'charismaSave') if save_skill.lower() in s.lower())
                     except StopIteration:
                         raise InvalidSaveType
-                    save = spell['save']
+                    on_save = spell['save']
 
                     save_roll_mod = target.saves.get(save_skill, 0)
-                    adv = 0 if args.get('adv', False) and args.get('dis', False) else 1 if args.get('adv',
-                                                                                                    False) else -1 if args.get(
-                        'dis', False) else 0
-
                     save_roll = roll('1d20{:+}'.format(save_roll_mod), adv=adv,
                                      rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
                     is_success = save_roll.total >= dc
                     out += save_roll.result + ("; Success!" if is_success else "; Failure!") + '\n'
 
-                    if save['damage'] is None:
+                    if on_save['damage'] is None:
                         if i == 0:
                             embed.add_field(name="DC", value=str(dc))
                         embed.add_field(name='...{}!'.format(target.name), value=out, inline=False)
                     else:  # save against damage spell
                         if damage_save is None:
-                            dmg = save['damage']
+                            dmg = on_save['damage']
 
                             if is_character and spell['level'] == '0' and spell.get('scales', True):
                                 def lsub(matchobj):
@@ -1043,26 +1014,25 @@ class InitTracker:
                             if upcast_dmg:
                                 dmg = dmg + '+' + upcast_dmg
 
-                            if args.get('d') is not None:
-                                dmg = dmg + '+' + "+".join(args.get('d', []))
+                            if d:
+                                dmg = dmg + '+' + d
 
                             dmgroll = roll(dmg, rollFor="Damage", inline=True, show_blurbs=False)
                             embed.add_field(name="Damage/DC", value=dmgroll.result + "\n**DC**: {}".format(str(dc)))
-                            d = ""
+                            damage_save = ""
                             for p in dmgroll.raw_dice.parts:
                                 if isinstance(p, SingleDiceGroup):
-                                    d += "{} {}".format(p.get_total(), p.annotation)
+                                    damage_save += "{} {}".format(p.get_total(), p.annotation)
                                 else:
-                                    d += str(p)
-                            damage_save = d
+                                    damage_save += str(p)
                         dmg = damage_save
 
-                        dmg = parse_resistances(dmg, args.get('resist', []) or target.resists['resist'],
-                                                args.get('immune', []) or target.resists['immune'],
-                                                args.get('vuln', []) or target.resists['vuln'])
+                        dmg = parse_resistances(dmg, resist or target.resists['resist'],
+                                                immune or target.resists['immune'],
+                                                vuln or target.resists['vuln'])
 
                         if is_success:
-                            if save['success'] == 'half':
+                            if on_save['success'] == 'half':
                                 dmg = "({})/2".format(dmg)
                             else:
                                 dmg = "0"
@@ -1080,18 +1050,11 @@ class InitTracker:
                         else:
                             embed_footer += "Dealt {} damage to {}!".format(dmgroll.total, target.name)
                 elif spell['type'] == 'attack':  # attack spell
-                    outargs = copy.copy(args)
-                    outargs['t'] = target.name
-                    if target.ac is not None: outargs['ac'] = target.ac
-                    outargs['resist'] = '|'.join(args.get('resist', [])) or '|'.join(target.resists['resist'])
-                    outargs['immune'] = '|'.join(args.get('immune', [])) or '|'.join(target.resists['immune'])
-                    outargs['vuln'] = '|'.join(args.get('vuln', [])) or '|'.join(target.resists['vuln'])
-                    outargs['d'] = "+".join(args.get('d', [])) or None
+                    args['t'] = [target.name]
+                    if target.ac is not None: args['ac'] = [target.ac]
                     if is_character:
-                        outargs['crittype'] = combatant.character.get_setting('crittype', 'default')
-                    for _arg, _value in outargs.items():
-                        if isinstance(_value, list):
-                            outargs[_arg] = _value[-1]
+                        args['crittype'] = [combatant.character.get_setting('crittype', 'default')]
+
                     attack = copy.copy(spell['atk'])
                     if is_character:
                         attack['attackBonus'] = str(
@@ -1128,7 +1091,7 @@ class InitTracker:
                         spellmod = combatant.spellcasting.sab  # well, hope for the best I suppose
                     attack['damage'] = attack['damage'].replace("SPELL", str(spellmod))
 
-                    result = sheet_attack(attack, outargs)
+                    result = sheet_attack(attack, args)
                     out = ""
                     for f in result['embed'].fields:
                         out += "**__{0.name}__**\n{0.value}\n".format(f)
@@ -1143,11 +1106,6 @@ class InitTracker:
                     else:
                         embed_footer += "Dealt {} damage to {}!".format(result['total_damage'], target.name)
                 else:  # special spell (MM)
-                    outargs = copy.copy(args)  # just make an attack for it
-                    outargs['d'] = "+".join(args.get('d', [])) or None
-                    for _arg, _value in outargs.items():
-                        if isinstance(_value, list):
-                            outargs[_arg] = _value[-1]
                     if is_character:
                         spellmod = str(combatant.character.evaluate_cvar(
                             "SPELL") or combatant.spellcasting.sab - combatant.character.get_prof_bonus())
@@ -1158,7 +1116,7 @@ class InitTracker:
                               "attackBonus": None}
                     if upcast_dmg:
                         attack['damage'] = attack['damage'] + '+' + upcast_dmg
-                    result = sheet_attack(attack, outargs)
+                    result = sheet_attack(attack, args)
                     out = ""
                     for f in result['embed'].fields:
                         out += "**__{0.name}__**\n{0.value}\n".format(f)

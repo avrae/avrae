@@ -721,3 +721,4 @@ class NoCharacterEvaluator(ScriptingEvaluator):
 
     def reset(self):
         self.names = copy.copy(self._initial_names)
+        self._loops = 0

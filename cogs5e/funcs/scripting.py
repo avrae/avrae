@@ -34,6 +34,8 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             ast.Subscript: self._assign_subscript
         }
 
+        self._loops = 0
+
     def eval(self, expr):  # allow for ast.Assign to set names
         """ evaluate an expression, using the operators, functions and
             names previously set up. """
@@ -121,8 +123,9 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
     def _eval_comprehension(self, node):
         iterable = self._eval(node.iter)
-        if len(iterable) > MAX_ITER_LENGTH:
-            raise IterableTooLong("This iterable is too long.")
+        if len(iterable) + self._loops > MAX_ITER_LENGTH:
+            raise IterableTooLong("Execution limit exceeded: too many loops.")
+        self._loops += len(iterable)
         for item in iterable:
             self._assign(node.target, item, False)
             if all(self._eval(stmt) for stmt in node.ifs):

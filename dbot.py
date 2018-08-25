@@ -45,11 +45,13 @@ class Avrae(commands.Bot):
         self.state = "init"
         self.credentials = Credentials()
         if TESTING:
-            self.db = RedisIO(testing=True, test_database_url=self.credentials.test_redis_url)
-            self.mdb = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
+            self.rdb = RedisIO(testing=True, test_database_url=self.credentials.test_redis_url)
+            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
         else:
-            self.db = RedisIO()
-            self.mdb = None
+            self.rdb = RedisIO()
+            self.mclient = None
+
+        self.mdb = self.mclient.avrae  # let's just use the avrae db
         self.dynamic_cog_list = DYNAMIC_COGS
 
 
@@ -85,7 +87,7 @@ log_formatter = logging.Formatter(
     '%(asctime)s s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, 'shard_id', 0)))
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(log_formatter)
-filehandler = logging.FileHandler(f"temp/log_shard_{bot.shard_id}_build_{bot.db.get('build_num')}.log", mode='w')
+filehandler = logging.FileHandler(f"temp/log_shard_{bot.shard_id}_build_{bot.rdb.get('build_num')}.log", mode='w')
 filehandler.setFormatter(log_formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -110,8 +112,8 @@ async def enter():
     await bot.wait_until_ready()
     appInfo = await bot.application_info()
     bot.owner = appInfo.owner
-    if not bot.db.exists('build_num'): bot.db.set('build_num', 114)  # this was added in build 114
-    if getattr(bot, "shard_id", 0) == 0: bot.db.incr('build_num')
+    if not bot.rdb.exists('build_num'): bot.rdb.set('build_num', 114)  # this was added in build 114
+    if getattr(bot, "shard_id", 0) == 0: bot.rdb.incr('build_num')
     await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
 
 
@@ -231,7 +233,7 @@ async def on_message(message):
 
 @bot.event
 async def on_command(command, ctx):
-    bot.db.incr('commands_used_life')
+    bot.rdb.incr('commands_used_life')
     try:
         log.debug(
             "Command called in channel {0.message.channel} ({0.message.channel.id}), server {0.message.server} ({0.message.server.id}): {0.message.content}".format(

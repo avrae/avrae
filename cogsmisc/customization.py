@@ -30,8 +30,8 @@ class Customization:
 
     def __init__(self, bot):
         self.bot = bot
-        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
-        self.serv_aliases = self.bot.db.jget('serv_aliases', {})
+        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
+        self.serv_aliases = self.bot.rdb.jget('serv_aliases', {})
         self.bot.loop.create_task(self.update_aliases())
         self.bot.loop.create_task(self.backup_aliases())
         self.nochar_eval = NoCharacterEvaluator()
@@ -39,15 +39,15 @@ class Customization:
     async def on_ready(self):
         if getattr(self.bot, "shard_id", 0) == 0:
             cmds = list(self.bot.commands.keys())
-            self.bot.db.jset('default_commands', cmds)
+            self.bot.rdb.jset('default_commands', cmds)
 
     async def update_aliases(self):
         try:
             await self.bot.wait_until_ready()
             while not self.bot.is_closed:
                 await asyncio.sleep(10)
-                self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
-                self.serv_aliases = self.bot.db.jget('serv_aliases', {})
+                self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
+                self.serv_aliases = self.bot.rdb.jget('serv_aliases', {})
         except asyncio.CancelledError:
             pass
 
@@ -56,7 +56,7 @@ class Customization:
             await self.bot.wait_until_ready()
             while not self.bot.is_closed:
                 await asyncio.sleep(1800)
-                self.bot.db.jset('cmd_aliases_backup', self.bot.db.not_json_get('cmd_aliases', {}))
+                self.bot.rdb.jset('cmd_aliases_backup', self.bot.rdb.not_json_get('cmd_aliases', {}))
         except asyncio.CancelledError:
             pass
 
@@ -175,7 +175,7 @@ class Customization:
 
         def process(to_process):
             ops = r"([-+*/().<>=])"
-            user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
+            user_vars = ctx.bot.rdb.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
 
             _vars = user_vars
             global_vars = None  # we'll load them if we need them
@@ -186,7 +186,7 @@ class Customization:
             def get_gvar(name):
                 nonlocal global_vars
                 if global_vars is None:  # load only if needed
-                    global_vars = ctx.bot.db.jget("global_vars", {})
+                    global_vars = ctx.bot.rdb.jget("global_vars", {})
                 return global_vars.get(name, {}).get('value')
 
             def exists(name):
@@ -237,7 +237,7 @@ class Customization:
         if alias_name is None:
             return await ctx.invoke(self.bot.get_command("alias list"))
         user_id = ctx.message.author.id
-        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
         user_aliases = self.aliases.get(user_id, {})
         if alias_name in self.bot.commands:
             return await self.bot.say('There is already a built-in command with that name!')
@@ -257,13 +257,13 @@ class Customization:
         await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
         self.aliases[user_id] = user_aliases
-        self.bot.db.not_json_set('cmd_aliases', self.aliases)
+        self.bot.rdb.not_json_set('cmd_aliases', self.aliases)
 
     @alias.command(pass_context=True, name='list')
     async def alias_list(self, ctx):
         """Lists all user aliases."""
         user_id = ctx.message.author.id
-        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
         user_aliases = self.aliases.get(user_id, {})
         aliases = [name for name in user_aliases.keys()]
         sorted_aliases = sorted(aliases)
@@ -273,7 +273,7 @@ class Customization:
     async def alias_delete(self, ctx, alias_name):
         """Deletes a user alias."""
         user_id = ctx.message.author.id
-        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
         user_aliases = self.aliases.get(user_id, {})
 
         try:
@@ -283,13 +283,13 @@ class Customization:
         await self.bot.say('Alias {} removed.'.format(alias_name))
 
         self.aliases[user_id] = user_aliases
-        self.bot.db.not_json_set('cmd_aliases', self.aliases)
+        self.bot.rdb.not_json_set('cmd_aliases', self.aliases)
 
     @alias.command(pass_context=True, name='deleteall', aliases=['removeall'])
     async def alias_deleteall(self, ctx):
         """Deletes ALL user aliases."""
         user_id = ctx.message.author.id
-        self.aliases = self.bot.db.not_json_get('cmd_aliases', {})
+        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
 
         await self.bot.say("This will delete **ALL** of your user aliases. "
                            "Are you *absolutely sure* you want to continue?\n"
@@ -299,7 +299,7 @@ class Customization:
             return await self.bot.say("Unconfirmed. Aborting.")
 
         del self.aliases[user_id]
-        self.bot.db.not_json_set('cmd_aliases', self.aliases)
+        self.bot.rdb.not_json_set('cmd_aliases', self.aliases)
 
         return await self.bot.say("OK. I have deleted all your aliases.")
 
@@ -311,7 +311,7 @@ class Customization:
         if alias_name is None:
             return await ctx.invoke(self.bot.get_command("servalias list"))
         server_id = ctx.message.server.id
-        self.serv_aliases = self.bot.db.not_json_get('serv_aliases', {})
+        self.serv_aliases = self.bot.rdb.not_json_get('serv_aliases', {})
         server_aliases = self.serv_aliases.get(server_id, {})
         if alias_name in self.bot.commands:
             return await self.bot.say('There is already a built-in command with that name!')
@@ -332,13 +332,13 @@ class Customization:
         await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, commands.lstrip('!')))
 
         self.serv_aliases[server_id] = server_aliases
-        self.bot.db.not_json_set('serv_aliases', self.serv_aliases)
+        self.bot.rdb.not_json_set('serv_aliases', self.serv_aliases)
 
     @servalias.command(pass_context=True, name='list', no_pm=True)
     async def servalias_list(self, ctx):
         """Lists all server aliases."""
         server_id = ctx.message.server.id
-        self.serv_aliases = self.bot.db.not_json_get('serv_aliases', {})
+        self.serv_aliases = self.bot.rdb.not_json_get('serv_aliases', {})
         server_aliases = self.serv_aliases.get(server_id, {})
         aliases = [name for name in server_aliases.keys()]
         sorted_aliases = sorted(aliases)
@@ -352,7 +352,7 @@ class Customization:
             return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
         server_id = ctx.message.server.id
-        self.serv_aliases = self.bot.db.not_json_get('serv_aliases', {})
+        self.serv_aliases = self.bot.rdb.not_json_get('serv_aliases', {})
         server_aliases = self.serv_aliases.get(server_id, {})
 
         try:
@@ -362,7 +362,7 @@ class Customization:
         await self.bot.say('Server alias {} removed.'.format(alias_name))
 
         self.serv_aliases[server_id] = server_aliases
-        self.bot.db.not_json_set('serv_aliases', self.serv_aliases)
+        self.bot.rdb.not_json_set('serv_aliases', self.serv_aliases)
 
     def can_edit_servaliases(self, ctx):
         """
@@ -379,7 +379,7 @@ class Customization:
         if snipname is None:
             return await ctx.invoke(self.bot.get_command("snippet list"))
         user_id = ctx.message.author.id
-        snippets = self.bot.db.not_json_get('damage_snippets', {})
+        snippets = self.bot.rdb.not_json_get('damage_snippets', {})
         user_snippets = snippets.get(user_id, {})
 
         if snippet is None:
@@ -392,13 +392,13 @@ class Customization:
         await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
 
         snippets[user_id] = user_snippets
-        self.bot.db.not_json_set('damage_snippets', snippets)
+        self.bot.rdb.not_json_set('damage_snippets', snippets)
 
     @snippet.command(pass_context=True, name='list')
     async def snippet_list(self, ctx):
         """Lists your user snippets."""
         user_id = ctx.message.author.id
-        snippets = self.bot.db.not_json_get('damage_snippets', {})
+        snippets = self.bot.rdb.not_json_get('damage_snippets', {})
         user_snippets = snippets.get(user_id, {})
         await self.bot.say('Your snippets:\n{}'.format(', '.join(sorted([name for name in user_snippets.keys()]))))
 
@@ -406,7 +406,7 @@ class Customization:
     async def snippet_delete(self, ctx, snippet_name):
         """Deletes a snippet."""
         user_id = ctx.message.author.id
-        snippets = self.bot.db.not_json_get('damage_snippets', {})
+        snippets = self.bot.rdb.not_json_get('damage_snippets', {})
         user_snippets = snippets.get(user_id, {})
         try:
             del user_snippets[snippet_name]
@@ -414,13 +414,13 @@ class Customization:
             return await self.bot.say('Snippet not found.')
         await self.bot.say('Shortcut {} removed.'.format(snippet_name))
         snippets[user_id] = user_snippets
-        self.bot.db.not_json_set('damage_snippets', snippets)
+        self.bot.rdb.not_json_set('damage_snippets', snippets)
 
     @snippet.command(pass_context=True, name='deleteall', aliases=['removeall'])
     async def snippet_deleteall(self, ctx):
         """Deletes ALL user snippets."""
         user_id = ctx.message.author.id
-        snippets = self.bot.db.not_json_get('damage_snippets', {})
+        snippets = self.bot.rdb.not_json_get('damage_snippets', {})
 
         await self.bot.say("This will delete **ALL** of your user snippets. "
                            "Are you *absolutely sure* you want to continue?\n"
@@ -430,7 +430,7 @@ class Customization:
             return await self.bot.say("Unconfirmed. Aborting.")
 
         del snippets[user_id]
-        self.bot.db.not_json_set('damage_snippets', snippets)
+        self.bot.rdb.not_json_set('damage_snippets', snippets)
         return await self.bot.say("OK. I have deleted all your snippets.")
 
     @commands.group(pass_context=True, invoke_without_command=True, no_pm=True)
@@ -442,7 +442,7 @@ class Customization:
         if snipname is None:
             return await ctx.invoke(self.bot.get_command("servsnippet list"))
         server_id = ctx.message.server.id
-        snippets = self.bot.db.jget('server_snippets', {})
+        snippets = self.bot.rdb.jget('server_snippets', {})
         server_snippets = snippets.get(server_id, {})
 
         if snippet is None:
@@ -459,13 +459,13 @@ class Customization:
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
 
         snippets[server_id] = server_snippets
-        self.bot.db.jset('server_snippets', snippets)
+        self.bot.rdb.jset('server_snippets', snippets)
 
     @servsnippet.command(pass_context=True, name='list', no_pm=True)
     async def servsnippet_list(self, ctx):
         """Lists this server's snippets."""
         server_id = ctx.message.server.id
-        snippets = self.bot.db.jget('server_snippets', {})
+        snippets = self.bot.rdb.jget('server_snippets', {})
         server_snippets = snippets.get(server_id, {})
         await self.bot.say(
             'This server\'s snippets:\n{}'.format(', '.join(sorted([name for name in server_snippets.keys()]))))
@@ -478,7 +478,7 @@ class Customization:
             return await self.bot.say("You do not have permission to edit server snippets. Either __Administrator__ "
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
         server_id = ctx.message.server.id
-        snippets = self.bot.db.jget('server_snippets', {})
+        snippets = self.bot.rdb.jget('server_snippets', {})
         server_snippets = snippets.get(server_id, {})
         try:
             del server_snippets[snippet_name]
@@ -486,7 +486,7 @@ class Customization:
             return await self.bot.say('Snippet not found.')
         await self.bot.say('Server snippet {} removed.'.format(snippet_name))
         snippets[server_id] = server_snippets
-        self.bot.db.not_json_set('server_snippets', snippets)
+        self.bot.rdb.not_json_set('server_snippets', snippets)
 
     @commands.command(pass_context=True)
     async def test(self, ctx, *, str):
@@ -505,7 +505,7 @@ class Customization:
         if name is None:
             return await ctx.invoke(self.bot.get_command("uservar list"))
 
-        user_vars = self.bot.db.jhget("user_vars", ctx.message.author.id, {})
+        user_vars = self.bot.rdb.jhget("user_vars", ctx.message.author.id, {})
 
         if value is None:  # display value
             uvar = user_vars.get(name)
@@ -519,27 +519,27 @@ class Customization:
             return await self.bot.say("Could not create uvar: already builtin, or contains invalid character!")
 
         user_vars[name] = value
-        self.bot.db.jhset("user_vars", ctx.message.author.id, user_vars)
+        self.bot.rdb.jhset("user_vars", ctx.message.author.id, user_vars)
         await self.bot.say('User variable `{}` set to: `{}`'.format(name, value))
 
     @uservar.command(pass_context=True, name='remove', aliases=['delete'])
     async def uvar_remove(self, ctx, name):
         """Deletes a uvar from the user."""
-        user_vars = self.bot.db.jhget("user_vars", ctx.message.author.id, {})
+        user_vars = self.bot.rdb.jhget("user_vars", ctx.message.author.id, {})
 
         try:
             del user_vars[name]
         except KeyError:
             return await self.bot.say('User variable not found.')
 
-        self.bot.db.jhset("user_vars", ctx.message.author.id, user_vars)
+        self.bot.rdb.jhset("user_vars", ctx.message.author.id, user_vars)
 
         await self.bot.say('User variable {} removed.'.format(name))
 
     @uservar.command(pass_context=True, name='list')
     async def uvar_list(self, ctx):
         """Lists all uvars for the user."""
-        user_vars = self.bot.db.jhget("user_vars", ctx.message.author.id, {})
+        user_vars = self.bot.rdb.jhget("user_vars", ctx.message.author.id, {})
 
         await self.bot.say('Your user variables:\n{}'.format(', '.join(sorted([name for name in user_vars.keys()]))))
 
@@ -555,7 +555,7 @@ class Customization:
         if (not reply) or (not reply.content == "Yes, I am sure"):
             return await self.bot.say("Unconfirmed. Aborting.")
 
-        self.bot.db.hdel("user_vars", user_id)
+        self.bot.rdb.hdel("user_vars", user_id)
 
         return await self.bot.say("OK. I have deleted all your uvars.")
 
@@ -569,7 +569,7 @@ class Customization:
         if name is None:
             return await ctx.invoke(self.bot.get_command("globalvar list"))
 
-        glob_vars = self.bot.db.jget("global_vars", {})
+        glob_vars = self.bot.rdb.jget("global_vars", {})
 
         gvar = glob_vars.get(name)
         if gvar is None: gvar = {'owner_name': 'None', 'value': 'Not defined.'}
@@ -579,17 +579,17 @@ class Customization:
     async def gvar_create(self, ctx, *, value):
         """Creates a global variable.
         A name will be randomly assigned upon creation."""
-        glob_vars = self.bot.db.jget("global_vars", {})
+        glob_vars = self.bot.rdb.jget("global_vars", {})
         name = str(uuid.uuid4())
         glob_vars[name] = {'owner': ctx.message.author.id, 'owner_name': str(ctx.message.author), 'value': value,
                            'editors': []}
-        self.bot.db.jset("global_vars", glob_vars)
+        self.bot.rdb.jset("global_vars", glob_vars)
         await self.bot.say(f"Created global variable `{name}`.")
 
     @globalvar.command(pass_context=True, name='edit')
     async def gvar_edit(self, ctx, name, *, value):
         """Edits a global variable."""
-        glob_vars = self.bot.db.jget("global_vars", {})
+        glob_vars = self.bot.rdb.jget("global_vars", {})
 
         gvar = glob_vars.get(name)
         if gvar is None:
@@ -599,13 +599,13 @@ class Customization:
         else:
             glob_vars[name]['value'] = value
 
-        self.bot.db.jset("global_vars", glob_vars)
+        self.bot.rdb.jset("global_vars", glob_vars)
         await self.bot.say(f'Global variable `{name}` edited.')
 
     @globalvar.command(pass_context=True, name='editor')
     async def gvar_editor(self, ctx, name, user: discord.Member = None):
         """Toggles the editor status of a user."""
-        glob_vars = self.bot.db.jget("global_vars", {})
+        glob_vars = self.bot.rdb.jget("global_vars", {})
 
         gvar = glob_vars.get(name)
         if gvar is None:
@@ -624,7 +624,7 @@ class Customization:
                     msg = f"Added {user} to the editor list."
                 glob_vars[name]['editors'] = e
 
-            self.bot.db.jset("global_vars", glob_vars)
+            self.bot.rdb.jset("global_vars", glob_vars)
             await self.bot.say(f'Global variable `{name}` edited: {msg}')
         else:
             await self.bot.say(f"Editors: {', '.join(gvar.get('editors', []))}")
@@ -632,7 +632,7 @@ class Customization:
     @globalvar.command(pass_context=True, name='remove', aliases=['delete'])
     async def gvar_remove(self, ctx, name):
         """Deletes a global variable."""
-        glob_vars = self.bot.db.jget("global_vars", {})
+        glob_vars = self.bot.rdb.jget("global_vars", {})
 
         gvar = glob_vars.get(name)
         if gvar is None:
@@ -645,14 +645,14 @@ class Customization:
             else:
                 return await self.bot.say("Ok, cancelling.")
 
-        self.bot.db.jset("global_vars", glob_vars)
+        self.bot.rdb.jset("global_vars", glob_vars)
 
         await self.bot.say('Global variable {} removed.'.format(name))
 
     @globalvar.command(pass_context=True, name='list')
     async def gvar_list(self, ctx):
         """Lists all global variables for the user."""
-        glob_vars = self.bot.db.jget("global_vars", {})
+        glob_vars = self.bot.rdb.jget("global_vars", {})
         user_vars = {k: v['value'] for k, v in glob_vars.items() if v['owner'] == ctx.message.author.id}
         gvar_list = [f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in
                      sorted(((k, v) for k, v in user_vars.items()), key=lambda i: i[0])]

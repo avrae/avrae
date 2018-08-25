@@ -15,8 +15,8 @@ class Bestiary:
 
     @classmethod
     def from_ctx(cls, ctx):
-        user_bestiaries = ctx.bot.db.jget(ctx.message.author.id + '.bestiaries', {})
-        active_bestiary = ctx.bot.db.jget('active_bestiaries', {}).get(ctx.message.author.id)
+        user_bestiaries = ctx.bot.rdb.jget(ctx.message.author.id + '.bestiaries', {})
+        active_bestiary = ctx.bot.rdb.jget('active_bestiaries', {}).get(ctx.message.author.id)
         if active_bestiary is None:
             raise NoBestiary()
         bestiary = user_bestiaries[active_bestiary]
@@ -27,14 +27,14 @@ class Bestiary:
 
     def commit(self, ctx):
         """Writes a bestiary object to the database, under the contextual author. Returns self."""
-        user_bestiaries = ctx.bot.db.jget(ctx.message.author.id + '.bestiaries', {})
+        user_bestiaries = ctx.bot.rdb.jget(ctx.message.author.id + '.bestiaries', {})
         user_bestiaries[self.id] = self.to_dict()  # commit
-        ctx.bot.db.jset(ctx.message.author.id + '.bestiaries', user_bestiaries)
+        ctx.bot.rdb.jset(ctx.message.author.id + '.bestiaries', user_bestiaries)
         return self
 
     def set_active(self, ctx):
         """Sets the bestiary as active. Returns self."""
-        active_bestiaries = ctx.bot.db.jget('active_bestiaries', {})
+        active_bestiaries = ctx.bot.rdb.jget('active_bestiaries', {})
         active_bestiaries[ctx.message.author.id] = self.id
-        ctx.bot.db.jset('active_bestiaries', active_bestiaries)
+        ctx.bot.rdb.jset('active_bestiaries', active_bestiaries)
         return self

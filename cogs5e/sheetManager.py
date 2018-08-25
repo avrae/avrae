@@ -46,7 +46,7 @@ class SheetManager:
 
     def __init__(self, bot):
         self.bot = bot
-        self.active_characters = self.bot.db.not_json_get('active_characters', {})
+        self.active_characters = self.bot.rdb.not_json_get('active_characters', {})
         self.logger = TextLogger('dicecloud.txt')
 
         self.gsheet_client = None
@@ -314,8 +314,8 @@ class SheetManager:
     @commands.group(pass_context=True, invoke_without_command=True)
     async def desc(self, ctx):
         """Prints or edits a description of your currently active character."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -345,8 +345,8 @@ class SheetManager:
     @desc.command(pass_context=True, name='update', aliases=['edit'])
     async def edit_desc(self, ctx, *, desc):
         """Updates the character description."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -357,15 +357,15 @@ class SheetManager:
 
         character['overrides'] = overrides
         user_characters[active_character] = character
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
 
         await self.bot.say("Description updated!")
 
     @desc.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_desc(self, ctx):
         """Removes the character description, returning to the default."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -378,15 +378,15 @@ class SheetManager:
 
         character['overrides'] = overrides
         user_characters[active_character] = character
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
 
         await self.bot.say("Description override removed! Use `!update` to return to the old description.")
 
     @commands.group(pass_context=True, invoke_without_command=True)
     async def portrait(self, ctx):
         """Shows or edits the image of your currently active character."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -408,8 +408,8 @@ class SheetManager:
     @portrait.command(pass_context=True, name='update', aliases=['edit'])
     async def edit_portrait(self, ctx, *, url):
         """Updates the character portrait."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -420,15 +420,15 @@ class SheetManager:
 
         character['overrides'] = overrides
         user_characters[active_character] = character
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
 
         await self.bot.say("Portrait updated!")
 
     @portrait.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_portrait(self, ctx):
         """Removes the character portrait, returning to the default."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -441,7 +441,7 @@ class SheetManager:
 
         character['overrides'] = overrides
         user_characters[active_character] = character
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
 
         await self.bot.say("Portrait override removed! Use `!update` to return to the old portrait.")
 
@@ -468,8 +468,8 @@ class SheetManager:
     @commands.command(pass_context=True)
     async def sheet(self, ctx):
         """Prints the embed sheet of your currently active character."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -489,8 +489,8 @@ class SheetManager:
     async def character(self, ctx, *, name: str = None):
         """Switches the active character.
         Breaks for characters created before Jan. 20, 2017."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
-        self.active_characters = self.bot.db.not_json_get('active_characters', {})
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', None)
+        self.active_characters = self.bot.rdb.not_json_get('active_characters', {})
         active_character = self.active_characters.get(ctx.message.author.id)
         if user_characters is None:
             return await self.bot.say('You have no characters.')
@@ -511,7 +511,7 @@ class SheetManager:
         name = char_name
 
         self.active_characters[ctx.message.author.id] = char_url
-        self.bot.db.not_json_set('active_characters', self.active_characters)
+        self.bot.rdb.not_json_set('active_characters', self.active_characters)
 
         try:
             await self.bot.delete_message(ctx.message)
@@ -523,7 +523,7 @@ class SheetManager:
     @character.command(pass_context=True, name='list')
     async def character_list(self, ctx):
         """Lists your characters."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', None)
         if user_characters is None:
             return await self.bot.say('You have no characters.')
 
@@ -533,8 +533,8 @@ class SheetManager:
     @character.command(pass_context=True, name='delete')
     async def character_delete(self, ctx, *, name):
         """Deletes a character."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', None)
-        self.active_characters = self.bot.db.not_json_get('active_characters', {})
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', None)
+        self.active_characters = self.bot.rdb.not_json_get('active_characters', {})
         if user_characters is None:
             return await self.bot.say('You have no characters.')
 
@@ -561,10 +561,10 @@ class SheetManager:
                 if me:
                     combat.remove_combatant(me, True).commit()
             del user_characters[char_url]
-            self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+            self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
             if self.active_characters[ctx.message.author.id] == char_url:
                 self.active_characters[ctx.message.author.id] = None
-                self.bot.db.not_json_set('active_characters', self.active_characters)
+                self.bot.rdb.not_json_set('active_characters', self.active_characters)
             return await self.bot.say('{} has been deleted.'.format(name))
         else:
             return await self.bot.say("OK, cancelling.")
@@ -575,8 +575,8 @@ class SheetManager:
         """Updates the current character sheet, preserving all settings.
         Valid Arguments: `-v` - Shows character sheet after update is complete.
         `-cc` - Updates custom counters from Dicecloud."""
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
         if active_character is None:
             return await self.bot.say('You have no character active.')
         url = active_character
@@ -675,7 +675,7 @@ class SheetManager:
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings',
                                                                                                      {}).get('color')
 
-        if c.get_combat_id() and not self.bot.db.exists(c.get_combat_id()):
+        if c.get_combat_id() and not self.bot.rdb.exists(c.get_combat_id()):
             c.leave_combat()
 
         c.commit(ctx).set_active(ctx)
@@ -689,7 +689,7 @@ class SheetManager:
         character = Character.from_ctx(ctx)
         overwrite = ''
 
-        user_characters = self.bot.db.not_json_get(f'{user.id}.characters', {})
+        user_characters = self.bot.rdb.not_json_get(f'{user.id}.characters', {})
         if character.id in user_characters:
             overwrite = "**WARNING**: This will overwrite an existing character."
 
@@ -713,8 +713,8 @@ class SheetManager:
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
         `crittype 2x/default` - Sets whether crits double damage or dice.
         `critdice <number>` - Adds additional dice for to critical attacks."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -867,7 +867,7 @@ class SheetManager:
                         out += "\u2705 Crit type set to {}.\n".format(character['settings'].get('crittype'))
             index += 1
         user_characters[active_character] = character
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
         await self.bot.say(out)
 
     @commands.group(pass_context=True, invoke_without_command=True)
@@ -899,8 +899,8 @@ class SheetManager:
     @cvar.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
         """Deletes a cvar from the currently active character."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -911,15 +911,15 @@ class SheetManager:
             return await self.bot.say('Character variable not found.')
 
         user_characters[active_character] = character  # commit
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
 
         await self.bot.say('Character variable {} removed.'.format(name))
 
     @cvar.command(pass_context=True, name='deleteall', aliases=['removeall'])
     async def cvar_deleteall(self, ctx):
         """Deletes ALL character variables for the active character."""
-        user_characters = self.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             return await self.bot.say('You have no character active.')
         character = user_characters[active_character]
@@ -933,7 +933,7 @@ class SheetManager:
 
         character['cvars'] = {}
         user_characters[active_character] = character  # commit
-        self.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
 
         return await self.bot.say(f"OK. I have deleted all of {character['stats']['name']}'s cvars.")
 
@@ -949,7 +949,7 @@ class SheetManager:
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.
         Returns True to overwrite, False or None otherwise."""
-        user_characters = self.bot.db.not_json_get(f'{ctx.message.author.id}.characters', {})
+        user_characters = self.bot.rdb.not_json_get(f'{ctx.message.author.id}.characters', {})
         if _id in user_characters:
             await ctx.bot.send_message(ctx.message.channel,
                                        "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"

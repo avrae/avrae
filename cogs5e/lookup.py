@@ -46,7 +46,7 @@ class Lookup:
 
     def __init__(self, bot):
         self.bot = bot
-        self.settings = self.bot.db.not_json_get("lookup_settings", {}) if bot is not None else {}
+        self.settings = self.bot.rdb.not_json_get("lookup_settings", {}) if bot is not None else {}
 
     @commands.command(pass_context=True, aliases=['status'])
     async def condition(self, ctx, *, name: str):
@@ -394,7 +394,7 @@ class Lookup:
                               -srd [True/False] - toggles SRD lookup restriction in a server."""
         args = shlex.split(args.lower())
         guild_id = ctx.message.server.id
-        self.settings = self.bot.db.not_json_get("lookup_settings", {})
+        self.settings = self.bot.rdb.not_json_get("lookup_settings", {})
         guild_settings = self.settings.get(guild_id, {})
         out = ""
         if '-req_dm_monster' in args:
@@ -423,7 +423,7 @@ class Lookup:
             out += 'srd set to {}!\n'.format(str(guild_settings['srd']))
 
         self.settings[guild_id] = guild_settings
-        self.bot.db.not_json_set("lookup_settings", self.settings)
+        self.bot.rdb.not_json_set("lookup_settings", self.settings)
         await self.bot.say("Lookup settings set:\n" + out)
 
     @commands.command(pass_context=True)
@@ -495,7 +495,7 @@ class Lookup:
             pm = False
             srd = False
 
-        self.bot.db.incr('monsters_looked_up_life')
+        self.bot.rdb.incr('monsters_looked_up_life')
         monster = await select_monster_full(ctx, name, srd=srd)
 
         embed_queue = [EmbedWithAuthor(ctx)]
@@ -628,7 +628,7 @@ class Lookup:
             pm = False
             srd = False
 
-        self.bot.db.incr('spells_looked_up_life')
+        self.bot.rdb.incr('spells_looked_up_life')
 
         result = await search_and_select(ctx, c.spells, name, lambda e: e['name'], return_key=True, srd=srd)
         result = getSpell(result)
@@ -730,7 +730,7 @@ class Lookup:
             pm = False
             srd = False
 
-        self.bot.db.incr('items_looked_up_life')
+        self.bot.rdb.incr('items_looked_up_life')
 
         result = await search_and_select(ctx, c.items, name, lambda e: e['name'], srd=srd)
 

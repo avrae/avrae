@@ -54,8 +54,8 @@ class Character:
 
     @classmethod
     def from_ctx(cls, ctx):
-        user_characters = ctx.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = ctx.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+        user_characters = ctx.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
+        active_character = ctx.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
         if active_character is None:
             raise NoCharacter()
         character = user_characters[active_character]
@@ -63,7 +63,7 @@ class Character:
 
     @classmethod
     def from_bot_and_ids(cls, bot, author_id, character_id):
-        user_characters = bot.db.not_json_get(author_id + '.characters', {})
+        user_characters = bot.rdb.not_json_get(author_id + '.characters', {})
         character = user_characters.get(character_id)
         if character is None: raise NoCharacter()
         return cls(character, character_id)
@@ -209,7 +209,7 @@ class Character:
             cvars = character.get('cvars', {})
             stat_vars = character.get('stat_cvars', {})
             stat_vars['color'] = hex(self.get_color())[2:]
-            user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
+            user_vars = ctx.bot.rdb.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
 
             _vars = user_vars
             _vars.update(cvars)
@@ -327,7 +327,7 @@ class Character:
 
             def get_gvar(name):
                 if not 'gvars' in _cache:  # load only if needed
-                    _cache['gvars'] = ctx.bot.db.jget("global_vars", {})
+                    _cache['gvars'] = ctx.bot.rdb.jget("global_vars", {})
                 return _cache['gvars'].get(name, {}).get('value')
 
             def exists(name):
@@ -454,22 +454,22 @@ class Character:
 
     def commit(self, ctx):
         """Writes a character object to the database, under the contextual author. Returns self."""
-        user_characters = ctx.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
+        user_characters = ctx.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
         user_characters[self.id] = self.character  # commit
-        ctx.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        ctx.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
         return self
 
     def manual_commit(self, bot, author_id):
-        user_characters = bot.db.not_json_get(author_id + '.characters', {})
+        user_characters = bot.rdb.not_json_get(author_id + '.characters', {})
         user_characters[self.id] = self.character  # commit
-        bot.db.not_json_set(author_id + '.characters', user_characters)
+        bot.rdb.not_json_set(author_id + '.characters', user_characters)
         return self
 
     def set_active(self, ctx):
         """Sets the character as active. Returns self."""
-        active_characters = ctx.bot.db.not_json_get('active_characters', {})
+        active_characters = ctx.bot.rdb.not_json_get('active_characters', {})
         active_characters[ctx.message.author.id] = self.id
-        ctx.bot.db.not_json_set('active_characters', active_characters)
+        ctx.bot.rdb.not_json_set('active_characters', active_characters)
         return self
 
     def initialize_consumables(self):

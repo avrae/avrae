@@ -36,7 +36,7 @@ class Combat:
 
     @classmethod
     def from_ctx(cls, ctx):
-        raw = ctx.bot.db.jget(f"{ctx.message.channel.id}.combat")
+        raw = ctx.bot.rdb.jget(f"{ctx.message.channel.id}.combat")
         if raw is None:
             raise CombatNotFound
         return cls.from_dict(raw, ctx)
@@ -60,7 +60,7 @@ class Combat:
 
     @classmethod
     def from_id(cls, _id, ctx):
-        raw = ctx.bot.db.jget(f"{_id}.combat")
+        raw = ctx.bot.rdb.jget(f"{_id}.combat")
         if raw is None:
             raise CombatNotFound
         return cls.from_dict(raw, ctx)
@@ -290,7 +290,7 @@ class Combat:
 
     @staticmethod
     def ensure_unique_chan(ctx):
-        if ctx.bot.db.exists(f"{ctx.message.channel.id}.combat"):
+        if ctx.bot.rdb.exists(f"{ctx.message.channel.id}.combat"):
             raise ChannelInCombat
 
     def get_db_key(self):
@@ -300,7 +300,7 @@ class Combat:
         """Commits the combat to db."""
         if not self.ctx:
             raise RequiresContext
-        self.ctx.bot.db.jsetex(self.get_db_key(), self.to_dict(), COMBAT_TTL)
+        self.ctx.bot.rdb.jsetex(self.get_db_key(), self.to_dict(), COMBAT_TTL)
 
     def get_summary(self, private=False):
         """Returns the generated summary message content."""
@@ -354,7 +354,7 @@ class Combat:
         """Ends combat in a channel."""
         for c in self._combatants:
             c.on_remove()
-        self.ctx.bot.db.delete(self.get_db_key())
+        self.ctx.bot.rdb.delete(self.get_db_key())
 
 
 class Combatant:

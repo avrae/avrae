@@ -639,7 +639,7 @@ class GameTrack:
 
     async def _old_cast(self, ctx, spell_name, args):
         spell = getSpell(spell_name)
-        self.bot.db.incr('spells_looked_up_life')
+        self.bot.rdb.incr('spells_looked_up_life')
         if spell is None:
             return await self.bot.say("Spell not found.", delete_after=15)
         if spell.get('source') == "UAMystic":
@@ -677,7 +677,7 @@ class GameTrack:
         if len(args) == 0:
             rolls = spell.get('roll', None)
             if isinstance(rolls, list):
-                active_character = self.bot.db.not_json_get('active_characters', {}).get(
+                active_character = self.bot.rdb.not_json_get('active_characters', {}).get(
                     ctx.message.author.id)  # get user's active
                 if active_character is not None:
                     rolls = '\n'.join(rolls).replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
@@ -686,7 +686,7 @@ class GameTrack:
                 out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(
                     roll(r, inline=True).skeleton for r in rolls)
             elif rolls is not None:
-                active_character = self.bot.db.not_json_get('active_characters', {}).get(
+                active_character = self.bot.rdb.not_json_get('active_characters', {}).get(
                     ctx.message.author.id)  # get user's active
                 if active_character is not None:
                     rolls = rolls.replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \

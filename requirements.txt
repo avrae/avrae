@@ -4,6 +4,7 @@ attrs==17.4.0
 cachetools==2.0.1
 chardet==3.0.4
 discord.py==0.16.12
+dnspython==1.15.0
 fuzzywuzzy==0.15.1
 google-api-python-client==1.6.4
 graphviz==0.8.4

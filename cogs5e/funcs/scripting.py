@@ -6,6 +6,7 @@ from math import floor, ceil, sqrt
 import simpleeval
 from simpleeval import EvalWithCompoundTypes, IterableTooLong
 
+import utils.argparser
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_damage
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
@@ -151,6 +152,7 @@ def verbose_roll(rollStr, multiply=1, add=0):
     if multiply != 1 or add != 0:
         def subDice(matchobj):
             return str((int(matchobj.group(1)) * multiply) + add) + 'd' + matchobj.group(2)
+
         rollStr = re.sub(r'(\d+)d(\d+)', subDice, rollStr)
     rolled = roll(rollStr, inline=True)
     return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
@@ -278,14 +280,14 @@ class SimpleCombatant:
         return None
 
     def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0):
-        args = {
-            'd': d,
-            'c': c,
-            'critdice' : critdice,
-            'resist': '|'.join(self._combatant.resists['resist']),
-            'immune': '|'.join(self._combatant.resists['immune']),
-            'vuln': '|'.join(self._combatant.resists['vuln'])
-        }
+        args = utils.argparser.ParsedArguments(None, {
+            'd': [d],
+            'c': [c],
+            'critdice': [critdice],
+            'resist': self._combatant.resists['resist'],
+            'immune': self._combatant.resists['immune'],
+            'vuln': self._combatant.resists['vuln']
+        })
         result = sheet_damage(dice_str, args, 1 if crit else 0)
         result['damage'] = result['damage'].strip()
         self.mod_hp(-result['total'])

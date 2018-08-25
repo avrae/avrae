@@ -4,6 +4,7 @@ import sys
 import traceback
 
 import discord
+import motor.motor_asyncio
 import redis
 from aiohttp import ClientResponseError
 from discord.errors import Forbidden, NotFound, HTTPException, InvalidArgument
@@ -11,8 +12,8 @@ from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.models.errors import AvraeException, EvaluationError
-from utils.dataIO import DataIO
 from utils.functions import discord_trim, get_positivity, list_get, gen_error_message
+from utils.redisIO import RedisIO
 
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
@@ -43,8 +44,12 @@ class Avrae(commands.Bot):
         self.testing = testing
         self.state = "init"
         self.credentials = Credentials()
-        self.db = DataIO() if not TESTING else DataIO(testing=True,
-                                                      test_database_url=self.credentials.test_database_url)
+        if TESTING:
+            self.db = RedisIO(testing=True, test_database_url=self.credentials.test_redis_url)
+            self.mdb = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
+        else:
+            self.db = RedisIO()
+            self.mdb = None
         self.dynamic_cog_list = DYNAMIC_COGS
 
 
@@ -55,7 +60,8 @@ class Credentials:
         except ImportError:
             raise Exception("Credentials not found.")
         self.token = credentials.officialToken
-        self.test_database_url = credentials.test_database_url
+        self.test_redis_url = credentials.test_redis_url
+        self.test_mongo_url = credentials.test_mongo_url
         if TESTING:
             self.token = credentials.testToken
         if 'ALPHA_TOKEN' in os.environ:

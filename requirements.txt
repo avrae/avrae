@@ -10,6 +10,7 @@ graphviz==0.8.4
 html2text==2018.1.9
 httplib2==0.10.3
 meteor-ejson==1.1.0
+motor==2.0.0
 multidict==3.3.2
 numexpr==2.6.4
 numpy==1.13.3
@@ -24,13 +25,14 @@ pyasn1-modules==0.2.1
 pycryptodome==3.4.7
 pyee==5.0.0
 pygsheets==1.1.3
+pymongo==3.7.1
 pytest==3.3.2
 python-ddp==0.1.5
 python-Levenshtein==0.12.0
 python-meteor==0.1.6
 redis==2.10.6
 rsa==3.4.2
-git+https://github.com/danthedeckie/simpleeval.git@84a4b2ba938d8382e6bc3ff34203262d451c01cd
+simpleeval==0.9.6
 six==1.11.0
 uritemplate==3.0.0
 websockets==3.4

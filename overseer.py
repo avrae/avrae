@@ -11,14 +11,13 @@ import sys
 import time
 
 import credentials
-from utils.dataIO import DataIO
+from utils.redisIO import RedisIO
 
 
 class Overseer:
     def __init__(self):
-        self.db = DataIO(TESTING, credentials.test_database_url)
+        self.db = RedisIO(TESTING, credentials.test_redis_url)
         self.shards = {}
-        self.web = None
 
 
 TESTING = False
@@ -45,15 +44,6 @@ def loop():
     time.sleep(30)
     if RUNNING:
         check_shards()
-
-
-def launch_web():
-    print("o.{}: Launching webserver".format(CLUSTER))
-    if TESTING:
-        bot.web = subprocess.Popen(["gunicorn", "-w", "2", "web.web:app"])
-    else:
-        bot.web = subprocess.Popen(
-            ["gunicorn", "-w", "1", "-b", "0.0.0.0:{}".format(os.environ.get("PORT")), "web.web:app"])
 
 
 def launch_shards():

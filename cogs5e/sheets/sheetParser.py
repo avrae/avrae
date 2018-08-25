@@ -10,7 +10,7 @@ import discord
 import numexpr
 
 
-class SheetParser():
+class SheetParser:
 
     def __init__(self, sheet):
         self.sheet = sheet

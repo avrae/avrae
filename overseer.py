@@ -14,7 +14,7 @@ import credentials
 from utils.dataIO import DataIO
 
 
-class Overseer():
+class Overseer:
     def __init__(self):
         self.db = DataIO(TESTING, credentials.test_database_url)
         self.shards = {}

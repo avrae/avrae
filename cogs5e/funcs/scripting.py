@@ -281,13 +281,15 @@ class SimpleCombatant:
 
     def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0):
         args = utils.argparser.ParsedArguments(None, {
-            'd': [d],
-            'c': [c],
             'critdice': [critdice],
             'resist': self._combatant.resists['resist'],
             'immune': self._combatant.resists['immune'],
             'vuln': self._combatant.resists['vuln']
         })
+        if d:
+            args['d'] = d
+        if c:
+            args['c'] = c
         result = sheet_damage(dice_str, args, 1 if crit else 0)
         result['damage'] = result['damage'].strip()
         self.mod_hp(-result['total'])

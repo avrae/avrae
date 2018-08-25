@@ -23,13 +23,13 @@ class Homebrew:
         """Commands to manage homebrew monsters.
         When called without an argument, lists the current bestiary and the monsters in it.
         When called with a name, switches to a different bestiary."""
-        user_bestiaries = self.bot.rdb.jget(ctx.message.author.id + '.bestiaries', None)
+        user_bestiaries = await self.bot.mdb.bestiaries.count_documents({"owner": ctx.message.author.id})
 
-        if user_bestiaries is None:
+        if not user_bestiaries:
             return await self.bot.say("You have no bestiaries. Use `!bestiary import` to import one!")
 
         if name is None:
-            bestiary = Bestiary.from_ctx(ctx)
+            bestiary = await Bestiary.from_ctx(ctx)
         else:
             try:
                 bestiary = await self.select_bestiary(ctx, name)
@@ -37,9 +37,7 @@ class Homebrew:
                 return await self.bot.say("You have no bestiaries. Use `!bestiary import` to import one!")
             except NoSelectionElements:
                 return await self.bot.say("Bestiary not found.")
-            active_bestiaries = self.bot.rdb.jget('active_bestiaries', {})
-            active_bestiaries[ctx.message.author.id] = bestiary.id
-            self.bot.rdb.jset('active_bestiaries', active_bestiaries)
+            await bestiary.set_active(ctx)
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
         embed.description = '\n'.join(m.name for m in bestiary.monsters)
@@ -48,8 +46,8 @@ class Homebrew:
     @bestiary.command(pass_context=True, name='list')
     async def bestiary_list(self, ctx):
         """Lists your available bestiaries."""
-        user_bestiaries = ctx.bot.rdb.jget(ctx.message.author.id + '.bestiaries', {})
-        await self.bot.say(f"Your bestiaries: {', '.join(b['name'] for b in user_bestiaries.values())}")
+        user_bestiaries = await self.bot.mdb.bestiaries.find({"owner": ctx.message.author.id}).to_list(None)
+        await self.bot.say(f"Your bestiaries: {', '.join(b['name'] for b in user_bestiaries)}")
 
     @bestiary.command(pass_context=True, name='delete')
     async def bestiary_delete(self, ctx, *, name):
@@ -64,12 +62,7 @@ class Homebrew:
         resp = await confirm(ctx, 'Are you sure you want to delete {}? (Reply with yes/no)'.format(bestiary.name))
 
         if resp:
-            user_bestiaries = ctx.bot.rdb.jget(ctx.message.author.id + '.bestiaries', {})
-            active_bestiaries = ctx.bot.rdb.jget('active_bestiaries', {})
-            active_bestiaries[ctx.message.author.id] = None
-            del user_bestiaries[bestiary.id]
-            self.bot.rdb.jset(ctx.message.author.id + '.bestiaries', user_bestiaries)
-            self.bot.rdb.not_json_set('active_bestiaries', active_bestiaries)
+            await self.bot.mdb.bestiaries.delete_one({"critterdb_id": bestiary.id})
             return await self.bot.say('{} has been deleted.'.format(bestiary.name))
         else:
             return await self.bot.say("OK, cancelling.")
@@ -89,7 +82,8 @@ class Homebrew:
 
         bestiary = await self.bestiary_from_critterdb(bestiary_id)
 
-        bestiary.set_active(ctx).commit(ctx)
+        await bestiary.commit(ctx)
+        await bestiary.set_active(ctx)
         await self.bot.edit_message(loading, f"Imported {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
@@ -99,14 +93,15 @@ class Homebrew:
     @bestiary.command(pass_context=True, name='update')
     async def bestiary_update(self, ctx):
         """Updates the active bestiary from CritterDB."""
-        bestiary_id = self.bot.rdb.jget('active_bestiaries', {}).get(ctx.message.author.id)
-        if bestiary_id is None:
+        active_bestiary = await self.bot.mdb.bestiaries.find_one({"owner": ctx.message.author.id, "active": True})
+
+        if active_bestiary is None:
             return await self.bot.say("You don't have a bestiary active. Add one with `!bestiary import` first!")
         loading = await self.bot.say("Importing bestiary (this may take a while for large bestiaries)...")
 
-        bestiary = await self.bestiary_from_critterdb(bestiary_id)
+        bestiary = await self.bestiary_from_critterdb(active_bestiary["critterdb_id"])
 
-        bestiary.commit(ctx)
+        await bestiary.commit(ctx)
         await self.bot.edit_message(loading, f"Imported and updated {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
@@ -114,12 +109,13 @@ class Homebrew:
         await self.bot.say(embed=embed)
 
     async def select_bestiary(self, ctx, name):
-        user_bestiaries = self.bot.rdb.jget(ctx.message.author.id + '.bestiaries', None)
+        user_bestiaries = await self.bot.mdb.bestiaries.find({"owner": ctx.message.author.id}).to_list(None)
 
-        if user_bestiaries is None:
+        if not user_bestiaries:
             raise NoBestiary()
         choices = []
-        for url, bestiary in user_bestiaries.items():
+        for bestiary in user_bestiaries:
+            url = bestiary['critterdb_id']
             if bestiary['name'].lower() == name.lower():
                 choices.append((bestiary, url))
             elif name.lower() in bestiary['name'].lower():

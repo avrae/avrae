@@ -3,7 +3,7 @@ from cogs5e.models.monster import Monster
 
 
 class Bestiary:
-    def __init__(self, _id: str, name:str, monsters: list):
+    def __init__(self, _id: str, name: str, monsters: list):
         self.id = _id
         self.name = name
         self.monsters = monsters
@@ -14,27 +14,33 @@ class Bestiary:
         return cls(_id, raw['name'], monsters)
 
     @classmethod
-    def from_ctx(cls, ctx):
-        user_bestiaries = ctx.bot.rdb.jget(ctx.message.author.id + '.bestiaries', {})
-        active_bestiary = ctx.bot.rdb.jget('active_bestiaries', {}).get(ctx.message.author.id)
+    async def from_ctx(cls, ctx):
+        active_bestiary = await ctx.bot.mdb.bestiaries.find_one({"owner": ctx.message.author.id, "active": True})
         if active_bestiary is None:
             raise NoBestiary()
-        bestiary = user_bestiaries[active_bestiary]
-        return cls.from_raw(active_bestiary, bestiary)
+        return cls.from_raw(active_bestiary['critterdb_id'], active_bestiary)
 
     def to_dict(self):
-        return {'monsters': [m.to_dict() for m in self.monsters], 'name': self.name}
+        return {'monsters': [m.to_dict() for m in self.monsters], 'name': self.name, 'critterdb_id': self.id}
 
-    def commit(self, ctx):
+    async def commit(self, ctx):
         """Writes a bestiary object to the database, under the contextual author. Returns self."""
-        user_bestiaries = ctx.bot.rdb.jget(ctx.message.author.id + '.bestiaries', {})
-        user_bestiaries[self.id] = self.to_dict()  # commit
-        ctx.bot.rdb.jset(ctx.message.author.id + '.bestiaries', user_bestiaries)
+        data = {"$set": self.to_dict(), "$setOnInsert": {"owner": ctx.message.author.id}}
+
+        await ctx.bot.mdb.bestiaries.update_one(
+            {"owner": ctx.message.author.id, "critterdb_id": self.id},
+            data,
+            True
+        )
         return self
 
-    def set_active(self, ctx):
-        """Sets the bestiary as active. Returns self."""
-        active_bestiaries = ctx.bot.rdb.jget('active_bestiaries', {})
-        active_bestiaries[ctx.message.author.id] = self.id
-        ctx.bot.rdb.jset('active_bestiaries', active_bestiaries)
+    async def set_active(self, ctx):
+        await ctx.bot.mdb.bestiaries.update_many(
+            {"owner": ctx.message.author.id},
+            {"$set": {"active": False}}
+        )
+        await ctx.bot.mdb.bestiaries.update_one(
+            {"owner": ctx.message.author.id, "critterdb_id": self.id},
+            {"$set": {"active": True}}
+        )
         return self

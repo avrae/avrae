@@ -59,6 +59,8 @@ class ParsedArguments:
         if arg not in self.parsed:
             return default  # not cast to type
         parsed_arg = self.parsed[arg]
+        if not parsed_arg:
+            return default
         last_arg = parsed_arg[-1]
         try:
             return type_(last_arg)

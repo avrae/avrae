@@ -4,5 +4,6 @@
     "see monster.spec.json"
   ],
   "owner": "OWNER_ID",
-  "critterdb_id": "CRITTERDB_ID"
+  "critterdb_id": "CRITTERDB_ID",
+  "active": false
 }

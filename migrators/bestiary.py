@@ -22,6 +22,7 @@ async def run(rdb, mdb):
             print(f"Adding owner and id keys: {owner_id}, {_id}")
             bestiary['owner'] = owner_id
             bestiary['critterdb_id'] = _id
+            bestiary['active'] = False
 
             print("Inserting into MongoDB...")
             result = await mdb.bestiaries.insert_one(bestiary)

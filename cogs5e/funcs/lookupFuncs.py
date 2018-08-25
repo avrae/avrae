@@ -145,7 +145,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     """
     choices = c.monster_mash.copy()
     try:
-        bestiary = Bestiary.from_ctx(ctx)
+        bestiary = await Bestiary.from_ctx(ctx)
         choices.extend(bestiary.monsters)
     except NoBestiary:
         pass

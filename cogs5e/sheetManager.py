@@ -265,6 +265,10 @@ class SheetManager:
         dc = args.last('dc', type_=int)
         num_successes = 0
 
+        mc = args.last('mc', None)
+        if mc:
+            formatted_d20 = f"{formatted_d20}mi{mc}"
+
         mod = skills[skill]
         skill_name = skill
         if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):

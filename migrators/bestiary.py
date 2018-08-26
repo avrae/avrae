@@ -19,7 +19,7 @@ async def run(rdb, mdb):
             print(f"Found bestiary: {bestiary['name']} ({_id})")
             owner_id = key[:-11]
 
-            print(f"Adding owner and id keys: {owner_id}, {_id}")
+            print(f"Adding owner, id, active keys: {owner_id}, {_id}")
             bestiary['owner'] = owner_id
             bestiary['critterdb_id'] = _id
             bestiary['active'] = False

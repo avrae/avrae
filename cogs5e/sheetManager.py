@@ -5,7 +5,6 @@ Created on Jan 19, 2017
 """
 import copy
 import logging
-import random
 import re
 import shlex
 import sys
@@ -46,7 +45,6 @@ class SheetManager:
 
     def __init__(self, bot):
         self.bot = bot
-        self.active_characters = self.bot.rdb.not_json_get('active_characters', {})
         self.logger = TextLogger('dicecloud.txt')
 
         self.gsheet_client = None
@@ -89,7 +87,7 @@ class SheetManager:
                          ea (Elven Accuracy double advantage)
                          -f "Field Title|Field Text" (see !embed)
                          [user snippet]"""
-        char = Character.from_ctx(ctx)
+        char = await Character.from_ctx(ctx)
 
         attacks = char.get_attacks()
 
@@ -165,7 +163,7 @@ class SheetManager:
                 return await self.bot.say("Error: GameTrack cog not loaded.")
             return await ctx.invoke(ds_cmd, *shlex.split(args))
 
-        char = Character.from_ctx(ctx)
+        char = await Character.from_ctx(ctx)
         saves = char.get_saves()
         if not saves:
             return await self.bot.say('You must update your character sheet first.')
@@ -239,7 +237,7 @@ class SheetManager:
               -dc [dc]
               -rr [iterations]
               str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))"""
-        char = Character.from_ctx(ctx)
+        char = await Character.from_ctx(ctx)
         skills = char.get_skills()
         if not skills:
             return await self.bot.say('You must update your character sheet first.')
@@ -314,14 +312,9 @@ class SheetManager:
     @commands.group(pass_context=True, invoke_without_command=True)
     async def desc(self, ctx):
         """Prints or edits a description of your currently active character."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
-        stats = character.get('stats')
-        image = stats.get('image', '')
-        desc = stats.get('description', 'No description available.')
+        char = await Character.from_ctx(ctx)
+
+        desc = char.character['stats'].get('description', 'No description available.')
         if desc is None:
             desc = 'No description available.'
         if len(desc) > 2048:
@@ -329,12 +322,9 @@ class SheetManager:
         elif len(desc) < 2:
             desc = 'No description available.'
 
-        embed = discord.Embed()
-        embed.title = stats.get('name')
+        embed = EmbedWithCharacter(char)
+        embed.title = char.get_name()
         embed.description = desc
-        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get(
-            'color') is None else character.get('settings', {}).get('color')
-        embed.set_thumbnail(url=image)
 
         await self.bot.say(embed=embed)
         try:
@@ -345,58 +335,42 @@ class SheetManager:
     @desc.command(pass_context=True, name='update', aliases=['edit'])
     async def edit_desc(self, ctx, *, desc):
         """Updates the character description."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
+        char = await Character.from_ctx(ctx)
 
-        overrides = character.get('overrides', {})
+        overrides = char.character.get('overrides', {})
         overrides['desc'] = desc
-        character['stats']['description'] = desc
+        char.character['stats']['description'] = desc
 
-        character['overrides'] = overrides
-        user_characters[active_character] = character
-        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
-
+        char.character['overrides'] = overrides
+        await char.commit(ctx)
         await self.bot.say("Description updated!")
 
     @desc.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_desc(self, ctx):
         """Removes the character description, returning to the default."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
+        char = await Character.from_ctx(ctx)
 
-        overrides = character.get('overrides', {})
+        overrides = char.character.get('overrides', {})
         if not 'desc' in overrides:
             return await self.bot.say("There is no custom description set.")
         else:
             del overrides['desc']
 
-        character['overrides'] = overrides
-        user_characters[active_character] = character
-        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
-
+        char.character['overrides'] = overrides
+        await char.commit(ctx)
         await self.bot.say("Description override removed! Use `!update` to return to the old description.")
 
     @commands.group(pass_context=True, invoke_without_command=True)
     async def portrait(self, ctx):
         """Shows or edits the image of your currently active character."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
-        stats = character.get('stats')
-        image = stats.get('image', '')
-        if image == '': return await self.bot.say('No image available.')
+        char = await Character.from_ctx(ctx)
+
+        image = char.get_image()
+        if not image:
+            return await self.bot.say("No image available.")
         embed = discord.Embed()
-        embed.title = stats.get('name')
-        embed.colour = random.randint(0, 0xffffff) if character.get('settings', {}).get(
-            'color') is None else character.get('settings', {}).get('color')
+        embed.title = char.get_name()
+        embed.colour = char.get_color()
         embed.set_image(url=image)
 
         await self.bot.say(embed=embed)
@@ -408,48 +382,38 @@ class SheetManager:
     @portrait.command(pass_context=True, name='update', aliases=['edit'])
     async def edit_portrait(self, ctx, *, url):
         """Updates the character portrait."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
+        char = await Character.from_ctx(ctx)
 
-        overrides = character.get('overrides', {})
+        overrides = char.character.get('overrides', {})
         overrides['image'] = url
-        character['stats']['image'] = url
+        char.character['stats']['image'] = url
 
-        character['overrides'] = overrides
-        user_characters[active_character] = character
-        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        char.character['overrides'] = overrides
 
+        await char.commit(ctx)
         await self.bot.say("Portrait updated!")
 
     @portrait.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_portrait(self, ctx):
         """Removes the character portrait, returning to the default."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
+        char = await Character.from_ctx(ctx)
 
-        overrides = character.get('overrides', {})
+        overrides = char.character.get('overrides', {})
         if not 'image' in overrides:
             return await self.bot.say("There is no custom portrait set.")
         else:
             del overrides['image']
 
-        character['overrides'] = overrides
-        user_characters[active_character] = character
-        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        char.character['overrides'] = overrides
 
+        await char.commit(ctx)
         await self.bot.say("Portrait override removed! Use `!update` to return to the old portrait.")
 
     @commands.command(pass_context=True, hidden=True)  # hidden, as just called by token command
     async def playertoken(self, ctx):
         """Generates and sends a token for use on VTTs."""
 
-        char = Character.from_ctx(ctx)
+        char = await Character.from_ctx(ctx)
         img_url = char.get_image()
         color_override = char.get_setting('color')
         if not img_url:
@@ -468,16 +432,11 @@ class SheetManager:
     @commands.command(pass_context=True)
     async def sheet(self, ctx):
         """Prints the embed sheet of your currently active character."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
-        parser = SheetParser(character)
+        char = await Character.from_ctx(ctx)
+
+        parser = SheetParser(char.character)
         embed = parser.get_embed()
-        embed.colour = embed.colour if character.get('settings', {}).get('color') is None else character.get('settings',
-                                                                                                             {}).get(
-            'color')
+        embed.colour = char.get_color()
 
         await self.bot.say(embed=embed)
         try:
@@ -489,29 +448,29 @@ class SheetManager:
     async def character(self, ctx, *, name: str = None):
         """Switches the active character.
         Breaks for characters created before Jan. 20, 2017."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', None)
-        self.active_characters = self.bot.rdb.not_json_get('active_characters', {})
-        active_character = self.active_characters.get(ctx.message.author.id)
-        if user_characters is None:
+        user_characters = await self.bot.mdb.characters.find({"owner": ctx.message.author.id}).to_list(None)
+        active_character = next((c for c in user_characters if c['active']), None)
+        if not user_characters:
             return await self.bot.say('You have no characters.')
 
         if name is None:
             if active_character is None:
                 return await self.bot.say('You have no character active.')
             return await self.bot.say(
-                'Currently active: {}'.format(user_characters[active_character].get('stats', {}).get('name')))
+                'Currently active: {}'.format(active_character.get('stats', {}).get('name')))
 
-        _character = await search_and_select(ctx, list(user_characters.items()), name,
-                                             lambda e: e[1].get('stats', {}).get('name', ''),
-                                             selectkey=lambda e: f"{e[1].get('stats', {}).get('name', '')} (`{e[0]}`)")
+        _character = await search_and_select(ctx, user_characters, name,
+                                             lambda e: e.get('stats', {}).get('name', ''),
+                                             selectkey=lambda
+                                                 e: f"{e.get('stats', {}).get('name', '')} (`{e['upstream']}`)")
 
-        char_name = _character[1].get('stats', {}).get('name', 'Unnamed')
-        char_url = _character[0]
+        char_name = _character.get('stats', {}).get('name', 'Unnamed')
+        char_url = _character['upstream']
 
         name = char_name
 
-        self.active_characters[ctx.message.author.id] = char_url
-        self.bot.rdb.not_json_set('active_characters', self.active_characters)
+        char = Character(_character, char_url)
+        await char.set_active(ctx)
 
         try:
             await self.bot.delete_message(ctx.message)
@@ -523,29 +482,26 @@ class SheetManager:
     @character.command(pass_context=True, name='list')
     async def character_list(self, ctx):
         """Lists your characters."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', None)
-        if user_characters is None:
+        user_characters = await self.bot.mdb.characters.find({"owner": ctx.message.author.id}).to_list(None)
+        if not user_characters:
             return await self.bot.say('You have no characters.')
 
         await self.bot.say('Your characters:\n{}'.format(
-            ', '.join([user_characters[c].get('stats', {}).get('name', '') for c in user_characters])))
+            ', '.join(c.get('stats', {}).get('name', '') for c in user_characters)))
 
     @character.command(pass_context=True, name='delete')
     async def character_delete(self, ctx, *, name):
         """Deletes a character."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', None)
-        self.active_characters = self.bot.rdb.not_json_get('active_characters', {})
-        if user_characters is None:
+        user_characters = await self.bot.mdb.characters.find({"owner": ctx.message.author.id}).to_list(None)
+        if not user_characters:
             return await self.bot.say('You have no characters.')
 
-        _character = await search_and_select(ctx, list(user_characters.items()), name,
-                                             lambda e: e[1].get('stats', {}).get('name', ''),
-                                             selectkey=lambda e: f"{e[1].get('stats', {}).get('name', '')} (`{e[0]}`)")
+        _character = await search_and_select(ctx, user_characters, name,
+                                             lambda e: e.get('stats', {}).get('name', ''),
+                                             selectkey=lambda e: f"{e['stats'].get('name', '')} (`{e['upstream']}`)")
 
-        char_name = _character[1].get('stats', {}).get('name', 'Unnamed')
-        char_url = _character[0]
-
-        name = char_name
+        name = _character.get('stats', {}).get('name', 'Unnamed')
+        char_url = _character['upstream']
 
         await self.bot.say('Are you sure you want to delete {}? (Reply with yes/no)'.format(name))
         reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
@@ -553,18 +509,15 @@ class SheetManager:
         if reply is None:
             return await self.bot.say('Timed out waiting for a response or invalid response.')
         elif reply:
-            _character = Character(_character[1], char_url)
+            _character = Character(_character, char_url)
             if _character.get_combat_id() is not None:
                 combat = Combat.from_id(_character.get_combat_id(), ctx)
                 me = next((c for c in combat.get_combatants() if getattr(c, 'character_id', None) == char_url),
                           None)
                 if me:
                     combat.remove_combatant(me, True).commit()
-            del user_characters[char_url]
-            self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
-            if self.active_characters[ctx.message.author.id] == char_url:
-                self.active_characters[ctx.message.author.id] = None
-                self.bot.rdb.not_json_set('active_characters', self.active_characters)
+
+            await self.bot.mdb.characters.delete_one({"owner": ctx.message.author.id, "upstream": char_url})
             return await self.bot.say('{} has been deleted.'.format(name))
         else:
             return await self.bot.say("OK, cancelling.")
@@ -575,12 +528,10 @@ class SheetManager:
         """Updates the current character sheet, preserving all settings.
         Valid Arguments: `-v` - Shows character sheet after update is complete.
         `-cc` - Updates custom counters from Dicecloud."""
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        url = active_character
-        old_character = user_characters[url]
+        char = await Character.from_ctx(ctx)
+        url = char.id
+        old_character = char.character
+
         prefixes = 'dicecloud-', 'pdf-', 'google-', 'beyond-'
         _id = copy.copy(url)
         for p in prefixes:
@@ -678,19 +629,20 @@ class SheetManager:
         if c.get_combat_id() and not self.bot.rdb.exists(c.get_combat_id()):
             c.leave_combat()
 
-        c.commit(ctx).set_active(ctx)
-        del user_characters, character, parser, old_character  # pls don't freak out avrae
+        await c.commit(ctx)
+        await c.set_active(ctx)
+        del character, parser, old_character  # pls don't freak out avrae
         if '-v' in args:
             await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True)
     async def transferchar(self, ctx, user: discord.Member):
         """Gives a copy of the active character to another user."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         overwrite = ''
 
-        user_characters = self.bot.rdb.not_json_get(f'{user.id}.characters', {})
-        if character.id in user_characters:
+        conflict = await self.bot.mdb.characters.find_one({"owner": user.id, "upstream": character.id})
+        if conflict:
             overwrite = "**WARNING**: This will overwrite an existing character."
 
         await self.bot.say(f"{user.mention}, accept a copy of {character.get_name()}? (Type yes/no)\n{overwrite}")
@@ -699,7 +651,7 @@ class SheetManager:
 
         if m is None or not get_positivity(m.content): return await self.bot.say("Transfer not confirmed, aborting.")
 
-        character.manual_commit(self.bot, user.id)
+        await character.manual_commit(self.bot, user.id)
         await self.bot.say(f"Copied {character.get_name()} to {user.display_name}'s storage.")
 
     @commands.command(pass_context=True)
@@ -713,11 +665,9 @@ class SheetManager:
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
         `crittype 2x/default` - Sets whether crits double damage or dice.
         `critdice <number>` - Adds additional dice for to critical attacks."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
+        char = await Character.from_ctx(ctx)
+        character = char.character
+
         args = shlex.split(args)
 
         if character.get('settings') is None:
@@ -866,8 +816,8 @@ class SheetManager:
                         character['settings']['crittype'] = crittype
                         out += "\u2705 Crit type set to {}.\n".format(character['settings'].get('crittype'))
             index += 1
-        user_characters[active_character] = character
-        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
+
+        await char.commit(ctx)
         await self.bot.say(out)
 
     @commands.group(pass_context=True, invoke_without_command=True)
@@ -880,7 +830,7 @@ class SheetManager:
         if name is None:
             return await ctx.invoke(self.bot.get_command("cvar list"))
 
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
 
         if value is None:  # display value
             cvar = character.get_cvar(name)
@@ -893,54 +843,44 @@ class SheetManager:
         except AssertionError:
             return await self.bot.say("Could not create cvar: already builtin, or contains invalid character!")
 
-        character.set_cvar(name, value).commit(ctx)
+        character.set_cvar(name, value)
+        await character.commit(ctx)
         await self.bot.say('Character variable `{}` set to: `{}`'.format(name, value))
 
     @cvar.command(pass_context=True, name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
         """Deletes a cvar from the currently active character."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
+        char = await Character.from_ctx(ctx)
 
         try:
-            del character.get('cvars', {})[name]
+            del char.character.get('cvars', {})[name]
         except KeyError:
             return await self.bot.say('Character variable not found.')
 
-        user_characters[active_character] = character  # commit
-        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
-
+        await char.commit(ctx)
         await self.bot.say('Character variable {} removed.'.format(name))
 
     @cvar.command(pass_context=True, name='deleteall', aliases=['removeall'])
     async def cvar_deleteall(self, ctx):
         """Deletes ALL character variables for the active character."""
-        user_characters = self.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = self.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
-        if active_character is None:
-            return await self.bot.say('You have no character active.')
-        character = user_characters[active_character]
+        char = await Character.from_ctx(ctx)
 
-        await self.bot.say(f"This will delete **ALL** of your character variables for {character['stats']['name']}. "
+        await self.bot.say(f"This will delete **ALL** of your character variables for {char.get_name()}. "
                            "Are you *absolutely sure* you want to continue?\n"
                            "Type `Yes, I am sure` to confirm.")
         reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
         if (not reply) or (not reply.content == "Yes, I am sure"):
             return await self.bot.say("Unconfirmed. Aborting.")
 
-        character['cvars'] = {}
-        user_characters[active_character] = character  # commit
-        self.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
+        char.character['cvars'] = {}
 
-        return await self.bot.say(f"OK. I have deleted all of {character['stats']['name']}'s cvars.")
+        await char.commit(ctx)
+        return await self.bot.say(f"OK. I have deleted all of {char.get_name()}'s cvars.")
 
     @cvar.command(pass_context=True, name='list')
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         cvars = character.get_cvars()
 
         await self.bot.say('{}\'s character variables:\n{}'.format(character.get_name(),
@@ -949,8 +889,8 @@ class SheetManager:
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.
         Returns True to overwrite, False or None otherwise."""
-        user_characters = self.bot.rdb.not_json_get(f'{ctx.message.author.id}.characters', {})
-        if _id in user_characters:
+        conflict = await self.bot.mdb.characters.find_one({"owner": ctx.message.author.id, "upstream": _id})
+        if conflict:
             await ctx.bot.send_message(ctx.message.channel,
                                        "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
                                        "If you only wanted to update your character, run `!update` instead.")
@@ -1005,14 +945,14 @@ class SheetManager:
                     pass
 
         del parser  # uh. maybe some weird instance things going on here.
-        c.commit(ctx).set_active(ctx)
+        await c.commit(ctx)
+        await c.set_active(ctx)
         embed = sheet['embed']
         try:
             await self.bot.say(embed=embed)
         except:
             await self.bot.say(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
-
 
     @commands.command(pass_context=True)
     async def gsheet(self, ctx, url: str):
@@ -1057,7 +997,9 @@ class SheetManager:
             return await self.bot.edit_message(loading,
                                                'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
 
-        Character(sheet['sheet'], f"google-{url}").initialize_consumables().commit(ctx).set_active(ctx)
+        char = Character(sheet['sheet'], f"google-{url}").initialize_consumables()
+        await char.commit(ctx)
+        await char.set_active(ctx)
 
         embed = sheet['embed']
         try:
@@ -1094,7 +1036,9 @@ class SheetManager:
 
         await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character['name']))
 
-        Character(sheet['sheet'], f"beyond-{url}").initialize_consumables().commit(ctx).set_active(ctx)
+        char = await Character(sheet['sheet'], f"beyond-{url}").initialize_consumables()
+        await char.commit(ctx)
+        await char.set_active(ctx)
 
         embed = sheet['embed']
         try:

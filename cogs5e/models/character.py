@@ -53,19 +53,17 @@ class Character:
         self.live = self.character.get('live') and self.character.get('type') == 'dicecloud'
 
     @classmethod
-    def from_ctx(cls, ctx):
-        user_characters = ctx.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = ctx.bot.rdb.not_json_get('active_characters', {}).get(ctx.message.author.id)
+    async def from_ctx(cls, ctx):
+        active_character = await ctx.bot.mdb.characters.find_one({"owner": ctx.message.author.id, "active": True})
         if active_character is None:
             raise NoCharacter()
-        character = user_characters[active_character]
-        return cls(character, active_character)
+        return cls(active_character, active_character['upstream'])
 
     @classmethod
-    def from_bot_and_ids(cls, bot, author_id, character_id):
-        user_characters = bot.rdb.not_json_get(author_id + '.characters', {})
-        character = user_characters.get(character_id)
-        if character is None: raise NoCharacter()
+    async def from_bot_and_ids(cls, bot, author_id, character_id):
+        character = await bot.mdb.characters.find_one({"owner": author_id, "upstream": character_id})
+        if character is None:
+            raise NoCharacter()
         return cls(character, character_id)
 
     def get_name(self):
@@ -202,6 +200,8 @@ class Character:
         :param ctx: The Context the cvar is parsed in.
         :param cstr: The string to parse.
         :returns string - the parsed string."""
+        _cache = {}  # load gvars, combat into cache
+        changed = False
 
         def process(to_process):
             character = self.character
@@ -213,10 +213,6 @@ class Character:
 
             _vars = user_vars
             _vars.update(cvars)
-
-            _cache = {}  # load gvars, combat into cache
-
-            changed = False
 
             # define our weird functions here
             def get_cc(name):
@@ -399,13 +395,16 @@ class Character:
             except Exception as ex:
                 raise EvaluationError(ex)
 
-            if changed and ctx:
-                self.commit(ctx)
-            if 'combat' in _cache and _cache['combat'] is not None:
-                _cache['combat'].func_commit()  # private commit, simpleeval will not show
             return output
 
-        return await asyncio.get_event_loop().run_in_executor(None, process, cstr)
+        out = await asyncio.get_event_loop().run_in_executor(None, process, cstr)
+
+        if changed and ctx:
+            await self.commit(ctx)
+        if 'combat' in _cache and _cache['combat'] is not None:
+            _cache['combat'].func_commit()  # private commit, simpleeval will not show
+
+        return out
 
     def evaluate_cvar(self, varstr):
         """Evaluates a cvar.
@@ -452,25 +451,31 @@ class Character:
     def get_stat_vars(self):
         return self.character.get('stat_cvars', {})
 
-    def commit(self, ctx):
-        """Writes a character object to the database, under the contextual author. Returns self."""
-        user_characters = ctx.bot.rdb.not_json_get(ctx.message.author.id + '.characters', {})
-        user_characters[self.id] = self.character  # commit
-        ctx.bot.rdb.not_json_set(ctx.message.author.id + '.characters', user_characters)
-        return self
+    async def commit(self, ctx):
+        """Writes a character object to the database, under the contextual author."""
+        await ctx.bot.mdb.characters.replace_one(
+            {"owner": ctx.message.author.id, "upstream": self.id},
+            self.character,
+            upsert=True
+        )
 
-    def manual_commit(self, bot, author_id):
-        user_characters = bot.rdb.not_json_get(author_id + '.characters', {})
-        user_characters[self.id] = self.character  # commit
-        bot.rdb.not_json_set(author_id + '.characters', user_characters)
-        return self
+    async def manual_commit(self, bot, author_id):
+        await bot.mdb.characters.replace_one(
+            {"owner": author_id, "upstream": self.id},
+            self.character,
+            upsert=True
+        )
 
-    def set_active(self, ctx):
-        """Sets the character as active. Returns self."""
-        active_characters = ctx.bot.rdb.not_json_get('active_characters', {})
-        active_characters[ctx.message.author.id] = self.id
-        ctx.bot.rdb.not_json_set('active_characters', active_characters)
-        return self
+    async def set_active(self, ctx):
+        """Sets the character as active."""
+        await ctx.bot.mdb.characters.update_many(
+            {"owner": ctx.message.author.id},
+            {"$set": {"active": False}}
+        )
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": ctx.message.author.id, "upstream": self.id},
+            {"$set": {"active": True}}
+        )
 
     def initialize_consumables(self):
         """Initializes a character's consumable counters. Returns self."""

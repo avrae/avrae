@@ -107,7 +107,7 @@ class Customization:
                 ctx = Context(self.bot, message)
                 char = None
                 try:
-                    char = Character.from_ctx(ctx)
+                    char = await Character.from_ctx(ctx)
                 except NoCharacter:
                     pass
 
@@ -491,7 +491,7 @@ class Customization:
     @commands.command(pass_context=True)
     async def test(self, ctx, *, str):
         """Parses `str` as if it were in an alias, for testing."""
-        char = Character.from_ctx(ctx)
+        char = await Character.from_ctx(ctx)
         parsed = await char.parse_cvars(str, ctx)
         parsed = clean_content(parsed, ctx)
         await self.bot.say(f"{ctx.message.author.display_name}: {parsed}")

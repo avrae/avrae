@@ -270,7 +270,7 @@ class InitTracker:
               -p [init value]
               -h (same as !init add)
               --group (same as !init add)"""
-        char = Character.from_ctx(ctx)
+        char = await Character.from_ctx(ctx)
         character = char.character
 
         if char.get_combat_id():
@@ -337,7 +337,8 @@ class InitTracker:
 
         await combat.final()
         await self.bot.say(embed=embed)
-        char.join_combat(ctx.message.channel.id).commit(ctx)
+        char.join_combat(ctx.message.channel.id)
+        await char.commit(ctx)
 
     @init.command(pass_context=True, name="next", aliases=['n'])
     async def nextInit(self, ctx):
@@ -1224,7 +1225,7 @@ class InitTracker:
             out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"
 
         out = "Spell not supported by new cast, falling back to old cast.\n" + out
-        char.commit(ctx)  # make sure we save changes
+        await char.commit(ctx)  # make sure we save changes
         await self.bot.say(out)
         spell_cmd = self.bot.get_command('spell')
         if spell_cmd is None: return await self.bot.say("Lookup cog not loaded.")

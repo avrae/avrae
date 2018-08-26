@@ -805,10 +805,10 @@ class PlayerCombatant(Combatant):
     def character(self):
         if self._character is None:
             from cogs5e.models.character import Character
-            c = Character.from_bot_and_ids(self.ctx.bot, self.character_owner, self.character_id)
+            c = await Character.from_bot_and_ids(self.ctx.bot, self.character_owner, self.character_id)
 
-            def new_commit(ctx):
-                c.manual_commit(ctx.bot, self.character_owner)
+            async def new_commit(ctx):
+                await c.manual_commit(ctx.bot, self.character_owner)
 
             c.commit = new_commit
             self._character = c

@@ -36,7 +36,7 @@ class Bestiary:
 
     async def set_active(self, ctx):
         await ctx.bot.mdb.bestiaries.update_many(
-            {"owner": ctx.message.author.id},
+            {"owner": ctx.message.author.id, "active": True},
             {"$set": {"active": False}}
         )
         await ctx.bot.mdb.bestiaries.update_one(

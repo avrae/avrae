@@ -483,7 +483,7 @@ class Character:
     async def set_active(self, ctx):
         """Sets the character as active."""
         await ctx.bot.mdb.characters.update_many(
-            {"owner": ctx.message.author.id},
+            {"owner": ctx.message.author.id, "active": True},
             {"$set": {"active": False}}
         )
         await ctx.bot.mdb.characters.update_one(

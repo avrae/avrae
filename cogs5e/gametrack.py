@@ -683,24 +683,19 @@ class GameTrack:
         if len(args) == 0:
             rolls = spell.get('roll', None)
             if isinstance(rolls, list):
-                active_character = self.bot.rdb.not_json_get('active_characters', {}).get(
-                    ctx.message.author.id)  # get user's active
-                if active_character is not None:
-                    rolls = '\n'.join(rolls).replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
-                        .replace('PROF', str(char.get_prof_bonus()))
-                    rolls = rolls.split('\n')
-                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(
+                rolls = '\n'.join(rolls)\
+                    .replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                    .replace('PROF', str(char.get_prof_bonus()))
+                rolls = rolls.split('\n')
+                out = "**{} casts {}:** ".format(char.get_name(), spell['name']) + '\n'.join(
                     roll(r, inline=True).skeleton for r in rolls)
             elif rolls is not None:
-                active_character = self.bot.rdb.not_json_get('active_characters', {}).get(
-                    ctx.message.author.id)  # get user's active
-                if active_character is not None:
-                    rolls = rolls.replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
-                        .replace('PROF', str(char.get_prof_bonus()))
-                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls,
-                                                                                                   inline=True).skeleton
+                rolls = rolls \
+                    .replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                    .replace('PROF', str(char.get_prof_bonus()))
+                out = "**{} casts {}:** ".format(char.get_name(), spell['name']) + roll(rolls, inline=True).skeleton
             else:
-                out = "**{} casts {}!** ".format(ctx.message.author.mention, spell['name'])
+                out = "**{} casts {}!** ".format(char.get_name(), spell['name'])
         else:
             rolls = args.get('r')
             roll_results = ""
@@ -710,7 +705,7 @@ class GameTrack:
                     roll_results += res.result + '\n'
                 else:
                     roll_results += "**Effect:** " + r
-            out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
+            out = "**{} casts {}:**\n".format(char.get_name(), spell['name']) + roll_results
 
         if not args.last('i', type_=bool):
             char.use_slot(cast_level)

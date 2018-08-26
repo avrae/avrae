@@ -453,16 +453,30 @@ class Character:
 
     async def commit(self, ctx):
         """Writes a character object to the database, under the contextual author."""
+        data = self.character
+        if 'active' not in data:
+            data['active'] = False
+        if 'upstream' not in data:
+            data['upstream'] = self.id
+        if 'owner' not in data:
+            data['owner'] = ctx.message.author.id
         await ctx.bot.mdb.characters.replace_one(
             {"owner": ctx.message.author.id, "upstream": self.id},
-            self.character,
+            data,
             upsert=True
         )
 
     async def manual_commit(self, bot, author_id):
+        data = self.character
+        if 'active' not in data:
+            data['active'] = False
+        if 'upstream' not in data:
+            data['upstream'] = self.id
+        if 'owner' not in data:
+            data['owner'] = author_id
         await bot.mdb.characters.replace_one(
             {"owner": author_id, "upstream": self.id},
-            self.character,
+            data,
             upsert=True
         )
 

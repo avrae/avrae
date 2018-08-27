@@ -505,49 +505,36 @@ class Customization:
         if name is None:
             return await ctx.invoke(self.bot.get_command("uservar list"))
 
-        user_vars = self.bot.rdb.jhget("user_vars", ctx.message.author.id, {})
+        user_vars = await scripting.get_uvars(ctx)
 
         if value is None:  # display value
             uvar = user_vars.get(name)
             if uvar is None: uvar = 'Not defined.'
             return await self.bot.say(f'**{name}**:\n`{uvar}`')
 
-        try:
-            assert not name in STAT_VAR_NAMES
-            assert not any(c in name for c in '-/()[]\\.^$*+?|{}')
-        except AssertionError:
+        if name in STAT_VAR_NAMES or any(c in name for c in '-/()[]\\.^$*+?|{}'):
             return await self.bot.say("Could not create uvar: already builtin, or contains invalid character!")
 
-        user_vars[name] = value
-        self.bot.rdb.jhset("user_vars", ctx.message.author.id, user_vars)
+        await scripting.set_uvar(ctx, name, value)
         await self.bot.say('User variable `{}` set to: `{}`'.format(name, value))
 
     @uservar.command(pass_context=True, name='remove', aliases=['delete'])
     async def uvar_remove(self, ctx, name):
         """Deletes a uvar from the user."""
-        user_vars = self.bot.rdb.jhget("user_vars", ctx.message.author.id, {})
-
-        try:
-            del user_vars[name]
-        except KeyError:
-            return await self.bot.say('User variable not found.')
-
-        self.bot.rdb.jhset("user_vars", ctx.message.author.id, user_vars)
-
+        result = await self.bot.mdb.uvars.delete_one({"owner": ctx.message.author.id, "name": name})
+        if not result.deleted_count:
+            return await self.bot.say("Uvar does not exist.")
         await self.bot.say('User variable {} removed.'.format(name))
 
     @uservar.command(pass_context=True, name='list')
     async def uvar_list(self, ctx):
         """Lists all uvars for the user."""
-        user_vars = self.bot.rdb.jhget("user_vars", ctx.message.author.id, {})
-
+        user_vars = await scripting.get_uvars(ctx)
         await self.bot.say('Your user variables:\n{}'.format(', '.join(sorted([name for name in user_vars.keys()]))))
 
     @uservar.command(pass_context=True, name='deleteall', aliases=['removeall'])
     async def uvar_deleteall(self, ctx):
         """Deletes ALL user variables."""
-        user_id = ctx.message.author.id
-
         await self.bot.say("This will delete **ALL** of your user variables (uvars). "
                            "Are you *absolutely sure* you want to continue?\n"
                            "Type `Yes, I am sure` to confirm.")
@@ -555,8 +542,7 @@ class Customization:
         if (not reply) or (not reply.content == "Yes, I am sure"):
             return await self.bot.say("Unconfirmed. Aborting.")
 
-        self.bot.rdb.hdel("user_vars", user_id)
-
+        await self.bot.mdb.uvars.delete_many({"owner": ctx.message.author.id})
         return await self.bot.say("OK. I have deleted all your uvars.")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['gvar'])
@@ -569,9 +555,7 @@ class Customization:
         if name is None:
             return await ctx.invoke(self.bot.get_command("globalvar list"))
 
-        glob_vars = self.bot.rdb.jget("global_vars", {})
-
-        gvar = glob_vars.get(name)
+        gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None: gvar = {'owner_name': 'None', 'value': 'Not defined.'}
         return await self.bot.say(f"**{name}**:\n*Owner: {gvar['owner_name']}* ```\n{gvar['value']}\n```")
 
@@ -579,35 +563,28 @@ class Customization:
     async def gvar_create(self, ctx, *, value):
         """Creates a global variable.
         A name will be randomly assigned upon creation."""
-        glob_vars = self.bot.rdb.jget("global_vars", {})
         name = str(uuid.uuid4())
-        glob_vars[name] = {'owner': ctx.message.author.id, 'owner_name': str(ctx.message.author), 'value': value,
-                           'editors': []}
-        self.bot.rdb.jset("global_vars", glob_vars)
+        data = {'key': name, 'owner': ctx.message.author.id, 'owner_name': str(ctx.message.author), 'value': value,
+                'editors': []}
+        await self.bot.mdb.gvars.insert_one(data)
         await self.bot.say(f"Created global variable `{name}`.")
 
     @globalvar.command(pass_context=True, name='edit')
     async def gvar_edit(self, ctx, name, *, value):
         """Edits a global variable."""
-        glob_vars = self.bot.rdb.jget("global_vars", {})
-
-        gvar = glob_vars.get(name)
+        gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
             return await self.bot.say("Global variable not found.")
         elif gvar['owner'] != ctx.message.author.id and not ctx.message.author.id in gvar.get('editors', []):
             return await self.bot.say("You are not allowed to edit this variable.")
         else:
-            glob_vars[name]['value'] = value
-
-        self.bot.rdb.jset("global_vars", glob_vars)
+            await self.bot.mdb.gvars.update_one({"key": name}, {"$set": {"value": value}})
         await self.bot.say(f'Global variable `{name}` edited.')
 
     @globalvar.command(pass_context=True, name='editor')
     async def gvar_editor(self, ctx, name, user: discord.Member = None):
         """Toggles the editor status of a user."""
-        glob_vars = self.bot.rdb.jget("global_vars", {})
-
-        gvar = glob_vars.get(name)
+        gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
             return await self.bot.say("Global variable not found.")
 
@@ -622,9 +599,7 @@ class Customization:
                 else:
                     e.append(user.id)
                     msg = f"Added {user} to the editor list."
-                glob_vars[name]['editors'] = e
-
-            self.bot.rdb.jset("global_vars", glob_vars)
+                await self.bot.mdb.gvars.update_one({"key": name}, {"$set": {"editors": e}})
             await self.bot.say(f'Global variable `{name}` edited: {msg}')
         else:
             await self.bot.say(f"Editors: {', '.join(gvar.get('editors', []))}")
@@ -632,30 +607,26 @@ class Customization:
     @globalvar.command(pass_context=True, name='remove', aliases=['delete'])
     async def gvar_remove(self, ctx, name):
         """Deletes a global variable."""
-        glob_vars = self.bot.rdb.jget("global_vars", {})
-
-        gvar = glob_vars.get(name)
+        gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
             return await self.bot.say("Global variable not found.")
         elif gvar['owner'] != ctx.message.author.id:
             return await self.bot.say("You are not the owner of this variable.")
         else:
             if await confirm(ctx, f"Are you sure you want to delete `{name}`?"):
-                del glob_vars[name]
+                await self.bot.mdb.gvars.delete_one({"key": name})
             else:
                 return await self.bot.say("Ok, cancelling.")
-
-        self.bot.rdb.jset("global_vars", glob_vars)
 
         await self.bot.say('Global variable {} removed.'.format(name))
 
     @globalvar.command(pass_context=True, name='list')
     async def gvar_list(self, ctx):
         """Lists all global variables for the user."""
-        glob_vars = self.bot.rdb.jget("global_vars", {})
-        user_vars = {k: v['value'] for k, v in glob_vars.items() if v['owner'] == ctx.message.author.id}
-        gvar_list = [f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in
-                     sorted(((k, v) for k, v in user_vars.items()), key=lambda i: i[0])]
+        user_vars = []
+        async for gvar in self.bot.mdb.gvars.find({"owner": ctx.message.author.id}):
+            user_vars.append((gvar['key'], gvar['value']))
+        gvar_list = [f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in sorted(user_vars, key=lambda i: i[0])]
         say_list = ['']
         for g in gvar_list:
             if len(g) + len(say_list[-1]) < 1900:

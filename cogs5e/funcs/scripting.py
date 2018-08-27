@@ -15,6 +15,20 @@ SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+
 MAX_ITER_LENGTH = 10000
 
 
+async def get_uvars(ctx):
+    uvars = {}
+    async for uvar in ctx.bot.mdb.uvars.find({"owner": ctx.message.author.id}):
+        uvars[uvar['name']] = uvar['value']
+    return uvars
+
+
+async def set_uvar(ctx, name, value):
+    await ctx.bot.mdb.uvars.update_one(
+        {"owner": ctx.message.author.id, "name": name},
+        {"$set": {"value": value}},
+        True)
+
+
 class ScriptingEvaluator(EvalWithCompoundTypes):
     def __init__(self, operators=None, functions=None, names=None):
         super(ScriptingEvaluator, self).__init__(operators, functions, names)
@@ -151,6 +165,7 @@ def verbose_roll(rollStr, multiply=1, add=0):
     if multiply != 1 or add != 0:
         def subDice(matchobj):
             return str((int(matchobj.group(1)) * multiply) + add) + 'd' + matchobj.group(2)
+
         rollStr = re.sub(r'(\d+)d(\d+)', subDice, rollStr)
     rolled = roll(rollStr, inline=True)
     return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
@@ -281,7 +296,7 @@ class SimpleCombatant:
         args = {
             'd': d,
             'c': c,
-            'critdice' : critdice,
+            'critdice': critdice,
             'resist': '|'.join(self._combatant.resists['resist']),
             'immune': '|'.join(self._combatant.resists['immune']),
             'vuln': '|'.join(self._combatant.resists['vuln'])

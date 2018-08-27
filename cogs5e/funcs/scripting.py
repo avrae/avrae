@@ -194,9 +194,9 @@ class SimpleCombat:
         self.turn_num = self._combat.turn_num
 
     @classmethod
-    def from_character(cls, character, ctx):
+    async def from_character(cls, character, ctx):
         try:
-            combat = Combat.from_ctx(ctx)
+            combat = await Combat.from_ctx(ctx)
         except CombatNotFound:
             return None
         me = next((c for c in combat.get_combatants() if getattr(c, 'character_id', None) == character.id), None)
@@ -218,8 +218,8 @@ class SimpleCombat:
         return None
 
     # private functions
-    def func_commit(self):
-        self._combat.commit()
+    async def func_commit(self):
+        await self._combat.commit()
 
 
 class SimpleCombatant:

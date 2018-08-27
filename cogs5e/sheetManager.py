@@ -511,11 +511,12 @@ class SheetManager:
         elif reply:
             _character = Character(_character, char_url)
             if _character.get_combat_id() is not None:
-                combat = Combat.from_id(_character.get_combat_id(), ctx)
+                combat = await Combat.from_id(_character.get_combat_id(), ctx)
                 me = next((c for c in combat.get_combatants() if getattr(c, 'character_id', None) == char_url),
                           None)
                 if me:
-                    combat.remove_combatant(me, True).commit()
+                    combat.remove_combatant(me, True)
+                    await combat.commit()
 
             await self.bot.mdb.characters.delete_one({"owner": ctx.message.author.id, "upstream": char_url})
             return await self.bot.say('{} has been deleted.'.format(name))

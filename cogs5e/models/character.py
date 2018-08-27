@@ -200,7 +200,10 @@ class Character:
         :param ctx: The Context the cvar is parsed in.
         :param cstr: The string to parse.
         :returns string - the parsed string."""
-        _cache = {}  # load gvars, combat into cache
+        _cache = {
+            "combat": await SimpleCombat.from_character(self, ctx),
+            "gvars": {}
+        }  # load gvars, combat into cache
         changed = False
 
         def process(to_process):
@@ -209,7 +212,7 @@ class Character:
             cvars = character.get('cvars', {})
             stat_vars = character.get('stat_cvars', {})
             stat_vars['color'] = hex(self.get_color())[2:]
-            user_vars = ctx.bot.rdb.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
+            user_vars = ctx.bot.rdb.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}  # TODO
 
             _vars = user_vars
             _vars.update(cvars)
@@ -321,7 +324,7 @@ class Character:
                     nonlocal changed
                     changed = True
 
-            def get_gvar(name):
+            def get_gvar(name):  # TODO
                 if not 'gvars' in _cache:  # load only if needed
                     _cache['gvars'] = ctx.bot.rdb.jget("global_vars", {})
                 return _cache['gvars'].get(name, {}).get('value')
@@ -333,8 +336,6 @@ class Character:
                 return copy.copy(self.character)
 
             def combat():
-                if not 'combat' in _cache:
-                    _cache['combat'] = SimpleCombat.from_character(self, ctx)
                 return _cache['combat']
 
             _funcs = scripting.DEFAULT_FUNCTIONS.copy()
@@ -402,7 +403,7 @@ class Character:
         if changed and ctx:
             await self.commit(ctx)
         if 'combat' in _cache and _cache['combat'] is not None:
-            _cache['combat'].func_commit()  # private commit, simpleeval will not show
+            await _cache['combat'].func_commit()  # private commit, simpleeval will not show
 
         return out
 

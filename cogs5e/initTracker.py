@@ -55,7 +55,7 @@ class InitTracker:
         Valid Arguments: -dyn (dynamic init; rerolls all initiatives at the start of a round)
                          -name <NAME> (names the combat)
                          -turnnotif (notifies the next player)"""
-        Combat.ensure_unique_chan(ctx)
+        await Combat.ensure_unique_chan(ctx)
 
         options = {}
         name = 'Current initiative'
@@ -130,7 +130,7 @@ class InitTracker:
         for k in ('resist', 'immune', 'vuln'):
             resists[k] = args.get(k)
 
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         if combat.get_combatant(name) is not None:
             await self.bot.say("Combatant already exists.")
@@ -198,7 +198,7 @@ class InitTracker:
         if npr:
             opts['npr'] = True
 
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         out = ''
         to_pm = ''
@@ -273,10 +273,12 @@ class InitTracker:
         char = await Character.from_ctx(ctx)
         character = char.character
 
-        if char.get_combat_id():
-            return await self.bot.say(f"This character is already in a combat. "
-                                      f"Please leave combat in <#{char.get_combat_id()}> first.\n"
-                                      f"If this seems like an error, please `!update` your character sheet.")
+        # if char.get_combat_id():
+        #     return await self.bot.say(f"This character is already in a combat. "
+        #                               f"Please leave combat in <#{char.get_combat_id()}> first.\n"
+        #                               f"If this seems like an error, please `!update` your character sheet.")
+        # we just ignore this for now.
+        # I'll figure out a better solution when I actually need it
 
         skills = character.get('skills')
         if skills is None:
@@ -318,10 +320,10 @@ class InitTracker:
         private = args.last('h', type_=bool)
         bonus = roll(bonus).total
 
-        me = PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
-                                            char.get_resists(), ctx, char.id, ctx.message.author.id)
+        me = await PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
+                                                  char.get_resists(), ctx, char.id, ctx.message.author.id, char)
 
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         if combat.get_combatant(char.get_name()) is not None:
             await self.bot.say("Combatant already exists.")
@@ -345,7 +347,7 @@ class InitTracker:
         """Moves to the next turn in initiative order.
         It must be your turn or you must be the DM (the person who started combat) to use this command."""
 
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         if len(combat.get_combatants()) == 0:
             await self.bot.say("There are no combatants.")
@@ -385,7 +387,7 @@ class InitTracker:
     async def prevInit(self, ctx):
         """Moves to the previous turn in initiative order."""
 
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         if len(combat.get_combatants()) == 0:
             await self.bot.say("There are no combatants.")
@@ -401,7 +403,7 @@ class InitTracker:
         """Moves to a certain initiative.
         `target` can be either a number, to go to that initiative, or a name.
         If not supplied, goes to the first combatant that the user controls."""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         if len(combat.get_combatants()) == 0:
             await self.bot.say("There are no combatants.")
@@ -427,7 +429,7 @@ class InitTracker:
     async def skipround(self, ctx, numrounds: int = 1):
         """Skips one or more rounds of initiative."""
 
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         if len(combat.get_combatants()) == 0:
             await self.bot.say("There are no combatants.")
@@ -441,14 +443,14 @@ class InitTracker:
     @init.command(pass_context=True, name="list", aliases=['summary'])
     async def listInits(self, ctx):
         """Lists the combatants."""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
         outStr = combat.get_summary()
         await self.bot.say(outStr, delete_after=60)
 
     @init.command(pass_context=True)
     async def note(self, ctx, name: str, *, note: str = ''):
         """Attaches a note to a combatant."""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         combatant = await combat.select_combatant(name)
         if combatant is None:
@@ -473,7 +475,7 @@ class InitTracker:
                             -immune <IMMUNITY>
                             -vuln <VULNERABILITY>
                             -group <GROUP> (changes group)"""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         combatant = await combat.select_combatant(name)
         if combatant is None:
@@ -583,7 +585,7 @@ class InitTracker:
     @init.command(pass_context=True)
     async def status(self, ctx, name: str, *, args: str = ''):
         """Gets the status of a combatant or group."""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name, select_group=True)
         if combatant is None:
             await self.bot.say("Combatant or group not found.")
@@ -608,7 +610,7 @@ class InitTracker:
         Usage: !init hp <NAME> <mod/set/max> <HP>
         If no operator is supplied, mod is assumed.
         If max is given with no number, resets combatant to max hp."""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
             await self.bot.say("Combatant not found.")
@@ -655,7 +657,7 @@ class InitTracker:
         """Modifies the temporary HP of a combatant.
         Usage: !init thp <NAME> <HP>
         Sets the combatant's THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP)."""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
             await self.bot.say("Combatant not found.")
@@ -683,7 +685,7 @@ class InitTracker:
         Valid Arguments: -b [bonus] (see !a)
                          -d [damage bonus] (see !a)
                          -ac [ac] (modifies ac temporarily; adds if starts with +/- or sets otherwise)"""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
             await self.bot.say("Combatant not found.")
@@ -700,7 +702,7 @@ class InitTracker:
     @init.command(pass_context=True, name='re')
     async def remove_effect(self, ctx, name: str, effect: str = ''):
         """Removes a status effect from a combatant. Removes all if effect is not passed."""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
             await self.bot.say("Combatant not found.")
@@ -730,7 +732,7 @@ class InitTracker:
         return await self._attack(ctx, combatant_name, target_name, atk_name, args)
 
     async def _attack(self, ctx, combatant_name, target_name, atk_name, args):
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         try:
             target = await combat.select_combatant(target_name, "Select the target.")
@@ -854,7 +856,7 @@ class InitTracker:
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     async def _cast(self, ctx, combatant_name, spell_name, args):
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         if combatant_name is None:
             combatant = combat.current_combatant
@@ -1190,20 +1192,14 @@ class InitTracker:
         if len(args) == 0:
             rolls = spell.get('roll', None)
             if isinstance(rolls, list):
-                active_character = self.bot.rdb.not_json_get('active_characters', {}).get(
-                    ctx.message.author.id)  # get user's active
-                if active_character is not None:
-                    rolls = '\n'.join(rolls).replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
-                        .replace('PROF', str(char.get_prof_bonus()))
-                    rolls = rolls.split('\n')
+                rolls = '\n'.join(rolls).replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                    .replace('PROF', str(char.get_prof_bonus()))
+                rolls = rolls.split('\n')
                 out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(
                     roll(r, inline=True).skeleton for r in rolls)
             elif rolls is not None:
-                active_character = self.bot.rdb.not_json_get('active_characters', {}).get(
-                    ctx.message.author.id)  # get user's active
-                if active_character is not None:
-                    rolls = rolls.replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
-                        .replace('PROF', str(char.get_prof_bonus()))
+                rolls = rolls.replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                    .replace('PROF', str(char.get_prof_bonus()))
                 out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls,
                                                                                                    inline=True).skeleton
             else:
@@ -1235,7 +1231,7 @@ class InitTracker:
     async def remove_combatant(self, ctx, *, name: str):
         """Removes a combatant or group from the combat.
         Usage: !init remove <NAME>"""
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         combatant = await combat.select_combatant(name)
         if combatant is None:
@@ -1257,7 +1253,7 @@ class InitTracker:
     async def end(self, ctx):
         """Ends combat in the channel."""
 
-        combat = Combat.from_ctx(ctx)
+        combat = await Combat.from_ctx(ctx)
 
         to_end = await confirm(ctx, 'Are you sure you want to end combat? (Reply with yes/no)', True)
 
@@ -1279,7 +1275,7 @@ class InitTracker:
         except:
             pass
 
-        combat.end()
+        await combat.end()
 
         await self.bot.edit_message(msg, "Combat ended.")
 

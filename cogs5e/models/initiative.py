@@ -35,14 +35,14 @@ class Combat:
         return cls(channelId, summaryMsgId, dmId, options, ctx)
 
     @classmethod
-    def from_ctx(cls, ctx):
-        raw = ctx.bot.rdb.jget(f"{ctx.message.channel.id}.combat")
+    async def from_ctx(cls, ctx):
+        raw = await ctx.bot.mdb.combats.find_one({"channel": ctx.message.channel.id})
         if raw is None:
             raise CombatNotFound
-        return cls.from_dict(raw, ctx)
+        return await cls.from_dict(raw, ctx)
 
     @classmethod
-    def from_dict(cls, raw, ctx):
+    async def from_dict(cls, raw, ctx):
         combatants = []
         for c in raw['combatants']:
             if c['type'] == 'common':
@@ -50,7 +50,7 @@ class Combat:
             elif c['type'] == 'monster':
                 combatants.append(MonsterCombatant.from_dict(c, ctx))
             elif c['type'] == 'player':
-                combatants.append(PlayerCombatant.from_dict(c, ctx))
+                combatants.append(await PlayerCombatant.from_dict(c, ctx))
             elif c['type'] == 'group':
                 combatants.append(CombatantGroup.from_dict(c, ctx))
             else:
@@ -59,11 +59,11 @@ class Combat:
                    raw['turn'], raw['current'])
 
     @classmethod
-    def from_id(cls, _id, ctx):
-        raw = ctx.bot.rdb.jget(f"{_id}.combat")
+    async def from_id(cls, _id, ctx):
+        raw = await ctx.bot.mdb.combats.find_one({"channel": _id})
         if raw is None:
             raise CombatNotFound
-        return cls.from_dict(raw, ctx)
+        return await cls.from_dict(raw, ctx)
 
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
@@ -289,18 +289,22 @@ class Combat:
         return outStr
 
     @staticmethod
-    def ensure_unique_chan(ctx):
-        if ctx.bot.rdb.exists(f"{ctx.message.channel.id}.combat"):
+    async def ensure_unique_chan(ctx):
+        if await ctx.bot.mdb.combats.find_one({"channel": ctx.message.channel.id}):
             raise ChannelInCombat
 
-    def get_db_key(self):
-        return f"{self.channel}.combat"
-
-    def commit(self):
+    async def commit(self):
         """Commits the combat to db."""
         if not self.ctx:
             raise RequiresContext
-        self.ctx.bot.rdb.jsetex(self.get_db_key(), self.to_dict(), COMBAT_TTL)
+        for pc in self.get_combatants():
+            if isinstance(pc, PlayerCombatant):
+                await pc.character.commit(self.ctx)
+        await self.ctx.bot.mdb.combats.update_one(
+            {"channel": self.channel},
+            {"$set": self.to_dict(), "$currentDate": {"lastchanged": True}},
+            upsert=True
+        )
 
     def get_summary(self, private=False):
         """Returns the generated summary message content."""
@@ -347,14 +351,14 @@ class Combat:
 
     async def final(self):
         """Final commit/update."""
-        self.commit()
+        await self.commit()
         await self.update_summary()
 
-    def end(self):
+    async def end(self):
         """Ends combat in a channel."""
         for c in self._combatants:
             c.on_remove()
-        self.ctx.bot.rdb.delete(self.get_db_key())
+        await self.ctx.bot.mdb.combats.remove_one({"channel": self.channel})
 
 
 class Combatant:
@@ -793,25 +797,18 @@ class PlayerCombatant(Combatant):
                                               attacks, saves, ctx, index, notes, effects, group, temphp, spellcasting)
         self.character_id = character_id
         self.character_owner = character_owner
-        self._character = None  # only grab the Character instance if we have to
+        self._character = None  # shenanigans
 
     @classmethod
-    def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, character_id,
-                       character_owner):
-        return cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx,
+    async def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, character_id,
+                             character_owner, char):
+        inst = cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx,
                    character_id=character_id, character_owner=character_owner)
+        inst._character = char
+        return inst
 
     @property
     def character(self):
-        if self._character is None:
-            from cogs5e.models.character import Character
-            c = Character.from_bot_and_ids(self.ctx.bot, self.character_owner, self.character_id)
-
-            async def new_commit(ctx):
-                await c.manual_commit(ctx.bot, self.character_owner)
-
-            c.commit = new_commit
-            self._character = c
         return self._character
 
     @property
@@ -828,10 +825,10 @@ class PlayerCombatant(Combatant):
 
     @hp.setter
     def hp(self, new_hp):
-        self.character.set_hp(new_hp).commit(self.ctx)
+        self.character.set_hp(new_hp)
 
     def set_hp(self, new_hp):
-        self.character.set_hp(new_hp, False).commit(self.ctx)
+        self.character.set_hp(new_hp, False)
 
     @property
     def temphp(self):
@@ -839,7 +836,7 @@ class PlayerCombatant(Combatant):
 
     @temphp.setter
     def temphp(self, new_hp):
-        self.character.set_temp_hp(new_hp).commit(self.ctx)
+        self.character.set_temp_hp(new_hp)
 
     @property
     def attacks(self):
@@ -858,20 +855,20 @@ class PlayerCombatant(Combatant):
         return self.character.get_remaining_slots(level) > 0 and spell['name'] in self.spellcasting.spells
 
     def cast(self, spell, level):
-        self.character.use_slot(level).commit(self.ctx)
+        self.character.use_slot(level)
 
     def remaining_casts_of(self, spell, level):
         return self.character.get_remaining_slots_str(level)
 
-    def on_remove(self):
-        super(PlayerCombatant, self).on_remove()
-        self.character.leave_combat().commit(self.ctx)
-
     @classmethod
-    def from_dict(cls, raw, ctx):
+    async def from_dict(cls, raw, ctx):
         inst = super(PlayerCombatant, cls).from_dict(raw, ctx)
         inst.character_id = raw['character_id']
         inst.character_owner = raw['character_owner']
+
+        from cogs5e.models.character import Character
+        inst._character = await Character.from_bot_and_ids(ctx.bot, inst.character_owner, inst.character_id)
+
         return inst
 
     def to_dict(self):

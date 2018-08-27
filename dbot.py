@@ -29,7 +29,7 @@ if '-s' in sys.argv:
         shard_id = temp_shard_id if int(temp_shard_id) < int(shard_count) else 0
         SHARDED = True
 # -----COGS-----
-DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.gametrack", "cogs5e.homebrew", #"cogs5e.initTracker",
+DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.gametrack", "cogs5e.homebrew", "cogs5e.initTracker",
                 "cogs5e.lookup", "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization"]
 STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.core", "cogsmisc.permissions", "cogsmisc.publicity", "cogsmisc.repl",
                "cogsmisc.stats", "utils.help"]

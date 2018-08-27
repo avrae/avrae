@@ -358,7 +358,7 @@ class Combat:
         """Ends combat in a channel."""
         for c in self._combatants:
             c.on_remove()
-        await self.ctx.bot.mdb.combats.remove_one({"channel": self.channel})
+        await self.ctx.bot.mdb.combats.delete_one({"channel": self.channel})
 
 
 class Combatant:

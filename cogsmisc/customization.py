@@ -236,61 +236,44 @@ class Customization:
         If a user and a server have aliases with the same name, the user alias will take priority."""
         if alias_name is None:
             return await ctx.invoke(self.bot.get_command("alias list"))
-        user_id = ctx.message.author.id
-        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
-        user_aliases = self.aliases.get(user_id, {})
         if alias_name in self.bot.commands:
             return await self.bot.say('There is already a built-in command with that name!')
 
         if ' ' in alias_name or not alias_name:
             return await self.bot.say('Invalid alias name.')
 
+        user_aliases = await scripting.get_aliases(ctx)
         if cmds is None:
             alias = user_aliases.get(alias_name)
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = f'!alias {alias_name} ' + alias
-            return await self.bot.say('**' + alias_name + f'**:\n(Copy-pastable)\n```md\n' + alias + "\n```")
+                alias = f'!alias {alias_name} {alias}'
+            return await self.bot.say(f'**{alias_name}**:\n(Copy-pastable)\n```md\n{alias}\n```')
 
-        user_aliases[alias_name] = cmds.lstrip('!')
+        await self.bot.mdb.aliases.update_one({"owner": ctx.message.author.id, "name": alias_name},
+                                              {"$set": {"commands": cmds.lstrip('!')}}, True)
         await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
-
-        self.aliases[user_id] = user_aliases
-        self.bot.rdb.not_json_set('cmd_aliases', self.aliases)
 
     @alias.command(pass_context=True, name='list')
     async def alias_list(self, ctx):
         """Lists all user aliases."""
-        user_id = ctx.message.author.id
-        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
-        user_aliases = self.aliases.get(user_id, {})
-        aliases = [name for name in user_aliases.keys()]
+        user_aliases = await scripting.get_aliases(ctx)
+        aliases = list(user_aliases.keys())
         sorted_aliases = sorted(aliases)
         return await self.bot.say('Your aliases:\n{}'.format(', '.join(sorted_aliases)))
 
     @alias.command(pass_context=True, name='delete', aliases=['remove'])
     async def alias_delete(self, ctx, alias_name):
         """Deletes a user alias."""
-        user_id = ctx.message.author.id
-        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
-        user_aliases = self.aliases.get(user_id, {})
-
-        try:
-            del user_aliases[alias_name]
-        except KeyError:
+        result = await self.bot.mdb.aliases.delete_one({"owner": ctx.message.author.id, "name": alias_name})
+        if not result.deleted_count:
             return await self.bot.say('Alias not found.')
         await self.bot.say('Alias {} removed.'.format(alias_name))
-
-        self.aliases[user_id] = user_aliases
-        self.bot.rdb.not_json_set('cmd_aliases', self.aliases)
 
     @alias.command(pass_context=True, name='deleteall', aliases=['removeall'])
     async def alias_deleteall(self, ctx):
         """Deletes ALL user aliases."""
-        user_id = ctx.message.author.id
-        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
-
         await self.bot.say("This will delete **ALL** of your user aliases. "
                            "Are you *absolutely sure* you want to continue?\n"
                            "Type `Yes, I am sure` to confirm.")
@@ -298,49 +281,42 @@ class Customization:
         if not reply.content == "Yes, I am sure":
             return await self.bot.say("Unconfirmed. Aborting.")
 
-        del self.aliases[user_id]
-        self.bot.rdb.not_json_set('cmd_aliases', self.aliases)
-
+        await self.bot.mdb.aliases.delete_many({"owner": ctx.message.author.id})
         return await self.bot.say("OK. I have deleted all your aliases.")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'], no_pm=True)
-    async def servalias(self, ctx, alias_name=None, *, commands=None):
+    async def servalias(self, ctx, alias_name=None, *, cmds=None):
         """Adds an alias that the entire server can use.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
         If a user and a server have aliases with the same name, the user alias will take priority."""
         if alias_name is None:
             return await ctx.invoke(self.bot.get_command("servalias list"))
-        server_id = ctx.message.server.id
-        self.serv_aliases = self.bot.rdb.not_json_get('serv_aliases', {})
-        server_aliases = self.serv_aliases.get(server_id, {})
+
+        server_aliases = await scripting.get_servaliases(ctx)
         if alias_name in self.bot.commands:
             return await self.bot.say('There is already a built-in command with that name!')
 
-        if commands is None:
+        if cmds is None:
             alias = server_aliases.get(alias_name)
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = f'!servalias {alias_name} ' + alias
-            return await self.bot.say('**' + alias_name + '**:\n(Copy-pastable)```md\n' + alias + "\n```")
+                alias = f'!servalias {alias_name} {alias}'
+            return await self.bot.say(f'**{alias_name}**:\n(Copy-pastable)```md\n{alias}\n```')
 
         if not self.can_edit_servaliases(ctx):
             return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
 
-        server_aliases[alias_name] = commands.lstrip('!')
-        await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, commands.lstrip('!')))
-
-        self.serv_aliases[server_id] = server_aliases
-        self.bot.rdb.not_json_set('serv_aliases', self.serv_aliases)
+        await self.bot.mdb.servaliases.update_one({"server": ctx.message.server.id, "name": alias_name},
+                                                  {"$set": {"commands": cmds.lstrip('!')}}, True)
+        await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
     @servalias.command(pass_context=True, name='list', no_pm=True)
     async def servalias_list(self, ctx):
         """Lists all server aliases."""
-        server_id = ctx.message.server.id
-        self.serv_aliases = self.bot.rdb.not_json_get('serv_aliases', {})
-        server_aliases = self.serv_aliases.get(server_id, {})
-        aliases = [name for name in server_aliases.keys()]
+        server_aliases = await scripting.get_servaliases(ctx)
+        aliases = list(server_aliases.keys())
         sorted_aliases = sorted(aliases)
         return await self.bot.say('This server\'s aliases:\n{}'.format(', '.join(sorted_aliases)))
 
@@ -351,20 +327,13 @@ class Customization:
         if not self.can_edit_servaliases(ctx):
             return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
-        server_id = ctx.message.server.id
-        self.serv_aliases = self.bot.rdb.not_json_get('serv_aliases', {})
-        server_aliases = self.serv_aliases.get(server_id, {})
-
-        try:
-            del server_aliases[alias_name]
-        except KeyError:
+        result = await self.bot.mdb.servaliases.delete_one({"server": ctx.message.server.id, "name": alias_name})
+        if not result.deleted_count:
             return await self.bot.say('Server alias not found.')
         await self.bot.say('Server alias {} removed.'.format(alias_name))
 
-        self.serv_aliases[server_id] = server_aliases
-        self.bot.rdb.not_json_set('serv_aliases', self.serv_aliases)
-
-    def can_edit_servaliases(self, ctx):
+    @staticmethod
+    def can_edit_servaliases(ctx):
         """
         Returns whether a user can edit server aliases in the current context.
         """
@@ -378,50 +347,36 @@ class Customization:
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await ctx.invoke(self.bot.get_command("snippet list"))
-        user_id = ctx.message.author.id
-        snippets = self.bot.rdb.not_json_get('damage_snippets', {})
-        user_snippets = snippets.get(user_id, {})
+        user_snippets = await scripting.get_snippets(ctx)
 
         if snippet is None:
-            return await self.bot.say(
-                '**' + snipname + f'**:\n(Copy-pastable)```md\n!snippet {snipname} ' + user_snippets.get(snipname,
-                                                                                                         'Not defined.') + '\n```')
+            return await self.bot.say(f'**{snipname}**:\n'
+                                      f'(Copy-pastable)```md\n'
+                                      f'!snippet {snipname} {user_snippets.get(snipname, "Not defined.")}'
+                                      f'\n```')
 
         if len(snipname) < 2: return await self.bot.say("Snippets must be at least 2 characters long!")
-        user_snippets[snipname] = snippet
+        await self.bot.mdb.snippets.update_one({"owner": ctx.message.author.id, "name": snipname},
+                                               {"$set": {"snippet": snippet}}, True)
         await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
-
-        snippets[user_id] = user_snippets
-        self.bot.rdb.not_json_set('damage_snippets', snippets)
 
     @snippet.command(pass_context=True, name='list')
     async def snippet_list(self, ctx):
         """Lists your user snippets."""
-        user_id = ctx.message.author.id
-        snippets = self.bot.rdb.not_json_get('damage_snippets', {})
-        user_snippets = snippets.get(user_id, {})
+        user_snippets = await scripting.get_snippets(ctx)
         await self.bot.say('Your snippets:\n{}'.format(', '.join(sorted([name for name in user_snippets.keys()]))))
 
     @snippet.command(pass_context=True, name='delete', aliases=['remove'])
     async def snippet_delete(self, ctx, snippet_name):
         """Deletes a snippet."""
-        user_id = ctx.message.author.id
-        snippets = self.bot.rdb.not_json_get('damage_snippets', {})
-        user_snippets = snippets.get(user_id, {})
-        try:
-            del user_snippets[snippet_name]
-        except KeyError:
+        result = await self.bot.mdb.snippets.delete_one({"owner": ctx.message.author.id, "name": snippet_name})
+        if not result.deleted_count:
             return await self.bot.say('Snippet not found.')
         await self.bot.say('Shortcut {} removed.'.format(snippet_name))
-        snippets[user_id] = user_snippets
-        self.bot.rdb.not_json_set('damage_snippets', snippets)
 
     @snippet.command(pass_context=True, name='deleteall', aliases=['removeall'])
     async def snippet_deleteall(self, ctx):
         """Deletes ALL user snippets."""
-        user_id = ctx.message.author.id
-        snippets = self.bot.rdb.not_json_get('damage_snippets', {})
-
         await self.bot.say("This will delete **ALL** of your user snippets. "
                            "Are you *absolutely sure* you want to continue?\n"
                            "Type `Yes, I am sure` to confirm.")
@@ -429,8 +384,7 @@ class Customization:
         if not reply.content == "Yes, I am sure":
             return await self.bot.say("Unconfirmed. Aborting.")
 
-        del snippets[user_id]
-        self.bot.rdb.not_json_set('damage_snippets', snippets)
+        await self.bot.mdb.snippets.delete_many({"owner": ctx.message.author.id})
         return await self.bot.say("OK. I have deleted all your snippets.")
 
     @commands.group(pass_context=True, invoke_without_command=True, no_pm=True)
@@ -442,31 +396,27 @@ class Customization:
         if snipname is None:
             return await ctx.invoke(self.bot.get_command("servsnippet list"))
         server_id = ctx.message.server.id
-        snippets = self.bot.rdb.jget('server_snippets', {})
-        server_snippets = snippets.get(server_id, {})
+        server_snippets = await scripting.get_servsnippets(ctx)
 
         if snippet is None:
-            return await self.bot.say(
-                '**' + snipname + f'**:\n(Copy-pastable)```md\n!snippet {snipname} ' + server_snippets.get(snipname,
-                                                                                                           'Not defined.') + '\n```')
+            return await self.bot.say(f'**{snipname}**:\n'
+                                      f'(Copy-pastable)```md\n'
+                                      f'!snippet {snipname} {server_snippets.get(snipname,"Not defined.")}\n'
+                                      f'```')
 
         if self.can_edit_servaliases(ctx):
             if len(snipname) < 2: return await self.bot.say("Snippets must be at least 2 characters long!")
-            server_snippets[snipname] = snippet
+            await self.bot.mdb.servsnippets.update_one({"server": server_id, "name": snipname},
+                                                       {"$set": {"snippet": snippet}}, True)
             await self.bot.say('Server snippet {} added for arguments:\n`{}`'.format(snipname, snippet))
         else:
             return await self.bot.say("You do not have permission to edit server snippets. Either __Administrator__ "
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
 
-        snippets[server_id] = server_snippets
-        self.bot.rdb.jset('server_snippets', snippets)
-
     @servsnippet.command(pass_context=True, name='list', no_pm=True)
     async def servsnippet_list(self, ctx):
         """Lists this server's snippets."""
-        server_id = ctx.message.server.id
-        snippets = self.bot.rdb.jget('server_snippets', {})
-        server_snippets = snippets.get(server_id, {})
+        server_snippets = await scripting.get_servsnippets(ctx)
         await self.bot.say(
             'This server\'s snippets:\n{}'.format(', '.join(sorted([name for name in server_snippets.keys()]))))
 
@@ -477,22 +427,16 @@ class Customization:
         if not self.can_edit_servaliases(ctx):
             return await self.bot.say("You do not have permission to edit server snippets. Either __Administrator__ "
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
-        server_id = ctx.message.server.id
-        snippets = self.bot.rdb.jget('server_snippets', {})
-        server_snippets = snippets.get(server_id, {})
-        try:
-            del server_snippets[snippet_name]
-        except KeyError:
+        result = await self.bot.mdb.servsnippets.delete_one({"server": ctx.message.server.id, "name": snippet_name})
+        if not result.deleted_count:
             return await self.bot.say('Snippet not found.')
         await self.bot.say('Server snippet {} removed.'.format(snippet_name))
-        snippets[server_id] = server_snippets
-        self.bot.rdb.not_json_set('server_snippets', snippets)
 
     @commands.command(pass_context=True)
-    async def test(self, ctx, *, str):
+    async def test(self, ctx, *, teststr):
         """Parses `str` as if it were in an alias, for testing."""
         char = await Character.from_ctx(ctx)
-        parsed = await char.parse_cvars(str, ctx)
+        parsed = await char.parse_cvars(teststr, ctx)
         parsed = clean_content(parsed, ctx)
         await self.bot.say(f"{ctx.message.author.display_name}: {parsed}")
 

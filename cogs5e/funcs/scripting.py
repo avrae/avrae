@@ -7,6 +7,7 @@ from math import floor, ceil, sqrt
 import simpleeval
 from simpleeval import EvalWithCompoundTypes, IterableTooLong
 
+import utils.argparser
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_damage
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
@@ -348,14 +349,16 @@ class SimpleCombatant:
         return None
 
     def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0):
-        args = {
-            'd': d,
-            'c': c,
-            'critdice': critdice,
-            'resist': '|'.join(self._combatant.resists['resist']),
-            'immune': '|'.join(self._combatant.resists['immune']),
-            'vuln': '|'.join(self._combatant.resists['vuln'])
-        }
+        args = utils.argparser.ParsedArguments(None, {
+            'critdice': [critdice],
+            'resist': self._combatant.resists['resist'],
+            'immune': self._combatant.resists['immune'],
+            'vuln': self._combatant.resists['vuln']
+        })
+        if d:
+            args['d'] = d
+        if c:
+            args['c'] = c
         result = sheet_damage(dice_str, args, 1 if crit else 0)
         result['damage'] = result['damage'].strip()
         self.mod_hp(-result['total'])

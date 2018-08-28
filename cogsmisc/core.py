@@ -78,7 +78,7 @@ class Core:
                     "items_looked_up_life",
                     "rounds_init_tracked_life", "turns_init_tracked_life"]
         for k in statKeys:
-            botStats[k] = int(self.bot.db.get(k, "0"))
+            botStats[k] = int(self.bot.rdb.get(k, "0"))
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808"
@@ -99,13 +99,13 @@ class Core:
                               "Will give higher rolls for cookies", ">:3",
                               "Does anyone even read these?"])
         embed.set_footer(
-            text='{} | Build {} | Shard {}'.format(motd, self.bot.db.get('build_num'),
+            text='{} | Build {} | Shard {}'.format(motd, self.bot.rdb.get('build_num'),
                                                    getattr(self.bot, 'shard_id', 0)))
         commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n{items_looked_up_life} items looked up\n{rounds_init_tracked_life} rounds of initiative tracked ({turns_init_tracked_life} turns)".format(
             **botStats)
         embed.add_field(name="Commands Run", value=commands_run)
         embed.add_field(name="Servers", value=str(len(self.bot.servers)) + ' on this shard\n' + str(
-            sum(a for a in self.bot.db.jget('shard_servers', {0: len(self.bot.servers)}).values())) + ' total')
+            sum(a for a in self.bot.rdb.jget('shard_servers', {0: len(self.bot.servers)}).values())) + ' total')
         memory_usage = psutil.Process().memory_full_info().uss / 1024 ** 2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
         embed.add_field(name='About', value='Bot coded by @zhu.exe#4211\nFound a bug? Report it with `!bug`!\n'

@@ -46,16 +46,13 @@ class Lookup:
 
     def __init__(self, bot):
         self.bot = bot
-        self.settings = self.bot.db.not_json_get("lookup_settings", {}) if bot is not None else {}
 
     @commands.command(pass_context=True, aliases=['status'])
     async def condition(self, ctx, *, name: str):
         """Looks up a condition."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-        except:
-            pm = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.conditions, name, lambda e: e['name'])
@@ -69,11 +66,9 @@ class Lookup:
     @commands.command(pass_context=True)
     async def rule(self, ctx, *, name: str):
         """Looks up a rule."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-        except:
-            pm = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.rules, name, lambda e: e['name'])
@@ -91,13 +86,10 @@ class Lookup:
     @commands.command(pass_context=True)
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            pm = False
-            srd = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
+
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.feats, name, lambda e: e['name'])
@@ -155,13 +147,10 @@ class Lookup:
     @commands.command(pass_context=True)
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            pm = False
-            srd = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
+
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'], srd=srd)
@@ -182,13 +171,10 @@ class Lookup:
     @commands.command(pass_context=True)
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            pm = False
-            srd = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
+
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name, srd=srd and (lambda e: e.srd))
@@ -215,13 +201,10 @@ class Lookup:
     @commands.command(pass_context=True)
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            pm = False
-            srd = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
+
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'], srd=srd)
@@ -242,13 +225,10 @@ class Lookup:
     @commands.command(pass_context=True, name='class')
     async def _class(self, ctx, name: str, level: int = None):
         """Looks up a class, or all features of a certain level."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            pm = False
-            srd = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
+
         destination = ctx.message.author if pm else ctx.message.channel
 
         if level is not None and not 0 < level < 21:
@@ -321,13 +301,10 @@ class Lookup:
     @commands.command(pass_context=True)
     async def subclass(self, ctx, name: str):
         """Looks up a subclass."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            pm = False
-            srd = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
+
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'], srd=srd)
@@ -353,13 +330,9 @@ class Lookup:
     @commands.command(pass_context=True)
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            pm = False
-            srd = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
 
         result = await search_and_select(ctx, c.backgrounds, name, lambda e: e['name'], srd=srd)
 
@@ -394,8 +367,9 @@ class Lookup:
                               -srd [True/False] - toggles SRD lookup restriction in a server."""
         args = shlex.split(args.lower())
         guild_id = ctx.message.server.id
-        self.settings = self.bot.db.not_json_get("lookup_settings", {})
-        guild_settings = self.settings.get(guild_id, {})
+        guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
+        if guild_settings is None:
+            guild_settings = {}
         out = ""
         if '-req_dm_monster' in args:
             try:
@@ -422,8 +396,7 @@ class Lookup:
             guild_settings['srd'] = setting if setting is not None else False
             out += 'srd set to {}!\n'.format(str(guild_settings['srd']))
 
-        self.settings[guild_id] = guild_settings
-        self.bot.db.not_json_set("lookup_settings", self.settings)
+        await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
         await self.bot.say("Lookup settings set:\n" + out)
 
     @commands.command(pass_context=True)
@@ -436,11 +409,9 @@ class Lookup:
                 return await self.bot.say("Error: SheetManager cog not loaded.")
             return await ctx.invoke(token_cmd)
 
-        try:
-            guild_id = ctx.message.server.id
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            srd = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        srd = guild_settings.get("srd", False)
+
         monster = await select_monster_full(ctx, name, srd=srd)
 
         if not monster.srd and srd:
@@ -479,23 +450,18 @@ class Lookup:
         """Looks up a monster.
         Generally requires a Game Master role to show full stat block.
         Game Master Roles: GM, DM, Game Master, Dungeon Master"""
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
 
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-            visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
-            if self.settings.get(guild_id, {}).get("req_dm_monster", True):
-                visible = True if any(
-                    ro in [str(r).lower() for r in ctx.message.author.roles] for ro in visible_roles) else False
-            else:
-                visible = True
-        except:
+        visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
+        if guild_settings.get("req_dm_monster", True):
+            visible = True if any(
+                ro in [str(r).lower() for r in ctx.message.author.roles] for ro in visible_roles) else False
+        else:
             visible = True
-            pm = False
-            srd = False
 
-        self.bot.db.incr('monsters_looked_up_life')
+        self.bot.rdb.incr('monsters_looked_up_life')
         monster = await select_monster_full(ctx, name, srd=srd)
 
         embed_queue = [EmbedWithAuthor(ctx)]
@@ -619,16 +585,11 @@ class Lookup:
     @commands.command(pass_context=True)
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
 
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            pm = False
-            srd = False
-
-        self.bot.db.incr('spells_looked_up_life')
+        self.bot.rdb.incr('spells_looked_up_life')
 
         result = await search_and_select(ctx, c.spells, name, lambda e: e['name'], return_key=True, srd=srd)
         result = getSpell(result)
@@ -722,15 +683,11 @@ class Lookup:
     @commands.command(pass_context=True, name='item')
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
-        try:
-            guild_id = ctx.message.server.id
-            pm = self.settings.get(guild_id, {}).get("pm_result", False)
-            srd = self.settings.get(guild_id, {}).get("srd", False)
-        except:
-            pm = False
-            srd = False
+        guild_settings = await self.get_settings(ctx.message.server.id)
+        pm = guild_settings.get("pm_result", False)
+        srd = guild_settings.get("srd", False)
 
-        self.bot.db.incr('items_looked_up_life')
+        self.bot.rdb.incr('items_looked_up_life')
 
         result = await search_and_select(ctx, c.items, name, lambda e: e['name'], srd=srd)
 
@@ -834,6 +791,10 @@ class Lookup:
         e.title = data['name']
         e.description = "Description not available."
         return await self.bot.say(embed=e)
+
+    async def get_settings(self, guild_id):
+        settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
+        return settings or {}
 
 
 def setup(bot):

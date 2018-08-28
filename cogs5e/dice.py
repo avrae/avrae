@@ -23,7 +23,7 @@ class Dice:
     @commands.command(name='2', hidden=True, pass_context=True)
     async def quick_roll(self, ctx, *, mod: str = '0'):
         """Quickly rolls a d20."""
-        self.bot.db.incr('dice_rolled_life')
+        self.bot.rdb.incr('dice_rolled_life')
         rollStr = '1d20+' + mod
         await ctx.invoke(self.bot.get_command("roll"), rollStr=rollStr)
 
@@ -53,7 +53,7 @@ class Dice:
             return await self.bot.say("What do you expect me to do, destroy the universe?")
 
         adv = 0
-        self.bot.db.incr('dice_rolled_life')
+        self.bot.rdb.incr('dice_rolled_life')
         if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
             adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
             rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
@@ -77,7 +77,7 @@ class Dice:
         Usage: !rrr <iterations> <xdy> [args]"""
         if iterations < 1 or iterations > 100:
             return await self.bot.say("Too many or too few iterations.")
-        self.bot.db.incr('dice_rolled_life')
+        self.bot.rdb.incr('dice_rolled_life')
         adv = 0
         out = []
         if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
@@ -105,7 +105,7 @@ class Dice:
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
         if iterations < 1 or iterations > 100:
             return await self.bot.say("Too many or too few iterations.")
-        self.bot.db.incr('dice_rolled_life')
+        self.bot.rdb.incr('dice_rolled_life')
         adv = 0
         out = []
         successes = 0
@@ -151,7 +151,7 @@ class Dice:
             pass
 
         monster = await select_monster_full(ctx, monster_name)
-        self.bot.db.incr('monsters_looked_up_life')
+        self.bot.rdb.incr('monsters_looked_up_life')
         attacks = monster.attacks
         monster_name = monster.get_title_name()
         if atk_name == 'list':
@@ -191,7 +191,7 @@ class Dice:
               str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
-        self.bot.db.incr('monsters_looked_up_life')
+        self.bot.rdb.incr('monsters_looked_up_life')
 
         monster_name = monster.get_title_name()
         skills = monster.skills
@@ -279,7 +279,7 @@ class Dice:
               -rr [iterations]"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
-        self.bot.db.incr('monsters_looked_up_life')
+        self.bot.rdb.incr('monsters_looked_up_life')
         monster_name = monster.get_title_name()
 
         saves = monster.saves

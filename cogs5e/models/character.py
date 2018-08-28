@@ -53,19 +53,17 @@ class Character:
         self.live = self.character.get('live') and self.character.get('type') == 'dicecloud'
 
     @classmethod
-    def from_ctx(cls, ctx):
-        user_characters = ctx.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        active_character = ctx.bot.db.not_json_get('active_characters', {}).get(ctx.message.author.id)
+    async def from_ctx(cls, ctx):
+        active_character = await ctx.bot.mdb.characters.find_one({"owner": ctx.message.author.id, "active": True})
         if active_character is None:
             raise NoCharacter()
-        character = user_characters[active_character]
-        return cls(character, active_character)
+        return cls(active_character, active_character['upstream'])
 
     @classmethod
-    def from_bot_and_ids(cls, bot, author_id, character_id):
-        user_characters = bot.db.not_json_get(author_id + '.characters', {})
-        character = user_characters.get(character_id)
-        if character is None: raise NoCharacter()
+    async def from_bot_and_ids(cls, bot, author_id, character_id):
+        character = await bot.mdb.characters.find_one({"owner": author_id, "upstream": character_id})
+        if character is None:
+            raise NoCharacter()
         return cls(character, character_id)
 
     def get_name(self):
@@ -197,11 +195,17 @@ class Character:
         self.character['settings'][setting] = value
         return self
 
-    async def parse_cvars(self, cstr, ctx=None):
+    async def parse_cvars(self, cstr, ctx):
         """Parses cvars.
         :param ctx: The Context the cvar is parsed in.
         :param cstr: The string to parse.
         :returns string - the parsed string."""
+        _cache = {
+            "combat": await SimpleCombat.from_character(self, ctx),
+            "gvars": {}
+        }  # load gvars, combat into cache
+        user_vars = await scripting.get_uvars(ctx)
+        changed = False
 
         def process(to_process):
             character = self.character
@@ -209,14 +213,9 @@ class Character:
             cvars = character.get('cvars', {})
             stat_vars = character.get('stat_cvars', {})
             stat_vars['color'] = hex(self.get_color())[2:]
-            user_vars = ctx.bot.db.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
 
             _vars = user_vars
             _vars.update(cvars)
-
-            _cache = {}  # load gvars, combat into cache
-
-            changed = False
 
             # define our weird functions here
             def get_cc(name):
@@ -326,9 +325,12 @@ class Character:
                     changed = True
 
             def get_gvar(name):
-                if not 'gvars' in _cache:  # load only if needed
-                    _cache['gvars'] = ctx.bot.db.jget("global_vars", {})
-                return _cache['gvars'].get(name, {}).get('value')
+                if name not in _cache['gvars']:
+                    result = ctx.bot.mdb.gvars.delegate.find_one({"key": name})
+                    if result is None:
+                        return None
+                    _cache['gvars'][name] = result['value']
+                return _cache['gvars'][name]
 
             def exists(name):
                 return name in evaluator.names
@@ -337,8 +339,6 @@ class Character:
                 return copy.copy(self.character)
 
             def combat():
-                if not 'combat' in _cache:
-                    _cache['combat'] = SimpleCombat.from_character(self, ctx)
                 return _cache['combat']
 
             _funcs = scripting.DEFAULT_FUNCTIONS.copy()
@@ -399,13 +399,16 @@ class Character:
             except Exception as ex:
                 raise EvaluationError(ex)
 
-            if changed and ctx:
-                self.commit(ctx)
-            if 'combat' in _cache and _cache['combat'] is not None:
-                _cache['combat'].func_commit()  # private commit, simpleeval will not show
             return output
 
-        return await asyncio.get_event_loop().run_in_executor(None, process, cstr)
+        out = await asyncio.get_event_loop().run_in_executor(None, process, cstr)
+
+        if changed and ctx:
+            await self.commit(ctx)
+        if 'combat' in _cache and _cache['combat'] is not None:
+            await _cache['combat'].func_commit()  # private commit, simpleeval will not show
+
+        return out
 
     def evaluate_cvar(self, varstr):
         """Evaluates a cvar.
@@ -452,25 +455,45 @@ class Character:
     def get_stat_vars(self):
         return self.character.get('stat_cvars', {})
 
-    def commit(self, ctx):
-        """Writes a character object to the database, under the contextual author. Returns self."""
-        user_characters = ctx.bot.db.not_json_get(ctx.message.author.id + '.characters', {})
-        user_characters[self.id] = self.character  # commit
-        ctx.bot.db.not_json_set(ctx.message.author.id + '.characters', user_characters)
-        return self
+    async def commit(self, ctx):
+        """Writes a character object to the database, under the contextual author."""
+        data = self.character
+        if 'active' not in data:
+            data['active'] = False
+        if 'upstream' not in data:
+            data['upstream'] = self.id
+        if 'owner' not in data:
+            data['owner'] = ctx.message.author.id
+        await ctx.bot.mdb.characters.replace_one(
+            {"owner": ctx.message.author.id, "upstream": self.id},
+            data,
+            upsert=True
+        )
 
-    def manual_commit(self, bot, author_id):
-        user_characters = bot.db.not_json_get(author_id + '.characters', {})
-        user_characters[self.id] = self.character  # commit
-        bot.db.not_json_set(author_id + '.characters', user_characters)
-        return self
+    async def manual_commit(self, bot, author_id):
+        data = self.character
+        if 'active' not in data:
+            data['active'] = False
+        if 'upstream' not in data:
+            data['upstream'] = self.id
+        if 'owner' not in data:
+            data['owner'] = author_id
+        await bot.mdb.characters.replace_one(
+            {"owner": author_id, "upstream": self.id},
+            data,
+            upsert=True
+        )
 
-    def set_active(self, ctx):
-        """Sets the character as active. Returns self."""
-        active_characters = ctx.bot.db.not_json_get('active_characters', {})
-        active_characters[ctx.message.author.id] = self.id
-        ctx.bot.db.not_json_set('active_characters', active_characters)
-        return self
+    async def set_active(self, ctx):
+        """Sets the character as active."""
+        await ctx.bot.mdb.characters.update_many(
+            {"owner": ctx.message.author.id, "active": True},
+            {"$set": {"active": False}}
+        )
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": ctx.message.author.id, "upstream": self.id},
+            {"$set": {"active": True}}
+        )
 
     def initialize_consumables(self):
         """Initializes a character's consumable counters. Returns self."""

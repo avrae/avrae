@@ -30,10 +30,10 @@ class Customization:
 
     def __init__(self, bot):
         self.bot = bot
-        self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
-        self.serv_aliases = self.bot.rdb.jget('serv_aliases', {})
+        self.aliases = {}
+        self.serv_aliases = {}
         self.bot.loop.create_task(self.update_aliases())
-        self.bot.loop.create_task(self.backup_aliases())
+        self.bot.loop.create_task(self.update_servaliases())
         self.nochar_eval = NoCharacterEvaluator()
 
     async def on_ready(self):
@@ -43,22 +43,23 @@ class Customization:
 
     async def update_aliases(self):
         try:
-            await self.bot.wait_until_ready()
-            while not self.bot.is_closed:
-                await asyncio.sleep(10)
-                self.aliases = self.bot.rdb.not_json_get('cmd_aliases', {})
-                self.serv_aliases = self.bot.rdb.jget('serv_aliases', {})
+            aliases = {}
+            async for alias in self.bot.mdb.aliases.find():
+                if alias['owner'] not in aliases:
+                    aliases[alias['owner']] = {}
+                aliases[alias['owner']][alias['name']] = alias['commands']
+            self.aliases = aliases
+            await asyncio.sleep(20)
         except asyncio.CancelledError:
             pass
 
-    async def backup_aliases(self):
-        try:
-            await self.bot.wait_until_ready()
-            while not self.bot.is_closed:
-                await asyncio.sleep(1800)
-                self.bot.rdb.jset('cmd_aliases_backup', self.bot.rdb.not_json_get('cmd_aliases', {}))
-        except asyncio.CancelledError:
-            pass
+    async def update_servaliases(self):  # only needs to run once
+        servaliases = {}
+        async for servalias in self.bot.mdb.servaliases.find():
+            if servalias['server'] not in servaliases:
+                servaliases[servalias['server']] = {}
+            servaliases[servalias['server']][servalias['name']] = servalias['commands']
+        self.serv_aliases = servaliases
 
     async def on_message(self, message):
         if message.author.id in self.bot.get_cog("AdminUtils").muted:
@@ -233,7 +234,8 @@ class Customization:
     async def alias(self, ctx, alias_name=None, *, cmds=None):
         """Adds an alias for a long command.
         After an alias has been added, you can instead run the aliased command with !<alias_name>.
-        If a user and a server have aliases with the same name, the user alias will take priority."""
+        If a user and a server have aliases with the same name, the user alias will take priority.
+        Aliases are synced across servers every 20 seconds."""
         if alias_name is None:
             return await ctx.invoke(self.bot.get_command("alias list"))
         if alias_name in self.bot.commands:
@@ -253,6 +255,9 @@ class Customization:
 
         await self.bot.mdb.aliases.update_one({"owner": ctx.message.author.id, "name": alias_name},
                                               {"$set": {"commands": cmds.lstrip('!')}}, True)
+        if not ctx.message.author.id in self.aliases:
+            self.aliases[ctx.message.author.id] = {}
+        self.aliases[ctx.message.author.id][alias_name] = cmds.lstrip("!")
         await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
     @alias.command(pass_context=True, name='list')
@@ -269,6 +274,10 @@ class Customization:
         result = await self.bot.mdb.aliases.delete_one({"owner": ctx.message.author.id, "name": alias_name})
         if not result.deleted_count:
             return await self.bot.say('Alias not found.')
+        try:
+            del self.aliases[ctx.message.author.id][alias_name]
+        except:
+            pass
         await self.bot.say('Alias {} removed.'.format(alias_name))
 
     @alias.command(pass_context=True, name='deleteall', aliases=['removeall'])
@@ -282,6 +291,7 @@ class Customization:
             return await self.bot.say("Unconfirmed. Aborting.")
 
         await self.bot.mdb.aliases.delete_many({"owner": ctx.message.author.id})
+        self.aliases[ctx.message.author.id] = {}
         return await self.bot.say("OK. I have deleted all your aliases.")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'], no_pm=True)
@@ -310,6 +320,9 @@ class Customization:
 
         await self.bot.mdb.servaliases.update_one({"server": ctx.message.server.id, "name": alias_name},
                                                   {"$set": {"commands": cmds.lstrip('!')}}, True)
+        if not ctx.message.server.id in self.serv_aliases:
+            self.serv_aliases[ctx.message.server.id] = {}
+        self.serv_aliases[ctx.message.server.id][alias_name] = cmds.lstrip("!")
         await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
     @servalias.command(pass_context=True, name='list', no_pm=True)
@@ -330,6 +343,10 @@ class Customization:
         result = await self.bot.mdb.servaliases.delete_one({"server": ctx.message.server.id, "name": alias_name})
         if not result.deleted_count:
             return await self.bot.say('Server alias not found.')
+        try:
+            del self.serv_aliases[ctx.message.server.id][alias_name]
+        except:
+            pass
         await self.bot.say('Server alias {} removed.'.format(alias_name))
 
     @staticmethod

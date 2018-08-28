@@ -173,7 +173,9 @@ class Customization:
         :return: The parsed string.
         :rtype: str
         """
-        global_vars = await scripting.get_gvar_values(ctx)
+        _cache = {
+            "gvars": {}
+        }
         user_vars = await scripting.get_uvars(ctx)
 
         def process(to_process):
@@ -184,7 +186,12 @@ class Customization:
             evaluator.reset()
 
             def get_gvar(name):
-                return global_vars.get(name)
+                if name not in _cache['gvars']:
+                    result = ctx.bot.mdb.gvars.delegate.find_one({"key": name})
+                    if result is None:
+                        return None
+                    _cache['gvars'][name] = result['value']
+                return _cache['gvars'][name]
 
             def exists(name):
                 return name in evaluator.names

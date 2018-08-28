@@ -202,7 +202,7 @@ class Character:
         :returns string - the parsed string."""
         _cache = {
             "combat": await SimpleCombat.from_character(self, ctx),
-            "gvars": await scripting.get_gvar_values(ctx)
+            "gvars": {}
         }  # load gvars, combat into cache
         user_vars = await scripting.get_uvars(ctx)
         changed = False
@@ -325,7 +325,12 @@ class Character:
                     changed = True
 
             def get_gvar(name):
-                return _cache['gvars'].get(name)
+                if name not in _cache['gvars']:
+                    result = ctx.bot.mdb.gvars.delegate.find_one({"key": name})
+                    if result is None:
+                        return None
+                    _cache['gvars'][name] = result['value']
+                return _cache['gvars'][name]
 
             def exists(name):
                 return name in evaluator.names

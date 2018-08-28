@@ -8,6 +8,7 @@ import traceback
 import discord
 from discord.ext import commands
 
+from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.funcs.lookupFuncs import searchSpellNameFull, \
     select_monster_full, getSpell, c
@@ -17,7 +18,7 @@ from cogs5e.models.embeds import EmbedWithCharacter, EmbedWithAuthor
 from cogs5e.models.errors import NoSpellDC, InvalidSaveType, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
 from utils.argparser import argparse
-from utils.functions import confirm, get_selection, parse_resistances, parse_snippets, \
+from utils.functions import confirm, get_selection, parse_resistances, \
     strict_search, search_and_select
 
 log = logging.getLogger(__name__)
@@ -764,7 +765,7 @@ class InitTracker:
             except SelectionException:
                 return await self.bot.say("Attack not found.")
 
-        args = parse_snippets(args, ctx)
+        args = await scripting.parse_snippets(args, ctx)
 
         is_player = isinstance(combatant, PlayerCombatant)
 
@@ -875,7 +876,7 @@ class InitTracker:
 
         is_character = isinstance(combatant, PlayerCombatant)
 
-        args = parse_snippets(args, ctx)
+        args = await scripting.parse_snippets(args, ctx)
         if is_character and combatant.character_owner == ctx.message.author.id:
             args = await combatant.character.parse_cvars(args, ctx)
         args = shlex.split(args)

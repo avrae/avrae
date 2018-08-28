@@ -12,6 +12,7 @@ import MeteorClient
 import discord
 from discord.ext import commands
 
+from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName, searchSpell
 from cogs5e.funcs.sheetFuncs import sheet_cast
@@ -20,7 +21,7 @@ from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
 from utils.argparser import argparse
-from utils.functions import strict_search, get_selection, dicecloud_parse, parse_snippets
+from utils.functions import strict_search, get_selection, dicecloud_parse
 
 log = logging.getLogger(__name__)
 
@@ -589,7 +590,7 @@ class GameTrack:
 
         if not char: char = await Character.from_ctx(ctx)
 
-        args = parse_snippets(args, ctx)
+        args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = argparse(args)
@@ -653,7 +654,7 @@ class GameTrack:
 
         char = await Character.from_ctx(ctx)
 
-        args = parse_snippets(args, ctx)
+        args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = argparse(args)
@@ -683,7 +684,7 @@ class GameTrack:
         if len(args) == 0:
             rolls = spell.get('roll', None)
             if isinstance(rolls, list):
-                rolls = '\n'.join(rolls)\
+                rolls = '\n'.join(rolls) \
                     .replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
                     .replace('PROF', str(char.get_prof_bonus()))
                 rolls = rolls.split('\n')

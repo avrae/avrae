@@ -31,7 +31,7 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.argparser import argparse
-from utils.functions import extract_gsheet_id_from_url, parse_snippets, generate_token, search_and_select, \
+from utils.functions import extract_gsheet_id_from_url, generate_token, search_and_select, \
     camel_to_title, verbose_stat
 from utils.functions import list_get, get_positivity, a_or_an
 from utils.loggers import TextLogger

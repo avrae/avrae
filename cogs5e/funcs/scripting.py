@@ -1,6 +1,7 @@
 import ast
 import json
 import re
+import shlex
 from math import floor, ceil, sqrt
 
 import simpleeval
@@ -62,6 +63,25 @@ async def get_servsnippets(ctx):
     async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": ctx.message.server.id}):
         servsnippets[servsnippet['name']] = servsnippet['snippet']
     return servsnippets
+
+
+async def parse_snippets(args: str, ctx) -> str:
+    """
+    Parses user and server snippets.
+    :param args: The string to parse. Will be split automatically
+    :param ctx: The Context.
+    :return: The string, with snippets replaced.
+    """
+    tempargs = shlex.split(args)
+    snippets = await get_servsnippets(ctx)
+    snippets.update(await get_snippets(ctx))
+    for index, arg in enumerate(tempargs):  # parse snippets
+        snippet_value = snippets.get(arg)
+        if snippet_value:
+            tempargs[index] = snippet_value
+        elif ' ' in arg:
+            tempargs[index] = shlex.quote(arg)
+    return " ".join(tempargs)
 
 
 class ScriptingEvaluator(EvalWithCompoundTypes):

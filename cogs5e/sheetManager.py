@@ -627,8 +627,9 @@ class SheetManager:
         embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings',
                                                                                                      {}).get('color')
 
-        if c.get_combat_id() and not self.bot.rdb.exists(c.get_combat_id()):
-            c.leave_combat()
+        # if c.get_combat_id() and not self.bot.rdb.exists(c.get_combat_id()):
+        #     c.leave_combat()
+        # reimplement this later
 
         await c.commit(ctx)
         await c.set_active(ctx)

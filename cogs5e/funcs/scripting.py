@@ -29,6 +29,13 @@ async def set_uvar(ctx, name, value):
         True)
 
 
+async def get_gvar_values(ctx):
+    gvars = {}
+    async for gvar in ctx.bot.mdb.gvars.find():
+        gvars[gvar['key']] = gvar['value']
+    return gvars
+
+
 async def get_aliases(ctx):
     aliases = {}
     async for alias in ctx.bot.mdb.aliases.find({"owner": ctx.message.author.id}):

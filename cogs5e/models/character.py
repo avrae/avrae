@@ -195,15 +195,16 @@ class Character:
         self.character['settings'][setting] = value
         return self
 
-    async def parse_cvars(self, cstr, ctx=None):
+    async def parse_cvars(self, cstr, ctx):
         """Parses cvars.
         :param ctx: The Context the cvar is parsed in.
         :param cstr: The string to parse.
         :returns string - the parsed string."""
         _cache = {
             "combat": await SimpleCombat.from_character(self, ctx),
-            "gvars": {}
+            "gvars": await scripting.get_gvar_values(ctx)
         }  # load gvars, combat into cache
+        user_vars = await scripting.get_uvars(ctx)
         changed = False
 
         def process(to_process):
@@ -212,7 +213,6 @@ class Character:
             cvars = character.get('cvars', {})
             stat_vars = character.get('stat_cvars', {})
             stat_vars['color'] = hex(self.get_color())[2:]
-            user_vars = ctx.bot.rdb.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}  # TODO
 
             _vars = user_vars
             _vars.update(cvars)
@@ -324,10 +324,8 @@ class Character:
                     nonlocal changed
                     changed = True
 
-            def get_gvar(name):  # TODO
-                if not 'gvars' in _cache:  # load only if needed
-                    _cache['gvars'] = ctx.bot.rdb.jget("global_vars", {})
-                return _cache['gvars'].get(name, {}).get('value')
+            def get_gvar(name):
+                return _cache['gvars'].get(name)
 
             def exists(name):
                 return name in evaluator.names

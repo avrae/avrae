@@ -173,22 +173,18 @@ class Customization:
         :return: The parsed string.
         :rtype: str
         """
+        global_vars = await scripting.get_gvar_values(ctx)
+        user_vars = await scripting.get_uvars(ctx)
 
         def process(to_process):
             ops = r"([-+*/().<>=])"
-            user_vars = ctx.bot.rdb.jhget("user_vars", ctx.message.author.id, {}) if ctx else {}
-
             _vars = user_vars
-            global_vars = None  # we'll load them if we need them
 
             evaluator = self.nochar_eval
             evaluator.reset()
 
             def get_gvar(name):
-                nonlocal global_vars
-                if global_vars is None:  # load only if needed
-                    global_vars = ctx.bot.rdb.jget("global_vars", {})
-                return global_vars.get(name, {}).get('value')
+                return global_vars.get(name)
 
             def exists(name):
                 return name in evaluator.names

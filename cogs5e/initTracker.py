@@ -916,6 +916,7 @@ class InitTracker:
         resist = args.get('resist')
         immune = args.get('immune')
         vuln = args.get('vuln')
+        args['name'] = combatant.name
 
         can_cast = True
         cast_level = l

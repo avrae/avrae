@@ -36,6 +36,11 @@ async def run(rdb, mdb):
                                        ("upstream", pymongo.ASCENDING)],
                                       unique=True)
 
+    active = rdb.jget("active_characters")
+    for user, charId in active.items():
+        print(f"Setting character {charId} as active...")
+        await mdb.characters.update_one({"owner": user, "upstream": charId}, {"$set": {"active": True}})
+
     print(f"Done! Migrated {num_characters} characters for {num_users} users.")
 
 

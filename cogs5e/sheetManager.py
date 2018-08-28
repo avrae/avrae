@@ -19,6 +19,7 @@ from discord.ext.commands.cooldowns import BucketType
 from googleapiclient.errors import HttpError
 from pygsheets.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
 
+from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
@@ -57,7 +58,7 @@ class SheetManager:
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
 
     async def new_arg_stuff(self, args, ctx, character):
-        args = parse_snippets(args, ctx)
+        args = await scripting.parse_snippets(args, ctx)
         args = await character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = argparse(args)

@@ -52,7 +52,7 @@ class Combat:
             elif c['type'] == 'player':
                 combatants.append(await PlayerCombatant.from_dict(c, ctx))
             elif c['type'] == 'group':
-                combatants.append(CombatantGroup.from_dict(c, ctx))
+                combatants.append(await CombatantGroup.from_dict(c, ctx))
             else:
                 raise CombatException("Unknown combatant type")
         return cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, combatants, raw['round'],
@@ -968,7 +968,7 @@ class CombatantGroup:
         return ", ".join({c.controller_mention() for c in self.get_combatants()})
 
     @classmethod
-    def from_dict(cls, raw, ctx):
+    async def from_dict(cls, raw, ctx):
         combatants = []
         for c in raw['combatants']:
             if c['type'] == 'common':
@@ -976,7 +976,7 @@ class CombatantGroup:
             elif c['type'] == 'monster':
                 combatants.append(MonsterCombatant.from_dict(c, ctx))
             elif c['type'] == 'player':
-                combatants.append(PlayerCombatant.from_dict(c, ctx))
+                combatants.append(await PlayerCombatant.from_dict(c, ctx))
             else:
                 raise CombatException("Unknown combatant type")
         return cls(raw['name'], raw['init'], combatants, ctx, raw['index'])

@@ -35,6 +35,10 @@ async def run(rdb, mdb):
                 if any(c in cvar for c in '-/()[]\\.^$*+?|{}'):
                     print(f"Deleting stat cvar {cvar}...")
                     del character['stat_cvars'][cvar]
+            for key in character.get('levels', {}).copy():
+                if any(c in key for c in '-/()[]\\.^$*+?|{}'):
+                    print(f"Deleting level {key}...")
+                    del character['levels'][key]
 
             print("Inserting into MongoDB...")
             result = await mdb.characters.insert_one(character)

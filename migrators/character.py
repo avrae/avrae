@@ -26,7 +26,7 @@ async def run(rdb, mdb):
             character['upstream'] = _id
             character['active'] = False
 
-            print("Checking for invalid cvar names...")
+            print("Checking for invalid key names...")
             for cvar in character.get('cvars', {}).copy():
                 if any(c in cvar for c in '-/()[]\\.^$*+?|{}'):
                     print(f"Deleting cvar {cvar}...")
@@ -39,6 +39,10 @@ async def run(rdb, mdb):
                 if any(c in lkey for c in '-/()[]\\.^$*+?|{}'):
                     print(f"Deleting level {lkey}...")
                     del character['levels'][lkey]
+            for cc in character.get('consumables', {}).get('custom', {}).copy():
+                if any(c in cc for c in '-/()[]\\.^$*+?|{}'):
+                    print(f"Deleting cc {cc}...")
+                    del character['consumables']['custom'][cc]
 
             print("Inserting into MongoDB...")
             try:

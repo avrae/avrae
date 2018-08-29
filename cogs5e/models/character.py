@@ -841,10 +841,10 @@ class Character:
         _reset = kwargs.get('reset')
         _type = kwargs.get('displayType')
         _live_id = kwargs.get('live')
-        try:
-            assert _reset in ('short', 'long', 'none') or _reset is None
-        except AssertionError:
+        if not (_reset in ('short', 'long', 'none') or _reset is None):
             raise InvalidArgument("Invalid reset.")
+        if any(c in name for c in ".$"):
+            raise InvalidArgument("Invalid character in CC name.")
         if _max is not None and _min is not None:
             maxV = self.evaluate_cvar(_max)
             try:

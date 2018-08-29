@@ -61,8 +61,9 @@ async def get_snippets(ctx):
 
 async def get_servsnippets(ctx):
     servsnippets = {}
-    async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": ctx.message.server.id}):
-        servsnippets[servsnippet['name']] = servsnippet['snippet']
+    if ctx.message.server:
+        async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": ctx.message.server.id}):
+            servsnippets[servsnippet['name']] = servsnippet['snippet']
     return servsnippets
 
 

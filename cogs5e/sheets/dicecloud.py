@@ -96,8 +96,7 @@ class DicecloudParser:
 
         stat_vars = {}
         stat_vars.update(stats)
-        for level, v in levels.items():
-            stat_vars[re.sub(r'\.\$', '_', level)] = v
+        stat_vars.update(levels)
         stat_vars['hp'] = int(hp)
         stat_vars['armor'] = int(armor)
         stat_vars.update(saves)
@@ -315,9 +314,14 @@ class DicecloudParser:
                 levels[levelName] = level.get('level')
             else:
                 levels[levelName] += level.get('level')
-        self.evaluator.names.update(levels)
-        self.levels = levels
-        return levels
+
+        out = {}
+        for level, v in levels.items():
+            out[re.sub(r'\.\$', '_', level)] = v
+
+        self.evaluator.names.update(out)
+        self.levels = out
+        return out
 
     def calculate_stat(self, stat, base=0):
         """Calculates and returns the stat value."""

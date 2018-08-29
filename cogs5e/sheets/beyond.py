@@ -103,8 +103,7 @@ class BeyondSheetParser:
 
         stat_vars = {}
         stat_vars.update(stats)
-        for level, v in levels.items():
-            stat_vars[re.sub(r'\.\$', '_', level)] = v
+        stat_vars.update(levels)
         stat_vars['hp'] = int(hp)
         stat_vars['armor'] = int(armor)
         stat_vars.update(saves)
@@ -311,8 +310,12 @@ class BeyondSheetParser:
                 levels[levelName] = _class.get('level')
             else:
                 levels[levelName] += _class.get('level')
-        self.levels = levels  # cache for further use
-        return levels
+
+        out = {}
+        for level, v in levels.items():
+            out[re.sub(r'\.\$', '_', level)] = v
+        self.levels = out  # cache for further use
+        return out
 
     def get_attack(self, atkIn, atkType):
         """Calculates and returns a list of dicts."""

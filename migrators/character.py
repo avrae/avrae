@@ -27,7 +27,7 @@ async def run(rdb, mdb):
             character['active'] = False
 
             print("Checking for invalid cvar names...")
-            for cvar in character.get('cvars', {}):
+            for cvar in character.get('cvars', {}).copy():
                 if any(c in cvar for c in '-/()[]\\.^$*+?|{}'):
                     print(f"Deleting cvar {cvar}...")
                     del character['cvars'][cvar]

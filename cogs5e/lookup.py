@@ -50,7 +50,7 @@ class Lookup:
     @commands.command(pass_context=True, aliases=['status'])
     async def condition(self, ctx, *, name: str):
         """Looks up a condition."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
 
         destination = ctx.message.author if pm else ctx.message.channel
@@ -66,7 +66,7 @@ class Lookup:
     @commands.command(pass_context=True)
     async def rule(self, ctx, *, name: str):
         """Looks up a rule."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
 
         destination = ctx.message.author if pm else ctx.message.channel
@@ -86,7 +86,7 @@ class Lookup:
     @commands.command(pass_context=True)
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -147,7 +147,7 @@ class Lookup:
     @commands.command(pass_context=True)
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -171,7 +171,7 @@ class Lookup:
     @commands.command(pass_context=True)
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -201,7 +201,7 @@ class Lookup:
     @commands.command(pass_context=True)
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -225,7 +225,7 @@ class Lookup:
     @commands.command(pass_context=True, name='class')
     async def _class(self, ctx, name: str, level: int = None):
         """Looks up a class, or all features of a certain level."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -301,7 +301,7 @@ class Lookup:
     @commands.command(pass_context=True)
     async def subclass(self, ctx, name: str):
         """Looks up a subclass."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -330,7 +330,7 @@ class Lookup:
     @commands.command(pass_context=True)
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -409,7 +409,7 @@ class Lookup:
                 return await self.bot.say("Error: SheetManager cog not loaded.")
             return await ctx.invoke(token_cmd)
 
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         srd = guild_settings.get("srd", False)
 
         monster = await select_monster_full(ctx, name, srd=srd)
@@ -450,7 +450,7 @@ class Lookup:
         """Looks up a monster.
         Generally requires a Game Master role to show full stat block.
         Game Master Roles: GM, DM, Game Master, Dungeon Master"""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -585,7 +585,7 @@ class Lookup:
     @commands.command(pass_context=True)
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -683,7 +683,7 @@ class Lookup:
     @commands.command(pass_context=True, name='item')
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
-        guild_settings = await self.get_settings(ctx.message.server.id)
+        guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -792,8 +792,10 @@ class Lookup:
         e.description = "Description not available."
         return await self.bot.say(embed=e)
 
-    async def get_settings(self, guild_id):
-        settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
+    async def get_settings(self, guild):
+        settings = {}
+        if guild is not None:
+            settings = await self.bot.mdb.lookupsettings.find_one({"server": guild.id})
         return settings or {}
 
 

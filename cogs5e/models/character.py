@@ -408,7 +408,7 @@ class Character:
 
         if changed and ctx:
             await self.commit(ctx)
-        if commit_combat:
+        if commit_combat and _cache['combat'] is not None:
             await _cache['combat'].func_commit()  # private commit, simpleeval will not show
 
         return out

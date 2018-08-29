@@ -26,6 +26,12 @@ async def run(rdb, mdb):
             character['upstream'] = _id
             character['active'] = False
 
+            print("Checking for invalid cvar names...")
+            for cvar in character.get('cvars', {}):
+                if any(c in cvar for c in '-/()[]\\.^$*+?|{}'):
+                    print(f"Deleting cvar {cvar}...")
+                    del character['cvars'][cvar]
+
             print("Inserting into MongoDB...")
             result = await mdb.characters.insert_one(character)
             print(result.inserted_id)

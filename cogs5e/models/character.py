@@ -467,6 +467,8 @@ class Character:
             data['upstream'] = self.id
         if 'owner' not in data:
             data['owner'] = ctx.message.author.id
+        if '_id' in data:
+            del data['_id']  # potential duplicate issues in transferchar
         await ctx.bot.mdb.characters.update_one(
             {"owner": ctx.message.author.id, "upstream": self.id},
             {"$set": data},
@@ -481,6 +483,8 @@ class Character:
             data['upstream'] = self.id
         if 'owner' not in data:
             data['owner'] = author_id
+        if '_id' in data:
+            del data['_id']
         await bot.mdb.characters.update_one(
             {"owner": author_id, "upstream": self.id},
             {"$set": data},

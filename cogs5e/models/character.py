@@ -481,8 +481,7 @@ class Character:
             data['active'] = False
         if 'upstream' not in data:
             data['upstream'] = self.id
-        if 'owner' not in data:
-            data['owner'] = author_id
+        data['owner'] = author_id
         if '_id' in data:
             del data['_id']
         await bot.mdb.characters.update_one(

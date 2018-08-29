@@ -1,3 +1,6 @@
+import pymongo
+
+
 async def run(rdb, mdb):
     num_bestiaries = 0
     num_users = 0
@@ -28,11 +31,9 @@ async def run(rdb, mdb):
             result = await mdb.bestiaries.insert_one(bestiary)
             print(result.inserted_id)
 
-    print("Creating index on critterdb_id...")
-    await mdb.bestiaries.create_index("critterdb_id", unique=True)
-
-    print("Creating index on owner...")
-    await mdb.bestiaries.create_index("owner")
+    print("Creating compound index on owner|critterdb_id...")
+    await mdb.bestiaries.create_index([("owner", pymongo.ASCENDING),
+                                       ("critterdb_id", pymongo.ASCENDING)], unique=True)
 
     print(f"Done! Migrated {num_bestiaries} bestiaries for {num_users} users.")
 

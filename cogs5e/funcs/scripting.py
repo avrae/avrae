@@ -319,7 +319,7 @@ class SimpleCombatant:
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes
-        if self._combatant.hp is not None and self._combatant.hpMax is not None:
+        if self._combatant.hp is not None and self._combatant.hpMax:
             self.ratio = (self._combatant.hp - (self._combatant.temphp or 0)) / self._combatant.hpMax
         else:
             self.ratio = 0

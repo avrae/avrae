@@ -96,7 +96,8 @@ class DicecloudParser:
 
         stat_vars = {}
         stat_vars.update(stats)
-        stat_vars.update(levels)
+        for level, v in levels.items():
+            stat_vars[re.sub(r'\.\$', '_', level)] = v
         stat_vars['hp'] = int(hp)
         stat_vars['armor'] = int(armor)
         stat_vars.update(saves)

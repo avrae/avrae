@@ -453,7 +453,7 @@ class Lookup:
         guild_settings = await self.get_settings(ctx.message.server)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
-        
+
         visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
         if guild_settings.get("req_dm_monster", True) and ctx.message.server:
             visible = True if any(

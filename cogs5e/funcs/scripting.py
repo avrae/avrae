@@ -301,7 +301,10 @@ class SimpleCombatant:
 
         if not self._hidden:
             self.ac = self._combatant.ac
-            self.hp = self._combatant.hp - (self._combatant.temphp or 0)
+            if self._combatant.hp is not None:
+                self.hp = self._combatant.hp - (self._combatant.temphp or 0)
+            else:
+                self.hp = None
             self.maxhp = self._combatant.hpMax
             self.initmod = self._combatant.initMod
             self.temphp = self._combatant.temphp

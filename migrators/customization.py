@@ -165,8 +165,8 @@ async def migrate_gvars(rdb, mdb):
         print()
 
     print("Creating index on key...")
-    await mdb.servsnippets.create_index("key",
-                                        unique=True)
+    await mdb.gvars.create_index("key",
+                                 unique=True)
 
     print(f"Done! Migrated {num_gvars} gvars.\n\n")
 

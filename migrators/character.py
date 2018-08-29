@@ -35,13 +35,16 @@ async def run(rdb, mdb):
                 if any(c in cvar for c in '-/()[]\\.^$*+?|{}'):
                     print(f"Deleting stat cvar {cvar}...")
                     del character['stat_cvars'][cvar]
-            for key in character.get('levels', {}).copy():
-                if any(c in key for c in '-/()[]\\.^$*+?|{}'):
-                    print(f"Deleting level {key}...")
-                    del character['levels'][key]
+            for lkey in character.get('levels', {}).copy():
+                if any(c in lkey for c in '-/()[]\\.^$*+?|{}'):
+                    print(f"Deleting level {lkey}...")
+                    del character['levels'][lkey]
 
             print("Inserting into MongoDB...")
-            result = await mdb.characters.insert_one(character)
+            try:
+                result = await mdb.characters.insert_one(character)
+            except OverflowError:
+                continue
             print(result.inserted_id)
             print()
 

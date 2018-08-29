@@ -540,9 +540,9 @@ class BeyondSheetParser:
                 pactLevel = pact_level_by_level(_class['level'])
 
         for lvl in range(1, 10):
-            spellbook['spellslots'][lvl] = SLOTS_PER_LEVEL[lvl](spellcasterLevel)
+            spellbook['spellslots'][str(lvl)] = SLOTS_PER_LEVEL[lvl](spellcasterLevel)
 
-        spellbook['spellslots'][pactLevel] += pactSlots
+        spellbook['spellslots'][str(pactLevel)] += pactSlots
 
         prof = self.get_stats()['proficiencyBonus']
         spellbook['dc'] = 8 + spellMod + prof

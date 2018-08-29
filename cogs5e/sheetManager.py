@@ -1043,7 +1043,7 @@ class SheetManager:
 
         await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character['name']))
 
-        char = await Character(sheet['sheet'], f"beyond-{url}").initialize_consumables()
+        char = Character(sheet['sheet'], f"beyond-{url}").initialize_consumables()
         await char.commit(ctx)
         await char.set_active(ctx)
 

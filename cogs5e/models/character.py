@@ -205,6 +205,7 @@ class Character:
             "gvars": {}
         }  # load gvars, combat into cache
         user_vars = await scripting.get_uvars(ctx)
+        commit_combat = False
         changed = False
 
         def process(to_process):
@@ -339,6 +340,8 @@ class Character:
                 return copy.copy(self.character)
 
             def combat():
+                nonlocal commit_combat
+                commit_combat = True
                 return _cache['combat']
 
             _funcs = scripting.DEFAULT_FUNCTIONS.copy()
@@ -405,7 +408,7 @@ class Character:
 
         if changed and ctx:
             await self.commit(ctx)
-        if 'combat' in _cache and _cache['combat'] is not None:
+        if commit_combat:
             await _cache['combat'].func_commit()  # private commit, simpleeval will not show
 
         return out
@@ -464,9 +467,9 @@ class Character:
             data['upstream'] = self.id
         if 'owner' not in data:
             data['owner'] = ctx.message.author.id
-        await ctx.bot.mdb.characters.replace_one(
+        await ctx.bot.mdb.characters.update_one(
             {"owner": ctx.message.author.id, "upstream": self.id},
-            data,
+            {"$set": data},
             upsert=True
         )
 
@@ -478,9 +481,9 @@ class Character:
             data['upstream'] = self.id
         if 'owner' not in data:
             data['owner'] = author_id
-        await bot.mdb.characters.replace_one(
+        await bot.mdb.characters.update_one(
             {"owner": author_id, "upstream": self.id},
-            data,
+            {"$set": data},
             upsert=True
         )
 

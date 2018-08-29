@@ -299,7 +299,7 @@ class Combat:
             raise RequiresContext
         for pc in self.get_combatants():
             if isinstance(pc, PlayerCombatant):
-                await pc.character.commit(self.ctx)
+                await pc.character.manual_commit(self.ctx.bot, pc.character_owner)
         await self.ctx.bot.mdb.combats.update_one(
             {"channel": self.channel},
             {"$set": self.to_dict(), "$currentDate": {"lastchanged": True}},

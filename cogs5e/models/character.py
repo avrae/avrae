@@ -43,7 +43,7 @@ SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'i
              'constitutionSave': 'constitution', 'intelligenceSave': 'intelligence', 'wisdomSave': 'wisdom',
              'charismaSave': 'charisma',
              'strength': 'strength', 'dexterity': 'dexterity', 'constitution': 'constitution',
-             'intelligence': 'intelligence', 'charisma': 'charisma'}
+             'intelligence': 'intelligence', 'wisdom': 'wisdom', 'charisma': 'charisma'}
 
 
 class Character:

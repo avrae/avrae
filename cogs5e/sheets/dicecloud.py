@@ -281,7 +281,7 @@ class DicecloudParser:
         if self.stats:
             return self.stats
         character = self.character
-        stats = {"name": "", "image": "", "description": "", "strength": 10, "dexterity": 10, "constitution": 10,
+        stats = {"strength": 10, "dexterity": 10, "constitution": 10,
                  "wisdom": 10, "intelligence": 10, "charisma": 10, "strengthMod": 0, "dexterityMod": 0,
                  "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0, "charismaMod": 0, "proficiencyBonus": 0,
                  'name': character.get('characters')[0].get('name'),

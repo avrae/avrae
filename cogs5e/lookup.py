@@ -396,8 +396,11 @@ class Lookup:
             guild_settings['srd'] = setting if setting is not None else False
             out += 'srd set to {}!\n'.format(str(guild_settings['srd']))
 
-        await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
-        await self.bot.say("Lookup settings set:\n" + out)
+        if guild_settings:
+            await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
+            await self.bot.say("Lookup settings set:\n" + out)
+        else:
+            await self.bot.say("No settings found. Make sure your syntax is correct.")
 
     @commands.command(pass_context=True)
     async def token(self, ctx, *, name=None):

@@ -641,7 +641,7 @@ class GameTrack:
         if cast_level > 0:
             embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
 
-        char.commit(ctx)  # make sure we save changes
+        await char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)
 
     async def _old_cast(self, ctx, spell_name, args):

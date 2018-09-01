@@ -395,7 +395,7 @@ class AdminUtils:
         try:
             invite = (
                 await self.bot.create_invite(
-                    self.bot.get_server(server_id) or self.bot.get_channel(server_id).server)).url
+                    next(self.bot.get_server(server_id).channels) or self.bot.get_channel(server_id))).url
         except:
             invite = None
         response = ServerInfoResponse(self.bot, reply_to, server_id, invite)

@@ -327,7 +327,7 @@ class SheetManager:
         elif len(desc) < 2:
             desc = 'No description available.'
 
-        embed = EmbedWithCharacter(char)
+        embed = EmbedWithCharacter(char, name=False)
         embed.title = char.get_name()
         embed.description = desc
 

@@ -274,6 +274,7 @@ class SimpleCombat:
         me = next((c for c in combat.get_combatants() if getattr(c, 'character_id', None) == character.id), None)
         if not me:
             return None
+        me._character = character  # set combatant character instance
         return cls(combat, me)
 
     # public methods

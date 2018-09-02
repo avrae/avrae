@@ -198,7 +198,7 @@ class SheetManager:
         embed.title = args.last('title', '') \
                           .replace('[charname]', char.get_name()) \
                           .replace('[sname]', camel_to_title(save)) \
-                      or '{} makes {}!'.format(char.get_name(), camel_to_title(save))
+                      or '{} makes {}!'.format(char.get_name(), a_or_an(camel_to_title(save)))
 
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')

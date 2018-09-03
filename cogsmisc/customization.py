@@ -30,9 +30,7 @@ class Customization:
 
     def __init__(self, bot):
         self.bot = bot
-        self.aliases = {}
         self.serv_aliases = {}
-        self.bot.loop.create_task(self.update_aliases())
         self.bot.loop.create_task(self.update_servaliases())
         self.nochar_eval = NoCharacterEvaluator()
 
@@ -40,18 +38,6 @@ class Customization:
         if getattr(self.bot, "shard_id", 0) == 0:
             cmds = list(self.bot.commands.keys())
             self.bot.rdb.jset('default_commands', cmds)
-
-    async def update_aliases(self):
-        try:
-            aliases = {}
-            async for alias in self.bot.mdb.aliases.find():
-                if alias['owner'] not in aliases:
-                    aliases[alias['owner']] = {}
-                aliases[alias['owner']][alias['name']] = alias['commands']
-            self.aliases = aliases
-            await asyncio.sleep(20)
-        except asyncio.CancelledError:
-            pass
 
     async def update_servaliases(self):  # only needs to run once
         servaliases = {}
@@ -95,11 +81,13 @@ class Customization:
         if message.content.startswith(self.bot.prefix):
             alias = self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0]
             if not message.channel.is_private:
-                command = self.aliases.get(message.author.id, {}).get(alias) or \
+                command = (await self.bot.mdb.aliases.find_one({"owner": message.author.id, "name": alias},
+                                                               ['commands'])) or \
                           self.serv_aliases.get(message.server.id, {}).get(alias)
             else:
-                command = self.aliases.get(message.author.id, {}).get(alias)
+                command = await self.bot.mdb.aliases.find_one({"owner": message.author.id, "name": alias}, ['commands'])
             if command:
+                command = command['commands']
                 try:
                     message.content = self.handle_alias_arguments(command, message)
                 except UserInputError as e:
@@ -258,9 +246,6 @@ class Customization:
 
         await self.bot.mdb.aliases.update_one({"owner": ctx.message.author.id, "name": alias_name},
                                               {"$set": {"commands": cmds.lstrip('!')}}, True)
-        if not ctx.message.author.id in self.aliases:
-            self.aliases[ctx.message.author.id] = {}
-        self.aliases[ctx.message.author.id][alias_name] = cmds.lstrip("!")
         await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
     @alias.command(pass_context=True, name='list')
@@ -277,10 +262,6 @@ class Customization:
         result = await self.bot.mdb.aliases.delete_one({"owner": ctx.message.author.id, "name": alias_name})
         if not result.deleted_count:
             return await self.bot.say('Alias not found.')
-        try:
-            del self.aliases[ctx.message.author.id][alias_name]
-        except:
-            pass
         await self.bot.say('Alias {} removed.'.format(alias_name))
 
     @alias.command(pass_context=True, name='deleteall', aliases=['removeall'])
@@ -294,7 +275,6 @@ class Customization:
             return await self.bot.say("Unconfirmed. Aborting.")
 
         await self.bot.mdb.aliases.delete_many({"owner": ctx.message.author.id})
-        self.aliases[ctx.message.author.id] = {}
         return await self.bot.say("OK. I have deleted all your aliases.")
 
     @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'], no_pm=True)

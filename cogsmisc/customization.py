@@ -225,8 +225,7 @@ class Customization:
     async def alias(self, ctx, alias_name=None, *, cmds=None):
         """Adds an alias for a long command.
         After an alias has been added, you can instead run the aliased command with !<alias_name>.
-        If a user and a server have aliases with the same name, the user alias will take priority.
-        Aliases are synced across servers every 20 seconds."""
+        If a user and a server have aliases with the same name, the user alias will take priority."""
         if alias_name is None:
             return await ctx.invoke(self.bot.get_command("alias list"))
         if alias_name in self.bot.commands:

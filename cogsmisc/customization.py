@@ -31,21 +31,12 @@ class Customization:
     def __init__(self, bot):
         self.bot = bot
         self.serv_aliases = {}
-        self.bot.loop.create_task(self.update_servaliases())
         self.nochar_eval = NoCharacterEvaluator()
 
     async def on_ready(self):
         if getattr(self.bot, "shard_id", 0) == 0:
             cmds = list(self.bot.commands.keys())
             self.bot.rdb.jset('default_commands', cmds)
-
-    async def update_servaliases(self):  # only needs to run once
-        servaliases = {}
-        async for servalias in self.bot.mdb.servaliases.find():
-            if servalias['server'] not in servaliases:
-                servaliases[servalias['server']] = {}
-            servaliases[servalias['server']][servalias['name']] = servalias['commands']
-        self.serv_aliases = servaliases
 
     async def on_message(self, message):
         if message.author.id in self.bot.get_cog("AdminUtils").muted:
@@ -83,7 +74,8 @@ class Customization:
             if not message.channel.is_private:
                 command = (await self.bot.mdb.aliases.find_one({"owner": message.author.id, "name": alias},
                                                                ['commands'])) or \
-                          self.serv_aliases.get(message.server.id, {}).get(alias)
+                          (await self.bot.mdb.servaliases.find_one({"server": message.server.id, "name": alias},
+                                                                   ['commands']))
             else:
                 command = await self.bot.mdb.aliases.find_one({"owner": message.author.id, "name": alias}, ['commands'])
             if command:
@@ -302,9 +294,6 @@ class Customization:
 
         await self.bot.mdb.servaliases.update_one({"server": ctx.message.server.id, "name": alias_name},
                                                   {"$set": {"commands": cmds.lstrip('!')}}, True)
-        if not ctx.message.server.id in self.serv_aliases:
-            self.serv_aliases[ctx.message.server.id] = {}
-        self.serv_aliases[ctx.message.server.id][alias_name] = cmds.lstrip("!")
         await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
     @servalias.command(pass_context=True, name='list', no_pm=True)
@@ -325,10 +314,6 @@ class Customization:
         result = await self.bot.mdb.servaliases.delete_one({"server": ctx.message.server.id, "name": alias_name})
         if not result.deleted_count:
             return await self.bot.say('Server alias not found.')
-        try:
-            del self.serv_aliases[ctx.message.server.id][alias_name]
-        except:
-            pass
         await self.bot.say('Server alias {} removed.'.format(alias_name))
 
     @staticmethod

@@ -43,14 +43,13 @@ class Customization:
 
     async def update_aliases(self):
         try:
-            while not self.bot.is_closed:
-                aliases = {}
-                async for alias in self.bot.mdb.aliases.find():
-                    if alias['owner'] not in aliases:
-                        aliases[alias['owner']] = {}
-                    aliases[alias['owner']][alias['name']] = alias['commands']
-                self.aliases = aliases
-                await asyncio.sleep(20)
+            aliases = {}
+            async for alias in self.bot.mdb.aliases.find():
+                if alias['owner'] not in aliases:
+                    aliases[alias['owner']] = {}
+                aliases[alias['owner']][alias['name']] = alias['commands']
+            self.aliases = aliases
+            await asyncio.sleep(20)
         except asyncio.CancelledError:
             pass
 

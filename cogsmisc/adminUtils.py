@@ -46,8 +46,8 @@ class AdminUtils:
 
         self.bot.loop.create_task(self.handle_pubsub())
         self.bot.rdb.pubsub.subscribe('server-info-requests', 'server-info-response',  # all-shard communication
-                                     'admin-commands'  # 1-shard communication
-                                     )
+                                      'admin-commands'  # 1-shard communication
+                                      )
         self.requests = {}
 
         loglevels = self.bot.rdb.jget('loglevels', {})
@@ -395,7 +395,8 @@ class AdminUtils:
         try:
             invite = (
                 await self.bot.create_invite(
-                    next(self.bot.get_server(server_id).channels) or self.bot.get_channel(server_id))).url
+                    self.bot.get_channel(server_id) or next(
+                        c for c in self.bot.get_server(server_id).channels if c.type == ChannelType.text))).url
         except:
             invite = None
         response = ServerInfoResponse(self.bot, reply_to, server_id, invite)

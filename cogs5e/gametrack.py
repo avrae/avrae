@@ -282,6 +282,8 @@ class GameTrack:
         spells_known = {}
         for spell_name in character.get_spell_list():
             spell = strict_search(c.spells, 'name', spell_name)
+            if spell is None:
+                continue
             spells_known[spell['level']] = spells_known.get(spell['level'], []) + [spell_name]
 
         level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',

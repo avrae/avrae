@@ -505,9 +505,12 @@ class Combatant:
     @property
     def ac(self):
         _ac = self._ac
-        for e in self.get_effects():
-            if e.effect:
-                args = argparse(shlex.split(e.effect))
+        for e in self.get_effects(): # TODO make a get_effect_dict func
+            if 'ac' in e.effect:
+                try:
+                    args = argparse(shlex.split(e.effect))
+                except ValueError:
+                    continue
                 if 'ac' in args:
                     modi = args.last('ac')
                     try:

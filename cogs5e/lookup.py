@@ -576,6 +576,8 @@ class Lookup:
 
         if monster.source == 'homebrew':
             embed_queue[-1].set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+        else:
+            embed_queue[-1].set_footer(text=f"Creature | {monster.source} {monster.page}")
 
         embed_queue[0].set_thumbnail(url=monster.get_image_url())
 

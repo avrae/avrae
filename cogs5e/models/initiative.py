@@ -5,7 +5,7 @@ import cachetools
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants
-from utils.argparser import argparse
+from utils.argparser import argparse, ParsedArguments
 from utils.functions import get_selection
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
@@ -995,8 +995,9 @@ class Effect:
         self._effect = effect
 
     @classmethod
-    def new(cls, name, duration, effect):
-        effect_args = argparse(effect)
+    def new(cls, name, duration, effect_args):
+        if not isinstance(effect_args, ParsedArguments):
+            effect_args = argparse(effect_args)
         effect_dict = {}
         for arg in cls.VALID_ARGS:
             if arg in effect_args:

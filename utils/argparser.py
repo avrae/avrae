@@ -13,6 +13,7 @@ def argparse(args):
     Parses arguments.
     :param args: A list of arguments to parse.
     :return: The parsed arguments (ParsedArguments).
+    :rtype ParsedArguments
     """
     if isinstance(args, str):
         args = argsplit(args)

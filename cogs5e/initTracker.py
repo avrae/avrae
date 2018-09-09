@@ -680,12 +680,16 @@ class InitTracker:
         await combat.final()
 
     @init.command(pass_context=True)
-    async def effect(self, ctx, name: str, duration: int, effect_name: str, *, effect: str = None):
+    async def effect(self, ctx, name: str, effect_name: str, *, args: str = None):
         """Attaches a status effect to a combatant.
-        [effect] is a set of args that will be appended to every `!i a` the combatant makes.
-        Valid Arguments: -b [bonus] (see !a)
-                         -d [damage bonus] (see !a)
-                         -ac [ac] (modifies ac temporarily; adds if starts with +/- or sets otherwise)"""
+        [args] is a set of args that affects a combatant in combat.
+        __**Valid Arguments**__
+        -dur [duration]
+        __Attacks__
+        -b [bonus] (see !a)
+        -d [damage bonus] (see !a)
+        __General__
+        -ac [ac] (modifies ac temporarily; adds if starts with +/- or sets otherwise)"""
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
@@ -695,7 +699,10 @@ class InitTracker:
         if effect_name.lower() in (e.name.lower() for e in combatant.get_effects()):
             return await self.bot.say("Effect already exists.", delete_after=10)
 
-        effectObj = Effect.new(duration=duration, name=effect_name, effect=effect)
+        args = argparse(args)
+        duration = args.last('dur', -1, int)
+
+        effectObj = Effect.new(duration=duration, name=effect_name, effect_args=args)
         combatant.add_effect(effectObj)
         await self.bot.say("Added effect {} to {}.".format(effect_name, combatant.name), delete_after=10)
         await combat.final()

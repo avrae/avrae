@@ -763,7 +763,7 @@ class Lookup:
 
         embed.title = name
         desc = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n{extras}"
-        embed.description = parse_data_entry(desc)
+        embed.description = desc  # no need to render, has been prerendered
 
         if 'reqAttune' in item:
             if item['reqAttune'] is True:  # can be truthy, but not true

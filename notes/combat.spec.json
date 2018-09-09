@@ -1,0 +1,11 @@
+{
+  "channel": "CHANID",
+  "lastchanged": "DATE",
+  "summary": "MSGID",
+  "dm": "USERID",
+  "options": {},
+  "combatants": [],
+  "turn": 0,
+  "round": 0,
+  "current": 0
+}

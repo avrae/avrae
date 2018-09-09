@@ -9,7 +9,6 @@ import logging
 import os
 import random
 import re
-import shlex
 from io import BytesIO
 from itertools import zip_longest
 
@@ -352,9 +351,10 @@ def verbose_stat(stat):
 
 
 def parse_data_entry(text, md_breaks=False):
-    """Parses a list or string from astranauta data.
+    """Parses a list or string from... data.
     :returns str - The final text."""
-    if not isinstance(text, list): return str(text)
+    if not isinstance(text, list):
+        return parse_data_formatting(str(text))
 
     out = []
     join_str = '\n' if not md_breaks else '  \n'
@@ -518,26 +518,6 @@ async def confirm(ctx, message, delete_msgs=False):
         except:
             pass
     return replyBool
-
-
-def parse_snippets(args: str, ctx) -> str:
-    """
-    Parses user and server snippets.
-    :param args: The string to parse. Will be split automatically
-    :param ctx: The Context.
-    :return: The string, with snippets replaced.
-    """
-    tempargs = shlex.split(args)
-    snippets = ctx.bot.db.jget('server_snippets', {}).get(ctx.message.server.id,
-                                                          {}) if ctx.message.server is not None else {}
-    snippets.update(ctx.bot.db.not_json_get('damage_snippets', {}).get(ctx.message.author.id, {}))
-    for index, arg in enumerate(tempargs):  # parse snippets
-        snippet_value = snippets.get(arg)
-        if snippet_value:
-            tempargs[index] = snippet_value
-        elif ' ' in arg:
-            tempargs[index] = shlex.quote(arg)
-    return " ".join(tempargs)
 
 
 async def generate_token(img_url, color_override=None):

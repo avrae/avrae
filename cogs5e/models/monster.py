@@ -59,7 +59,7 @@ class Monster:
                  condition_immune: list = None, raw_saves: str = '', saves: dict = None, raw_skills: str = '',
                  skills: dict = None, languages: list = None, traits: list = None, actions: list = None,
                  reactions: list = None, legactions: list = None, la_per_round=3, srd=True, source='homebrew',
-                 attacks: list = None, proper: bool = False, image_url: str = None, spellcasting=None):
+                 attacks: list = None, proper: bool = False, image_url: str = None, spellcasting=None, page=None):
         if vuln is None:
             vuln = []
         if resist is None:
@@ -137,6 +137,7 @@ class Monster:
         self.proper = proper
         self.image_url = image_url
         self.spellcasting = spellcasting
+        self.page = page  # this should really be by source, but oh well
 
     @classmethod
     def from_data(cls, data):
@@ -180,6 +181,7 @@ class Monster:
         save_text = parse_save_text(data.get('save', {}))
 
         source = data['source']
+        proper = bool(data.get('isNamedCreature') or data.get('isNPC'))
 
         attacks = data.get('attacks', [])
         spellcasting = data.get('spellcasting', {})
@@ -188,7 +190,7 @@ class Monster:
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, save_text, saves, skill_text, skills, languages, traits,
                    actions, reactions, legactions, 3, data.get('srd', False), source, attacks,
-                   spellcasting=spellcasting)
+                   spellcasting=spellcasting, page=data.get('page'), proper=proper)
 
     @classmethod
     def from_critterdb(cls, data):

@@ -1,0 +1,22 @@
+{
+  "owner": "USERID",
+  "active": false,
+  "upstream": "UPSTREAM_ID",
+  "type": "TYPE",
+  "version": 0,
+  "stats": {},
+  "levels": {},
+  "hp": 0,
+  "armor": 0,
+  "attacks": [],
+  "skills": {},
+  "resist": [],
+  "immune": [],
+  "vuln": [],
+  "saves": {},
+  "stat_cvars": {},
+  "skill_effects": {},
+  "consumables": {},
+  "spellbook": {},
+  "live": false
+}

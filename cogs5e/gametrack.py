@@ -12,6 +12,7 @@ import MeteorClient
 import discord
 from discord.ext import commands
 
+from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName, searchSpell
 from cogs5e.funcs.sheetFuncs import sheet_cast
@@ -20,7 +21,7 @@ from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
 from utils.argparser import argparse
-from utils.functions import strict_search, get_selection, dicecloud_parse, parse_snippets
+from utils.functions import strict_search, get_selection, dicecloud_parse
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class GameTrack:
     @game.command(pass_context=True, name='status', aliases=['summary'])
     async def game_status(self, ctx):
         """Prints the status of the current active character."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.add_field(name="Hit Points", value=f"{character.get_current_hp()}/{character.get_max_hp()}")
         embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str())
@@ -66,7 +67,7 @@ class GameTrack:
                 assert 0 < level < 10
             except AssertionError:
                 return await self.bot.say("Invalid spell level.")
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.set_footer(text="\u25c9 = Available / \u3007 = Used")
         if level is None and value is None:  # show remaining
@@ -85,7 +86,8 @@ class GameTrack:
                 assert 0 <= value <= character.get_max_spellslots(level)
             except AssertionError:
                 raise CounterOutOfBounds()
-            character.set_remaining_slots(level, value).commit(ctx)
+            character.set_remaining_slots(level, value)
+            await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n{character.get_remaining_slots_str(level)}"
         await self.bot.say(embed=embed)
 
@@ -94,12 +96,12 @@ class GameTrack:
         """Performs a long rest, resetting applicable counters.
         __Valid Arguments__
         -h - Hides the character summary output."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         reset = character.long_rest()
         embed = EmbedWithCharacter(character, name=False)
         embed.title = f"{character.get_name()} took a Long Rest!"
         embed.add_field(name="Reset Values", value=', '.join(set(reset)))
-        character.commit(ctx)
+        await character.commit(ctx)
         await self.bot.say(embed=embed)
         if not '-h' in args:
             await ctx.invoke(self.game_status)
@@ -109,12 +111,12 @@ class GameTrack:
         """Performs a short rest, resetting applicable counters.
         __Valid Arguments__
         -h - Hides the character summary output."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         reset = character.short_rest()
         embed = EmbedWithCharacter(character, name=False)
         embed.title = f"{character.get_name()} took a Short Rest!"
         embed.add_field(name="Reset Values", value=', '.join(set(reset)))
-        character.commit(ctx)
+        await character.commit(ctx)
         await self.bot.say(embed=embed)
         if not '-h' in args:
             await ctx.invoke(self.game_status)
@@ -124,7 +126,7 @@ class GameTrack:
         """Modifies the HP of a the current active character. Synchronizes live with Dicecloud.
         If operator is not passed, assumes `mod`.
         Operators: `mod`, `set`."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
 
         if not operator == '':
             hp_roll = roll(hp, inline=True, show_blurbs=False)
@@ -143,7 +145,7 @@ class GameTrack:
                 await self.bot.say("Incorrect operator. Use mod or set.")
                 return
 
-            character.commit(ctx)
+            await character.commit(ctx)
             out = "{}: {}".format(character.get_name(), character.get_hp_str())
             if 'd' in hp: out += '\n' + hp_roll.skeleton
         else:
@@ -155,7 +157,7 @@ class GameTrack:
     async def game_thp(self, ctx, thp: int = None):
         """Modifies the temp HP of a the current active character.
         If positive, assumes set; if negative, assumes mod."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
 
         if thp is not None:
             if thp >= 0:
@@ -163,7 +165,7 @@ class GameTrack:
             else:
                 character.set_temp_hp(character.get_temp_hp() + thp)
 
-            character.commit(ctx)
+            await character.commit(ctx)
 
         out = "{}: {}".format(character.get_name(), character.get_hp_str())
         await self.bot.say(out)
@@ -173,7 +175,7 @@ class GameTrack:
         """Commands to manage character death saves.
         __Valid Arguments__
         See `!help save`."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         args = argparse(args)
         adv = args.adv()
         b = args.join('b', '+')
@@ -205,7 +207,7 @@ class GameTrack:
         else:
             if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
 
-        character.commit(ctx)
+        await character.commit(ctx)
         embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase else '')
         if death_phrase: embed.set_footer(text=death_phrase)
 
@@ -219,7 +221,7 @@ class GameTrack:
     @game_deathsave.command(pass_context=True, name='success', aliases=['s', 'save'])
     async def game_deathsave_save(self, ctx):
         """Adds a successful death save."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
 
         embed = EmbedWithCharacter(character)
         embed.title = f'{character.get_name()} succeeds a Death Save!'
@@ -227,7 +229,7 @@ class GameTrack:
         death_phrase = ''
         if character.add_successful_ds(): death_phrase = f"{character.get_name()} is STABLE!"
 
-        character.commit(ctx)
+        await character.commit(ctx)
         embed.description = "Added 1 successful death save."
         if death_phrase: embed.set_footer(text=death_phrase)
 
@@ -238,7 +240,7 @@ class GameTrack:
     @game_deathsave.command(pass_context=True, name='fail', aliases=['f'])
     async def game_deathsave_fail(self, ctx):
         """Adds a failed death save."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
 
         embed = EmbedWithCharacter(character)
         embed.title = f'{character.get_name()} fails a Death Save!'
@@ -246,7 +248,7 @@ class GameTrack:
         death_phrase = ''
         if character.add_failed_ds(): death_phrase = f"{character.get_name()} is DEAD!"
 
-        character.commit(ctx)
+        await character.commit(ctx)
         embed.description = "Added 1 failed death save."
         if death_phrase: embed.set_footer(text=death_phrase)
 
@@ -257,12 +259,12 @@ class GameTrack:
     @game_deathsave.command(pass_context=True, name='reset')
     async def game_deathsave_reset(self, ctx):
         """Resets all death saves."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         character.reset_death_saves()
         embed = EmbedWithCharacter(character)
         embed.title = f'{character.get_name()} reset Death Saves!'
 
-        character.commit(ctx)
+        await character.commit(ctx)
 
         embed.add_field(name="Death Saves", value=character.get_ds_str())
 
@@ -271,7 +273,7 @@ class GameTrack:
     @commands.group(pass_context=True, invoke_without_command=True, name='spellbook', aliases=['sb'])
     async def spellbook(self, ctx):
         """Commands to display a character's known spells and metadata."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.description = f"{character.get_name()} knows {len(character.get_spell_list())} spells."
         embed.add_field(name="DC", value=str(character.get_save_dc()))
@@ -280,6 +282,8 @@ class GameTrack:
         spells_known = {}
         for spell_name in character.get_spell_list():
             spell = strict_search(c.spells, 'name', spell_name)
+            if spell is None:
+                continue
             spells_known[spell['level']] = spells_known.get(spell['level'], []) + [spell_name]
 
         level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
@@ -308,13 +312,14 @@ class GameTrack:
                 result = await get_selection(ctx, [(r, r) for r in results])
                 if result is None: return await self.bot.say('Selection timed out or was cancelled.')
         spell = getSpell(result)
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         if character.live:
             try:
                 await DicecloudClient.getInstance().sync_add_spell(character, dicecloud_parse(spell))
             except MeteorClient.MeteorClientException:
                 return await self.bot.say("Error: Failed to connect to Dicecloud. The site may be down.")
-        character.add_known_spell(spell).commit(ctx)
+        character.add_known_spell(spell)
+        await character.commit(ctx)
         live = "Spell added to Dicecloud!" if character.live else ''
         await self.bot.say(f"{spell['name']} added to known spell list!\n{live}")
 
@@ -322,7 +327,7 @@ class GameTrack:
     async def spellbook_addall(self, ctx, _class, level: int, spell_list=None):
         """Adds all spells of a given level from a given class list to the spellbook override. Requires live sheet.
         If `spell_list` is passed, will add these spells to the list named so in Dicecloud."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         if not character.live:
             return await self.bot.say("This command requires a live Dicecloud sheet. To set up, share your Dicecloud "
                                       "sheet with `avrae` with edit permissions, then `!update`.")
@@ -337,7 +342,7 @@ class GameTrack:
             await DicecloudClient.getInstance().sync_add_mass_spells(character,
                                                                      [dicecloud_parse(s) for s in level_spells],
                                                                      spell_list)
-            character.commit(ctx)
+            await character.commit(ctx)
         except MeteorClient.MeteorClientException:
             return await self.bot.say("Error: Failed to connect to Dicecloud. The site may be down.")
         await self.bot.say(f"{len(level_spells)} spells added to {character.get_name()}'s spell list on Dicecloud.")
@@ -347,12 +352,12 @@ class GameTrack:
         """
         Removes a spell from the spellbook override. Must type in full name.
         """
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         if character.live:
             return await self.bot.say("Just delete the spell from your character sheet!")
         spell = character.remove_known_spell(spell_name)
         if spell:
-            character.commit(ctx)
+            await character.commit(ctx)
             await self.bot.say(f"{spell} removed from spellbook override.")
         else:
             await self.bot.say(
@@ -366,7 +371,7 @@ class GameTrack:
         If modifier is not supplied, prints the value and metadata of the counter *name*."""
         if name is None:
             return await ctx.invoke(self.bot.get_command("customcounter list"))
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         sel = await character.select_consumable(ctx, name)
         if sel is None:
             return await self.bot.say("Selection timed out or was cancelled.")
@@ -402,7 +407,8 @@ class GameTrack:
         else:
             return await self.bot.say("Invalid operator. Use mod or set.")
         try:
-            character.set_consumable(name, newValue).commit(ctx)
+            character.set_consumable(name, newValue)
+            await character.commit(ctx)
             _max = self._get_cc_max(character, counter)
             actualValue = int(character.get_consumable(name).get('value', 0))
 
@@ -437,14 +443,15 @@ class GameTrack:
         `-max <max value>` - The maximum value of the counter.
         `-min <min value>` - The minimum value of the counter.
         `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         args = argparse(args)
         _reset = args.last('reset')
         _max = args.last('max')
         _min = args.last('min')
         _type = args.last('type')
         try:
-            character.create_consumable(name, maxValue=_max, minValue=_min, reset=_reset, displayType=_type).commit(ctx)
+            character.create_consumable(name, maxValue=_max, minValue=_min, reset=_reset, displayType=_type)
+            await character.commit(ctx)
         except InvalidArgument as e:
             return await self.bot.say(f"Failed to create counter: {e}")
         else:
@@ -453,9 +460,10 @@ class GameTrack:
     @customcounter.command(pass_context=True, name='delete', aliases=['remove'])
     async def customcounter_delete(self, ctx, name):
         """Deletes a custom counter."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         try:
-            character.delete_consumable(name).commit(ctx)
+            character.delete_consumable(name)
+            await character.commit(ctx)
         except ConsumableNotFound:
             return await self.bot.say("Counter not found. Make sure you're using the full name, case-sensitive.")
         await self.bot.say(f"Deleted counter {name}.")
@@ -463,7 +471,7 @@ class GameTrack:
     @customcounter.command(pass_context=True, name='summary', aliases=['list'])
     async def customcounter_summary(self, ctx):
         """Prints a summary of all custom counters."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         for name, counter in character.get_all_consumables().items():
             val = self._get_cc_value(character, counter)
@@ -478,7 +486,7 @@ class GameTrack:
         Reset hierarchy: short < long < default < none
         __Valid Arguments__
         -h - Hides the character summary output."""
-        character = Character.from_ctx(ctx)
+        character = await Character.from_ctx(ctx)
         try:
             name = args[0]
         except IndexError:
@@ -487,14 +495,15 @@ class GameTrack:
             if name == '-h': name = None
         if name:
             try:
-                character.reset_consumable(name).commit(ctx)
+                character.reset_consumable(name)
+                await character.commit(ctx)
             except ConsumableException as e:
                 return await self.bot.say(f"Counter could not be reset: {e}")
             else:
                 return await self.bot.say(f"Counter reset to {character.get_consumable(name)['value']}.")
         else:
             reset_consumables = character.reset_all_consumables()
-            character.commit(ctx)
+            await character.commit(ctx)
             await self.bot.say(f"Reset counters: {', '.join(set(reset_consumables)) or 'none'}")
         if not '-h' in args:
             await ctx.invoke(self.game_status)
@@ -571,7 +580,7 @@ class GameTrack:
 
         char = None
         if not '-i' in args:
-            char = Character.from_ctx(ctx)
+            char = await Character.from_ctx(ctx)
             spell_name = await searchCharacterSpellName(spell_name, ctx, char)
         else:
             spell_name = await searchSpellNameFull(spell_name, ctx)
@@ -581,9 +590,9 @@ class GameTrack:
         spell = strict_search(c.autospells, 'name', spell_name)
         if spell is None: return await self._old_cast(ctx, spell_name, args)  # fall back to old cast
 
-        if not char: char = Character.from_ctx(ctx)
+        if not char: char = await Character.from_ctx(ctx)
 
-        args = parse_snippets(args, ctx)
+        args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = argparse(args)
@@ -634,20 +643,20 @@ class GameTrack:
         if cast_level > 0:
             embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
 
-        char.commit(ctx)  # make sure we save changes
+        await char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)
 
     async def _old_cast(self, ctx, spell_name, args):
         spell = getSpell(spell_name)
-        self.bot.db.incr('spells_looked_up_life')
+        self.bot.rdb.incr('spells_looked_up_life')
         if spell is None:
             return await self.bot.say("Spell not found.", delete_after=15)
         if spell.get('source') == "UAMystic":
             return await self.bot.say("Mystic talents are not supported.")
 
-        char = Character.from_ctx(ctx)
+        char = await Character.from_ctx(ctx)
 
-        args = parse_snippets(args, ctx)
+        args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = argparse(args)
@@ -677,24 +686,19 @@ class GameTrack:
         if len(args) == 0:
             rolls = spell.get('roll', None)
             if isinstance(rolls, list):
-                active_character = self.bot.db.not_json_get('active_characters', {}).get(
-                    ctx.message.author.id)  # get user's active
-                if active_character is not None:
-                    rolls = '\n'.join(rolls).replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
-                        .replace('PROF', str(char.get_prof_bonus()))
-                    rolls = rolls.split('\n')
-                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + '\n'.join(
+                rolls = '\n'.join(rolls) \
+                    .replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                    .replace('PROF', str(char.get_prof_bonus()))
+                rolls = rolls.split('\n')
+                out = "**{} casts {}:** ".format(char.get_name(), spell['name']) + '\n'.join(
                     roll(r, inline=True).skeleton for r in rolls)
             elif rolls is not None:
-                active_character = self.bot.db.not_json_get('active_characters', {}).get(
-                    ctx.message.author.id)  # get user's active
-                if active_character is not None:
-                    rolls = rolls.replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
-                        .replace('PROF', str(char.get_prof_bonus()))
-                out = "**{} casts {}:** ".format(ctx.message.author.mention, spell['name']) + roll(rolls,
-                                                                                                   inline=True).skeleton
+                rolls = rolls \
+                    .replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
+                    .replace('PROF', str(char.get_prof_bonus()))
+                out = "**{} casts {}:** ".format(char.get_name(), spell['name']) + roll(rolls, inline=True).skeleton
             else:
-                out = "**{} casts {}!** ".format(ctx.message.author.mention, spell['name'])
+                out = "**{} casts {}!** ".format(char.get_name(), spell['name'])
         else:
             rolls = args.get('r')
             roll_results = ""
@@ -704,7 +708,7 @@ class GameTrack:
                     roll_results += res.result + '\n'
                 else:
                     roll_results += "**Effect:** " + r
-            out = "**{} casts {}:**\n".format(ctx.message.author.mention, spell['name']) + roll_results
+            out = "**{} casts {}:**\n".format(char.get_name(), spell['name']) + roll_results
 
         if not args.last('i', type_=bool):
             char.use_slot(cast_level)
@@ -712,7 +716,7 @@ class GameTrack:
             out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"
 
         out = "Spell not supported by new cast, falling back to old cast.\n" + out
-        char.commit(ctx)  # make sure we save changes
+        await char.commit(ctx)  # make sure we save changes
         await self.bot.say(out)
         spell_cmd = self.bot.get_command('spell')
         if spell_cmd is None: return await self.bot.say("Lookup cog not loaded.")

@@ -1,5 +1,6 @@
 # avrae
 [![Build Status](https://travis-ci.org/avrae/avrae.svg?branch=master)](https://travis-ci.org/avrae/avrae)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/678413361db643d9af25d9e8e2cdeaeb)](https://www.codacy.com/app/mommothazaz123/avrae?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=avrae/avrae&amp;utm_campaign=Badge_Grade)
 
 Avrae is a bot to facilitate running Dungeons & Dragons 5e online over Discord.
 
@@ -8,6 +9,9 @@ You can join the Avrae Development Discord [here](https://discord.gg/pQbd4s6)!
 ## Contributing
 
 #### How to run Avrae locally
+###### OS Requirements
+Avrae runs best on Ubuntu 16.04.4, but should be fully compatible with any UNIX-based system.
+It is possible to run Avrae on Windows, but is not recommended.
 ###### Support File Package
 You can download templates of all the required files at https://andrew-zhu.com/avrae/avrae-files.zip.
 ##### Creating Support Files
@@ -17,7 +21,8 @@ You'll need to create a few files first.
 `credentials.py` should include, at the very least, variables as such:
 - `officialToken` - Empty string.
 - `owner_id` - The Discord User ID of the bot owner (you, if testing).
-- `test_database_url` - The URI of a Redis cache (probably `redis://localhost:6379/0`)
+- `test_redis_url` - The URI of a Redis cache (probably `redis://localhost:6379/0`)
+- `test_mongo_url` - The URI of a MongoDB instance. (e.g. `mongodb+srv://user:pass@localhost/test`)
 - `testToken` - A valid Discord Bot token.
 - `test_dicecloud_user` - A Dicecloud username.
 - `test_dicecloud_pass` - The Dicecloud password of the Dicecloud user.
@@ -44,7 +49,9 @@ Files marked with a * can be obtained by running the [data parsers](https://gith
 
 ##### Actually Running Avrae
 ###### Redis
-You will need to run a Redis cache to serve as Avrae's database. Download [Redis 4.0](https://redis.io/download) and run a redis server locally **before** launching Avrae.
+You will need to run a Redis cache to serve as a high-performance cache. Download [Redis 4.0](https://redis.io/download) and run a redis server locally **before** launching Avrae.
+###### MongoDB
+You will also need to run a MongoDB instance to serve as Avrae's database.
 ###### Avrae
 To actually run Avrae, you need Python version >= 3.6.0 < 3.7.
 First, install the dependencies with `pip install -r requirements.txt`.

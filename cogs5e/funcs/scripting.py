@@ -1,11 +1,13 @@
 import ast
 import json
 import re
+import shlex
 from math import floor, ceil, sqrt
 
 import simpleeval
 from simpleeval import EvalWithCompoundTypes, IterableTooLong
 
+import utils.argparser
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_damage
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
@@ -13,6 +15,75 @@ from cogs5e.models.initiative import Combat, Combatant, CombatantGroup
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
 MAX_ITER_LENGTH = 10000
+
+
+async def get_uvars(ctx):
+    uvars = {}
+    async for uvar in ctx.bot.mdb.uvars.find({"owner": ctx.message.author.id}):
+        uvars[uvar['name']] = uvar['value']
+    return uvars
+
+
+async def set_uvar(ctx, name, value):
+    await ctx.bot.mdb.uvars.update_one(
+        {"owner": ctx.message.author.id, "name": name},
+        {"$set": {"value": value}},
+        True)
+
+
+async def get_gvar_values(ctx):
+    gvars = {}
+    async for gvar in ctx.bot.mdb.gvars.find():
+        gvars[gvar['key']] = gvar['value']
+    return gvars
+
+
+async def get_aliases(ctx):
+    aliases = {}
+    async for alias in ctx.bot.mdb.aliases.find({"owner": ctx.message.author.id}):
+        aliases[alias['name']] = alias['commands']
+    return aliases
+
+
+async def get_servaliases(ctx):
+    servaliases = {}
+    async for servalias in ctx.bot.mdb.servaliases.find({"server": ctx.message.server.id}):
+        servaliases[servalias['name']] = servalias['commands']
+    return servaliases
+
+
+async def get_snippets(ctx):
+    snippets = {}
+    async for snippet in ctx.bot.mdb.snippets.find({"owner": ctx.message.author.id}):
+        snippets[snippet['name']] = snippet['snippet']
+    return snippets
+
+
+async def get_servsnippets(ctx):
+    servsnippets = {}
+    if ctx.message.server:
+        async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": ctx.message.server.id}):
+            servsnippets[servsnippet['name']] = servsnippet['snippet']
+    return servsnippets
+
+
+async def parse_snippets(args: str, ctx) -> str:
+    """
+    Parses user and server snippets.
+    :param args: The string to parse. Will be split automatically
+    :param ctx: The Context.
+    :return: The string, with snippets replaced.
+    """
+    tempargs = shlex.split(args)
+    snippets = await get_servsnippets(ctx)
+    snippets.update(await get_snippets(ctx))
+    for index, arg in enumerate(tempargs):  # parse snippets
+        snippet_value = snippets.get(arg)
+        if snippet_value:
+            tempargs[index] = snippet_value
+        elif ' ' in arg:
+            tempargs[index] = shlex.quote(arg)
+    return " ".join(tempargs)
 
 
 class ScriptingEvaluator(EvalWithCompoundTypes):
@@ -33,6 +104,8 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             ast.Tuple: self._assign_tuple,
             ast.Subscript: self._assign_subscript
         }
+
+        self._loops = 0
 
     def eval(self, expr):  # allow for ast.Assign to set names
         """ evaluate an expression, using the operators, functions and
@@ -121,8 +194,9 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
     def _eval_comprehension(self, node):
         iterable = self._eval(node.iter)
-        if len(iterable) > MAX_ITER_LENGTH:
-            raise IterableTooLong("This iterable is too long.")
+        if len(iterable) + self._loops > MAX_ITER_LENGTH:
+            raise IterableTooLong("Execution limit exceeded: too many loops.")
+        self._loops += len(iterable)
         for item in iterable:
             self._assign(node.target, item, False)
             if all(self._eval(stmt) for stmt in node.ifs):
@@ -144,7 +218,12 @@ class SimpleRollResult:
         return self.full
 
 
-def verbose_roll(rollStr):
+def verbose_roll(rollStr, multiply=1, add=0):
+    if multiply != 1 or add != 0:
+        def subDice(matchobj):
+            return str((int(matchobj.group(1)) * multiply) + add) + 'd' + matchobj.group(2)
+
+        rollStr = re.sub(r'(\d+)d(\d+)', subDice, rollStr)
     rolled = roll(rollStr, inline=True)
     return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
                             [part.to_dict() for part in rolled.raw_dice.parts])
@@ -187,14 +266,15 @@ class SimpleCombat:
         self.turn_num = self._combat.turn_num
 
     @classmethod
-    def from_character(cls, character, ctx):
+    async def from_character(cls, character, ctx):
         try:
-            combat = Combat.from_ctx(ctx)
+            combat = await Combat.from_ctx(ctx)
         except CombatNotFound:
             return None
         me = next((c for c in combat.get_combatants() if getattr(c, 'character_id', None) == character.id), None)
         if not me:
             return None
+        me._character = character  # set combatant character instance
         return cls(combat, me)
 
     # public methods
@@ -211,8 +291,8 @@ class SimpleCombat:
         return None
 
     # private functions
-    def func_commit(self):
-        self._combat.commit()
+    async def func_commit(self):
+        await self._combat.commit()
 
 
 class SimpleCombatant:
@@ -222,7 +302,10 @@ class SimpleCombatant:
 
         if not self._hidden:
             self.ac = self._combatant.ac
-            self.hp = self._combatant.hp - (self._combatant.temphp or 0)
+            if self._combatant.hp is not None:
+                self.hp = self._combatant.hp - (self._combatant.temphp or 0)
+            else:
+                self.hp = None
             self.maxhp = self._combatant.hpMax
             self.initmod = self._combatant.initMod
             self.temphp = self._combatant.temphp
@@ -237,7 +320,7 @@ class SimpleCombatant:
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes
-        if self._combatant.hp is not None and self._combatant.hpMax is not None:
+        if self._combatant.hp is not None and self._combatant.hpMax:
             self.ratio = (self._combatant.hp - (self._combatant.temphp or 0)) / self._combatant.hpMax
         else:
             self.ratio = 0
@@ -271,14 +354,16 @@ class SimpleCombatant:
         return None
 
     def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0):
-        args = {
-            'd': d,
-            'c': c,
-            'critdice' : critdice,
-            'resist': '|'.join(self._combatant.resists['resist']),
-            'immune': '|'.join(self._combatant.resists['immune']),
-            'vuln': '|'.join(self._combatant.resists['vuln'])
-        }
+        args = utils.argparser.ParsedArguments(None, {
+            'critdice': [critdice],
+            'resist': self._combatant.resists['resist'],
+            'immune': self._combatant.resists['immune'],
+            'vuln': self._combatant.resists['vuln']
+        })
+        if d:
+            args['d'] = d
+        if c:
+            args['c'] = c
         result = sheet_damage(dice_str, args, 1 if crit else 0)
         result['damage'] = result['damage'].strip()
         self.mod_hp(-result['total'])

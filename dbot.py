@@ -4,6 +4,7 @@ import sys
 import traceback
 
 import discord
+import motor.motor_asyncio
 import redis
 from aiohttp import ClientResponseError
 from discord.errors import Forbidden, NotFound, HTTPException, InvalidArgument
@@ -11,8 +12,8 @@ from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.models.errors import AvraeException, EvaluationError
-from utils.dataIO import DataIO
 from utils.functions import discord_trim, get_positivity, list_get, gen_error_message
+from utils.redisIO import RedisIO
 
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
@@ -43,8 +44,14 @@ class Avrae(commands.Bot):
         self.testing = testing
         self.state = "init"
         self.credentials = Credentials()
-        self.db = DataIO() if not TESTING else DataIO(testing=True,
-                                                      test_database_url=self.credentials.test_database_url)
+        if TESTING:
+            self.rdb = RedisIO(testing=True, test_database_url=self.credentials.test_redis_url)
+            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
+        else:
+            self.rdb = RedisIO()
+            self.mclient = motor.motor_asyncio.AsyncIOMotorClient("mongodb://localhost:27017")
+
+        self.mdb = self.mclient.avrae  # let's just use the avrae db
         self.dynamic_cog_list = DYNAMIC_COGS
 
 
@@ -55,7 +62,8 @@ class Credentials:
         except ImportError:
             raise Exception("Credentials not found.")
         self.token = credentials.officialToken
-        self.test_database_url = credentials.test_database_url
+        self.test_redis_url = credentials.test_redis_url
+        self.test_mongo_url = credentials.test_mongo_url
         if TESTING:
             self.token = credentials.testToken
         if 'ALPHA_TOKEN' in os.environ:
@@ -79,7 +87,7 @@ log_formatter = logging.Formatter(
     '%(asctime)s s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, 'shard_id', 0)))
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(log_formatter)
-filehandler = logging.FileHandler(f"temp/log_shard_{bot.shard_id}_build_{bot.db.get('build_num')}.log", mode='w')
+filehandler = logging.FileHandler(f"temp/log_shard_{bot.shard_id}_build_{bot.rdb.get('build_num')}.log", mode='w')
 filehandler.setFormatter(log_formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -104,8 +112,8 @@ async def enter():
     await bot.wait_until_ready()
     appInfo = await bot.application_info()
     bot.owner = appInfo.owner
-    if not bot.db.exists('build_num'): bot.db.set('build_num', 114)  # this was added in build 114
-    if getattr(bot, "shard_id", 0) == 0: bot.db.incr('build_num')
+    if not bot.rdb.exists('build_num'): bot.rdb.set('build_num', 114)  # this was added in build 114
+    if getattr(bot, "shard_id", 0) == 0: bot.rdb.incr('build_num')
     await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
 
 
@@ -225,7 +233,7 @@ async def on_message(message):
 
 @bot.event
 async def on_command(command, ctx):
-    bot.db.incr('commands_used_life')
+    bot.rdb.incr('commands_used_life')
     try:
         log.debug(
             "Command called in channel {0.message.channel} ({0.message.channel.id}), server {0.message.server} ({0.message.server.id}): {0.message.content}".format(

@@ -15,6 +15,8 @@ from re import IGNORECASE
 
 import numexpr
 
+from cogs5e.models import errors
+
 log = logging.getLogger(__name__)
 
 VALID_OPERATORS = 'k|rr|ro|mi|ma|ra|e'
@@ -83,9 +85,8 @@ class Roll(object):
     def roll(self, rollStr, adv: int = 0, rollFor='', inline=False, double=False, show_blurbs=True, **kwargs):
         try:
             if '**' in rollStr:
-                raise Exception("Exponents are currently disabled.")
-            results = self
-            results.parts = []
+                raise errors.InvalidArgument("Exponents are currently disabled.")
+            self.parts = []
             # split roll string into XdYoptsSel [comment] or Op
             # set remainder to comment
             # parse each, returning a SingleDiceResult
@@ -98,29 +99,32 @@ class Roll(object):
                 # check if it's dice
                 if match.group(1):
                     roll = self.roll_one(dice.replace(match.group(5), ''), adv)
-                    results.parts.append(roll)
+                    self.parts.append(roll)
                 # or a constant
                 elif match.group(2):
-                    results.parts.append(Constant(value=int(match.group(2)), annotation=match.group(4)))
+                    self.parts.append(Constant(value=int(match.group(2)), annotation=match.group(4)))
                 # or an operator
-                else:
-                    results.parts.append(Operator(op=match.group(3), annotation=match.group(4)))
+                elif not match.group(5):
+                    self.parts.append(Operator(op=match.group(3), annotation=match.group(4)))
 
                 if match.group(5):
-                    results.parts.append(Comment(match.group(5) + ''.join(dice_set[index + 1:])))
+                    self.parts.append(Comment(match.group(5) + ''.join(dice_set[index + 1:])))
                     break
 
             # calculate total
-            crit = results.get_crit()
-            total = results.get_total()
-            rolled = ' '.join(str(res) for res in results.parts if not isinstance(res, Comment))
+            crit = self.get_crit()
+            try:
+                total = self.get_total()
+            except SyntaxError:
+                raise errors.InvalidArgument("No dice found to roll.")
+            rolled = ' '.join(str(res) for res in self.parts if not isinstance(res, Comment))
             if rollFor is '':
-                rollFor = ''.join(str(c) for c in results.parts if isinstance(c, Comment))
+                rollFor = ''.join(str(c) for c in self.parts if isinstance(c, Comment))
             # return final solution
             if not inline:
                 # Builds end result while showing rolls
                 reply = ' '.join(
-                    str(res) for res in results.parts if not isinstance(res, Comment)) + '\n**Total:** ' + str(
+                    str(res) for res in self.parts if not isinstance(res, Comment)) + '\n**Total:** ' + str(
                     floor(total))
                 skeletonReply = reply
                 rollFor = rollFor if rollFor is not '' else 'Result'
@@ -138,7 +142,7 @@ class Roll(object):
                         reply += critStr
             else:
                 # Builds end result while showing rolls
-                reply = ' '.join(str(res) for res in results.parts if not isinstance(res, Comment)) + ' = `' + str(
+                reply = ' '.join(str(res) for res in self.parts if not isinstance(res, Comment)) + ' = `' + str(
                     floor(total)) + '`'
                 skeletonReply = reply
                 rollFor = rollFor if rollFor is not '' else 'Result'
@@ -157,9 +161,9 @@ class Roll(object):
             reply = re.sub(' +', ' ', reply)
             skeletonReply = re.sub(' +', ' ', str(skeletonReply))
             return DiceResult(result=int(floor(total)), verbose_result=reply, crit=crit, rolled=rolled,
-                              skeleton=skeletonReply, raw_dice=results)
+                              skeleton=skeletonReply, raw_dice=self)
         except Exception as ex:
-            if not isinstance(ex, (SyntaxError, KeyError)):
+            if not isinstance(ex, (SyntaxError, KeyError, errors.AvraeException)):
                 log.error('Error in roll() caused by roll {}:'.format(rollStr))
                 traceback.print_exc()
             return DiceResult(verbose_result="Invalid input: {}".format(ex))
@@ -180,7 +184,7 @@ class Roll(object):
         ops = []
         if numArgs == 1:
             if not dice.startswith('d'):
-                raise Exception('Please pass in the value of the dice.')
+                raise errors.InvalidArgument('Please pass in the value of the dice.')
             numDice = 1
             diceVal = obj[0]
             if adv is not 0 and diceVal == 20:
@@ -201,7 +205,7 @@ class Roll(object):
 
         # dice repair/modification
         if numDice > 300 or diceVal < 1:
-            raise Exception('Too many dice rolled.')
+            raise errors.InvalidArgument('Too many dice rolled.')
 
         result.max_value = diceVal
         result.num_dice = numDice

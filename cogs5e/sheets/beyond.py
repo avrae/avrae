@@ -310,8 +310,12 @@ class BeyondSheetParser:
                 levels[levelName] = _class.get('level')
             else:
                 levels[levelName] += _class.get('level')
-        self.levels = levels  # cache for further use
-        return levels
+
+        out = {}
+        for level, v in levels.items():
+            out[re.sub(r'\.\$', '_', level)] = v
+        self.levels = out  # cache for further use
+        return out
 
     def get_attack(self, atkIn, atkType):
         """Calculates and returns a list of dicts."""
@@ -536,9 +540,9 @@ class BeyondSheetParser:
                 pactLevel = pact_level_by_level(_class['level'])
 
         for lvl in range(1, 10):
-            spellbook['spellslots'][lvl] = SLOTS_PER_LEVEL[lvl](spellcasterLevel)
+            spellbook['spellslots'][str(lvl)] = SLOTS_PER_LEVEL[lvl](spellcasterLevel)
 
-        spellbook['spellslots'][pactLevel] += pactSlots
+        spellbook['spellslots'][str(pactLevel)] += pactSlots
 
         prof = self.get_stats()['proficiencyBonus']
         spellbook['dc'] = 8 + spellMod + prof

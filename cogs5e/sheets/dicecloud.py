@@ -281,7 +281,7 @@ class DicecloudParser:
         if self.stats:
             return self.stats
         character = self.character
-        stats = {"name": "", "image": "", "description": "", "strength": 10, "dexterity": 10, "constitution": 10,
+        stats = {"strength": 10, "dexterity": 10, "constitution": 10,
                  "wisdom": 10, "intelligence": 10, "charisma": 10, "strengthMod": 0, "dexterityMod": 0,
                  "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0, "charismaMod": 0, "proficiencyBonus": 0,
                  'name': character.get('characters')[0].get('name'),
@@ -314,9 +314,14 @@ class DicecloudParser:
                 levels[levelName] = level.get('level')
             else:
                 levels[levelName] += level.get('level')
-        self.evaluator.names.update(levels)
-        self.levels = levels
-        return levels
+
+        out = {}
+        for level, v in levels.items():
+            out[re.sub(r'\.\$', '_', level)] = v
+
+        self.evaluator.names.update(out)
+        self.levels = out
+        return out
 
     def calculate_stat(self, stat, base=0):
         """Calculates and returns the stat value."""
@@ -591,13 +596,21 @@ class DicecloudParser:
         return counters
 
 
+def func_if(condition, t, f):
+    return t if condition else f
+
+
 class DicecloudEvaluator(SimpleEval):
-    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round}
+    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round, 'func_if': func_if}
 
     def __init__(self, operators=None, functions=None, names=None):
         if not functions:
             functions = self.DEFAULT_FUNCTIONS
         super(DicecloudEvaluator, self).__init__(operators, functions, names)
+
+    def eval(self, expr):
+        expr = re.sub(r'if\s*\(', 'func_if(', expr)  # 0.5ms avg
+        return super().eval(expr)
 
     def _eval_name(self, node):
         lowernames = {k.lower(): v for k, v in self.names.items()}

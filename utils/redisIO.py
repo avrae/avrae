@@ -12,7 +12,7 @@ from redis import Redis
 import credentials
 
 
-class DataIO:
+class RedisIO:
     """
     A simple class to interface with the redis database.
     """
@@ -20,7 +20,7 @@ class DataIO:
     def __init__(self, testing=False, test_database_url=''):
         if not testing:
             self._db = Redis(host="127.0.0.1", db=0, socket_connect_timeout=2, socket_timeout=2,
-                             password=credentials.db_pass)
+                             password=credentials.redis_pass)
         else:
             self._db = redis.from_url(test_database_url)
         self.pubsub = self._db.pubsub(ignore_subscribe_messages=True)

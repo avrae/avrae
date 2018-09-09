@@ -1,5 +1,4 @@
 import copy
-import shlex
 
 import cachetools
 
@@ -391,6 +390,8 @@ class Combatant:
         self._temphp = temphp
         self._spellcasting = spellcasting
 
+        self._cache = {}
+
     @classmethod
     def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx):
         return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx)
@@ -505,21 +506,14 @@ class Combatant:
     @property
     def ac(self):
         _ac = self._ac
-        for e in self.get_effects(): # TODO make a get_effect_dict func
-            if e.effect and 'ac' in e.effect:
-                try:
-                    args = argparse(shlex.split(e.effect))
-                except ValueError:
-                    continue
-                if 'ac' in args:
-                    modi = args.last('ac')
-                    try:
-                        if modi.startswith(('+', '-')):
-                            _ac += int(modi)
-                        else:
-                            _ac = int(modi)
-                    except (ValueError, TypeError):
-                        continue
+        for e in self.active_effects('ac'):
+            try:
+                if e.startswith(('+', '-')):
+                    _ac += int(e)
+                else:
+                    _ac = int(e)
+            except (ValueError, TypeError):
+                continue
         return _ac
 
     @ac.setter
@@ -604,17 +598,27 @@ class Combatant:
 
     def attack_effects(self, attacks):
         at = copy.deepcopy(attacks)
-        to_parse = ''
-        for e in self.get_effects():
-            if e.effect:
-                to_parse += f' {e.effect}'
-        args = argparse(shlex.split(to_parse))
+        b = self.active_effects('b')
+        d = self.active_effects('d')
         for a in at:
-            if a['attackBonus'] is not None:
-                a['attackBonus'] += f" + {args.join('b', '+')}" if 'b' in args else ''
-            if a['damage'] is not None:
-                a['damage'] += f" + {args.join('d', '+')}" if 'd' in args else ''
+            if a['attackBonus'] is not None and b:
+                a['attackBonus'] += f" + {'+'.join(b)}"
+            if a['damage'] is not None and d:
+                a['damage'] += f" + {'+'.join(d)}"
         return at
+
+    def active_effects(self, key=None):
+        if 'parsed_effects' not in self._cache:
+            parsed_effects = {}
+            for effect in self.get_effects():
+                for k, v in effect.effect:
+                    if k not in parsed_effects:
+                        parsed_effects[k] = []
+                    parsed_effects[k].append(v)
+            self._cache['parsed_effects'] = parsed_effects
+        if key:
+            return self._cache['parsed_effects'].get(key, [])
+        return self._cache['parsed_effects']
 
     def controller_mention(self):
         return f"<@{self.controller}>"
@@ -682,15 +686,7 @@ class Combatant:
         return status
 
     def get_long_effects(self):
-        out = ''
-        for e in self.get_effects():
-            edesc = e.name
-            if e.remaining >= 0:
-                edesc += " [{} rounds]".format(e.remaining)
-            if getattr(e, 'effect', None):
-                edesc += " ({})".format(e.effect)
-            out += '\n* ' + edesc
-        return out
+        return '\n'.join(f"* {str(e)}" for e in self.get_effects())
 
     def get_effects_and_notes(self):
         out = []
@@ -938,7 +934,7 @@ class CombatantGroup:
         self._combatants.remove(combatant)
         combatant.group = None
 
-    def get_summary(self, private=False):
+    def get_summary(self, private=False, no_notes=False):
         """
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
@@ -948,7 +944,7 @@ class CombatantGroup:
         else:
             status = f"{self.init}: {self.name}"
             for c in self.get_combatants():
-                status += f'\n    - {": ".join(c.get_summary(private).split(": ")[1:])}'
+                status += f'\n    - {": ".join(c.get_summary(private, no_notes).split(": ")[1:])}'
         return status
 
     def get_status(self, private=False):
@@ -990,7 +986,9 @@ class CombatantGroup:
 
 
 class Effect:
-    def __init__(self, name, duration, remaining, effect):
+    VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC'}
+
+    def __init__(self, name: str, duration: int, remaining: int, effect: dict):
         self._name = name
         self._duration = duration
         self._remaining = remaining
@@ -998,7 +996,12 @@ class Effect:
 
     @classmethod
     def new(cls, name, duration, effect):
-        return cls(name, duration, duration, effect)
+        effect_args = argparse(effect)
+        effect_dict = {}
+        for arg in cls.VALID_ARGS:
+            if arg in effect_args:
+                effect_dict[arg] = effect_args.last(arg)
+        return cls(name, duration, duration, effect_dict)
 
     @property
     def name(self):
@@ -1015,6 +1018,17 @@ class Effect:
     @property
     def effect(self):
         return self._effect
+
+    def __str__(self):
+        desc = self.name
+        if self.remaining >= 0:
+            desc += f" [{self.remaining} rounds]"
+        if self.effect:
+            desc += f" ({self.get_effect_str()})"
+        return desc
+
+    def get_effect_str(self):
+        return ', '.join(f"{self.VALID_ARGS.get(k)}: {v}" for k, v in self.effect.items())
 
     def on_turn(self, num_turns=1):
         """

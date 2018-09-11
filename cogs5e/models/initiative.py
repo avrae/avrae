@@ -677,7 +677,7 @@ class Combatant:
         :param private: Whether to return the full revealed stats or not.
         :return: A string describing the combatant.
         """
-        csFormat = "{} {} {}{}{}"
+        csFormat = "{} {} {}{}\n{}"
         status = csFormat.format(self.name,
                                  self.get_hp_and_ac(private),
                                  self.get_resist_string(private),

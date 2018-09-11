@@ -1,5 +1,11 @@
+import shlex
+
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import list_get
+
+
+def argsplit(args):
+    return shlex.split(args)
 
 
 def argparse(args):
@@ -7,7 +13,11 @@ def argparse(args):
     Parses arguments.
     :param args: A list of arguments to parse.
     :return: The parsed arguments (ParsedArguments).
+    :rtype ParsedArguments
     """
+    if isinstance(args, str):
+        args = argsplit(args)
+
     parsed = {}
     index = 0
     for a in args:

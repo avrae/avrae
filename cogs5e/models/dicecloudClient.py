@@ -243,7 +243,23 @@ class DicecloudClient(MeteorClient):
         return userId
 
     async def share_character(self, charId: str, userId: str):
+        if userId:
+            def share_callback(error, data):
+                if error:
+                    log.warning(error)
+                    raise MeteorClientException("Failed to transfer character ownership.")
+                else:
+                    log.debug(data)
 
+            self.update('characters', {'_id': charId}, {
+                '$addToSet': {'writers': {"$each": [self.user_id, userId]}},
+                '$pull': {'readers': {"$in": [self.user_id, userId]}}
+            }, share_callback)
+            return True
+        else:
+            raise MeteorClientException("Invalid user.")
+
+    async def transfer_ownership(self, charId: str, userId: str):
         if userId:
             def share_callback(error, data):
                 if error:
@@ -252,10 +268,8 @@ class DicecloudClient(MeteorClient):
                 else:
                     log.debug(data)
 
-            self.update('characters', {'_id': charId}, {
-                '$addToSet': {'writers': userId},
-                '$pull': {'readers': userId},
-            }, share_callback)
+            self.update('characters', {'_id': charId},
+                        {'$set': {'owner': userId}}, share_callback)
             return True
         else:
             raise MeteorClientException("Invalid user.")

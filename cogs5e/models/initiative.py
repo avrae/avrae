@@ -611,7 +611,7 @@ class Combatant:
         if 'parsed_effects' not in self._cache:
             parsed_effects = {}
             for effect in self.get_effects():
-                for k, v in effect.effect:
+                for k, v in effect.effect.items():
                     if k not in parsed_effects:
                         parsed_effects[k] = []
                     parsed_effects[k].append(v)

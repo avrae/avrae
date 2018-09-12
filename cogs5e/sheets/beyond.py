@@ -550,8 +550,9 @@ class BeyondSheetParser:
         spellbook['spellslots'][str(pactLevel)] += pactSlots
 
         prof = self.get_stats()['proficiencyBonus']
+        attack_bonus_bonus = self.get_stat("spell-attacks")
         spellbook['dc'] = 8 + spellMod + prof
-        spellbook['attackBonus'] = spellMod + prof
+        spellbook['attackBonus'] = spellMod + prof + attack_bonus_bonus
 
         for src in self.character['classSpells']:
             spellbook['spells'].extend(s['definition']['name'].replace('\u2019', "'") for s in src['spells'])

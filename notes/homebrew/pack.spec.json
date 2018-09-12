@@ -1,0 +1,12 @@
+{
+  "name": "string",
+  "owner": "string",
+  "editors": ["string"],
+  "public": "boolean",
+  "active": ["string"],
+  "_id": "ObjectId",
+  "server_active": ["string"],
+  "items": [
+    "see item.spec.json"
+  ]
+}

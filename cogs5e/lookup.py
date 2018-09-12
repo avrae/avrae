@@ -773,7 +773,7 @@ class Lookup:
             else:
                 embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune']}")
 
-        text = parse_data_entry(item.get('entries', []))
+        text = item['desc']
         if proptext:
             text = f"{text}\n{proptext}"
         if len(text) > 5500:

@@ -680,7 +680,7 @@ class InitTracker:
         await combat.final()
 
     @init.command(pass_context=True)
-    async def effect(self, ctx, name: str, effect_name: str, *, args: str = None):
+    async def effect(self, ctx, name: str, effect_name: str, *, args: str = ''):
         """Attaches a status effect to a combatant.
         [args] is a set of args that affects a combatant in combat.
         __**Valid Arguments**__

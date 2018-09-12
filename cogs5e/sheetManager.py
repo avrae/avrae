@@ -53,7 +53,7 @@ class SheetManager:
 
     async def init_gsheet_client(self):
         def _():
-            return pygsheets.authorize(service_file='avrae-google.json')
+            return pygsheets.authorize(service_file='avrae-google.json', no_cache=True)
 
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
 
@@ -67,27 +67,28 @@ class SheetManager:
     @commands.command(pass_context=True, aliases=['a'])
     async def attack(self, ctx, atk_name: str = 'list', *, args: str = ''):
         """Rolls an attack for the current active character.
-        Valid Arguments: adv/dis
-                         adv#/dis# (applies adv to the first # attacks)
-                         -ac [target ac]
-                         -b [to hit bonus]
-                         -d [damage bonus]
-                         -d# [applies damage to the first # hits]
-                         -rr [times to reroll]
-                         -t [target]
-                         -c [damage bonus on crit]
-                         -criton [a number to crit on if rolled on or above]
-                         -phrase [flavor text]
-                         -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
-                         -resist [damage resistance]
-                         -immune [damage immunity]
-                         -vuln [damage vulnerability]
-                         -hit (automatically hits)
-                         -miss (automatically misses)
-                         crit (automatically crit)
-                         ea (Elven Accuracy double advantage)
-                         -f "Field Title|Field Text" (see !embed)
-                         [user snippet]"""
+        __Valid Arguments__
+        adv/dis
+        adv#/dis# (applies adv to the first # attacks)
+        -ac [target ac]
+        -b [to hit bonus]
+        -d [damage bonus]
+        -d# [applies damage to the first # hits]
+        -rr [times to reroll]
+        -t [target]
+        -c [damage bonus on crit]
+        -criton [a number to crit on if rolled on or above]
+        -phrase [flavor text]
+        -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
+        -resist [damage resistance]
+        -immune [damage immunity]
+        -vuln [damage vulnerability]
+        -hit (automatically hits)
+        -miss (automatically misses)
+        crit (automatically crit)
+        ea (Elven Accuracy double advantage)
+        -f "Field Title|Field Text" (see !embed)
+        [user snippet]"""
         char = await Character.from_ctx(ctx)
 
         attacks = char.get_attacks()

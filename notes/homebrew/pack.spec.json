@@ -8,5 +8,7 @@
   "server_active": ["string"],
   "items": [
     "see item.spec.json"
-  ]
+  ],
+  "image": "string",
+  "desc": "string"
 }

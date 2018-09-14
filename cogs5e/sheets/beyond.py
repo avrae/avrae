@@ -473,8 +473,6 @@ class BeyondSheetParser:
 
         for modtype in character['modifiers'].values():
             for mod in modtype:
-                if not mod['isGranted']:
-                    continue
                 mod['subType'] = mod['subType'].replace("-saving-throws", "Save")
                 if mod['type'] == 'half-proficiency':
                     profs[mod['subType']] = max(profs.get(mod['subType'], 0), 0.5)
@@ -483,6 +481,8 @@ class BeyondSheetParser:
                 elif mod['type'] == 'expertise':
                     profs[mod['subType']] = 2
                 elif mod['type'] == 'bonus':
+                    if not mod['isGranted']:
+                        continue
                     if mod['statId'] is not None:
                         bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + self.stat_from_id(mod['statId'])
                     else:

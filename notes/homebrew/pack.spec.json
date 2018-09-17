@@ -1,7 +1,7 @@
 {
   "name": "string",
-  "owner": "string",
-  "editors": ["string"],
+  "owner": {"id": "string", "username": "string"},
+  "editors": [{"id": "string", "username": "string"}],
   "public": "boolean",
   "active": ["string"],
   "_id": "ObjectId",

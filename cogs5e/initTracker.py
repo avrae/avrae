@@ -1259,10 +1259,8 @@ class InitTracker:
         await combat.final()
 
     @init.command(pass_context=True)
-    async def end(self, ctx):
+    async def end(self, ctx, args=None):
         """Ends combat in the channel."""
-
-        combat = await Combat.from_ctx(ctx)
 
         to_end = await confirm(ctx, 'Are you sure you want to end combat? (Reply with yes/no)', True)
 
@@ -1272,19 +1270,23 @@ class InitTracker:
             return await self.bot.say('OK, cancelling.', delete_after=10)
 
         msg = await self.bot.say("OK, ending...")
+        if args != '-force':
+            combat = await Combat.from_ctx(ctx)
 
-        try:
-            await self.bot.send_message(ctx.message.author, f"End of combat report: {combat.round_num} rounds "
-                                                            f"{combat.get_summary(True)}")
+            try:
+                await self.bot.send_message(ctx.message.author, f"End of combat report: {combat.round_num} rounds "
+                                                                f"{combat.get_summary(True)}")
 
-            summary = await combat.get_summary_msg()
-            await self.bot.edit_message(summary,
-                                        combat.get_summary() + " ```-----COMBAT ENDED-----```")
-            await self.bot.unpin_message(summary)
-        except:
-            pass
+                summary = await combat.get_summary_msg()
+                await self.bot.edit_message(summary,
+                                            combat.get_summary() + " ```-----COMBAT ENDED-----```")
+                await self.bot.unpin_message(summary)
+            except:
+                pass
 
-        await combat.end()
+            await combat.end()
+        else:
+            await self.bot.mdb.combats.delete_one({"channel": ctx.message.channel.id})
 
         await self.bot.edit_message(msg, "Combat ended.")
 

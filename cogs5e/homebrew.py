@@ -1,13 +1,13 @@
 import logging
 
-import aiohttp
+import discord
 from discord.ext import commands
 
-from cogs5e.models.bestiary import Bestiary
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
-from cogs5e.models.errors import NoBestiary, SelectionCancelled, NoSelectionElements, ExternalImportError
-from cogs5e.models.monster import Monster
-from utils.functions import get_selection, confirm
+from cogs5e.models.errors import NoActiveBrew, NoSelectionElements
+from cogs5e.models.homebrew.bestiary import Bestiary, bestiary_from_critterdb, select_bestiary
+from cogs5e.models.homebrew.pack import Pack, select_pack
+from utils.functions import confirm
 
 log = logging.getLogger(__name__)
 
@@ -32,8 +32,8 @@ class Homebrew:
             bestiary = await Bestiary.from_ctx(ctx)
         else:
             try:
-                bestiary = await self.select_bestiary(ctx, name)
-            except NoBestiary:
+                bestiary = await select_bestiary(ctx, name)
+            except NoActiveBrew:
                 return await self.bot.say("You have no bestiaries. Use `!bestiary import` to import one!")
             except NoSelectionElements:
                 return await self.bot.say("Bestiary not found.")
@@ -46,15 +46,15 @@ class Homebrew:
     @bestiary.command(pass_context=True, name='list')
     async def bestiary_list(self, ctx):
         """Lists your available bestiaries."""
-        user_bestiaries = await self.bot.mdb.bestiaries.find({"owner": ctx.message.author.id}).to_list(None)
+        user_bestiaries = await self.bot.mdb.bestiaries.find({"owner": ctx.message.author.id}, ['name']).to_list(None)
         await self.bot.say(f"Your bestiaries: {', '.join(b['name'] for b in user_bestiaries)}")
 
     @bestiary.command(pass_context=True, name='delete')
     async def bestiary_delete(self, ctx, *, name):
         """Deletes a bestiary from Avrae."""
         try:
-            bestiary = await self.select_bestiary(ctx, name)
-        except NoBestiary:
+            bestiary = await select_bestiary(ctx, name)
+        except NoActiveBrew:
             return await self.bot.say("You have no bestiaries. Use `!bestiary import` to import one!")
         except NoSelectionElements:
             return await self.bot.say("Bestiary not found.")
@@ -80,7 +80,7 @@ class Homebrew:
         loading = await self.bot.say("Importing bestiary (this may take a while for large bestiaries)...")
         bestiary_id = url.split('/view')[1].strip('/ \n')
 
-        bestiary = await self.bestiary_from_critterdb(bestiary_id)
+        bestiary = await bestiary_from_critterdb(bestiary_id)
 
         await bestiary.commit(ctx)
         await bestiary.set_active(ctx)
@@ -99,7 +99,7 @@ class Homebrew:
             return await self.bot.say("You don't have a bestiary active. Add one with `!bestiary import` first!")
         loading = await self.bot.say("Importing bestiary (this may take a while for large bestiaries)...")
 
-        bestiary = await self.bestiary_from_critterdb(active_bestiary["critterdb_id"])
+        bestiary = await bestiary_from_critterdb(active_bestiary["critterdb_id"])
 
         await bestiary.commit(ctx)
         await self.bot.edit_message(loading, f"Imported and updated {bestiary.name}!")
@@ -108,56 +108,60 @@ class Homebrew:
         embed.description = '\n'.join(m.name for m in bestiary.monsters)
         await self.bot.say(embed=embed)
 
-    async def select_bestiary(self, ctx, name):
-        user_bestiaries = await self.bot.mdb.bestiaries.find({"owner": ctx.message.author.id}).to_list(None)
+    @commands.group(pass_context=True, invoke_without_command=True)
+    async def pack(self, ctx, *, name=None):
+        """Commands to manage homebrew items.
+        When called without an argument, lists the current pack and its description.
+        When called with a name, switches to a different pack."""
+        user_packs = await self.bot.mdb.packs.count_documents(
+            {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]})
 
-        if not user_bestiaries:
-            raise NoBestiary()
-        choices = []
-        for bestiary in user_bestiaries:
-            url = bestiary['critterdb_id']
-            if bestiary['name'].lower() == name.lower():
-                choices.append((bestiary, url))
-            elif name.lower() in bestiary['name'].lower():
-                choices.append((bestiary, url))
+        if not user_packs:
+            return await self.bot.say(
+                "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!")
 
-        if len(choices) > 1:
-            choiceList = [(f"{c[0]['name']} (`{c[1]})`", c) for c in choices]
-
-            result = await get_selection(ctx, choiceList, delete=True)
-            if result is None:
-                raise SelectionCancelled()
-
-            bestiary = result[0]
-            bestiary_url = result[1]
-        elif len(choices) == 0:
-            raise NoSelectionElements()
+        if name is None:
+            pack = await Pack.from_ctx(ctx)
         else:
-            bestiary = choices[0][0]
-            bestiary_url = choices[0][1]
-        return Bestiary.from_raw(bestiary_url, bestiary)
+            try:
+                pack = await select_pack(ctx, name)
+            except NoActiveBrew:
+                return await self.bot.say(
+                    "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!")
+            except NoSelectionElements:
+                return await self.bot.say("Pack not found.")
+            await pack.set_active(ctx)
+        embed = HomebrewEmbedWithAuthor(ctx)
+        embed.title = pack.name
+        embed.description = pack.desc
+        embed.set_thumbnail(url=pack.image)
+        await self.bot.say(embed=embed)
 
-    async def bestiary_from_critterdb(self, url):
-        log.info(f"Getting bestiary ID {url}...")
-        index = 1
-        creatures = []
-        async with aiohttp.ClientSession() as session:
-            for _ in range(100):  # 100 pages max
-                log.info(f"Getting page {index} of {url}...")
-                async with session.get(
-                        f"http://critterdb.com/api/publishedbestiaries/{url}/creatures/{index}") as resp:
-                    if not 199 < resp.status < 300:
-                        raise ExternalImportError("Error importing bestiary. Are you sure the link is right?")
-                    raw = await resp.json()
-                    if not raw:
-                        break
-                    creatures.extend(raw)
-                    index += 1
-            async with session.get(f"http://critterdb.com/api/publishedbestiaries/{url}") as resp:
-                raw = await resp.json()
-                name = raw['name']
-        parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
-        return Bestiary(url, name, parsed_creatures)
+    @pack.command(pass_context=True, name='list')
+    async def pack_list(self, ctx):
+        """Lists your available packs."""
+        available_pack_names = await self.bot.mdb.packs.find(
+            {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]},
+            ['name']
+        ).to_list(None)
+        await self.bot.say(f"Your available packs: {', '.join(p['name'] for p in available_pack_names)}")
+
+    @pack.command(pass_context=True, name='editor')
+    async def pack_editor(self, ctx, user: discord.Member):
+        """Allows another user to edit your active pack."""
+        pack = await Pack.from_ctx(ctx)
+        if not pack.owner['id'] == ctx.message.author.id:
+            return await self.bot.say("You do not have permission to add editors to this pack.")
+        if pack.owner['id'] == user.id:
+            return await self.bot.say("You already own this pack.")
+
+        if user.id not in [e['id'] for e in pack.editors]:
+            pack.editors.append({"username": str(user), "id": user.id})
+            await self.bot.say(f"{user} added to {pack.name}'s editors.")
+        else:
+            pack.editors.remove(next(e for e in pack.editors if e['id'] == user.id))
+            await self.bot.say(f"{user} removed from {pack.name}'s editors.")
+        await pack.commit(ctx)
 
 
 def setup(bot):

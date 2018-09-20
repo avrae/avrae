@@ -11,7 +11,9 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.lookupFuncs import select_monster_full, c, getSpell
-from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
+from cogs5e.models.errors import NoActiveBrew
+from cogs5e.models.homebrew.pack import Pack
 from utils import checks
 from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP, search_and_select, generate_token
 
@@ -694,7 +696,14 @@ class Lookup:
 
         self.bot.rdb.incr('items_looked_up_life')
 
-        result = await search_and_select(ctx, c.items, name, lambda e: e['name'], srd=srd)
+        choices = c.items.copy()
+        try:
+            pack = await Pack.from_ctx(ctx)
+            choices.extend(pack.get_search_formatted_items())
+        except NoActiveBrew:
+            pass
+
+        result = await search_and_select(ctx, choices, name, lambda e: e['name'], srd=srd)
 
         embed = EmbedWithAuthor(ctx)
         item = result
@@ -703,77 +712,88 @@ class Lookup:
             return await self.send_srd_error(ctx, result)
 
         name = item['name']
-        damage = ''
-        extras = ''
-        properties = []
         proptext = ""
 
-        if 'type' in item:
-            type_ = ', '.join(
-                i for i in ([ITEM_TYPES.get(t, 'n/a') for t in item['type'].split(',')] +
-                            ["Wondrous Item" if item.get('wondrous') else ''])
-                if i)
-            for iType in item['type'].split(','):
-                if iType in ('M', 'R', 'GUN'):
-                    damage = f"{item.get('dmg1', 'n/a')} {DMGTYPES.get(item.get('dmgType'), 'n/a')}" \
-                        if 'dmg1' in item and 'dmgType' in item else ''
-                    type_ += f', {item.get("weaponCategory")}'
-                if iType == 'S': damage = f"AC +{item.get('ac', 'n/a')}"
-                if iType == 'LA': damage = f"AC {item.get('ac', 'n/a')} + DEX"
-                if iType == 'MA': damage = f"AC {item.get('ac', 'n/a')} + DEX (Max 2)"
-                if iType == 'HA': damage = f"AC {item.get('ac', 'n/a')}"
-                if iType == 'SHP':  # ships
-                    for p in ("CREW", "PASS", "CARGO", "DMGT", "SHPREP"):
-                        a = PROPS.get(p, 'n/a')
-                        proptext += f"**{a.title()}**: {c.itemprops[p]}\n"
-                    extras = f"Speed: {item.get('speed')}\nCarrying Capacity: {item.get('carryingcapacity')}\n" \
-                             f"Crew {item.get('crew')}, AC {item.get('vehAc')}, HP {item.get('vehHp')}"
-                    if 'vehDmgThresh' in item:
-                        extras += f", Damage Threshold {item['vehDmgThresh']}"
-                if iType == 'siege weapon':
-                    extras = f"Size: {SIZES.get(item.get('size'), 'Unknown')}\n" \
-                             f"AC {item.get('ac')}, HP {item.get('hp')}\n" \
-                             f"Immunities: {item.get('immune')}"
-        else:
-            type_ = ', '.join(
-                i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)
-        rarity = str(item.get('rarity')).replace('None', '')
-        if 'tier' in item:
-            if rarity:
-                rarity += f', {item["tier"]}'
+        if not item.get('source') == 'homebrew':
+            damage = ''
+            extras = ''
+            properties = []
+
+            if 'type' in item:
+                type_ = ', '.join(
+                    i for i in ([ITEM_TYPES.get(t, 'n/a') for t in item['type'].split(',')] +
+                                ["Wondrous Item" if item.get('wondrous') else ''])
+                    if i)
+                for iType in item['type'].split(','):
+                    if iType in ('M', 'R', 'GUN'):
+                        damage = f"{item.get('dmg1', 'n/a')} {DMGTYPES.get(item.get('dmgType'), 'n/a')}" \
+                            if 'dmg1' in item and 'dmgType' in item else ''
+                        type_ += f', {item.get("weaponCategory")}'
+                    if iType == 'S': damage = f"AC +{item.get('ac', 'n/a')}"
+                    if iType == 'LA': damage = f"AC {item.get('ac', 'n/a')} + DEX"
+                    if iType == 'MA': damage = f"AC {item.get('ac', 'n/a')} + DEX (Max 2)"
+                    if iType == 'HA': damage = f"AC {item.get('ac', 'n/a')}"
+                    if iType == 'SHP':  # ships
+                        for p in ("CREW", "PASS", "CARGO", "DMGT", "SHPREP"):
+                            a = PROPS.get(p, 'n/a')
+                            proptext += f"**{a.title()}**: {c.itemprops[p]}\n"
+                        extras = f"Speed: {item.get('speed')}\nCarrying Capacity: {item.get('carryingcapacity')}\n" \
+                                 f"Crew {item.get('crew')}, AC {item.get('vehAc')}, HP {item.get('vehHp')}"
+                        if 'vehDmgThresh' in item:
+                            extras += f", Damage Threshold {item['vehDmgThresh']}"
+                    if iType == 'siege weapon':
+                        extras = f"Size: {SIZES.get(item.get('size'), 'Unknown')}\n" \
+                                 f"AC {item.get('ac')}, HP {item.get('hp')}\n" \
+                                 f"Immunities: {item.get('immune')}"
             else:
-                rarity = item['tier']
-        type_and_rarity = type_ + (f", {rarity}" if rarity else '')
-        value = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
-        weight = (item.get('weight', 'n/a') + (' lb.' if item.get('weight') == '1' else ' lbs.')) \
-            if 'weight' in item else ''
-        weight_and_value = value + weight
-        for prop in item.get('property', []):
-            if not prop: continue
-            a = b = prop
-            a = PROPS.get(a, 'n/a')
-            if b in c.itemprops:
-                proptext += f"**{a.title()}**: {c.itemprops[b]}\n"
-            if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
-            if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
-            if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
-            properties.append(a)
-        properties = ', '.join(properties)
-        damage_and_properties = f"{damage} - {properties}" if properties else damage
-        damage_and_properties = (' --- ' + damage_and_properties) if weight_and_value and damage_and_properties else \
-            damage_and_properties
+                type_ = ', '.join(
+                    i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)
+            rarity = str(item.get('rarity')).replace('None', '')
+            if 'tier' in item:
+                if rarity:
+                    rarity += f', {item["tier"]}'
+                else:
+                    rarity = item['tier']
+            type_and_rarity = type_ + (f", {rarity}" if rarity else '')
+            value = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
+            weight = (item.get('weight', 'n/a') + (' lb.' if item.get('weight') == '1' else ' lbs.')) \
+                if 'weight' in item else ''
+            weight_and_value = value + weight
+            for prop in item.get('property', []):
+                if not prop: continue
+                a = b = prop
+                a = PROPS.get(a, 'n/a')
+                if b in c.itemprops:
+                    proptext += f"**{a.title()}**: {c.itemprops[b]}\n"
+                if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
+                if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
+                if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
+                properties.append(a)
+            properties = ', '.join(properties)
+            damage_and_properties = f"{damage} - {properties}" if properties else damage
+            damage_and_properties = (' --- ' + damage_and_properties) if weight_and_value and damage_and_properties else \
+                damage_and_properties
+
+            meta = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n{extras}"
+            text = item['desc']
+
+            if 'reqAttune' in item:
+                if item['reqAttune'] is True:  # can be truthy, but not true
+                    embed.add_field(name="Attunement", value=f"Requires Attunement")
+                else:
+                    embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune']}")
+
+            embed.set_footer(text=f"Item | {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
+        else:
+            meta = item['meta']
+            text = item['desc']
+            if 'image' in item:
+                embed.set_thumbnail(url=item['image'])
+            add_homebrew_footer(embed)
 
         embed.title = name
-        desc = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n{extras}"
-        embed.description = desc  # no need to render, has been prerendered
+        embed.description = meta  # no need to render, has been prerendered
 
-        if 'reqAttune' in item:
-            if item['reqAttune'] is True:  # can be truthy, but not true
-                embed.add_field(name="Attunement", value=f"Requires Attunement")
-            else:
-                embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune']}")
-
-        text = item['desc']
         if proptext:
             text = f"{text}\n{proptext}"
         if len(text) > 5500:
@@ -783,8 +803,6 @@ class Lookup:
         for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
             embed.add_field(name=field_name, value=piece)
             field_name = "** **"
-
-        embed.set_footer(text=f"Item | {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
 
         if pm:
             await self.bot.send_message(ctx.message.author, embed=embed)

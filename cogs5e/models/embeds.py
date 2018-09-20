@@ -17,7 +17,7 @@ class HomebrewEmbedWithAuthor(EmbedWithAuthor):
 
     def __init__(self, ctx, **kwargs):
         super(HomebrewEmbedWithAuthor, self).__init__(ctx, **kwargs)
-        self.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+        self.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
 
 class EmbedWithCharacter(discord.Embed):
@@ -44,3 +44,6 @@ def add_fields_from_args(embed, _fields):
             value = "|".join(f.split('|')[1:]) if '|' in f else f
             embed.add_field(name=title, value=value)
     return embed
+
+def add_homebrew_footer(embed):
+    embed.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png", text="Homebrew content.")

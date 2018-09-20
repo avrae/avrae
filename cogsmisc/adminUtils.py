@@ -28,9 +28,10 @@ log = logging.getLogger(__name__)
 
 RELOADABLE_MODULES = (
     "cogs5e.funcs.dice", "cogs5e.funcs.lookupFuncs", "cogs5e.funcs.scripting", "cogs5e.funcs.sheetFuncs",
-    "cogs5e.models.bestiary", "cogs5e.models.character", "cogs5e.models.embeds", "cogs5e.models.initiative",
+    "cogs5e.models.homebrew.bestiary", "cogs5e.models.character", "cogs5e.models.embeds", "cogs5e.models.initiative",
     "cogs5e.models.monster", "cogs5e.models.race", "cogs5e.sheets.beyond", "cogs5e.sheets.dicecloud",
-    "cogs5e.sheets.errors", "cogs5e.sheets.gsheet", "cogs5e.sheets.sheetParser", "utils.functions", "utils.argparser"
+    "cogs5e.sheets.errors", "cogs5e.sheets.gsheet", "cogs5e.sheets.sheetParser", "utils.functions", "utils.argparser",
+    "cogs5e.models.homebrew.pack"
 )
 
 

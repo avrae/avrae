@@ -7,8 +7,8 @@ import copy
 import json
 import logging
 
-from cogs5e.models.bestiary import Bestiary
-from cogs5e.models.errors import NoBestiary
+from cogs5e.models.homebrew.bestiary import Bestiary
+from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
 from utils.functions import strict_search, fuzzywuzzy_search_all_3, get_selection, \
@@ -147,7 +147,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     try:
         bestiary = await Bestiary.from_ctx(ctx)
         choices.extend(bestiary.monsters)
-    except NoBestiary:
+    except NoActiveBrew:
         pass
     if srd:
         if list_filter:

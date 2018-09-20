@@ -12,11 +12,11 @@ class NoCharacter(AvraeException):
         super().__init__("You have no character active.")
 
 
-class NoBestiary(AvraeException):
-    """Raised when a user has no active bestiary."""
+class NoActiveBrew(AvraeException):
+    """Raised when a user has no active homebrew of a certain type."""
 
     def __init__(self):
-        super().__init__("You have no bestiary active.")
+        super().__init__("You have no homebrew of this type active.")
 
 
 class ExternalImportError(AvraeException):

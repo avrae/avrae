@@ -259,11 +259,14 @@ class SimpleCombat:
         self._combat: Combat = combat
 
         self.combatants = [SimpleCombatant(c) for c in self._combat.get_combatants()]
-        self.current = SimpleCombatant(self._combat.current_combatant) if not isinstance(
-            self._combat.current_combatant, CombatantGroup) else SimpleGroup(self._combat.current_combatant)
         self.me = SimpleCombatant(me, False)
         self.round_num = self._combat.round_num
         self.turn_num = self._combat.turn_num
+        if self._combat.current_combatant:
+            self.current = SimpleCombatant(self._combat.current_combatant) if not isinstance(
+                self._combat.current_combatant, CombatantGroup) else SimpleGroup(self._combat.current_combatant)
+        else:
+            self.current = None
 
     @classmethod
     async def from_character(cls, character, ctx):

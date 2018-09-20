@@ -963,6 +963,9 @@ class InitTracker:
             usermsgs.append(msg)
             damage_msgs[user] = usermsgs
 
+        # set up args for each target
+        original_args = copy.copy(args)
+
         for i, t in enumerate(args.get('t')):
             target: Combatant = await combat.select_combatant(t, f"Select target #{i+1}.")
             if target is None:
@@ -971,6 +974,11 @@ class InitTracker:
                 embed.add_field(name="{} not supported!".format(t),
                                 value="Target must be a monster or player added with `madd` or `cadd`.")
             else:
+                args = copy.copy(original_args)
+                args['resist'] = resist or target.resists['resist'],
+                args['immune'] = immune or target.resists['immune'],
+                args['vuln'] = vuln or target.resists['vuln']
+
                 spell_type = spell.get('type')
                 if spell_type == 'save':  # save spell
                     out = ''
@@ -1039,9 +1047,8 @@ class InitTracker:
                                     damage_save += str(p)
                         dmg = damage_save
 
-                        dmg = parse_resistances(dmg, resist or target.resists['resist'],
-                                                immune or target.resists['immune'],
-                                                vuln or target.resists['vuln'])
+                        dmg = parse_resistances(dmg, args.get('resist', []), args.get('immune', []),
+                                                args.get('vuln', []))  # TODO switch to sheet_damage()
 
                         if is_success:
                             if on_save['success'] == 'half':

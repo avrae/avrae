@@ -715,7 +715,6 @@ class GameTrack:
         if cast_level > 0:
             out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"
 
-        out = "Spell not supported by new cast, falling back to old cast.\n" + out
         await char.commit(ctx)  # make sure we save changes
         await self.bot.say(out)
         spell_cmd = self.bot.get_command('spell')

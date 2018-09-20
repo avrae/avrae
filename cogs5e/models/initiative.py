@@ -4,7 +4,7 @@ import cachetools
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
-    CombatChannelNotFound, NoCombatants
+    CombatChannelNotFound, NoCombatants, NoCharacter
 from utils.argparser import argparse
 from utils.functions import get_selection
 
@@ -865,8 +865,11 @@ class PlayerCombatant(Combatant):
         inst.character_id = raw['character_id']
         inst.character_owner = raw['character_owner']
 
-        from cogs5e.models.character import Character
-        inst._character = await Character.from_bot_and_ids(ctx.bot, inst.character_owner, inst.character_id)
+        try:
+            from cogs5e.models.character import Character
+            inst._character = await Character.from_bot_and_ids(ctx.bot, inst.character_owner, inst.character_id)
+        except NoCharacter:
+            raise CombatException("A character in combat was deleted. Please run `!init end -force` to end combat.")
 
         return inst
 

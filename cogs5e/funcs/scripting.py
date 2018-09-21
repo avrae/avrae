@@ -262,9 +262,12 @@ class SimpleCombat:
         self.me = SimpleCombatant(me, False)
         self.round_num = self._combat.round_num
         self.turn_num = self._combat.turn_num
-        if self._combat.current_combatant:
-            self.current = SimpleCombatant(self._combat.current_combatant) if not isinstance(
-                self._combat.current_combatant, CombatantGroup) else SimpleGroup(self._combat.current_combatant)
+        current = self._combat.current_combatant
+        if current:
+            if isinstance(current, CombatantGroup):
+                self.current = SimpleGroup(current)
+            else:
+                self.current = SimpleCombatant(current)
         else:
             self.current = None
 

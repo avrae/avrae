@@ -216,7 +216,10 @@ class Monster:
             if skill['proficient']:
                 mod = ability_scores.get_mod(SKILL_MAP.get(name)) + proficiency
             else:
-                mod = skill['value']
+                try:
+                    mod = skill['value']
+                except KeyError:
+                    continue
             skills[name] = mod
             raw_skills.append(f"{skill['name']} {mod:+}")
         raw_skills = ', '.join(raw_skills)

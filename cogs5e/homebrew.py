@@ -135,6 +135,11 @@ class Homebrew:
         embed.title = pack.name
         embed.description = pack.desc
         embed.set_thumbnail(url=pack.image)
+        itemnames = "\n".join(i['name'] for i in pack.items)
+        if len(itemnames) < 1200:
+            embed.add_field(name="Items", value=itemnames)
+        else:
+            embed.add_field(name="Items", value=f"{len(pack.items)} items.")
         await self.bot.say(embed=embed)
 
     @pack.command(pass_context=True, name='list')

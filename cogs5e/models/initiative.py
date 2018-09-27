@@ -577,6 +577,12 @@ class Combatant:
     def get_effects(self):
         return self._effects
 
+    def get_effect(self, name, strict=True):
+        if strict:
+            return next((c for c in self.get_effects() if c.name == name), None)
+        else:
+            return next((c for c in self.get_effects() if name.lower() in c.name.lower()), None)
+
     async def select_effect(self, name):
         """
         Opens a prompt for a user to select the effect they were searching for.

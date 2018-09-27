@@ -11,7 +11,7 @@ import utils.argparser
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_damage
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
-from cogs5e.models.initiative import Combat, Combatant, CombatantGroup
+from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
 MAX_ITER_LENGTH = 10000
@@ -300,11 +300,15 @@ class SimpleCombat:
     async def func_commit(self):
         await self._combat.commit()
 
+    def __str__(self):
+        return str(self._combat)
+
 
 class SimpleCombatant:
     def __init__(self, combatant: Combatant, hidestats=True):
         self._combatant = combatant
         self._hidden = hidestats and self._combatant.isPrivate
+        self.type = "combatant"
 
         if not self._hidden:
             self.ac = self._combatant.ac
@@ -326,6 +330,7 @@ class SimpleCombatant:
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes
+        self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
         if self._combatant.hp is not None and self._combatant.hpMax:
             self.ratio = (self._combatant.hp - (self._combatant.temphp or 0)) / self._combatant.hpMax
         else:
@@ -405,16 +410,51 @@ class SimpleCombatant:
             note = str(note)
         self._combatant.notes = note
 
+    def get_effect(self, name: str):
+        effect = self._combatant.get_effect(name)
+        if effect:
+            return SimpleEffect(effect)
+        return None
+
+    def add_effect(self, name: str, args: str, duration: int = -1):
+        effectObj = Effect.new(duration=duration, name=name, effect_args=args)
+        self._combatant.add_effect(effectObj)
+
+    def remove_effect(self, name: str):
+        effect = self._combatant.get_effect(name)
+        if effect:
+            self._combatant.remove_effect(effect)
+
+    def __str__(self):
+        return str(self._combatant)
+
 
 class SimpleGroup:
     def __init__(self, group: CombatantGroup):
         self._group = group
+        self.type = "group"
 
     def get_combatant(self, name):
         combatant = next((c for c in self._group.get_combatants() if name.lower() in c.name.lower()), None)
         if combatant:
             return SimpleCombatant(combatant)
         return None
+
+    def __str__(self):
+        return str(self._group)
+
+
+class SimpleEffect:
+    def __init__(self, effect: Effect):
+        self._effect = effect
+
+        self.name = self._effect.name
+        self.duration = self._effect.duration
+        self.remaining = self._effect.remaining
+        self.effect = self._effect.effect
+
+    def __str__(self):
+        return str(self._effect)
 
 
 DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()

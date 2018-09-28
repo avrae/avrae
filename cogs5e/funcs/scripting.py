@@ -417,7 +417,7 @@ class SimpleCombatant:
         return None
 
     def add_effect(self, name: str, args: str, duration: int = -1):
-        existing = self._combatant.get_effect(name)
+        existing = self._combatant.get_effect(name, True)
         if existing:
             self._combatant.remove_effect(existing)
         effectObj = Effect.new(duration=duration, name=name, effect_args=args)

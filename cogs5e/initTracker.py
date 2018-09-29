@@ -1028,7 +1028,8 @@ class InitTracker:
                         dmg = damage_save
 
                         dmg = parse_resistances(dmg, args.get('resist', []), args.get('immune', []),
-                                                args.get('vuln', []))  # TODO switch to sheet_damage()
+                                                args.get('vuln', []),
+                                                args.get('neutral', []))  # TODO switch to sheet_damage()
 
                         if is_success:
                             if on_save['success'] == 'half':

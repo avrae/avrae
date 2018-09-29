@@ -59,7 +59,8 @@ class Monster:
                  condition_immune: list = None, raw_saves: str = '', saves: dict = None, raw_skills: str = '',
                  skills: dict = None, languages: list = None, traits: list = None, actions: list = None,
                  reactions: list = None, legactions: list = None, la_per_round=3, srd=True, source='homebrew',
-                 attacks: list = None, proper: bool = False, image_url: str = None, spellcasting=None, page=None):
+                 attacks: list = None, proper: bool = False, image_url: str = None, spellcasting=None, page=None,
+                 raw_resists: dict = None):
         if vuln is None:
             vuln = []
         if resist is None:
@@ -98,6 +99,8 @@ class Monster:
                 saves[save] = int(saves[save])
         if passiveperc is None:
             passiveperc = 10 + skills['perception']
+        if raw_resists is None:
+            raw_resists = {}
         self.name = name
         self.size = size
         self.race = race
@@ -138,6 +141,7 @@ class Monster:
         self.image_url = image_url
         self.spellcasting = spellcasting
         self.page = page  # this should really be by source, but oh well
+        self.raw_resists = raw_resists
 
     @classmethod
     def from_data(cls, data):
@@ -163,6 +167,12 @@ class Monster:
         resist = parse_resists(data['resist']) if 'resist' in data else None
         immune = parse_resists(data['immune']) if 'immune' in data else None
         condition_immune = data.get('conditionImmune', []) if 'conditionImmune' in data else None
+
+        raw_resists = {
+            "vuln": parse_resists(data['vulnerable'], False) if 'vulnerable' in data else [],
+            "resist": parse_resists(data['resist'], False) if 'resist' in data else [],
+            "immune": parse_resists(data['immune'], False) if 'immune' in data else []
+        }
 
         languages = data.get('languages', '').split(', ') if 'languages' in data else None
 
@@ -190,7 +200,7 @@ class Monster:
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, save_text, saves, skill_text, skills, languages, traits,
                    actions, reactions, legactions, 3, data.get('srd', False), source, attacks,
-                   spellcasting=spellcasting, page=data.get('page'), proper=proper)
+                   spellcasting=spellcasting, page=data.get('page'), proper=proper, raw_resists=raw_resists)
 
     @classmethod
     def from_critterdb(cls, data):
@@ -246,6 +256,12 @@ class Monster:
             for trait in atk_src:
                 attacks.extend(trait.attacks)
 
+        resists = {
+            "resist": data['stats']['damageResistances'],
+            "immune": data['stats']['damageImmunities'],
+            "vuln": data['stats']['conditionImmunities']
+        }
+
         return cls(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
                    data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
                    ability_scores, cr, data['stats']['experiencePoints'], None,
@@ -254,7 +270,7 @@ class Monster:
                    data['stats']['conditionImmunities'], raw_saves, saves, raw_skills, skills,
                    data['stats']['languages'], traits, actions, reactions, legactions,
                    data['stats']['legendaryActionsPerRound'], True, 'homebrew', attacks,
-                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'])
+                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'], raw_resists=resists)
 
     @classmethod
     def from_bestiary(cls, data):
@@ -282,7 +298,7 @@ class Monster:
                 'reactions': [t.to_dict() for t in self.reactions],
                 'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
                 'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
-                'image_url': self.image_url, 'spellcasting': self.spellcasting}
+                'image_url': self.image_url, 'spellcasting': self.spellcasting, 'raw_resists': self.raw_resists}
 
     def get_stat_array(self):
         """
@@ -496,7 +512,7 @@ def parse_critterdb_traits(data, key):
     return traits
 
 
-def parse_resists(resists):
+def parse_resists(resists, notated=True):
     out = []
     for dmgtype in resists:
         if isinstance(dmgtype, str):
@@ -505,9 +521,13 @@ def parse_resists(resists):
             if 'special' in dmgtype:
                 out.append(dmgtype['special'])
             else:
-                out.append(
-                    f"{', '.join(parse_resists(dmgtype.get('resist') or dmgtype.get('immune') or dmgtype.get('vulnerable')))} "
-                    f"{dmgtype.get('note')}")
+                if notated:
+                    out.append(
+                        f"{', '.join(parse_resists(dmgtype.get('resist') or dmgtype.get('immune') or dmgtype.get('vulnerable')))} "
+                        f"{dmgtype.get('note')}")
+                else:
+                    out.extend(
+                        parse_resists(dmgtype.get('resist') or dmgtype.get('immune') or dmgtype.get('vulnerable')))
     return out
 
 

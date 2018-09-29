@@ -770,9 +770,9 @@ class MonsterCombatant(Combatant):
         hp = int(monster.hp) if not hp else int(hp)
         ac = int(monster.ac) if not ac else int(ac)
 
-        resist = monster.resist
-        immune = monster.immume
-        vuln = monster.vuln
+        resist = monster.raw_resists['resist']
+        immune = monster.raw_resists['immune']
+        vuln = monster.raw_resists['vuln']
         # fix npr and blug/pierc/slash
         if opts.get('npr'):
             if resist:

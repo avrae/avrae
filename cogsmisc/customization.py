@@ -47,7 +47,7 @@ class Customization:
     @commands.cooldown(1, 20, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.
-        Limited to 1 multiline every 20 seconds due to abuse.
+        Limited to 1 multiline every 20 seconds, with a max of 20 commands, due to abuse.
         Usage:
         "!multiline
         !roll 1d20

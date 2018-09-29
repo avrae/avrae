@@ -4,7 +4,7 @@ import cachetools
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
-    CombatChannelNotFound, NoCombatants, NoCharacter
+    CombatChannelNotFound, NoCombatants, NoCharacter, InvalidArgument
 from utils.argparser import argparse
 from utils.functions import get_selection
 
@@ -1011,6 +1011,10 @@ class Effect:
         for arg in cls.VALID_ARGS:
             if arg in effect_args:
                 effect_dict[arg] = effect_args.last(arg)
+        try:
+            duration = int(duration)
+        except (ValueError, TypeError):
+            raise InvalidArgument("Effect duration must be an integer.")
         return cls(name, duration, duration, effect_dict)
 
     @property

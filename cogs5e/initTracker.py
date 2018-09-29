@@ -472,9 +472,10 @@ class InitTracker:
                             -name <NAME> (changes combatant name)
                             -controller <CONTROLLER> (pings a different person on turn)
                             -ac <AC> (changes combatant AC)
-                            -resist <RESISTANCE>
-                            -immune <IMMUNITY>
-                            -vuln <VULNERABILITY>
+                            -resist <DMGTYPE>
+                            -immune <DMGTYPE>
+                            -vuln <DMGTYPE>
+                            -neutral <DMGTYPE>
                             -group <GROUP> (changes group)"""
         combat = await Combat.from_ctx(ctx)
 
@@ -544,36 +545,12 @@ class InitTracker:
                 out += "\u2705 Combatant name set to {}.\n".format(name)
             else:
                 out += "\u274c You must pass in a name with the -name tag.\n"
-        if 'resist' in args:
-            for resist in args.get('resist'):
-                resist = resist.lower()
-                combatant.resists['resist'] = list(set(i.lower() for i in combatant.resists['resist']))
-                if resist in combatant.resists['resist']:
-                    combatant.resists['resist'].remove(resist)
-                    out += "\u2705 {} removed from combatant resistances.\n".format(resist)
-                else:
-                    combatant.resists['resist'].append(resist)
-                    out += "\u2705 {} added to combatant resistances.\n".format(resist)
-        if 'immune' in args:
-            for immune in args.get('immune'):
-                immune = immune.lower()
-                combatant.resists['immune'] = list(set(i.lower() for i in combatant.resists['immune']))
-                if immune in combatant.resists['immune']:
-                    combatant.resists['immune'].remove(immune)
-                    out += "\u2705 {} removed from combatant immunities.\n".format(immune)
-                else:
-                    combatant.resists['immune'].append(immune)
-                    out += "\u2705 {} added to combatant immunities.\n".format(immune)
-        if 'vuln' in args:
-            for vuln in args.get('vuln'):
-                vuln = vuln.lower()
-                combatant.resists['vuln'] = list(set(i.lower() for i in combatant.resists['vuln']))
-                if vuln in combatant.resists['vuln']:
-                    combatant.resists['vuln'].remove(vuln)
-                    out += "\u2705 {} removed from combatant vulnerabilities.\n".format(vuln)
-                else:
-                    combatant.resists['vuln'].append(vuln)
-                    out += "\u2705 {} added to combatant vulnerabilities.\n".format(vuln)
+        for resisttype in ("resist", "immune", "vuln", "neutral"):
+            if resisttype in args:
+                for resist in args.get(resisttype):
+                    resist = resist.lower()
+                    combatant.set_resist(resist, resisttype)
+                    out += f"\u2705 Now {resisttype} to {resist}.\n"
 
         if combatant.isPrivate:
             await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
@@ -786,6 +763,7 @@ class InitTracker:
         args['resist'] = args.get('resist') or target.resists['resist']
         args['immune'] = args.get('immune') or target.resists['immune']
         args['vuln'] = args.get('vuln') or target.resists['vuln']
+        args['neutral'] = args.get('neutral') or target.resists['neutral']
         if is_player:
             args['c'] = combatant.character.get_setting('critdmg') or args.get('c')
             args['reroll'] = combatant.character.get_setting('reroll') or 0
@@ -923,6 +901,7 @@ class InitTracker:
         resist = args.get('resist')
         immune = args.get('immune')
         vuln = args.get('vuln')
+        neutral = args.get('neutral')
         args['name'] = combatant.name
 
         can_cast = True
@@ -975,9 +954,10 @@ class InitTracker:
                                 value="Target must be a monster or player added with `madd` or `cadd`.")
             else:
                 args = copy.copy(original_args)
-                args['resist'] = resist or target.resists['resist'],
-                args['immune'] = immune or target.resists['immune'],
+                args['resist'] = resist or target.resists['resist']
+                args['immune'] = immune or target.resists['immune']
                 args['vuln'] = vuln or target.resists['vuln']
+                args['neutral'] = neutral or target.resists['neutral']
 
                 spell_type = spell.get('type')
                 if spell_type == 'save':  # save spell

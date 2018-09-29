@@ -6,6 +6,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants, NoCharacter, InvalidArgument
 from utils.argparser import argparse
+from utils.constants import RESIST_TYPES
 from utils.functions import get_selection
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
@@ -407,7 +408,7 @@ class Combatant:
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
                 'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
-                'resists': self.resists, 'attacks': self._attacks, 'saves': self._saves, 'index': self.index,
+                'resists': self._resists, 'attacks': self._attacks, 'saves': self._saves, 'index': self.index,
                 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
                 'temphp': self.temphp, 'spellcasting': self.spellcasting.to_dict(), 'type': 'common'}
 
@@ -530,10 +531,30 @@ class Combatant:
 
     @property
     def resists(self):
-        for k in ('resist', 'immune', 'vuln'):
-            if not k in self._resists:
-                self._resists[k] = []
-        return self._resists
+        checked = []
+        out = {}
+        for k in reversed(RESIST_TYPES):
+            out[k] = []
+            for _type in self.active_effects(k):
+                if _type not in checked:
+                    out[k].append(_type)
+                    checked.append(_type)
+        for k in reversed(RESIST_TYPES):
+            for _type in self._resists.get(k, []):
+                if _type not in checked:
+                    out[k].append(_type)
+                    checked.append(_type)
+        return out
+
+    def set_resist(self, dmgtype, resisttype):
+        if resisttype not in RESIST_TYPES:
+            raise ValueError("Resistance type is invalid")
+        for rt in RESIST_TYPES:
+            if dmgtype in self._resists.get(rt, []):
+                self._resists[rt].remove(dmgtype)
+        if resisttype not in self._resists:
+            self._resists[resisttype] = []
+        self._resists[resisttype].append(dmgtype)
 
     @property
     def attacks(self):
@@ -620,7 +641,10 @@ class Combatant:
                 for k, v in effect.effect.items():
                     if k not in parsed_effects:
                         parsed_effects[k] = []
-                    parsed_effects[k].append(v)
+                    if not isinstance(v, list):
+                        parsed_effects[k].append(v)
+                    else:
+                        parsed_effects[k].extend(v)
             self._cache['parsed_effects'] = parsed_effects
         if key:
             return self._cache['parsed_effects'].get(key, [])
@@ -713,9 +737,9 @@ class Combatant:
 
     def get_resist_string(self, private: bool = False):
         resistStr = ''
-        self._resists['resist'] = [r for r in self.resists['resist'] if r]  # clean empty resists
-        self._resists['immune'] = [r for r in self.resists['immune'] if r]  # clean empty resists
-        self._resists['vuln'] = [r for r in self.resists['vuln'] if r]  # clean empty resists
+        self._resists['resist'] = [r for r in self._resists['resist'] if r]  # clean empty resists
+        self._resists['immune'] = [r for r in self._resists['immune'] if r]  # clean empty resists
+        self._resists['vuln'] = [r for r in self._resists['vuln'] if r]  # clean empty resists
         if not self.isPrivate or private:
             if len(self.resists['resist']) > 0:
                 resistStr += "\n> Resistances: " + ', '.join(self.resists['resist']).title()
@@ -757,17 +781,10 @@ class MonsterCombatant(Combatant):
                 immune = [r for r in immune if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
             if vuln:
                 vuln = [r for r in vuln if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
-        for t in (resist, immune, vuln):
-            for e in t:
-                for d in ('bludgeoning', 'piercing', 'slashing'):
-                    if d in e and not d == e.lower():
-                        try:
-                            t.remove(e)
-                        except ValueError:
-                            pass
-                        t.append(d)
 
-        resists = {'resist': resist, 'immune': immune, 'vuln': vuln}
+        resists = {'resist': [r.lower() for r in resist],
+                   'immune': [i.lower() for i in immune],
+                   'vuln': [v.lower() for v in vuln]}
         attacks = monster.attacks
         saves = monster.saves
         spellcasting = Spellcasting(monster.spellcasting.get('spells', []), monster.spellcasting.get('dc', 0),
@@ -995,7 +1012,9 @@ class CombatantGroup:
 
 
 class Effect:
-    VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC'}
+    LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
+    VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
+                  'vuln': 'Vulnerability', 'neutral': 'Neutral'}
 
     def __init__(self, name: str, duration: int, remaining: int, effect: dict):
         self._name = name
@@ -1008,8 +1027,10 @@ class Effect:
         if isinstance(effect_args, str):
             effect_args = argparse(effect_args)
         effect_dict = {}
-        for arg in cls.VALID_ARGS:
-            if arg in effect_args:
+        for arg in effect_args:
+            if arg in cls.LIST_ARGS:
+                effect_dict[arg] = effect_args.get(arg, [])
+            elif arg in cls.VALID_ARGS:
                 effect_dict[arg] = effect_args.last(arg)
         try:
             duration = int(duration)
@@ -1042,7 +1063,13 @@ class Effect:
         return desc
 
     def get_effect_str(self):
-        return ', '.join(f"{self.VALID_ARGS.get(k)}: {v}" for k, v in self.effect.items())
+        out = []
+        for k, v in self.effect.items():
+            if isinstance(v, list):
+                out.append(f"{self.VALID_ARGS.get(k)}: {', '.join(v)}")
+            else:
+                out.append(f"{self.VALID_ARGS.get(k)}: {v}")
+        return '; '.join(out)
 
     def on_turn(self, num_turns=1):
         """

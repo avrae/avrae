@@ -188,7 +188,11 @@ def camel_to_title(string):
     return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
 
 
-def parse_resistances(damage, resistances, immunities, vulnerabilities):
+def parse_resistances(damage, resistances, immunities, vulnerabilities, neutral=None):
+    if neutral is None:
+        neutral = []
+    checked = neutral.copy()
+
     COMMENT_REGEX = r'\[(?P<comment>.*?)\]'
     ROLL_STRING_REGEX = r'\[.*?]'
 
@@ -222,19 +226,22 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities):
         if roll_string[0] in '-+*/().<>=':  # case: +6[blud]
             preop = roll_string[0]
             roll_string = roll_string[1:]
-        if not comment.endswith('^'):
-            for resistance in resistances:
-                if resistance.lower() in comment.lower() and len(resistance) > 0:
-                    roll_string = '({0}) / 2'.format(roll_string)
-                    break
-            for immunity in immunities:
-                if immunity.lower() in comment.lower() and len(immunity) > 0:
-                    roll_string = '({0}) * 0'.format(roll_string)
-                    break
         for vulnerability in vulnerabilities:
-            if vulnerability.lower() in comment.lower() and len(vulnerability) > 0:
+            if vulnerability.lower() in comment.lower() and len(vulnerability) > 0 and vulnerability not in checked:
                 roll_string = '({0}) * 2'.format(roll_string)
+                checked.append(vulnerability)
                 break
+        if not comment.endswith('^'):
+            for immunity in immunities:
+                if immunity.lower() in comment.lower() and len(immunity) > 0 and immunity not in checked:
+                    roll_string = '({0}) * 0'.format(roll_string)
+                    checked.append(immunity)
+                    break
+            for resistance in resistances:
+                if resistance.lower() in comment.lower() and len(resistance) > 0 and resistance not in checked:
+                    roll_string = '({0}) / 2'.format(roll_string)
+                    checked.append(resistance)
+                    break
         formatted_roll_strings[index] = '{0}{1}{2}'.format(preop, roll_string,
                                                            "[{}]".format(comment) if comment is not '' else "")
     if formatted_roll_strings:

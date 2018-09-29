@@ -10,6 +10,7 @@ import discord
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models.errors import NoSpellDC, NoSpellAB, InvalidSaveType
+from utils.constants import RESIST_TYPES
 from utils.functions import a_or_an, parse_resistances
 
 
@@ -172,6 +173,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
     resist = args.get('resist')
     immune = args.get('immune')
     vuln = args.get('vuln')
+    neutral = args.get('neutral')
 
     if damage_str is None and d:
         damage_str = '0'
@@ -214,7 +216,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
             rollFor = "Damage (Miss!)"
 
         # resist parsing
-        damage = parse_resistances(damage, resist, immune, vuln)
+        damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
         # actual roll
         if itercrit == 2 and not showmiss:

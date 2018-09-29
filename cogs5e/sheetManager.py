@@ -83,6 +83,7 @@ class SheetManager:
         -resist [damage resistance]
         -immune [damage immunity]
         -vuln [damage vulnerability]
+        -neutral [damage non-resistance]
         -hit (automatically hits)
         -miss (automatically misses)
         crit (automatically crit)

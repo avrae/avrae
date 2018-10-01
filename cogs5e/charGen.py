@@ -464,7 +464,7 @@ class CharGenerator:
             elif trait['name'].lower().startswith('equipment'):
                 caveats.append(f"**Background Equipment**: Your background grants you {text}")
 
-        # await dc.transfer_ownership(char_id, dicecloud_userId)  TODO fix your stuff, dicecloud
+        await dc.transfer_ownership(char_id, dicecloud_userId)
 
         out = f"Generated {name}! I have PMed you the link."
         await self.bot.send_message(ctx.message.author, f"https://dicecloud.com/character/{char_id}/{name}")

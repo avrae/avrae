@@ -598,7 +598,7 @@ class Lookup:
 
         self.bot.rdb.incr('spells_looked_up_life')
 
-        spell = await search_and_select(ctx, c.spells, name, lambda e: e.name, srd=srd)
+        spell = await search_and_select(ctx, c.spells, name, lambda e: e.name, srd=srd and (lambda s: s.srd))
 
         spellDesc = []
         embed = EmbedWithAuthor(ctx)

@@ -110,7 +110,7 @@ class Spell:
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
                  description: str, classes: list = None, subclasses: list = None, ritual: bool = False,
                  higherlevels: str = None, source: str = "homebrew", page: int = None, concentration: bool = False,
-                 automation: Automation = None):
+                 automation: Automation = None, srd: bool = False):
         if classes is None:
             classes = []
         if subclasses is None:
@@ -131,6 +131,7 @@ class Spell:
         self.page = page
         self.concentration = concentration
         self.automation = automation
+        self.srd = srd
 
     @classmethod
     def from_data(cls, data):

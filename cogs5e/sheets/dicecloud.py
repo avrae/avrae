@@ -21,7 +21,7 @@ import credentials
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.errors import ExternalImportError
-from utils.functions import fuzzy_search
+from utils.functions import search
 
 log = logging.getLogger(__name__)
 
@@ -552,9 +552,9 @@ class DicecloudParser:
             spellbook['spellslots'][str(lvl)] = numSlots
 
         for spell in spellnames:
-            s = fuzzy_search(c.spells, 'name', spell.strip())
-            if s:
-                spellbook['spells'].append(s.get('name'))
+            s, strict = search(c.spells, spell, lambda sp: sp.name)
+            if s and strict:
+                spellbook['spells'].append(s.name)
 
         sls = [(0, 0)]  # ab, dc
         for sl in self.character.get('spellLists', []):

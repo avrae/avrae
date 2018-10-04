@@ -21,7 +21,7 @@ from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
 from utils.argparser import argparse
-from utils.functions import strict_search, dicecloud_parse, search_and_select
+from utils.functions import strict_search, dicecloud_parse, search_and_select, search
 
 log = logging.getLogger(__name__)
 
@@ -281,10 +281,10 @@ class GameTrack:
         embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
         spells_known = {}
         for spell_name in character.get_spell_list():
-            spell = strict_search(c.spells, 'name', spell_name)
-            if spell is None:
+            spell, strict = search(c.spells, spell_name, lambda sp: sp.name)
+            if spell is None or not strict:
                 continue
-            spells_known[spell['level']] = spells_known.get(spell['level'], []) + [spell_name]
+            spells_known[str(spell.level)] = spells_known.get(str(spell.level), []) + [spell_name]
 
         level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
                       '4': '4th Level', '5': '5th Level', '6': '6th Level',
@@ -320,11 +320,10 @@ class GameTrack:
                                       "sheet with `avrae` with edit permissions, then `!update`.")
         if not 0 <= level < 10:
             return await self.bot.say("Invalid spell level.")
-        class_spells = [sp for sp in c.spells if
-                        _class.lower() in [cl.lower() for cl in sp['classes'].split(', ') if not '(' in cl]]
+        class_spells = [sp for sp in c.spells if _class.lower() in [cl.lower() for cl in sp.classes]]
         if len(class_spells) == 0:
             return await self.bot.say("No spells for that class found.")
-        level_spells = [s for s in class_spells if str(level) == s['level']]
+        level_spells = [s for s in class_spells if level == s.level]
         try:
             await DicecloudClient.getInstance().sync_add_mass_spells(character,
                                                                      [dicecloud_parse(s) for s in level_spells],

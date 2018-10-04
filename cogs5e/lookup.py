@@ -10,7 +10,7 @@ import textwrap
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs.lookupFuncs import select_monster_full, c, getSpell
+from cogs5e.funcs.lookupFuncs import select_monster_full, c
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
@@ -598,8 +598,7 @@ class Lookup:
 
         self.bot.rdb.incr('spells_looked_up_life')
 
-        result = await search_and_select(ctx, c.spells, name, lambda e: e['name'], return_key=True, srd=srd)
-        result = getSpell(result)
+        spell = await search_and_select(ctx, c.spells, name, lambda e: e.name, srd=srd)
 
         spellDesc = []
         embed = EmbedWithAuthor(ctx)

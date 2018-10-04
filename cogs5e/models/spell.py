@@ -21,7 +21,7 @@ class Effect:
 
     @classmethod
     def from_data(cls, data):  # catch-all
-        data['type_'] = data.pop('type')
+        data.pop('type')
         return cls(**data)
 
 

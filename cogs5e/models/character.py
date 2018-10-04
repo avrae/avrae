@@ -800,13 +800,13 @@ class Character:
         :returns self"""
         self._initialize_spellbook()
         spells = set(self.character['spellbook']['spells'])
-        spells.add(spell['name'])
+        spells.add(spell.name)
         self.character['spellbook']['spells'] = list(spells)
 
         if not self.live:
             self._initialize_spell_overrides()
             overrides = set(self.character['overrides']['spells'])
-            overrides.add(spell['name'])
+            overrides.add(spell.name)
             self.character['overrides']['spells'] = list(overrides)
         return self
 

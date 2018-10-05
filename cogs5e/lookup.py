@@ -604,15 +604,19 @@ class Lookup:
         color = embed.colour
 
         embed.title = spell.name
-        embed.description = f"*{spell.get_level()} {spell.get_school()}. " \
+        embed.description = f"*{spell.get_level()} {spell.get_school().lower()}. " \
                             f"({', '.join(itertools.chain(spell.classes, spell.subclasses))})*"
-        embed.add_field(name="Casting Time", value=spell.time)
+        if spell.ritual:
+            time = f"{spell.time} (ritual)"
+        else:
+            time = spell.time
+        embed.add_field(name="Casting Time", value=time)
         embed.add_field(name="Range", value=spell.range)
         embed.add_field(name="Components", value=spell.components)
         embed.add_field(name="Duration", value=spell.duration)
-        embed.add_field(name="Ritual", value=spell.ritual)
+        embed.set_footer(text=f"Spell | {spell.source} {spell.page}")
 
-        text = '\n'.join(spell.description)
+        text = spell.description
         higher_levels = spell.higherlevels
 
         if not spell.srd and srd:

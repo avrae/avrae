@@ -138,3 +138,26 @@ class Spell:
         data["range_"] = data.pop("range")  # ignore this
         data["automation"] = Automation.from_data(data["automation"])
         return cls(**data)
+
+    def get_school(self):
+        return {
+            "A": "Abjuration",
+            "EV": "Evocation",
+            "EN": "Enchantment",
+            "I": "Illusion",
+            "D": "Divination",
+            "N": "Necromancy",
+            "T": "Transmutation",
+            "C": "Conjuration"
+        }.get(self.school, self.school)
+
+    def get_level(self):
+        if self.level == 0:
+            return "cantrip"
+        if self.level == 1:
+            return "1st level"
+        if self.level == 2:
+            return "2nd level"
+        if self.level == 3:
+            return "3rd level"
+        return f"{self.level}th level"

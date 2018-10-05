@@ -796,7 +796,7 @@ class Character:
 
     def add_known_spell(self, spell):
         """Adds a spell to the character's known spell list.
-        :param spell (dict) - the Spell dictionary.
+        :param spell (Spell) - the Spell.
         :returns self"""
         self._initialize_spellbook()
         spells = set(self.character['spellbook']['spells'])

@@ -453,16 +453,6 @@ def dicecloud_parse(spell):
     :return: (dict) A dictionary with all the keys necessary for dicecloud exporting.
     """
     mat = re.search(r'\(([^()]+)\)', spell.components)
-    schools = {
-        "A": "Abjuration",
-        "EV": "Evocation",
-        "EN": "Enchantment",
-        "I": "Illusion",
-        "D": "Divination",
-        "N": "Necromancy",
-        "T": "Transmutation",
-        "C": "Conjuration"
-    }
     text = spell.description.replace('\n', '\n  ')
     if spell.higherlevels:
         text += f"\n\n**At Higher Levels**: {spell.higherlevels}"
@@ -478,7 +468,7 @@ def dicecloud_parse(spell):
         'components.material': mat.group(1) if mat else None,
         'ritual': spell.ritual,
         'level': int(spell.level),
-        'school': schools.get(spell.school)
+        'school': spell.get_school()
     }
 
 

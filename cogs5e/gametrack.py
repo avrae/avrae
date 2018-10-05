@@ -308,7 +308,7 @@ class GameTrack:
         character.add_known_spell(spell)
         await character.commit(ctx)
         live = "Spell added to Dicecloud!" if character.live else ''
-        await self.bot.say(f"{spell['name']} added to known spell list!\n{live}")
+        await self.bot.say(f"{spell.name} added to known spell list!\n{live}")
 
     @spellbook.command(pass_context=True, name='addall')
     async def spellbook_addall(self, ctx, _class, level: int, spell_list=None):

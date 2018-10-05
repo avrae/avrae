@@ -3,7 +3,7 @@ Created on Nov 29, 2016
 
 @author: andrew
 """
-import copy
+import itertools
 import shlex
 import textwrap
 
@@ -600,65 +600,22 @@ class Lookup:
 
         spell = await search_and_select(ctx, c.spells, name, lambda e: e.name, srd=srd and (lambda s: s.srd))
 
-        spellDesc = []
         embed = EmbedWithAuthor(ctx)
         color = embed.colour
-        spell = copy.copy(result)
 
-        def parseschool(school):
-            if school == "A": return "abjuration"
-            if school == "EV": return "evocation"
-            if school == "EN": return "enchantment"
-            if school == "I": return "illusion"
-            if school == "D": return "divination"
-            if school == "N": return "necromancy"
-            if school == "T": return "transmutation"
-            if school == "C": return "conjuration"
-            return school
+        embed.title = spell.name
+        embed.description = f"*{spell.get_level()} {spell.get_school()}. " \
+                            f"({', '.join(itertools.chain(spell.classes, spell.subclasses))})*"
+        embed.add_field(name="Casting Time", value=spell.time)
+        embed.add_field(name="Range", value=spell.range)
+        embed.add_field(name="Components", value=spell.components)
+        embed.add_field(name="Duration", value=spell.duration)
+        embed.add_field(name="Ritual", value=spell.ritual)
 
-        def parsespelllevel(level):
-            if level == "0": return "cantrip"
-            if level == "2": return level + "nd level"
-            if level == "3": return level + "rd level"
-            if level == "1": return level + "st level"
-            return level + "th level"
+        text = '\n'.join(spell.description)
+        higher_levels = spell.higherlevels
 
-        spell['school'] = parseschool(spell.get('school'))
-        spell['ritual'] = spell.get('ritual', 'no').lower()
-
-        embed.title = spell['name']
-
-        if spell.get("source") == "UAMystic":
-            embed.description = "*{level} Mystic Talent. ({classes})*".format(**spell)
-        else:
-            spell['level'] = parsespelllevel(spell['level'])
-            embed.description = "*{level} {school}. ({classes})*".format(**spell)
-            embed.add_field(name="Casting Time", value=spell['time'])
-            embed.add_field(name="Range", value=spell['range'])
-            embed.add_field(name="Components", value=spell['components'])
-            embed.add_field(name="Duration", value=spell['duration'])
-            embed.add_field(name="Ritual", value=spell['ritual'])
-
-        if isinstance(spell['text'], list):
-            for a in spell["text"]:
-                if a is '': continue
-                spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
-                    "This spell can be found in the Elemental Evil Player's Companion", ""))
-        else:
-            spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
-                "This spell can be found in the Elemental Evil Player's Companion", ""))
-
-        text = '\n'.join(spellDesc)
-        if "**At Higher Levels:** " in text:
-            text, higher_levels = text.split("**At Higher Levels:** ", 1)
-        elif "At Higher Levels" in text:
-            text, higher_levels = text.split("At Higher Levels", 1)
-            text = text.strip('*\n')
-            higher_levels = higher_levels.strip('* \n.:')
-        else:
-            higher_levels = None
-
-        if not spell['srd'] and srd:
+        if not spell.srd and srd:
             text = "No description available."
             higher_levels = ''
 
@@ -695,10 +652,10 @@ class Lookup:
 
         self.bot.rdb.incr('items_looked_up_life')
 
-        choices = c.items.copy()
+        choices = c.items
         try:
             pack = await Pack.from_ctx(ctx)
-            choices.extend(pack.get_search_formatted_items())
+            choices = itertools.chain(c.items, pack.get_search_formatted_items())
         except NoActiveBrew:
             pass
 

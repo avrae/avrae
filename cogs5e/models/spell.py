@@ -142,8 +142,8 @@ class Spell:
     def get_school(self):
         return {
             "A": "Abjuration",
-            "EV": "Evocation",
-            "EN": "Enchantment",
+            "V": "Evocation",
+            "E": "Enchantment",
             "I": "Illusion",
             "D": "Divination",
             "N": "Necromancy",

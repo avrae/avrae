@@ -35,6 +35,10 @@ API_BASE = "https://dicecloud.com/character/"
 KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
 
 
+def generate_cachebuster():
+    return str(random.randint(100000, 1000000))
+
+
 class DicecloudParser:
     def __init__(self, url):
         self.url = url
@@ -48,7 +52,7 @@ class DicecloudParser:
         character = None
         async with aiohttp.ClientSession() as session:
             for _ in range(10):  # 10 retries
-                async with session.get(f"{API_BASE}{url}/json?key={KEY}") as resp:
+                async with session.get(f"{API_BASE}{url}/json?key={KEY}&cachebuster={generate_cachebuster()}") as resp:
                     log.debug(f"Dicecloud returned {resp.status}")
                     if resp.status == 200:
                         character = await resp.json(encoding='utf-8')

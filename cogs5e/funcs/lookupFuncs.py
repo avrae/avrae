@@ -4,6 +4,7 @@ Created on Jan 13, 2017
 @author: andrew
 """
 import copy
+import itertools
 import json
 import logging
 
@@ -141,10 +142,10 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
-    choices = c.monster_mash.copy()
+    choices = c.monster_mash
     try:
         bestiary = await Bestiary.from_ctx(ctx)
-        choices.extend(bestiary.monsters)
+        choices = itertools.chain(c.monster_mash, bestiary.monsters)
     except NoActiveBrew:
         pass
     if srd:

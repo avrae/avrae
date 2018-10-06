@@ -230,23 +230,9 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
 
 
 def sheet_cast(spell, args, embed=None):
-    if embed is None:
-        embed = discord.Embed()
 
-    spell_level = int(spell.get('level', 0))
-    spell_type = spell.get('type')  # save, attack, special
-
-    cast_level = args.last('l', spell_level, int)
-    caster_name = args.last('name', 'Unnamed')
     phrase = args.join('phrase', '\n')
-    dc = args.last('dc', type_=int)  # save DC (int)
-    save_skill = args.last('save') or spell.get('save', {}).get('save')  # str, dex, etc (optional)
-    caster_level = args.last('casterlevel', 1, int)  # for cantrip scaling
-    d = args.join('d', '+')
-    spell_ab = sum(args.get('ab', type_=int))
-    casting_mod = sum(args.get('SPELL', type_=int))
 
-    total_damage = 0
 
     upcast_dmg = None
     if not cast_level == spell_level:

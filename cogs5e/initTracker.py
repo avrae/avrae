@@ -869,18 +869,18 @@ class InitTracker:
         if not args.get('t'):
             return await self.bot.say("You must pass in targets with `-t target`.", delete_after=15)
 
-        embed = discord.Embed()
-        embed_footer = ''
-        if args.get('phrase'):  # parse phrase
-            embed.description = '*' + args.join('phrase', '\n') + '*'
-        else:
-            embed.description = '~~' + ' ' * 500 + '~~'
-
         if not args.last('i', type_=bool):
             spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name,
                                             list_filter=lambda s: s.name in combatant.spellcasting.spells)
         else:
             spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
+
+        targets = [await combat.select_combatant(t, f"Select target #{i+1}.") for i, t in enumerate(args.get('t'))]
+
+        await spell.cast(ctx, combatant, targets, args, combat=combat)
+
+        embed = discord.Embed()
+        embed_footer = ''
 
         if spell.automation is None: return await self.bot.say(
             embed=discord.Embed(title="Unsupported spell!",
@@ -892,61 +892,19 @@ class InitTracker:
             return await self.bot.say("Spell not supported by casting system.")
         spell_level = int(spell.get('level', 0))
 
-        l = args.last('l', spell_level, int)
-        i = args.last('i', type_=bool)
-        dc = args.last('dc', type_=int)
-        save = args.last('save')
-        adv = args.adv(True)  # hopefully no one EAs a save spell?
-        d = args.join('d', '+')
-        resist = args.get('resist')
-        immune = args.get('immune')
-        vuln = args.get('vuln')
-        neutral = args.get('neutral')
-        args['name'] = combatant.name
 
-        can_cast = True
-        cast_level = l
-        if not spell_level <= cast_level <= 9:
-            return await self.bot.say("Invalid spell level.")
 
-        if not combatant.can_cast(spell, cast_level):  # TODO - check available slots / innate casting
-            can_cast = False
-        else:
-            if not i:
-                combatant.cast(spell, cast_level)  # TODO - use available slot / innate casting
 
-        if i:
-            can_cast = True
-
-        if not can_cast:
-            embed = EmbedWithAuthor(ctx)
-            embed.title = "Cannot cast spell!"
-            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                                "Use `!game longrest` to restore all spell slots if this is a character, " \
-                                "or pass `-i` to ignore restrictions."
-            if cast_level > 0:
-                embed.add_field(name="Spell Slots", value=combatant.remaining_casts_of(spell, cast_level))  # TODO
-            return await self.bot.say(embed=embed)
 
         upcast_dmg = None
         if not cast_level == spell_level:
             upcast_dmg = spell.get('higher_levels', {}).get(str(cast_level))
 
-        embed.title = '{} casts {} at...'.format(combatant.name, spell['name'])
-
-        damage_save = None
-        damage_msgs = {}
-
-        def add_dmg_msg(user, msg):
-            usermsgs = damage_msgs.get(user, [])
-            usermsgs.append(msg)
-            damage_msgs[user] = usermsgs
 
         # set up args for each target
         original_args = copy.copy(args)
 
         for i, t in enumerate(args.get('t')):
-            target: Combatant = await combat.select_combatant(t, f"Select target #{i+1}.")
             if target is None:
                 embed.add_field(name="{} not found!".format(t), value="Target not found.")
             elif not isinstance(target, (PlayerCombatant, MonsterCombatant)):

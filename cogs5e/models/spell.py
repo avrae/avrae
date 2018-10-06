@@ -1,3 +1,9 @@
+import discord
+
+from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.errors import AvraeException
+
+
 class Automation:
     def __init__(self, effects: list):
         self.effects = effects
@@ -8,6 +14,24 @@ class Automation:
             effects = Effect.deserialize(data)
             return cls(effects)
         return None
+
+    def run(self, ctx, embed, caster, targets, args, combat=None):
+        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat)
+        for effect in self.effects:
+            effect.run(autoctx)
+
+
+class AutomationContext:
+    def __init__(self, ctx, embed, caster, targets, args, combat):
+        self.ctx = ctx
+        self.embed = embed
+        self.caster = caster
+        self.targets = targets
+        self.args = args
+        self.combat = combat
+
+        self.metavars = {}
+        self.target = None
 
 
 class Effect:
@@ -24,6 +48,11 @@ class Effect:
         data.pop('type')
         return cls(**data)
 
+    def run(self, autoctx):
+        if self.meta:
+            for metaeffect in self.meta:
+                metaeffect.run(autoctx)
+
 
 class Target(Effect):
     def __init__(self, target, effects: list, **kwargs):
@@ -35,6 +64,28 @@ class Target(Effect):
     def from_data(cls, data):
         data['effects'] = Effect.deserialize(data['effects'])
         return super(Target, cls).from_data(data)
+
+    def run(self, autoctx):
+        super(Target, self).run(autoctx)
+
+        def run_effects():
+            for e in self.effects:
+                e.run(autoctx)
+
+        if self.target in ('all', 'each'):
+            for target in autoctx.targets:
+                autoctx.target = target
+                run_effects()
+        elif self.target == 'self':
+            autoctx.target = autoctx.caster
+            run_effects()
+        else:
+            try:
+                autoctx.target = autoctx.targets[self.target - 1]
+            except IndexError:
+                return
+            run_effects()
+        autoctx.target = None
 
 
 class Attack(Effect):
@@ -48,6 +99,17 @@ class Attack(Effect):
         data['hit'] = Effect.deserialize(data['hit'])
         data['miss'] = Effect.deserialize(data['miss'])
         return super(Attack, cls).from_data(data)
+    
+    def run(self, autoctx):
+        super(Attack, self).run(autoctx)
+        # roll attack against autoctx.target
+        # if hit
+        #   run hit effects
+        # else
+        #   if miss effects
+        #       run miss effects
+        #   else
+        #       "Miss!"
 
 
 class Save(Effect):
@@ -161,3 +223,67 @@ class Spell:
         if self.level == 3:
             return "3rd level"
         return f"{self.level}th level"
+
+    async def cast(self, ctx, caster, targets, args, combat=None):
+        """
+        Casts this spell.
+        :param ctx: The context of the casting.
+        :param caster: The caster of this spell.
+        :type caster: cogs5e.models.caster.Spellcaster
+        :param targets: A list of targets.
+        :param args: Args
+        :param combat: The combat the spell was cast in, if applicable.
+        :return: {embed: Embed}
+        """
+
+        # generic args
+        l = args.last('l', self.level, int)
+        i = args.last('i', type_=bool)
+        phrase = args.join('phrase', '\n')
+        # save args
+        dc = args.last('dc', type_=int) or caster.spellcasting.dc
+        save = args.last('save')
+        # attack/save args
+        adv = args.adv(True)  # hopefully no one EAs a save spell?
+        # damage args
+        d = args.join('d', '+')
+        resist = args.get('resist')
+        immune = args.get('immune')
+        vuln = args.get('vuln')
+        neutral = args.get('neutral')
+
+        # meta checks
+        if not self.level <= l <= 9:
+            raise SpellException("Invalid spell level.")
+
+        if not (caster.can_cast(self, l) or i):
+            embed = EmbedWithAuthor(ctx)
+            embed.title = "Cannot cast spell!"
+            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
+                                "Use `!game longrest` to restore all spell slots if this is a character, " \
+                                "or pass `-i` to ignore restrictions."
+            if l > 0:
+                embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
+            return {"embed": embed}
+
+        if not i:
+            caster.cast(self, l)
+
+        # begin setup
+        embed = discord.Embed()
+        if len(targets):
+            embed.title = f"{caster.get_name()} casts {self.name} at..."
+        else:
+            embed.title = f"{caster.get_name()} casts {self.name}!"
+
+        if phrase:
+            embed.description = f"*{phrase}*"
+
+        if self.automation:
+            self.automation.run(ctx, embed, caster, targets, args, combat)
+        else:
+            pass  # TODO no automation
+
+
+class SpellException(AvraeException):
+    pass

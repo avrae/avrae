@@ -2,7 +2,7 @@ import discord
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import AvraeException
+from cogs5e.models.errors import AvraeException, NoSpellAB
 
 
 class Automation:
@@ -165,6 +165,9 @@ class Attack(Effect):
 
         sab = autoctx.caster.spellcasting.sab
         ac = autoctx.target.ac
+
+        if not sab:
+            raise NoSpellAB()
 
         # roll attack(s) against autoctx.target
         for iteration in range(rr):

@@ -1,5 +1,6 @@
 import discord
 
+from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException
 
@@ -20,6 +21,8 @@ class Automation:
         for effect in self.effects:
             effect.run(autoctx)
 
+        autoctx.build_embed()
+
 
 class AutomationContext:
     def __init__(self, ctx, embed, caster, targets, args, combat):
@@ -32,6 +35,52 @@ class AutomationContext:
 
         self.metavars = {}
         self.target = None
+        self.in_crit = False
+
+        self._embed_queue = []
+        self._meta_queue = []
+        self._field_queue = []
+
+    def queue(self, text):
+        self._embed_queue.append(text)
+
+    def meta_queue(self, text):
+        self._meta_queue.append(text)
+
+    def push_embed_field(self, title):
+        if not self._embed_queue:
+            return
+        self._field_queue.append({"name": title, "value": '\n'.join(self._embed_queue)})
+        self._embed_queue = []
+
+    def insert_meta_field(self):
+        if not self._meta_queue:
+            return
+        self._field_queue.insert(0, {"name": "Meta", "value": '\n'.join(self._meta_queue)})
+        self._meta_queue = []
+
+    def build_embed(self):
+        self.push_embed_field("Effect")
+        self.insert_meta_field()
+        for field in self._field_queue:
+            self.embed.add_field(**field)
+
+
+class AutomationTarget:
+    def __init__(self, target):
+        self.target = target
+
+    @property
+    def name(self):
+        if isinstance(self.target, str):
+            return self.target
+        return self.target.get_name()
+
+    @property
+    def ac(self):
+        if hasattr(self.target, "ac"):
+            return self.target.ac
+        return None
 
 
 class Effect:
@@ -68,24 +117,25 @@ class Target(Effect):
     def run(self, autoctx):
         super(Target, self).run(autoctx)
 
-        def run_effects():
-            for e in self.effects:
-                e.run(autoctx)
-
         if self.target in ('all', 'each'):
             for target in autoctx.targets:
                 autoctx.target = target
-                run_effects()
+                self.run_effects(autoctx)
         elif self.target == 'self':
             autoctx.target = autoctx.caster
-            run_effects()
+            self.run_effects(autoctx)
         else:
             try:
-                autoctx.target = autoctx.targets[self.target - 1]
+                autoctx.target = AutomationTarget(autoctx.targets[self.target - 1])
             except IndexError:
                 return
-            run_effects()
+            self.run_effects(autoctx)
         autoctx.target = None
+
+    def run_effects(self, autoctx):
+        for e in self.effects:
+            e.run(autoctx)
+        autoctx.push_embed_field(autoctx.target.name)
 
 
 class Attack(Effect):
@@ -99,17 +149,93 @@ class Attack(Effect):
         data['hit'] = Effect.deserialize(data['hit'])
         data['miss'] = Effect.deserialize(data['miss'])
         return super(Attack, cls).from_data(data)
-    
-    def run(self, autoctx):
+
+    def run(self, autoctx):  # TODO fix the attack framework, future me
         super(Attack, self).run(autoctx)
-        # roll attack against autoctx.target
-        # if hit
-        #   run hit effects
-        # else
-        #   if miss effects
-        #       run miss effects
-        #   else
-        #       "Miss!"
+        args = autoctx.args
+        adv = args.adv(True)
+        crit = args.last('crit', None, bool) and 1
+        hit = args.last('hit', None, bool) and 1
+        miss = (args.last('miss', None, bool) and not hit) and 1
+        rr = min(args.last('rr', 1, int), 25)
+        b = args.join('b', '+')
+
+        reroll = args.last('reroll', 0, int)
+        criton = args.last('criton', 20, int)
+
+        sab = autoctx.caster.spellcasting.sab
+        ac = autoctx.target.ac
+
+        # roll attack(s) against autoctx.target
+        for iteration in range(rr):
+            if rr > 1:
+                autoctx.queue(f"**Attack {iteration + 1}**")
+
+            if not (hit or miss):
+                formatted_d20 = '1d20'
+                if adv == 1:
+                    formatted_d20 = '2d20kh1'
+                elif adv == 2:
+                    formatted_d20 = '3d20kh1'
+                elif adv == -1:
+                    formatted_d20 = '2d20kl1'
+
+                if reroll:
+                    formatted_d20 = f"{formatted_d20}ro{reroll}"
+
+                if b:
+                    toHit = roll(f"{formatted_d20}+{sab}+{b}", rollFor='To Hit', inline=True, show_blurbs=False)
+                else:
+                    toHit = roll(f"{formatted_d20}+{sab}", rollFor='To Hit', inline=True, show_blurbs=False)
+
+                autoctx.queue(toHit.result)
+
+                # crit processing
+                try:
+                    d20_value = next(p for p in toHit.raw_dice.parts if
+                                     isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
+                except StopIteration:
+                    d20_value = 0
+
+                if d20_value >= criton:
+                    itercrit = 1
+                else:
+                    itercrit = toHit.crit
+
+                if ac is not None:
+                    if toHit.total < ac and itercrit == 0:
+                        itercrit = 2  # miss!
+
+                if itercrit == 2:
+                    self.on_miss(autoctx)
+                elif itercrit == 1:
+                    self.on_crit(autoctx)
+                else:
+                    self.on_hit(autoctx)
+            elif hit:
+                autoctx.queue(f"**To Hit**: Automatic hit!")
+                if crit:
+                    self.on_crit(autoctx)
+                else:
+                    self.on_hit(autoctx)
+            else:
+                autoctx.queue(f"**To Hit**: Automatic miss!")
+                self.on_miss(autoctx)
+
+    def on_hit(self, autoctx):
+        for effect in self.hit:
+            effect.run(autoctx)
+
+    def on_crit(self, autoctx):
+        original = autoctx.in_crit
+        autoctx.in_crit = True
+        self.on_hit(autoctx)
+        autoctx.in_crit = original
+
+    def on_miss(self, autoctx):
+        autoctx.queue("**Miss!**")
+        for effect in self.miss:
+            effect.run(autoctx)
 
 
 class Save(Effect):
@@ -283,6 +409,8 @@ class Spell:
             self.automation.run(ctx, embed, caster, targets, args, combat)
         else:
             pass  # TODO no automation
+
+        return {"embed": embed}
 
 
 class SpellException(AvraeException):

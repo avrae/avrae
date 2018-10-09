@@ -1,8 +1,10 @@
+import re
+
 import discord
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import AvraeException, NoSpellAB
+from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
 
 
 class Automation:
@@ -16,8 +18,8 @@ class Automation:
             return cls(effects)
         return None
 
-    def run(self, ctx, embed, caster, targets, args, combat=None):
-        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat)
+    def run(self, ctx, embed, caster, targets, args, combat=None, spell=None):
+        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell)
         for effect in self.effects:
             effect.run(autoctx)
 
@@ -25,13 +27,14 @@ class Automation:
 
 
 class AutomationContext:
-    def __init__(self, ctx, embed, caster, targets, args, combat):
+    def __init__(self, ctx, embed, caster, targets, args, combat, spell):
         self.ctx = ctx
         self.embed = embed
         self.caster = caster
         self.targets = targets
         self.args = args
         self.combat = combat
+        self.spell = spell
 
         self.metavars = {}
         self.target = None
@@ -45,7 +48,8 @@ class AutomationContext:
         self._embed_queue.append(text)
 
     def meta_queue(self, text):
-        self._meta_queue.append(text)
+        if text not in self._meta_queue:
+            self._meta_queue.append(text)
 
     def push_embed_field(self, title):
         if not self._embed_queue:
@@ -65,6 +69,9 @@ class AutomationContext:
         for field in self._field_queue:
             self.embed.add_field(**field)
 
+    def get_cast_level(self):
+        return self.args.last('l', self.spell.level, int)
+
 
 class AutomationTarget:
     def __init__(self, target):
@@ -81,6 +88,11 @@ class AutomationTarget:
         if hasattr(self.target, "ac"):
             return self.target.ac
         return None
+
+    def get_save(self, save, default=0):
+        if hasattr(self.target, "saves"):
+            return self.target.saves.get(save, default)
+        raise TargetException("Target does not have defined saves.")
 
 
 class Effect:
@@ -150,7 +162,7 @@ class Attack(Effect):
         data['miss'] = Effect.deserialize(data['miss'])
         return super(Attack, cls).from_data(data)
 
-    def run(self, autoctx):  # TODO fix the attack framework, future me
+    def run(self, autoctx):  # TODO what is target is None?
         super(Attack, self).run(autoctx)
         args = autoctx.args
         adv = args.adv(True)
@@ -254,6 +266,44 @@ class Save(Effect):
         data['success'] = Effect.deserialize(data['success'])
         return super(Save, cls).from_data(data)
 
+    def run(self, autoctx):
+        dc = autoctx.args.last('dc', type_=int) or autoctx.caster.spellcasting.dc
+        save = autoctx.args.last('save') or self.stat
+        adv = autoctx.args.adv(False)
+
+        if not dc:
+            raise NoSpellDC()
+        try:
+            save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',
+                                          'intelligenceSave', 'wisdomSave', 'charismaSave') if
+                              save.lower() in s.lower())
+        except StopIteration:
+            raise InvalidSaveType()
+
+        autoctx.meta_queue(f"**DC**: {dc}")
+        if autoctx.target:
+            target_save_mod = autoctx.target.get_save(save_skill)
+            save_roll = roll('1d20{:+}'.format(target_save_mod), adv=adv,
+                             rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
+            is_success = save_roll.total >= dc
+            autoctx.queue(save_roll.result + ("; Success!" if is_success else "; Failure!"))
+        else:
+            autoctx.meta_queue('{} Save'.format(save_skill[:3].upper()))
+            is_success = False
+
+        if is_success:
+            self.on_success(autoctx)
+        else:
+            self.on_fail(autoctx)
+
+    def on_success(self, autoctx):
+        for effect in self.success:
+            effect.run(autoctx)
+
+    def on_fail(self, autoctx):
+        for effect in self.fail:
+            effect.run(autoctx)
+
 
 class Damage(Effect):
     def __init__(self, damage: str, higher: dict = None, cantripScale: bool = None, **kwargs):
@@ -261,6 +311,14 @@ class Damage(Effect):
         self.damage = damage
         self.higher = higher
         self.cantripScale = cantripScale
+
+    def run(self, autoctx):
+        args = autoctx.args
+        d = args.join('d', '+')
+        resist = args.get('resist')
+        immune = args.get('immune')
+        vuln = args.get('vuln')
+        neutral = args.get('neutral')
 
 
 class IEffect(Effect):
@@ -278,6 +336,41 @@ class Roll(Effect):
         self.name = name
         self.higher = higher
         self.cantripScale = cantripScale
+
+    def run(self, autoctx):
+        d = autoctx.args.join('d', '+')
+        if self.cantripScale:
+            def cantrip_scale(matchobj):
+                level = autoctx.caster.spellcasting.casterLevel
+                if level < 5:
+                    levelDice = "1"
+                elif level < 11:
+                    levelDice = "2"
+                elif level < 17:
+                    levelDice = "3"
+                else:
+                    levelDice = "4"
+                return levelDice + 'd' + matchobj.group(2)
+
+            self.dice = re.sub(r'(\d+)d(\d+)', cantrip_scale, self.dice)
+
+        if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
+            higher = self.higher.get(str(autoctx.get_cast_level()))
+            if higher:
+                self.dice = f"{self.dice}+{higher}"
+        if d:
+            self.dice = f"{self.dice}+{d}"
+
+        rolled = roll(self.dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
+        autoctx.meta_queue(rolled.result)
+
+        formatted_rolled = ""
+        for p in rolled.raw_dice.parts:
+            if isinstance(p, SingleDiceGroup):
+                formatted_rolled += "{} {}".format(p.get_total(), p.annotation)
+            else:
+                formatted_rolled += str(p)
+        autoctx.metavars[self.name] = formatted_rolled
 
 
 class Text(Effect):
@@ -369,17 +462,6 @@ class Spell:
         l = args.last('l', self.level, int)
         i = args.last('i', type_=bool)
         phrase = args.join('phrase', '\n')
-        # save args
-        dc = args.last('dc', type_=int) or caster.spellcasting.dc
-        save = args.last('save')
-        # attack/save args
-        adv = args.adv(True)  # hopefully no one EAs a save spell?
-        # damage args
-        d = args.join('d', '+')
-        resist = args.get('resist')
-        immune = args.get('immune')
-        vuln = args.get('vuln')
-        neutral = args.get('neutral')
 
         # meta checks
         if not self.level <= l <= 9:
@@ -409,7 +491,7 @@ class Spell:
             embed.description = f"*{phrase}*"
 
         if self.automation:
-            self.automation.run(ctx, embed, caster, targets, args, combat)
+            self.automation.run(ctx, embed, caster, targets, args, combat, self)
         else:
             pass  # TODO no automation
 
@@ -417,4 +499,8 @@ class Spell:
 
 
 class SpellException(AvraeException):
+    pass
+
+
+class TargetException(SpellException):
     pass

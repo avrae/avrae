@@ -15,13 +15,12 @@ from discord.ext import commands
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import c
-from cogs5e.funcs.sheetFuncs import sheet_cast
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
 from utils.argparser import argparse
-from utils.functions import strict_search, dicecloud_parse, search_and_select, search
+from utils.functions import dicecloud_parse, search_and_select, search
 
 log = logging.getLogger(__name__)
 
@@ -571,46 +570,12 @@ class GameTrack:
         else:
             spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
 
-        if spell.automation is None: return await self._old_cast(ctx, spell_name, args)  # fall back to old cast TODO
-
         args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = argparse(args)
 
-        can_cast = True
-        spell_level = int(spell.get('level', 0))
-        cast_level = args.last('l', spell_level, int)
-        if not spell_level <= cast_level <= 9:
-            return await self.bot.say("Invalid spell level.")
-
-        # make sure we can cast it
-        if not char.get_remaining_slots(cast_level) > 0 and spell_name in char.get_spell_list():
-            can_cast = False
-
-        if args.last('i', type_=bool):
-            can_cast = True
-
-        if not can_cast:
-            embed = EmbedWithCharacter(char)
-            embed.title = "Cannot cast spell!"
-            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                                "Use `!game longrest` to restore all spell slots, or pass `-i` to ignore restrictions."
-            if cast_level > 0:
-                embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
-            return await self.bot.say(embed=embed)
-
-        args['l'] = [cast_level]
-        args['name'] = [char.get_name()]
-        args['dc'] = [args.get('dc', [char.get_save_dc()])[-1]]
-        args['casterlevel'] = [char.get_level()]
-        args['crittype'] = [char.get_setting('crittype', 'default')]
-        args['ab'] = [char.get_spell_ab()]
-        args['SPELL'] = [str(char.evaluate_cvar("SPELL") or (char.get_spell_ab() - char.get_prof_bonus()))]
-
-        result = sheet_cast(spell, args, EmbedWithCharacter(char, name=False))
-
-        embed = result['embed']
+        embed = await spell.cast(ctx, char, [], args)['embed']
 
         _fields = args.get('f')
         if type(_fields) == list:
@@ -618,11 +583,6 @@ class GameTrack:
                 title = f.split('|')[0] if '|' in f else '\u200b'
                 value = "|".join(f.split('|')[1:]) if '|' in f else f
                 embed.add_field(name=title, value=value)
-
-        if not args.last('i', type_=bool):
-            char.use_slot(cast_level)
-        if cast_level > 0:
-            embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
 
         await char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)

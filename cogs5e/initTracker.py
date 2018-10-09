@@ -862,9 +862,6 @@ class InitTracker:
         args = shlex.split(args)
         args = argparse(args)
 
-        if not args.get('t'):
-            return await self.bot.say("You must pass in targets with `-t target`.", delete_after=15)
-
         if not args.last('i', type_=bool):
             spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name,
                                             list_filter=lambda s: s.name in combatant.spellcasting.spells)

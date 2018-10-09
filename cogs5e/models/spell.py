@@ -3,8 +3,11 @@ import re
 import discord
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
+from cogs5e.models import initiative
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
+from cogs5e.models.initiative import Combatant
+from utils.functions import parse_resistances
 
 
 class Automation:
@@ -18,15 +21,23 @@ class Automation:
             return cls(effects)
         return None
 
-    def run(self, ctx, embed, caster, targets, args, combat=None, spell=None):
+    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None):
         autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell)
         for effect in self.effects:
             effect.run(autoctx)
 
         autoctx.build_embed()
+        for user, msgs in autoctx.pm_queue.items():
+            try:
+                await ctx.bot.send_message(ctx.message.server.get_member(user),
+                                           f"{autoctx.caster.name} cast {autoctx.spell.name}!\n" + '\n'.join(msgs))
+            except:
+                pass
 
 
 class AutomationContext:
+    ANNOSTR_RE = re.compile(r"{(\w+)}")
+
     def __init__(self, ctx, embed, caster, targets, args, combat, spell):
         self.ctx = ctx
         self.embed = embed
@@ -43,6 +54,8 @@ class AutomationContext:
         self._embed_queue = []
         self._meta_queue = []
         self._field_queue = []
+        self._footer_queue = []
+        self.pm_queue = {}
 
     def queue(self, text):
         self._embed_queue.append(text)
@@ -50,6 +63,9 @@ class AutomationContext:
     def meta_queue(self, text):
         if text not in self._meta_queue:
             self._meta_queue.append(text)
+
+    def footer_queue(self, text):
+        self._footer_queue.append(text)
 
     def push_embed_field(self, title):
         if not self._embed_queue:
@@ -68,9 +84,21 @@ class AutomationContext:
         self.insert_meta_field()
         for field in self._field_queue:
             self.embed.add_field(**field)
+        self.embed.set_footer(text='\n'.join(self._footer_queue))
+
+    def add_pm(self, user, message):
+        if user not in self.pm_queue:
+            self.pm_queue[user] = []
+        self.pm_queue[user].append(message)
 
     def get_cast_level(self):
         return self.args.last('l', self.spell.level, int)
+
+    def parse_annostr(self, annostr):
+        def metasub(match):
+            return self.metavars.get(match.group(1), match.group(0))
+
+        return self.ANNOSTR_RE.sub(metasub, annostr)
 
 
 class AutomationTarget:
@@ -93,6 +121,23 @@ class AutomationTarget:
         if hasattr(self.target, "saves"):
             return self.target.saves.get(save, default)
         raise TargetException("Target does not have defined saves.")
+
+    def get_resists(self):
+        if hasattr(self.target, "resists"):
+            return self.target.resists
+        return {}
+
+    def get_resist(self):
+        return self.get_resists().get("resist", [])
+
+    def get_immune(self):
+        return self.get_resists().get("immune", [])
+
+    def get_vuln(self):
+        return self.get_resists().get("vuln", [])
+
+    def get_neutral(self):
+        return self.get_resists().get("neutral", [])
 
 
 class Effect:
@@ -267,6 +312,7 @@ class Save(Effect):
         return super(Save, cls).from_data(data)
 
     def run(self, autoctx):
+        super(Save, self).run(autoctx)
         dc = autoctx.args.last('dc', type_=int) or autoctx.caster.spellcasting.dc
         save = autoctx.args.last('save') or self.stat
         adv = autoctx.args.adv(False)
@@ -313,32 +359,23 @@ class Damage(Effect):
         self.cantripScale = cantripScale
 
     def run(self, autoctx):
+        super(Damage, self).run(autoctx)
         args = autoctx.args
+        damage = self.damage
         d = args.join('d', '+')
-        resist = args.get('resist')
-        immune = args.get('immune')
-        vuln = args.get('vuln')
-        neutral = args.get('neutral')
+        c = args.join('c', '+')
+        resist = args.get('resist', [])
+        immune = args.get('immune', [])
+        vuln = args.get('vuln', [])
+        neutral = args.get('neutral', [])
+        if autoctx.target:
+            resist = resist or autoctx.target.get_resist()
+            immune = immune or autoctx.target.get_immune()
+            vuln = vuln or autoctx.target.get_vuln()
+            neutral = neutral or autoctx.target.get_neutral()
 
+        damage = autoctx.parse_annostr(damage)
 
-class IEffect(Effect):
-    def __init__(self, name: str, duration: int, effects: str, **kwargs):
-        super(IEffect, self).__init__("ieffect", **kwargs)
-        self.name = name
-        self.duration = duration
-        self.effects = effects
-
-
-class Roll(Effect):
-    def __init__(self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, **kwargs):
-        super(Roll, self).__init__("roll", **kwargs)
-        self.dice = dice
-        self.name = name
-        self.higher = higher
-        self.cantripScale = cantripScale
-
-    def run(self, autoctx):
-        d = autoctx.args.join('d', '+')
         if self.cantripScale:
             def cantrip_scale(matchobj):
                 level = autoctx.caster.spellcasting.casterLevel
@@ -352,16 +389,95 @@ class Roll(Effect):
                     levelDice = "4"
                 return levelDice + 'd' + matchobj.group(2)
 
-            self.dice = re.sub(r'(\d+)d(\d+)', cantrip_scale, self.dice)
+            damage = re.sub(r'(\d+)d(\d+)', cantrip_scale, damage)
 
         if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
-                self.dice = f"{self.dice}+{higher}"
-        if d:
-            self.dice = f"{self.dice}+{d}"
+                damage = f"{damage}+{higher}"
 
-        rolled = roll(self.dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
+        if autoctx.in_crit:
+            def critSub(matchobj):
+                return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
+
+            damage = re.sub(r'(\d+)d(\d+)', critSub, damage)
+            if c:
+                damage = f"{damage}+{c}"
+
+        if d:
+            damage = f"{damage}+{d}"
+
+        damage = parse_resistances(damage, resist, immune, vuln, neutral)
+
+        dmgroll = roll(damage, rollFor="Damage", inline=True, show_blurbs=False)
+        autoctx.queue(dmgroll.result)
+
+        if autoctx.target and isinstance(autoctx.target.target, Combatant):
+            target = autoctx.target.target
+            if target.hp is not None:
+                target.hp -= dmgroll.total
+                autoctx.footer_queue("{}: {}".format(target.name, target.get_hp_str()))
+                if target.isPrivate:
+                    autoctx.add_pm(target.controller, f"{target.name}'s HP: {target.get_hp_str(True)}")
+            else:
+                autoctx.footer_queue("Dealt {} damage to {}!".format(dmgroll.total, target.name))
+
+
+class IEffect(Effect):
+    def __init__(self, name: str, duration: int, effects: str, **kwargs):
+        super(IEffect, self).__init__("ieffect", **kwargs)
+        self.name = name
+        self.duration = duration
+        self.effects = effects
+
+    def run(self, autoctx):
+        super(IEffect, self).run(autoctx)
+        if isinstance(autoctx.target.target, Combatant):
+            self.effects = autoctx.parse_annostr(self.effects)
+            if isinstance(self.duration, str):
+                try:
+                    self.duration = int(autoctx.parse_annostr(self.duration))
+                except ValueError:
+                    raise SpellException(f"{self.duration} is not an integer (in effect duration)")
+            autoctx.target.target.add_effect(initiative.Effect.new(self.name, self.duration, self.effects))
+        autoctx.queue(f"**Effect**: {self.name}")
+
+
+class Roll(Effect):
+    def __init__(self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, **kwargs):
+        super(Roll, self).__init__("roll", **kwargs)
+        self.dice = dice
+        self.name = name
+        self.higher = higher
+        self.cantripScale = cantripScale
+
+    def run(self, autoctx):
+        super(Roll, self).run(autoctx)
+        d = autoctx.args.join('d', '+')
+        dice = self.dice
+        if self.cantripScale:
+            def cantrip_scale(matchobj):
+                level = autoctx.caster.spellcasting.casterLevel
+                if level < 5:
+                    levelDice = "1"
+                elif level < 11:
+                    levelDice = "2"
+                elif level < 17:
+                    levelDice = "3"
+                else:
+                    levelDice = "4"
+                return levelDice + 'd' + matchobj.group(2)
+
+            dice = re.sub(r'(\d+)d(\d+)', cantrip_scale, dice)
+
+        if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
+            higher = self.higher.get(str(autoctx.get_cast_level()))
+            if higher:
+                dice = f"{dice}+{higher}"
+        if d:
+            dice = f"{dice}+{d}"
+
+        rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)
 
         formatted_rolled = ""
@@ -452,7 +568,7 @@ class Spell:
         :param ctx: The context of the casting.
         :param caster: The caster of this spell.
         :type caster: cogs5e.models.caster.Spellcaster
-        :param targets: A list of targets.
+        :param targets: A list of targets (Combatants)
         :param args: Args
         :param combat: The combat the spell was cast in, if applicable.
         :return: {embed: Embed}
@@ -491,9 +607,12 @@ class Spell:
             embed.description = f"*{phrase}*"
 
         if self.automation:
-            self.automation.run(ctx, embed, caster, targets, args, combat, self)
+            await self.automation.run(ctx, embed, caster, targets, args, combat, self)
         else:
             pass  # TODO no automation
+
+        if l > 0:
+            embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
 
         return {"embed": embed}
 

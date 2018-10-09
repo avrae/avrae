@@ -53,6 +53,7 @@ class AutomationContext:
 
         self._embed_queue = []
         self._meta_queue = []
+        self._effect_queue = []
         self._field_queue = []
         self._footer_queue = []
         self.pm_queue = {}
@@ -66,6 +67,10 @@ class AutomationContext:
 
     def footer_queue(self, text):
         self._footer_queue.append(text)
+
+    def effect_queue(self, text):
+        if text not in self._effect_queue:
+            self._effect_queue.append(text)
 
     def push_embed_field(self, title):
         if not self._embed_queue:
@@ -84,6 +89,8 @@ class AutomationContext:
         self.insert_meta_field()
         for field in self._field_queue:
             self.embed.add_field(**field)
+        for effect in self._effect_queue:
+            self.embed.add_field(name="Effect", value=effect)
         self.embed.set_footer(text='\n'.join(self._footer_queue))
 
     def add_pm(self, user, message):
@@ -493,6 +500,12 @@ class Text(Effect):
     def __init__(self, text: str, **kwargs):
         super(Text, self).__init__("text", **kwargs)
         self.text = text
+        self.added = False
+
+    def run(self, autoctx):
+        if not self.added:
+            autoctx.effect_queue(self.text)
+            self.added = True
 
 
 EFFECT_MAP = {

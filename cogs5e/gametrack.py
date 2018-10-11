@@ -465,7 +465,7 @@ class GameTrack:
             character.delete_consumable(name)
             await character.commit(ctx)
         except ConsumableNotFound:
-            return await self.bot.say("Counter not found. Make sure you're using the full name, case-sensitive.")
+            return await self.bot.say("Counter not found. Make sure you're using the full name, case-sensitive, using quotes if there is a space.")
         await self.bot.say(f"Deleted counter {name}.")
 
     @customcounter.command(pass_context=True, name='summary', aliases=['list'])

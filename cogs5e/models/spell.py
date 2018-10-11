@@ -507,9 +507,7 @@ class Text(Effect):
         self.added = False
 
     def run(self, autoctx):
-        if not self.added:
-            autoctx.effect_queue(self.text)
-            self.added = True
+        autoctx.effect_queue(self.text)
 
 
 EFFECT_MAP = {

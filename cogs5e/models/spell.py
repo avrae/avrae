@@ -72,10 +72,13 @@ class AutomationContext:
         if text not in self._effect_queue:
             self._effect_queue.append(text)
 
-    def push_embed_field(self, title, inline=False):
+    def push_embed_field(self, title, inline=False, to_meta=False):
         if not self._embed_queue:
             return
-        self._field_queue.append({"name": title, "value": '\n'.join(self._embed_queue), "inline": inline})
+        if to_meta:
+            self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)
+        else:
+            self._field_queue.append({"name": title, "value": '\n'.join(self._embed_queue), "inline": inline})
         self._embed_queue = []
 
     def insert_meta_field(self):
@@ -203,6 +206,8 @@ class Target(Effect):
             e.run(autoctx)
         if autoctx.target.target:
             autoctx.push_embed_field(autoctx.target.name)
+        else:
+            autoctx.push_embed_field(None, to_meta=True)
 
 
 class Attack(Effect):

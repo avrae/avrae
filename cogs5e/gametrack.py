@@ -575,7 +575,11 @@ class GameTrack:
         args = shlex.split(args)
         args = argparse(args)
 
-        embed = await spell.cast(ctx, char, [], args)['embed']
+        result = await spell.cast(ctx, char, None, args)
+        embed = result['embed']
+
+        embed.colour = char.get_color()
+        embed.set_thumbnail(url=char.get_image())
 
         _fields = args.get('f')
         if type(_fields) == list:

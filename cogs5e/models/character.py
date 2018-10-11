@@ -782,7 +782,7 @@ class Character(Spellcaster):
         return self
 
     def can_cast(self, spell, level) -> bool:
-        return self.get_remaining_slots(level) > 0 and spell['name'] in self.spellcasting.spells
+        return self.get_remaining_slots(level) > 0 and spell.name in self.spellcasting.spells
 
     def cast(self, spell, level):
         self.use_slot(level)

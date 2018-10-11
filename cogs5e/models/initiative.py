@@ -591,11 +591,9 @@ class Combatant(Spellcaster):
     def group(self, value):
         self._group = value
 
-    @property
-    def spellcasting(self):
-        return self._spellcasting
-
     def add_effect(self, effect):
+        if self.get_effect(effect.name):
+            self.remove_effect(self.get_effect(effect.name))
         self._effects.append(effect)
 
     def get_effects(self):

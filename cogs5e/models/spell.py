@@ -72,10 +72,10 @@ class AutomationContext:
         if text not in self._effect_queue:
             self._effect_queue.append(text)
 
-    def push_embed_field(self, title):
+    def push_embed_field(self, title, inline=False):
         if not self._embed_queue:
             return
-        self._field_queue.append({"name": title, "value": '\n'.join(self._embed_queue)})
+        self._field_queue.append({"name": title, "value": '\n'.join(self._embed_queue), "inline": inline})
         self._embed_queue = []
 
     def insert_meta_field(self):
@@ -85,7 +85,7 @@ class AutomationContext:
         self._meta_queue = []
 
     def build_embed(self):
-        self.push_embed_field("Effect")
+        self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)
         self.insert_meta_field()
         for field in self._field_queue:
             self.embed.add_field(**field)
@@ -150,6 +150,8 @@ class AutomationTarget:
 class Effect:
     def __init__(self, type_, meta=None):
         self.type = type_
+        if meta:
+            meta = Effect.deserialize(meta)
         self.meta = meta
 
     @staticmethod
@@ -183,10 +185,10 @@ class Target(Effect):
 
         if self.target in ('all', 'each'):
             for target in autoctx.targets:
-                autoctx.target = target
+                autoctx.target = AutomationTarget(target)
                 self.run_effects(autoctx)
         elif self.target == 'self':
-            autoctx.target = autoctx.caster
+            autoctx.target = AutomationTarget(autoctx.caster)
             self.run_effects(autoctx)
         else:
             try:
@@ -199,7 +201,8 @@ class Target(Effect):
     def run_effects(self, autoctx):
         for e in self.effects:
             e.run(autoctx)
-        autoctx.push_embed_field(autoctx.target.name)
+        if autoctx.target.target:
+            autoctx.push_embed_field(autoctx.target.name)
 
 
 class Attack(Effect):
@@ -214,7 +217,7 @@ class Attack(Effect):
         data['miss'] = Effect.deserialize(data['miss'])
         return super(Attack, cls).from_data(data)
 
-    def run(self, autoctx):  # TODO what is target is None?
+    def run(self, autoctx):
         super(Attack, self).run(autoctx)
         args = autoctx.args
         adv = args.adv(True)
@@ -228,7 +231,6 @@ class Attack(Effect):
         criton = args.last('criton', 20, int)
 
         sab = autoctx.caster.spellcasting.sab
-        ac = autoctx.target.ac
 
         if not sab:
             raise NoSpellAB()
@@ -269,8 +271,8 @@ class Attack(Effect):
                 else:
                     itercrit = toHit.crit
 
-                if ac is not None:
-                    if toHit.total < ac and itercrit == 0:
+                if autoctx.target.target and autoctx.target.ac is not None:
+                    if toHit.total < autoctx.target.ac and itercrit == 0:
                         itercrit = 2  # miss!
 
                 if itercrit == 2:
@@ -334,7 +336,7 @@ class Save(Effect):
             raise InvalidSaveType()
 
         autoctx.meta_queue(f"**DC**: {dc}")
-        if autoctx.target:
+        if autoctx.target.target:
             target_save_mod = autoctx.target.get_save(save_skill)
             save_roll = roll('1d20{:+}'.format(target_save_mod), adv=adv,
                              rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
@@ -375,12 +377,14 @@ class Damage(Effect):
         immune = args.get('immune', [])
         vuln = args.get('vuln', [])
         neutral = args.get('neutral', [])
-        if autoctx.target:
+        if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
             vuln = vuln or autoctx.target.get_vuln()
             neutral = neutral or autoctx.target.get_neutral()
 
+        if not autoctx.target.target and autoctx.ANNOSTR_RE.match(damage):  # likely have output this in meta already
+            return
         damage = autoctx.parse_annostr(damage)
 
         if self.cantripScale:
@@ -419,7 +423,7 @@ class Damage(Effect):
         dmgroll = roll(damage, rollFor="Damage", inline=True, show_blurbs=False)
         autoctx.queue(dmgroll.result)
 
-        if autoctx.target and isinstance(autoctx.target.target, Combatant):
+        if autoctx.target.target and isinstance(autoctx.target.target, Combatant):
             target = autoctx.target.target
             if target.hp is not None:
                 target.hp -= dmgroll.total
@@ -611,10 +615,12 @@ class Spell:
 
         # begin setup
         embed = discord.Embed()
-        if len(targets):
+        if targets:
             embed.title = f"{caster.get_name()} casts {self.name} at..."
         else:
             embed.title = f"{caster.get_name()} casts {self.name}!"
+            if targets is None:
+                targets = [None]
 
         if phrase:
             embed.description = f"*{phrase}*"

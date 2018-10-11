@@ -20,7 +20,11 @@ class Spellcaster:
     def __init__(self, spellcasting=None):
         if spellcasting is None:
             spellcasting = Spellcasting()
-        self.spellcasting = spellcasting
+        self._spellcasting = spellcasting
+
+    @property
+    def spellcasting(self):
+        return self._spellcasting
 
     def can_cast(self, spell, level) -> bool:
         """
@@ -29,7 +33,7 @@ class Spellcaster:
         :param level: The level to cast it at.
         :return: Whether the combatant can cast the spell.
         """
-        return spell['name'].lower() in [s.lower() for s in self.spellcasting.spells]
+        return spell.name.lower() in [s.lower() for s in self.spellcasting.spells]
 
     def cast(self, spell, level):
         """

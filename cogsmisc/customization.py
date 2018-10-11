@@ -54,15 +54,17 @@ class Customization:
         !spell Fly
         !monster Rat"
         """
-        cmds = cmds.splitlines()
+
+        try:
+            guild_prefix = self.bot.global_prefixes.get(ctx.message.server.id, self.bot.prefix)
+        except:
+            guild_prefix = self.bot.prefix
+        cmds = cmds.split(guild_prefix)
+
         for c in cmds[:20]:
-            ctx.message.content = c
+            ctx.message.content = guild_prefix + c
             if not hasattr(self.bot, 'global_prefixes'):  # bot's still starting up!
                 return
-            try:
-                guild_prefix = self.bot.global_prefixes.get(ctx.message.server.id, self.bot.prefix)
-            except:
-                guild_prefix = self.bot.prefix
             if ctx.message.content.startswith(guild_prefix):
                 ctx.message.content = ctx.message.content.replace(guild_prefix, self.bot.prefix, 1)
             await self.bot.process_commands(ctx.message)

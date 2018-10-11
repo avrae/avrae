@@ -626,7 +626,13 @@ class Spell:
         if self.automation:
             await self.automation.run(ctx, embed, caster, targets, args, combat, self)
         else:
-            pass  # TODO no automation
+            text = self.description
+            if len(text) > 1020:
+                text = f"{text[:1020]}..."
+            embed.add_field(name="Description", value=text)
+            if l != self.level and self.higherlevels:
+                embed.add_field(name="At Higher Levels", value=self.higherlevels)
+            embed.set_footer(text="No spell automation found.")
 
         if l > 0:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))

@@ -47,7 +47,9 @@ class AutomationContext:
         self.combat = combat
         self.spell = spell
 
-        self.metavars = {}
+        self.metavars = {
+            "spell": caster.spellcasting.sab - caster.pb_from_level()  # for healing spells
+        }
         self.target = None
         self.in_crit = False
 

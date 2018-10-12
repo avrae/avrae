@@ -1,3 +1,6 @@
+from math import floor
+
+
 class Spellcasting:
     def __init__(self, spells=None, dc=0, sab=0, casterLevel=0):
         if spells is None:
@@ -58,3 +61,11 @@ class Spellcaster:
         :return: The name of the caster.
         """
         return "Unnamed"
+
+    def pb_from_level(self):
+        """
+        Gets the proficiency bonus of the caster, given their level.
+        Not quite foolproof.
+        :return: The caster's probable PB.
+        """
+        return floor((self.spellcasting.casterLevel + 7) / 4)

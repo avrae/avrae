@@ -108,7 +108,7 @@ class AutomationContext:
 
     def parse_annostr(self, annostr):
         def metasub(match):
-            return self.metavars.get(match.group(1), match.group(0))
+            return str(self.metavars.get(match.group(1), match.group(0)))
 
         return self.ANNOSTR_RE.sub(metasub, annostr)
 

@@ -614,7 +614,6 @@ class Lookup:
         embed.add_field(name="Range", value=spell.range)
         embed.add_field(name="Components", value=spell.components)
         embed.add_field(name="Duration", value=spell.duration)
-        embed.set_footer(text=f"Spell | {spell.source} {spell.page}")
 
         text = spell.description
         higher_levels = spell.higherlevels
@@ -640,6 +639,8 @@ class Lookup:
 
         if higher_levels:
             embed_queue[-1].add_field(name="At Higher Levels", value=higher_levels)
+
+        embed_queue[-1].set_footer(text=f"Spell | {spell.source} {spell.page}")
 
         for embed in embed_queue:
             if pm:

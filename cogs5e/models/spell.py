@@ -448,15 +448,15 @@ class IEffect(Effect):
 
     def run(self, autoctx):
         super(IEffect, self).run(autoctx)
+        effect = initiative.Effect.new(self.name, self.duration, autoctx.parse_annostr(self.effects))
         if isinstance(autoctx.target.target, Combatant):
-            self.effects = autoctx.parse_annostr(self.effects)
             if isinstance(self.duration, str):
                 try:
                     self.duration = int(autoctx.parse_annostr(self.duration))
                 except ValueError:
                     raise SpellException(f"{self.duration} is not an integer (in effect duration)")
-            autoctx.target.target.add_effect(initiative.Effect.new(self.name, self.duration, self.effects))
-        autoctx.queue(f"**Effect**: {self.name}")
+            autoctx.target.target.add_effect(effect)
+        autoctx.queue(f"**Effect**: {str(effect)}")
 
 
 class Roll(Effect):

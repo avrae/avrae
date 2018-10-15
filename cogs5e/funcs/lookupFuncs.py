@@ -145,7 +145,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     choices = c.monster_mash
     try:
         bestiary = await Bestiary.from_ctx(ctx)
-        choices = itertools.chain(c.monster_mash, bestiary.monsters)
+        choices = list(itertools.chain(c.monster_mash, bestiary.monsters))
     except NoActiveBrew:
         pass
     if srd:

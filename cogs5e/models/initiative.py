@@ -389,7 +389,6 @@ class Combatant(Spellcaster):
         self._effects = effects
         self._group = group
         self._temphp = temphp
-        self._spellcasting = spellcasting
 
         self._cache = {}
 

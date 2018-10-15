@@ -4,6 +4,7 @@ import discord
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models import initiative
+from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
 from cogs5e.models.initiative import Combatant
@@ -150,6 +151,18 @@ class AutomationTarget:
 
     def get_neutral(self):
         return self.get_resists().get("neutral", [])
+
+    def damage(self, autoctx, amount):
+        if isinstance(self.target, Combatant):
+            if self.target.hp is not None:
+                self.target.hp -= amount
+                autoctx.footer_queue("{}: {}".format(self.target.name, self.target.get_hp_str()))
+                if self.target.isPrivate:
+                    autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.get_hp_str(True)}")
+            else:
+                autoctx.footer_queue("Dealt {} damage to {}!".format(amount, self.target.name))
+        elif isinstance(self.target, Character):
+            self.target.modify_hp(-amount)
 
 
 class Effect:
@@ -430,15 +443,7 @@ class Damage(Effect):
         dmgroll = roll(damage, rollFor="Damage", inline=True, show_blurbs=False)
         autoctx.queue(dmgroll.result)
 
-        if autoctx.target.target and isinstance(autoctx.target.target, Combatant):
-            target = autoctx.target.target
-            if target.hp is not None:
-                target.hp -= dmgroll.total
-                autoctx.footer_queue("{}: {}".format(target.name, target.get_hp_str()))
-                if target.isPrivate:
-                    autoctx.add_pm(target.controller, f"{target.name}'s HP: {target.get_hp_str(True)}")
-            else:
-                autoctx.footer_queue("Dealt {} damage to {}!".format(dmgroll.total, target.name))
+        autoctx.target.damage(autoctx, dmgroll.total)
 
 
 class IEffect(Effect):

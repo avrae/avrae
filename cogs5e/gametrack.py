@@ -17,7 +17,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import DicecloudClient
-from cogs5e.models.embeds import EmbedWithCharacter
+from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
 from utils.argparser import argparse
 from utils.functions import dicecloud_parse, search_and_select, search
@@ -581,12 +581,7 @@ class GameTrack:
         embed.colour = char.get_color()
         embed.set_thumbnail(url=char.get_image())
 
-        _fields = args.get('f')
-        if type(_fields) == list:
-            for f in _fields:
-                title = f.split('|')[0] if '|' in f else '\u200b'
-                value = "|".join(f.split('|')[1:]) if '|' in f else f
-                embed.add_field(name=title, value=value)
+        add_fields_from_args(embed, args.get('f'))
 
         await char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)

@@ -26,10 +26,10 @@ import MeteorClient
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import SCRIPTING_RE, SimpleCombat, ScriptingEvaluator
+from cogs5e.models.caster import Spellcaster, Spellcasting
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError, InvalidSpellLevel
-from cogs5e.sheets.dicecloud import CLASS_RESOURCES
 from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
@@ -44,13 +44,17 @@ SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'i
              'charismaSave': 'charisma',
              'strength': 'strength', 'dexterity': 'dexterity', 'constitution': 'constitution',
              'intelligence': 'intelligence', 'wisdom': 'wisdom', 'charisma': 'charisma'}
+CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiorityDice")
 
 
-class Character:
+class Character(Spellcaster):
     def __init__(self, _dict, _id):
         self.character = _dict
         self.id = _id
         self.live = self.character.get('live') and self.character.get('type') == 'dicecloud'
+
+        spellcasting = Spellcasting(self.get_spell_list(), self.get_save_dc(), self.get_spell_ab(), self.get_level())
+        super(Character, self).__init__(spellcasting)
 
     @classmethod
     async def from_ctx(cls, ctx):
@@ -777,6 +781,15 @@ class Character:
         self._sync_slots()
         return self
 
+    def can_cast(self, spell, level) -> bool:
+        return self.get_remaining_slots(level) > 0 and spell.name in self.spellcasting.spells
+
+    def cast(self, spell, level):
+        self.use_slot(level)
+
+    def remaining_casts_of(self, spell, level):
+        return self.get_remaining_slots_str(level)
+
     def _initialize_spellbook(self):
         """Sets up a character's spellbook override.
         @:raises OutdatedSheet if sheet does not have spellbook."""
@@ -796,17 +809,17 @@ class Character:
 
     def add_known_spell(self, spell):
         """Adds a spell to the character's known spell list.
-        :param spell (dict) - the Spell dictionary.
+        :param spell (Spell) - the Spell.
         :returns self"""
         self._initialize_spellbook()
         spells = set(self.character['spellbook']['spells'])
-        spells.add(spell['name'])
+        spells.add(spell.name)
         self.character['spellbook']['spells'] = list(spells)
 
         if not self.live:
             self._initialize_spell_overrides()
             overrides = set(self.character['overrides']['spells'])
-            overrides.add(spell['name'])
+            overrides.add(spell.name)
             self.character['overrides']['spells'] = list(overrides)
         return self
 

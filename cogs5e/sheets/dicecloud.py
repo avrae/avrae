@@ -21,7 +21,7 @@ import credentials
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.errors import ExternalImportError
-from utils.functions import fuzzy_search
+from utils.functions import search
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +33,10 @@ CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long
                          "sorceryPoints": 'long', "superiorityDice": 'short'}
 API_BASE = "https://dicecloud.com/character/"
 KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
+
+
+def generate_cachebuster():
+    return str(random.randint(100000, 1000000))
 
 
 class DicecloudParser:
@@ -48,7 +52,7 @@ class DicecloudParser:
         character = None
         async with aiohttp.ClientSession() as session:
             for _ in range(10):  # 10 retries
-                async with session.get(f"{API_BASE}{url}/json?key={KEY}") as resp:
+                async with session.get(f"{API_BASE}{url}/json?key={KEY}&cachebuster={generate_cachebuster()}") as resp:
                     log.debug(f"Dicecloud returned {resp.status}")
                     if resp.status == 200:
                         character = await resp.json(encoding='utf-8')
@@ -552,9 +556,9 @@ class DicecloudParser:
             spellbook['spellslots'][str(lvl)] = numSlots
 
         for spell in spellnames:
-            s = fuzzy_search(c.spells, 'name', spell.strip())
-            if s:
-                spellbook['spells'].append(s.get('name'))
+            s, strict = search(c.spells, spell, lambda sp: sp.name)
+            if s and strict:
+                spellbook['spells'].append(s.name)
 
         sls = [(0, 0)]  # ab, dc
         for sl in self.character.get('spellLists', []):

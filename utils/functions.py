@@ -452,41 +452,23 @@ def dicecloud_parse(spell):
     :param spell: The spell to parse.
     :return: (dict) A dictionary with all the keys necessary for dicecloud exporting.
     """
-    mat = re.search(r'\(([^()]+)\)', spell['components'])
-    schools = {
-        "A": "Abjuration",
-        "EV": "Evocation",
-        "EN": "Enchantment",
-        "I": "Illusion",
-        "D": "Divination",
-        "N": "Necromancy",
-        "T": "Transmutation",
-        "C": "Conjuration"
-    }
-    spellDesc = []
-    if isinstance(spell['text'], list):
-        for a in spell["text"]:
-            if a is '': continue
-            spellDesc.append(a.replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
-                "This spell can be found in the Elemental Evil Player's Companion", ""))
-    else:
-        spellDesc.append(spell['text'].replace("At Higher Levels: ", "**At Higher Levels:** ").replace(
-            "This spell can be found in the Elemental Evil Player's Companion", ""))
-
-    text = '\n\n'.join(spellDesc)
+    mat = re.search(r'\(([^()]+)\)', spell.components)
+    text = spell.description.replace('\n', '\n  ')
+    if spell.higherlevels:
+        text += f"\n\n**At Higher Levels**: {spell.higherlevels}"
     return {
-        'name': spell['name'],
+        'name': spell.name,
         'description': text,
-        'castingTime': spell['time'],
-        'range': spell['range'],
-        'duration': spell['duration'],
-        'components.verbal': 'V' in spell['components'],
-        'components.somatic': 'S' in spell['components'],
-        'components.concentration': 'Concentration' in spell['duration'],
+        'castingTime': spell.time,
+        'range': spell.range,
+        'duration': spell.duration,
+        'components.verbal': 'V' in spell.components,
+        'components.somatic': 'S' in spell.components,
+        'components.concentration': spell.concentration,
         'components.material': mat.group(1) if mat else None,
-        'ritual': 'ritual' in spell,
-        'level': int(spell['level']),
-        'school': schools.get(spell.get('school', 'A'))
+        'ritual': spell.ritual,
+        'level': int(spell.level),
+        'school': spell.get_school()
     }
 
 

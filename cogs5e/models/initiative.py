@@ -3,6 +3,7 @@ import copy
 import cachetools
 
 from cogs5e.funcs.dice import roll
+from cogs5e.models.caster import Spellcasting, Spellcaster
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants, NoCharacter, InvalidArgument
 from utils.argparser import argparse
@@ -361,17 +362,16 @@ class Combat:
         await self.ctx.bot.mdb.combats.delete_one({"channel": self.channel})
 
 
-class Combatant:
+class Combatant(Spellcaster):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
                  index=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None, *args, **kwargs):
+        super(Combatant, self).__init__(spellcasting)
         if resists is None:
             resists = {}
         if attacks is None:
             attacks = []
         if effects is None:
             effects = []
-        if spellcasting is None:
-            spellcasting = Spellcasting()
         self._name = name
         self._controller = controllerId
         self._init = init
@@ -419,6 +419,9 @@ class Combatant:
     @name.setter
     def name(self, new_name):
         self._name = new_name
+
+    def get_name(self):
+        return self.name
 
     @property
     def controller(self):
@@ -588,11 +591,9 @@ class Combatant:
     def group(self, value):
         self._group = value
 
-    @property
-    def spellcasting(self):
-        return self._spellcasting
-
     def add_effect(self, effect):
+        if self.get_effect(effect.name):
+            self.remove_effect(self.get_effect(effect.name))
         self._effects.append(effect)
 
     def get_effects(self):
@@ -652,33 +653,6 @@ class Combatant:
 
     def controller_mention(self):
         return f"<@{self.controller}>"
-
-    def can_cast(self, spell, level) -> bool:
-        """
-        Checks whether a combatant can cast a certain spell at a certain level.
-        :param spell: The spell to check.
-        :param level: The level to cast it at.
-        :return: Whether the combatant can cast the spell.
-        """
-        return spell['name'].lower() in [s.lower() for s in
-                                         self.spellcasting.spells]  # TODO: care about monster slots
-
-    def cast(self, spell, level):
-        """
-        Casts a spell at a certain level, using the necessary resources.
-        :param spell: The spell
-        :param level: The level
-        :return: None
-        """
-        pass  # again, don't care about monsters
-
-    def remaining_casts_of(self, spell, level):
-        """
-        Gets the string representing how many more times this combatant can cast this spell.
-        :param spell: The spell
-        :param level: The level
-        """
-        return "Slots are not yet tracked for non-player combatants."
 
     def on_turn(self, num_turns=1):
         """
@@ -874,13 +848,13 @@ class PlayerCombatant(Combatant):
                             self.character.get_spell_ab(), self.character.get_level())
 
     def can_cast(self, spell, level) -> bool:
-        return self.character.get_remaining_slots(level) > 0 and spell['name'] in self.spellcasting.spells
+        return self.character.can_cast(spell, level)
 
     def cast(self, spell, level):
-        self.character.use_slot(level)
+        self.character.cast(spell, level)
 
     def remaining_casts_of(self, spell, level):
-        return self.character.get_remaining_slots_str(level)
+        return self.character.remaining_casts_of(spell, level)
 
     @classmethod
     async def from_dict(cls, raw, ctx):
@@ -1087,21 +1061,3 @@ class Effect:
 
     def to_dict(self):
         return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect}
-
-
-class Spellcasting:
-    def __init__(self, spells=None, dc=0, sab=0, casterLevel=0):
-        if spells is None:
-            spells = []
-        self.spells = spells
-        self.dc = dc
-        self.sab = sab
-        self.casterLevel = casterLevel
-
-    @classmethod
-    def from_dict(cls, spelldict):
-        return cls(spelldict.get('spells', []), spelldict.get('dc', 0), spelldict.get('attackBonus', 0),
-                   spelldict.get('casterLevel', 0))
-
-    def to_dict(self):
-        return {'spells': self.spells, 'dc': self.dc, 'attackBonus': self.sab, 'casterLevel': self.casterLevel}

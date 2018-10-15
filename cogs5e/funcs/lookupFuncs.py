@@ -4,15 +4,16 @@ Created on Jan 13, 2017
 @author: andrew
 """
 import copy
+import itertools
 import json
 import logging
 
-from cogs5e.models.homebrew.bestiary import Bestiary
 from cogs5e.models.errors import NoActiveBrew
+from cogs5e.models.homebrew.bestiary import Bestiary
 from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
-from utils.functions import strict_search, fuzzywuzzy_search_all_3, get_selection, \
-    fuzzywuzzy_search_all_3_list, parse_data_entry, search_and_select
+from cogs5e.models.spell import Spell
+from utils.functions import fuzzywuzzy_search_all_3, parse_data_entry, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -85,12 +86,10 @@ class Compendium:
             self.monsters = json.load(f)
             self.monster_mash = [Monster.from_data(m) for m in self.monsters]
         with open('./res/spells.json', 'r') as f:
-            self.spells = json.load(f)
+            self.spells = [Spell.from_data(r) for r in json.load(f)]
         with open('./res/items.json', 'r') as f:
             _items = json.load(f)
             self.items = [i for i in _items if i.get('type') is not '$']
-        with open('./res/auto_spells.json', 'r') as f:
-            self.autospells = json.load(f)
         with open('./res/backgrounds.json', 'r') as f:
             self.backgrounds = json.load(f)
         self.subclasses = self.load_subclasses()
@@ -143,10 +142,10 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
-    choices = c.monster_mash.copy()
+    choices = c.monster_mash
     try:
         bestiary = await Bestiary.from_ctx(ctx)
-        choices.extend(bestiary.monsters)
+        choices = itertools.chain(c.monster_mash, bestiary.monsters)
     except NoActiveBrew:
         pass
     if srd:
@@ -157,78 +156,3 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
             list_filter = lambda e: e.srd
         message = "This server only shows results from the 5e SRD."
     return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter)
-
-
-def searchSpell(name):
-    return fuzzywuzzy_search_all_3(c.spells, 'name', name, return_key=True)
-
-
-async def searchSpellNameFull(name, ctx):
-    result = searchSpell(name)
-    if result is None:
-        return None
-    strict = result[1]
-    results = result[0]
-    bot = ctx.bot
-
-    if strict:
-        result = results
-    else:
-        if len(results) == 1:
-            result = results[0]
-        else:
-            result = await get_selection(ctx, [(r, r) for r in results])
-            if result is None:
-                await bot.send_message(ctx.message.channel, 'Selection timed out or was cancelled.')
-                return None
-    return result
-
-
-async def searchCharacterSpellName(name, ctx, char):
-    result = fuzzywuzzy_search_all_3_list(char.get_spell_list(), name)
-    if result is None:
-        return None
-    strict = result[1]
-    results = result[0]
-    bot = ctx.bot
-
-    if strict:
-        result = results
-    else:
-        if len(results) == 1:
-            result = results[0]
-        else:
-            result = await get_selection(ctx, [(r, r) for r in results])
-            if result is None:
-                await bot.send_message(ctx.message.channel, 'Selection timed out or was cancelled.')
-                return None
-    return result
-
-
-def searchAutoSpell(name):
-    return fuzzywuzzy_search_all_3(c.autospells, 'name', name)
-
-
-async def searchAutoSpellFull(name, ctx):
-    result = searchAutoSpell(name)
-    if result is None:
-        return None
-    strict = result[1]
-    results = result[0]
-    bot = ctx.bot
-
-    if strict:
-        result = results
-    else:
-        if len(results) == 1:
-            result = results[0]
-        else:
-            result = await get_selection(ctx, [(r['name'], r) for r in results])
-            if result is None:
-                await bot.send_message(ctx.message.channel, 'Selection timed out or was cancelled.')
-                return None
-    return result
-
-
-def getSpell(spellname):
-    return strict_search(c.spells, 'name', spellname)

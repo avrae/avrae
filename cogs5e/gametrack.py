@@ -14,14 +14,13 @@ from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import getSpell, searchSpellNameFull, c, searchCharacterSpellName, searchSpell
-from cogs5e.funcs.sheetFuncs import sheet_cast
+from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import DicecloudClient
-from cogs5e.models.embeds import EmbedWithCharacter
+from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
 from utils.argparser import argparse
-from utils.functions import strict_search, get_selection, dicecloud_parse
+from utils.functions import dicecloud_parse, search_and_select, search
 
 log = logging.getLogger(__name__)
 
@@ -281,10 +280,10 @@ class GameTrack:
         embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
         spells_known = {}
         for spell_name in character.get_spell_list():
-            spell = strict_search(c.spells, 'name', spell_name)
-            if spell is None:
+            spell, strict = search(c.spells, spell_name, lambda sp: sp.name)
+            if spell is None or not strict:
                 continue
-            spells_known[spell['level']] = spells_known.get(spell['level'], []) + [spell_name]
+            spells_known[str(spell.level)] = spells_known.get(str(spell.level), []) + [spell_name]
 
         level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
                       '4': '4th Level', '5': '5th Level', '6': '6th Level',
@@ -297,21 +296,8 @@ class GameTrack:
     @spellbook.command(pass_context=True, name='add')
     async def spellbook_add(self, ctx, *, spell_name):
         """Adds a spell to the spellbook override. If character is live, will add to sheet as well."""
-        result = searchSpell(spell_name)
-        if result is None:
-            return await self.bot.say('Spell not found.')
-        strict = result[1]
-        results = result[0]
+        spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
 
-        if strict:
-            result = results
-        else:
-            if len(results) == 1:
-                result = results[0]
-            else:
-                result = await get_selection(ctx, [(r, r) for r in results])
-                if result is None: return await self.bot.say('Selection timed out or was cancelled.')
-        spell = getSpell(result)
         character = await Character.from_ctx(ctx)
         if character.live:
             try:
@@ -321,7 +307,7 @@ class GameTrack:
         character.add_known_spell(spell)
         await character.commit(ctx)
         live = "Spell added to Dicecloud!" if character.live else ''
-        await self.bot.say(f"{spell['name']} added to known spell list!\n{live}")
+        await self.bot.say(f"{spell.name} added to known spell list!\n{live}")
 
     @spellbook.command(pass_context=True, name='addall')
     async def spellbook_addall(self, ctx, _class, level: int, spell_list=None):
@@ -333,11 +319,10 @@ class GameTrack:
                                       "sheet with `avrae` with edit permissions, then `!update`.")
         if not 0 <= level < 10:
             return await self.bot.say("Invalid spell level.")
-        class_spells = [sp for sp in c.spells if
-                        _class.lower() in [cl.lower() for cl in sp['classes'].split(', ') if not '(' in cl]]
+        class_spells = [sp for sp in c.spells if _class.lower() in [cl.lower() for cl in sp.classes]]
         if len(class_spells) == 0:
             return await self.bot.say("No spells for that class found.")
-        level_spells = [s for s in class_spells if str(level) == s['level']]
+        level_spells = [s for s in class_spells if level == s.level]
         try:
             await DicecloudClient.getInstance().sync_add_mass_spells(character,
                                                                      [dicecloud_parse(s) for s in level_spells],
@@ -578,148 +563,28 @@ class GameTrack:
         except:
             pass
 
-        char = None
+        char = await Character.from_ctx(ctx)
         if not '-i' in args:
-            char = await Character.from_ctx(ctx)
-            spell_name = await searchCharacterSpellName(spell_name, ctx, char)
+            spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name,
+                                            list_filter=lambda s: s.name in char.get_spell_list())
         else:
-            spell_name = await searchSpellNameFull(spell_name, ctx)
-
-        if spell_name is None: return
-
-        spell = strict_search(c.autospells, 'name', spell_name)
-        if spell is None: return await self._old_cast(ctx, spell_name, args)  # fall back to old cast
-
-        if not char: char = await Character.from_ctx(ctx)
+            spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
 
         args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = argparse(args)
 
-        can_cast = True
-        spell_level = int(spell.get('level', 0))
-        cast_level = args.last('l', spell_level, int)
-        if not spell_level <= cast_level <= 9:
-            return await self.bot.say("Invalid spell level.")
-
-        # make sure we can cast it
-        if not char.get_remaining_slots(cast_level) > 0 and spell_name in char.get_spell_list():
-            can_cast = False
-
-        if args.last('i', type_=bool):
-            can_cast = True
-
-        if not can_cast:
-            embed = EmbedWithCharacter(char)
-            embed.title = "Cannot cast spell!"
-            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                                "Use `!game longrest` to restore all spell slots, or pass `-i` to ignore restrictions."
-            if cast_level > 0:
-                embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
-            return await self.bot.say(embed=embed)
-
-        args['l'] = [cast_level]
-        args['name'] = [char.get_name()]
-        args['dc'] = [args.get('dc', [char.get_save_dc()])[-1]]
-        args['casterlevel'] = [char.get_level()]
-        args['crittype'] = [char.get_setting('crittype', 'default')]
-        args['ab'] = [char.get_spell_ab()]
-        args['SPELL'] = [str(char.evaluate_cvar("SPELL") or (char.get_spell_ab() - char.get_prof_bonus()))]
-
-        result = sheet_cast(spell, args, EmbedWithCharacter(char, name=False))
-
+        result = await spell.cast(ctx, char, None, args)
         embed = result['embed']
 
-        _fields = args.get('f')
-        if type(_fields) == list:
-            for f in _fields:
-                title = f.split('|')[0] if '|' in f else '\u200b'
-                value = "|".join(f.split('|')[1:]) if '|' in f else f
-                embed.add_field(name=title, value=value)
+        embed.colour = char.get_color()
+        embed.set_thumbnail(url=char.get_image())
 
-        if not args.last('i', type_=bool):
-            char.use_slot(cast_level)
-        if cast_level > 0:
-            embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
+        add_fields_from_args(embed, args.get('f'))
 
         await char.commit(ctx)  # make sure we save changes
         await self.bot.say(embed=embed)
-
-    async def _old_cast(self, ctx, spell_name, args):
-        spell = getSpell(spell_name)
-        self.bot.rdb.incr('spells_looked_up_life')
-        if spell is None:
-            return await self.bot.say("Spell not found.", delete_after=15)
-        if spell.get('source') == "UAMystic":
-            return await self.bot.say("Mystic talents are not supported.")
-
-        char = await Character.from_ctx(ctx)
-
-        args = await scripting.parse_snippets(args, ctx)
-        args = await char.parse_cvars(args, ctx)
-        args = shlex.split(args)
-        args = argparse(args)
-
-        can_cast = True
-        spell_level = int(spell.get('level', 0))
-        cast_level = args.last('l', spell_level, int)
-        if not spell_level <= cast_level <= 9:
-            return await self.bot.say("Invalid spell level.")
-
-        # make sure we can cast it
-        if not char.get_remaining_slots(cast_level) > 0 and spell_name in char.get_spell_list():
-            can_cast = False
-
-        if args.last('i', type_=bool):
-            can_cast = True
-
-        if not can_cast:
-            embed = EmbedWithCharacter(char)
-            embed.title = "Cannot cast spell!"
-            embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                                "Use `!game longrest` to restore all spell slots, or pass `-i` to ignore restrictions."
-            if cast_level > 0:
-                embed.add_field(name="Spell Slots", value=char.get_remaining_slots_str(cast_level))
-            return await self.bot.say(embed=embed)
-
-        if len(args) == 0:
-            rolls = spell.get('roll', None)
-            if isinstance(rolls, list):
-                rolls = '\n'.join(rolls) \
-                    .replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
-                    .replace('PROF', str(char.get_prof_bonus()))
-                rolls = rolls.split('\n')
-                out = "**{} casts {}:** ".format(char.get_name(), spell['name']) + '\n'.join(
-                    roll(r, inline=True).skeleton for r in rolls)
-            elif rolls is not None:
-                rolls = rolls \
-                    .replace('SPELL', str(char.get_spell_ab() - char.get_prof_bonus())) \
-                    .replace('PROF', str(char.get_prof_bonus()))
-                out = "**{} casts {}:** ".format(char.get_name(), spell['name']) + roll(rolls, inline=True).skeleton
-            else:
-                out = "**{} casts {}!** ".format(char.get_name(), spell['name'])
-        else:
-            rolls = args.get('r')
-            roll_results = ""
-            for r in rolls:
-                res = roll(r, inline=True)
-                if res.total is not None:
-                    roll_results += res.result + '\n'
-                else:
-                    roll_results += "**Effect:** " + r
-            out = "**{} casts {}:**\n".format(char.get_name(), spell['name']) + roll_results
-
-        if not args.last('i', type_=bool):
-            char.use_slot(cast_level)
-        if cast_level > 0:
-            out += f"\n**Remaining Spell Slots**: {char.get_remaining_slots_str(cast_level)}"
-
-        await char.commit(ctx)  # make sure we save changes
-        await self.bot.say(out)
-        spell_cmd = self.bot.get_command('spell')
-        if spell_cmd is None: return await self.bot.say("Lookup cog not loaded.")
-        await ctx.invoke(spell_cmd, name=spell['name'])
 
 
 def setup(bot):

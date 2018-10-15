@@ -13,7 +13,7 @@ import discord
 from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.sheets.errors import MissingAttribute
-from utils.functions import fuzzy_search
+from utils.functions import fuzzy_search, search
 
 log = logging.getLogger(__name__)
 
@@ -336,9 +336,9 @@ class GoogleSheet:
         for col in potential_spells:
             for cell in col:
                 if cell.value and not cell.value in ('MAX', 'SLOTS'):
-                    s = fuzzy_search(c.spells, 'name', cell.value.strip())
-                    if s:
-                        spells.add(s.get('name'))
+                    s, strict = search(c.spells, cell.value.strip(), lambda sp: sp.name)
+                    if s and strict:
+                        spells.add(s.name)
 
         spellbook['spells'] = list(spells)
 

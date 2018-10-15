@@ -30,7 +30,6 @@ from cogs5e.models.caster import Spellcaster, Spellcasting
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
     OutdatedSheet, EvaluationError, InvalidSpellLevel
-from cogs5e.sheets.dicecloud import CLASS_RESOURCES
 from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
@@ -45,6 +44,7 @@ SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'i
              'charismaSave': 'charisma',
              'strength': 'strength', 'dexterity': 'dexterity', 'constitution': 'constitution',
              'intelligence': 'intelligence', 'wisdom': 'wisdom', 'charisma': 'charisma'}
+CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiorityDice")
 
 
 class Character(Spellcaster):

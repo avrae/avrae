@@ -660,7 +660,7 @@ class Lookup:
         choices = c.items
         try:
             pack = await Pack.from_ctx(ctx)
-            choices = itertools.chain(c.items, pack.get_search_formatted_items())
+            choices = list(itertools.chain(c.items, pack.get_search_formatted_items()))
         except NoActiveBrew:
             pass
 

@@ -94,7 +94,7 @@ def fuzzywuzzy_search_all_3_list(list_to_search: list, value, cutoff=5):
     return search(list_to_search, value, lambda e: e)
 
 
-def search(list_to_search: list, value, key, cutoff=5, return_key=False):
+def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=False):
     """Fuzzy searches a list for an object
     result can be either an object or list of objects
     :param list_to_search: The list to search.
@@ -106,6 +106,8 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False):
     try:
         result = next(a for a in list_to_search if value.lower() == key(a).lower())
     except StopIteration:
+        if strict:
+            return None
         result = [a for a in list_to_search if value.lower() in key(a).lower()]
         if len(result) is 0:
             names = [key(d) for d in list_to_search]

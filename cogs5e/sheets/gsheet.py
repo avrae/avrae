@@ -336,9 +336,11 @@ class GoogleSheet:
         for col in potential_spells:
             for cell in col:
                 if cell.value and not cell.value in ('MAX', 'SLOTS'):
-                    s, strict = search(c.spells, cell.value.strip(), lambda sp: sp.name)
-                    if s and strict:
-                        spells.add(s.name)
+                    result = search(c.spells, cell.value.strip(), lambda sp: sp.name, strict=True)
+                    if result is None:
+                        continue
+                    elif result[0] and result[1]:
+                        spells.add(result[0].name)
 
         spellbook['spells'] = list(spells)
 

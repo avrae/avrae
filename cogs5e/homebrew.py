@@ -69,9 +69,9 @@ class Homebrew:
 
     @bestiary.command(pass_context=True, name='import')
     async def bestiary_import(self, ctx, url):
-        """Imports a published bestiary from [CritterDB](http://www.critterdb.com/)."""
-        # ex: http://www.critterdb.com/#/publishedbestiary/view/5acb0aa187653a455731b890
-        # http://www.critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
+        """Imports a published bestiary from [CritterDB](https://critterdb.com/)."""
+        # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
+        # https://critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
         if not 'critterdb.com' in url:
             return await self.bot.say("This is not a CritterDB link.")
         if not 'publishedbestiary' in url:

@@ -872,6 +872,9 @@ class InitTracker:
 
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
         embed = result['embed']
+        
+        add_fields_from_args(embed, args.get('f'))
+
 
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
         await self.bot.say(embed=embed)

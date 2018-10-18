@@ -404,11 +404,23 @@ class BeyondSheetParser:
                     }
                 )
         elif atkType == 'unarmed':
-            dmg = 1 + self.stat_from_id(1)
+            monk_level = self.get_levels().get('MonkLevel')
+            if not monk_level:
+                dmg = 1 + self.stat_from_id(1)
+            elif monk_level < 5:
+                dmg = f"1d4+{self.stat_from_id(1)}"
+            elif monk_level < 11:
+                dmg = f"1d6+{self.stat_from_id(1)}"
+            elif monk_level < 17:
+                dmg = f"1d8+{self.stat_from_id(1)}"
+            else:
+                dmg = f"1d10+{self.stat_from_id(1)}"
             atkBonus = self.get_stats()['proficiencyBonus']
 
             atkBonus += self.get_stat('natural-attacks')
-            dmg += self.get_stat('natural-attacks', bonus_tags=['damage'])
+            natural_bonus = self.get_stat('natural-attacks', bonus_tags=['damage'])
+            if natural_bonus:
+                dmg = f"{dmg}+{natural_bonus}"
 
             attack = {
                 'attackBonus': str(self.stat_from_id(1) + atkBonus),

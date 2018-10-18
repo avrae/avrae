@@ -193,7 +193,6 @@ def camel_to_title(string):
 def parse_resistances(damage, resistances, immunities, vulnerabilities, neutral=None):
     if neutral is None:
         neutral = []
-    checked = neutral.copy()
 
     COMMENT_REGEX = r'\[(?P<comment>.*?)\]'
     ROLL_STRING_REGEX = r'\[.*?]'
@@ -223,6 +222,7 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities, neutral=
 
     for index, comment in enumerate(formatted_comments):
         roll_string = formatted_roll_strings[index].replace(' ', '')
+        checked = neutral.copy()
 
         preop = ''
         if roll_string[0] in '-+*/().<>=':  # case: +6[blud]

@@ -10,7 +10,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, c
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithCharacter
+from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import SelectionException
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
 from utils.argparser import argparse
@@ -874,6 +874,7 @@ class InitTracker:
         embed = result['embed']
 
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
+        add_fields_from_args(embed, args.get('f'))
         await self.bot.say(embed=embed)
         await combat.final()
 

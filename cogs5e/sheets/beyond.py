@@ -32,7 +32,7 @@ SLOTS_PER_LEVEL = {
     2: lambda l: 0 if l < 3 else min(l - 1, 3),
     3: lambda l: 0 if l < 5 else min(l - 3, 3),
     4: lambda l: 0 if l < 7 else min(l - 6, 3),
-    5: lambda l: 0 if l < 9 else min(l - 8, 3),
+    5: lambda l: 0 if l < 9 else 1 if l < 10 else 2 if l < 18 else 3,
     6: lambda l: 0 if l < 11 else 1 if l < 19 else 2,
     7: lambda l: 0 if l < 13 else 1 if l < 20 else 2,
     8: lambda l: int(l >= 15),

@@ -13,7 +13,7 @@ from utils.functions import parse_data_entry, ABILITY_MAP, get_selection, fuzzyw
 log = logging.getLogger(__name__)
 
 SKILL_MAP = {'Acrobatics': 'acrobatics', 'Animal Handling': 'animalHandling', 'Arcana': 'arcana',
-             'Athletics': 'athletics', 'Deception': 'deception', 'History': 'history', 'Initiaitve': 'initiative',
+             'Athletics': 'athletics', 'Deception': 'deception', 'History': 'history', 'Initiative': 'initiative',
              'Insight': 'insight', 'Intimidation': 'intimidation', 'Investigation': 'investigation',
              'Medicine': 'medicine', 'Nature': 'nature', 'Perception': 'perception', 'Performance': 'performance',
              'Persuasion': 'persuasion', 'Religion': 'religion', 'Sleight of Hand': 'sleightOfHand',
@@ -42,8 +42,10 @@ class CharGenerator:
             return
 
         if level == 0:
-            stats = '\n'.join(roll("4d6kh3", inline=True).skeleton for _ in range(6))
-            await self.bot.say(f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}")
+            rolls = [roll("4d6kh3", inline=True) for _ in range(6)]
+            stats = '\n'.join(r.skeleton for r in rolls)
+            total = sum([r.total for r in rolls])
+            await self.bot.say(f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`")
             return
 
         if level > 20 or level < 1:

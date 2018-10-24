@@ -225,8 +225,11 @@ def verbose_roll(rollStr, multiply=1, add=0):
 
         rollStr = re.sub(r'(\d+)d(\d+)', subDice, rollStr)
     rolled = roll(rollStr, inline=True)
-    return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
-                            [part.to_dict() for part in rolled.raw_dice.parts])
+    try:
+        return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
+                                [part.to_dict() for part in rolled.raw_dice.parts])
+    except AttributeError:
+        return None
 
 
 def safe_range(start, stop=None, step=None):

@@ -94,7 +94,10 @@ async def bestiary_from_critterdb(url):
                     f"http://critterdb.com/api/publishedbestiaries/{url}/creatures/{index}") as resp:
                 if not 199 < resp.status < 300:
                     raise ExternalImportError("Error importing bestiary. Are you sure the link is right?")
-                raw = await resp.json()
+                try:
+                    raw = await resp.json()
+                except ValueError:
+                    raise ExternalImportError("Error importing bestiary. Are you sure the link is right?")
                 if not raw:
                     break
                 creatures.extend(raw)

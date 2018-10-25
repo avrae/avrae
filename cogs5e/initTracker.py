@@ -657,6 +657,7 @@ class InitTracker:
         [args] is a set of args that affects a combatant in combat.
         __**Valid Arguments**__
         -dur [duration]
+        conc (makes effect require conc)
         __Attacks__
         -b [bonus] (see !a)
         -d [damage bonus] (see !a)
@@ -673,10 +674,14 @@ class InitTracker:
 
         args = argparse(args)
         duration = args.last('dur', -1, int)
+        conc = args.last('conc', False, bool)
 
-        effectObj = Effect.new(duration=duration, name=effect_name, effect_args=args)
-        combatant.add_effect(effectObj)
-        await self.bot.say("Added effect {} to {}.".format(effect_name, combatant.name), delete_after=10)
+        effectObj = Effect.new(duration=duration, name=effect_name, effect_args=args, concentration=conc)
+        result = combatant.add_effect(effectObj)
+        out = "Added effect {} to {}.".format(effect_name, combatant.name)
+        if result['conc_conflict']:
+            out += f"\nRemoved {', '.join(e.name for e in result['conc_conflict'])} due to concentration conflict!"
+        await self.bot.say(out, delete_after=10)
         await combat.final()
 
     @init.command(pass_context=True, name='re')

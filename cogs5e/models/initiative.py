@@ -593,7 +593,10 @@ class Combatant(Spellcaster):
     def add_effect(self, effect):
         if self.get_effect(effect.name):
             self.remove_effect(self.get_effect(effect.name))
+        conc_conflict = self.remove_all_effects(lambda e: e.concentration)
+
         self._effects.append(effect)
+        return {"conc_conflict": conc_conflict}
 
     def get_effects(self):
         return self._effects
@@ -620,8 +623,14 @@ class Combatant(Spellcaster):
         except ValueError:
             raise CombatException("Effect does not exist on combatant.")
 
-    def remove_all_effects(self):
-        self._effects = []
+    def remove_all_effects(self, _filter=None):
+        if not _filter:
+            self._effects = []
+        else:
+            to_remove = filter(_filter, self._effects)
+            for e in to_remove:
+                self.remove_effect(e)
+            return to_remove
 
     def attack_effects(self, attacks):
         at = copy.deepcopy(attacks)
@@ -989,14 +998,15 @@ class Effect:
     VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
                   'vuln': 'Vulnerability', 'neutral': 'Neutral'}
 
-    def __init__(self, name: str, duration: int, remaining: int, effect: dict):
+    def __init__(self, name: str, duration: int, remaining: int, effect: dict, concentration: bool = False):
         self._name = name
         self._duration = duration
         self._remaining = remaining
         self._effect = effect
+        self._concentration = concentration
 
     @classmethod
-    def new(cls, name, duration, effect_args):
+    def new(cls, name, duration, effect_args, concentration: bool = False):
         if isinstance(effect_args, str):
             effect_args = argparse(effect_args)
         effect_dict = {}
@@ -1009,7 +1019,7 @@ class Effect:
             duration = int(duration)
         except (ValueError, TypeError):
             raise InvalidArgument("Effect duration must be an integer.")
-        return cls(name, duration, duration, effect_dict)
+        return cls(name, duration, duration, effect_dict, concentration=concentration)
 
     @property
     def name(self):
@@ -1027,12 +1037,18 @@ class Effect:
     def effect(self):
         return self._effect
 
+    @property
+    def concentration(self):
+        return self._concentration
+
     def __str__(self):
         desc = self.name
         if self.remaining >= 0:
             desc += f" [{self.remaining} rounds]"
         if self.effect:
             desc += f" ({self.get_effect_str()})"
+        if self.concentration:
+            desc += " <C>"
         return desc
 
     def get_effect_str(self):

@@ -419,11 +419,11 @@ class SimpleCombatant:
             return SimpleEffect(effect)
         return None
 
-    def add_effect(self, name: str, args: str, duration: int = -1):
+    def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False):
         existing = self._combatant.get_effect(name, True)
         if existing:
             self._combatant.remove_effect(existing)
-        effectObj = Effect.new(duration=duration, name=name, effect_args=args)
+        effectObj = Effect.new(duration=duration, name=name, effect_args=args, concentration=concentration)
         self._combatant.add_effect(effectObj)
 
     def remove_effect(self, name: str):
@@ -458,6 +458,7 @@ class SimpleEffect:
         self.duration = self._effect.duration
         self.remaining = self._effect.remaining
         self.effect = self._effect.effect
+        self.conc = self._effect.concentration
 
     def __str__(self):
         return str(self._effect)

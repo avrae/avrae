@@ -38,9 +38,8 @@ After creating the credential files, you'll have to create a few files so that L
 - `res/races.json`*
 - `res/classes.json`
 - `res/bestiary.json`*
-- `res/spells.json`
+- `res/spells.json`*
 - `res/items.json`*
-- `res/auto_spells.json`
 - `res/backgrounds.json`
 - `res/itemprops.json`
 
@@ -49,7 +48,7 @@ Files marked with a * can be obtained by running the [data parsers](https://gith
 
 ##### Actually Running Avrae
 ###### Redis
-You will need to run a Redis cache to serve as a high-performance cache. Download [Redis 4.0](https://redis.io/download) and run a redis server locally **before** launching Avrae.
+You will need to run a Redis instance to serve as a high-performance cache. Download [Redis 4.0](https://redis.io/download) and run a redis server locally **before** launching Avrae.
 ###### MongoDB
 You will also need to run a MongoDB instance to serve as Avrae's database.
 ###### Avrae

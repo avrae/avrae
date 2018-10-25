@@ -183,6 +183,10 @@ async def on_command_error(error, ctx):
             await bot.send_message(ctx.message.channel,
                                    "Error: I am having an issue writing to my database. Please report this to the dev!")
             return await bot.send_message(bot.owner, f"Database error!\n{repr(original)}")
+        if isinstance(original, OverflowError):
+            return await bot.send_message(ctx.message.channel,
+                                          f"Error: A number is too large for me to store. "
+                                          f"This generally means you've done something terribly wrong.")
 
     error_msg = gen_error_message()
 

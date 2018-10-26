@@ -627,7 +627,7 @@ class Combatant(Spellcaster):
         if not _filter:
             self._effects = []
         else:
-            to_remove = filter(_filter, self._effects)
+            to_remove = list(filter(_filter, self._effects))
             for e in to_remove:
                 self.remove_effect(e)
             return to_remove
@@ -658,6 +658,9 @@ class Combatant(Spellcaster):
         if key:
             return self._cache['parsed_effects'].get(key, [])
         return self._cache['parsed_effects']
+
+    def is_concentrating(self):
+        return any(e.concentration for e in self.get_effects())
 
     def controller_mention(self):
         return f"<@{self.controller}>"
@@ -1072,7 +1075,8 @@ class Effect:
 
     @classmethod
     def from_dict(cls, raw):
-        return cls(raw['name'], raw['duration'], raw['remaining'], raw['effect'])
+        return cls(**raw)
 
     def to_dict(self):
-        return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect}
+        return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect,
+                'concentration': self.concentration}

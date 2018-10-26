@@ -161,6 +161,8 @@ class AutomationTarget:
                     autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.get_hp_str(True)}")
             else:
                 autoctx.footer_queue("Dealt {} damage to {}!".format(amount, self.target.name))
+            if self.target.is_concentrating():
+                autoctx.queue(f"**Concentration**: DC {int(max(amount/2, 10))}")
         elif isinstance(self.target, Character):
             self.target.modify_hp(-amount)
 
@@ -586,6 +588,18 @@ class Spell:
         if self.level == 3:
             return "3rd level"
         return f"{self.level}th level"
+
+    def get_combat_duration(self):
+        match = re.match(r"(?:Concentration, up to )?(\d+) (\w+)", self.duration)
+        if match:
+            num = int(match.group(1))
+            unit = match.group(2)
+            if 'round' in unit:
+                return num
+            elif 'minute' in unit:
+                if num == 1:  # anything over 1 minute can be indefinite, really
+                    return 10
+        return -1
 
     async def cast(self, ctx, caster, targets, args, combat=None):
         """

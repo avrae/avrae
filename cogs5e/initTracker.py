@@ -792,6 +792,9 @@ class InitTracker:
                         pass
             else:
                 embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
+            if target.is_concentrating():
+                embed.add_field(name="Concentration",
+                                value=f"Check your concentration (DC {int(max(result['total_damage']/2, 10))})!")
         else:
             embed.set_footer(text="Target AC not set.")
 
@@ -876,7 +879,16 @@ class InitTracker:
         targets = [await combat.select_combatant(t, f"Select target #{i+1}.") for i, t in enumerate(args.get('t'))]
 
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
+
         embed = result['embed']
+
+        if spell.concentration:
+            effect_result = combatant.add_effect(
+                Effect.new(spell.name, spell.get_combat_duration(), "", True))
+            conc_conflict = effect_result['conc_conflict']
+            if conc_conflict:
+                embed.add_field(name="Concentration",
+                                value=f"Dropped {', '.join(e.name for e in conc_conflict)} due to concentration.")
 
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
         add_fields_from_args(embed, args.get('f'))

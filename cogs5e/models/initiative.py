@@ -488,7 +488,7 @@ class Combatant(Spellcaster):
                 hpStr = "<Healthy>"
             elif 0.5 < ratio < 1:
                 hpStr = "<Injured>"
-            elif 0.15 < ratio <= 0.5:
+            elif 0.25 < ratio <= 0.5:
                 hpStr = "<Bloodied>"
             elif 0 < ratio <= 0.25:
                 hpStr = "<Critical>"

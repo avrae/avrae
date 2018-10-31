@@ -12,7 +12,6 @@ import traceback
 from socket import timeout
 
 import discord
-import numexpr
 import pygsheets
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
@@ -26,7 +25,6 @@ from cogs5e.models import embeds
 from cogs5e.models.character import Character, SKILL_MAP
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, AvraeException
-from cogs5e.models.initiative import Combat
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
@@ -64,8 +62,8 @@ class SheetManager:
         args = argparse(args)
         return args
 
-    @commands.command(pass_context=True, aliases=['a'])
-    async def attack(self, ctx, atk_name: str = 'list', *, args: str = ''):
+    @commands.group(pass_context=True, aliases=['a'], invoke_without_command=True)
+    async def attack(self, ctx, atk_name=None, *, args: str = ''):
         """Rolls an attack for the current active character.
         __Valid Arguments__
         adv/dis
@@ -90,33 +88,11 @@ class SheetManager:
         ea (Elven Accuracy double advantage)
         -f "Field Title|Field Text" (see !embed)
         [user snippet]"""
+        if atk_name is None:
+            return await ctx.invoke(self.attack_list)
+
         char = await Character.from_ctx(ctx)
-
         attacks = char.get_attacks()
-
-        if atk_name == 'list':
-            tempAttacks = []
-            for a in attacks:
-                if a['attackBonus'] is not None:
-                    try:
-                        bonus = numexpr.evaluate(a['attackBonus'])
-                    except:
-                        bonus = a['attackBonus']
-                    tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
-                                                                                  bonus,
-                                                                                  a['damage'] if a[
-                                                                                                     'damage'] is not None else 'no'))
-                else:
-                    tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
-                                                                     a['damage'] if a['damage'] is not None else 'no'))
-            if not tempAttacks:
-                tempAttacks = ['No attacks.']
-            a = '\n'.join(tempAttacks)
-            if len(a) > 2000:
-                a = ', '.join(atk['name'] for atk in attacks)
-            if len(a) > 2000:
-                a = "Too many attacks, values hidden!"
-            return await self.bot.say("{}'s attacks:\n{}".format(char.get_name(), a))
 
         try:  # fuzzy search for atk_name
             attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
@@ -149,6 +125,77 @@ class SheetManager:
             await self.bot.delete_message(ctx.message)
         except:
             pass
+
+    @attack.command(pass_context=True, name="list")
+    async def attack_list(self, ctx):
+        """Lists the active character's attacks."""
+        char = await Character.from_ctx(ctx)
+        attacks = char.get_attacks()
+
+        tempAttacks = []
+        for a in attacks:
+            damage = a['damage'] if a['damage'] is not None else 'no'
+            if a['attackBonus'] is not None:
+                try:
+                    bonus = roll(a['attackBonus']).total
+                except:
+                    bonus = a['attackBonus']
+                tempAttacks.append(f"**{a['name']}:** +{bonus} To Hit, {damage} damage.")
+            else:
+                tempAttacks.append(f"**{a['name']}:** {damage} damage.")
+        if not tempAttacks:
+            tempAttacks = ['No attacks.']
+        a = '\n'.join(tempAttacks)
+        if len(a) > 2000:
+            a = ', '.join(atk['name'] for atk in attacks)
+        if len(a) > 2000:
+            a = "Too many attacks, values hidden!"
+        return await self.bot.say("{}'s attacks:\n{}".format(char.get_name(), a))
+
+    @attack.command(pass_context=True, name="add", aliases=['create'])
+    async def attack_add(self, ctx, name, *, args=""):
+        """
+        Adds an attack to the active character.
+        __Arguments__
+        -d [damage]: How much damage the attack should do.
+        -b [to-hit]: The to-hit bonus of the attack.
+        -desc [description]: A description of the attack.
+        """
+        parsed = argparse(args)
+        attack = {
+            "name": name,
+            "attackBonus": parsed.join('b', '+'),
+            "damage": parsed.join('d', '+'),
+            "details": parsed.join('desc', '\n')
+        }
+        character = await Character.from_ctx(ctx)
+        attack_overrides = character.get_override("attacks", [])
+        duplicate = next((a for a in attack_overrides if a['name'].lower() == attack['name'].lower()), None)
+        if duplicate:
+            attack_overrides.remove(duplicate)
+        attack_overrides.append(attack)
+        character.set_override("attacks", attack_overrides)
+
+        await character.commit(ctx)
+        out = f"Created attack {attack['name']}!"
+        if duplicate:
+            out += f" Removed a duplicate attack."
+        await self.bot.say(out)
+
+    @attack.command(pass_context=True, name="delete", aliases=['remove'])
+    async def attack_delete(self, ctx, name):
+        """
+        Deletes an attack override.
+        """
+        character = await Character.from_ctx(ctx)
+        attack_overrides = character.get_override("attacks", [])
+        attack = await search_and_select(ctx, attack_overrides, name, lambda a: a['name'])
+
+        attack_overrides.remove(attack)
+        character.set_override("attacks", attack_overrides)
+        await character.commit(ctx)
+
+        await self.bot.say(f"Okay, deleted attack {attack['name']}.")
 
     @commands.command(pass_context=True, aliases=['s'])
     async def save(self, ctx, skill, *, args: str = ''):

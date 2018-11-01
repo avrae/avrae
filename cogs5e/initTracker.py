@@ -593,8 +593,8 @@ class InitTracker:
 
         if 'mod' in operator.lower():
             if combatant.hp is None:
-                combatant.hp = 0
-            combatant.hp += hp_roll.total
+                combatant.set_hp(0)
+            combatant.mod_hp(hp_roll.total)
         elif 'set' in operator.lower():
             combatant.set_hp(hp_roll.total)
         elif 'max' in operator.lower():
@@ -607,8 +607,8 @@ class InitTracker:
         elif hp == '':
             hp_roll = roll(operator, inline=True, show_blurbs=False)
             if combatant.hp is None:
-                combatant.hp = 0
-            combatant.hp += hp_roll.total
+                combatant.set_hp(0)
+            combatant.mod_hp(hp_roll.total)
         else:
             await self.bot.say("Incorrect operator. Use mod, set, or max.")
             return
@@ -778,7 +778,8 @@ class InitTracker:
             embed.colour = combatant.character.get_color()
         else:
             embed.colour = random.randint(0, 0xffffff)
-        if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
+        if target.ac is not None and target.hp is not None:
+            target.mod_hp(-result['total_damage'], overheal=False)
 
         if target.ac is not None:
             if target.hp is not None:

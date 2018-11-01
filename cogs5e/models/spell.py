@@ -155,7 +155,7 @@ class AutomationTarget:
     def damage(self, autoctx, amount):
         if isinstance(self.target, Combatant):
             if self.target.hp is not None:
-                self.target.hp -= amount
+                self.target.mod_hp(-amount, overheal=False)
                 autoctx.footer_queue("{}: {}".format(self.target.name, self.target.get_hp_str()))
                 if self.target.isPrivate:
                     autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.get_hp_str(True)}")

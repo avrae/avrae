@@ -464,6 +464,22 @@ class Combatant(Spellcaster):
                 self._temphp = max(self._temphp + delta, 0)
         self._hp = new_hp
 
+    def get_hp(self, no_temp=False):
+        if not no_temp:
+            return self.hp
+
+        if self.temphp and self.temphp > 0:
+            hp = self.hp - self.temphp
+        else:
+            hp = self.hp
+        return hp
+
+    def mod_hp(self, delta, overheal=True):
+        if not overheal and delta > 0:
+            if self.get_hp(True) + delta > self.hpMax:
+                delta = max(self.hpMax - self.get_hp(True), 0)  # don't do damage by over-overhealing
+        self.hp += delta
+
     def set_hp(self, new_hp):  # set hp before temp hp
         if self._temphp:
             self._hp = new_hp + self._temphp
@@ -473,10 +489,7 @@ class Combatant(Spellcaster):
     def get_hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''
-        if self.temphp and self.temphp > 0:
-            hp = self.hp - self.temphp
-        else:
-            hp = self.hp
+        hp = self.get_hp(no_temp=True)
         if not self.isPrivate or private:
             hpStr = '<{}/{} HP>'.format(hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
                 hp) if hp is not None else ''

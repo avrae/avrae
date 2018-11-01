@@ -464,6 +464,22 @@ class Combatant(Spellcaster):
                 self._temphp = max(self._temphp + delta, 0)
         self._hp = new_hp
 
+    def get_hp(self, no_temp=False):
+        if not no_temp:
+            return self.hp
+
+        if self.temphp and self.temphp > 0:
+            hp = self.hp - self.temphp
+        else:
+            hp = self.hp
+        return hp
+
+    def mod_hp(self, delta, overheal=True):
+        if not overheal and delta > 0:
+            if self.get_hp(True) + delta > self.hpMax:
+                delta = max(self.hpMax - self.get_hp(True), 0)  # don't do damage by over-overhealing
+        self.hp += delta
+
     def set_hp(self, new_hp):  # set hp before temp hp
         if self._temphp:
             self._hp = new_hp + self._temphp
@@ -473,10 +489,7 @@ class Combatant(Spellcaster):
     def get_hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''
-        if self.temphp and self.temphp > 0:
-            hp = self.hp - self.temphp
-        else:
-            hp = self.hp
+        hp = self.get_hp(no_temp=True)
         if not self.isPrivate or private:
             hpStr = '<{}/{} HP>'.format(hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
                 hp) if hp is not None else ''
@@ -593,7 +606,10 @@ class Combatant(Spellcaster):
     def add_effect(self, effect):
         if self.get_effect(effect.name):
             self.remove_effect(self.get_effect(effect.name))
+        conc_conflict = self.remove_all_effects(lambda e: e.concentration)
+
         self._effects.append(effect)
+        return {"conc_conflict": conc_conflict}
 
     def get_effects(self):
         return self._effects
@@ -620,8 +636,14 @@ class Combatant(Spellcaster):
         except ValueError:
             raise CombatException("Effect does not exist on combatant.")
 
-    def remove_all_effects(self):
-        self._effects = []
+    def remove_all_effects(self, _filter=None):
+        if not _filter:
+            self._effects = []
+        else:
+            to_remove = list(filter(_filter, self._effects))
+            for e in to_remove:
+                self.remove_effect(e)
+            return to_remove
 
     def attack_effects(self, attacks):
         at = copy.deepcopy(attacks)
@@ -649,6 +671,9 @@ class Combatant(Spellcaster):
         if key:
             return self._cache['parsed_effects'].get(key, [])
         return self._cache['parsed_effects']
+
+    def is_concentrating(self):
+        return any(e.concentration for e in self.get_effects())
 
     def controller_mention(self):
         return f"<@{self.controller}>"
@@ -989,14 +1014,15 @@ class Effect:
     VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
                   'vuln': 'Vulnerability', 'neutral': 'Neutral'}
 
-    def __init__(self, name: str, duration: int, remaining: int, effect: dict):
+    def __init__(self, name: str, duration: int, remaining: int, effect: dict, concentration: bool = False):
         self._name = name
         self._duration = duration
         self._remaining = remaining
         self._effect = effect
+        self._concentration = concentration
 
     @classmethod
-    def new(cls, name, duration, effect_args):
+    def new(cls, name, duration, effect_args, concentration: bool = False):
         if isinstance(effect_args, str):
             effect_args = argparse(effect_args)
         effect_dict = {}
@@ -1009,7 +1035,7 @@ class Effect:
             duration = int(duration)
         except (ValueError, TypeError):
             raise InvalidArgument("Effect duration must be an integer.")
-        return cls(name, duration, duration, effect_dict)
+        return cls(name, duration, duration, effect_dict, concentration=concentration)
 
     @property
     def name(self):
@@ -1027,12 +1053,18 @@ class Effect:
     def effect(self):
         return self._effect
 
+    @property
+    def concentration(self):
+        return self._concentration
+
     def __str__(self):
         desc = self.name
         if self.remaining >= 0:
             desc += f" [{self.remaining} rounds]"
         if self.effect:
             desc += f" ({self.get_effect_str()})"
+        if self.concentration:
+            desc += " <C>"
         return desc
 
     def get_effect_str(self):
@@ -1056,7 +1088,8 @@ class Effect:
 
     @classmethod
     def from_dict(cls, raw):
-        return cls(raw['name'], raw['duration'], raw['remaining'], raw['effect'])
+        return cls(**raw)
 
     def to_dict(self):
-        return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect}
+        return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect,
+                'concentration': self.concentration}

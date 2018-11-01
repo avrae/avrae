@@ -130,7 +130,7 @@ class Character(Spellcaster):
 
     def get_attacks(self):
         """@:returns list - the character's list of attack dicts."""
-        return self.character.get('attacks', [])
+        return self.character.get('attacks', []) + self.get_override('attacks', [])
 
     def get_max_spellslots(self, level: int):
         """@:returns the maximum number of spellslots of level level a character has.
@@ -198,6 +198,14 @@ class Character(Spellcaster):
             self.character['settings'] = {}
         self.character['settings'][setting] = value
         return self
+
+    def get_override(self, override, default):
+        return self.character.get('overrides', {}).get(override, default)
+
+    def set_override(self, override, value):
+        if not 'overrides' in self.character:
+            self.character['overrides'] = {}
+        self.character['overrides'][override] = value
 
     async def parse_cvars(self, cstr, ctx):
         """Parses cvars.

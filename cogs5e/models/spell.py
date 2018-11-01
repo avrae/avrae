@@ -155,12 +155,14 @@ class AutomationTarget:
     def damage(self, autoctx, amount):
         if isinstance(self.target, Combatant):
             if self.target.hp is not None:
-                self.target.hp -= amount
+                self.target.mod_hp(-amount, overheal=False)
                 autoctx.footer_queue("{}: {}".format(self.target.name, self.target.get_hp_str()))
                 if self.target.isPrivate:
                     autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.get_hp_str(True)}")
             else:
                 autoctx.footer_queue("Dealt {} damage to {}!".format(amount, self.target.name))
+            if self.target.is_concentrating():
+                autoctx.queue(f"**Concentration**: DC {int(max(amount/2, 10))}")
         elif isinstance(self.target, Character):
             self.target.modify_hp(-amount)
 
@@ -476,7 +478,6 @@ class Roll(Effect):
 
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
-        d = autoctx.args.join('d', '+')
         dice = self.dice
         if self.cantripScale:
             def cantrip_scale(matchobj):
@@ -497,8 +498,6 @@ class Roll(Effect):
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
                 dice = f"{dice}+{higher}"
-        if d:
-            dice = f"{dice}+{d}"
 
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)
@@ -589,6 +588,18 @@ class Spell:
         if self.level == 3:
             return "3rd level"
         return f"{self.level}th level"
+
+    def get_combat_duration(self):
+        match = re.match(r"(?:Concentration, up to )?(\d+) (\w+)", self.duration)
+        if match:
+            num = int(match.group(1))
+            unit = match.group(2)
+            if 'round' in unit:
+                return num
+            elif 'minute' in unit:
+                if num == 1:  # anything over 1 minute can be indefinite, really
+                    return 10
+        return -1
 
     async def cast(self, ctx, caster, targets, args, combat=None):
         """

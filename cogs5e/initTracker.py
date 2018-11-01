@@ -593,8 +593,8 @@ class InitTracker:
 
         if 'mod' in operator.lower():
             if combatant.hp is None:
-                combatant.hp = 0
-            combatant.hp += hp_roll.total
+                combatant.set_hp(0)
+            combatant.mod_hp(hp_roll.total)
         elif 'set' in operator.lower():
             combatant.set_hp(hp_roll.total)
         elif 'max' in operator.lower():
@@ -607,8 +607,8 @@ class InitTracker:
         elif hp == '':
             hp_roll = roll(operator, inline=True, show_blurbs=False)
             if combatant.hp is None:
-                combatant.hp = 0
-            combatant.hp += hp_roll.total
+                combatant.set_hp(0)
+            combatant.mod_hp(hp_roll.total)
         else:
             await self.bot.say("Incorrect operator. Use mod, set, or max.")
             return
@@ -657,6 +657,7 @@ class InitTracker:
         [args] is a set of args that affects a combatant in combat.
         __**Valid Arguments**__
         -dur [duration]
+        conc (makes effect require conc)
         __Attacks__
         -b [bonus] (see !a)
         -d [damage bonus] (see !a)
@@ -673,10 +674,14 @@ class InitTracker:
 
         args = argparse(args)
         duration = args.last('dur', -1, int)
+        conc = args.last('conc', False, bool)
 
-        effectObj = Effect.new(duration=duration, name=effect_name, effect_args=args)
-        combatant.add_effect(effectObj)
-        await self.bot.say("Added effect {} to {}.".format(effect_name, combatant.name), delete_after=10)
+        effectObj = Effect.new(duration=duration, name=effect_name, effect_args=args, concentration=conc)
+        result = combatant.add_effect(effectObj)
+        out = "Added effect {} to {}.".format(effect_name, combatant.name)
+        if result['conc_conflict']:
+            out += f"\nRemoved {', '.join(e.name for e in result['conc_conflict'])} due to concentration conflict!"
+        await self.bot.say(out, delete_after=10)
         await combat.final()
 
     @init.command(pass_context=True, name='re')
@@ -773,7 +778,8 @@ class InitTracker:
             embed.colour = combatant.character.get_color()
         else:
             embed.colour = random.randint(0, 0xffffff)
-        if target.ac is not None and target.hp is not None: target.hp -= result['total_damage']
+        if target.ac is not None and target.hp is not None:
+            target.mod_hp(-result['total_damage'], overheal=False)
 
         if target.ac is not None:
             if target.hp is not None:
@@ -787,6 +793,9 @@ class InitTracker:
                         pass
             else:
                 embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
+            if target.is_concentrating():
+                embed.add_field(name="Concentration",
+                                value=f"Check your concentration (DC {int(max(result['total_damage']/2, 10))})!")
         else:
             embed.set_footer(text="Target AC not set.")
 
@@ -864,14 +873,23 @@ class InitTracker:
 
         if not args.last('i', type_=bool):
             spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name,
-                                            list_filter=lambda s: s.name in combatant.spellcasting.spells)
+                                            list_filter=lambda s: s.name.lower() in combatant.spellcasting.lower_spells)
         else:
             spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
 
         targets = [await combat.select_combatant(t, f"Select target #{i+1}.") for i, t in enumerate(args.get('t'))]
 
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
+
         embed = result['embed']
+
+        if spell.concentration:
+            effect_result = combatant.add_effect(
+                Effect.new(spell.name, spell.get_combat_duration(), "", True))
+            conc_conflict = effect_result['conc_conflict']
+            if conc_conflict:
+                embed.add_field(name="Concentration",
+                                value=f"Dropped {', '.join(e.name for e in conc_conflict)} due to concentration.")
 
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
         add_fields_from_args(embed, args.get('f'))

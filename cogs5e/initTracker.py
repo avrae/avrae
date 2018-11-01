@@ -872,7 +872,7 @@ class InitTracker:
 
         if not args.last('i', type_=bool):
             spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name,
-                                            list_filter=lambda s: s.name in combatant.spellcasting.spells)
+                                            list_filter=lambda s: s.name.lower() in combatant.spellcasting.lower_spells)
         else:
             spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
 

@@ -6,6 +6,7 @@ class Spellcasting:
         if spells is None:
             spells = []
         self.spells = spells
+        self.lower_spells = [s.lower() for s in spells]
         self.dc = dc
         self.sab = sab
         self.casterLevel = casterLevel

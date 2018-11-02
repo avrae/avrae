@@ -62,6 +62,24 @@ class Pack:
             {"$push": {"active": ctx.message.author.id}}
         )
 
+    async def toggle_server_active(self, ctx):
+        """
+        Toggles whether the pack should be active on the contextual server.
+        :param ctx: Context
+        :return: Whether the pack is now active on the server.
+        """
+        data = await ctx.bot.mdb.packs.find_one({"_id": self._id}, ["server_active"])
+        server_active = data.get('server_active', [])
+        if ctx.message.server.id in server_active:
+            server_active.remove(ctx.message.server.id)
+        else:
+            server_active.append(ctx.message.server.id)
+        await ctx.bot.mdb.packs.update_one(
+            {"_id": self._id},
+            {"$set": {"server_active": server_active}}
+        )
+        return ctx.message.server.id in server_active
+
 
 async def select_pack(ctx, name):
     available_pack_names = await ctx.bot.mdb.packs.find(

@@ -24,6 +24,8 @@ from cogs5e.models.errors import NoCharacter, EvaluationError, FunctionRequiresC
     AvraeException
 from utils.functions import confirm, clean_content
 
+ALIASER_ROLES = ("server aliaser", "dragonspeaker")
+
 
 class Customization:
     """Commands to help streamline using the bot."""
@@ -290,7 +292,8 @@ class Customization:
 
         if not self.can_edit_servaliases(ctx):
             return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "
-                                      "Discord permissions or a role called \"Server Aliaser\" is required.")
+                                      "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
+                                      "is required.")
 
         await self.bot.mdb.servaliases.update_one({"server": ctx.message.server.id, "name": alias_name},
                                                   {"$set": {"commands": cmds.lstrip('!')}}, True)
@@ -322,7 +325,7 @@ class Customization:
         Returns whether a user can edit server aliases in the current context.
         """
         return ctx.message.author.server_permissions.administrator or \
-               'server aliaser' in (r.name.lower() for r in ctx.message.author.roles) or \
+               any(r.name.lower() in ALIASER_ROLES for r in ctx.message.author.roles) or \
                ctx.message.author.id == ctx.bot.owner.id
 
     @commands.group(pass_context=True, invoke_without_command=True)
@@ -395,7 +398,8 @@ class Customization:
             await self.bot.say('Server snippet {} added for arguments:\n`{}`'.format(snipname, snippet))
         else:
             return await self.bot.say("You do not have permission to edit server snippets. Either __Administrator__ "
-                                      "Discord permissions or a role called \"Server Aliaser\" is required.")
+                                      "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
+                                      "is required.")
 
     @servsnippet.command(pass_context=True, name='list', no_pm=True)
     async def servsnippet_list(self, ctx):

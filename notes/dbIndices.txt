@@ -2,3 +2,7 @@ packs:
 db.packs.createIndex({"owner.id": 1});
 db.packs.createIndex({"editors.id": 1});
 db.packs.createIndex({"active": 1});
+db.packs.createIndex({"server_active": 1});
+
+bestiaries:
+db.bestiaries.createIndex({"server_active": 1});

@@ -9,6 +9,8 @@ from cogs5e.models.homebrew.bestiary import Bestiary, bestiary_from_critterdb, s
 from cogs5e.models.homebrew.pack import Pack, select_pack
 from utils.functions import confirm
 
+BREWER_ROLES = ("server brewer", "dragonspeaker")
+
 log = logging.getLogger(__name__)
 
 
@@ -17,6 +19,12 @@ class Homebrew:
 
     def __init__(self, bot):
         self.bot = bot
+
+    @staticmethod
+    def can_manage_serverbrew(ctx):
+        return ctx.message.author.server_permissions.manage_server or \
+               any(r.name.lower() in BREWER_ROLES for r in ctx.message.author.roles) or \
+               ctx.message.author.id == ctx.bot.owner.id
 
     @commands.group(pass_context=True, invoke_without_command=True)
     async def bestiary(self, ctx, *, name=None):
@@ -108,6 +116,29 @@ class Homebrew:
         embed.description = '\n'.join(m.name for m in bestiary.monsters)
         await self.bot.say(embed=embed)
 
+    @bestiary.group(pass_context=True, name='server', no_pm=True, invoke_without_command=True)
+    async def bestiary_server(self, ctx):
+        """Toggles whether the active bestiary should be viewable by anyone on the server.
+        Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
+        if not self.can_manage_serverbrew(ctx):
+            return await self.bot.say("You do not have permission to manage server homebrew. Either __Manage Server__ "
+                                      "Discord permissions or a role named \"Server Brewer\" or \"Dragonspeaker\" "
+                                      "is required.")
+        bestiary = await Bestiary.from_ctx(ctx)
+        is_server_active = await bestiary.toggle_server_active(ctx)
+        if is_server_active:
+            await self.bot.say(f"Ok, {bestiary.name} is now active on {ctx.message.server.name}!")
+        else:
+            await self.bot.say(f"Ok, {bestiary.name} is no longer active on {ctx.message.server.name}.")
+
+    @bestiary_server.command(pass_context=True, name='list')
+    async def bestiary_server_list(self, ctx):
+        """Shows what bestiaries are currently active on the server."""
+        desc = ""
+        async for doc in self.bot.mdb.bestiaries.find({"server_active": ctx.message.server.id}, ['name', 'owner']):
+            desc += f"{doc['name']} (<@{doc['owner']}>)\n"
+        await self.bot.say(embed=discord.Embed(title="Active Server Bestiaries", description=desc))
+
     @commands.group(pass_context=True, invoke_without_command=True)
     async def pack(self, ctx, *, name=None):
         """Commands to manage homebrew items.
@@ -167,6 +198,29 @@ class Homebrew:
             pack.editors.remove(next(e for e in pack.editors if e['id'] == user.id))
             await self.bot.say(f"{user} removed from {pack.name}'s editors.")
         await pack.commit(ctx)
+
+    @pack.group(pass_context=True, name='server', no_pm=True, invoke_without_command=True)
+    async def pack_server(self, ctx):
+        """Toggles whether the active pack should be viewable by anyone on the server.
+        Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
+        if not self.can_manage_serverbrew(ctx):
+            return await self.bot.say("You do not have permission to manage server homebrew. Either __Manage Server__ "
+                                      "Discord permissions or a role named \"Server Brewer\" or \"Dragonspeaker\" "
+                                      "is required.")
+        pack = await Pack.from_ctx(ctx)
+        is_server_active = await pack.toggle_server_active(ctx)
+        if is_server_active:
+            await self.bot.say(f"Ok, {pack.name} is now active on {ctx.message.server.name}!")
+        else:
+            await self.bot.say(f"Ok, {pack.name} is no longer active on {ctx.message.server.name}.")
+
+    @pack_server.command(pass_context=True, name='list')
+    async def pack_server_list(self, ctx):
+        """Shows what packs are currently active on the server."""
+        desc = ""
+        async for doc in self.bot.mdb.packs.find({"server_active": ctx.message.server.id}, ['name', 'owner']):
+            desc += f"{doc['name']} (<@{doc['owner']['id']}>)\n"
+        await self.bot.say(embed=discord.Embed(title="Active Server Packs", description=desc))
 
 
 def setup(bot):

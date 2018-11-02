@@ -15,6 +15,8 @@ from cogs5e.models.race import Race
 from cogs5e.models.spell import Spell
 from utils.functions import fuzzywuzzy_search_all_3, parse_data_entry, search_and_select
 
+HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
+
 log = logging.getLogger(__name__)
 
 
@@ -142,12 +144,16 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
-    choices = c.monster_mash
     try:
         bestiary = await Bestiary.from_ctx(ctx)
-        choices = list(itertools.chain(c.monster_mash, bestiary.monsters))
+        custom_monsters = bestiary.monsters
     except NoActiveBrew:
-        pass
+        custom_monsters = []
+    choices = list(itertools.chain(c.monster_mash, custom_monsters))
+    if ctx.message.server:
+        async for servbestiary in ctx.bot.mdb.bestiaries.find({"server_active": ctx.message.server.id}, ['monsters']):
+            choices.extend(Monster.from_bestiary(m) for m in servbestiary['monsters'])
+
     if srd:
         if list_filter:
             old = list_filter
@@ -155,4 +161,11 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
         else:
             list_filter = lambda e: e.srd
         message = "This server only shows results from the 5e SRD."
-    return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter)
+
+    def get_homebrew_formatted_name(monster):
+        if monster.source == 'homebrew':
+            return f"{monster.name} ({HOMEBREW_EMOJI})"
+        return monster.name
+
+    return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
+                                   selectkey=get_homebrew_formatted_name)

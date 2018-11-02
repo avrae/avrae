@@ -10,7 +10,7 @@ import textwrap
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs.lookupFuncs import select_monster_full, c
+from cogs5e.funcs.lookupFuncs import select_monster_full, c, HOMEBREW_EMOJI
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
@@ -657,14 +657,23 @@ class Lookup:
 
         self.bot.rdb.incr('items_looked_up_life')
 
-        choices = c.items
         try:
             pack = await Pack.from_ctx(ctx)
-            choices = list(itertools.chain(c.items, pack.get_search_formatted_items()))
+            custom_items = pack.get_search_formatted_items()
         except NoActiveBrew:
-            pass
+            custom_items = []
+        choices = list(itertools.chain(c.items, custom_items))
+        if ctx.message.server:
+            async for servpack in ctx.bot.mdb.packs.find({"server_active": ctx.message.server.id}):
+                choices.extend(Pack.from_dict(servpack).get_search_formatted_items())
 
-        result = await search_and_select(ctx, choices, name, lambda e: e['name'], srd=srd)
+        def get_homebrew_formatted_name(_item):
+            if _item['source'] == 'homebrew':
+                return f"{_item['name']} ({HOMEBREW_EMOJI})"
+            return _item['name']
+
+        result = await search_and_select(ctx, choices, name, lambda e: e['name'], srd=srd,
+                                         selectkey=get_homebrew_formatted_name)
 
         embed = EmbedWithAuthor(ctx)
         item = result

@@ -32,7 +32,7 @@ class Bestiary:
 
     async def commit(self, ctx):
         """Writes a bestiary object to the database, under the contextual author. Returns self."""
-        data = {"$set": self.to_dict(), "$setOnInsert": {"owner": ctx.message.author.id}}
+        data = {"$set": self.to_dict(), "$setOnInsert": {"owner": ctx.message.author.id, "server_active": []}}
 
         await ctx.bot.mdb.bestiaries.update_one(
             {"owner": ctx.message.author.id, "critterdb_id": self.id},
@@ -51,6 +51,25 @@ class Bestiary:
             {"$set": {"active": True}}
         )
         return self
+
+    async def toggle_server_active(self, ctx):
+        """
+        Toggles whether the bestiary should be active on the contextual server.
+        :param ctx: Context
+        :return: Whether the bestiary is now active on the server.
+        """
+        data = await ctx.bot.mdb.bestiaries.find_one({"owner": ctx.message.author.id, "critterdb_id": self.id},
+                                                     ["server_active"])
+        server_active = data.get('server_active', [])
+        if ctx.message.server.id in server_active:
+            server_active.remove(ctx.message.server.id)
+        else:
+            server_active.append(ctx.message.server.id)
+        await ctx.bot.mdb.bestiaries.update_one(
+            {"owner": ctx.message.author.id, "critterdb_id": self.id},
+            {"$set": {"server_active": server_active}}
+        )
+        return ctx.message.server.id in server_active
 
 
 async def select_bestiary(ctx, name):

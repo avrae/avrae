@@ -668,7 +668,7 @@ class Lookup:
                 choices.extend(Pack.from_dict(servpack).get_search_formatted_items())
 
         def get_homebrew_formatted_name(_item):
-            if _item['source'] == 'homebrew':
+            if _item.get('source') == 'homebrew':
                 return f"{_item['name']} ({HOMEBREW_EMOJI})"
             return _item['name']
 

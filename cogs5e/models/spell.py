@@ -478,6 +478,7 @@ class Roll(Effect):
 
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
+        d = autoctx.args.join('d', '+')
         dice = self.dice
         if self.cantripScale:
             def cantrip_scale(matchobj):
@@ -498,6 +499,8 @@ class Roll(Effect):
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
                 dice = f"{dice}+{higher}"
+        if d:
+            dice = f"{dice}+{d}"
 
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)

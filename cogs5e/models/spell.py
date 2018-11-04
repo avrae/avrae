@@ -407,6 +407,8 @@ class Damage(Effect):
 
         if not autoctx.target.target and autoctx.ANNOSTR_RE.match(damage):  # likely have output this in meta already
             return
+        if autoctx.ANNOSTR_RE.search(damage):
+            d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 
         if self.cantripScale:

@@ -793,7 +793,7 @@ class InitTracker:
                         pass
             else:
                 embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
-            if target.is_concentrating():
+            if target.is_concentrating() and result['total_damage'] > 0:
                 embed.add_field(name="Concentration",
                                 value=f"Check your concentration (DC {int(max(result['total_damage']/2, 10))})!")
         else:

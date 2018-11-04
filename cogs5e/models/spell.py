@@ -161,7 +161,7 @@ class AutomationTarget:
                     autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.get_hp_str(True)}")
             else:
                 autoctx.footer_queue("Dealt {} damage to {}!".format(amount, self.target.name))
-            if self.target.is_concentrating():
+            if self.target.is_concentrating() and amount > 0:
                 autoctx.queue(f"**Concentration**: DC {int(max(amount/2, 10))}")
         elif isinstance(self.target, Character):
             self.target.modify_hp(-amount)

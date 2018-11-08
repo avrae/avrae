@@ -437,7 +437,8 @@ class Lookup:
 
         monster = await select_monster_full(ctx, name, srd=srd)
 
-        await self.add_training_data("monster", name, monster.name)
+        if not monster.source == 'homebrew':
+            await self.add_training_data("monster", name, monster.name)
 
         if not monster.srd and srd:
             e = EmbedWithAuthor(ctx)

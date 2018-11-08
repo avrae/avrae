@@ -540,13 +540,17 @@ EFFECT_MAP = {
 
 class Spell:
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
-                 description: str, classes: list = None, subclasses: list = None, ritual: bool = False,
+                 description: str, classes = None, subclasses = None, ritual: bool = False,
                  higherlevels: str = None, source: str = "homebrew", page: int = None, concentration: bool = False,
                  automation: Automation = None, srd: bool = False):
         if classes is None:
             classes = []
+        if isinstance(classes, str):
+            classes = [cls.strip() for cls in classes.split(',')]
         if subclasses is None:
             subclasses = []
+        if isinstance(subclasses, str):
+            subclasses = [cls.strip() for cls in subclasses.split(',')]
         self.name = name
         self.level = level
         self.school = school

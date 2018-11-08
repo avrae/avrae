@@ -59,6 +59,8 @@ class Lookup:
 
         result = await search_and_select(ctx, c.conditions, name, lambda e: e['name'])
 
+        await self.add_training_data("condition", name, result['name'])
+
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         embed.description = result['desc']
@@ -74,6 +76,8 @@ class Lookup:
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.rules, name, lambda e: e['name'])
+
+        await self.add_training_data("rule", name, result['name'])
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -95,6 +99,8 @@ class Lookup:
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.feats, name, lambda e: e['name'])
+
+        await self.add_training_data("feat", name, result['name'])
 
         if not result['name'] == 'Grappler' and srd:  # the only SRD feat.
             return await self.send_srd_error(ctx, result)
@@ -157,6 +163,8 @@ class Lookup:
 
         result = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'], srd=srd)
 
+        await self.add_training_data("racefeat", name, result['name'])
+
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
 
@@ -180,6 +188,8 @@ class Lookup:
         destination = ctx.message.author if pm else ctx.message.channel
 
         result = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name, srd=srd and (lambda e: e.srd))
+
+        await self.add_training_data("race", name, result.name)
 
         if not result.srd and srd:
             return await self.send_srd_error(ctx, result)
@@ -211,6 +221,8 @@ class Lookup:
 
         result = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'], srd=srd)
 
+        await self.add_training_data("classfeat", name, result['name'])
+
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
 
@@ -237,6 +249,8 @@ class Lookup:
             return await self.bot.say("Invalid level.")
 
         result = await search_and_select(ctx, c.classes, name, lambda e: e['name'], srd=srd)
+
+        await self.add_training_data("class", name, result['name'])
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -311,6 +325,8 @@ class Lookup:
 
         result = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'], srd=srd)
 
+        await self.add_training_data("subclass", name, result['name'])
+
         if not result.get('srd') and srd:
             return await self.send_srd_error(ctx, result)
 
@@ -337,6 +353,8 @@ class Lookup:
         srd = guild_settings.get("srd", False)
 
         result = await search_and_select(ctx, c.backgrounds, name, lambda e: e['name'], srd=srd)
+
+        await self.add_training_data("background", name, result['name'])
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -419,6 +437,8 @@ class Lookup:
 
         monster = await select_monster_full(ctx, name, srd=srd)
 
+        await self.add_training_data("monster", name, monster.name)
+
         if not monster.srd and srd:
             e = EmbedWithAuthor(ctx)
             e.title = monster.name
@@ -468,6 +488,9 @@ class Lookup:
 
         self.bot.rdb.incr('monsters_looked_up_life')
         monster = await select_monster_full(ctx, name, srd=srd)
+
+        if not monster.source == 'homebrew':
+            await self.add_training_data("monster", name, monster.name)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -599,6 +622,7 @@ class Lookup:
         self.bot.rdb.incr('spells_looked_up_life')
 
         spell = await search_and_select(ctx, c.spells, name, lambda e: e.name, srd=srd and (lambda s: s.srd))
+        await self.add_training_data("spell", name, spell.name)
 
         embed = EmbedWithAuthor(ctx)
         color = embed.colour
@@ -674,6 +698,9 @@ class Lookup:
 
         result = await search_and_select(ctx, choices, name, lambda e: e['name'], srd=srd,
                                          selectkey=get_homebrew_formatted_name)
+
+        if not result.get('source') == 'homebrew':
+            await self.add_training_data("item", name, result['name'])
 
         embed = EmbedWithAuthor(ctx)
         item = result
@@ -790,6 +817,9 @@ class Lookup:
         if guild is not None:
             settings = await self.bot.mdb.lookupsettings.find_one({"server": guild.id})
         return settings or {}
+
+    async def add_training_data(self, lookup_type, query, result_name):
+        await self.bot.mdb.nn_training.insert_one({"type": lookup_type, "query": query, "result": result_name})
 
 
 def setup(bot):

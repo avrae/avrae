@@ -619,6 +619,7 @@ class SheetManager:
                                                "Google returned an error trying to access your sheet. Please ensure your sheet is shared and try again in a few minutes.")
         except Exception as e:
             del parser
+            log.warning(f"Failed to import character\n{traceback.format_exception(type(e), e, e.__traceback__)}")
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         try:

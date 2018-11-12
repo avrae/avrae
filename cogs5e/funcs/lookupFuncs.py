@@ -8,6 +8,7 @@ import itertools
 import json
 import logging
 
+from cogs5e.models.background import Background
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogs5e.models.monster import Monster
@@ -93,7 +94,7 @@ class Compendium:
             _items = json.load(f)
             self.items = [i for i in _items if i.get('type') is not '$']
         with open('./res/backgrounds.json', 'r') as f:
-            self.backgrounds = json.load(f)
+            self.backgrounds = [Background.from_data(b) for b in json.load(f)]
         self.subclasses = self.load_subclasses()
         with open('./res/itemprops.json', 'r') as f:
             self.itemprops = json.load(f)
@@ -132,10 +133,6 @@ c = Compendium()
 
 def searchClass(name):
     return fuzzywuzzy_search_all_3(c.classes, 'name', name)
-
-
-def searchBackground(name):
-    return fuzzywuzzy_search_all_3(c.backgrounds, 'name', name)
 
 
 # ----- Monster stuff

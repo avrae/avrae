@@ -316,6 +316,7 @@ class Lookup:
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
+        embed.description = f"*Source: {result['source']}*"
 
         for level_features in result['subclassFeatures']:
             for feature in level_features:

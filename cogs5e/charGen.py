@@ -5,19 +5,19 @@ from MeteorClient import MeteorClientException
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import c, searchClass, searchBackground
+from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import DicecloudClient, Parent
 from cogs5e.models.embeds import EmbedWithAuthor
-from utils.functions import parse_data_entry, ABILITY_MAP, get_selection, fuzzywuzzy_search_all_3, search_and_select
+from utils.functions import parse_data_entry, ABILITY_MAP, search_and_select
 
 log = logging.getLogger(__name__)
 
-SKILL_MAP = {'Acrobatics': 'acrobatics', 'Animal Handling': 'animalHandling', 'Arcana': 'arcana',
-             'Athletics': 'athletics', 'Deception': 'deception', 'History': 'history', 'Initiative': 'initiative',
-             'Insight': 'insight', 'Intimidation': 'intimidation', 'Investigation': 'investigation',
-             'Medicine': 'medicine', 'Nature': 'nature', 'Perception': 'perception', 'Performance': 'performance',
-             'Persuasion': 'persuasion', 'Religion': 'religion', 'Sleight of Hand': 'sleightOfHand',
-             'Stealth': 'stealth', 'Survival': 'survival'}
+SKILL_MAP = {'acrobatics': 'acrobatics', 'animal handling': 'animalHandling', 'arcana': 'arcana',
+             'athletics': 'athletics', 'deception': 'deception', 'history': 'history', 'initiative': 'initiative',
+             'insight': 'insight', 'intimidation': 'intimidation', 'investigation': 'investigation',
+             'medicine': 'medicine', 'nature': 'nature', 'perception': 'perception', 'performance': 'performance',
+             'persuasion': 'persuasion', 'religion': 'religion', 'sleight of hand': 'sleightOfHand',
+             'stealth': 'stealth', 'survival': 'survival'}
 
 CLASS_RESOURCE_NAMES = {"Ki Points": "ki", "Rage Damage": "rageDamage", "Rages": "rages",
                         "Sorcery Points": "sorceryPoints", "Superiority Dice": "superiorityDice",
@@ -82,24 +82,21 @@ class CharGenerator:
         await self.bot.say(author.mention + " What class?")
         class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
         if class_response is None: return await self.bot.say("Class not found.")
-        result = searchClass(class_response.content)
-        if result is None: return await self.bot.say("Class not found.")
-        _class = await resolve(result, ctx)
+        _class = await search_and_select(ctx, c.classes, class_response.content, lambda e: e['name'])
 
         if 'subclasses' in _class:
             await self.bot.say(author.mention + " What subclass?")
             subclass_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
             if subclass_response is None: return await self.bot.say("Subclass not found.")
-            result = fuzzywuzzy_search_all_3(_class['subclasses'], 'name', subclass_response.content)
-            subclass = await resolve(result, ctx)
+            subclass = await search_and_select(ctx, _class['subclasses'], subclass_response.content,
+                                               lambda e: e['name'])
         else:
             subclass = None
 
         await self.bot.say(author.mention + " What background?")
         bg_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
         if bg_response is None: return await self.bot.say("Background not found.")
-        result = searchBackground(bg_response.content)
-        background = await resolve(result, ctx)
+        background = await search_and_select(ctx, c.backgrounds, bg_response.content, lambda e: e.name)
 
         await self.genChar(ctx, level, race, _class, subclass, background)
 
@@ -240,12 +237,12 @@ class CharGenerator:
         #    Inventory/Trait Gen
         background = background or random.choice(c.backgrounds)
         embed = EmbedWithAuthor(ctx)
-        embed.title = background['name']
+        embed.title = background.name
         embed.description = f"*Source: {background.get('source', 'Unknown')}*"
 
         ignored_fields = ['suggested characteristics', 'specialty',
                           'harrowing event']
-        for trait in background['trait']:
+        for trait in background.traits:
             if trait['name'].lower() in ignored_fields: continue
             text = '\n'.join(t for t in trait['text'] if t)
             text = [text[i:i + 1024] for i in range(0, len(text), 1024)]
@@ -256,7 +253,7 @@ class CharGenerator:
         await self.bot.send_message(ctx.message.author, embed=embed)
 
         out = "{6}\n{0}, {1} {7} {2} {3}. {4} Background.\nStat Array: `{5}`\nI have PM'd you full character details.".format(
-            name, race.name, _class['name'], final_level, background['name'], stats, ctx.message.author.mention,
+            name, race.name, _class['name'], final_level, background.name, stats, ctx.message.author.mention,
             subclass['name'])
 
         await self.bot.edit_message(loadingMessage, out)
@@ -284,24 +281,21 @@ class CharGenerator:
         await self.bot.say(author.mention + " What class?")
         class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
         if class_response is None: return await self.bot.say("Class not found.")
-        result = searchClass(class_response.content)
-        if result is None: return await self.bot.say("Class not found.")
-        _class = await resolve(result, ctx)
+        _class = await search_and_select(ctx, c.classes, class_response.content, lambda e: e['name'])
 
         if 'subclasses' in _class:
             await self.bot.say(author.mention + " What subclass?")
             subclass_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
             if subclass_response is None: return await self.bot.say("Subclass not found.")
-            result = fuzzywuzzy_search_all_3(_class['subclasses'], 'name', subclass_response.content)
-            subclass = await resolve(result, ctx)
+            subclass = await search_and_select(ctx, _class['subclasses'], subclass_response.content,
+                                               lambda e: e['name'])
         else:
             subclass = None
 
         await self.bot.say(author.mention + " What background?")
         bg_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
         if bg_response is None: return await self.bot.say("Background not found.")
-        result = searchBackground(bg_response.content)
-        background = await resolve(result, ctx)
+        background = await search_and_select(ctx, c.backgrounds, bg_response.content, lambda e: e.name)
 
         userId = None
         for _ in range(2):
@@ -336,7 +330,7 @@ class CharGenerator:
         background = background or random.choice(c.backgrounds)
 
         try:
-            char_id = dc.create_character(name=name, race=race.name, backstory=background['name'])
+            char_id = dc.create_character(name=name, race=race.name, backstory=background.name)
         except MeteorClientException:
             return await self.bot.say("I am having problems connecting to Dicecloud. Please try again later.")
 
@@ -447,24 +441,34 @@ class CharGenerator:
 
         # Background Gen
         #    Inventory/Trait Gen
-        for trait in background['trait']:
-            text = '\n'.join(t for t in trait['text'] if t)
-            if 'proficiency' in trait['name'].lower():
-                for skill in text.split(', '):
-                    if skill in SKILL_MAP:
-                        dc.insert_proficiency(char_id, Parent.background(char_id), SKILL_MAP.get(skill))
-                    else:
-                        dc.insert_proficiency(char_id, Parent.background(char_id), skill, type_='tool')
-            elif 'language' in trait['name'].lower():
-                for lang in text.split(', '):
-                    dc.insert_proficiency(char_id, Parent.background(char_id), lang, type_='language')
-                caveats.append("**Languages**: Some backgrounds' languages may ask you to choose one or more. Fill "
-                               "this out in the Persona tab.")
-            elif trait['name'].lower().startswith('feature'):
+        for trait in background.traits:
+            text = trait['text']
+            if any(i in trait['name'].lower() for i in ('proficiency', 'language')):
+                continue
+            if trait['name'].lower().startswith('feature'):
                 tname = trait['name'][9:]
                 dc.insert_feature(char_id, tname, text)
             elif trait['name'].lower().startswith('equipment'):
                 caveats.append(f"**Background Equipment**: Your background grants you {text}")
+
+        for proftype, profs in background.proficiencies.items():
+            if proftype == 'tool':
+                for prof in profs:
+                    dc.insert_proficiency(char_id, Parent.background(char_id), prof, type_='tool')
+            elif proftype == 'skill':
+                for prof in profs:
+                    dc_prof = SKILL_MAP.get(prof, prof)
+                    if dc_prof:
+                        dc.insert_proficiency(char_id, Parent.background(char_id), dc_prof)
+                    else:
+                        dc.insert_proficiency(char_id, Parent.background(char_id))
+                        caveats.append(f"**Choose Skill**: Your background gives you proficiency in either {prof}. "
+                                       f"Choose this in the Background section of the Persona tab.")
+            elif proftype == 'language':
+                for prof in profs:
+                    dc.insert_proficiency(char_id, Parent.background(char_id), prof, type_='language')
+                caveats.append("**Languages**: Some backgrounds' languages may ask you to choose one or more. Fill "
+                               "this out in the Background section of the Persona tab.")
 
         await dc.transfer_ownership(char_id, dicecloud_userId)
 
@@ -493,22 +497,6 @@ class CharGenerator:
     def genStats(self):
         stats = [roll('4d6kh3').total for i in range(6)]
         return stats
-
-
-async def resolve(result, ctx):
-    if result is None:
-        return None
-    strict = result[1]
-    results = result[0]
-
-    if strict:
-        result = results
-    else:
-        if len(results) == 1:
-            result = results[0]
-        else:
-            result = await get_selection(ctx, [(r['name'], r) for r in results])
-    return result
 
 
 def setup(bot):

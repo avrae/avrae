@@ -8,12 +8,13 @@ import itertools
 import json
 import logging
 
+from cogs5e.models.background import Background
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
 from cogs5e.models.spell import Spell
-from utils.functions import fuzzywuzzy_search_all_3, parse_data_entry, search_and_select
+from utils.functions import parse_data_entry, search_and_select
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
 
@@ -50,7 +51,7 @@ class Compendium:
                               'text': parse_data_entry(feature['entries']), 'srd': _class['srd']}
                         self.cfeats.append(fe)
                         options = [e for e in feature['entries'] if
-                                   isinstance(e, dict) and e['type'] == 'options']
+                                   isinstance(e, dict) and e.get('type') == 'options']
                         for option in options:
                             for opt_entry in option.get('entries', []):
                                 fe = {'name': f"{_class['name']}: {feature['name']}: {_resolve_name(opt_entry)}",
@@ -76,7 +77,7 @@ class Compendium:
                                       'text': parse_data_entry(entry['entries']), 'srd': subclass.get('srd', False)}
                                 self.cfeats.append(fe)
                                 options = [e for e in entry['entries'] if
-                                           isinstance(e, dict) and e['type'] == 'options']
+                                           isinstance(e, dict) and e.get('type') == 'options']
                                 for option in options:
                                     for opt_entry in option.get('entries', []):
                                         fe = {'name': f"{_class['name']}: {subclass['name']}: {entry['name']}: "
@@ -93,7 +94,7 @@ class Compendium:
             _items = json.load(f)
             self.items = [i for i in _items if i.get('type') is not '$']
         with open('./res/backgrounds.json', 'r') as f:
-            self.backgrounds = json.load(f)
+            self.backgrounds = [Background.from_data(b) for b in json.load(f)]
         self.subclasses = self.load_subclasses()
         with open('./res/itemprops.json', 'r') as f:
             self.itemprops = json.load(f)
@@ -109,7 +110,7 @@ class Compendium:
 
 
 def _resolve_name(entry):
-    """Resolves the next name of an astranauta entry.
+    """Resolves the next name of a data entry.
     :param entry (dict) - the entry.
     :returns str - The next found name, or None."""
     if 'entries' in entry and 'name' in entry['entries'][0]:
@@ -128,14 +129,6 @@ def _parse_prereqs(entry):
 
 
 c = Compendium()
-
-
-def searchClass(name):
-    return fuzzywuzzy_search_all_3(c.classes, 'name', name)
-
-
-def searchBackground(name):
-    return fuzzywuzzy_search_all_3(c.backgrounds, 'name', name)
 
 
 # ----- Monster stuff

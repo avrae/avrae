@@ -332,6 +332,7 @@ class Lookup:
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
+        embed.description = f"*Source: {result['source']}*"
 
         for level_features in result['subclassFeatures']:
             for feature in level_features:
@@ -352,22 +353,22 @@ class Lookup:
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
-        result = await search_and_select(ctx, c.backgrounds, name, lambda e: e['name'], srd=srd)
+        result = await search_and_select(ctx, c.backgrounds, name, lambda e: e.name, srd=srd)
 
-        await self.add_training_data("background", name, result['name'])
+        await self.add_training_data("background", name, result.name)
 
-        if not result['srd'] and srd:
+        if not result.srd and srd:
             return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        embed.description = f"*Source: {result.get('source', 'Unknown')}*"
+        embed.title = result.name
+        embed.set_footer(text=f"Background | {result.source} {result.page}")
 
         ignored_fields = ['suggested characteristics', 'personality trait', 'ideal', 'bond', 'flaw', 'specialty',
                           'harrowing event']
-        for trait in result['trait']:
+        for trait in result.traits:
             if trait['name'].lower() in ignored_fields: continue
-            text = '\n'.join(t for t in trait['text'] if t)
+            text = trait['text']
             text = textwrap.shorten(text, width=1020, placeholder="...")
             embed.add_field(name=trait['name'], value=text)
 

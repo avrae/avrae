@@ -161,7 +161,7 @@ class AutomationTarget:
                     autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.get_hp_str(True)}")
             else:
                 autoctx.footer_queue("Dealt {} damage to {}!".format(amount, self.target.name))
-            if self.target.is_concentrating():
+            if self.target.is_concentrating() and amount > 0:
                 autoctx.queue(f"**Concentration**: DC {int(max(amount/2, 10))}")
         elif isinstance(self.target, Character):
             self.target.modify_hp(-amount)
@@ -407,6 +407,8 @@ class Damage(Effect):
 
         if not autoctx.target.target and autoctx.ANNOSTR_RE.match(damage):  # likely have output this in meta already
             return
+        if autoctx.ANNOSTR_RE.search(damage):
+            d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 
         if self.cantripScale:
@@ -478,6 +480,7 @@ class Roll(Effect):
 
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
+        d = autoctx.args.join('d', '+')
         dice = self.dice
         if self.cantripScale:
             def cantrip_scale(matchobj):
@@ -498,6 +501,8 @@ class Roll(Effect):
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
                 dice = f"{dice}+{higher}"
+        if d:
+            dice = f"{dice}+{d}"
 
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)
@@ -535,13 +540,17 @@ EFFECT_MAP = {
 
 class Spell:
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
-                 description: str, classes: list = None, subclasses: list = None, ritual: bool = False,
+                 description: str, classes = None, subclasses = None, ritual: bool = False,
                  higherlevels: str = None, source: str = "homebrew", page: int = None, concentration: bool = False,
                  automation: Automation = None, srd: bool = False):
         if classes is None:
             classes = []
+        if isinstance(classes, str):
+            classes = [cls.strip() for cls in classes.split(',')]
         if subclasses is None:
             subclasses = []
+        if isinstance(subclasses, str):
+            subclasses = [cls.strip() for cls in subclasses.split(',')]
         self.name = name
         self.level = level
         self.school = school

@@ -11,6 +11,7 @@ import sys
 import traceback
 from socket import timeout
 
+import aiohttp
 import discord
 import pygsheets
 from discord.ext import commands
@@ -611,14 +612,16 @@ class SheetManager:
             return await self.bot.say("Error: Unknown sheet type.")
         try:
             character = await parser.get_character()
-        except timeout:
+        except (timeout, aiohttp.ClientResponseError):
             return await self.bot.say(
-                "We're having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
+                "I'm having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
         except HttpError:
             return await self.bot.edit_message(loading,
                                                "Google returned an error trying to access your sheet. Please ensure your sheet is shared and try again in a few minutes.")
         except Exception as e:
             del parser
+            log.warning(
+                f"Failed to import character\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         try:

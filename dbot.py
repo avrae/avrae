@@ -192,7 +192,7 @@ async def on_command_error(error, ctx):
 
     await bot.send_message(ctx.message.channel,
                            f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-                           f"Please join <https://support.avrae.io> and tell the developer that {error_msg}!")
+                           f"Please join <http://support.avrae.io> and tell the developer that {error_msg}!")
     try:
         await bot.send_message(bot.owner,
                                f"**{error_msg}**\n" \

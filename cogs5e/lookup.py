@@ -298,7 +298,7 @@ class Lookup:
             level_resources = {}
             level_features = result['classFeatures'][level - 1]
 
-            for table in result['classTableGroups']:
+            for table in result.get('classTableGroups', []):
                 relevant_row = table['rows'][level - 1]
                 for i, col in enumerate(relevant_row):
                     level_resources[table['colLabels'][i]] = parse_data_entry([col])

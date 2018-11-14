@@ -388,7 +388,10 @@ def parse_data_entry(text, md_breaks=False):
             elif entry['type'] == 'bonus':
                 out.append("{:+}".format(entry['value']))
             elif entry['type'] == 'dice':
-                out.append(f"{entry['number']}d{entry['faces']}")
+                if 'toRoll' in entry:
+                    out.append(' + '.join(f"{d['number']}d{d['faces']}" for d in entry['toRoll']))
+                else:
+                    out.append(f"{entry['number']}d{entry['faces']}")
             elif entry['type'] == 'bonusSpeed':
                 out.append(f"{entry['value']} feet")
             else:

@@ -177,7 +177,7 @@ class CharGenerator:
 
         embed = EmbedWithAuthor(ctx)
         level_resources = {}
-        for table in _class['classTableGroups']:
+        for table in _class.get('classTableGroups', []):
             relevant_row = table['rows'][final_level - 1]
             for i, col in enumerate(relevant_row):
                 level_resources[table['colLabels'][i]] = parse_data_entry([col])
@@ -238,7 +238,7 @@ class CharGenerator:
         background = background or random.choice(c.backgrounds)
         embed = EmbedWithAuthor(ctx)
         embed.title = background.name
-        embed.description = f"*Source: {background.get('source', 'Unknown')}*"
+        embed.description = f"*Source: {background.source}*"
 
         ignored_fields = ['suggested characteristics', 'specialty',
                           'harrowing event']
@@ -403,7 +403,7 @@ class CharGenerator:
         caveats.append(f"**Starting Class Equipment**: {starting_items}")
 
         level_resources = {}
-        for table in _class['classTableGroups']:
+        for table in _class.get('classTableGroups', []):
             relevant_row = table['rows'][final_level - 1]
             for i, col in enumerate(relevant_row):
                 level_resources[table['colLabels'][i]] = parse_data_entry([col])

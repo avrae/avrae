@@ -3,7 +3,6 @@ Created on Jan 13, 2017
 
 @author: andrew
 """
-import copy
 import itertools
 import json
 import logging
@@ -32,59 +31,17 @@ class Compendium:
         with open('./res/races.json', 'r') as f:
             _raw = json.load(f)
             self.rfeats = []
-            self.races = copy.deepcopy(_raw)
-            self.fancyraces = [Race.from_data(r) for r in self.races]
+            self.fancyraces = [Race.from_data(r) for r in _raw]
             for race in _raw:
                 for entry in race['entries']:
                     if isinstance(entry, dict) and 'name' in entry:
                         temp = {'name': "{}: {}".format(race['name'], entry['name']),
                                 'text': parse_data_entry(entry['entries']), 'srd': race['srd']}
                         self.rfeats.append(temp)
-        with open('./res/classes.json', 'r', encoding='utf-8-sig') as f:
-            _raw = json.load(f)
-            self.cfeats = []
-            self.classes = copy.deepcopy(_raw)
-            for _class in _raw:
-                for level in _class.get('classFeatures', []):
-                    for feature in level:
-                        fe = {'name': f"{_class['name']}: {feature['name']}",
-                              'text': parse_data_entry(feature['entries']), 'srd': _class['srd']}
-                        self.cfeats.append(fe)
-                        options = [e for e in feature['entries'] if
-                                   isinstance(e, dict) and e.get('type') == 'options']
-                        for option in options:
-                            for opt_entry in option.get('entries', []):
-                                fe = {'name': f"{_class['name']}: {feature['name']}: {_resolve_name(opt_entry)}",
-                                      'text': f"{_parse_prereqs(opt_entry)}{parse_data_entry(opt_entry['entries'])}",
-                                      'srd': _class['srd']}
-                                self.cfeats.append(fe)
-                for subclass in _class.get('subclasses', []):
-                    for level in subclass.get('subclassFeatures', []):
-                        for feature in level:
-                            options = [f for f in feature.get('entries', []) if
-                                       isinstance(f, dict) and f['type'] == 'options']  # battlemaster only
-                            for option in options:
-                                for opt_entry in option.get('entries', []):
-                                    fe = {'name': f"{_class['name']}: {option['name']}: "
-                                                  f"{_resolve_name(opt_entry)}",
-                                          'text': parse_data_entry(opt_entry['entries']),
-                                          'srd': subclass.get('srd', False)}
-                                    self.cfeats.append(fe)
-                            for entry in feature.get('entries', []):
-                                if not isinstance(entry, dict): continue
-                                if not entry.get('type') == 'entries': continue
-                                fe = {'name': f"{_class['name']}: {subclass['name']}: {entry['name']}",
-                                      'text': parse_data_entry(entry['entries']), 'srd': subclass.get('srd', False)}
-                                self.cfeats.append(fe)
-                                options = [e for e in entry['entries'] if
-                                           isinstance(e, dict) and e.get('type') == 'options']
-                                for option in options:
-                                    for opt_entry in option.get('entries', []):
-                                        fe = {'name': f"{_class['name']}: {subclass['name']}: {entry['name']}: "
-                                                      f"{_resolve_name(opt_entry)}",
-                                              'text': parse_data_entry(opt_entry['entries']),
-                                              'srd': subclass.get('srd', False)}
-                                        self.cfeats.append(fe)
+        with open('./res/classes.json', 'r') as f:
+            self.classes = json.load(f)
+        with open('./res/classfeats.json') as f:
+            self.cfeats = json.load(f)
         with open('./res/bestiary.json', 'r') as f:
             self.monsters = json.load(f)
             self.monster_mash = [Monster.from_data(m) for m in self.monsters]
@@ -107,25 +64,6 @@ class Compendium:
                 sc['name'] = f"{_class['name']}: {sc['name']}"
             s.extend(subclasses)
         return s
-
-
-def _resolve_name(entry):
-    """Resolves the next name of a data entry.
-    :param entry (dict) - the entry.
-    :returns str - The next found name, or None."""
-    if 'entries' in entry and 'name' in entry['entries'][0]:
-        return _resolve_name(entry['entries'][0])
-    elif 'name' in entry:
-        return entry['name']
-    else:
-        log.warning(f"No name found for {entry}")
-
-
-def _parse_prereqs(entry):
-    if 'prerequisite' in entry:
-        return f"*Prerequisite: {entry['prerequisite']}*\n"
-    else:
-        return ''
 
 
 c = Compendium()

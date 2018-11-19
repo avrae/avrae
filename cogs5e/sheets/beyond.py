@@ -334,11 +334,13 @@ class BeyondSheetParser:
                 return []  # thanks DDB
             isProf = atkIn['isProficient']
             atkBonus = None
+            dmgBonus = ""
             if atkIn["abilityModifierStatId"]:
                 atkBonus = self.stat_from_id(atkIn['abilityModifierStatId']) + (prof if isProf else 0)
+                dmgBonus = f"+{self.stat_from_id(atkIn['abilityModifierStatId'])}"
             attack = {
                 'attackBonus': str(atkBonus),
-                'damage': f"{atkIn['dice']['diceString']}[{parse_dmg_type(atkIn)}]",
+                'damage': f"{atkIn['dice']['diceString']}{dmgBonus}[{parse_dmg_type(atkIn)}]",
                 'name': atkIn['name'],
                 'details': atkIn['snippet']
             }

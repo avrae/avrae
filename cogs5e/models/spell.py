@@ -1,3 +1,4 @@
+import logging
 import re
 
 import discord
@@ -9,6 +10,8 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
 from cogs5e.models.initiative import Combatant
 from utils.functions import parse_resistances
+
+log = logging.getLogger(__name__)
 
 
 class Automation:
@@ -79,7 +82,7 @@ class AutomationContext:
         if not self._embed_queue:
             return
         if to_meta:
-            self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)
+            self._meta_queue.extend(self._embed_queue)
         else:
             self._field_queue.append({"name": title, "value": '\n'.join(self._embed_queue), "inline": inline})
         self._embed_queue = []
@@ -184,6 +187,7 @@ class Effect:
         return cls(**data)
 
     def run(self, autoctx):
+        log.debug(f"Running {self.type}")
         if self.meta:
             for metaeffect in self.meta:
                 metaeffect.run(autoctx)

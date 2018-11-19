@@ -384,11 +384,15 @@ class BeyondSheetParser:
             if not is_melee and is_weapon:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
 
+            damage = None
+            if itemdef['fixedDamage'] or itemdef['damage']:
+                damage = f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}" \
+                         f"[{itemdef['damageType'].lower()}" \
+                         f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+
             attack = {
                 'attackBonus': str(weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus),
-                'damage': f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}"
-                          f"[{itemdef['damageType'].lower()}"
-                          f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",
+                'damage': damage,
                 'name': itemdef['name'],
                 'details': html2text.html2text(itemdef['description'], bodywidth=0).strip()
             }

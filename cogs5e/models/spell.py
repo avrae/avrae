@@ -431,6 +431,9 @@ class Damage(Effect):
             if higher:
                 damage = f"{damage}+{higher}"
 
+        if d:
+            damage = f"{damage}+{d}"
+
         if autoctx.in_crit:
             def critSub(matchobj):
                 return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
@@ -438,9 +441,6 @@ class Damage(Effect):
             damage = re.sub(r'(\d+)d(\d+)', critSub, damage)
             if c:
                 damage = f"{damage}+{c}"
-
-        if d:
-            damage = f"{damage}+{d}"
 
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
@@ -540,7 +540,7 @@ EFFECT_MAP = {
 
 class Spell:
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
-                 description: str, classes = None, subclasses = None, ritual: bool = False,
+                 description: str, classes=None, subclasses=None, ritual: bool = False,
                  higherlevels: str = None, source: str = "homebrew", page: int = None, concentration: bool = False,
                  automation: Automation = None, srd: bool = False):
         if classes is None:

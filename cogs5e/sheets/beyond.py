@@ -40,8 +40,8 @@ SLOTS_PER_LEVEL = {
 }
 SIMPLE_WEAPONS = ["Club", "Dagger", "Greatclub", "Handaxe", "Javelin", "Light Hammer", "Mace", "Quarterstaff", "Sickle",
                   "Spear", "Crossbow, Light", "Dart", "Shortbow", "Sling"]
-MARTIAL_WEAPONS = ['Battleaxe', 'Blowgun', 'Flail', 'Glaive', 'Greataxe', 'Greatsword', 'Halberd', 'Hand Crossbow',
-                   'Heavy Crossbow', 'Lance', 'Longbow', 'Longsword', 'Maul', 'Morningstar', 'Net', 'Pike', 'Rapier',
+MARTIAL_WEAPONS = ['Battleaxe', 'Blowgun', 'Flail', 'Glaive', 'Greataxe', 'Greatsword', 'Halberd', 'Crossbow, Hand',
+                   'Crossbow, Heavy', 'Lance', 'Longbow', 'Longsword', 'Maul', 'Morningstar', 'Net', 'Pike', 'Rapier',
                    'Scimitar', 'Shortsword', 'Trident', 'War Pick', 'Warhammer', 'Whip', 'Pistol', 'Musket',
                    'Automatic Pistol', 'Revolver', 'Hunting Rifle', 'Automatic Rifle', 'Shotgun', 'Laser Pistol',
                    'Antimatter Rifle', 'Laser Rifle']

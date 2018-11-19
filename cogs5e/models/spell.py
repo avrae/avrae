@@ -1,3 +1,4 @@
+import logging
 import re
 
 import discord
@@ -9,6 +10,8 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
 from cogs5e.models.initiative import Combatant
 from utils.functions import parse_resistances
+
+log = logging.getLogger(__name__)
 
 
 class Automation:
@@ -79,7 +82,7 @@ class AutomationContext:
         if not self._embed_queue:
             return
         if to_meta:
-            self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)
+            self._meta_queue.extend(self._embed_queue)
         else:
             self._field_queue.append({"name": title, "value": '\n'.join(self._embed_queue), "inline": inline})
         self._embed_queue = []
@@ -161,7 +164,7 @@ class AutomationTarget:
                     autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.get_hp_str(True)}")
             else:
                 autoctx.footer_queue("Dealt {} damage to {}!".format(amount, self.target.name))
-            if self.target.is_concentrating():
+            if self.target.is_concentrating() and amount > 0:
                 autoctx.queue(f"**Concentration**: DC {int(max(amount/2, 10))}")
         elif isinstance(self.target, Character):
             self.target.modify_hp(-amount)
@@ -184,6 +187,7 @@ class Effect:
         return cls(**data)
 
     def run(self, autoctx):
+        log.debug(f"Running {self.type}")
         if self.meta:
             for metaeffect in self.meta:
                 metaeffect.run(autoctx)
@@ -399,6 +403,7 @@ class Damage(Effect):
         immune = args.get('immune', [])
         vuln = args.get('vuln', [])
         neutral = args.get('neutral', [])
+        crit = args.last('crit', None, bool)
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
@@ -407,6 +412,8 @@ class Damage(Effect):
 
         if not autoctx.target.target and autoctx.ANNOSTR_RE.match(damage):  # likely have output this in meta already
             return
+        if autoctx.ANNOSTR_RE.match(damage):
+            d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 
         if self.cantripScale:
@@ -429,16 +436,16 @@ class Damage(Effect):
             if higher:
                 damage = f"{damage}+{higher}"
 
-        if autoctx.in_crit:
+        if d:
+            damage = f"{damage}+{d}"
+
+        if autoctx.in_crit or crit:
             def critSub(matchobj):
                 return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
 
             damage = re.sub(r'(\d+)d(\d+)', critSub, damage)
             if c:
                 damage = f"{damage}+{c}"
-
-        if d:
-            damage = f"{damage}+{d}"
 
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
@@ -478,6 +485,7 @@ class Roll(Effect):
 
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
+        d = autoctx.args.join('d', '+')
         dice = self.dice
         if self.cantripScale:
             def cantrip_scale(matchobj):
@@ -498,6 +506,8 @@ class Roll(Effect):
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
                 dice = f"{dice}+{higher}"
+        if d:
+            dice = f"{dice}+{d}"
 
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)
@@ -535,13 +545,17 @@ EFFECT_MAP = {
 
 class Spell:
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
-                 description: str, classes: list = None, subclasses: list = None, ritual: bool = False,
+                 description: str, classes=None, subclasses=None, ritual: bool = False,
                  higherlevels: str = None, source: str = "homebrew", page: int = None, concentration: bool = False,
                  automation: Automation = None, srd: bool = False):
         if classes is None:
             classes = []
+        if isinstance(classes, str):
+            classes = [cls.strip() for cls in classes.split(',')]
         if subclasses is None:
             subclasses = []
+        if isinstance(subclasses, str):
+            subclasses = [cls.strip() for cls in subclasses.split(',')]
         self.name = name
         self.level = level
         self.school = school

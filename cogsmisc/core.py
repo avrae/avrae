@@ -37,7 +37,7 @@ class Core:
             await self.bot.send_message(self.bot.owner,
                                         "Bug reported by {} ({}):\n{}".format(ctx.message.author.mention,
                                                                               str(ctx.message.author), report))
-        await self.bot.say("Bug report sent to developer! For faster response, check out <https://support.avrae.io>!")
+        await self.bot.say("Bug report sent to developer! For faster response, check out <http://support.avrae.io>!")
 
     @commands.command(hidden=True, pass_context=True)
     async def avatar(self, ctx, user: discord.User = None):

@@ -366,7 +366,7 @@ class Monster:
         if self.immume:
             desc += f"**Damage Immunities:** {', '.join(self.immume)}\n"
         if self.condition_immune:
-            desc += f"**Condition Immunities:** {', '.join(self.condition_immune)}\n"
+            desc += f"**Condition Immunities:** {', '.join(map(str, self.condition_immune))}\n"
         if self.languages:
             desc += f"**Languages:** {', '.join(self.languages)}\n"
         else:

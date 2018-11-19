@@ -17,7 +17,7 @@ class Race:
     @classmethod
     def from_data(cls, data):
         size = {'T': "Tiny", 'S': "Small", 'M': "Medium", 'L': "Large", 'H': "Huge"}.get(data['size'], 'Unknown')
-        return cls(data['name'], data['source'], data['page'], size, data['speed'], data.get('ability', {}),
+        return cls(data['name'], data['source'], data.get('page', '?'), size, data['speed'], data.get('ability', {}),
                    data['entries'], data['srd'], data.get('darkvision', 0))
 
     def get_speed_str(self):

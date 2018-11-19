@@ -28,7 +28,7 @@ DAMAGE_TYPES = {1: "bludgeoning", 2: "piercing", 3: "slashing", 4: "necrotic", 5
 CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.334, "Monk": 0, "Paladin": 0.5,
                 "Ranger": 0.5, "Rogue": 0.334, "Sorcerer": 1, "Warlock": 0, "Wizard": 1}
 SLOTS_PER_LEVEL = {
-    1: lambda l: min(l + 1, 4),
+    1: lambda l: min(l + 1, 4) if l else 0,
     2: lambda l: 0 if l < 3 else min(l - 1, 3),
     3: lambda l: 0 if l < 5 else min(l - 3, 3),
     4: lambda l: 0 if l < 7 else min(l - 6, 3),
@@ -40,8 +40,8 @@ SLOTS_PER_LEVEL = {
 }
 SIMPLE_WEAPONS = ["Club", "Dagger", "Greatclub", "Handaxe", "Javelin", "Light Hammer", "Mace", "Quarterstaff", "Sickle",
                   "Spear", "Crossbow, Light", "Dart", "Shortbow", "Sling"]
-MARTIAL_WEAPONS = ['Battleaxe', 'Blowgun', 'Flail', 'Glaive', 'Greataxe', 'Greatsword', 'Halberd', 'Hand Crossbow',
-                   'Heavy Crossbow', 'Lance', 'Longbow', 'Longsword', 'Maul', 'Morningstar', 'Net', 'Pike', 'Rapier',
+MARTIAL_WEAPONS = ['Battleaxe', 'Blowgun', 'Flail', 'Glaive', 'Greataxe', 'Greatsword', 'Halberd', 'Crossbow, Hand',
+                   'Crossbow, Heavy', 'Lance', 'Longbow', 'Longsword', 'Maul', 'Morningstar', 'Net', 'Pike', 'Rapier',
                    'Scimitar', 'Shortsword', 'Trident', 'War Pick', 'Warhammer', 'Whip', 'Pistol', 'Musket',
                    'Automatic Pistol', 'Revolver', 'Hunting Rifle', 'Automatic Rifle', 'Shotgun', 'Laser Pistol',
                    'Antimatter Rifle', 'Laser Rifle']
@@ -334,11 +334,13 @@ class BeyondSheetParser:
                 return []  # thanks DDB
             isProf = atkIn['isProficient']
             atkBonus = None
+            dmgBonus = ""
             if atkIn["abilityModifierStatId"]:
                 atkBonus = self.stat_from_id(atkIn['abilityModifierStatId']) + (prof if isProf else 0)
+                dmgBonus = f"+{self.stat_from_id(atkIn['abilityModifierStatId'])}"
             attack = {
                 'attackBonus': str(atkBonus),
-                'damage': f"{atkIn['dice']['diceString']}[{parse_dmg_type(atkIn)}]",
+                'damage': f"{atkIn['dice']['diceString']}{dmgBonus}[{parse_dmg_type(atkIn)}]",
                 'name': atkIn['name'],
                 'details': atkIn['snippet']
             }
@@ -382,11 +384,15 @@ class BeyondSheetParser:
             if not is_melee and is_weapon:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
 
+            damage = None
+            if itemdef['fixedDamage'] or itemdef['damage']:
+                damage = f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}" \
+                         f"[{itemdef['damageType'].lower()}" \
+                         f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+
             attack = {
                 'attackBonus': str(weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus),
-                'damage': f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}"
-                          f"[{itemdef['damageType'].lower()}"
-                          f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",
+                'damage': damage,
                 'name': itemdef['name'],
                 'details': html2text.html2text(itemdef['description'], bodywidth=0).strip()
             }

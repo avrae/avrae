@@ -4,9 +4,7 @@ Created on Oct 29, 2016
 @author: andrew
 """
 import asyncio
-import errno
 import logging
-import os
 import random
 import re
 from io import BytesIO
@@ -42,14 +40,6 @@ def list_get(index, default, l):
     return a
 
 
-def make_sure_path_exists(path):
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
-
-
 def get_positivity(string):
     if isinstance(string, bool):  # oi!
         return string
@@ -78,20 +68,6 @@ def fuzzy_search(list_to_search: list, key, value):
         except StopIteration:
             return None
     return result
-
-
-def fuzzywuzzy_search_all_3(list_to_search: list, key, value, cutoff=5, return_key=False):
-    """Fuzzy searches a list for a dict with all keys "key" of value "value"
-    result can be either an object or list of objects
-    :returns: A two-tuple (result, strict) or None"""
-    return search(list_to_search, value, lambda e: e[key], cutoff, return_key)
-
-
-def fuzzywuzzy_search_all_3_list(list_to_search: list, value, cutoff=5):
-    """Fuzzy searches a list for a value.
-    result can be either an object or list of objects
-    :returns: A two-tuple (result, strict) or None"""
-    return search(list_to_search, value, lambda e: e)
 
 
 def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=False):
@@ -233,7 +209,7 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities, neutral=
                 roll_string = '({0}) * 2'.format(roll_string)
                 checked.append(vulnerability)
                 break
-        if not comment.endswith('^'):
+        if not (comment.endswith('^') or comment.startswith('^')):
             for immunity in immunities:
                 if immunity.lower() in comment.lower() and len(immunity) > 0 and immunity not in checked:
                     roll_string = '({0}) * 0'.format(roll_string)
@@ -380,6 +356,9 @@ def parse_data_entry(text, md_breaks=False):
                 for row in entry['tbody']:
                     temp += ' - '.join(f"{col}" for col in row) + '\n'
                 out.append(temp.strip())
+            elif not 'type' in entry:
+                out.append((f"**{entry['name']}**: " if 'name' in entry else '') +
+                           parse_data_entry(entry['entries']))
             elif entry['type'] == 'entries':
                 out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
                     entry['entries']))  # oh gods here we goooooooo
@@ -409,7 +388,10 @@ def parse_data_entry(text, md_breaks=False):
             elif entry['type'] == 'bonus':
                 out.append("{:+}".format(entry['value']))
             elif entry['type'] == 'dice':
-                out.append(f"{entry['number']}d{entry['faces']}")
+                if 'toRoll' in entry:
+                    out.append(' + '.join(f"{d['number']}d{d['faces']}" for d in entry['toRoll']))
+                else:
+                    out.append(f"{entry['number']}d{entry['faces']}")
             elif entry['type'] == 'bonusSpeed':
                 out.append(f"{entry['value']} feet")
             else:

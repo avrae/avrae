@@ -28,7 +28,7 @@ DAMAGE_TYPES = {1: "bludgeoning", 2: "piercing", 3: "slashing", 4: "necrotic", 5
 CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.334, "Monk": 0, "Paladin": 0.5,
                 "Ranger": 0.5, "Rogue": 0.334, "Sorcerer": 1, "Warlock": 0, "Wizard": 1}
 SLOTS_PER_LEVEL = {
-    1: lambda l: min(l + 1, 4),
+    1: lambda l: min(l + 1, 4) if l else 0,
     2: lambda l: 0 if l < 3 else min(l - 1, 3),
     3: lambda l: 0 if l < 5 else min(l - 3, 3),
     4: lambda l: 0 if l < 7 else min(l - 6, 3),

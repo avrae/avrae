@@ -399,6 +399,7 @@ class Damage(Effect):
         immune = args.get('immune', [])
         vuln = args.get('vuln', [])
         neutral = args.get('neutral', [])
+        crit = args.last('crit', None, bool)
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
@@ -434,7 +435,7 @@ class Damage(Effect):
         if d:
             damage = f"{damage}+{d}"
 
-        if autoctx.in_crit:
+        if autoctx.in_crit or crit:
             def critSub(matchobj):
                 return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
 

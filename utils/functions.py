@@ -209,7 +209,7 @@ def parse_resistances(damage, resistances, immunities, vulnerabilities, neutral=
                 roll_string = '({0}) * 2'.format(roll_string)
                 checked.append(vulnerability)
                 break
-        if not comment.endswith('^'):
+        if not (comment.endswith('^') or comment.startswith('^')):
             for immunity in immunities:
                 if immunity.lower() in comment.lower() and len(immunity) > 0 and immunity not in checked:
                     roll_string = '({0}) * 0'.format(roll_string)

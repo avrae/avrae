@@ -827,7 +827,7 @@ class InitTracker:
         -phrase [phrase] - adds flavor text."""
         return await self._cast(ctx, None, spell_name, args)
 
-    @init.command(pass_context=True)
+    @init.command(pass_context=True, aliases=['aooc', 'rcast'])
     async def reactcast(self, ctx, combatant_name, spell_name, *, args=''):
         """Casts a spell against another combatant.
         __Valid Arguments__

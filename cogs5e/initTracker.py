@@ -901,7 +901,7 @@ class InitTracker:
         """Removes a combatant or group from the combat.
         Usage: !init remove <NAME>"""
         combat = await Combat.from_ctx(ctx)
-
+        name = name.strip("'").strip('"')
         combatant = await combat.select_combatant(name)
         if combatant is None:
             return await self.bot.say("Combatant not found.")

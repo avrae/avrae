@@ -179,7 +179,7 @@ class Dice:
         embeds.add_fields_from_args(embed, args.get('f'))
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
         await self.bot.say(embed=embed)
 
@@ -269,7 +269,7 @@ class Dice:
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
         await self.bot.say(embed=embed)
         try:
@@ -353,7 +353,7 @@ class Dice:
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
         await self.bot.say(embed=embed)
         try:

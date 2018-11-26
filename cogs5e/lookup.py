@@ -602,7 +602,7 @@ class Lookup:
                 embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster.legactions)))
 
         if monster.source == 'homebrew':
-            embed_queue[-1].set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+            embed_queue[-1].set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
         else:
             embed_queue[-1].set_footer(text=f"Creature | {monster.source} {monster.page}")
 

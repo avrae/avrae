@@ -16,6 +16,7 @@ from cogs5e.models.spell import Spell
 from utils.functions import parse_data_entry, search_and_select
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
+HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
 
 log = logging.getLogger(__name__)
 

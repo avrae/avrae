@@ -575,10 +575,22 @@ class Spell:
         self.srd = srd
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data):  # local JSON
         data["range_"] = data.pop("range")  # ignore this
         data["automation"] = Automation.from_data(data["automation"])
         return cls(**data)
+
+    @classmethod
+    def from_dict(cls, raw):  # homebrew spells
+        raw['components'] = parse_components(raw['components'])
+        return cls.from_data(raw)
+
+    # def to_dict(self):
+    #     return {"name": self.name, "level": self.level, "school": self.school, "classes": self.classes,
+    #             "subclasses": self.subclasses, "time": self.time, "range": self.range,
+    #             "components": serialize_components(self.components), "duration": self.duration, "ritual": self.ritual,
+    #             "description": self.description, "higherlevels": self.higherlevels, "source": self.source,
+    #             "page": self.page, "concentration": self.concentration, "automation": self.automation, "srd": self.srd}
 
     def get_school(self):
         return {
@@ -676,6 +688,25 @@ class Spell:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
 
         return {"embed": embed}
+
+
+def parse_components(components):
+    v = components.get('verbal')
+    s = components.get('somatic')
+    m = components.get('material')
+    if isinstance(m, bool):
+        parsedm = "M"
+    else:
+        parsedm = f"M ({m})"
+
+    comps = []
+    if v:
+        comps.append("V")
+    if s:
+        comps.append("S")
+    if m:
+        comps.append(parsedm)
+    return ', '.join(comps)
 
 
 class SpellException(AvraeException):

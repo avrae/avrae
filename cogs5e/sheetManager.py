@@ -48,13 +48,19 @@ class SheetManager:
         self.logger = TextLogger('dicecloud.txt')
 
         self.gsheet_client = None
+        self._gsheet_initializing = False
         self.bot.loop.create_task(self.init_gsheet_client())
 
     async def init_gsheet_client(self):
+        if self._gsheet_initializing:
+            return
+        self._gsheet_initializing = True
+
         def _():
             return pygsheets.authorize(service_file='avrae-google.json', no_cache=True)
 
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
+        self._gsheet_initializing = False
 
     async def new_arg_stuff(self, args, ctx, character):
         args = await scripting.parse_snippets(args, ctx)
@@ -603,6 +609,7 @@ class SheetManager:
             try:
                 parser = GoogleSheet(_id, self.gsheet_client)
             except AssertionError:
+                await self.init_gsheet_client()  # attempt reconnection
                 return await self.bot.say("I am still connecting to Google. Try again in 15-30 seconds.")
             loading = await self.bot.say('Updating character data from Google...')
         elif sheet_type == 'beyond':
@@ -1030,6 +1037,7 @@ class SheetManager:
         try:
             parser = GoogleSheet(url, self.gsheet_client)
         except AssertionError:
+            await self.init_gsheet_client()  # hmm.
             return await self.bot.edit_message(loading, "I am still connecting to Google. Try again in 15-30 seconds.")
 
         try:

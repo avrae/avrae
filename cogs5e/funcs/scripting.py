@@ -342,8 +342,8 @@ class SimpleCombatant:
     def set_hp(self, newhp: int):
         self._combatant.set_hp(int(newhp))
 
-    def mod_hp(self, mod: int):
-        self._combatant.hp += int(mod)
+    def mod_hp(self, mod: int, overheal: bool = False):
+        self._combatant.mod_hp(mod, overheal)
 
     def hp_str(self):
         return self._combatant.get_hp_str()
@@ -367,7 +367,7 @@ class SimpleCombatant:
             return to_hit >= self._combatant.ac
         return None
 
-    def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0):
+    def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0, overheal=False):
         args = utils.argparser.ParsedArguments(None, {
             'critdice': [critdice],
             'resist': self._combatant.resists['resist'],
@@ -380,7 +380,7 @@ class SimpleCombatant:
             args['c'] = c
         result = sheet_damage(dice_str, args, 1 if crit else 0)
         result['damage'] = result['damage'].strip()
-        self.mod_hp(-result['total'])
+        self.mod_hp(-result['total'], overheal=overheal)
         return result
 
     def set_ac(self, ac: int):

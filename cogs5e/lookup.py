@@ -10,7 +10,7 @@ import textwrap
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs.lookupFuncs import select_monster_full, c, HOMEBREW_EMOJI, HOMEBREW_ICON
+from cogs5e.funcs.lookupFuncs import select_monster_full, c, HOMEBREW_EMOJI, HOMEBREW_ICON, select_spell_full
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
@@ -624,23 +624,7 @@ class Lookup:
 
         self.bot.rdb.incr('spells_looked_up_life')
 
-        try:
-            tome = await Tome.from_ctx(ctx)
-            custom_spells = tome.spells
-        except NoActiveBrew:
-            custom_spells = []
-        choices = list(itertools.chain(c.spells, custom_spells))
-        if ctx.message.server:
-            async for servtome in ctx.bot.mdb.tomes.find({"server_active": ctx.message.server.id}):
-                choices.extend(Tome.from_dict(servtome).spells)
-
-        def get_homebrew_formatted_name(spell):
-            if spell.source == 'homebrew':
-                return f"{spell.name} ({HOMEBREW_EMOJI})"
-            return spell.name
-
-        spell = await search_and_select(ctx, choices, name, lambda e: e.name, srd=srd and (lambda s: s.srd),
-                                        selectkey=get_homebrew_formatted_name)
+        spell = await select_spell_full(ctx, name, srd=srd)
 
         if spell.source != 'homebrew':
             await self.add_training_data("spell", name, spell.name)

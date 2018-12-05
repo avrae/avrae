@@ -573,9 +573,17 @@ class BeyondSheetParser:
         spellbook['attackBonus'] = spellMod + prof + attack_bonus_bonus
 
         for src in self.character['classSpells']:
-            spellbook['spells'].extend(s['definition']['name'].replace('\u2019', "'") for s in src['spells'])
+            spellnames = [s['definition']['name'].replace('\u2019', "'") for s in src['spells']]
+            spellbook['spells'].extend({
+                                           'name': s.name,
+                                           'strict': True
+                                       } for s in spellnames)
         for src in self.character['spells'].values():
-            spellbook['spells'].extend(s['definition']['name'].replace('\u2019', "'") for s in src)
+            spellnames = [s['definition']['name'].replace('\u2019', "'") for s in src]
+            spellbook['spells'].extend({
+                                           'name': s.name,
+                                           'strict': True
+                                       } for s in spellnames)
         spellbook['spells'] = list(set(spellbook['spells']))
 
         return spellbook

@@ -143,6 +143,9 @@ class Character(Spellcaster):
 
         return int(self.character.get('spellbook', {}).get('spellslots', {}).get(str(level), 0))
 
+    def get_raw_spells(self):
+        return self.character.get('spellbook', {}).get('spells', [])
+
     def get_spell_list(self):
         """@:returns list - a list of the names of all spells the character can cast.
         @:raises OutdatedSheet if character does not have spellbook."""
@@ -150,8 +153,13 @@ class Character(Spellcaster):
             assert 'spellbook' in self.character
         except AssertionError:
             raise OutdatedSheet()
-
-        return self.character.get('spellbook', {}).get('spells', [])
+        spells = self.get_raw_spells()
+        if spells:
+            if isinstance(spells[0], dict):
+                return [s['name'] for s in spells]
+            else:
+                return spells
+        return []
 
     def get_cached_spell_list_id(self):
         """Gets the Dicecloud ID of the most recently used spell list ID.
@@ -821,13 +829,19 @@ class Character(Spellcaster):
         :returns self"""
         self._initialize_spellbook()
         spells = set(self.character['spellbook']['spells'])
-        spells.add(spell.name)
+        spells.add({
+            'name': spell.name,
+            'strict': spell.source != 'homebrew'
+        })
         self.character['spellbook']['spells'] = list(spells)
 
         if not self.live:
             self._initialize_spell_overrides()
             overrides = set(self.character['overrides']['spells'])
-            overrides.add(spell.name)
+            overrides.add({
+                'name': spell.name,
+                'strict': spell.source != 'homebrew'
+            })
             self.character['overrides']['spells'] = list(overrides)
         return self
 
@@ -841,14 +855,16 @@ class Character(Spellcaster):
         self._initialize_spellbook()
         self._initialize_spell_overrides()
         overrides = set(self.character['overrides'].get('spells', []))
-        spell_name = next((s for s in overrides if spell_name.lower() == s.lower()), None)
-        if spell_name:
-            overrides.remove(spell_name)
+
+        override = next((s for s in overrides if isinstance(s, str) and spell_name.lower() == s.lower() or
+                         isinstance(s, dict) and s['name'].lower() == spell_name.lower()), None)
+        if override:
+            overrides.remove(override)
             self.character['overrides']['spells'] = list(overrides)
             spells = set(self.character['spellbook']['spells'])
-            spells.remove(spell_name)
+            spells.remove(override)
             self.character['spellbook']['spells'] = list(spells)
-        return spell_name
+        return override
 
     def _initialize_custom_counters(self):
         try:

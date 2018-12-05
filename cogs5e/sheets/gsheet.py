@@ -337,10 +337,16 @@ class GoogleSheet:
             for cell in col:
                 if cell.value and not cell.value in ('MAX', 'SLOTS'):
                     result = search(c.spells, cell.value.strip(), lambda sp: sp.name, strict=True)
-                    if result is None:
-                        continue
-                    elif result[0] and result[1]:
-                        spells.add(result[0].name)
+                    if result and result[0] and result[1]:
+                        spells.add({
+                            'name': result[0].name,
+                            'strict': True
+                        })
+                    else:
+                        spells.add({
+                            'name': cell.value.strip(),
+                            'strict': False
+                        })
 
         spellbook['spells'] = list(spells)
 

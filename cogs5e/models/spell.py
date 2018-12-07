@@ -674,7 +674,7 @@ class Spell:
         if phrase:
             embed.description = f"*{phrase}*"
 
-        if self.automation:
+        if self.automation and self.automation.effects:
             await self.automation.run(ctx, embed, caster, targets, args, combat, self)
         else:
             text = self.description

@@ -1,0 +1,14 @@
+{
+  "name": "string",
+  "owner": {"id": "string", "username": "string"},
+  "editors": [{"id": "string", "username": "string"}],
+  "public": "boolean",
+  "active": ["string"],
+  "_id": "ObjectId",
+  "server_active": ["string"],
+  "spells": [
+    "see spell.spec.json"
+  ],
+  "image": "string",
+  "desc": "string"
+}

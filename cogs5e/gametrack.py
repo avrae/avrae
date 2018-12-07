@@ -14,7 +14,7 @@ from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import c
+from cogs5e.funcs.lookupFuncs import c, get_castable_spell, select_spell_full, HOMEBREW_EMOJI
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
@@ -279,24 +279,39 @@ class GameTrack:
         embed.add_field(name="Spell Attack Bonus", value=str(character.get_spell_ab()))
         embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
         spells_known = {}
-        for spell_name in character.get_spell_list():
-            spell, strict = search(c.spells, spell_name, lambda sp: sp.name)
-            if spell is None or not strict:
-                continue
-            spells_known[str(spell.level)] = spells_known.get(str(spell.level), []) + [spell_name]
+        for spell_ in character.get_raw_spells():
+            if isinstance(spell_, str):
+                spell, strict = search(c.spells, spell_, lambda sp: sp.name)
+                if spell is None or not strict:
+                    continue
+                spells_known[str(spell.level)] = spells_known.get(str(spell.level), []) + [spell.name]
+            else:
+                spellname = spell_['name']
+                strict = spell_['strict']
+                spell = await get_castable_spell(ctx, spellname)
+                if spell is None and strict:
+                    continue
+                elif spell is None:
+                    spells_known['unknown'] = spells_known.get('unknown', []) + [f"*{spellname}*"]
+                else:
+                    if spell.source == 'homebrew':
+                        formatted = f"{spell.name} ({HOMEBREW_EMOJI})"
+                    else:
+                        formatted = spell.name
+                    spells_known[str(spell.level)] = spells_known.get(str(spell.level), []) + [formatted]
 
         level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
                       '4': '4th Level', '5': '5th Level', '6': '6th Level',
                       '7': '7th Level', '8': '8th Level', '9': '9th Level'}
         for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
             if spells:
-                embed.add_field(name=level_name.get(level, "Unknown Level"), value=', '.join(spells))
+                embed.add_field(name=level_name.get(level, "Unknown"), value=', '.join(spells))
         await self.bot.say(embed=embed)
 
     @spellbook.command(pass_context=True, name='add')
     async def spellbook_add(self, ctx, *, spell_name):
         """Adds a spell to the spellbook override. If character is live, will add to sheet as well."""
-        spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
+        spell = await select_spell_full(ctx, spell_name)
 
         character = await Character.from_ctx(ctx)
         if character.live:
@@ -564,11 +579,11 @@ class GameTrack:
             pass
 
         char = await Character.from_ctx(ctx)
+
         if not '-i' in args:
-            spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name,
-                                            list_filter=lambda s: s.name in char.get_spell_list())
+            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.get_spell_list())
         else:
-            spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
+            spell = await select_spell_full(ctx, spell_name)
 
         args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)

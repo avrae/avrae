@@ -14,13 +14,13 @@ from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import c, get_castable_spell, select_spell_full, HOMEBREW_EMOJI
+from cogs5e.funcs.lookupFuncs import c, get_castable_spell, select_spell_full
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
 from utils.argparser import argparse
-from utils.functions import dicecloud_parse, search_and_select, search
+from utils.functions import dicecloud_parse, search
 
 log = logging.getLogger(__name__)
 
@@ -295,7 +295,7 @@ class GameTrack:
                     spells_known['unknown'] = spells_known.get('unknown', []) + [f"*{spellname}*"]
                 else:
                     if spell.source == 'homebrew':
-                        formatted = f"{spell.name} ({HOMEBREW_EMOJI})"
+                        formatted = f"{spell.name}\*"
                     else:
                         formatted = spell.name
                     spells_known[str(spell.level)] = spells_known.get(str(spell.level), []) + [formatted]

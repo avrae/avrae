@@ -154,12 +154,13 @@ class Character(Spellcaster):
         except AssertionError:
             raise OutdatedSheet()
         spells = self.get_raw_spells()
-        if spells:
-            if isinstance(spells[0], dict):
-                return [s['name'] for s in spells]
+        out = []
+        for spell in spells:
+            if isinstance(spell, dict):
+                out.append(spell['name'])
             else:
-                return spells
-        return []
+                out.append(spell)
+        return out
 
     def get_cached_spell_list_id(self):
         """Gets the Dicecloud ID of the most recently used spell list ID.

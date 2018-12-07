@@ -545,9 +545,9 @@ EFFECT_MAP = {
 
 class Spell:
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
-                 description: str, classes=None, subclasses=None, ritual: bool = False,
-                 higherlevels: str = None, source: str = "homebrew", page: int = None, concentration: bool = False,
-                 automation: Automation = None, srd: bool = False):
+                 description: str, classes=None, subclasses=None, ritual: bool = False, higherlevels: str = None,
+                 source: str = "homebrew", page: int = None, concentration: bool = False, automation: Automation = None,
+                 srd: bool = False, image: str = None):
         if classes is None:
             classes = []
         if isinstance(classes, str):
@@ -573,6 +573,7 @@ class Spell:
         self.concentration = concentration
         self.automation = automation
         self.srd = srd
+        self.image = image
 
     @classmethod
     def from_data(cls, data):  # local JSON
@@ -686,6 +687,9 @@ class Spell:
 
         if l > 0:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
+
+        if self.image:
+            embed.set_image(url=self.image)
 
         return {"embed": embed}
 

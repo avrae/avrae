@@ -14,7 +14,7 @@ from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import c, get_castable_spell, select_spell_full
+from cogs5e.funcs.lookupFuncs import c, get_castable_spell, select_spell_full, HOMEBREW_EMOJI
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
@@ -294,7 +294,11 @@ class GameTrack:
                 elif spell is None:
                     spells_known['unknown'] = spells_known.get('unknown', []) + [f"*{spellname}*"]
                 else:
-                    spells_known[str(spell.level)] = spells_known.get(str(spell.level), []) + [spell.name]
+                    if spell.source == 'homebrew':
+                        formatted = f"{spell.name} ({HOMEBREW_EMOJI})"
+                    else:
+                        formatted = spell.name
+                    spells_known[str(spell.level)] = spells_known.get(str(spell.level), []) + [formatted]
 
         level_name = {'0': 'Cantrips', '1': '1st Level', '2': '2nd Level', '3': '3rd Level',
                       '4': '4th Level', '5': '5th Level', '6': '6th Level',
@@ -575,11 +579,11 @@ class GameTrack:
             pass
 
         char = await Character.from_ctx(ctx)
+
         if not '-i' in args:
-            spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name,
-                                            list_filter=lambda s: s.name in char.get_spell_list())
+            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.get_spell_list())
         else:
-            spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
+            spell = await select_spell_full(ctx, spell_name)
 
         args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)

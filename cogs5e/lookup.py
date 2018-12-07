@@ -674,6 +674,9 @@ class Lookup:
         else:
             embed_queue[-1].set_footer(text=f"Spell | {spell.source} {spell.page}")
 
+        if spell.image:
+            embed_queue[0].set_image(url=spell.image)
+
         for embed in embed_queue:
             if pm:
                 await self.bot.send_message(ctx.message.author, embed=embed)

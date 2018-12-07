@@ -7,7 +7,7 @@ from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import select_monster_full, c
+from cogs5e.funcs.lookupFuncs import select_monster_full, c, select_spell_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
@@ -872,10 +872,10 @@ class InitTracker:
         args = argparse(args)
 
         if not args.last('i', type_=bool):
-            spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name,
+            spell = await select_spell_full(ctx, spell_name,
                                             list_filter=lambda s: s.name.lower() in combatant.spellcasting.lower_spells)
         else:
-            spell = await search_and_select(ctx, c.spells, spell_name, lambda s: s.name)
+            spell = await select_spell_full(ctx, spell_name)
 
         targets = [await combat.select_combatant(t, f"Select target #{i+1}.") for i, t in enumerate(args.get('t'))]
 

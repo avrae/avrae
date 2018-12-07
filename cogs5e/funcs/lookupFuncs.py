@@ -148,7 +148,7 @@ async def get_castable_spell(ctx, name):
         async for servtome in ctx.bot.mdb.tomes.find({"server_active": ctx.message.server.id}, ['spells']):
             choices.extend(Spell.from_dict(s) for s in servtome['spells'])
 
-    result = search(c.spells, name, lambda sp: sp.name)
+    result = search(choices, name, lambda sp: sp.name)
     if result and result[1]:
         return result[0]
     return None

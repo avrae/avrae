@@ -584,7 +584,7 @@ class BeyondSheetParser:
                                            'name': s.name,
                                            'strict': True
                                        } for s in spellnames)
-        spellbook['spells'] = list(set(spellbook['spells']))
+        # spellbook['spells'] = list(set(spellbook['spells']))
 
         return spellbook
 

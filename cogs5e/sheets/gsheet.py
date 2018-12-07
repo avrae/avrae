@@ -331,24 +331,24 @@ class GoogleSheet:
         spellbook['spellslots'] = spellslots
 
         potential_spells = self.character.range('C96:AH143')
-        spells = set()
+        spells = []
 
         for col in potential_spells:
             for cell in col:
                 if cell.value and not cell.value in ('MAX', 'SLOTS'):
                     result = search(c.spells, cell.value.strip(), lambda sp: sp.name, strict=True)
                     if result and result[0] and result[1]:
-                        spells.add({
+                        spells.append({
                             'name': result[0].name,
                             'strict': True
                         })
                     else:
-                        spells.add({
+                        spells.append({
                             'name': cell.value.strip(),
                             'strict': False
                         })
 
-        spellbook['spells'] = list(spells)
+        spellbook['spells'] = spells
 
         try:
             spellbook['dc'] = int(self.character.cell('AB91').value or 0)

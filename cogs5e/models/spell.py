@@ -551,11 +551,11 @@ class Spell:
         if classes is None:
             classes = []
         if isinstance(classes, str):
-            classes = [cls.strip() for cls in classes.split(',')]
+            classes = [cls.strip() for cls in classes.split(',') if cls.strip()]
         if subclasses is None:
             subclasses = []
         if isinstance(subclasses, str):
-            subclasses = [cls.strip() for cls in subclasses.split(',')]
+            subclasses = [cls.strip() for cls in subclasses.split(',') if cls.strip()]
         self.name = name
         self.level = level
         self.school = school

@@ -7,6 +7,7 @@ from cogs5e.models.embeds import HomebrewEmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew, NoSelectionElements
 from cogs5e.models.homebrew.bestiary import Bestiary, bestiary_from_critterdb, select_bestiary
 from cogs5e.models.homebrew.pack import Pack, select_pack
+from cogs5e.models.homebrew.tome import Tome, select_tome
 from utils.functions import confirm
 
 BREWER_ROLES = ("server brewer", "dragonspeaker")
@@ -221,6 +222,89 @@ class Homebrew:
         async for doc in self.bot.mdb.packs.find({"server_active": ctx.message.server.id}, ['name', 'owner']):
             desc += f"{doc['name']} (<@{doc['owner']['id']}>)\n"
         await self.bot.say(embed=discord.Embed(title="Active Server Packs", description=desc))
+
+    @commands.group(pass_context=True, invoke_without_command=True)
+    async def tome(self, ctx, *, name=None):
+        """Commands to manage homebrew spells.
+        When called without an argument, lists the current tome and its description.
+        When called with a name, switches to a different tome."""
+        user_tomes = await self.bot.mdb.tomes.count_documents(
+            {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]})
+
+        if not user_tomes:
+            return await self.bot.say(
+                "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!")
+
+        if name is None:
+            tome = await Tome.from_ctx(ctx)
+        else:
+            try:
+                tome = await select_tome(ctx, name)
+            except NoActiveBrew:
+                return await self.bot.say(
+                    "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!")
+            except NoSelectionElements:
+                return await self.bot.say("Tome not found.")
+            await tome.set_active(ctx)
+        embed = HomebrewEmbedWithAuthor(ctx)
+        embed.title = tome.name
+        embed.description = tome.desc
+        embed.set_thumbnail(url=tome.image)
+        spellnames = "\n".join(i.name for i in tome.spells)
+        if len(spellnames) < 1200:
+            embed.add_field(name="Spells", value=spellnames)
+        else:
+            embed.add_field(name="Spells", value=f"{len(tome.spells)} spells.")
+        await self.bot.say(embed=embed)
+
+    @tome.command(pass_context=True, name='list')
+    async def tome_list(self, ctx):
+        """Lists your available tomes."""
+        available_tome_names = await self.bot.mdb.tomes.find(
+            {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]},
+            ['name']
+        ).to_list(None)
+        await self.bot.say(f"Your available tomes: {', '.join(p['name'] for p in available_tome_names)}")
+
+    @tome.command(pass_context=True, name='editor')
+    async def tome_editor(self, ctx, user: discord.Member):
+        """Allows another user to edit your active tome."""
+        tome = await Tome.from_ctx(ctx)
+        if not tome.owner['id'] == ctx.message.author.id:
+            return await self.bot.say("You do not have permission to add editors to this tome.")
+        if tome.owner['id'] == user.id:
+            return await self.bot.say("You already own this tome.")
+
+        if user.id not in [e['id'] for e in tome.editors]:
+            tome.editors.append({"username": str(user), "id": user.id})
+            await self.bot.say(f"{user} added to {tome.name}'s editors.")
+        else:
+            tome.editors.remove(next(e for e in tome.editors if e['id'] == user.id))
+            await self.bot.say(f"{user} removed from {tome.name}'s editors.")
+        await tome.commit(ctx)
+
+    @tome.group(pass_context=True, name='server', no_pm=True, invoke_without_command=True)
+    async def tome_server(self, ctx):
+        """Toggles whether the active tome should be viewable by anyone on the server.
+        Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
+        if not self.can_manage_serverbrew(ctx):
+            return await self.bot.say("You do not have permission to manage server homebrew. Either __Manage Server__ "
+                                      "Discord permissions or a role named \"Server Brewer\" or \"Dragonspeaker\" "
+                                      "is required.")
+        tome = await Tome.from_ctx(ctx)
+        is_server_active = await tome.toggle_server_active(ctx)
+        if is_server_active:
+            await self.bot.say(f"Ok, {tome.name} is now active on {ctx.message.server.name}!")
+        else:
+            await self.bot.say(f"Ok, {tome.name} is no longer active on {ctx.message.server.name}.")
+
+    @tome_server.command(pass_context=True, name='list')
+    async def tome_server_list(self, ctx):
+        """Shows what tomes are currently active on the server."""
+        desc = ""
+        async for doc in self.bot.mdb.tomes.find({"server_active": ctx.message.server.id}, ['name', 'owner']):
+            desc += f"{doc['name']} (<@{doc['owner']['id']}>)\n"
+        await self.bot.say(embed=discord.Embed(title="Active Server Tomes", description=desc))
 
 
 def setup(bot):

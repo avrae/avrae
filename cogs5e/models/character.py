@@ -836,7 +836,7 @@ class Character(Spellcaster):
 
         if not self.live:
             self._initialize_spell_overrides()
-            self.character['overrides']['spells'].add({
+            self.character['overrides']['spells'].append({
                 'name': spell.name,
                 'strict': spell.source != 'homebrew'
             })

@@ -575,13 +575,13 @@ class BeyondSheetParser:
         for src in self.character['classSpells']:
             spellnames = [s['definition']['name'].replace('\u2019', "'") for s in src['spells']]
             spellbook['spells'].extend({
-                                           'name': s.name,
+                                           'name': s,
                                            'strict': True
                                        } for s in spellnames)
         for src in self.character['spells'].values():
             spellnames = [s['definition']['name'].replace('\u2019', "'") for s in src]
             spellbook['spells'].extend({
-                                           'name': s.name,
+                                           'name': s,
                                            'strict': True
                                        } for s in spellnames)
         # spellbook['spells'] = list(set(spellbook['spells']))

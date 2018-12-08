@@ -6,7 +6,7 @@ import discord
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
 from cogs5e.models.initiative import Combatant
 from utils.functions import parse_resistances
@@ -690,6 +690,9 @@ class Spell:
 
         if self.image:
             embed.set_image(url=self.image)
+
+        if self.source == 'homebrew':
+            add_homebrew_footer(embed)
 
         return {"embed": embed}
 

@@ -689,7 +689,7 @@ class Spell:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
 
         if self.image:
-            embed.set_image(url=self.image)
+            embed.set_thumbnail(url=self.image)
 
         if self.source == 'homebrew':
             add_homebrew_footer(embed)

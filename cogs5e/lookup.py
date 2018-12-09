@@ -675,7 +675,7 @@ class Lookup:
             embed_queue[-1].set_footer(text=f"Spell | {spell.source} {spell.page}")
 
         if spell.image:
-            embed_queue[0].set_image(url=spell.image)
+            embed_queue[0].set_thumbnail(url=spell.image)
 
         for embed in embed_queue:
             if pm:

@@ -137,7 +137,7 @@ async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, mes
                                    selectkey=get_homebrew_formatted_name)
 
 
-async def get_castable_spell(ctx, name):
+async def get_spell_choices(ctx):
     try:
         tome = await Tome.from_ctx(ctx)
         custom_spells = tome.spells
@@ -147,6 +147,12 @@ async def get_castable_spell(ctx, name):
     if ctx.message.server:
         async for servtome in ctx.bot.mdb.tomes.find({"server_active": ctx.message.server.id}, ['spells']):
             choices.extend(Spell.from_dict(s) for s in servtome['spells'])
+    return choices
+
+
+async def get_castable_spell(ctx, name, choices=None):
+    if choices is None:
+        choices = await get_spell_choices(ctx)
 
     result = search(choices, name, lambda sp: sp.name)
     if result and result[1]:

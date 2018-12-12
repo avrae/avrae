@@ -14,7 +14,7 @@ from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import c, get_castable_spell, select_spell_full
+from cogs5e.funcs.lookupFuncs import c, get_castable_spell, select_spell_full, get_spell_choices
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloudClient import DicecloudClient
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
@@ -279,6 +279,7 @@ class GameTrack:
         embed.add_field(name="Spell Attack Bonus", value=str(character.get_spell_ab()))
         embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
         spells_known = {}
+        choices = await get_spell_choices(ctx)
         for spell_ in character.get_raw_spells():
             if isinstance(spell_, str):
                 spell, strict = search(c.spells, spell_, lambda sp: sp.name)
@@ -288,7 +289,7 @@ class GameTrack:
             else:
                 spellname = spell_['name']
                 strict = spell_['strict']
-                spell = await get_castable_spell(ctx, spellname)
+                spell = await get_castable_spell(ctx, spellname, choices)
                 if spell is None and strict:
                     continue
                 elif spell is None:

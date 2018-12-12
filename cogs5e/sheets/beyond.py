@@ -7,7 +7,7 @@ Created on Feb 14, 2017
 import logging
 import random
 import re
-from math import floor
+from math import floor, ceil
 
 import aiohttp
 import discord
@@ -553,16 +553,31 @@ class BeyondSheetParser:
                      'dc': 0,
                      'attackBonus': 0}
         spellcasterLevel = 0
+        castingClasses = 0
         spellMod = 0
         pactSlots = 0
         pactLevel = 1
         for _class in self.character['classes']:
-            if _class['definition']['spellCastingAbilityId']:
-                spellcasterLevel += floor(_class['level'] * CASTER_TYPES.get(_class['definition']['name'], 1))
-                spellMod = max(spellMod, self.stat_from_id(_class['definition']['spellCastingAbilityId']))
+            castingAbility = _class['definition']['spellCastingAbilityId'] or \
+                             _class.get('subclassDefinition', {}).get('spellCastingAbilityId')
+            if castingAbility:
+                castingClasses += 1
+                casterMult = CASTER_TYPES.get(_class['definition']['name'], 1)
+                spellcasterLevel += _class['level'] * casterMult
+                spellMod = max(spellMod, self.stat_from_id(castingAbility))
             if _class['definition']['name'] == 'Warlock':
                 pactSlots = pact_slots_by_level(_class['level'])
                 pactLevel = pact_level_by_level(_class['level'])
+
+        if castingClasses > 1:
+            spellcasterLevel = floor(spellcasterLevel)
+        else:
+            if spellcasterLevel >= 1:
+                spellcasterLevel = ceil(spellcasterLevel)
+            else:
+                spellcasterLevel = 0
+
+        log.debug(f"Caster level: {spellcasterLevel}")
 
         for lvl in range(1, 10):
             spellbook['spellslots'][str(lvl)] = SLOTS_PER_LEVEL[lvl](spellcasterLevel)

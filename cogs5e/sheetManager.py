@@ -246,7 +246,7 @@ class SheetManager:
         dc = args.last('dc', type_=int)
         num_successes = 0
 
-        ro = char.get_setting('reroll') or None
+        ro = char.get_setting('reroll')
         if ro:
             formatted_d20 = f"{formatted_d20}ro{ro}"
                            
@@ -324,7 +324,7 @@ class SheetManager:
         dc = args.last('dc', type_=int)
         num_successes = 0
                            
-        ro = char.get_setting('reroll') or None
+        ro = char.get_setting('reroll')
         if ro:
             formatted_d20 = f"{formatted_d20}ro{ro}"
 

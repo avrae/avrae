@@ -529,7 +529,10 @@ class Text(Effect):
 
     def run(self, autoctx):
         if self.text:
-            autoctx.effect_queue(self.text)
+            text = self.text
+            if len(text) > 1020:
+                text = f"{text[:1020]}..."
+            autoctx.effect_queue(text)
 
 
 EFFECT_MAP = {

@@ -219,9 +219,11 @@ class BeyondSheetParser:
             for mod in modtype:
                 if not mod['subType'] == stat: continue
                 if mod['type'] in bonus_tags:
-                    bonus += mod['value'] or self.stat_from_id(mod['statId'])
+                    bonus += mod['value'] + self.stat_from_id(mod['statId'])
                 elif mod['type'] == 'set':
-                    base = mod['value'] or self.stat_from_id(mod['statId'])
+                    base = mod['value'] + self.stat_from_id(mod['statId'])
+                elif mod['type'] == 'ignore':
+                    return 0
 
         if bonus_tags == ['bonus']:
             self.calculated_stats[stat] = base + bonus
@@ -251,7 +253,7 @@ class BeyondSheetParser:
         armoredBonus = self.get_stat('armored-armor-class')
         miscBonus = 0
 
-        baseWithDex = base + dexBonus
+        baseWithDex = base + self.get_stat('unarmored-dex-ac-bonus', base=dexBonus)
 
         for val in self.character['characterValues']:
             if val['typeId'] == 1:  # AC override

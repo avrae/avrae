@@ -2,6 +2,7 @@ import ast
 import json
 import re
 import shlex
+import time
 from math import floor, ceil, sqrt
 
 import simpleeval
@@ -469,7 +470,8 @@ DEFAULT_OPERATORS.pop(ast.Pow)
 DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
                           'range': safe_range, 'sqrt': sqrt,
-                          'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json})
+                          'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
+                          'time': time.time})
 
 if __name__ == '__main__':
     evaluator = ScriptingEvaluator()

@@ -219,9 +219,9 @@ class BeyondSheetParser:
             for mod in modtype:
                 if not mod['subType'] == stat: continue
                 if mod['type'] in bonus_tags:
-                    bonus += mod['value'] + self.stat_from_id(mod['statId'])
+                    bonus += (mod['value'] or 0) + self.stat_from_id(mod['statId'])
                 elif mod['type'] == 'set':
-                    base = mod['value'] + self.stat_from_id(mod['statId'])
+                    base = (mod['value'] or 0) + self.stat_from_id(mod['statId'])
                 elif mod['type'] == 'ignore':
                     return 0
 

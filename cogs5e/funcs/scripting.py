@@ -331,7 +331,6 @@ class SimpleCombatant:
             self.initmod = None
             self.temphp = None
             self.resists = None
-        self.attacks = self._combatant.attacks
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes

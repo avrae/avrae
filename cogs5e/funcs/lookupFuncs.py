@@ -57,6 +57,8 @@ class Compendium:
         self.subclasses = self.load_subclasses()
         with open('./res/itemprops.json', 'r') as f:
             self.itemprops = json.load(f)
+        with open('./res/names.json', 'r') as f:
+            self.names = json.load(f)
 
     def load_subclasses(self):
         s = []

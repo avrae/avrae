@@ -52,11 +52,11 @@ async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None,
 
     # Name Gen
     #    DMG name gen
-    name = self.nameGen()
+    name = self.old_name_gen()
     # Stat Gen
     #    4d6d1
     #        reroll if too low/high
-    stats = self.genStats()
+    stats = self.stat_gen()
     await self.bot.send_message(ctx.message.author, "**Stats for {0}:** `{1}`".format(name, stats))
     # Race Gen
     #    Racial Features

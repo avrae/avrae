@@ -171,7 +171,8 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
     immune = args.get('immune')
     vuln = args.get('vuln')
     neutral = args.get('neutral')
-
+    maxdmg = args.last('max', 0, int)
+    
     if damage_str is None and d:
         damage_str = '0'
     if damage_str is not None:
@@ -202,7 +203,9 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
             if not itercrit == 2 and numHits > 0:
                 damage += '+' + parsecrit(dice)
                 dnum[dice] -= 1
-
+    
+        damage = parsemax(damage, maxdmg)
+                
         # crit parsing
         rollFor = "Damage"
         if itercrit == 1:
@@ -224,3 +227,12 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
             if not itercrit == 2:  # if we actually hit
                 total_damage += dmgroll.total
     return {'damage': out, 'total': total_damage}
+
+def parsemax(damage_str, maxdmg=0):
+    if maxdmg == 0 :
+        def maxSub(matchobj):
+            return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
+        maxDice = re.sub(r'(\d+)d(\d+)', maxSub, damage_str)
+    else:
+        maxDice = damage_str
+    return maxDice

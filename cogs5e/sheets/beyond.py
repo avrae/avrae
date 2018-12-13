@@ -559,7 +559,7 @@ class BeyondSheetParser:
         pactLevel = 1
         for _class in self.character['classes']:
             castingAbility = _class['definition']['spellCastingAbilityId'] or \
-                             _class.get('subclassDefinition', {}).get('spellCastingAbilityId')
+                             (_class['subclassDefinition'] or {}).get('spellCastingAbilityId')
             if castingAbility:
                 castingClasses += 1
                 casterMult = CASTER_TYPES.get(_class['definition']['name'], 1)

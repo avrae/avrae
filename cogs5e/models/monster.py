@@ -4,6 +4,7 @@ from urllib import parse
 
 import html2text
 
+from cogs5e.models import errors
 from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
@@ -219,6 +220,9 @@ class Monster:
         hitdice = f"{num_hit_die}d{hit_die_size} + {con_by_level}"
 
         proficiency = data['stats']['proficiencyBonus']
+        if proficiency is None:
+            raise errors.ExternalImportError(f"Monster's proficiency bonus is nonexistent ({data['name']}).")
+
         skills = {}
         raw_skills = []
         for skill in data['stats']['skills']:

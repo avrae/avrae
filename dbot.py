@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -171,7 +172,7 @@ async def on_command_error(error, ctx):
             return await bot.send_message(ctx.message.channel, "Error: No closing quotation.")
         if isinstance(original, AttributeError) and str(original) in ("'NoneType' object has no attribute 'name'",):
             return await bot.send_message(ctx.message.channel, "Error in Discord API. Please try again.")
-        if isinstance(original, (ClientResponseError, InvalidArgument)):
+        if isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError)):
             return await bot.send_message(ctx.message.channel, "Error in Discord API. Please try again.")
         if isinstance(original, HTTPException):
             if original.response.status == 400:

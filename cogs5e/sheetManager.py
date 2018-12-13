@@ -48,13 +48,19 @@ class SheetManager:
         self.logger = TextLogger('dicecloud.txt')
 
         self.gsheet_client = None
+        self._gsheet_initializing = False
         self.bot.loop.create_task(self.init_gsheet_client())
 
     async def init_gsheet_client(self):
+        if self._gsheet_initializing:
+            return
+        self._gsheet_initializing = True
+
         def _():
             return pygsheets.authorize(service_file='avrae-google.json', no_cache=True)
 
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
+        self._gsheet_initializing = False
 
     async def new_arg_stuff(self, args, ctx, character):
         args = await scripting.parse_snippets(args, ctx)
@@ -240,6 +246,10 @@ class SheetManager:
         dc = args.last('dc', type_=int)
         num_successes = 0
 
+        ro = char.get_setting('reroll')
+        if ro:
+            formatted_d20 = f"{formatted_d20}ro{ro}"
+                           
         if b is not None:
             roll_str = formatted_d20 + '{:+}'.format(saves[save]) + '+' + b
         else:
@@ -313,10 +323,15 @@ class SheetManager:
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
+                           
+        ro = char.get_setting('reroll')
+        if ro:
+            formatted_d20 = f"{formatted_d20}ro{ro}"
 
         mc = args.last('mc', None)
         if mc:
             formatted_d20 = f"{formatted_d20}mi{mc}"
+
 
         mod = skills[skill]
         skill_name = skill
@@ -603,6 +618,7 @@ class SheetManager:
             try:
                 parser = GoogleSheet(_id, self.gsheet_client)
             except AssertionError:
+                await self.init_gsheet_client()  # attempt reconnection
                 return await self.bot.say("I am still connecting to Google. Try again in 15-30 seconds.")
             loading = await self.bot.say('Updating character data from Google...')
         elif sheet_type == 'beyond':
@@ -664,9 +680,13 @@ class SheetManager:
         sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description",
                                                                                             "No description available.")
         sheet['stats']['image'] = overrides.get('image') or sheet.get('stats', {}).get('image', '')
-        spells = set(sheet['spellbook']['spells'])
-        spells.update(overrides.get('spells', []))
-        sheet['spellbook']['spells'] = list(spells)
+        override_spells = []
+        for s in overrides.get('spells', []):
+            if isinstance(s, str):
+                override_spells.append({'name': s, 'strict': True})
+            else:
+                override_spells.append(s)
+        sheet['spellbook']['spells'].extend(override_spells)
 
         c = Character(sheet, url).initialize_consumables()
 
@@ -1030,6 +1050,7 @@ class SheetManager:
         try:
             parser = GoogleSheet(url, self.gsheet_client)
         except AssertionError:
+            await self.init_gsheet_client()  # hmm.
             return await self.bot.edit_message(loading, "I am still connecting to Google. Try again in 15-30 seconds.")
 
         try:

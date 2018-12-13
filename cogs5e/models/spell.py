@@ -6,7 +6,7 @@ import discord
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
 from cogs5e.models.initiative import Combatant
 from utils.functions import parse_resistances
@@ -412,7 +412,7 @@ class Damage(Effect):
 
         if not autoctx.target.target and autoctx.ANNOSTR_RE.match(damage):  # likely have output this in meta already
             return
-        if autoctx.ANNOSTR_RE.match(damage):
+        if autoctx.ANNOSTR_RE.search(damage):
             d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 
@@ -529,7 +529,10 @@ class Text(Effect):
 
     def run(self, autoctx):
         if self.text:
-            autoctx.effect_queue(self.text)
+            text = self.text
+            if len(text) > 1020:
+                text = f"{text[:1020]}..."
+            autoctx.effect_queue(text)
 
 
 EFFECT_MAP = {
@@ -545,17 +548,17 @@ EFFECT_MAP = {
 
 class Spell:
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
-                 description: str, classes=None, subclasses=None, ritual: bool = False,
-                 higherlevels: str = None, source: str = "homebrew", page: int = None, concentration: bool = False,
-                 automation: Automation = None, srd: bool = False):
+                 description: str, classes=None, subclasses=None, ritual: bool = False, higherlevels: str = None,
+                 source: str = "homebrew", page: int = None, concentration: bool = False, automation: Automation = None,
+                 srd: bool = False, image: str = None):
         if classes is None:
             classes = []
         if isinstance(classes, str):
-            classes = [cls.strip() for cls in classes.split(',')]
+            classes = [cls.strip() for cls in classes.split(',') if cls.strip()]
         if subclasses is None:
             subclasses = []
         if isinstance(subclasses, str):
-            subclasses = [cls.strip() for cls in subclasses.split(',')]
+            subclasses = [cls.strip() for cls in subclasses.split(',') if cls.strip()]
         self.name = name
         self.level = level
         self.school = school
@@ -573,12 +576,25 @@ class Spell:
         self.concentration = concentration
         self.automation = automation
         self.srd = srd
+        self.image = image
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data):  # local JSON
         data["range_"] = data.pop("range")  # ignore this
         data["automation"] = Automation.from_data(data["automation"])
         return cls(**data)
+
+    @classmethod
+    def from_dict(cls, raw):  # homebrew spells
+        raw['components'] = parse_components(raw['components'])
+        return cls.from_data(raw)
+
+    # def to_dict(self):
+    #     return {"name": self.name, "level": self.level, "school": self.school, "classes": self.classes,
+    #             "subclasses": self.subclasses, "time": self.time, "range": self.range,
+    #             "components": serialize_components(self.components), "duration": self.duration, "ritual": self.ritual,
+    #             "description": self.description, "higherlevels": self.higherlevels, "source": self.source,
+    #             "page": self.page, "concentration": self.concentration, "automation": self.automation, "srd": self.srd}
 
     def get_school(self):
         return {
@@ -661,7 +677,7 @@ class Spell:
         if phrase:
             embed.description = f"*{phrase}*"
 
-        if self.automation:
+        if self.automation and self.automation.effects:
             await self.automation.run(ctx, embed, caster, targets, args, combat, self)
         else:
             text = self.description
@@ -675,7 +691,32 @@ class Spell:
         if l > 0:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
 
+        if self.image:
+            embed.set_thumbnail(url=self.image)
+
+        if self.source == 'homebrew':
+            add_homebrew_footer(embed)
+
         return {"embed": embed}
+
+
+def parse_components(components):
+    v = components.get('verbal')
+    s = components.get('somatic')
+    m = components.get('material')
+    if isinstance(m, bool):
+        parsedm = "M"
+    else:
+        parsedm = f"M ({m})"
+
+    comps = []
+    if v:
+        comps.append("V")
+    if s:
+        comps.append("S")
+    if m:
+        comps.append(parsedm)
+    return ', '.join(comps)
 
 
 class SpellException(AvraeException):

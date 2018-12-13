@@ -10,12 +10,14 @@ import logging
 from cogs5e.models.background import Background
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.bestiary import Bestiary
+from cogs5e.models.homebrew.tome import Tome
 from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
 from cogs5e.models.spell import Spell
-from utils.functions import parse_data_entry, search_and_select
+from utils.functions import parse_data_entry, search_and_select, search
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
+HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
 
 log = logging.getLogger(__name__)
 
@@ -100,3 +102,59 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
 
     return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
                                    selectkey=get_homebrew_formatted_name)
+
+
+# ---- SPELL STUFF ----
+async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
+                            srd=False):
+    """
+    Gets a Spell from the compendium and active tome(s).
+    """
+    try:
+        tome = await Tome.from_ctx(ctx)
+        custom_spells = tome.spells
+    except NoActiveBrew:
+        custom_spells = []
+    choices = list(itertools.chain(c.spells, custom_spells))
+    if ctx.message.server:
+        async for servtome in ctx.bot.mdb.tomes.find({"server_active": ctx.message.server.id}, ['spells']):
+            choices.extend(Spell.from_dict(s) for s in servtome['spells'])
+
+    if srd:
+        if list_filter:
+            old = list_filter
+            list_filter = lambda e: old(e) and e.srd
+        else:
+            list_filter = lambda e: e.srd
+        message = "This server only shows results from the 5e SRD."
+
+    def get_homebrew_formatted_name(spell):
+        if spell.source == 'homebrew':
+            return f"{spell.name} ({HOMEBREW_EMOJI})"
+        return spell.name
+
+    return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
+                                   selectkey=get_homebrew_formatted_name)
+
+
+async def get_spell_choices(ctx):
+    try:
+        tome = await Tome.from_ctx(ctx)
+        custom_spells = tome.spells
+    except NoActiveBrew:
+        custom_spells = []
+    choices = list(itertools.chain(c.spells, custom_spells))
+    if ctx.message.server:
+        async for servtome in ctx.bot.mdb.tomes.find({"server_active": ctx.message.server.id}, ['spells']):
+            choices.extend(Spell.from_dict(s) for s in servtome['spells'])
+    return choices
+
+
+async def get_castable_spell(ctx, name, choices=None):
+    if choices is None:
+        choices = await get_spell_choices(ctx)
+
+    result = search(choices, name, lambda sp: sp.name)
+    if result and result[1]:
+        return result[0]
+    return None

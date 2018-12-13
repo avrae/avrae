@@ -2,6 +2,7 @@ import ast
 import json
 import re
 import shlex
+import time
 from math import floor, ceil, sqrt
 
 import simpleeval
@@ -343,8 +344,8 @@ class SimpleCombatant:
     def set_hp(self, newhp: int):
         self._combatant.set_hp(int(newhp))
 
-    def mod_hp(self, mod: int):
-        self._combatant.hp += int(mod)
+    def mod_hp(self, mod: int, overheal: bool = False):
+        self._combatant.mod_hp(mod, overheal)
 
     def hp_str(self):
         return self._combatant.get_hp_str()
@@ -368,7 +369,7 @@ class SimpleCombatant:
             return to_hit >= self._combatant.ac
         return None
 
-    def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0):
+    def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0, overheal=False):
         args = utils.argparser.ParsedArguments(None, {
             'critdice': [critdice],
             'resist': self._combatant.resists['resist'],
@@ -381,7 +382,7 @@ class SimpleCombatant:
             args['c'] = c
         result = sheet_damage(dice_str, args, 1 if crit else 0)
         result['damage'] = result['damage'].strip()
-        self.mod_hp(-result['total'])
+        self.mod_hp(-result['total'], overheal=overheal)
         return result
 
     def set_ac(self, ac: int):
@@ -470,7 +471,8 @@ DEFAULT_OPERATORS.pop(ast.Pow)
 DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
                           'range': safe_range, 'sqrt': sqrt,
-                          'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json})
+                          'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
+                          'time': time.time})
 
 if __name__ == '__main__':
     evaluator = ScriptingEvaluator()

@@ -106,13 +106,14 @@ class DicecloudParser:
         stat_vars.update(saves)
 
         sheet = {'type': 'dicecloud',
-                 'version': 12,  # v6: added stat cvars
+                 'version': 13,  # v6: added stat cvars
                  # v7: added check effects (adv/dis)
                  # v8: consumables
                  # v9: spellbook
                  # v10: live tracking
                  # v11: save effects (adv/dis)
                  # v12: add cached dicecloud spell list id
+                 # v13: added nonstrict spells
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -556,9 +557,17 @@ class DicecloudParser:
             spellbook['spellslots'][str(lvl)] = numSlots
 
         for spell in spellnames:
-            s, strict = search(c.spells, spell, lambda sp: sp.name)
-            if s and strict:
-                spellbook['spells'].append(s.name)
+            result = search(c.spells, spell, lambda sp: sp.name)
+            if result and result[0] and result[1]:
+                spellbook['spells'].append({
+                    'name': result[0].name,
+                    'strict': True
+                })
+            else:
+                spellbook['spells'].append({
+                    'name': spell,
+                    'strict': False
+                })  # non-strict spell
 
         sls = [(0, 0)]  # ab, dc
         for sl in self.character.get('spellLists', []):

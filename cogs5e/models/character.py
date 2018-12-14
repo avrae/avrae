@@ -856,8 +856,9 @@ class Character(Spellcaster):
                          if isinstance(s, str) and spell_name.lower() == s.lower() or
                          isinstance(s, dict) and s['name'].lower() == spell_name.lower()), None)
         if override:
-            self.character['overrides'].get('spells', []).remove(override)
-            self.character['spellbook']['spells'].remove(override)
+            self.character['overrides']['spells'].remove(override)
+            if override in self.character['spellbook']['spells']:
+                self.character['spellbook']['spells'].remove(override)
         return override
 
     def _initialize_custom_counters(self):

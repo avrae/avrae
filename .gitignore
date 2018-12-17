@@ -13,6 +13,8 @@
 /.cache/
 /.pytest_cache/
 
+res/spell-nn/
+
 *.json
 !*.spec.json
 *.pdf

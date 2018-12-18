@@ -56,7 +56,6 @@ class AutomationContext:
         }
         self.target = None
         self.in_crit = False
-        self.maxdmg = False
 
         self._embed_queue = []
         self._meta_queue = []
@@ -449,7 +448,7 @@ class Damage(Effect):
             if c:
                 damage = f"{damage}+{c}"
 
-        if autoctx.maxdmg or maxdmg:
+        if maxdmg:
             def maxSub(matchobj):
                 return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
 
@@ -519,7 +518,7 @@ class Roll(Effect):
         if d:
             dice = f"{dice}+{d}"
 
-        if autoctx.maxdmg or maxdmg:
+        if maxdmg:
             def maxSub(matchobj):
                 return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
 

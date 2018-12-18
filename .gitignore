@@ -2,6 +2,7 @@
 *.pyc
 
 *.log
+*.DS_Store
 
 *.avrae
 
@@ -12,6 +13,8 @@
 
 /.cache/
 /.pytest_cache/
+
+res/spell-nn/
 
 *.json
 !*.spec.json

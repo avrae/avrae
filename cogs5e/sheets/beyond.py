@@ -83,8 +83,8 @@ class BeyondSheetParser:
         try:
             stats = self.get_stats()
             levels = self.get_levels()
-            hp = character['baseHitPoints'] + (
-                    (self.get_stat('hit-points-per-level', base=stats['constitutionMod'])) * levels['level'])
+            hp = character['overrideHitPoints'] or (character['baseHitPoints'] + (
+                    (self.get_stat('hit-points-per-level', base=stats['constitutionMod'])) * levels['level']))
             armor = self.get_ac()
             attacks = self.get_attacks()
             skills = self.get_skills()

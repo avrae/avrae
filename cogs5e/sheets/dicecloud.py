@@ -375,7 +375,6 @@ class DicecloudParser:
         if self.character is None: raise Exception('You must call get_character() first.')
 
         log.debug(f"Processing attack {atkIn.get('name')}")
-        ragedmg = str(self.get_stat('rageDamage'))
         temp_names = {}
         if atkIn.get('parent', {}).get('collection') == 'Spells':
             spellParentID = atkIn.get('parent', {}).get('id')
@@ -422,7 +421,7 @@ class DicecloudParser:
                 return match.group(0)
 
         damage = re.sub(r'{(.*?)}', damage_sub, atkIn.get('damage', ''))
-        damage = damage.replace('rageDamage', ragedmg)
+        damage = damage.replace('rageDamage', self.ragedmg)
         attack['damage'] = damage.replace('{', '').replace('}', '')
         if not attack['damage']:
             attack['damage'] = None
@@ -443,6 +442,7 @@ class DicecloudParser:
         """Returns a list of dicts of all of the character's attacks."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
+        self.ragedmg = str(self.get_stat('rageDamage'))
         attacks = []
         for attack in character.get('attacks', []):
             if attack.get('enabled') and not attack.get('removed'):

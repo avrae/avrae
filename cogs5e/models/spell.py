@@ -404,7 +404,7 @@ class Damage(Effect):
         vuln = args.get('vuln', [])
         neutral = args.get('neutral', [])
         crit = args.last('crit', None, bool)
-        maxdmg = args.last('max', type_=bool)
+        maxdmg = args.last('max', None, bool)
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
@@ -442,7 +442,7 @@ class Damage(Effect):
 
         if autoctx.in_crit or crit:
             def critSub(matchobj):
-                return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
+                return f"{int(matchobj.group(1)) * 2)}d{matchobj.group(2)}"
 
             damage = re.sub(r'(\d+)d(\d+)', critSub, damage)
             if c:
@@ -450,10 +450,9 @@ class Damage(Effect):
 
         if maxdmg:
             def maxSub(matchobj):
-                return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
+                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
 
             damage = re.sub(r'(\d+)d(\d+)', maxSub, damage)
-
 
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
@@ -494,7 +493,7 @@ class Roll(Effect):
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
         d = autoctx.args.join('d', '+')
-        maxdmg = autoctx.args.last('max', type_=bool)
+        maxdmg = autoctx.args.last('max', None, bool)
         dice = self.dice
         if self.cantripScale:
             def cantrip_scale(matchobj):
@@ -520,7 +519,7 @@ class Roll(Effect):
 
         if maxdmg:
             def maxSub(matchobj):
-                return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
+                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
 
             dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
 

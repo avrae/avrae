@@ -166,9 +166,10 @@ class Homebrew:
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = pack.name
         embed.description = pack.desc
-        embed.set_thumbnail(url=pack.image)
+        if pack.image:
+            embed.set_thumbnail(url=pack.image)
         itemnames = "\n".join(i['name'] for i in pack.items)
-        if len(itemnames) < 1200:
+        if len(itemnames) < 1020:
             embed.add_field(name="Items", value=itemnames)
         else:
             embed.add_field(name="Items", value=f"{len(pack.items)} items.")
@@ -249,9 +250,10 @@ class Homebrew:
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = tome.name
         embed.description = tome.desc
-        embed.set_thumbnail(url=tome.image)
+        if tome.image:
+            embed.set_thumbnail(url=tome.image)
         spellnames = "\n".join(i.name for i in tome.spells)
-        if len(spellnames) < 1200:
+        if len(spellnames) < 1020:
             embed.add_field(name="Spells", value=spellnames)
         else:
             embed.add_field(name="Spells", value=f"{len(tome.spells)} spells.")

@@ -154,12 +154,13 @@ class Character(Spellcaster):
         except AssertionError:
             raise OutdatedSheet()
         spells = self.get_raw_spells()
-        if spells:
-            if isinstance(spells[0], dict):
-                return [s['name'] for s in spells]
+        out = []
+        for spell in spells:
+            if isinstance(spell, dict):
+                out.append(spell['name'])
             else:
-                return spells
-        return []
+                out.append(spell)
+        return out
 
     def get_cached_spell_list_id(self):
         """Gets the Dicecloud ID of the most recently used spell list ID.
@@ -828,21 +829,17 @@ class Character(Spellcaster):
         :param spell (Spell) - the Spell.
         :returns self"""
         self._initialize_spellbook()
-        spells = set(self.character['spellbook']['spells'])
-        spells.add({
+        self.character['spellbook']['spells'].append({
             'name': spell.name,
             'strict': spell.source != 'homebrew'
         })
-        self.character['spellbook']['spells'] = list(spells)
 
         if not self.live:
             self._initialize_spell_overrides()
-            overrides = set(self.character['overrides']['spells'])
-            overrides.add({
+            self.character['overrides']['spells'].append({
                 'name': spell.name,
                 'strict': spell.source != 'homebrew'
             })
-            self.character['overrides']['spells'] = list(overrides)
         return self
 
     def remove_known_spell(self, spell_name):
@@ -854,16 +851,14 @@ class Character(Spellcaster):
         assert not self.live
         self._initialize_spellbook()
         self._initialize_spell_overrides()
-        overrides = set(self.character['overrides'].get('spells', []))
 
-        override = next((s for s in overrides if isinstance(s, str) and spell_name.lower() == s.lower() or
+        override = next((s for s in self.character['overrides'].get('spells', [])
+                         if isinstance(s, str) and spell_name.lower() == s.lower() or
                          isinstance(s, dict) and s['name'].lower() == spell_name.lower()), None)
         if override:
-            overrides.remove(override)
-            self.character['overrides']['spells'] = list(overrides)
-            spells = set(self.character['spellbook']['spells'])
-            spells.remove(override)
-            self.character['spellbook']['spells'] = list(spells)
+            self.character['overrides']['spells'].remove(override)
+            if override in self.character['spellbook']['spells']:
+                self.character['spellbook']['spells'].remove(override)
         return override
 
     def _initialize_custom_counters(self):

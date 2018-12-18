@@ -8,7 +8,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import DicecloudClient, Parent
 from cogs5e.models.embeds import EmbedWithAuthor
-from utils.functions import parse_data_entry, ABILITY_MAP, search_and_select
+from utils.functions import parse_data_entry, ABILITY_MAP, search_and_select, get_selection
 
 log = logging.getLogger(__name__)
 
@@ -54,10 +54,21 @@ class CharGenerator:
 
         await self.genChar(ctx, level)
 
-    @commands.command(name="randname")
-    async def randname(self):
-        """Generates a random name, as per DMG rules."""
-        await self.bot.say(f"Your random name: {self.nameGen()}")
+    @commands.command(pass_context=True, aliases=['name'])
+    async def randname(self, ctx, race=None, option=None):
+        """Generates a random name, optionally from a given race."""
+        if race is None:
+            return await self.bot.say(f"Your random name: {self.old_name_gen()}")
+
+        embed = EmbedWithAuthor(ctx)
+        race_names = await search_and_select(ctx, c.names, race, lambda e: e['race'])
+        if option is None:
+            table = await get_selection(ctx, [(t['name'], t) for t in race_names['tables']])
+        else:
+            table = await search_and_select(ctx, race_names['tables'], option, lambda e: e['name'])
+        embed.title = f"{table['name']} {race_names['race']} Name"
+        embed.description = random.choice(table['choices'])
+        await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True, name='charref', aliases=['makechar'])
     async def char(self, ctx, level):
@@ -106,11 +117,11 @@ class CharGenerator:
 
         # Name Gen
         #    DMG name gen
-        name = self.nameGen()
+        name = self.old_name_gen()
         # Stat Gen
         #    4d6d1
         #        reroll if too low/high
-        stats = self.genStats()
+        stats = self.stat_gen()
         await self.bot.send_message(ctx.message.author, "**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
@@ -323,7 +334,7 @@ class CharGenerator:
 
         # Name Gen + Setup
         #    DMG name gen
-        name = self.nameGen()
+        name = self.old_name_gen()
         race = race or random.choice([r for r in c.fancyraces if r['source'] in ('PHB', 'VGM', 'MTF')])
         _class = _class or random.choice([cl for cl in c.classes if not 'UA' in cl.get('source')])
         subclass = subclass or random.choice([s for s in _class['subclasses'] if not 'UA' in s['source']])
@@ -482,7 +493,7 @@ class CharGenerator:
                                     f"`!dicecloud https://dicecloud.com/character/{char_id}/{name} -cc`")
         await self.bot.edit_message(loadingMessage, out)
 
-    def nameGen(self):
+    def old_name_gen(self):
         name = ""
         beginnings = ["", "", "", "", "A", "Be", "De", "El", "Fa", "Jo", "Ki", "La", "Ma", "Na", "O", "Pa", "Re", "Si",
                       "Ta", "Va"]
@@ -494,8 +505,8 @@ class CharGenerator:
         name = name.capitalize()
         return name
 
-    def genStats(self):
-        stats = [roll('4d6kh3').total for i in range(6)]
+    def stat_gen(self):
+        stats = [roll('4d6kh3').total for _ in range(6)]
         return stats
 
 

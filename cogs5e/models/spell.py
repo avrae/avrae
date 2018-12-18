@@ -6,7 +6,7 @@ import discord
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
 from cogs5e.models.initiative import Combatant
 from utils.functions import parse_resistances
@@ -412,7 +412,7 @@ class Damage(Effect):
 
         if not autoctx.target.target and autoctx.ANNOSTR_RE.match(damage):  # likely have output this in meta already
             return
-        if autoctx.ANNOSTR_RE.match(damage):
+        if autoctx.ANNOSTR_RE.search(damage):
             d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 
@@ -529,7 +529,10 @@ class Text(Effect):
 
     def run(self, autoctx):
         if self.text:
-            autoctx.effect_queue(self.text)
+            text = self.text
+            if len(text) > 1020:
+                text = f"{text[:1020]}..."
+            autoctx.effect_queue(text)
 
 
 EFFECT_MAP = {
@@ -551,11 +554,11 @@ class Spell:
         if classes is None:
             classes = []
         if isinstance(classes, str):
-            classes = [cls.strip() for cls in classes.split(',')]
+            classes = [cls.strip() for cls in classes.split(',') if cls.strip()]
         if subclasses is None:
             subclasses = []
         if isinstance(subclasses, str):
-            subclasses = [cls.strip() for cls in subclasses.split(',')]
+            subclasses = [cls.strip() for cls in subclasses.split(',') if cls.strip()]
         self.name = name
         self.level = level
         self.school = school
@@ -674,7 +677,7 @@ class Spell:
         if phrase:
             embed.description = f"*{phrase}*"
 
-        if self.automation:
+        if self.automation and self.automation.effects:
             await self.automation.run(ctx, embed, caster, targets, args, combat, self)
         else:
             text = self.description
@@ -689,7 +692,10 @@ class Spell:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
 
         if self.image:
-            embed.set_image(url=self.image)
+            embed.set_thumbnail(url=self.image)
+
+        if self.source == 'homebrew':
+            add_homebrew_footer(embed)
 
         return {"embed": embed}
 

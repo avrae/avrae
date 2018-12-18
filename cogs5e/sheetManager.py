@@ -246,6 +246,10 @@ class SheetManager:
         dc = args.last('dc', type_=int)
         num_successes = 0
 
+        ro = char.get_setting('reroll')
+        if ro:
+            formatted_d20 = f"{formatted_d20}ro{ro}"
+                           
         if b is not None:
             roll_str = formatted_d20 + '{:+}'.format(saves[save]) + '+' + b
         else:
@@ -319,10 +323,15 @@ class SheetManager:
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
+                           
+        ro = char.get_setting('reroll')
+        if ro:
+            formatted_d20 = f"{formatted_d20}ro{ro}"
 
         mc = args.last('mc', None)
         if mc:
             formatted_d20 = f"{formatted_d20}mi{mc}"
+
 
         mod = skills[skill]
         skill_name = skill

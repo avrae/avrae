@@ -11,10 +11,10 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.lookupFuncs import select_monster_full, c, HOMEBREW_EMOJI, HOMEBREW_ICON, select_spell_full
+from cogs5e.funcs.lookup_ml import ml_spell_search
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
-from cogs5e.models.homebrew.tome import Tome
 from utils import checks
 from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP, search_and_select, generate_token
 
@@ -624,7 +624,7 @@ class Lookup:
 
         self.bot.rdb.incr('spells_looked_up_life')
 
-        spell = await select_spell_full(ctx, name, srd=srd)
+        spell = await select_spell_full(ctx, name, srd=srd, search_func=ml_spell_search)
 
         if spell.source != 'homebrew':
             await self.add_training_data("spell", name, spell.name)
@@ -675,7 +675,7 @@ class Lookup:
             embed_queue[-1].set_footer(text=f"Spell | {spell.source} {spell.page}")
 
         if spell.image:
-            embed_queue[0].set_image(url=spell.image)
+            embed_queue[0].set_thumbnail(url=spell.image)
 
         for embed in embed_queue:
             if pm:

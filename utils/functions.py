@@ -108,7 +108,7 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
 
 
 async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False,
-                            message=None, list_filter=None, srd=False, selectkey=None):
+                            message=None, list_filter=None, srd=False, selectkey=None, search_func=search):
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
     :param ctx: The context of the search.
@@ -122,6 +122,7 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
     :param list_filter: A filter to filter the list to search by.
     :param srd: Whether to only search items that have a property ['srd'] set to true, or a search function.
     :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
+    :param search_func: The function to use to search.
     :return:
     """
     if srd:
@@ -135,7 +136,15 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
         message = "This server only shows results from the 5e SRD."
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))
-    result = search(list_to_search, value, key, cutoff, return_key)
+
+    if search_func is None:
+        search_func = search
+
+    if asyncio.iscoroutinefunction(search_func):
+        result = await search_func(list_to_search, value, key, cutoff, return_key)
+    else:
+        result = search_func(list_to_search, value, key, cutoff, return_key)
+
     if result is None:
         raise NoSelectionElements("No matches found.")
     strict = result[1]

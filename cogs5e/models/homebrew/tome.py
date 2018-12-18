@@ -8,7 +8,7 @@ from utils.functions import search_and_select
 class Tome:
     def __init__(self, _id: ObjectId, name: str, owner: dict, editors: list, public: bool, active: list,
                  server_active: list, spells: list, image: str, desc: str, **kwargs):
-        self._id = _id
+        self.id = _id
         self.name = name
         self.owner = owner
         self.editors = editors

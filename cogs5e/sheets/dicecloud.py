@@ -375,7 +375,7 @@ class DicecloudParser:
         if self.character is None: raise Exception('You must call get_character() first.')
 
         log.debug(f"Processing attack {atkIn.get('name')}")
-
+        ragedmg = str(self.get_stat('rageDamage'))
         temp_names = {}
         if atkIn.get('parent', {}).get('collection') == 'Spells':
             spellParentID = atkIn.get('parent', {}).get('id')
@@ -422,7 +422,7 @@ class DicecloudParser:
                 return match.group(0)
 
         damage = re.sub(r'{(.*?)}', damage_sub, atkIn.get('damage', ''))
-        damage = damage.replace('rageDamage', str(self.get_stat('rageDamage')))
+        damage = damage.replace('rageDamage', ragedmg)
         attack['damage'] = damage.replace('{', '').replace('}', '')
         if not attack['damage']:
             attack['damage'] = None

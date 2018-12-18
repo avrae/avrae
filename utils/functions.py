@@ -166,6 +166,8 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
 
 
 def a_or_an(string, upper=False):
+    if string.startswith('^') or string.endswith('^'):
+        return string.strip('^')
     if re.match('[AEIOUaeiou].*', string):
         return 'an {0}'.format(string) if not upper else f'An {string}'
     return 'a {0}'.format(string) if not upper else f'A {string}'

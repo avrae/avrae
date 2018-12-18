@@ -46,6 +46,7 @@ class DicecloudParser:
         self.stats = None
         self.levels = None
         self.evaluator = DicecloudEvaluator()
+        self._cache = {}
 
     async def get_character(self):
         url = self.url
@@ -223,6 +224,8 @@ class DicecloudParser:
     def get_stat(self, stat, base=0):
         """Returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if not base and stat in self._cache:
+            return self._cache[stat]
         character = self.character
         effects = character.get('effects', [])
         add = 0
@@ -248,11 +251,15 @@ class DicecloudParser:
             out = max(out, minV)
         if maxV is not None:
             out = min(out, maxV)
+        if not base:
+            self._cache[stat] = out
         return out
 
     def get_stat_float(self, stat, base=0):
         """Returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if not base and stat in self._cache:
+            return self._cache[stat]
         character = self.character
         effects = character.get('effects', [])
         add = 0
@@ -278,6 +285,8 @@ class DicecloudParser:
             out = max(out, minV)
         if maxV is not None:
             out = min(out, maxV)
+        if not base:
+            self._cache[stat] = out
         return out
 
     def get_stats(self):
@@ -331,6 +340,8 @@ class DicecloudParser:
     def calculate_stat(self, stat, base=0):
         """Calculates and returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if not base and stat in self._cache:
+            return self._cache[stat]
         character = self.character
         effects = character.get('effects', [])
         add = 0
@@ -368,6 +379,8 @@ class DicecloudParser:
             out = max(out, minV)
         if maxV is not None:
             out = min(out, maxV)
+        if not base:
+            self._cache[stat] = out
         return out
 
     def get_attack(self, atkIn):
@@ -397,6 +410,8 @@ class DicecloudParser:
                         temp_names['DC'] = int(self.evaluator.eval(spellListObj.get('saveDC')))
                     except Exception as e:
                         log.debug(f"Exception parsing spellvars: {e}")
+
+        temp_names['rageDamage'] = self.get_stat('rageDamage')
 
         old_names = self.evaluator.names.copy()
         self.evaluator.names.update(temp_names)

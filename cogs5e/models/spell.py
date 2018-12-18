@@ -442,7 +442,7 @@ class Damage(Effect):
 
         if autoctx.in_crit or crit:
             def critSub(matchobj):
-                return f"{int(matchobj.group(1)) * 2)}d{matchobj.group(2)}"
+                return f"{int(matchobj.group(1)) * 2}d{matchobj.group(2)}"
 
             damage = re.sub(r'(\d+)d(\d+)', critSub, damage)
             if c:

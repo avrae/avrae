@@ -471,7 +471,7 @@ DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
                           'range': safe_range, 'sqrt': sqrt,
                           'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
-                          'time': time.time})
+                          'time': time.time, 'type': type, 'argparse': shlex.split})
 
 if __name__ == '__main__':
     evaluator = ScriptingEvaluator()

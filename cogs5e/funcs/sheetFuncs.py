@@ -193,13 +193,10 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
                 critDice = damage_str
             return critDice
         
-        def parsemax(damage_str, maxdmg=0):
-            if maxdmg == 1 :
-                def maxSub(matchobj):
-                    return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
-                maxDice = re.sub(r'(\d+)d(\d+)', maxSub, damage_str)
-            else:
-                maxDice = damage_str
+        def parsemax(damage_str):
+            def maxSub(matchobj):
+                return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
+            maxDice = re.sub(r'(\d+)d(\d+)', maxSub, damage_str)
             return maxDice
 
         # -d, -d# parsing
@@ -214,7 +211,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
                 dnum[dice] -= 1
                 
         if maxdmg:
-            damage = parsemax(damage, maxdmg)
+            damage = parsemax(damage)
                 
         # crit parsing
         rollFor = "Damage"

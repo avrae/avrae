@@ -56,6 +56,7 @@ class AutomationContext:
         }
         self.target = None
         self.in_crit = False
+        self.maxdmg = False
 
         self._embed_queue = []
         self._meta_queue = []
@@ -404,6 +405,7 @@ class Damage(Effect):
         vuln = args.get('vuln', [])
         neutral = args.get('neutral', [])
         crit = args.last('crit', None, bool)
+        maxdmg = args.last('max', type_=bool)
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
@@ -447,6 +449,13 @@ class Damage(Effect):
             if c:
                 damage = f"{damage}+{c}"
 
+        if autoctx.maxdmg or maxdmg:
+            def maxSub(matchobj):
+                return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
+
+            damage = re.sub(r'(\d+)d(\d+)', maxSub, damage)
+
+
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
         dmgroll = roll(damage, rollFor="Damage", inline=True, show_blurbs=False)
@@ -486,6 +495,7 @@ class Roll(Effect):
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
         d = autoctx.args.join('d', '+')
+        maxdmg = autoctx.args.last('max', type_=bool)
         dice = self.dice
         if self.cantripScale:
             def cantrip_scale(matchobj):
@@ -508,6 +518,12 @@ class Roll(Effect):
                 dice = f"{dice}+{higher}"
         if d:
             dice = f"{dice}+{d}"
+
+        if autoctx.maxdmg or maxdmg:
+            def maxSub(matchobj):
+                return matchobj.group(1) + 'd' + matchobj.group(2) + 'mi' + matchobj.group(2)
+
+            dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
 
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)

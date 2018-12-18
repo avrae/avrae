@@ -5,6 +5,7 @@ import shlex
 import discord
 from discord.ext import commands
 
+from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
@@ -164,7 +165,7 @@ class Dice:
         attack = fuzzy_search(attacks, 'name', atk_name)
         if attack is None:
             return await self.bot.say("No attack with that name found.", delete_after=15)
-
+        args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
         if not args.last('h', type_=bool):
             args['name'] = monster_name
@@ -212,7 +213,7 @@ class Dice:
 
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
-
+        args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
         adv = args.adv()
         b = args.join('b', '+')
@@ -292,7 +293,7 @@ class Dice:
         monster: Monster = await select_monster_full(ctx, monster_name)
         self.bot.rdb.incr('monsters_looked_up_life')
         monster_name = monster.get_title_name()
-
+        args = await scripting.parse_snippets(args, ctx)
         saves = monster.saves
 
         try:

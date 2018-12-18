@@ -422,6 +422,7 @@ class DicecloudParser:
                 return match.group(0)
 
         damage = re.sub(r'{(.*?)}', damage_sub, atkIn.get('damage', ''))
+        damage = damage.replace('rageDamage', str(self.get_stat('rageDamage')))
         attack['damage'] = damage.replace('{', '').replace('}', '')
         if not attack['damage']:
             attack['damage'] = None

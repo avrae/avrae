@@ -41,6 +41,7 @@ class Automation:
 
 class AutomationContext:
     ANNOSTR_RE = re.compile(r"{(\w+)}")
+    ANNOSTR_RE_NO_SPELL = re.compile(r"(?!{spell}){(\w+)}")
 
     def __init__(self, ctx, embed, caster, targets, args, combat, spell):
         self.ctx = ctx
@@ -411,9 +412,10 @@ class Damage(Effect):
             vuln = vuln or autoctx.target.get_vuln()
             neutral = neutral or autoctx.target.get_neutral()
 
-        if not autoctx.target.target and autoctx.ANNOSTR_RE.match(damage):  # likely have output this in meta already
+        if not autoctx.target.target and autoctx.ANNOSTR_RE_NO_SPELL.match(
+                damage):  # likely have output this in meta already
             return
-        if autoctx.ANNOSTR_RE.search(damage):
+        if autoctx.ANNOSTR_RE_NO_SPELL.search(damage):
             d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 

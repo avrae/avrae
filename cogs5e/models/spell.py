@@ -663,6 +663,7 @@ class Spell:
         l = args.last('l', self.level, int)
         i = args.last('i', type_=bool)
         phrase = args.join('phrase', '\n')
+        title = args.last('title')
 
         # meta checks
         if not self.level <= l <= 9:
@@ -683,7 +684,9 @@ class Spell:
 
         # begin setup
         embed = discord.Embed()
-        if targets:
+        if title:
+            embed.title = title.replace('[sname]', self.name)
+        elif targets:
             embed.title = f"{caster.get_name()} casts {self.name} at..."
         else:
             embed.title = f"{caster.get_name()} casts {self.name}!"

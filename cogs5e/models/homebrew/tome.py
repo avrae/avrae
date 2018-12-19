@@ -7,11 +7,14 @@ from utils.functions import search_and_select
 
 class Tome:
     def __init__(self, _id: ObjectId, name: str, owner: dict, editors: list, public: bool, active: list,
-                 server_active: list, spells: list, image: str, desc: str, **kwargs):
+                 server_active: list, spells: list, image: str, desc: str, subscribers=None, **kwargs):
+        if subscribers is None:
+            subscribers = []
         self.id = _id
         self.name = name
         self.owner = owner
         self.editors = editors
+        self.subscribers = subscribers
         self.public = public
         self.active = active
         self.server_active = server_active
@@ -25,6 +28,13 @@ class Tome:
         return cls(**raw)
 
     @classmethod
+    async def from_id(cls, ctx, tome_id):
+        tome = await ctx.bot.mdb.tomes.find_one({"_id": ObjectId(tome_id)})
+        if tome is None:
+            raise NoActiveBrew()
+        return cls.from_dict(tome)
+
+    @classmethod
     async def from_ctx(cls, ctx):
         active_tome = await ctx.bot.mdb.tomes.find_one({"active": ctx.message.author.id})
         if active_tome is None:
@@ -35,7 +45,8 @@ class Tome:
         # spells = [s.to_dict() for s in self.spells]
         return {'name': self.name, 'owner': self.owner, 'editors': self.editors, 'public': self.public,
                 'active': self.active, 'server_active': self.server_active, 'image': self.image,
-                'desc': self.desc}
+                'desc': self.desc,  # end v1
+                'subscribers': self.subscribers}
 
     async def commit(self, ctx):
         """Writes a tome object to the database. Does not modify spells."""
@@ -73,10 +84,22 @@ class Tome:
         )
         return ctx.message.server.id in server_active
 
+    @staticmethod
+    def view_query(user_id):
+        """Returns the MongoDB query to find all documents a user can set active."""
+        return {"$or": [
+            {"owner.id": user_id},
+            {"editors.id": user_id},
+            {"$and": [
+                {"subscribers.id": user_id},
+                {"public": True}
+            ]}
+        ]}
+
 
 async def select_tome(ctx, name):
     available_tome_names = await ctx.bot.mdb.tomes.find(
-        {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]},
+        Tome.view_query(ctx.message.author.id),
         ['name', '_id']
     ).to_list(None)
 

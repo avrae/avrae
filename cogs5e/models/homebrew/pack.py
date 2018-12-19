@@ -8,11 +8,14 @@ from utils.functions import search_and_select
 
 class Pack:
     def __init__(self, _id: ObjectId, name: str, owner: dict, editors: list, public: bool, active: list,
-                 server_active: list, items: list, image: str, desc: str, **kwargs):
+                 server_active: list, items: list, image: str, desc: str, subscribers=None, **kwargs):
+        if subscribers is None:
+            subscribers = []
         self._id = _id
         self.name = name
         self.owner = owner
         self.editors = editors
+        self.subscribers = subscribers
         self.public = public
         self.active = active
         self.server_active = server_active
@@ -31,11 +34,19 @@ class Pack:
             raise NoActiveBrew()
         return cls.from_dict(active_pack)
 
+    @classmethod
+    async def from_id(cls, ctx, pack_id):
+        pack = await ctx.bot.mdb.packs.find_one({"_id": ObjectId(pack_id)})
+        if pack is None:
+            raise NoActiveBrew()
+        return cls.from_dict(pack)
+
     def to_dict(self):
         items = self.items  # TODO make Item structured
         return {'name': self.name, 'owner': self.owner, 'editors': self.editors, 'public': self.public,
                 'active': self.active, 'server_active': self.server_active, 'items': items, 'image': self.image,
-                'desc': self.desc}
+                'desc': self.desc,  # end v1
+                'subscribers': self.subscribers}
 
     def get_search_formatted_items(self):
         _items = copy.deepcopy(self.items)
@@ -80,10 +91,22 @@ class Pack:
         )
         return ctx.message.server.id in server_active
 
+    @staticmethod
+    def view_query(user_id):
+        """Returns the MongoDB query to find all documents a user can set active."""
+        return {"$or": [
+            {"owner.id": user_id},
+            {"editors.id": user_id},
+            {"$and": [
+                {"subscribers.id": user_id},
+                {"public": True}
+            ]}
+        ]}
+
 
 async def select_pack(ctx, name):
     available_pack_names = await ctx.bot.mdb.packs.find(
-        {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]},
+        Pack.view_query(ctx.message.author.id),
         ['name', '_id']
     ).to_list(None)
 

@@ -185,7 +185,7 @@ class Dice:
         await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True, aliases=['mc'])
-    async def monster_check(self, ctx, monster_name, check, *args):
+    async def monster_check(self, ctx, monster_name, check, *, args=''):
         """Rolls a check for a monster.
         __Valid Arguments__
         adv/dis
@@ -279,7 +279,7 @@ class Dice:
             pass
 
     @commands.command(pass_context=True, aliases=['ms'])
-    async def monster_save(self, ctx, monster_name, save, *args):
+    async def monster_save(self, ctx, monster_name, save, *, args=''):
         """Rolls a save for a monster.
         __Valid Arguments__
         adv/dis

@@ -662,7 +662,8 @@ class InitTracker:
         -b [bonus] (see !a)
         -d [damage bonus] (see !a)
         __General__
-        -ac [ac] (modifies ac temporarily; adds if starts with +/- or sets otherwise)"""
+        -ac [ac] (modifies ac temporarily; adds if starts with +/- or sets otherwise)
+        -sb [save bonus] (Adds a bonus to saving throws)"""
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:

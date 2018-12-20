@@ -888,7 +888,7 @@ class InitTracker:
 
         if spell.concentration:
             effect_result = combatant.add_effect(
-                Effect.new(spell.name, spell.get_combat_duration(), "", True))
+                Effect.new(f"{spell.name} <c>", spell.get_combat_duration(), "", True))
             conc_conflict = effect_result['conc_conflict']
             if conc_conflict:
                 embed.add_field(name="Concentration",

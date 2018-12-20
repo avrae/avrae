@@ -1012,7 +1012,7 @@ class CombatantGroup:
 class Effect:
     LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
     VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
-                  'vuln': 'Vulnerability', 'neutral': 'Neutral'}
+                  'vuln': 'Vulnerability', 'neutral': 'Neutral', 'sb': 'Save Bonus}
 
     def __init__(self, name: str, duration: int, remaining: int, effect: dict, concentration: bool = False):
         self._name = name

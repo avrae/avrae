@@ -255,7 +255,7 @@ class CharGenerator:
                           'harrowing event']
         for trait in background.traits:
             if trait['name'].lower() in ignored_fields: continue
-            text = '\n'.join(t for t in trait['text'] if t)
+            text = trait['text']
             text = [text[i:i + 1024] for i in range(0, len(text), 1024)]
             embed.add_field(name=trait['name'], value=text[0])
             for piece in text[1:]:

@@ -438,7 +438,7 @@ class InitTracker:
 
     @init.command(pass_context=True, name="reroll", aliases=['shuffle'])
     async def reroll(self, ctx):
-        """Rerolls initiative for all combatants.."""
+        """Rerolls initiative for all combatants."""
         combat = await Combat.from_ctx(ctx)
         combat.reroll_dynamic()
         await self.bot.say(f"Rerolled initiative! New order: {combat.get_summary()}")

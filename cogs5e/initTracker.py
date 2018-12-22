@@ -436,6 +436,14 @@ class InitTracker:
         await self.bot.say(combat.get_turn_str())
         await combat.final()
 
+    @init.command(pass_context=True, name="reroll", aliases=['shuffle'])
+    async def reroll(self, ctx):
+        """Rerolls initiative for all combatants.."""
+        combat = await Combat.from_ctx(ctx)
+        combat.reroll_dynamic()
+        await self.bot.say(f"Rerolled initiative! New order: {combat.get_summary()}")
+        await combat.final()
+
     @init.command(pass_context=True, name="list", aliases=['summary'])
     async def listInits(self, ctx):
         """Lists the combatants."""

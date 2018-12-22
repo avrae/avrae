@@ -79,28 +79,34 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
     :param cutoff: The scorer cutoff value for fuzzy searching.
     :param return_key: Whether to return the key of the object that matched or the object itself.
     :returns: A two-tuple (result, strict) or None"""
-    try:
-        result = next(a for a in list_to_search if value.lower() == key(a).lower())
-    except StopIteration:
-        if strict:
-            return None
-        result = [a for a in list_to_search if value.lower() in key(a).lower()]
-        if len(result) is 0:
+    # full match, return result
+    result = next((a for a in list_to_search if value.lower() == key(a).lower()), None)
+    if result is None:
+        partial_matches = [a for a in list_to_search if value.lower() in key(a).lower()]
+        if len(partial_matches) > 1 or not partial_matches:
             names = [key(d) for d in list_to_search]
-            result = process.extract(value, names, scorer=fuzz.ratio)
-            result = [r for r in result if r[1] >= cutoff]
-            if len(result) is 0:
-                return None
-            else:
-                if return_key:
-                    return [r[0] for r in result], False
-                else:
-                    return [a for a in list_to_search if key(a) in [r[0] for r in result]], False
+            fuzzy_map = {key(d): d for d in list_to_search}
+            fuzzy_results = [r for r in process.extract(value, names, scorer=fuzz.ratio) if r[1] >= cutoff]
+            fuzzy_sum = sum(r[1] for r in fuzzy_results)
+            fuzzy_matches_and_confidences = [(fuzzy_map[r[0]], r[1] / fuzzy_sum) for r in fuzzy_results]
+
+            # display the results in order of confidence
+            weighted_results = []
+            weighted_results.extend((match, confidence) for match, confidence in fuzzy_matches_and_confidences)
+            weighted_results.extend((match, len(value) / len(key(match))) for match in partial_matches)
+            sorted_weighted = sorted(weighted_results, key=lambda e: e[1], reverse=True)
+
+            # build results list, unique
+            results = []
+            for r in sorted_weighted:
+                if r[0] not in results:
+                    results.append(r[0])
         else:
-            if return_key:
-                return [key(r) for r in result], False
-            else:
-                return result, False
+            results = partial_matches
+        if return_key:
+            return [key(r) for r in results], False
+        else:
+            return results, False
     if return_key:
         return key(result), True
     else:

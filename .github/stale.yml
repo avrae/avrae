@@ -11,8 +11,6 @@ exemptLabels:
   - "P1: Very High"
   - "P2: High"
   - "P3: Medium"
-  - "P4: Low"
-  - "P5: Trivial"
 # Label to use when marking an issue as stale
 staleLabel: stale
 # Comment to post when marking an issue as stale. Set to `false` to disable

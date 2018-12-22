@@ -41,6 +41,7 @@ class Automation:
 
 class AutomationContext:
     ANNOSTR_RE = re.compile(r"{(\w+)}")
+    ANNOSTR_RE_NO_SPELL = re.compile(r"(?!{spell}){(\w+)}")
 
     def __init__(self, ctx, embed, caster, targets, args, combat, spell):
         self.ctx = ctx
@@ -404,15 +405,17 @@ class Damage(Effect):
         vuln = args.get('vuln', [])
         neutral = args.get('neutral', [])
         crit = args.last('crit', None, bool)
+        maxdmg = args.last('max', None, bool)
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
             vuln = vuln or autoctx.target.get_vuln()
             neutral = neutral or autoctx.target.get_neutral()
 
-        if not autoctx.target.target and autoctx.ANNOSTR_RE.match(damage):  # likely have output this in meta already
+        if not autoctx.target.target and autoctx.ANNOSTR_RE_NO_SPELL.match(
+                damage):  # likely have output this in meta already
             return
-        if autoctx.ANNOSTR_RE.search(damage):
+        if autoctx.ANNOSTR_RE_NO_SPELL.search(damage):
             d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 
@@ -441,11 +444,17 @@ class Damage(Effect):
 
         if autoctx.in_crit or crit:
             def critSub(matchobj):
-                return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
+                return f"{int(matchobj.group(1)) * 2}d{matchobj.group(2)}"
 
             damage = re.sub(r'(\d+)d(\d+)', critSub, damage)
             if c:
                 damage = f"{damage}+{c}"
+
+        if maxdmg:
+            def maxSub(matchobj):
+                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+
+            damage = re.sub(r'(\d+)d(\d+)', maxSub, damage)
 
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
@@ -486,6 +495,7 @@ class Roll(Effect):
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
         d = autoctx.args.join('d', '+')
+        maxdmg = autoctx.args.last('max', None, bool)
         dice = self.dice
         if self.cantripScale:
             def cantrip_scale(matchobj):
@@ -508,6 +518,12 @@ class Roll(Effect):
                 dice = f"{dice}+{higher}"
         if d:
             dice = f"{dice}+{d}"
+
+        if maxdmg:
+            def maxSub(matchobj):
+                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+
+            dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
 
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)
@@ -647,6 +663,7 @@ class Spell:
         l = args.last('l', self.level, int)
         i = args.last('i', type_=bool)
         phrase = args.join('phrase', '\n')
+        title = args.last('title')
 
         # meta checks
         if not self.level <= l <= 9:
@@ -667,7 +684,9 @@ class Spell:
 
         # begin setup
         embed = discord.Embed()
-        if targets:
+        if title:
+            embed.title = title.replace('[sname]', self.name)
+        elif targets:
             embed.title = f"{caster.get_name()} casts {self.name} at..."
         else:
             embed.title = f"{caster.get_name()} casts {self.name}!"

@@ -1,6 +1,8 @@
 import logging
+import re
 
 import discord
+from bson import ObjectId
 from discord.ext import commands
 
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
@@ -145,8 +147,7 @@ class Homebrew:
         """Commands to manage homebrew items.
         When called without an argument, lists the current pack and its description.
         When called with a name, switches to a different pack."""
-        user_packs = await self.bot.mdb.packs.count_documents(
-            {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]})
+        user_packs = await self.bot.mdb.packs.count_documents(Pack.view_query(ctx.message.author.id))
 
         if not user_packs:
             return await self.bot.say(
@@ -179,7 +180,7 @@ class Homebrew:
     async def pack_list(self, ctx):
         """Lists your available packs."""
         available_pack_names = await self.bot.mdb.packs.find(
-            {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]},
+            Pack.view_query(ctx.message.author.id),
             ['name']
         ).to_list(None)
         await self.bot.say(f"Your available packs: {', '.join(p['name'] for p in available_pack_names)}")
@@ -200,6 +201,30 @@ class Homebrew:
             pack.editors.remove(next(e for e in pack.editors if e['id'] == user.id))
             await self.bot.say(f"{user} removed from {pack.name}'s editors.")
         await pack.commit(ctx)
+
+    @pack.command(pass_context=True, name='subscribe', aliases=['sub'])
+    async def pack_sub(self, ctx, url):
+        """Subscribes to another user's pack."""
+        pack_id_match = re.search(r"homebrew/items/([0-9a-f]{24})/?", url)
+        if not pack_id_match:
+            return await self.bot.say("Invalid pack URL.")
+        try:
+            pack = await Pack.from_id(ctx, pack_id_match.group(1))
+        except NoActiveBrew:
+            return await self.bot.say("Pack not found.")
+
+        if not pack.public:
+            return await self.bot.say("This pack is not public.")
+
+        user = ctx.message.author
+        if user.id not in [s['id'] for s in pack.subscribers]:
+            pack.subscribers.append({"username": str(user), "id": user.id})
+            out = f"Subscribed to {pack.name} by {pack.owner['username']}. Use `!pack {pack.name}` to select it."
+        else:
+            pack.subscribers.remove(next(s for s in pack.subscribers if s['id'] == user.id))
+            out = f"Unsubscribed from {pack.name}."
+        await pack.commit(ctx)
+        await self.bot.say(out)
 
     @pack.group(pass_context=True, name='server', no_pm=True, invoke_without_command=True)
     async def pack_server(self, ctx):
@@ -229,8 +254,7 @@ class Homebrew:
         """Commands to manage homebrew spells.
         When called without an argument, lists the current tome and its description.
         When called with a name, switches to a different tome."""
-        user_tomes = await self.bot.mdb.tomes.count_documents(
-            {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]})
+        user_tomes = await self.bot.mdb.tomes.count_documents(Tome.view_query(ctx.message.author.id))
 
         if not user_tomes:
             return await self.bot.say(
@@ -263,7 +287,7 @@ class Homebrew:
     async def tome_list(self, ctx):
         """Lists your available tomes."""
         available_tome_names = await self.bot.mdb.tomes.find(
-            {"$or": [{"owner.id": ctx.message.author.id}, {"editors.id": ctx.message.author.id}]},
+            Tome.view_query(ctx.message.author.id),
             ['name']
         ).to_list(None)
         await self.bot.say(f"Your available tomes: {', '.join(p['name'] for p in available_tome_names)}")
@@ -284,6 +308,30 @@ class Homebrew:
             tome.editors.remove(next(e for e in tome.editors if e['id'] == user.id))
             await self.bot.say(f"{user} removed from {tome.name}'s editors.")
         await tome.commit(ctx)
+
+    @tome.command(pass_context=True, name='subscribe', aliases=['sub'])
+    async def tome_sub(self, ctx, url):
+        """Subscribes to another user's tome."""
+        tome_id_match = re.search(r"homebrew/spells/([0-9a-f]{24})/?", url)
+        if not tome_id_match:
+            return await self.bot.say("Invalid tome URL.")
+        try:
+            tome = await Tome.from_id(ctx, tome_id_match.group(1))
+        except NoActiveBrew:
+            return await self.bot.say("Pack not found.")
+
+        if not tome.public:
+            return await self.bot.say("This tome is not public.")
+
+        user = ctx.message.author
+        if user.id not in [s['id'] for s in tome.subscribers]:
+            tome.subscribers.append({"username": str(user), "id": user.id})
+            out = f"Subscribed to {tome.name} by {tome.owner['username']}. Use `!tome {tome.name}` to select it."
+        else:
+            tome.subscribers.remove(next(s for s in tome.subscribers if s['id'] == user.id))
+            out = f"Unsubscribed from {tome.name}."
+        await tome.commit(ctx)
+        await self.bot.say(out)
 
     @tome.group(pass_context=True, name='server', no_pm=True, invoke_without_command=True)
     async def tome_server(self, ctx):

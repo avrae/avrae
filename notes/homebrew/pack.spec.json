@@ -10,5 +10,6 @@
     "see item.spec.json"
   ],
   "image": "string",
-  "desc": "string"
+  "desc": "string",
+  "subscribers": [{"id": "string", "username": "string"}]
 }

@@ -11,7 +11,7 @@ from simpleeval import EvalWithCompoundTypes, IterableTooLong
 import utils.argparser
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_damage
-from cogs5e.models.errors import CombatNotFound, InvalidSaveType
+from cogs5e.models.errors import CombatNotFound, InvalidSaveType, AvraeException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
@@ -465,13 +465,21 @@ class SimpleEffect:
         return str(self._effect)
 
 
+class AliasException(AvraeException):
+    pass
+
+
+def raise_alias_exception(reason):
+    raise AliasException(reason)
+
+
 DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
 DEFAULT_OPERATORS.pop(ast.Pow)
 DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
                           'range': safe_range, 'sqrt': sqrt,
                           'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
-                          'time': time.time})
+                          'time': time.time, 'err': raise_alias_exception})
 
 if __name__ == '__main__':
     evaluator = ScriptingEvaluator()

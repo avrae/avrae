@@ -573,7 +573,8 @@ class GameTrack:
         **__Attack Spells__**
         See `!a`.
         **__All Spells__**
-        -phrase [phrase] - adds flavor text."""
+        -phrase [phrase] - adds flavor text.
+        -title [title] - changes the title of the cast. Replaces [sname] with spell name."""
         try:
             await self.bot.delete_message(ctx.message)
         except:

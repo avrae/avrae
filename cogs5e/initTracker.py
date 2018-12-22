@@ -825,7 +825,8 @@ class InitTracker:
         **__Attack Spells__**
         See `!a`.
         **__All Spells__**
-        -phrase [phrase] - adds flavor text."""
+        -phrase [phrase] - adds flavor text.
+        -title [title] - changes the title of the cast. Replaces [sname] with spell name."""
         return await self._cast(ctx, None, spell_name, args)
 
     @init.command(pass_context=True)
@@ -843,7 +844,8 @@ class InitTracker:
         **__Attack Spells__**
         See `!a`.
         **__All Spells__**
-        -phrase [phrase] - adds flavor text."""
+        -phrase [phrase] - adds flavor text.
+        -title [title] - changes the title of the cast. Replaces [sname] with spell name."""
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     async def _cast(self, ctx, combatant_name, spell_name, args):

@@ -264,8 +264,8 @@ class GoogleSheet:
             if a is not None: attacks.append(a)
         if self.additional:
             for rownum in range(3, 14):  # sht2, B3:B13; W3:W13
-                additional = self.get_attack(f"B{rownum}", f"I{rownum}", f"M{rownum}")
-                other = self.get_attack(f"W{rownum}", f"AD{rownum}", f"AH{rownum}")
+                additional = self.get_attack(f"B{rownum}", f"I{rownum}", f"M{rownum}", self.additional)
+                other = self.get_attack(f"W{rownum}", f"AD{rownum}", f"AH{rownum}", self.additional)
                 if additional is not None: attacks.append(additional)
                 if other is not None: attacks.append(other)
         return attacks

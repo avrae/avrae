@@ -138,7 +138,7 @@ class InitTracker:
             init = modifier
             modifier = 0
 
-        me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private, resists, [], {}, ctx)
+        me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private, resists, [], {}, ctx, combat)
 
         if group is None:
             combat.add_combatant(me)
@@ -236,7 +236,7 @@ class InitTracker:
                     to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
-                me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, opts,
+                me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, combat, opts,
                                                    hp=hp or rolled_hp, ac=ac)
                 if group is None:
                     combat.add_combatant(me)
@@ -316,10 +316,10 @@ class InitTracker:
         private = args.last('h', type_=bool)
         bonus = roll(bonus).total
 
-        me = await PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
-                                                  char.get_resists(), ctx, char.id, ctx.message.author.id, char)
-
         combat = await Combat.from_ctx(ctx)
+
+        me = await PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
+                                                  char.get_resists(), ctx, combat, char.id, ctx.message.author.id, char)
 
         if combat.get_combatant(char.get_name()) is not None:
             await self.bot.say("Combatant already exists.")
@@ -685,7 +685,8 @@ class InitTracker:
         duration = args.last('dur', -1, int)
         conc = args.last('conc', False, bool)
 
-        effectObj = Effect.new(duration=duration, name=effect_name, effect_args=args, concentration=conc)
+        effectObj = Effect.new(combat, combatant, duration=duration, name=effect_name, effect_args=args,
+                               concentration=conc)
         result = combatant.add_effect(effectObj)
         out = "Added effect {} to {}.".format(effect_name, combatant.name)
         if result['conc_conflict']:
@@ -707,8 +708,12 @@ class InitTracker:
             await self.bot.say("All effects removed from {}.".format(combatant.name), delete_after=10)
         else:
             to_remove = await combatant.select_effect(effect)
-            combatant.remove_effect(to_remove)
-            await self.bot.say('Effect {} removed from {}.'.format(to_remove.name, combatant.name), delete_after=10)
+            children_removed = ""
+            if to_remove.children:
+                children_removed = f"Also removed {len(to_remove.children)} child effects."
+            to_remove.remove()
+            await self.bot.say(f'Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}',
+                               delete_after=10)
         await combat.final()
 
     @init.command(pass_context=True, aliases=['a'])
@@ -893,15 +898,6 @@ class InitTracker:
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
 
         embed = result['embed']
-
-        if spell.concentration:
-            effect_result = combatant.add_effect(
-                Effect.new(spell.name, spell.get_combat_duration(), "", True))
-            conc_conflict = effect_result['conc_conflict']
-            if conc_conflict:
-                embed.add_field(name="Concentration",
-                                value=f"Dropped {', '.join(e.name for e in conc_conflict)} due to concentration.")
-
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
         add_fields_from_args(embed, args.get('f'))
         await self.bot.say(embed=embed)

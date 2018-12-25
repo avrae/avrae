@@ -420,17 +420,20 @@ class SimpleCombatant:
             return SimpleEffect(effect)
         return None
 
-    def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False):
+    def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False, parent = None):
         existing = self._combatant.get_effect(name, True)
         if existing:
-            self._combatant.remove_effect(existing)
-        effectObj = Effect.new(duration=duration, name=name, effect_args=args, concentration=concentration)
+            existing.remove()
+        effectObj = Effect.new(self._combatant.combat, self._combatant, duration=duration, name=name, effect_args=args,
+                               concentration=concentration)
+        if parent:
+            effectObj.set_parent(parent._effect)
         self._combatant.add_effect(effectObj)
 
     def remove_effect(self, name: str):
         effect = self._combatant.get_effect(name)
         if effect:
-            self._combatant.remove_effect(effect)
+            effect.remove()
 
     def __str__(self):
         return str(self._combatant)
@@ -463,6 +466,9 @@ class SimpleEffect:
 
     def __str__(self):
         return str(self._effect)
+
+    def set_parent(self, parent):
+        self._effect.set_parent(parent._effect)
 
 
 class AliasException(AvraeException):

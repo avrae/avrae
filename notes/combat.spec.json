@@ -1,11 +1,30 @@
 {
-  "channel": "CHANID",
-  "lastchanged": "DATE",
-  "summary": "MSGID",
-  "dm": "USERID",
-  "options": {},
-  "combatants": [],
-  "turn": 0,
-  "round": 0,
-  "current": 0
+  "Combat": {
+    "channel": "CHANID",
+    "lastchanged": "DATE",
+    "summary": "MSGID",
+    "dm": "USERID",
+    "options": {},
+    "combatants": [],
+    "turn": 0,
+    "round": 0,
+    "current": 0
+  },
+  "Effect": {
+    "name": "NAME",
+    "duration": 0,
+    "remaining": 0,
+    "effect": {},
+    "concentration": false,
+    "children": [
+      {
+        "combatant": "NAME",
+        "effect": "NAME"
+      }
+    ],
+    "parent": {
+      "combatant": "NAME",
+      "effect": "NAME"
+    }
+  }
 }

@@ -25,8 +25,8 @@ class Automation:
             return cls(effects)
         return None
 
-    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None):
-        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell)
+    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None):
+        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect)
         for effect in self.effects:
             effect.run(autoctx)
 
@@ -43,7 +43,7 @@ class AutomationContext:
     ANNOSTR_RE = re.compile(r"{(\w+)}")
     ANNOSTR_RE_NO_SPELL = re.compile(r"(?!{spell}){(\w+)}")
 
-    def __init__(self, ctx, embed, caster, targets, args, combat, spell):
+    def __init__(self, ctx, embed, caster, targets, args, combat, spell, conc_effect=None):
         self.ctx = ctx
         self.embed = embed
         self.caster = caster
@@ -51,6 +51,7 @@ class AutomationContext:
         self.args = args
         self.combat = combat
         self.spell = spell
+        self.conc_effect = conc_effect
 
         self.metavars = {
             "spell": caster.spellcasting.sab - caster.pb_from_level()  # for healing spells
@@ -473,8 +474,12 @@ class IEffect(Effect):
 
     def run(self, autoctx):
         super(IEffect, self).run(autoctx)
-        effect = initiative.Effect.new(self.name, self.duration, autoctx.parse_annostr(self.effects))
+        effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects))
         if isinstance(autoctx.target.target, Combatant):
+            effect.combat = autoctx.target.target.combat  # hacky but works
+            effect.combatant = autoctx.target.target
+            if autoctx.conc_effect:
+                effect.set_parent(autoctx.conc_effect)
             if isinstance(self.duration, str):
                 try:
                     self.duration = int(autoctx.parse_annostr(self.duration))
@@ -696,8 +701,15 @@ class Spell:
         if phrase:
             embed.description = f"*{phrase}*"
 
+        conc_conflict = None
+        conc_effect = None
+        if self.concentration and isinstance(caster, Combatant) and combat:
+            conc_effect = initiative.Effect.new(combat, caster, self.name, self.get_combat_duration(), "", True)
+            effect_result = caster.add_effect(conc_effect)
+            conc_conflict = effect_result['conc_conflict']
+
         if self.automation and self.automation.effects:
-            await self.automation.run(ctx, embed, caster, targets, args, combat, self)
+            await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect)
         else:
             text = self.description
             if len(text) > 1020:
@@ -709,6 +721,10 @@ class Spell:
 
         if l > 0:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
+
+        if conc_conflict:
+            embed.add_field(name="Concentration",
+                            value=f"Dropped {', '.join(e.name for e in conc_conflict)} due to concentration.")
 
         if self.image:
             embed.set_thumbnail(url=self.image)

@@ -480,7 +480,9 @@ class InitTracker:
         -immune <DMGTYPE>
         -vuln <DMGTYPE>
         -neutral <DMGTYPE>
-        -group <GROUP> (changes group)"""
+        -group <GROUP> (changes group)
+        -max <MAXHP> (sets max hp)
+        -hp <HP> (sets current hp)"""
         combat = await Combat.from_ctx(ctx)
 
         combatant = await combat.select_combatant(name)
@@ -542,7 +544,7 @@ class InitTracker:
                     out += "\u2705 Combatant group set to {}.\n".format(group.name)
         if 'name' in args:
             name = args.last('name')
-            if combat.get_combatant(name) is not None:
+            if combat.get_combatant(name, True) is not None:
                 out += "\u274c There is already another combatant with that name.\n"
             elif name:
                 combatant.name = name
@@ -555,6 +557,17 @@ class InitTracker:
                     resist = resist.lower()
                     combatant.set_resist(resist, resisttype)
                     out += f"\u2705 Now {resisttype} to {resist}.\n"
+        if 'max' in args:
+            maxhp = args.last('max', type_=int)
+            if maxhp < 1:
+                out += "\u274c Max HP must be at least 1.\n"
+            else:
+                combatant.hpMax = maxhp
+                out += "\u2705 Combatant HP max set to {}.\n".format(maxhp)
+        if 'hp' in args:
+            hp = args.last('hp', type_=int)
+            combatant.set_hp(hp)
+            out += "\u2705 Combatant HP set to {}.\n".format(hp)
 
         if combatant.isPrivate:
             await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
@@ -648,7 +661,10 @@ class InitTracker:
         if thp >= 0:
             combatant.temphp = thp
         else:
-            combatant.temphp += thp
+            if combatant.temphp:
+                combatant.temphp += thp
+            else:
+                return await self.bot.say("Combatant has no temp hp.")
 
         out = "{}: {}".format(combatant.name, combatant.get_hp_str())
         await self.bot.say(out, delete_after=10)

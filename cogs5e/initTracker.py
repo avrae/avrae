@@ -471,7 +471,8 @@ class InitTracker:
                             -immune <DMGTYPE>
                             -vuln <DMGTYPE>
                             -neutral <DMGTYPE>
-                            -group <GROUP> (changes group)"""
+                            -group <GROUP> (changes group)
+                            -maxhp <MAXHP> (changes combatant max hp)"""
         combat = await Combat.from_ctx(ctx)
 
         combatant = await combat.select_combatant(name)
@@ -546,6 +547,14 @@ class InitTracker:
                     resist = resist.lower()
                     combatant.set_resist(resist, resisttype)
                     out += f"\u2705 Now {resisttype} to {resist}.\n"
+        if 'maxhp' in args:
+            try:
+                maxhp = args.last('maxhp', type_=int)
+                combatant.hpMax = maxhp
+                combatant.hp = min(combatant.hp, maxhp)
+                out += "\u2705 Max HP set to {}".format(maxhp)
+            except:
+                out += "\u274c Max HP must be an integer."
 
         if combatant.isPrivate:
             await self.bot.send_message(ctx.message.server.get_member(combatant.controller),

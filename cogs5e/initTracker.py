@@ -462,7 +462,7 @@ class InitTracker:
     @init.command(pass_context=True, aliases=['opts'])
     async def opt(self, ctx, name: str, *args):
         """Edits the options of a combatant.
-        __Valid Arguments__                                 
+        __Valid Arguments__
         -h (hides HP)
         -p (changes init)
         -name <NAME> (changes combatant name)

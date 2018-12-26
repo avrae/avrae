@@ -148,7 +148,8 @@ def sheet_attack(attack, args, embed=None):
         embed.add_field(name='Total Damage', value=str(total_damage))
 
     if attack.get('details'):
-        embed.add_field(name='Effect', value=(attack.get('details', '')))
+        embed.add_field(name='Effect',
+                        value=attack['details'] if len(attack['details']) < 1020 else f"{attack['details'][:1020]}...")
 
     if args.last('image') is not None:
         embed.set_thumbnail(url=args.last('image'))

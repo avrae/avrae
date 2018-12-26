@@ -462,17 +462,18 @@ class InitTracker:
     @init.command(pass_context=True, aliases=['opts'])
     async def opt(self, ctx, name: str, *args):
         """Edits the options of a combatant.
-        Valid Arguments:    -h (hides HP)
-                            -p (changes init)
-                            -name <NAME> (changes combatant name)
-                            -controller <CONTROLLER> (pings a different person on turn)
-                            -ac <AC> (changes combatant AC)
-                            -resist <DMGTYPE>
-                            -immune <DMGTYPE>
-                            -vuln <DMGTYPE>
-                            -neutral <DMGTYPE>
-                            -group <GROUP> (changes group)
-                            -maxhp <MAXHP> (changes combatant max hp)"""
+        __Valid Arguments__                                 
+        -h (hides HP)
+        -p (changes init)
+        -name <NAME> (changes combatant name)
+        -controller <CONTROLLER> (pings a different person on turn)
+        -ac <AC> (changes combatant AC)
+        -resist <DMGTYPE>
+        -immune <DMGTYPE>
+        -vuln <DMGTYPE>
+        -neutral <DMGTYPE>
+        -group <GROUP> (changes group)
+        -maxhp <MAXHP> (changes combatant max hp)"""
         combat = await Combat.from_ctx(ctx)
 
         combatant = await combat.select_combatant(name)

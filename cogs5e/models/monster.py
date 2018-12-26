@@ -26,11 +26,15 @@ class AbilityScores:
         self.charisma = cha
 
     def get_mod(self, stat):
-        return {'str': floor(self.strength / 2 - 5), 'dex': floor(self.dexterity / 2 - 5),
-                'con': floor(self.constitution / 2 - 5), 'int': floor(self.intelligence / 2 - 5),
-                'wis': floor(self.wisdom / 2 - 5), 'cha': floor(self.charisma / 2 - 5)}.get(stat, 0)
-
-
+        def astom(s):
+            return s - 10 >> 1
+        return {'str': astom(self.strength),
+                'dex': astom(self.dexterity),
+                'con': astom(self.constitution),
+                'int': astom(self.intelligence),
+                'wis': astom(self.wisdom),
+                'cha': astom(self.charisma)}.get(stat, 0)
+        
 class Trait:
     def __init__(self, name, desc, attacks=None):
         if attacks is None:

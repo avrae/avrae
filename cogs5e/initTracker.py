@@ -697,7 +697,10 @@ class InitTracker:
         if effect_name.lower() in (e.name.lower() for e in combatant.get_effects()):
             return await self.bot.say("Effect already exists.", delete_after=10)
 
-        args = argparse(args)
+        if isinstance(combatant, PlayerCombatant):
+            args = argparse(args, combatant.character)
+        else:
+            args = argparse(args)
         duration = args.last('dur', -1, int)
         conc = args.last('conc', False, bool)
 

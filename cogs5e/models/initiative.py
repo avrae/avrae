@@ -576,7 +576,9 @@ class Combatant(Spellcaster):
 
     @property
     def attacks(self):
-        return self.attack_effects(self._attacks)
+        attacks = self.attack_effects(self._attacks)
+        attacks.extend(self.active_effects('attack'))
+        return attacks
 
     @property
     def saves(self):
@@ -865,7 +867,9 @@ class PlayerCombatant(Combatant):
 
     @property
     def attacks(self):
-        return self.attack_effects(self.character.get_attacks())
+        attacks = super(PlayerCombatant, self).attacks
+        attacks.extend(self.attack_effects(self.character.get_attacks()))
+        return attacks
 
     @property
     def saves(self):
@@ -949,7 +953,7 @@ class CombatantGroup:
     def attacks(self):
         a = []
         for c in self.get_combatants():
-            a.extend(c.attacks)
+            a.extend(atk for atk in c.attacks if atk not in a)
         return a
 
     def get_combatants(self):
@@ -1014,10 +1018,20 @@ class CombatantGroup:
                 'index': self.index, 'type': 'group'}
 
 
+def parse_attack_arg(arg, name):
+    data = arg.split('|')
+    if not len(data) == 3:
+        raise InvalidArgument("`attack` arg must be formatted `HIT|DAMAGE|TEXT`")
+    return {'name': name, 'attackBonus': data[0] or None, 'damage': data[1] or None, 'details': data[2] or None}
+
+
 class Effect:
     LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
+    SPECIAL_ARGS = {  # 2-tuple of effect, str
+        'attack': (parse_attack_arg, lambda e: f"{int(e['attackBonus']):+}|{e['damage']}")
+    }
     VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
-                  'vuln': 'Vulnerability', 'neutral': 'Neutral'}
+                  'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack'}
 
     def __init__(self, combat, combatant, name: str, duration: int, remaining: int, effect: dict,
                  concentration: bool = False, children: list = None, parent: dict = None):
@@ -1036,10 +1050,15 @@ class Effect:
     @classmethod
     def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False):
         if isinstance(effect_args, str):
-            effect_args = argparse(effect_args)
+            if isinstance(combatant, PlayerCombatant):
+                effect_args = argparse(effect_args, combatant.character)
+            else:
+                effect_args = argparse(effect_args)
         effect_dict = {}
         for arg in effect_args:
-            if arg in cls.LIST_ARGS:
+            if arg in cls.SPECIAL_ARGS:
+                effect_dict[arg] = cls.SPECIAL_ARGS[arg][0](effect_args.last(arg), name)
+            elif arg in cls.LIST_ARGS:
                 effect_dict[arg] = effect_args.get(arg, [])
             elif arg in cls.VALID_ARGS:
                 effect_dict[arg] = effect_args.last(arg)
@@ -1098,7 +1117,9 @@ class Effect:
     def get_effect_str(self):
         out = []
         for k, v in self.effect.items():
-            if isinstance(v, list):
+            if k in self.SPECIAL_ARGS:
+                out.append(f"{self.VALID_ARGS.get(k)}: {self.SPECIAL_ARGS[k][1](v)}")
+            elif isinstance(v, list):
                 out.append(f"{self.VALID_ARGS.get(k)}: {', '.join(v)}")
             else:
                 out.append(f"{self.VALID_ARGS.get(k)}: {v}")
@@ -1134,12 +1155,12 @@ class Effect:
 
     def get_children_effects(self):
         """Returns an iterator of Effects of this Effect's children."""
-        for e in self.children:
+        for e in self.children.copy():
             child = self.get_child_effect(e)
             if child:
                 yield child
             else:
-                self.children.remove(e)  # effect was removed elsewise
+                self.children.remove(e)  # effect was removed elsewhere; disown it
 
     def get_child_effect(self, e):
         combatant = self.combat.get_combatant(e['combatant'], True)

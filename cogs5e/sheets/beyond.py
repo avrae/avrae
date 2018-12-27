@@ -189,7 +189,7 @@ class BeyondSheetParser:
         if self.character is None: raise Exception('You must call get_character() first.')
         if self.stats: return self.stats
         character = self.character
-        stats = {"name": "", "image": "", "description": "", "strength": 10, "dexterity": 10, "constitution": 10,
+        stats = {"strength": 10, "dexterity": 10, "constitution": 10,
                  "wisdom": 10, "intelligence": 10, "charisma": 10, "strengthMod": 0, "dexterityMod": 0,
                  "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0, "charismaMod": 0, "proficiencyBonus": 0,
                  'name': character.get('name') or "Unnamed", 'description': self.get_description(),
@@ -203,7 +203,7 @@ class BeyondSheetParser:
             bonus = next(s for s in character['bonusStats'] if s['id'] == i + 1)['value'] or 0
             override = next(s for s in character['overrideStats'] if s['id'] == i + 1)['value']
             stats[stat] = override or self.get_stat(f"{stat}-score", base=base + bonus)
-            stats[f"{stat}Mod"] = floor((int(stats[stat]) - 10) / 2)
+            stats[f"{stat}Mod"] = (int(stats[stat]) - 10) // 2
 
         self.stats = stats
         return stats
@@ -665,7 +665,7 @@ def pact_slots_by_level(level):
 
 
 def pact_level_by_level(level):
-    return min(floor((level + 1) / 2), 5)
+    return min((level + 1) // 2, 5)
 
 
 if __name__ == '__main__':

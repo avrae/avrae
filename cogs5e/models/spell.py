@@ -695,8 +695,8 @@ class Spell:
             embed.title = f"{caster.get_name()} casts {self.name} at..."
         else:
             embed.title = f"{caster.get_name()} casts {self.name}!"
-            if targets is None:
-                targets = [None]
+        if targets is None:
+            targets = [None]
 
         if phrase:
             embed.description = f"*{phrase}*"

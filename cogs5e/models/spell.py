@@ -7,7 +7,7 @@ from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
-from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
+from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType, InvalidArgument
 from cogs5e.models.initiative import Combatant
 from utils.functions import parse_resistances
 
@@ -533,13 +533,10 @@ class Roll(Effect):
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)
 
-        formatted_rolled = ""
-        for p in rolled.raw_dice.parts:
-            if isinstance(p, SingleDiceGroup):
-                formatted_rolled += "{} {}".format(p.get_total(), p.annotation)
-            else:
-                formatted_rolled += str(p)
-        autoctx.metavars[self.name] = formatted_rolled
+        if not rolled.raw_dice:
+            raise InvalidArgument(f"Invalid roll in meta roll: {rolled.result}")
+
+        autoctx.metavars[self.name] = rolled.consolidated()
 
 
 class Text(Effect):

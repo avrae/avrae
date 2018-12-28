@@ -498,6 +498,36 @@ class DiceResult:
     def __repr__(self):
         return '<DiceResult object: total={}>'.format(self.total)
 
+    def consolidated(self):
+        """Gets the most simplified version of the roll string."""
+        parts = []  # list of (part, annotation)
+        last_part = ""
+        for p in self.raw_dice.parts:
+            if isinstance(p, SingleDiceGroup):
+                last_part += str(p.get_total())
+            else:
+                last_part += str(p)
+            if p.annotation and not isinstance(p, Comment):
+                parts.append((last_part, p.annotation))
+                last_part = ""
+        if last_part:
+            parts.append((last_part, ""))
+
+        to_roll = ""
+        last_annotation = ""
+        out = ""
+        for numbers, annotation in parts:
+            if annotation and annotation != last_annotation and to_roll:
+                out += f"{roll(to_roll).total:+} {last_annotation}"
+                to_roll = ""
+            if annotation:
+                last_annotation = annotation
+            to_roll += numbers
+        if to_roll:
+            out += f"{roll(to_roll).total:+} {last_annotation}"
+        out = out.strip('+ ')
+        return out
+
 
 if __name__ == '__main__':
     while True:

@@ -5,6 +5,7 @@ import shlex
 import discord
 from discord.ext import commands
 
+from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
@@ -135,15 +136,17 @@ class Dice:
     async def monster_atk(self, ctx, monster_name, atk_name='list', *, args=''):
         """Rolls a monster's attack.
         Attack name can be "list" for a list of all of the monster's attacks.
-        Valid Arguments: adv/dis
-                         -ac [target ac]
-                         -b [to hit bonus]
-                         -d [damage bonus]
-                         -d# [applies damage to the first # hits]
-                         -rr [times to reroll]
-                         -t [target]
-                         -phrase [flavor text]
-                         crit (automatically crit)"""
+        __Valid Arguments__
+        adv/dis
+        -ac [target ac]
+        -b [to hit bonus]
+        -d [damage bonus]
+        -d# [applies damage to the first # hits]
+        -rr [times to reroll]
+        -t [target]
+        -phrase [flavor text]
+        crit (automatically crit)
+        -h (hide monster name/image)"""
 
         try:
             await self.bot.delete_message(ctx.message)
@@ -162,11 +165,13 @@ class Dice:
         attack = fuzzy_search(attacks, 'name', atk_name)
         if attack is None:
             return await self.bot.say("No attack with that name found.", delete_after=15)
-
-        args = shlex.split(args)
+        args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
-        args['name'] = [monster_name]
-        args['image'] = args.get('image') or [monster.get_image_url()]
+        if not args.last('h', type_=bool):
+            args['name'] = monster_name
+            args['image'] = args.get('image') or monster.get_image_url()
+        else:
+            args['name'] = "An unknown creature"
         attack['details'] = attack.get('desc') or attack.get('details')
 
         result = sheet_attack(attack, args)
@@ -175,20 +180,22 @@ class Dice:
         embeds.add_fields_from_args(embed, args.get('f'))
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
         await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True, aliases=['mc'])
-    async def monster_check(self, ctx, monster_name, check, *args):
+    async def monster_check(self, ctx, monster_name, check, *, args=''):
         """Rolls a check for a monster.
-        Args: adv/dis
-              -b [conditional bonus]
-              -phrase [flavor text]
-              -title [title] *note: [mname] and [cname] will be replaced automatically*
-              -dc [dc]
-              -rr [iterations]
-              str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))"""
+        __Valid Arguments__
+        adv/dis
+        -b [conditional bonus]
+        -phrase [flavor text]
+        -title [title] *note: [mname] and [cname] will be replaced automatically*
+        -dc [dc]
+        -rr [iterations]
+        str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
+        -h (hides name and image of monster)"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
         self.bot.rdb.incr('monsters_looked_up_life')
@@ -206,7 +213,7 @@ class Dice:
 
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
-
+        args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
         adv = args.adv()
         b = args.join('b', '+')
@@ -224,7 +231,10 @@ class Dice:
             skill_name = f"{verbose_stat(base)} ({skill})"
 
         skill_name = skill_name.title()
-        default_title = '{} makes {} check!'.format(monster_name, a_or_an(skill_name))
+        if not args.last('h', type_=bool):
+            default_title = '{} makes {} check!'.format(monster_name, a_or_an(skill_name))
+        else:
+            default_title = f"An unknown creature makes {a_or_an(skill_name)} check!"
 
         if b is not None:
             roll_str = formatted_d20 + '{:+}'.format(mod) + '+' + b
@@ -256,11 +266,11 @@ class Dice:
 
         if args.last('image') is not None:
             embed.set_thumbnail(url=args.last('image'))
-        else:
+        elif not args.last('h', type_=bool):
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
         await self.bot.say(embed=embed)
         try:
@@ -269,19 +279,21 @@ class Dice:
             pass
 
     @commands.command(pass_context=True, aliases=['ms'])
-    async def monster_save(self, ctx, monster_name, save, *args):
+    async def monster_save(self, ctx, monster_name, save, *, args=''):
         """Rolls a save for a monster.
-        Args: adv/dis
-              -b [conditional bonus]
-              -phrase [flavor text]
-              -title [title] *note: [mname] and [cname] will be replaced automatically*
-              -dc [dc]
-              -rr [iterations]"""
+        __Valid Arguments__
+        adv/dis
+        -b [conditional bonus]
+        -phrase [flavor text]
+        -title [title] *note: [mname] and [cname] will be replaced automatically*
+        -dc [dc]
+        -rr [iterations]
+        -h (hides name and image of monster)"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
         self.bot.rdb.incr('monsters_looked_up_life')
         monster_name = monster.get_title_name()
-
+        args = await scripting.parse_snippets(args, ctx)
         saves = monster.saves
 
         try:
@@ -308,7 +320,10 @@ class Dice:
         else:
             roll_str = '1d20{:+}'.format(saves[save])
 
-        default_title = f'{monster_name} makes {a_or_an(camel_to_title(save))}!'
+        if not args.last('h', type_=bool):
+            default_title = f'{monster_name} makes {a_or_an(camel_to_title(save))}!'
+        else:
+            default_title = f"An unknown creature makes {a_or_an(camel_to_title(save))}!"
 
         embed.title = args.last('title', '') \
                           .replace('[mname]', monster_name) \
@@ -335,11 +350,11 @@ class Dice:
 
         if args.last('image') is not None:
             embed.set_thumbnail(url=args.last('image'))
-        else:
+        elif not args.last('h', type_=bool):
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/static/homebrew.png")
+            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
         await self.bot.say(embed=embed)
         try:

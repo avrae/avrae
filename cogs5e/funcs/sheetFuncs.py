@@ -148,7 +148,8 @@ def sheet_attack(attack, args, embed=None):
         embed.add_field(name='Total Damage', value=str(total_damage))
 
     if attack.get('details'):
-        embed.add_field(name='Effect', value=(attack.get('details', '')))
+        embed.add_field(name='Effect',
+                        value=attack['details'] if len(attack['details']) < 1020 else f"{attack['details'][:1020]}...")
 
     if args.last('image') is not None:
         embed.set_thumbnail(url=args.last('image'))
@@ -171,6 +172,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
     immune = args.get('immune')
     vuln = args.get('vuln')
     neutral = args.get('neutral')
+    maxdmg = args.last('max', None, bool)
 
     if damage_str is None and d:
         damage_str = '0'
@@ -185,7 +187,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
                 else:
                     def critSub(matchobj):
                         extracritdice = critdice if critdice and wep else 0
-                        return str(int(matchobj.group(1)) * 2 + extracritdice) + 'd' + matchobj.group(2)
+                        return f"{int(matchobj.group(1)) * 2 + extracritdice}d{matchobj.group(2)}"
 
                     critDice = re.sub(r'(\d+)d(\d+)', critSub, damage_str)
             else:
@@ -202,6 +204,12 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
             if not itercrit == 2 and numHits > 0:
                 damage += '+' + parsecrit(dice)
                 dnum[dice] -= 1
+
+        if maxdmg:
+            def maxSub(matchobj):
+                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+
+            damage = re.sub(r'(\d+)d(\d+)', maxSub, damage)
 
         # crit parsing
         rollFor = "Damage"

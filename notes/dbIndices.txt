@@ -1,8 +1,16 @@
 packs:
 db.packs.createIndex({"owner.id": 1});
 db.packs.createIndex({"editors.id": 1});
+db.packs.createIndex({"subscribers.id": 1});
 db.packs.createIndex({"active": 1});
 db.packs.createIndex({"server_active": 1});
 
 bestiaries:
 db.bestiaries.createIndex({"server_active": 1});
+
+tomes:
+db.tomes.createIndex({"owner.id": 1});
+db.tomes.createIndex({"editors.id": 1});
+db.tomes.createIndex({"subscribers.id": 1});
+db.tomes.createIndex({"active": 1});
+db.tomes.createIndex({"server_active": 1});

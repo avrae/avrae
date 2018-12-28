@@ -10,12 +10,14 @@ import logging
 from cogs5e.models.background import Background
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.bestiary import Bestiary
+from cogs5e.models.homebrew.tome import Tome
 from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
 from cogs5e.models.spell import Spell
-from utils.functions import parse_data_entry, search_and_select
+from utils.functions import parse_data_entry, search_and_select, search
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
+HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +57,8 @@ class Compendium:
         self.subclasses = self.load_subclasses()
         with open('./res/itemprops.json', 'r') as f:
             self.itemprops = json.load(f)
+        with open('./res/names.json', 'r') as f:
+            self.names = json.load(f)
 
     def load_subclasses(self):
         s = []
@@ -78,12 +82,15 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     try:
         bestiary = await Bestiary.from_ctx(ctx)
         custom_monsters = bestiary.monsters
+        bestiary_id = bestiary.id
     except NoActiveBrew:
         custom_monsters = []
+        bestiary_id = None
     choices = list(itertools.chain(c.monster_mash, custom_monsters))
     if ctx.message.server:
         async for servbestiary in ctx.bot.mdb.bestiaries.find({"server_active": ctx.message.server.id}, ['monsters']):
-            choices.extend(Monster.from_bestiary(m) for m in servbestiary['monsters'])
+            choices.extend(
+                Monster.from_bestiary(m) for m in servbestiary['monsters'] if servbestiary['_id'] != bestiary_id)
 
     if srd:
         if list_filter:
@@ -100,3 +107,53 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
 
     return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
                                    selectkey=get_homebrew_formatted_name)
+
+
+# ---- SPELL STUFF ----
+async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
+                            srd=False, search_func=None):
+    """
+    Gets a Spell from the compendium and active tome(s).
+    """
+    choices = await get_spell_choices(ctx)
+
+    if srd:
+        if list_filter:
+            old = list_filter
+            list_filter = lambda e: old(e) and e.srd
+        else:
+            list_filter = lambda e: e.srd
+        message = "This server only shows results from the 5e SRD."
+
+    def get_homebrew_formatted_name(spell):
+        if spell.source == 'homebrew':
+            return f"{spell.name} ({HOMEBREW_EMOJI})"
+        return spell.name
+
+    return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
+                                   selectkey=get_homebrew_formatted_name, search_func=search_func)
+
+
+async def get_spell_choices(ctx):
+    try:
+        tome = await Tome.from_ctx(ctx)
+        custom_spells = tome.spells
+        tome_id = tome.id
+    except NoActiveBrew:
+        custom_spells = []
+        tome_id = None
+    choices = list(itertools.chain(c.spells, custom_spells))
+    if ctx.message.server:
+        async for servtome in ctx.bot.mdb.tomes.find({"server_active": ctx.message.server.id}, ['spells']):
+            choices.extend(Spell.from_dict(s) for s in servtome['spells'] if servtome['_id'] != tome_id)
+    return choices
+
+
+async def get_castable_spell(ctx, name, choices=None):
+    if choices is None:
+        choices = await get_spell_choices(ctx)
+
+    result = search(choices, name, lambda sp: sp.name)
+    if result and result[1]:
+        return result[0]
+    return None

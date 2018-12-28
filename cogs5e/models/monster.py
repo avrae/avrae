@@ -4,6 +4,7 @@ from urllib import parse
 
 import html2text
 
+from cogs5e.models import errors
 from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
@@ -25,9 +26,9 @@ class AbilityScores:
         self.charisma = cha
 
     def get_mod(self, stat):
-        return {'str': floor(self.strength / 2 - 5), 'dex': floor(self.dexterity / 2 - 5),
-                'con': floor(self.constitution / 2 - 5), 'int': floor(self.intelligence / 2 - 5),
-                'wis': floor(self.wisdom / 2 - 5), 'cha': floor(self.charisma / 2 - 5)}.get(stat, 0)
+        return {'str': self.strength // 2 - 5, 'dex': self.dexterity // 2 - 5,
+                'con': self.constitution // 2 - 5, 'int': self.intelligence // 2 - 5,
+                'wis': self.wisdom // 2 - 5, 'cha': self.charisma // 2 - 5}.get(stat, 0)
 
 
 class Trait:
@@ -219,6 +220,9 @@ class Monster:
         hitdice = f"{num_hit_die}d{hit_die_size} + {con_by_level}"
 
         proficiency = data['stats']['proficiencyBonus']
+        if proficiency is None:
+            raise errors.ExternalImportError(f"Monster's proficiency bonus is nonexistent ({data['name']}).")
+
         skills = {}
         raw_skills = []
         for skill in data['stats']['skills']:
@@ -304,12 +308,12 @@ class Monster:
         """
         Returns a string describing the monster's 6 core stats, with modifiers.
         """
-        str_mod = floor(self.strength / 2 - 5)
-        dex_mod = floor(self.dexterity / 2 - 5)
-        con_mod = floor(self.constitution / 2 - 5)
-        int_mod = floor(self.intelligence / 2 - 5)
-        wis_mod = floor(self.wisdom / 2 - 5)
-        cha_mod = floor(self.charisma / 2 - 5)
+        str_mod = self.strength // 2 - 5
+        dex_mod = self.dexterity // 2 - 5
+        con_mod = self.constitution // 2 - 5
+        int_mod = self.intelligence // 2 - 5
+        wis_mod = self.wisdom // 2 - 5
+        cha_mod = self.charisma // 2 - 5
         return f"**STR**: {self.strength} ({str_mod:+}) **DEX**: {self.dexterity} ({dex_mod:+}) " \
                f"**CON**: {self.constitution} ({con_mod:+})\n**INT**: {self.intelligence} ({int_mod:+}) " \
                f"**WIS**: {self.wisdom} ({wis_mod:+}) **CHA**: {self.charisma} ({cha_mod:+})"
@@ -397,7 +401,7 @@ class Monster:
             raise ValueError(f"{stat} is not a valid stat.")
         score = (self.strength, self.dexterity, self.constitution, self.intelligence, self.wisdom, self.charisma)[
             valid.index(stat)]
-        return int(floor((score - 10) / 2))
+        return score // 2 - 5
 
 
 def parse_type(_type):

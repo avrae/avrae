@@ -6,8 +6,8 @@
   "active": ["string"],
   "_id": "ObjectId",
   "server_active": ["string"],
-  "items": [
-    "see item.spec.json"
+  "spells": [
+    "see spell.spec.json"
   ],
   "image": "string",
   "desc": "string",

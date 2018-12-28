@@ -2,6 +2,7 @@ import ast
 import json
 import re
 import shlex
+import time
 from math import floor, ceil, sqrt
 
 import simpleeval
@@ -10,7 +11,7 @@ from simpleeval import EvalWithCompoundTypes, IterableTooLong
 import utils.argparser
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_damage
-from cogs5e.models.errors import CombatNotFound, InvalidSaveType
+from cogs5e.models.errors import CombatNotFound, InvalidSaveType, AvraeException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
@@ -342,8 +343,8 @@ class SimpleCombatant:
     def set_hp(self, newhp: int):
         self._combatant.set_hp(int(newhp))
 
-    def mod_hp(self, mod: int):
-        self._combatant.hp += int(mod)
+    def mod_hp(self, mod: int, overheal: bool = False):
+        self._combatant.mod_hp(mod, overheal)
 
     def hp_str(self):
         return self._combatant.get_hp_str()
@@ -367,7 +368,7 @@ class SimpleCombatant:
             return to_hit >= self._combatant.ac
         return None
 
-    def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0):
+    def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0, overheal=False):
         args = utils.argparser.ParsedArguments(None, {
             'critdice': [critdice],
             'resist': self._combatant.resists['resist'],
@@ -380,7 +381,7 @@ class SimpleCombatant:
             args['c'] = c
         result = sheet_damage(dice_str, args, 1 if crit else 0)
         result['damage'] = result['damage'].strip()
-        self.mod_hp(-result['total'])
+        self.mod_hp(-result['total'], overheal=overheal)
         return result
 
     def set_ac(self, ac: int):
@@ -419,17 +420,20 @@ class SimpleCombatant:
             return SimpleEffect(effect)
         return None
 
-    def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False):
+    def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False, parent = None):
         existing = self._combatant.get_effect(name, True)
         if existing:
-            self._combatant.remove_effect(existing)
-        effectObj = Effect.new(duration=duration, name=name, effect_args=args, concentration=concentration)
+            existing.remove()
+        effectObj = Effect.new(self._combatant.combat, self._combatant, duration=duration, name=name, effect_args=args,
+                               concentration=concentration)
+        if parent:
+            effectObj.set_parent(parent._effect)
         self._combatant.add_effect(effectObj)
 
     def remove_effect(self, name: str):
         effect = self._combatant.get_effect(name)
         if effect:
-            self._combatant.remove_effect(effect)
+            effect.remove()
 
     def __str__(self):
         return str(self._combatant)
@@ -463,13 +467,25 @@ class SimpleEffect:
     def __str__(self):
         return str(self._effect)
 
+    def set_parent(self, parent):
+        self._effect.set_parent(parent._effect)
+
+
+class AliasException(AvraeException):
+    pass
+
+
+def raise_alias_exception(reason):
+    raise AliasException(reason)
+
 
 DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
 DEFAULT_OPERATORS.pop(ast.Pow)
 DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
                           'range': safe_range, 'sqrt': sqrt,
-                          'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json})
+                          'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
+                          'time': time.time, 'err': raise_alias_exception})
 
 if __name__ == '__main__':
     evaluator = ScriptingEvaluator()

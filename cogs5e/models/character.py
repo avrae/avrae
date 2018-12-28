@@ -143,6 +143,9 @@ class Character(Spellcaster):
 
         return int(self.character.get('spellbook', {}).get('spellslots', {}).get(str(level), 0))
 
+    def get_raw_spells(self):
+        return self.character.get('spellbook', {}).get('spells', [])
+
     def get_spell_list(self):
         """@:returns list - a list of the names of all spells the character can cast.
         @:raises OutdatedSheet if character does not have spellbook."""
@@ -150,8 +153,14 @@ class Character(Spellcaster):
             assert 'spellbook' in self.character
         except AssertionError:
             raise OutdatedSheet()
-
-        return self.character.get('spellbook', {}).get('spells', [])
+        spells = self.get_raw_spells()
+        out = []
+        for spell in spells:
+            if isinstance(spell, dict):
+                out.append(spell['name'])
+            else:
+                out.append(spell)
+        return out
 
     def get_cached_spell_list_id(self):
         """Gets the Dicecloud ID of the most recently used spell list ID.
@@ -425,10 +434,14 @@ class Character(Spellcaster):
 
         return out
 
-    def evaluate_cvar(self, varstr):
+    def evaluate_cvar(self, varstr, parse=False):
         """Evaluates a cvar.
-        @:param varstr - the name of the cvar to parse.
-        @:returns int - the value of the cvar, or 0 if evaluation failed."""
+        :param varstr - the name of the cvar to parse.
+        :param parse - if True, will evaluate cvars and return resulting string
+        :returns int - the value of the cvar, or 0 if evaluation failed."""
+        if parse:
+            return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.evaluate_cvar(m.group(1))), varstr)
+
         ops = r"([-+*/().<>=])"
         varstr = str(varstr).strip('<>{}')
 
@@ -820,15 +833,17 @@ class Character(Spellcaster):
         :param spell (Spell) - the Spell.
         :returns self"""
         self._initialize_spellbook()
-        spells = set(self.character['spellbook']['spells'])
-        spells.add(spell.name)
-        self.character['spellbook']['spells'] = list(spells)
+        self.character['spellbook']['spells'].append({
+            'name': spell.name,
+            'strict': spell.source != 'homebrew'
+        })
 
         if not self.live:
             self._initialize_spell_overrides()
-            overrides = set(self.character['overrides']['spells'])
-            overrides.add(spell.name)
-            self.character['overrides']['spells'] = list(overrides)
+            self.character['overrides']['spells'].append({
+                'name': spell.name,
+                'strict': spell.source != 'homebrew'
+            })
         return self
 
     def remove_known_spell(self, spell_name):
@@ -840,15 +855,15 @@ class Character(Spellcaster):
         assert not self.live
         self._initialize_spellbook()
         self._initialize_spell_overrides()
-        overrides = set(self.character['overrides'].get('spells', []))
-        spell_name = next((s for s in overrides if spell_name.lower() == s.lower()), None)
-        if spell_name:
-            overrides.remove(spell_name)
-            self.character['overrides']['spells'] = list(overrides)
-            spells = set(self.character['spellbook']['spells'])
-            spells.remove(spell_name)
-            self.character['spellbook']['spells'] = list(spells)
-        return spell_name
+
+        override = next((s for s in self.character['overrides'].get('spells', [])
+                         if isinstance(s, str) and spell_name.lower() == s.lower() or
+                         isinstance(s, dict) and s['name'].lower() == spell_name.lower()), None)
+        if override:
+            self.character['overrides']['spells'].remove(override)
+            if override in self.character['spellbook']['spells']:
+                self.character['spellbook']['spells'].remove(override)
+        return override
 
     def _initialize_custom_counters(self):
         try:

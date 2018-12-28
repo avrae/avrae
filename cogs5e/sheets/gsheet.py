@@ -13,11 +13,14 @@ import discord
 from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.sheets.errors import MissingAttribute
-from utils.functions import fuzzy_search, search
+from utils.functions import search
 
 log = logging.getLogger(__name__)
 
 POS_RE = re.compile(r"([A-Z]+)(\d+)")
+IGNORED_SPELL_VALUES = ('MAX', 'SLOTS', 'CANTRIPS', '1ST LEVEL', '2ND LEVEL', '3RD LEVEL', '4TH LEVEL', '5TH LEVEL',
+                        '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL',
+                        "You can hide each level of spells individually by hiding the rows (on the left).")
 
 
 def letter2num(letters, zbase=True):
@@ -28,17 +31,17 @@ def letter2num(letters, zbase=True):
     letters = letters.upper()
     res = 0
     weight = len(letters) - 1
-    for i, c in enumerate(letters):
-        res += (ord(c) - 64) * 26 ** (weight - i)
+    for i, ch in enumerate(letters):
+        res += (ord(ch) - 64) * 26 ** (weight - i)
     if not zbase:
         return res
     return res - 1
 
 
 class TempCharacter:
-    def __init__(self, worksheet):
+    def __init__(self, worksheet, cells):
         self.worksheet = worksheet
-        self.cells = worksheet.range("A1:AP180")
+        self.cells = worksheet.range(cells)
         # print('\n'.join(str(r) for r in self.cells))
 
     def cell(self, pos):
@@ -63,12 +66,14 @@ class GoogleSheet:
         self.character = None
         assert client is not None
         self.client = client
+        self.additional = None
 
     def _gchar(self):
         # self.client.login()
-        sheet = self.client.open_by_key(self.url).sheet1
-        self.character = TempCharacter(sheet)
-        return sheet
+        doc = self.client.open_by_key(self.url)
+        self.character = TempCharacter(doc.sheet1, "A1:AQ180")
+        if doc.sheet1.cell("AQ4").value == "2.0":
+            self.additional = TempCharacter(doc.worksheet('index', 1), "A1:AP81")
 
     async def get_character(self):
         loop = asyncio.get_event_loop()
@@ -85,14 +90,19 @@ class GoogleSheet:
         try:
             stats = self.get_stats()
             hp = int(character.cell("U16").value)
+        except ValueError:
+            raise MissingAttribute("Max HP")
+
+        try:
             armor = character.cell("R12").value
             attacks = self.get_attacks()
             skills = self.get_skills()
-            level = self.get_level()
-            stats['description'] = self.get_description()
+            levels = self.get_levels()
+
+            temp_resist = self.get_resistances()
+            resistances = temp_resist['resist']
+            immunities = temp_resist['immune']
             spellbook = self.get_spellbook()
-        except ValueError:
-            raise MissingAttribute("Max HP")
         except:
             raise
 
@@ -103,23 +113,24 @@ class GoogleSheet:
 
         stat_vars = {}
         stat_vars.update(stats)
-        stat_vars['level'] = int(level)
+        stat_vars.update(levels)
         stat_vars['hp'] = hp
         stat_vars['armor'] = int(armor)
         stat_vars.update(saves)
 
         sheet = {'type': 'google',
-                 'version': 5,  # v3: added stat cvars
+                 'version': 6,  # v3: added stat cvars
                  # v4: consumables
                  # v5: spellbook
+                 # v6: v2.0 support (level vars, resistances, extra spells/attacks)
                  'stats': stats,
-                 'levels': {'level': int(level)},
+                 'levels': levels,
                  'hp': hp,
                  'armor': int(armor),
                  'attacks': attacks,
                  'skills': skills,
-                 'resist': [],
-                 'immune': [],
+                 'resist': resistances,
+                 'immune': immunities,
                  'vuln': [],
                  'saves': saves,
                  'stat_cvars': stat_vars,
@@ -180,7 +191,7 @@ class GoogleSheet:
                 else:
                     tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                      a['damage'] if a['damage'] is not None else 'no'))
-        if tempAttacks == []:
+        if not tempAttacks:
             tempAttacks = ['No attacks.']
         embed.add_field(name="Attacks", value='\n'.join(tempAttacks))
 
@@ -190,13 +201,11 @@ class GoogleSheet:
         """Returns a dict of stats."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        stats = {"name": "", "image": "", "description": "",
-                 "strength": 10, "dexterity": 10, "constitution": 10, "wisdom": 10, "intelligence": 10, "charisma": 10,
-                 "strengthMod": 0, "dexterityMod": 0, "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0,
-                 "charismaMod": 0,
-                 "proficiencyBonus": 0}
-        stats['name'] = character.cell("C6").value or "Unnamed"
-        stats['description'] = "The Google sheet does not have a description field."
+        stats = {"image": "", "strength": 10, "dexterity": 10, "constitution": 10,
+                 "wisdom": 10, "intelligence": 10, "charisma": 10, "strengthMod": 0, "dexterityMod": 0,
+                 "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0, "charismaMod": 0, "proficiencyBonus": 0,
+                 'name': character.cell("C6").value or "Unnamed",
+                 'description': self.get_description()}
         try:
             stats['proficiencyBonus'] = int(character.cell("H14").value)
         except (TypeError, ValueError):
@@ -214,18 +223,17 @@ class GoogleSheet:
 
         return stats
 
-    def get_attack(self, atkIn):
+    def get_attack(self, name_index, bonus_index, damage_index, sheet=None):
         """Calculates and returns a dict."""
         if self.character is None: raise Exception('You must call get_character() first.')
-        character = self.character
-        attack = {'attackBonus': '0', 'damage': '0', 'name': ''}
-        name_index = "R" + str(32 + atkIn)
-        bonus_index = "Y" + str(32 + atkIn)
-        damage_index = "AC" + str(32 + atkIn)
 
-        attack['name'] = character.cell(name_index).value
-        attack['attackBonus'] = character.cell(bonus_index).value
-        attack['damage'] = character.cell(damage_index).value
+        wksht = sheet or self.character
+
+        attack = {
+            'attackBonus': wksht.cell(bonus_index).value,
+            'damage': wksht.cell(damage_index).value,
+            'name': wksht.cell(name_index).value
+        }
 
         if attack['name'] is "":
             return None
@@ -251,9 +259,15 @@ class GoogleSheet:
         """Returns a list of dicts of all of the character's attacks."""
         if self.character is None: raise Exception('You must call get_character() first.')
         attacks = []
-        for attack in range(5):
-            a = self.get_attack(attack)
+        for rownum in range(32, 37):  # sht1, R32:R36
+            a = self.get_attack(f"R{rownum}", f"Y{rownum}", f"AC{rownum}")
             if a is not None: attacks.append(a)
+        if self.additional:
+            for rownum in range(3, 14):  # sht2, B3:B13; W3:W13
+                additional = self.get_attack(f"B{rownum}", f"I{rownum}", f"M{rownum}", self.additional)
+                other = self.get_attack(f"W{rownum}", f"AD{rownum}", f"AH{rownum}", self.additional)
+                if additional is not None: attacks.append(additional)
+                if other is not None: attacks.append(other)
         return attacks
 
     def get_skills(self):
@@ -283,14 +297,24 @@ class GoogleSheet:
 
         return skills
 
-    def get_level(self):
+    def get_levels(self):
         if self.character is None: raise Exception('You must call get_character() first.')
-        character = self.character
+        levels = {}
         try:
-            level = int(character.cell("AL6").value)
+            levels['level'] = int(self.character.cell("AL6").value)
         except ValueError:
             raise MissingAttribute("Character level")
-        return level
+        if self.additional:
+            for rownum in range(69, 79):  # sheet2, C69:C78
+                namecell = f"C{rownum}"
+                levelcell = f"N{rownum}"
+                classname = self.additional.cell(namecell).value
+                if classname:
+                    classlevel = int(self.additional.cell(levelcell).value)
+                    levels[f"{classname}Level"] = classlevel
+                else:  # classes should be top-aligned
+                    break
+        return levels
 
     def get_description(self):
         if self.character is None: raise Exception('You must call get_character() first.')
@@ -312,6 +336,23 @@ class GoogleSheet:
                            character.cell("L150").value.lower() or "unknown")
         return desc
 
+    def get_resistances(self):
+        out = {'resist': [], 'immune': []}
+        if not self.additional:  # requires 2.0
+            return out
+
+        for resist_row in range(69, 80):  # T69:T79
+            resist = self.additional.cell(f"T{resist_row}").value
+            if resist:
+                out['resist'].append(resist.lower())
+
+        for immune_row in range(69, 80):  # AE69:AE79
+            immune = self.additional.cell(f"AE{immune_row}").value
+            if immune:
+                out['immune'].append(immune.lower())
+
+        return out
+
     def get_spellbook(self):
         if self.character is None: raise Exception('You must call get_character() first.')
         spellbook = {'spellslots': {},
@@ -330,19 +371,28 @@ class GoogleSheet:
                       '9': int(self.character.cell('AK142').value or 0)}
         spellbook['spellslots'] = spellslots
 
-        potential_spells = self.character.range('C96:AH143')
-        spells = set()
+        potential_spells = self.character.range("D96:AH143")  # returns a matrix, the docs lie
+        if self.additional:
+            potential_spells.extend(self.additional.range("D17:AH64"))
+        spells = []
 
-        for col in potential_spells:
-            for cell in col:
-                if cell.value and not cell.value in ('MAX', 'SLOTS'):
-                    result = search(c.spells, cell.value.strip(), lambda sp: sp.name, strict=True)
-                    if result is None:
-                        continue
-                    elif result[0] and result[1]:
-                        spells.add(result[0].name)
+        for row in potential_spells:
+            for cell in row:
+                if cell.value and not cell.value in IGNORED_SPELL_VALUES:
+                    value = cell.value.strip()
+                    result = search(c.spells, value, lambda sp: sp.name, strict=True)
+                    if result and result[0] and result[1]:
+                        spells.append({
+                            'name': result[0].name,
+                            'strict': True
+                        })
+                    elif len(value) > 2:
+                        spells.append({
+                            'name': value,
+                            'strict': False
+                        })
 
-        spellbook['spells'] = list(spells)
+        spellbook['spells'] = spells
 
         try:
             spellbook['dc'] = int(self.character.cell('AB91').value or 0)

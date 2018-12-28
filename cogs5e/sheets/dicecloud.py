@@ -46,6 +46,7 @@ class DicecloudParser:
         self.stats = None
         self.levels = None
         self.evaluator = DicecloudEvaluator()
+        self._cache = {}
 
     async def get_character(self):
         url = self.url
@@ -106,13 +107,14 @@ class DicecloudParser:
         stat_vars.update(saves)
 
         sheet = {'type': 'dicecloud',
-                 'version': 12,  # v6: added stat cvars
+                 'version': 13,  # v6: added stat cvars
                  # v7: added check effects (adv/dis)
                  # v8: consumables
                  # v9: spellbook
                  # v10: live tracking
                  # v11: save effects (adv/dis)
                  # v12: add cached dicecloud spell list id
+                 # v13: added nonstrict spells
                  'stats': stats,
                  'levels': levels,
                  'hp': int(hp),
@@ -222,6 +224,8 @@ class DicecloudParser:
     def get_stat(self, stat, base=0):
         """Returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if not base and stat in self._cache:
+            return self._cache[stat]
         character = self.character
         effects = character.get('effects', [])
         add = 0
@@ -247,11 +251,15 @@ class DicecloudParser:
             out = max(out, minV)
         if maxV is not None:
             out = min(out, maxV)
+        if not base:
+            self._cache[stat] = out
         return out
 
     def get_stat_float(self, stat, base=0):
         """Returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if not base and stat in self._cache:
+            return self._cache[stat]
         character = self.character
         effects = character.get('effects', [])
         add = 0
@@ -277,6 +285,8 @@ class DicecloudParser:
             out = max(out, minV)
         if maxV is not None:
             out = min(out, maxV)
+        if not base:
+            self._cache[stat] = out
         return out
 
     def get_stats(self):
@@ -296,7 +306,7 @@ class DicecloudParser:
 
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             stats[stat] = self.get_stat(stat)
-            stats[stat + 'Mod'] = floor((int(stats[stat]) - 10) / 2)
+            stats[stat + 'Mod'] = int(stats[stat]) // 2 - 5
 
         self.evaluator.names.update(stats)
         self.stats = stats
@@ -330,6 +340,8 @@ class DicecloudParser:
     def calculate_stat(self, stat, base=0):
         """Calculates and returns the stat value."""
         if self.character is None: raise Exception('You must call get_character() first.')
+        if not base and stat in self._cache:
+            return self._cache[stat]
         character = self.character
         effects = character.get('effects', [])
         add = 0
@@ -367,6 +379,8 @@ class DicecloudParser:
             out = max(out, minV)
         if maxV is not None:
             out = min(out, maxV)
+        if not base:
+            self._cache[stat] = out
         return out
 
     def get_attack(self, atkIn):
@@ -396,6 +410,8 @@ class DicecloudParser:
                         temp_names['DC'] = int(self.evaluator.eval(spellListObj.get('saveDC')))
                     except Exception as e:
                         log.debug(f"Exception parsing spellvars: {e}")
+
+        temp_names['rageDamage'] = self.get_stat('rageDamage')
 
         old_names = self.evaluator.names.copy()
         self.evaluator.names.update(temp_names)
@@ -556,9 +572,17 @@ class DicecloudParser:
             spellbook['spellslots'][str(lvl)] = numSlots
 
         for spell in spellnames:
-            s, strict = search(c.spells, spell, lambda sp: sp.name)
-            if s and strict:
-                spellbook['spells'].append(s.name)
+            result = search(c.spells, spell, lambda sp: sp.name)
+            if result and result[0] and result[1]:
+                spellbook['spells'].append({
+                    'name': result[0].name,
+                    'strict': True
+                })
+            else:
+                spellbook['spells'].append({
+                    'name': spell,
+                    'strict': False
+                })  # non-strict spell
 
         sls = [(0, 0)]  # ab, dc
         for sl in self.character.get('spellLists', []):

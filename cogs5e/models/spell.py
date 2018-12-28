@@ -6,7 +6,7 @@ import discord
 from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
 from cogs5e.models.initiative import Combatant
 from utils.functions import parse_resistances
@@ -25,8 +25,8 @@ class Automation:
             return cls(effects)
         return None
 
-    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None):
-        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell)
+    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None):
+        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect)
         for effect in self.effects:
             effect.run(autoctx)
 
@@ -41,8 +41,9 @@ class Automation:
 
 class AutomationContext:
     ANNOSTR_RE = re.compile(r"{(\w+)}")
+    ANNOSTR_RE_NO_SPELL = re.compile(r"(?!{spell}){(\w+)}")
 
-    def __init__(self, ctx, embed, caster, targets, args, combat, spell):
+    def __init__(self, ctx, embed, caster, targets, args, combat, spell, conc_effect=None):
         self.ctx = ctx
         self.embed = embed
         self.caster = caster
@@ -50,6 +51,7 @@ class AutomationContext:
         self.args = args
         self.combat = combat
         self.spell = spell
+        self.conc_effect = conc_effect
 
         self.metavars = {
             "spell": caster.spellcasting.sab - caster.pb_from_level()  # for healing spells
@@ -409,15 +411,17 @@ class Damage(Effect):
         vuln = args.get('vuln', [])
         neutral = args.get('neutral', [])
         crit = args.last('crit', None, bool)
+        maxdmg = args.last('max', None, bool)
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
             vuln = vuln or autoctx.target.get_vuln()
             neutral = neutral or autoctx.target.get_neutral()
 
-        if not autoctx.target.target and autoctx.ANNOSTR_RE.match(damage):  # likely have output this in meta already
+        if not autoctx.target.target and autoctx.ANNOSTR_RE_NO_SPELL.match(
+                damage):  # likely have output this in meta already
             return
-        if autoctx.ANNOSTR_RE.match(damage):
+        if autoctx.ANNOSTR_RE_NO_SPELL.search(damage):
             d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 
@@ -446,11 +450,17 @@ class Damage(Effect):
 
         if autoctx.in_crit or crit:
             def critSub(matchobj):
-                return str(int(matchobj.group(1)) * 2) + 'd' + matchobj.group(2)
+                return f"{int(matchobj.group(1)) * 2}d{matchobj.group(2)}"
 
             damage = re.sub(r'(\d+)d(\d+)', critSub, damage)
             if c:
                 damage = f"{damage}+{c}"
+
+        if maxdmg:
+            def maxSub(matchobj):
+                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+
+            damage = re.sub(r'(\d+)d(\d+)', maxSub, damage)
 
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
@@ -469,8 +479,12 @@ class IEffect(Effect):
 
     def run(self, autoctx):
         super(IEffect, self).run(autoctx)
-        effect = initiative.Effect.new(self.name, self.duration, autoctx.parse_annostr(self.effects))
+        effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects))
         if isinstance(autoctx.target.target, Combatant):
+            effect.combat = autoctx.target.target.combat  # hacky but works
+            effect.combatant = autoctx.target.target
+            if autoctx.conc_effect:
+                effect.set_parent(autoctx.conc_effect)
             if isinstance(self.duration, str):
                 try:
                     self.duration = int(autoctx.parse_annostr(self.duration))
@@ -491,6 +505,7 @@ class Roll(Effect):
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
         d = autoctx.args.join('d', '+')
+        maxdmg = autoctx.args.last('max', None, bool)
         dice = self.dice
         if self.cantripScale:
             def cantrip_scale(matchobj):
@@ -514,6 +529,12 @@ class Roll(Effect):
         if d:
             dice = f"{dice}+{d}"
 
+        if maxdmg:
+            def maxSub(matchobj):
+                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+
+            dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
+
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)
 
@@ -534,7 +555,10 @@ class Text(Effect):
 
     def run(self, autoctx):
         if self.text:
-            autoctx.effect_queue(self.text)
+            text = self.text
+            if len(text) > 1020:
+                text = f"{text[:1020]}..."
+            autoctx.effect_queue(text)
 
 
 EFFECT_MAP = {
@@ -550,17 +574,17 @@ EFFECT_MAP = {
 
 class Spell:
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
-                 description: str, classes=None, subclasses=None, ritual: bool = False,
-                 higherlevels: str = None, source: str = "homebrew", page: int = None, concentration: bool = False,
-                 automation: Automation = None, srd: bool = False):
+                 description: str, classes=None, subclasses=None, ritual: bool = False, higherlevels: str = None,
+                 source: str = "homebrew", page: int = None, concentration: bool = False, automation: Automation = None,
+                 srd: bool = False, image: str = None):
         if classes is None:
             classes = []
         if isinstance(classes, str):
-            classes = [cls.strip() for cls in classes.split(',')]
+            classes = [cls.strip() for cls in classes.split(',') if cls.strip()]
         if subclasses is None:
             subclasses = []
         if isinstance(subclasses, str):
-            subclasses = [cls.strip() for cls in subclasses.split(',')]
+            subclasses = [cls.strip() for cls in subclasses.split(',') if cls.strip()]
         self.name = name
         self.level = level
         self.school = school
@@ -578,12 +602,25 @@ class Spell:
         self.concentration = concentration
         self.automation = automation
         self.srd = srd
+        self.image = image
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data):  # local JSON
         data["range_"] = data.pop("range")  # ignore this
         data["automation"] = Automation.from_data(data["automation"])
         return cls(**data)
+
+    @classmethod
+    def from_dict(cls, raw):  # homebrew spells
+        raw['components'] = parse_components(raw['components'])
+        return cls.from_data(raw)
+
+    # def to_dict(self):
+    #     return {"name": self.name, "level": self.level, "school": self.school, "classes": self.classes,
+    #             "subclasses": self.subclasses, "time": self.time, "range": self.range,
+    #             "components": serialize_components(self.components), "duration": self.duration, "ritual": self.ritual,
+    #             "description": self.description, "higherlevels": self.higherlevels, "source": self.source,
+    #             "page": self.page, "concentration": self.concentration, "automation": self.automation, "srd": self.srd}
 
     def get_school(self):
         return {
@@ -636,6 +673,7 @@ class Spell:
         l = args.last('l', self.level, int)
         i = args.last('i', type_=bool)
         phrase = args.join('phrase', '\n')
+        title = args.last('title')
 
         # meta checks
         if not self.level <= l <= 9:
@@ -656,18 +694,27 @@ class Spell:
 
         # begin setup
         embed = discord.Embed()
-        if targets:
+        if title:
+            embed.title = title.replace('[sname]', self.name)
+        elif targets:
             embed.title = f"{caster.get_name()} casts {self.name} at..."
         else:
             embed.title = f"{caster.get_name()} casts {self.name}!"
-            if targets is None:
-                targets = [None]
+        if targets is None:
+            targets = [None]
 
         if phrase:
             embed.description = f"*{phrase}*"
 
-        if self.automation:
-            await self.automation.run(ctx, embed, caster, targets, args, combat, self)
+        conc_conflict = None
+        conc_effect = None
+        if self.concentration and isinstance(caster, Combatant) and combat:
+            conc_effect = initiative.Effect.new(combat, caster, self.name, self.get_combat_duration(), "", True)
+            effect_result = caster.add_effect(conc_effect)
+            conc_conflict = effect_result['conc_conflict']
+
+        if self.automation and self.automation.effects:
+            await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect)
         else:
             text = self.description
             if len(text) > 1020:
@@ -680,7 +727,36 @@ class Spell:
         if l > 0:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
 
+        if conc_conflict:
+            embed.add_field(name="Concentration",
+                            value=f"Dropped {', '.join(e.name for e in conc_conflict)} due to concentration.")
+
+        if self.image:
+            embed.set_thumbnail(url=self.image)
+
+        if self.source == 'homebrew':
+            add_homebrew_footer(embed)
+
         return {"embed": embed}
+
+
+def parse_components(components):
+    v = components.get('verbal')
+    s = components.get('somatic')
+    m = components.get('material')
+    if isinstance(m, bool):
+        parsedm = "M"
+    else:
+        parsedm = f"M ({m})"
+
+    comps = []
+    if v:
+        comps.append("V")
+    if s:
+        comps.append("S")
+    if m:
+        comps.append(parsedm)
+    return ', '.join(comps)
 
 
 class SpellException(AvraeException):

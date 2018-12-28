@@ -48,13 +48,19 @@ class SheetManager:
         self.logger = TextLogger('dicecloud.txt')
 
         self.gsheet_client = None
+        self._gsheet_initializing = False
         self.bot.loop.create_task(self.init_gsheet_client())
 
     async def init_gsheet_client(self):
+        if self._gsheet_initializing:
+            return
+        self._gsheet_initializing = True
+
         def _():
             return pygsheets.authorize(service_file='avrae-google.json', no_cache=True)
 
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
+        self._gsheet_initializing = False
 
     async def new_arg_stuff(self, args, ctx, character):
         args = await scripting.parse_snippets(args, ctx)
@@ -240,6 +246,10 @@ class SheetManager:
         dc = args.last('dc', type_=int)
         num_successes = 0
 
+        ro = char.get_setting('reroll')
+        if ro:
+            formatted_d20 = f"{formatted_d20}ro{ro}"
+
         if b is not None:
             roll_str = formatted_d20 + '{:+}'.format(saves[save]) + '+' + b
         else:
@@ -313,6 +323,10 @@ class SheetManager:
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
+
+        ro = char.get_setting('reroll')
+        if ro:
+            formatted_d20 = f"{formatted_d20}ro{ro}"
 
         mc = args.last('mc', None)
         if mc:
@@ -603,6 +617,7 @@ class SheetManager:
             try:
                 parser = GoogleSheet(_id, self.gsheet_client)
             except AssertionError:
+                await self.init_gsheet_client()  # attempt reconnection
                 return await self.bot.say("I am still connecting to Google. Try again in 15-30 seconds.")
             loading = await self.bot.say('Updating character data from Google...')
         elif sheet_type == 'beyond':
@@ -611,7 +626,7 @@ class SheetManager:
         else:
             return await self.bot.say("Error: Unknown sheet type.")
         try:
-            character = await parser.get_character()
+            await parser.get_character()
         except (timeout, aiohttp.ClientResponseError):
             return await self.bot.say(
                 "I'm having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
@@ -626,20 +641,17 @@ class SheetManager:
 
         try:
             if sheet_type == 'dicecloud':
-                fmt = character.get('characters')[0].get('name')
                 sheet = parser.get_sheet()
-                if '-cc' in args:
-                    counters = parser.get_custom_counters()
             elif sheet_type == 'pdf':
-                fmt = character.get('CharacterName')
                 sheet = parser.get_sheet()
             elif sheet_type == 'google':
-                fmt = character.cell("C6").value
                 sheet = await parser.get_sheet()
             elif sheet_type == 'beyond':
-                fmt = character['name']
                 sheet = parser.get_sheet()
-            await self.bot.edit_message(loading, 'Updated and saved data for {}!'.format(fmt))
+            else:
+                return await self.bot.say("Error: Unknown sheet type.")
+            await self.bot.edit_message(loading,
+                                        'Updated and saved data for {}!'.format(sheet['sheet']['stats']['name']))
         except TypeError as e:
             del parser
             log.info(f"Exception in parser.get_sheet: {e}")
@@ -664,13 +676,18 @@ class SheetManager:
         sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description",
                                                                                             "No description available.")
         sheet['stats']['image'] = overrides.get('image') or sheet.get('stats', {}).get('image', '')
-        spells = set(sheet['spellbook']['spells'])
-        spells.update(overrides.get('spells', []))
-        sheet['spellbook']['spells'] = list(spells)
+        override_spells = []
+        for s in overrides.get('spells', []):
+            if isinstance(s, str):
+                override_spells.append({'name': s, 'strict': True})
+            else:
+                override_spells.append(s)
+        sheet['spellbook']['spells'].extend(override_spells)
 
         c = Character(sheet, url).initialize_consumables()
 
         if '-cc' in args and sheet_type == 'dicecloud':
+            counters = parser.get_custom_counters()
             for counter in counters:
                 displayType = 'bubble' if c.evaluate_cvar(counter['max']) < 6 else None
                 try:
@@ -690,7 +707,7 @@ class SheetManager:
 
         await c.commit(ctx)
         await c.set_active(ctx)
-        del character, parser, old_character  # pls don't freak out avrae
+        del parser, old_character  # pls don't freak out avrae
         if '-v' in args:
             await self.bot.say(embed=embed)
 
@@ -706,7 +723,7 @@ class SheetManager:
 
         await self.bot.say(f"{user.mention}, accept a copy of {character.get_name()}? (Type yes/no)\n{overwrite}")
         m = await self.bot.wait_for_message(timeout=300, author=user, channel=ctx.message.channel,
-                                            check=lambda m: get_positivity(m.content) is not None)
+                                            check=lambda msg: get_positivity(msg.content) is not None)
 
         if m is None or not get_positivity(m.content): return await self.bot.say("Transfer not confirmed, aborting.")
 
@@ -1015,7 +1032,8 @@ class SheetManager:
 
     @commands.command(pass_context=True)
     async def gsheet(self, ctx, url: str):
-        """Loads a character sheet from [this Google sheet](https://docs.google.com/spreadsheets/d/1etrBJ0qCDXACovYHUM4XvjE0erndThwRLcUQzX6ts8w/edit?usp=sharing), resetting all settings. The sheet must be shared with Avrae (see specific command help) for this to work.
+        """Loads a character sheet from [GSheet v2.0](http://gsheet2.avrae.io) (auto) or [GSheet v1.3](http://gsheet.avrae.io) (manual), resetting all settings.
+        The sheet must be shared with Avrae for this to work.
         Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
 
         loading = await self.bot.say('Loading character data from Google... (This usually takes ~30 sec)')
@@ -1030,10 +1048,11 @@ class SheetManager:
         try:
             parser = GoogleSheet(url, self.gsheet_client)
         except AssertionError:
+            await self.init_gsheet_client()  # hmm.
             return await self.bot.edit_message(loading, "I am still connecting to Google. Try again in 15-30 seconds.")
 
         try:
-            character = await parser.get_character()
+            await parser.get_character()
         except (KeyError, SpreadsheetNotFound):
             return await self.bot.edit_message(loading,
                                                "Invalid character sheet. Make sure you've shared it with me at `avrae-320@avrae-bot.iam.gserviceaccount.com`!")
@@ -1050,7 +1069,8 @@ class SheetManager:
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
         try:
-            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character.cell("C6").value))
+            await self.bot.edit_message(loading,
+                                        'Loaded and saved data for {}!'.format(sheet['sheet']['stats']['name']))
         except TypeError as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
             return await self.bot.edit_message(loading,

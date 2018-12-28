@@ -7,7 +7,7 @@ Created on Feb 14, 2017
 import logging
 import random
 import re
-from math import floor
+from math import floor, ceil
 
 import aiohttp
 import discord
@@ -83,8 +83,8 @@ class BeyondSheetParser:
         try:
             stats = self.get_stats()
             levels = self.get_levels()
-            hp = character['baseHitPoints'] + (
-                    (self.get_stat('hit-points-per-level', base=stats['constitutionMod'])) * levels['level'])
+            hp = character['overrideHitPoints'] or (character['baseHitPoints'] + (
+                    (self.get_stat('hit-points-per-level', base=stats['constitutionMod'])) * levels['level']))
             armor = self.get_ac()
             attacks = self.get_attacks()
             skills = self.get_skills()
@@ -189,7 +189,7 @@ class BeyondSheetParser:
         if self.character is None: raise Exception('You must call get_character() first.')
         if self.stats: return self.stats
         character = self.character
-        stats = {"name": "", "image": "", "description": "", "strength": 10, "dexterity": 10, "constitution": 10,
+        stats = {"strength": 10, "dexterity": 10, "constitution": 10,
                  "wisdom": 10, "intelligence": 10, "charisma": 10, "strengthMod": 0, "dexterityMod": 0,
                  "constitutionMod": 0, "wisdomMod": 0, "intelligenceMod": 0, "charismaMod": 0, "proficiencyBonus": 0,
                  'name': character.get('name') or "Unnamed", 'description': self.get_description(),
@@ -203,7 +203,7 @@ class BeyondSheetParser:
             bonus = next(s for s in character['bonusStats'] if s['id'] == i + 1)['value'] or 0
             override = next(s for s in character['overrideStats'] if s['id'] == i + 1)['value']
             stats[stat] = override or self.get_stat(f"{stat}-score", base=base + bonus)
-            stats[f"{stat}Mod"] = floor((int(stats[stat]) - 10) / 2)
+            stats[f"{stat}Mod"] = (int(stats[stat]) - 10) // 2
 
         self.stats = stats
         return stats
@@ -219,9 +219,11 @@ class BeyondSheetParser:
             for mod in modtype:
                 if not mod['subType'] == stat: continue
                 if mod['type'] in bonus_tags:
-                    bonus += mod['value'] or self.stat_from_id(mod['statId'])
+                    bonus += (mod['value'] or 0) + self.stat_from_id(mod['statId'])
                 elif mod['type'] == 'set':
-                    base = mod['value'] or self.stat_from_id(mod['statId'])
+                    base = (mod['value'] or 0) + self.stat_from_id(mod['statId'])
+                elif mod['type'] == 'ignore':
+                    return 0
 
         if bonus_tags == ['bonus']:
             self.calculated_stats[stat] = base + bonus
@@ -251,7 +253,7 @@ class BeyondSheetParser:
         armoredBonus = self.get_stat('armored-armor-class')
         miscBonus = 0
 
-        baseWithDex = base + dexBonus
+        baseWithDex = base + self.get_stat('unarmored-dex-ac-bonus', base=dexBonus)
 
         for val in self.character['characterValues']:
             if val['typeId'] == 1:  # AC override
@@ -551,16 +553,31 @@ class BeyondSheetParser:
                      'dc': 0,
                      'attackBonus': 0}
         spellcasterLevel = 0
+        castingClasses = 0
         spellMod = 0
         pactSlots = 0
         pactLevel = 1
         for _class in self.character['classes']:
-            if _class['definition']['spellCastingAbilityId']:
-                spellcasterLevel += floor(_class['level'] * CASTER_TYPES.get(_class['definition']['name'], 1))
-                spellMod = max(spellMod, self.stat_from_id(_class['definition']['spellCastingAbilityId']))
+            castingAbility = _class['definition']['spellCastingAbilityId'] or \
+                             (_class['subclassDefinition'] or {}).get('spellCastingAbilityId')
+            if castingAbility:
+                castingClasses += 1
+                casterMult = CASTER_TYPES.get(_class['definition']['name'], 1)
+                spellcasterLevel += _class['level'] * casterMult
+                spellMod = max(spellMod, self.stat_from_id(castingAbility))
             if _class['definition']['name'] == 'Warlock':
                 pactSlots = pact_slots_by_level(_class['level'])
                 pactLevel = pact_level_by_level(_class['level'])
+
+        if castingClasses > 1:
+            spellcasterLevel = floor(spellcasterLevel)
+        else:
+            if spellcasterLevel >= 1:
+                spellcasterLevel = ceil(spellcasterLevel)
+            else:
+                spellcasterLevel = 0
+
+        log.debug(f"Caster level: {spellcasterLevel}")
 
         for lvl in range(1, 10):
             spellbook['spellslots'][str(lvl)] = SLOTS_PER_LEVEL[lvl](spellcasterLevel)
@@ -573,10 +590,18 @@ class BeyondSheetParser:
         spellbook['attackBonus'] = spellMod + prof + attack_bonus_bonus
 
         for src in self.character['classSpells']:
-            spellbook['spells'].extend(s['definition']['name'].replace('\u2019', "'") for s in src['spells'])
+            spellnames = [s['definition']['name'].replace('\u2019', "'") for s in src['spells']]
+            spellbook['spells'].extend({
+                                           'name': s,
+                                           'strict': True
+                                       } for s in spellnames)
         for src in self.character['spells'].values():
-            spellbook['spells'].extend(s['definition']['name'].replace('\u2019', "'") for s in src)
-        spellbook['spells'] = list(set(spellbook['spells']))
+            spellnames = [s['definition']['name'].replace('\u2019', "'") for s in src]
+            spellbook['spells'].extend({
+                                           'name': s,
+                                           'strict': True
+                                       } for s in spellnames)
+        # spellbook['spells'] = list(set(spellbook['spells']))
 
         return spellbook
 
@@ -640,7 +665,7 @@ def pact_slots_by_level(level):
 
 
 def pact_level_by_level(level):
-    return min(floor((level + 1) / 2), 5)
+    return min((level + 1) // 2, 5)
 
 
 if __name__ == '__main__':

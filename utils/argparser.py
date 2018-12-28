@@ -8,15 +8,18 @@ def argsplit(args):
     return shlex.split(args)
 
 
-def argparse(args):
+def argparse(args, character=None):
     """
     Parses arguments.
     :param args: A list of arguments to parse.
+    :param character: A Character object, if args should have cvars parsed.
     :return: The parsed arguments (ParsedArguments).
     :rtype ParsedArguments
     """
     if isinstance(args, str):
         args = argsplit(args)
+    if character:
+        args = [str(character.evaluate_cvar(a, True)) for a in args]
 
     parsed = {}
     index = 0

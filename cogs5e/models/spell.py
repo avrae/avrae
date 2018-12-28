@@ -366,7 +366,12 @@ class Save(Effect):
         autoctx.meta_queue(f"**DC**: {dc}")
         if autoctx.target.target:
             target_save_mod = autoctx.target.get_save(save_skill)
-            save_roll = roll('1d20{:+}'.format(target_save_mod), adv=adv,
+            sb = autoctx.target.target.active_effects('sb')
+            if sb:
+                saveroll = '1d20{:+}+{}'.format(target_save_mod, '+'.join(sb))
+            else:
+                saveroll = '1d20{:+}'.format(target_save_mod)
+            save_roll = roll(saveroll, adv=adv,
                              rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
             is_success = save_roll.total >= dc
             autoctx.queue(save_roll.result + ("; Success!" if is_success else "; Failure!"))

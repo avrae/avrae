@@ -7,14 +7,14 @@ from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import select_monster_full, c, select_spell_full
+from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import SelectionException
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
 from utils.argparser import argparse
-from utils.functions import confirm, get_selection, search_and_select
+from utils.functions import confirm, get_selection
 
 log = logging.getLogger(__name__)
 

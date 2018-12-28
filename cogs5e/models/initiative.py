@@ -920,6 +920,7 @@ class CombatantGroup:
         self._index = index
         self.initMod = 0  # for sorting
         self.group = None  # groups cannot be in groups
+        self.isPrivate = False  # eh
 
     @classmethod
     def new(cls, name, init, ctx=None):

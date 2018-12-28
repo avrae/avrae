@@ -735,12 +735,47 @@ class InitTracker:
                                delete_after=10)
         await combat.final()
 
-    @init.command(pass_context=True, aliases=['a'])
+    @init.group(pass_context=True, aliases=['a'], invoke_without_command=True)
     async def attack(self, ctx, target_name, atk_name, *, args=''):
         """Rolls an attack against another combatant.
         Valid Arguments: see !a and !ma.
         `-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit."""
         return await self._attack(ctx, None, target_name, atk_name, args)
+
+    @attack.command(pass_context=True, name="list")
+    async def attack_list(self, ctx):
+        """Lists the active combatant's attacks."""
+        combat = await Combat.from_ctx(ctx)
+        combatant = combat.current_combatant
+        if combatant is None:
+            return await self.bot.say("You must start combat with `!init next` first.")
+
+        attacks = combatant.attacks
+
+        tempAttacks = []
+        for a in attacks:
+            damage = a['damage'] if a['damage'] is not None else 'no'
+            if a['attackBonus'] is not None:
+                try:
+                    bonus = roll(a['attackBonus']).total
+                except:
+                    bonus = a['attackBonus']
+                tempAttacks.append(f"**{a['name']}:** +{bonus} To Hit, {damage} damage.")
+            else:
+                tempAttacks.append(f"**{a['name']}:** {damage} damage.")
+        if not tempAttacks:
+            tempAttacks = ['No attacks.']
+        a = '\n'.join(tempAttacks)
+        if len(a) > 2000:
+            a = ', '.join(atk['name'] for atk in attacks)
+        if len(a) > 2000:
+            a = "Too many attacks, values hidden!"
+
+        if not combatant.isPrivate:
+            destination = ctx.message.channel
+        else:
+            destination = ctx.message.author
+        return await self.bot.send_message(destination, "{}'s attacks:\n{}".format(combatant.name, a))
 
     @init.command(pass_context=True)
     async def aoo(self, ctx, combatant_name, target_name, atk_name, *, args=''):

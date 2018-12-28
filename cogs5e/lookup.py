@@ -354,7 +354,7 @@ class Lookup:
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
-        result = await search_and_select(ctx, c.backgrounds, name, lambda e: e.name, srd=srd)
+        result = await search_and_select(ctx, c.backgrounds, name, lambda e: e.name, srd=lambda e: e.srd)
 
         await self.add_training_data("background", name, result.name)
 

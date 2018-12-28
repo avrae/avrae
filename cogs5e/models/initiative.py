@@ -1032,7 +1032,7 @@ class Effect:
         'attack': (parse_attack_arg, lambda e: f"{int(e['attackBonus']):+}|{e['damage']}")
     }
     VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
-                  'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack'}
+                  'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus'}
 
     def __init__(self, combat, combatant, name: str, duration: int, remaining: int, effect: dict,
                  concentration: bool = False, children: list = None, parent: dict = None):

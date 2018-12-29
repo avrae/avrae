@@ -479,10 +479,9 @@ class IEffect(Effect):
 
     def run(self, autoctx):
         super(IEffect, self).run(autoctx)
-        effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects))
         if isinstance(autoctx.target.target, Combatant):
-            effect.combat = autoctx.target.target.combat  # hacky but works
-            effect.combatant = autoctx.target.target
+            effect = initiative.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
+                                           self.duration, autoctx.parse_annostr(self.effects))
             if autoctx.conc_effect:
                 effect.set_parent(autoctx.conc_effect)
             if isinstance(self.duration, str):
@@ -491,6 +490,8 @@ class IEffect(Effect):
                 except ValueError:
                     raise SpellException(f"{self.duration} is not an integer (in effect duration)")
             autoctx.target.target.add_effect(effect)
+        else:
+            effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects))
         autoctx.queue(f"**Effect**: {str(effect)}")
 
 

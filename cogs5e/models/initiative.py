@@ -1026,10 +1026,17 @@ def parse_attack_arg(arg, name):
     return {'name': name, 'attackBonus': data[0] or None, 'damage': data[1] or None, 'details': data[2] or None}
 
 
+def parse_attack_str(atk):
+    try:
+        return f"{int(atk['attackBonus']):+}|{atk['damage']}"
+    except:
+        return f"{atk['attackBonus']}|{atk['damage']}"
+
+
 class Effect:
     LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
     SPECIAL_ARGS = {  # 2-tuple of effect, str
-        'attack': (parse_attack_arg, lambda e: f"{int(e['attackBonus']):+}|{e['damage']}")
+        'attack': (parse_attack_arg, parse_attack_str)
     }
     VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
                   'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus'}

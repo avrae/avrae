@@ -577,7 +577,7 @@ class Combatant(Spellcaster):
     @property
     def attacks(self):
         attacks = self.attack_effects(self._attacks)
-        attacks.extend(self.active_effects('attack'))
+        attacks.extend(self.attack_effects(self.active_effects('attack')))
         return attacks
 
     @property
@@ -652,15 +652,17 @@ class Combatant(Spellcaster):
         return to_remove
 
     def attack_effects(self, attacks):
-        at = copy.deepcopy(attacks)
         b = self.active_effects('b')
         d = self.active_effects('d')
-        for a in at:
-            if a['attackBonus'] is not None and b:
-                a['attackBonus'] += f" + {'+'.join(b)}"
-            if a['damage'] is not None and d:
-                a['damage'] += f" + {'+'.join(d)}"
-        return at
+        if b or d:
+            at = copy.deepcopy(attacks)
+            for a in at:
+                if a['attackBonus'] is not None and b:
+                    a['attackBonus'] += f" + {'+'.join(b)}"
+                if a['damage'] is not None and d:
+                    a['damage'] += f" + {'+'.join(d)}"
+            return at
+        return attacks
 
     def active_effects(self, key=None):
         if 'parsed_effects' not in self._cache:

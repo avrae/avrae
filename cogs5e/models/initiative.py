@@ -662,7 +662,7 @@ class Combatant(Spellcaster):
                 if a['damage'] is not None and d:
                     a['damage'] += f" + {'+'.join(d)}"
             return at
-        return attacks
+        return attacks.copy()
 
     def active_effects(self, key=None):
         if 'parsed_effects' not in self._cache:

@@ -18,33 +18,53 @@ You can download templates of all the required files at https://andrew-zhu.com/a
 Avrae is a large project, and can be a bit daunting to get running.
 You'll need to create a few files first.
 
+###### Credentials
 `credentials.py` should include, at the very least, variables as such:
 - `officialToken` - Empty string.
 - `owner_id` - The Discord User ID of the bot owner (you, if testing).
-- `test_redis_url` - The URI of a Redis cache (probably `redis://localhost:6379/0`)
-- `test_mongo_url` - The URI of a MongoDB instance. (e.g. `mongodb+srv://user:pass@localhost/test`)
+- `test_redis_url` - The URI of a Redis cache (e.g. `redis://localhost:6379/0`)
+- `test_mongo_url` - The URI of a MongoDB instance. (e.g. `mongodb://localhost:27017`)
 - `testToken` - A valid Discord Bot token.
 - `test_dicecloud_user` - A Dicecloud username.
 - `test_dicecloud_pass` - The Dicecloud password of the Dicecloud user.
 - `test_dicecloud_token` - A Dicecloud API token.
 
-You'll also need to create a Google Drive Service Account. You can find instructions on how to do this [here](http://pygsheets.readthedocs.io/en/latest/authorizing.html).
-Follow steps 1-4, then follow the **Signed Credentials** portion. Rename the JSON `avrae-google.json` and put it in the project root.
+You'll also need to create a Google Drive Service Account. You can find instructions on how to do this [here](https://gspread.readthedocs.io/en/latest/oauth2.html#using-signed-credentials).
+Follow steps 1-3 in the **Signed Credentials** portion. Rename the JSON `avrae-google.json` and put it in the project root.
 
+###### Resources
 After creating the credential files, you'll have to create a few files so that Lookup doesn't break:
-- `res/conditions.json`
-- `res/rules.json`
-- `res/feats.json`
-- `res/races.json`*
-- `res/classes.json`
+- `res/backgrounds.json`*
 - `res/bestiary.json`*
-- `res/spells.json`*
+- `res/classes.json`*
+- `res/classfeats.json`*
+- `res/conditions.json`
+- `res/feats.json`
+- `res/itemprops.json` (should be `{}`)
 - `res/items.json`*
-- `res/backgrounds.json`
-- `res/itemprops.json`
+- `res/names.json`*
+- `res/races.json`*
+- `res/rules.json`
+- `res/spells.json`*
 
-These files should just contain an empty JSON array (`[]`) for testing.
+These files (except for itemprops) should just contain an empty JSON array (`[]`) for testing.
 Files marked with a * can be obtained by running the [data parsers](https://github.com/avrae/avrae-data).
+
+###### Temp Folders
+You will need to create a folder named `temp`.
+
+###### Search Algorithm
+You will also need to change the search algorithm used by spell lookup to the standard algorithm.
+
+In `cogs5e/lookup.py`, delete line 14 (`from cogs5e.funcs.lookup_ml import ml_spell_search`) and
+edit line 627
+```py
+spell = await select_spell_full(ctx, name, srd=srd, search_func=ml_spell_search)
+```
+to
+```py
+spell = await select_spell_full(ctx, name, srd=srd)
+```
 
 ##### Actually Running Avrae
 ###### Redis

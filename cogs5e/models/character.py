@@ -447,6 +447,7 @@ class Character(Spellcaster):
 
         cvars = self.character.get('cvars', {})
         stat_vars = self.character.get('stat_cvars', {})
+        stat_vars['spell'] = self.get_spell_ab() - self.get_prof_bonus()
         out = ""
         tempout = ''
         for substr in re.split(ops, varstr):

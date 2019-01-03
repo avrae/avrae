@@ -45,6 +45,11 @@ MARTIAL_WEAPONS = ['Battleaxe', 'Blowgun', 'Flail', 'Glaive', 'Greataxe', 'Great
                    'Scimitar', 'Shortsword', 'Trident', 'War Pick', 'Warhammer', 'Whip', 'Pistol', 'Musket',
                    'Automatic Pistol', 'Revolver', 'Hunting Rifle', 'Automatic Rifle', 'Shotgun', 'Laser Pistol',
                    'Antimatter Rifle', 'Laser Rifle']
+HOUSERULE_SKILL_MAP = {
+    3: 'acrobatics', 11: 'animalHandling', 6: 'arcana', 2: 'athletics', 16: 'deception', 7: 'history',
+    12: 'insight', 17: 'intimidation', 8: 'investigation', 13: 'medicine', 9: 'nature', 14: 'perception',
+    18: 'performance', 19: 'persuasion', 10: 'religion', 4: 'sleightOfHand', 5: 'stealth', 15: 'survival'
+}
 
 
 class BeyondSheetParser:
@@ -491,7 +496,7 @@ class BeyondSheetParser:
         for skill, stat in SKILL_MAP.items():
             skills[skill] = stats.get(f"{stat}Mod", 0)
 
-        for modtype in character['modifiers'].values():
+        for modtype in character['modifiers'].values():  # calculate proficiencies in all skills
             for mod in modtype:
                 mod['subType'] = mod['subType'].replace("-saving-throws", "Save")
                 if mod['type'] == 'half-proficiency':
@@ -511,7 +516,7 @@ class BeyondSheetParser:
         profs['animalHandling'] = profs.get('animal-handling', 0)
         profs['sleightOfHand'] = profs.get('sleight-of-hand', 0)
 
-        for skill in skills:
+        for skill in skills:  # add proficiency and bonuses to skills
             relevantprof = profs.get(skill, 0)
             relevantbonus = bonuses.get(skill, 0)
             if 'ability-checks' in profs and not 'Save' in skill:
@@ -524,6 +529,12 @@ class BeyondSheetParser:
                 relevantbonus += bonuses['saving-throws']
             skills[skill] = floor(
                 skills[skill] + (stats.get('proficiencyBonus') * relevantprof) + relevantbonus)
+
+        for charval in self.character['characterValues']:  # houseruled overrides
+            if not charval['typeId'] == 23:
+                continue
+            if charval['valueId'] in HOUSERULE_SKILL_MAP:
+                skills[HOUSERULE_SKILL_MAP[charval['valueId']]] = charval['value']
 
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             skills[stat] = stats.get(stat + 'Mod')

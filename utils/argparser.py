@@ -1,6 +1,5 @@
 import shlex
 
-from cogs5e.funcs.scripting import MathEvaluator
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import list_get
 
@@ -20,6 +19,7 @@ def argparse(args, character=None):
     if isinstance(args, str):
         args = argsplit(args)
     if character:
+        from cogs5e.funcs.scripting import MathEvaluator
         evaluator = MathEvaluator.with_character(character)
         args = [evaluator.parse(a) for a in args]
 

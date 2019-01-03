@@ -12,8 +12,6 @@ You can join the Avrae Development Discord [here](https://discord.gg/pQbd4s6)!
 ###### OS Requirements
 Avrae runs best on Ubuntu 16.04.4, but should be fully compatible with any UNIX-based system.
 It is possible to run Avrae on Windows, but is not recommended.
-###### Support File Package
-You can download templates of all the required files at https://andrew-zhu.com/avrae/avrae-files.zip.
 ##### Creating Support Files
 Avrae is a large project, and can be a bit daunting to get running.
 You'll need to create a few files first.

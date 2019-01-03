@@ -29,7 +29,6 @@ class Combat:
         self._turn = turnNum
         self._current_index = currentIndex
         self.ctx = ctx
-        self.sort_combatants()
 
     @classmethod
     def new(cls, channelId, summaryMsgId, dmId, options, ctx):
@@ -44,20 +43,20 @@ class Combat:
 
     @classmethod
     async def from_dict(cls, raw, ctx):
-        combatants = []
+        inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+                   raw['turn'], raw['current'])
         for c in raw['combatants']:
             if c['type'] == 'common':
-                combatants.append(Combatant.from_dict(c, ctx))
+                inst._combatants.append(Combatant.from_dict(c, ctx, inst))
             elif c['type'] == 'monster':
-                combatants.append(MonsterCombatant.from_dict(c, ctx))
+                inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
             elif c['type'] == 'player':
-                combatants.append(await PlayerCombatant.from_dict(c, ctx))
+                inst._combatants.append(await PlayerCombatant.from_dict(c, ctx, inst))
             elif c['type'] == 'group':
-                combatants.append(await CombatantGroup.from_dict(c, ctx))
+                inst._combatants.append(await CombatantGroup.from_dict(c, ctx, inst))
             else:
                 raise CombatException("Unknown combatant type")
-        return cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, combatants, raw['round'],
-                   raw['turn'], raw['current'])
+        return inst
 
     @classmethod
     async def from_id(cls, _id, ctx):
@@ -69,7 +68,7 @@ class Combat:
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
                 'combatants': [c.to_dict() for c in self._combatants], 'turn': self.turn_num,
-                'round': self.round_num, 'current': self.index}
+                'round': self.round_num, 'current': self._current_index}
 
     @property
     def channel(self):
@@ -363,7 +362,7 @@ class Combat:
 
 
 class Combatant(Spellcaster):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
+    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
                  index=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None, *args, **kwargs):
         super(Combatant, self).__init__(spellcasting)
         if resists is None:
@@ -385,6 +384,7 @@ class Combatant(Spellcaster):
         self._saves = saves
         self._index = index  # combat write only; position in combat
         self.ctx = ctx
+        self.combat = combat
         self._notes = notes
         self._effects = effects
         self._group = group
@@ -393,16 +393,17 @@ class Combatant(Spellcaster):
         self._cache = {}
 
     @classmethod
-    def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx):
-        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx)
+    def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat):
+        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat)
 
     @classmethod
-    def from_dict(cls, raw, ctx):
-        effects = [Effect.from_dict(e) for e in raw['effects']]
-        return cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
-                   raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, index=raw['index'],
-                   notes=raw['notes'], effects=effects, group=raw['group'],  # begin backwards compatibility
+    def from_dict(cls, raw, ctx, combat):
+        inst = cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
+                   raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, combat, index=raw['index'],
+                   notes=raw['notes'], effects=[], group=raw['group'],  # begin backwards compatibility
                    temphp=raw.get('temphp'), spellcasting=Spellcasting.from_dict(raw.get('spellcasting', {})))
+        inst._effects = [Effect.from_dict(e, combat, inst) for e in raw['effects']]
+        return inst
 
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
@@ -417,6 +418,8 @@ class Combatant(Spellcaster):
 
     @name.setter
     def name(self, new_name):
+        for effect in self._effects:
+            effect.on_name_change(self._name, new_name)
         self._name = new_name
 
     def get_name(self):
@@ -573,7 +576,9 @@ class Combatant(Spellcaster):
 
     @property
     def attacks(self):
-        return self.attack_effects(self._attacks)
+        attacks = self.attack_effects(self._attacks)
+        attacks.extend(self.attack_effects(self.active_effects('attack')))
+        return attacks
 
     @property
     def saves(self):
@@ -604,9 +609,11 @@ class Combatant(Spellcaster):
         self._group = value
 
     def add_effect(self, effect):
-        if self.get_effect(effect.name):
-            self.remove_effect(self.get_effect(effect.name))
-        conc_conflict = self.remove_all_effects(lambda e: e.concentration)
+        if self.get_effect(effect.name, True):
+            self.get_effect(effect.name).remove()
+        conc_conflict = []
+        if effect.concentration:
+            conc_conflict = self.remove_all_effects(lambda e: e.concentration)
 
         self._effects.append(effect)
         return {"conc_conflict": conc_conflict}
@@ -637,24 +644,25 @@ class Combatant(Spellcaster):
             raise CombatException("Effect does not exist on combatant.")
 
     def remove_all_effects(self, _filter=None):
-        if not _filter:
-            self._effects = []
-        else:
-            to_remove = list(filter(_filter, self._effects))
-            for e in to_remove:
-                self.remove_effect(e)
-            return to_remove
+        if _filter is None:
+            _filter = lambda _: True
+        to_remove = list(filter(_filter, self._effects))
+        for e in to_remove:
+            e.remove()
+        return to_remove
 
     def attack_effects(self, attacks):
-        at = copy.deepcopy(attacks)
         b = self.active_effects('b')
         d = self.active_effects('d')
-        for a in at:
-            if a['attackBonus'] is not None and b:
-                a['attackBonus'] += f" + {'+'.join(b)}"
-            if a['damage'] is not None and d:
-                a['damage'] += f" + {'+'.join(d)}"
-        return at
+        if b or d:
+            at = copy.deepcopy(attacks)
+            for a in at:
+                if a['attackBonus'] is not None and b:
+                    a['attackBonus'] += f" + {'+'.join(b)}"
+                if a['damage'] is not None and d:
+                    a['damage'] += f" + {'+'.join(d)}"
+            return at
+        return attacks.copy()
 
     def active_effects(self, key=None):
         if 'parsed_effects' not in self._cache:
@@ -685,8 +693,7 @@ class Combatant(Spellcaster):
         :return: None
         """
         for e in self.get_effects().copy():
-            if e.on_turn(num_turns):
-                self.remove_effect(e)
+            e.on_turn(num_turns)
 
     def get_summary(self, private=False, no_notes=False):
         """
@@ -755,15 +762,16 @@ class Combatant(Spellcaster):
 
 
 class MonsterCombatant(Combatant):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
+    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
                  index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None):
         super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                               attacks, saves, ctx, index, notes, effects, group, temphp, spellcasting)
+                                               attacks, saves, ctx, combat, index, notes, effects, group, temphp,
+                                               spellcasting)
         self._monster_name = monster_name
 
     @classmethod
-    def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, opts=None, index=None, hp=None,
-                     ac=None):
+    def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, combat, opts=None, index=None,
+                     hp=None, ac=None):
         monster_name = monster.name
         hp = int(monster.hp) if not hp else int(hp)
         ac = int(monster.ac) if not ac else int(ac)
@@ -789,12 +797,12 @@ class MonsterCombatant(Combatant):
                                     monster.spellcasting.get('attackBonus', 0),
                                     monster.spellcasting.get('casterLevel', 0))
 
-        return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, index,
+        return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, combat, index,
                    monster_name, spellcasting=spellcasting)
 
     @classmethod
-    def from_dict(cls, raw, ctx):
-        inst = super(MonsterCombatant, cls).from_dict(raw, ctx)
+    def from_dict(cls, raw, ctx, combat):
+        inst = super(MonsterCombatant, cls).from_dict(raw, ctx, combat)
         inst._monster_name = raw['monster_name']
         return inst
 
@@ -810,19 +818,20 @@ class MonsterCombatant(Combatant):
 
 
 class PlayerCombatant(Combatant):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx,
+    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
                  index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None,
                  temphp=None, spellcasting=None):
         super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                              attacks, saves, ctx, index, notes, effects, group, temphp, spellcasting)
+                                              attacks, saves, ctx, combat, index, notes, effects, group, temphp,
+                                              spellcasting)
         self.character_id = character_id
         self.character_owner = character_owner
         self._character = None  # shenanigans
 
     @classmethod
-    async def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, character_id,
+    async def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, combat, character_id,
                              character_owner, char):
-        inst = cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx,
+        inst = cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx, combat,
                    character_id=character_id, character_owner=character_owner)
         inst._character = char
         return inst
@@ -860,7 +869,9 @@ class PlayerCombatant(Combatant):
 
     @property
     def attacks(self):
-        return self.attack_effects(self.character.get_attacks())
+        attacks = super(PlayerCombatant, self).attacks
+        attacks.extend(self.attack_effects(self.character.get_attacks()))
+        return attacks
 
     @property
     def saves(self):
@@ -881,8 +892,8 @@ class PlayerCombatant(Combatant):
         return self.character.remaining_casts_of(spell, level)
 
     @classmethod
-    async def from_dict(cls, raw, ctx):
-        inst = super(PlayerCombatant, cls).from_dict(raw, ctx)
+    async def from_dict(cls, raw, ctx, combat):
+        inst = super(PlayerCombatant, cls).from_dict(raw, ctx, combat)
         inst.character_id = raw['character_id']
         inst.character_owner = raw['character_owner']
 
@@ -911,6 +922,7 @@ class CombatantGroup:
         self._index = index
         self.initMod = 0  # for sorting
         self.group = None  # groups cannot be in groups
+        self.isPrivate = False  # eh
 
     @classmethod
     def new(cls, name, init, ctx=None):
@@ -944,7 +956,7 @@ class CombatantGroup:
     def attacks(self):
         a = []
         for c in self.get_combatants():
-            a.extend(c.attacks)
+            a.extend(atk for atk in c.attacks if atk not in a)
         return a
 
     def get_combatants(self):
@@ -991,15 +1003,15 @@ class CombatantGroup:
         return ", ".join({c.controller_mention() for c in self.get_combatants()})
 
     @classmethod
-    async def from_dict(cls, raw, ctx):
+    async def from_dict(cls, raw, ctx, combat):
         combatants = []
         for c in raw['combatants']:
             if c['type'] == 'common':
-                combatants.append(Combatant.from_dict(c, ctx))
+                combatants.append(Combatant.from_dict(c, ctx, combat))
             elif c['type'] == 'monster':
-                combatants.append(MonsterCombatant.from_dict(c, ctx))
+                combatants.append(MonsterCombatant.from_dict(c, ctx, combat))
             elif c['type'] == 'player':
-                combatants.append(await PlayerCombatant.from_dict(c, ctx))
+                combatants.append(await PlayerCombatant.from_dict(c, ctx, combat))
             else:
                 raise CombatException("Unknown combatant type")
         return cls(raw['name'], raw['init'], combatants, ctx, raw['index'])
@@ -1009,25 +1021,54 @@ class CombatantGroup:
                 'index': self.index, 'type': 'group'}
 
 
+def parse_attack_arg(arg, name):
+    data = arg.split('|')
+    if not len(data) == 3:
+        raise InvalidArgument("`attack` arg must be formatted `HIT|DAMAGE|TEXT`")
+    return {'name': name, 'attackBonus': data[0] or None, 'damage': data[1] or None, 'details': data[2] or None}
+
+
+def parse_attack_str(atk):
+    try:
+        return f"{int(atk['attackBonus']):+}|{atk['damage']}"
+    except:
+        return f"{atk['attackBonus']}|{atk['damage']}"
+
+
 class Effect:
     LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
+    SPECIAL_ARGS = {  # 2-tuple of effect, str
+        'attack': (parse_attack_arg, parse_attack_str)
+    }
     VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
-                  'vuln': 'Vulnerability', 'neutral': 'Neutral'}
+                  'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus'}
 
-    def __init__(self, name: str, duration: int, remaining: int, effect: dict, concentration: bool = False):
+    def __init__(self, combat, combatant, name: str, duration: int, remaining: int, effect: dict,
+                 concentration: bool = False, children: list = None, parent: dict = None):
+        if children is None:
+            children = []
+        self.combat = combat
+        self.combatant = combatant
         self._name = name
         self._duration = duration
         self._remaining = remaining
         self._effect = effect
         self._concentration = concentration
+        self.children = children
+        self.parent = parent
 
     @classmethod
-    def new(cls, name, duration, effect_args, concentration: bool = False):
+    def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False):
         if isinstance(effect_args, str):
-            effect_args = argparse(effect_args)
+            if isinstance(combatant, PlayerCombatant):
+                effect_args = argparse(effect_args, combatant.character)
+            else:
+                effect_args = argparse(effect_args)
         effect_dict = {}
         for arg in effect_args:
-            if arg in cls.LIST_ARGS:
+            if arg in cls.SPECIAL_ARGS:
+                effect_dict[arg] = cls.SPECIAL_ARGS[arg][0](effect_args.last(arg), name)
+            elif arg in cls.LIST_ARGS:
                 effect_dict[arg] = effect_args.get(arg, [])
             elif arg in cls.VALID_ARGS:
                 effect_dict[arg] = effect_args.last(arg)
@@ -1035,7 +1076,13 @@ class Effect:
             duration = int(duration)
         except (ValueError, TypeError):
             raise InvalidArgument("Effect duration must be an integer.")
-        return cls(name, duration, duration, effect_dict, concentration=concentration)
+        return cls(combat, combatant, name, duration, duration, effect_dict, concentration=concentration)
+
+    def set_parent(self, parent):
+        """Sets the parent of an effect."""
+        self.parent = {"combatant": parent.combatant.name, "effect": parent.name}
+        parent.children.append({"combatant": self.combatant.name, "effect": self.name})
+        return self
 
     @property
     def name(self):
@@ -1061,16 +1108,28 @@ class Effect:
         desc = self.name
         if self.remaining >= 0:
             desc += f" [{self.remaining} rounds]"
-        if self.effect:
-            desc += f" ({self.get_effect_str()})"
+        desc += self.get_parenthetical()
         if self.concentration:
             desc += " <C>"
         return desc
 
+    def get_parenthetical(self):
+        """Gets the descriptive text inside parentheses."""
+        text = []
+        if self.effect:
+            text.append(self.get_effect_str())
+        if self.parent:
+            text.append(f"Parent: {self.parent['effect']}")  # name of parent effect
+        if text:
+            return f" ({'; '.join(text)})"
+        return ""
+
     def get_effect_str(self):
         out = []
         for k, v in self.effect.items():
-            if isinstance(v, list):
+            if k in self.SPECIAL_ARGS:
+                out.append(f"{self.VALID_ARGS.get(k)}: {self.SPECIAL_ARGS[k][1](v)}")
+            elif isinstance(v, list):
                 out.append(f"{self.VALID_ARGS.get(k)}: {', '.join(v)}")
             else:
                 out.append(f"{self.VALID_ARGS.get(k)}: {v}")
@@ -1082,14 +1141,47 @@ class Effect:
         """
         if self.remaining >= 0:
             if self.remaining - num_turns <= 0:
-                return True
+                self.remove()
             self._remaining -= num_turns
-        return False
+
+    def remove(self):
+        for effect in self.get_children_effects():
+            effect.remove()
+
+        self.combatant.remove_effect(self)
+
+    def on_name_change(self, old_name, new_name):
+        for effect in self.get_children_effects():
+            effect.parent['combatant'] = new_name
+
+        if self.parent:
+            parent = self.get_parent_effect()
+            for child in parent.children:
+                if child['combatant'] == old_name:
+                    child['combatant'] = new_name
+
+    def get_parent_effect(self):
+        return self.combat.get_combatant(self.parent['combatant'], True).get_effect(self.parent['effect'], True)
+
+    def get_children_effects(self):
+        """Returns an iterator of Effects of this Effect's children."""
+        for e in self.children.copy():
+            child = self.get_child_effect(e)
+            if child:
+                yield child
+            else:
+                self.children.remove(e)  # effect was removed elsewhere; disown it
+
+    def get_child_effect(self, e):
+        combatant = self.combat.get_combatant(e['combatant'], True)
+        if not combatant:
+            return None
+        return combatant.get_effect(e['effect'], True)
 
     @classmethod
-    def from_dict(cls, raw):
-        return cls(**raw)
+    def from_dict(cls, raw, combat, combatant):
+        return cls(combat, combatant, **raw)
 
     def to_dict(self):
         return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect,
-                'concentration': self.concentration}
+                'concentration': self.concentration, 'children': self.children, 'parent': self.parent}

@@ -436,13 +436,14 @@ class Character(Spellcaster):
 
     def evaluate_cvar(self, varstr):
         """Evaluates a cvar.
-        @:param varstr - the name of the cvar to parse.
-        @:returns int - the value of the cvar, or 0 if evaluation failed."""
+        :param varstr - the name of the cvar to parse.
+        :returns int - the value of the cvar, or 0 if evaluation failed."""
         ops = r"([-+*/().<>=])"
         varstr = str(varstr).strip('<>{}')
 
         cvars = self.character.get('cvars', {})
         stat_vars = self.character.get('stat_cvars', {})
+        stat_vars['spell'] = self.get_spell_ab() - self.get_prof_bonus()
         out = ""
         tempout = ''
         for substr in re.split(ops, varstr):

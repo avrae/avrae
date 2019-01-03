@@ -7,14 +7,14 @@ from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import select_monster_full, c, select_spell_full
+from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import SelectionException
 from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
 from utils.argparser import argparse
-from utils.functions import confirm, get_selection, search_and_select
+from utils.functions import confirm, get_selection
 
 log = logging.getLogger(__name__)
 
@@ -138,7 +138,7 @@ class InitTracker:
             init = modifier
             modifier = 0
 
-        me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private, resists, [], {}, ctx)
+        me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private, resists, [], {}, ctx, combat)
 
         if group is None:
             combat.add_combatant(me)
@@ -236,7 +236,7 @@ class InitTracker:
                     to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
-                me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, opts,
+                me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, combat, opts,
                                                    hp=hp or rolled_hp, ac=ac)
                 if group is None:
                     combat.add_combatant(me)
@@ -316,10 +316,10 @@ class InitTracker:
         private = args.last('h', type_=bool)
         bonus = roll(bonus).total
 
-        me = await PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
-                                                  char.get_resists(), ctx, char.id, ctx.message.author.id, char)
-
         combat = await Combat.from_ctx(ctx)
+
+        me = await PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
+                                                  char.get_resists(), ctx, combat, char.id, ctx.message.author.id, char)
 
         if combat.get_combatant(char.get_name()) is not None:
             await self.bot.say("Combatant already exists.")
@@ -480,7 +480,9 @@ class InitTracker:
         -immune <DMGTYPE>
         -vuln <DMGTYPE>
         -neutral <DMGTYPE>
-        -group <GROUP> (changes group)"""
+        -group <GROUP> (changes group)
+        -max <MAXHP> (sets max hp)
+        -hp <HP> (sets current hp)"""
         combat = await Combat.from_ctx(ctx)
 
         combatant = await combat.select_combatant(name)
@@ -542,7 +544,7 @@ class InitTracker:
                     out += "\u2705 Combatant group set to {}.\n".format(group.name)
         if 'name' in args:
             name = args.last('name')
-            if combat.get_combatant(name) is not None:
+            if combat.get_combatant(name, True) is not None:
                 out += "\u274c There is already another combatant with that name.\n"
             elif name:
                 combatant.name = name
@@ -555,6 +557,17 @@ class InitTracker:
                     resist = resist.lower()
                     combatant.set_resist(resist, resisttype)
                     out += f"\u2705 Now {resisttype} to {resist}.\n"
+        if 'max' in args:
+            maxhp = args.last('max', type_=int)
+            if maxhp < 1:
+                out += "\u274c Max HP must be at least 1.\n"
+            else:
+                combatant.hpMax = maxhp
+                out += "\u2705 Combatant HP max set to {}.\n".format(maxhp)
+        if 'hp' in args:
+            hp = args.last('hp', type_=int)
+            combatant.set_hp(hp)
+            out += "\u2705 Combatant HP set to {}.\n".format(hp)
 
         if combatant.isPrivate:
             await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
@@ -648,7 +661,10 @@ class InitTracker:
         if thp >= 0:
             combatant.temphp = thp
         else:
-            combatant.temphp += thp
+            if combatant.temphp:
+                combatant.temphp += thp
+            else:
+                return await self.bot.say("Combatant has no temp hp.")
 
         out = "{}: {}".format(combatant.name, combatant.get_hp_str())
         await self.bot.say(out, delete_after=10)
@@ -671,7 +687,8 @@ class InitTracker:
         -b [bonus] (see !a)
         -d [damage bonus] (see !a)
         __General__
-        -ac [ac] (modifies ac temporarily; adds if starts with +/- or sets otherwise)"""
+        -ac [ac] (modifies ac temporarily; adds if starts with +/- or sets otherwise)
+        -sb [save bonus] (Adds a bonus to saving throws)"""
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
@@ -681,11 +698,15 @@ class InitTracker:
         if effect_name.lower() in (e.name.lower() for e in combatant.get_effects()):
             return await self.bot.say("Effect already exists.", delete_after=10)
 
-        args = argparse(args)
+        if isinstance(combatant, PlayerCombatant):
+            args = argparse(args, combatant.character)
+        else:
+            args = argparse(args)
         duration = args.last('dur', -1, int)
         conc = args.last('conc', False, bool)
 
-        effectObj = Effect.new(duration=duration, name=effect_name, effect_args=args, concentration=conc)
+        effectObj = Effect.new(combat, combatant, duration=duration, name=effect_name, effect_args=args,
+                               concentration=conc)
         result = combatant.add_effect(effectObj)
         out = "Added effect {} to {}.".format(effect_name, combatant.name)
         if result['conc_conflict']:
@@ -707,16 +728,55 @@ class InitTracker:
             await self.bot.say("All effects removed from {}.".format(combatant.name), delete_after=10)
         else:
             to_remove = await combatant.select_effect(effect)
-            combatant.remove_effect(to_remove)
-            await self.bot.say('Effect {} removed from {}.'.format(to_remove.name, combatant.name), delete_after=10)
+            children_removed = ""
+            if to_remove.children:
+                children_removed = f"Also removed {len(to_remove.children)} child effects."
+            to_remove.remove()
+            await self.bot.say(f'Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}',
+                               delete_after=10)
         await combat.final()
 
-    @init.command(pass_context=True, aliases=['a'])
+    @init.group(pass_context=True, aliases=['a'], invoke_without_command=True)
     async def attack(self, ctx, target_name, atk_name, *, args=''):
         """Rolls an attack against another combatant.
         Valid Arguments: see !a and !ma.
         `-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit."""
         return await self._attack(ctx, None, target_name, atk_name, args)
+
+    @attack.command(pass_context=True, name="list")
+    async def attack_list(self, ctx):
+        """Lists the active combatant's attacks."""
+        combat = await Combat.from_ctx(ctx)
+        combatant = combat.current_combatant
+        if combatant is None:
+            return await self.bot.say("You must start combat with `!init next` first.")
+
+        attacks = combatant.attacks
+
+        tempAttacks = []
+        for a in attacks:
+            damage = a['damage'] if a['damage'] is not None else 'no'
+            if a['attackBonus'] is not None:
+                try:
+                    bonus = roll(a['attackBonus']).total
+                except:
+                    bonus = a['attackBonus']
+                tempAttacks.append(f"**{a['name']}:** +{bonus} To Hit, {damage} damage.")
+            else:
+                tempAttacks.append(f"**{a['name']}:** {damage} damage.")
+        if not tempAttacks:
+            tempAttacks = ['No attacks.']
+        a = '\n'.join(tempAttacks)
+        if len(a) > 2000:
+            a = ', '.join(atk['name'] for atk in attacks)
+        if len(a) > 2000:
+            a = "Too many attacks, values hidden!"
+
+        if not combatant.isPrivate:
+            destination = ctx.message.channel
+        else:
+            destination = ctx.message.author
+        return await self.bot.send_message(destination, "{}'s attacks:\n{}".format(combatant.name, a))
 
     @init.command(pass_context=True)
     async def aoo(self, ctx, combatant_name, target_name, atk_name, *, args=''):
@@ -893,15 +953,6 @@ class InitTracker:
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
 
         embed = result['embed']
-
-        if spell.concentration:
-            effect_result = combatant.add_effect(
-                Effect.new(spell.name, spell.get_combat_duration(), "", True))
-            conc_conflict = effect_result['conc_conflict']
-            if conc_conflict:
-                embed.add_field(name="Concentration",
-                                value=f"Dropped {', '.join(e.name for e in conc_conflict)} due to concentration.")
-
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
         add_fields_from_args(embed, args.get('f'))
         await self.bot.say(embed=embed)
@@ -913,7 +964,7 @@ class InitTracker:
         Usage: !init remove <NAME>"""
         combat = await Combat.from_ctx(ctx)
 
-        combatant = await combat.select_combatant(name)
+        combatant = await combat.select_combatant(name, select_group=True)
         if combatant is None:
             return await self.bot.say("Combatant not found.")
 

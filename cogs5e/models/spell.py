@@ -7,7 +7,7 @@ from cogs5e.funcs.dice import roll, SingleDiceGroup
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
-from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType
+from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType, InvalidArgument
 from cogs5e.models.initiative import Combatant
 from utils.functions import parse_resistances
 
@@ -25,8 +25,8 @@ class Automation:
             return cls(effects)
         return None
 
-    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None):
-        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell)
+    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None):
+        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect)
         for effect in self.effects:
             effect.run(autoctx)
 
@@ -43,7 +43,7 @@ class AutomationContext:
     ANNOSTR_RE = re.compile(r"{(\w+)}")
     ANNOSTR_RE_NO_SPELL = re.compile(r"(?!{spell}){(\w+)}")
 
-    def __init__(self, ctx, embed, caster, targets, args, combat, spell):
+    def __init__(self, ctx, embed, caster, targets, args, combat, spell, conc_effect=None):
         self.ctx = ctx
         self.embed = embed
         self.caster = caster
@@ -51,6 +51,7 @@ class AutomationContext:
         self.args = args
         self.combat = combat
         self.spell = spell
+        self.conc_effect = conc_effect
 
         self.metavars = {
             "spell": caster.spellcasting.sab - caster.pb_from_level()  # for healing spells
@@ -365,7 +366,12 @@ class Save(Effect):
         autoctx.meta_queue(f"**DC**: {dc}")
         if autoctx.target.target:
             target_save_mod = autoctx.target.get_save(save_skill)
-            save_roll = roll('1d20{:+}'.format(target_save_mod), adv=adv,
+            sb = autoctx.target.target.active_effects('sb')
+            if sb:
+                saveroll = '1d20{:+}+{}'.format(target_save_mod, '+'.join(sb))
+            else:
+                saveroll = '1d20{:+}'.format(target_save_mod)
+            save_roll = roll(saveroll, adv=adv,
                              rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
             is_success = save_roll.total >= dc
             autoctx.queue(save_roll.result + ("; Success!" if is_success else "; Failure!"))
@@ -473,14 +479,19 @@ class IEffect(Effect):
 
     def run(self, autoctx):
         super(IEffect, self).run(autoctx)
-        effect = initiative.Effect.new(self.name, self.duration, autoctx.parse_annostr(self.effects))
         if isinstance(autoctx.target.target, Combatant):
+            effect = initiative.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
+                                           self.duration, autoctx.parse_annostr(self.effects))
+            if autoctx.conc_effect:
+                effect.set_parent(autoctx.conc_effect)
             if isinstance(self.duration, str):
                 try:
                     self.duration = int(autoctx.parse_annostr(self.duration))
                 except ValueError:
                     raise SpellException(f"{self.duration} is not an integer (in effect duration)")
             autoctx.target.target.add_effect(effect)
+        else:
+            effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects))
         autoctx.queue(f"**Effect**: {str(effect)}")
 
 
@@ -528,13 +539,10 @@ class Roll(Effect):
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         autoctx.meta_queue(rolled.result)
 
-        formatted_rolled = ""
-        for p in rolled.raw_dice.parts:
-            if isinstance(p, SingleDiceGroup):
-                formatted_rolled += "{} {}".format(p.get_total(), p.annotation)
-            else:
-                formatted_rolled += str(p)
-        autoctx.metavars[self.name] = formatted_rolled
+        if not rolled.raw_dice:
+            raise InvalidArgument(f"Invalid roll in meta roll: {rolled.result}")
+
+        autoctx.metavars[self.name] = rolled.consolidated()
 
 
 class Text(Effect):
@@ -690,14 +698,21 @@ class Spell:
             embed.title = f"{caster.get_name()} casts {self.name} at..."
         else:
             embed.title = f"{caster.get_name()} casts {self.name}!"
-            if targets is None:
-                targets = [None]
+        if targets is None:
+            targets = [None]
 
         if phrase:
             embed.description = f"*{phrase}*"
 
+        conc_conflict = None
+        conc_effect = None
+        if self.concentration and isinstance(caster, Combatant) and combat:
+            conc_effect = initiative.Effect.new(combat, caster, self.name, self.get_combat_duration(), "", True)
+            effect_result = caster.add_effect(conc_effect)
+            conc_conflict = effect_result['conc_conflict']
+
         if self.automation and self.automation.effects:
-            await self.automation.run(ctx, embed, caster, targets, args, combat, self)
+            await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect)
         else:
             text = self.description
             if len(text) > 1020:
@@ -709,6 +724,10 @@ class Spell:
 
         if l > 0:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
+
+        if conc_conflict:
+            embed.add_field(name="Concentration",
+                            value=f"Dropped {', '.join(e.name for e in conc_conflict)} due to concentration.")
 
         if self.image:
             embed.set_thumbnail(url=self.image)

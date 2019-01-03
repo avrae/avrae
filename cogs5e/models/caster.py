@@ -1,6 +1,3 @@
-from math import floor
-
-
 class Spellcasting:
     def __init__(self, spells=None, dc=0, sab=0, casterLevel=0):
         if spells is None:
@@ -69,4 +66,4 @@ class Spellcaster:
         Not quite foolproof.
         :return: The caster's probable PB.
         """
-        return floor((self.spellcasting.casterLevel + 7) / 4)
+        return (self.spellcasting.casterLevel + 7) // 4

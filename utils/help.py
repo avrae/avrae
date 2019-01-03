@@ -101,7 +101,7 @@ class Help:
         except Forbidden:
             await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
         else:
-            if bot.pm_help:
+            if bot.pm_help and not ctx.message.channel.is_private:
                 await bot.send_message(ctx.message.channel, 'I have sent help to your PMs.')
 
 

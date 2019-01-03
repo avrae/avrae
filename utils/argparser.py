@@ -1,5 +1,6 @@
 import shlex
 
+from cogs5e.funcs.scripting import MathEvaluator
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import list_get
 
@@ -8,15 +9,19 @@ def argsplit(args):
     return shlex.split(args)
 
 
-def argparse(args):
+def argparse(args, character=None):
     """
     Parses arguments.
     :param args: A list of arguments to parse.
+    :param character: A Character object, if args should have cvars parsed.
     :return: The parsed arguments (ParsedArguments).
     :rtype ParsedArguments
     """
     if isinstance(args, str):
         args = argsplit(args)
+    if character:
+        evaluator = MathEvaluator.with_character(character)
+        args = [evaluator.parse(a) for a in args]
 
     parsed = {}
     index = 0

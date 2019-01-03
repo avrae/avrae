@@ -306,7 +306,7 @@ class DicecloudParser:
 
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             stats[stat] = self.get_stat(stat)
-            stats[stat + 'Mod'] = floor((int(stats[stat]) - 10) / 2)
+            stats[stat + 'Mod'] = int(stats[stat]) // 2 - 5
 
         self.evaluator.names.update(stats)
         self.stats = stats

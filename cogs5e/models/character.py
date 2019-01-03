@@ -434,14 +434,10 @@ class Character(Spellcaster):
 
         return out
 
-    def evaluate_cvar(self, varstr, parse=False):
+    def evaluate_cvar(self, varstr):
         """Evaluates a cvar.
         :param varstr - the name of the cvar to parse.
-        :param parse - if True, will evaluate cvars and return resulting string
         :returns int - the value of the cvar, or 0 if evaluation failed."""
-        if parse:
-            return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.evaluate_cvar(m.group(1))), varstr)
-
         ops = r"([-+*/().<>=])"
         varstr = str(varstr).strip('<>{}')
 

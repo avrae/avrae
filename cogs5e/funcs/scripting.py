@@ -6,7 +6,7 @@ import time
 from math import floor, ceil, sqrt
 
 import simpleeval
-from simpleeval import EvalWithCompoundTypes, IterableTooLong
+from simpleeval import EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
 import utils.argparser
 from cogs5e.funcs.dice import roll
@@ -87,7 +87,31 @@ async def parse_snippets(args: str, ctx) -> str:
     return " ".join(tempargs)
 
 
+class MathEvaluator(SimpleEval):
+    """Evaluator with basic math functions exposed."""
+    MATH_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round}
+
+    def __init__(self, operators=None, functions=None, names=None):
+        if not functions:
+            functions = self.MATH_FUNCTIONS
+        super(MathEvaluator, self).__init__(operators, functions, names)
+
+    @classmethod
+    def with_character(cls, character):
+        names = {}
+        names.update(character.get_cvars())
+        names.update(character.get_stat_vars())
+        names['spell'] = character.get_spell_ab() - character.get_prof_bonus()
+        return cls(names=names)
+
+    def parse(self, string):
+        """Parses a dicecloud-formatted string (evaluating text in {})."""
+        return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1))), string)
+
+
 class ScriptingEvaluator(EvalWithCompoundTypes):
+    """Evaluator with compound types, comprehensions, and assignments exposed."""
+
     def __init__(self, operators=None, functions=None, names=None):
         super(ScriptingEvaluator, self).__init__(operators, functions, names)
 
@@ -420,7 +444,7 @@ class SimpleCombatant:
             return SimpleEffect(effect)
         return None
 
-    def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False, parent = None):
+    def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False, parent=None):
         existing = self._combatant.get_effect(name, True)
         if existing:
             existing.remove()
@@ -481,6 +505,7 @@ def raise_alias_exception(reason):
 
 DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
 DEFAULT_OPERATORS.pop(ast.Pow)
+
 DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
                           'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all,

@@ -52,7 +52,9 @@ class RedisIO:
     def get_dict(self, key, dict_key):
         return self._db.hget(key, dict_key).decode()
 
-    def get_whole_dict(self, key, default={}):
+    def get_whole_dict(self, key, default=None):
+        if default is None:
+            default = {}
         encoded_dict = self._db.hgetall(key)
         if encoded_dict is None: return default
         out = {}

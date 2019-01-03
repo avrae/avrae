@@ -87,7 +87,7 @@ class SheetParser:
             else:
                 tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
                                                                  a['damage'] if a['damage'] is not None else 'no'))
-        if tempAttacks == []:
+        if not tempAttacks:
             tempAttacks = ['No attacks.']
         a = '\n'.join(tempAttacks)
         if len(a) > 1023:

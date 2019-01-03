@@ -2,7 +2,6 @@ import logging
 import re
 
 import discord
-from bson import ObjectId
 from discord.ext import commands
 
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor

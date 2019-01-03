@@ -8,8 +8,8 @@ from cogs5e.models import initiative
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType, InvalidArgument
-from cogs5e.models.initiative import Combatant
-from utils.functions import parse_resistances
+from cogs5e.models.initiative import Combatant, PlayerCombatant
+from utils.functions import parse_resistances, verbose_stat
 
 log = logging.getLogger(__name__)
 
@@ -25,8 +25,10 @@ class Automation:
             return cls(effects)
         return None
 
-    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None):
-        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect)
+    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None, ab_override=None,
+                  dc_override=None):
+        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect, ab_override,
+                                    dc_override)
         for effect in self.effects:
             effect.run(autoctx)
 
@@ -43,7 +45,8 @@ class AutomationContext:
     ANNOSTR_RE = re.compile(r"{(\w+)}")
     ANNOSTR_RE_NO_SPELL = re.compile(r"(?!{spell}){(\w+)}")
 
-    def __init__(self, ctx, embed, caster, targets, args, combat, spell, conc_effect=None):
+    def __init__(self, ctx, embed, caster, targets, args, combat, spell, conc_effect=None, ab_override=None,
+                 dc_override=None):
         self.ctx = ctx
         self.embed = embed
         self.caster = caster
@@ -52,6 +55,8 @@ class AutomationContext:
         self.combat = combat
         self.spell = spell
         self.conc_effect = conc_effect
+        self.ab_override = ab_override
+        self.dc_override = dc_override
 
         self.metavars = {
             "spell": caster.spellcasting.sab - caster.pb_from_level()  # for healing spells
@@ -258,7 +263,7 @@ class Attack(Effect):
         reroll = args.last('reroll', 0, int)
         criton = args.last('criton', 20, int)
 
-        sab = autoctx.caster.spellcasting.sab
+        sab = autoctx.ab_override or autoctx.caster.spellcasting.sab
 
         if not sab:
             raise NoSpellAB()
@@ -350,7 +355,7 @@ class Save(Effect):
 
     def run(self, autoctx):
         super(Save, self).run(autoctx)
-        dc = autoctx.args.last('dc', type_=int) or autoctx.caster.spellcasting.dc
+        dc = autoctx.args.last('dc', type_=int) or autoctx.dc_override or autoctx.caster.spellcasting.dc
         save = autoctx.args.last('save') or self.stat
         adv = autoctx.args.adv(False)
 
@@ -690,14 +695,32 @@ class Spell:
         if not i:
             caster.cast(self, l)
 
+        # character setup
+        character = None
+        if isinstance(caster, PlayerCombatant):
+            character = caster.character
+        elif isinstance(caster, Character):
+            character = caster
+
+        # base stat stuff
+        dc_override = None
+        ab_override = None
+        stat_override = ''
+        if character and any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
+            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
+            mod = character.get_mod(base)
+            dc_override = 8 + mod + character.get_prof_bonus()
+            ab_override = mod + character.get_prof_bonus()
+            stat_override = f" with {verbose_stat(base)}"
+
         # begin setup
         embed = discord.Embed()
         if title:
             embed.title = title.replace('[sname]', self.name)
         elif targets:
-            embed.title = f"{caster.get_name()} casts {self.name} at..."
+            embed.title = f"{caster.get_name()} casts {self.name}{stat_override} at..."
         else:
-            embed.title = f"{caster.get_name()} casts {self.name}!"
+            embed.title = f"{caster.get_name()} casts {self.name}{stat_override}!"
         if targets is None:
             targets = [None]
 
@@ -712,7 +735,8 @@ class Spell:
             conc_conflict = effect_result['conc_conflict']
 
         if self.automation and self.automation.effects:
-            await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect)
+            await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect,
+                                      ab_override=ab_override, dc_override=dc_override)
         else:
             text = self.description
             if len(text) > 1020:

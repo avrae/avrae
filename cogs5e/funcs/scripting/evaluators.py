@@ -6,9 +6,10 @@ from math import ceil, floor
 from simpleeval import SimpleEval, IterableTooLong, EvalWithCompoundTypes
 
 from cogs5e.funcs.dice import roll
-from .combat import SimpleCombat
-from .helpers import MAX_ITER_LENGTH, SCRIPTING_RE, get_uvars
 from cogs5e.models.errors import FunctionRequiresCharacter, EvaluationError
+from .combat import SimpleCombat
+from .functions import DEFAULT_OPERATORS, DEFAULT_FUNCTIONS
+from .helpers import MAX_ITER_LENGTH, SCRIPTING_RE, get_uvars
 
 
 class MathEvaluator(SimpleEval):
@@ -37,6 +38,10 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
     """Evaluator with compound types, comprehensions, and assignments exposed."""
 
     def __init__(self, ctx, operators=None, functions=None, names=None):
+        if operators is None:
+            operators = DEFAULT_OPERATORS
+        if functions is None:
+            functions = DEFAULT_FUNCTIONS
         super(ScriptingEvaluator, self).__init__(operators, functions, names)
 
         self.nodes.update({

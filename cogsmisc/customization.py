@@ -32,8 +32,6 @@ class Customization:
 
     def __init__(self, bot):
         self.bot = bot
-        self.serv_aliases = {}
-        self.nochar_eval = NoCharacterEvaluator()
 
     async def on_ready(self):
         if getattr(self.bot, "shard_id", 0) == 0:
@@ -155,65 +153,10 @@ class Customization:
         :return: The parsed string.
         :rtype: str
         """
-        _cache = {
-            "gvars": {}
-        }
-        user_vars = await scripting.get_uvars(ctx)
-
-        def process(to_process):
-            ops = r"([-+*/().<>=])"
-            _vars = user_vars
-
-            evaluator = self.nochar_eval
-            evaluator.reset()
-
-            def get_gvar(name):
-                if name not in _cache['gvars']:
-                    result = ctx.bot.mdb.gvars.delegate.find_one({"key": name})
-                    if result is None:
-                        return None
-                    _cache['gvars'][name] = result['value']
-                return _cache['gvars'][name]
-
-            def exists(name):
-                return name in evaluator.names
-
-            evaluator.functions['get_gvar'] = get_gvar
-            evaluator.functions['exists'] = exists
-
-            def set_value(name, value):
-                evaluator.names[name] = value
-                return ''
-
-            evaluator.functions['set'] = set_value
-            evaluator.names.update(_vars)
-
-            def evalrepl(match):
-                if match.group(1):  # {{}}
-                    evalresult = evaluator.eval(match.group(1))
-                elif match.group(2):  # <>
-                    if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
-                        return match.group(0)
-                    out = match.group(2)
-                    evalresult = str(_vars.get(out, out))
-                elif match.group(3):  # {}
-                    varstr = match.group(3)
-                    out = ""
-                    for substr in re.split(ops, varstr):
-                        temp = substr.strip()
-                        out += str(_vars.get(temp, temp)) + " "
-                    evalresult = str(roll(out).total)
-                else:
-                    evalresult = None
-                return str(evalresult) if evalresult is not None else ''
-
-            try:
-                output = re.sub(SCRIPTING_RE, evalrepl, to_process)  # evaluate
-            except Exception as ex:
-                raise EvaluationError(ex)
-            return output
-
-        return await asyncio.get_event_loop().run_in_executor(None, process, cstr)
+        evaluator = await ScriptingEvaluator.new(ctx)
+        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.parse, cstr)
+        await evaluator.run_commits()
+        return out
 
     @commands.group(pass_context=True, invoke_without_command=True)
     async def alias(self, ctx, alias_name=None, *, cmds=None):
@@ -592,36 +535,3 @@ class Context:
     def __init__(self, bot, message):
         self.bot = bot
         self.message = message
-
-
-class NoCharacterEvaluator(ScriptingEvaluator):
-    def __init__(self, operators=None, functions=None, names=None):
-        _funcs = scripting.DEFAULT_FUNCTIONS.copy()
-        _funcs.update(get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
-                      get_cc_min=self.needs_char, mod_cc=self.needs_char,
-                      cc_exists=self.needs_char, create_cc_nx=self.needs_char,
-                      get_slots=self.needs_char, get_slots_max=self.needs_char, set_slots=self.needs_char,
-                      use_slot=self.needs_char,
-                      get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char,
-                      get_temphp=self.needs_char, set_temphp=self.needs_char,
-                      set_cvar=self.needs_char, delete_cvar=self.needs_char, set_cvar_nx=self.needs_char,
-                      get_raw=self.needs_char, combat=self.needs_char)
-        _ops = scripting.DEFAULT_OPERATORS.copy()
-        _names = {"True": True, "False": False, "currentHp": 0}
-
-        if operators:
-            _ops.update(operators)
-        if functions:
-            _funcs.update(functions)
-        if names:
-            _names.update(names)
-
-        super(NoCharacterEvaluator, self).__init__(_ops, _funcs, _names)
-        self._initial_names = copy.copy(self.names)
-
-    def needs_char(self, *args, **kwargs):
-        raise FunctionRequiresCharacter()  # no. bad.
-
-    def reset(self):
-        self.names = copy.copy(self._initial_names)
-        self._loops = 0

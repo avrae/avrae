@@ -201,7 +201,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                 self.character_changed = True
 
         def get_raw():
-            return copy.copy(character)
+            return copy.copy(character.character)
 
         def combat():
             if not 'combat' in self._cache:

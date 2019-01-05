@@ -496,7 +496,11 @@ class IEffect(Effect):
                     raise SpellException(f"{self.duration} is not an integer (in effect duration)")
             autoctx.target.target.add_effect(effect)
         else:
-            effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects))
+            character = None
+            if isinstance(autoctx.caster, Character):
+                character = autoctx.caster
+            effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects),
+                                           character=character)
         autoctx.queue(f"**Effect**: {str(effect)}")
 
 

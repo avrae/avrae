@@ -648,7 +648,10 @@ class Combatant(Spellcaster):
             _filter = lambda _: True
         to_remove = list(filter(_filter, self._effects))
         for e in to_remove:
-            e.remove()
+            try:
+                e.remove()
+            except CombatException:  # effect was likely removed already, possibly by its parent being removed
+                continue
         return to_remove
 
     def attack_effects(self, attacks):

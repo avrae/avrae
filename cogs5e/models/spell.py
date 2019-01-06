@@ -4,6 +4,7 @@ import re
 import discord
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
+from cogs5e.funcs.scripting import SpellEvaluator
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
@@ -42,9 +43,6 @@ class Automation:
 
 
 class AutomationContext:
-    ANNOSTR_RE = re.compile(r"{(\w+)}")
-    ANNOSTR_RE_NO_SPELL = re.compile(r"(?!{spell}){(\w+)}")
-
     def __init__(self, ctx, embed, caster, targets, args, combat, spell, conc_effect=None, ab_override=None,
                  dc_override=None):
         self.ctx = ctx
@@ -58,9 +56,7 @@ class AutomationContext:
         self.ab_override = ab_override
         self.dc_override = dc_override
 
-        self.metavars = {
-            "spell": caster.spellcasting.sab - caster.pb_from_level()  # for healing spells
-        }
+        self.metavars = {}
         self.target = None
         self.in_crit = False
 
@@ -70,6 +66,12 @@ class AutomationContext:
         self._field_queue = []
         self._footer_queue = []
         self.pm_queue = {}
+        if isinstance(caster, PlayerCombatant):
+            self.evaluator = SpellEvaluator.with_character(caster.character)
+        elif isinstance(caster, Character):
+            self.evaluator = SpellEvaluator.with_character(caster)
+        else:
+            self.evaluator = SpellEvaluator()
 
     def queue(self, text):
         self._embed_queue.append(text)
@@ -118,10 +120,7 @@ class AutomationContext:
         return self.args.last('l', self.spell.level, int)
 
     def parse_annostr(self, annostr):
-        def metasub(match):
-            return str(self.metavars.get(match.group(1), match.group(0)))
-
-        return self.ANNOSTR_RE.sub(metasub, annostr)
+        return self.evaluator.parse(annostr, extra_names=self.metavars)
 
 
 class AutomationTarget:
@@ -239,10 +238,11 @@ class Target(Effect):
 
 
 class Attack(Effect):
-    def __init__(self, hit: list, miss: list, **kwargs):
+    def __init__(self, hit: list, miss: list, attackBonus: str = None, **kwargs):
         super(Attack, self).__init__("attack", **kwargs)
         self.hit = hit
         self.miss = miss
+        self.bonus = attackBonus
 
     @classmethod
     def from_data(cls, data):
@@ -262,8 +262,15 @@ class Attack(Effect):
 
         reroll = args.last('reroll', 0, int)
         criton = args.last('criton', 20, int)
+        bonus = None
+        if self.bonus:
+            bonus = autoctx.evaluator.parse(self.bonus, autoctx.metavars)
+            try:
+                bonus = int(bonus)
+            except (TypeError, ValueError):
+                raise AutomationException(f"{bonus} cannot be interpreted as an attack bonus.")
 
-        sab = autoctx.ab_override or autoctx.caster.spellcasting.sab
+        sab = bonus or autoctx.ab_override or autoctx.caster.spellcasting.sab
 
         if not sab:
             raise NoSpellAB()
@@ -341,11 +348,12 @@ class Attack(Effect):
 
 
 class Save(Effect):
-    def __init__(self, stat: str, fail: list, success: list, **kwargs):
+    def __init__(self, stat: str, fail: list, success: list, dc: str = None, **kwargs):
         super(Save, self).__init__("save", **kwargs)
         self.stat = stat
         self.fail = fail
         self.success = success
+        self.dc = dc
 
     @classmethod
     def from_data(cls, data):
@@ -355,9 +363,17 @@ class Save(Effect):
 
     def run(self, autoctx):
         super(Save, self).run(autoctx)
-        dc = autoctx.args.last('dc', type_=int) or autoctx.dc_override or autoctx.caster.spellcasting.dc
         save = autoctx.args.last('save') or self.stat
         adv = autoctx.args.adv(False)
+        dc_override = None
+        if self.dc:
+            try:
+                dc_override = autoctx.evaluator.parse(self.dc, autoctx.metavars)
+                dc_override = int(dc_override)
+            except (TypeError, ValueError):
+                raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")
+
+        dc = autoctx.args.last('dc', type_=int) or dc_override or autoctx.dc_override or autoctx.caster.spellcasting.dc
 
         if not dc:
             raise NoSpellDC()
@@ -423,10 +439,9 @@ class Damage(Effect):
             vuln = vuln or autoctx.target.get_vuln()
             neutral = neutral or autoctx.target.get_neutral()
 
-        if not autoctx.target.target and autoctx.ANNOSTR_RE_NO_SPELL.match(
-                damage):  # likely have output this in meta already
+        if not autoctx.target.target and self.is_meta(autoctx, True):  # likely have output this in meta already
             return
-        if autoctx.ANNOSTR_RE_NO_SPELL.search(damage):
+        if self.is_meta(autoctx):
             d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 
@@ -473,6 +488,11 @@ class Damage(Effect):
         autoctx.queue(dmgroll.result)
 
         autoctx.target.damage(autoctx, dmgroll.total)
+
+    def is_meta(self, autoctx, strict=False):
+        if strict:
+            return any(f"{{{v}}}" in self.damage for v in autoctx.metavars)
+        return any(f"{{{v}}}" == self.damage for v in autoctx.metavars)
 
 
 class IEffect(Effect):
@@ -790,4 +810,8 @@ class SpellException(AvraeException):
 
 
 class TargetException(SpellException):
+    pass
+
+
+class AutomationException(SpellException):
     pass

@@ -246,25 +246,32 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         return self._cache['gvars'][name]
 
     # evaluation
-    def parse(self, string):
+    def parse(self, string, double_curly=None, curly=None, ltgt=None):
         """Parses a scripting string (evaluating text in {{}})."""
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):
             if match.group(1):  # {{}}
-                evalresult = self.eval(match.group(1))
+                double_func = double_curly or self.eval
+                evalresult = double_func(match.group(1))
             elif match.group(2):  # <>
                 if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
                     return match.group(0)
                 out = match.group(2)
-                evalresult = str(self.names.get(out, out))
+                ltgt_func = ltgt or (lambda s: str(self.names.get(s, s)))
+                evalresult = ltgt_func(out)
             elif match.group(3):  # {}
                 varstr = match.group(3)
-                out = ""
-                for substr in re.split(ops, varstr):
-                    temp = substr.strip()
-                    out += str(self.names.get(temp, temp)) + " "
-                evalresult = str(roll(out).total)
+
+                def default_curly_func(s):
+                    out = ""
+                    for substr in re.split(ops, s):
+                        temp = substr.strip()
+                        out += str(self.names.get(temp, temp)) + " "
+                    return str(roll(out).total)
+
+                curly_func = curly or default_curly_func
+                evalresult = curly_func(varstr)
             else:
                 evalresult = None
             return str(evalresult) if evalresult is not None else ''
@@ -371,3 +378,31 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self._assign(node.target, item, False)
             if all(self._eval(stmt) for stmt in node.ifs):
                 yield item
+
+
+class SpellEvaluator(MathEvaluator):
+    def parse(self, string, extra_names=None):
+        """Parses a spell-formatted string (evaluating {{}} and replacing {} with rollstrings)."""
+        original_names = None
+        if extra_names:
+            original_names = self.names.copy()
+            self.names.update(extra_names)
+
+        def evalrepl(match):
+            if match.group(1):  # {{}}
+                evalresult = self.eval(match.group(1))
+            elif match.group(3):  # {}
+                evalresult = self.names.get(match.group(3), match.group(0))
+            else:
+                evalresult = None
+            return str(evalresult) if evalresult is not None else ''
+
+        try:
+            output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
+        except Exception as ex:
+            raise EvaluationError(ex)
+
+        if original_names:
+            self.names = original_names
+
+        return output

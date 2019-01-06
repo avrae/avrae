@@ -525,12 +525,14 @@ class IEffect(Effect):
 
 
 class Roll(Effect):
-    def __init__(self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, **kwargs):
+    def __init__(self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, hidden: bool = False,
+                 **kwargs):
         super(Roll, self).__init__("roll", **kwargs)
         self.dice = dice
         self.name = name
         self.higher = higher
         self.cantripScale = cantripScale
+        self.hidden = hidden
 
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
@@ -566,7 +568,8 @@ class Roll(Effect):
             dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
 
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
-        autoctx.meta_queue(rolled.result)
+        if not self.hidden:
+            autoctx.meta_queue(rolled.result)
 
         if not rolled.raw_dice:
             raise InvalidArgument(f"Invalid roll in meta roll: {rolled.result}")

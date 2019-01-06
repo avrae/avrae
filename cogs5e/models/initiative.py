@@ -1060,7 +1060,7 @@ class Effect:
     @classmethod
     def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None):
         if isinstance(effect_args, str):
-            if isinstance(combatant, PlayerCombatant) or character:
+            if (combatant and isinstance(combatant, PlayerCombatant)) or character:
                 effect_args = argparse(effect_args, combatant.character or character)
             else:
                 effect_args = argparse(effect_args)

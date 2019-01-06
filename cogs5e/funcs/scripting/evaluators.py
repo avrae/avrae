@@ -224,7 +224,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
     async def run_commits(self):
         if self.character_changed and 'character' in self._cache:
             await self._cache['character'].commit(self.ctx)
-        if self.combat_changed and 'combat' in self._cache:
+        if self.combat_changed and 'combat' in self._cache and self._cache['combat']:
             await self._cache['combat'].func_commit()
 
     # helpers

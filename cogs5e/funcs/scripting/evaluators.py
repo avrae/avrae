@@ -3,7 +3,7 @@ import copy
 import re
 from math import ceil, floor
 
-from simpleeval import SimpleEval, IterableTooLong, EvalWithCompoundTypes
+from simpleeval import SimpleEval, IterableTooLong, EvalWithCompoundTypes, DEFAULT_NAMES
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import FunctionRequiresCharacter, EvaluationError
@@ -17,8 +17,12 @@ class MathEvaluator(SimpleEval):
     MATH_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round}
 
     def __init__(self, operators=None, functions=None, names=None):
-        if not functions:
-            functions = self.MATH_FUNCTIONS
+        if operators is None:
+            operators = DEFAULT_OPERATORS.copy()
+        if functions is None:
+            functions = DEFAULT_FUNCTIONS.copy()
+        if names is None:
+            names = DEFAULT_NAMES.copy()
         super(MathEvaluator, self).__init__(operators, functions, names)
 
     @classmethod
@@ -39,9 +43,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
     def __init__(self, ctx, operators=None, functions=None, names=None):
         if operators is None:
-            operators = DEFAULT_OPERATORS
+            operators = DEFAULT_OPERATORS.copy()
         if functions is None:
-            functions = DEFAULT_FUNCTIONS
+            functions = DEFAULT_FUNCTIONS.copy()
+        if names is None:
+            names = DEFAULT_NAMES.copy()
         super(ScriptingEvaluator, self).__init__(operators, functions, names)
 
         self.nodes.update({

@@ -882,7 +882,7 @@ class InitTracker:
     async def cast(self, ctx, spell_name, *, args=''):
         """Casts a spell against another combatant.
         __Valid Arguments__
-        -t [target (chainable)] - Required
+        -t [target (chainable)]
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l [level] - Specifies the level to cast the spell at.
         **__Save Spells__**
@@ -894,14 +894,15 @@ class InitTracker:
         See `!a`.
         **__All Spells__**
         -phrase [phrase] - adds flavor text.
-        -title [title] - changes the title of the cast. Replaces [sname] with spell name."""
+        -title [title] - changes the title of the cast. Replaces [sname] with spell name.
+        int/wis/cha - different skill base for DC/AB"""
         return await self._cast(ctx, None, spell_name, args)
 
     @init.command(pass_context=True)
     async def reactcast(self, ctx, combatant_name, spell_name, *, args=''):
         """Casts a spell against another combatant.
         __Valid Arguments__
-        -t [target (chainable)] - Required
+        -t [target (chainable)]
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l [level] - Specifies the level to cast the spell at.
         **__Save Spells__**
@@ -913,7 +914,8 @@ class InitTracker:
         See `!a`.
         **__All Spells__**
         -phrase [phrase] - adds flavor text.
-        -title [title] - changes the title of the cast. Replaces [sname] with spell name."""
+        -title [title] - changes the title of the cast. Replaces [sname] with spell name.
+        int/wis/cha - different skill base for DC/AB"""
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     async def _cast(self, ctx, combatant_name, spell_name, args):

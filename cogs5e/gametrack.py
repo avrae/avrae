@@ -574,7 +574,8 @@ class GameTrack:
         See `!a`.
         **__All Spells__**
         -phrase [phrase] - adds flavor text.
-        -title [title] - changes the title of the cast. Replaces [sname] with spell name."""
+        -title [title] - changes the title of the cast. Replaces [sname] with spell name.
+        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)"""
         try:
             await self.bot.delete_message(ctx.message)
         except:

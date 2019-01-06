@@ -21,13 +21,13 @@ from cogs5e.models.errors import SelectionCancelled, NoSelectionElements
 log = logging.getLogger(__name__)
 
 
-def discord_trim(str):
+def discord_trim(string):
     result = []
     trimLen = 0
     lastLen = 0
-    while trimLen <= len(str):
+    while trimLen <= len(string):
         trimLen += 1999
-        result.append(str[lastLen:trimLen])
+        result.append(string[lastLen:trimLen])
         lastLen += 1999
     return result
 
@@ -78,6 +78,7 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
     :param key: A function defining what to search for.
     :param cutoff: The scorer cutoff value for fuzzy searching.
     :param return_key: Whether to return the key of the object that matched or the object itself.
+    :param strict: Kinda does nothing. I'm not sure why this is here.
     :returns: A two-tuple (result, strict) or None"""
     # full match, return result
     result = next((a for a in list_to_search if value.lower() == key(a).lower()), None)

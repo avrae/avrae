@@ -19,7 +19,9 @@ def argparse(args, character=None):
     if isinstance(args, str):
         args = argsplit(args)
     if character:
-        args = [str(character.evaluate_cvar(a, True)) for a in args]
+        from cogs5e.funcs.scripting import MathEvaluator
+        evaluator = MathEvaluator.with_character(character)
+        args = [evaluator.parse(a) for a in args]
 
     parsed = {}
     index = 0

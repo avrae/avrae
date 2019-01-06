@@ -1,6 +1,5 @@
 import random
 import re
-import shlex
 
 import discord
 from discord.ext import commands

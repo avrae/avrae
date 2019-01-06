@@ -4,12 +4,13 @@ import re
 import discord
 
 from cogs5e.funcs.dice import roll, SingleDiceGroup
+from cogs5e.funcs.scripting import SpellEvaluator
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType, InvalidArgument
-from cogs5e.models.initiative import Combatant
-from utils.functions import parse_resistances
+from cogs5e.models.initiative import Combatant, PlayerCombatant
+from utils.functions import parse_resistances, verbose_stat
 
 log = logging.getLogger(__name__)
 
@@ -25,8 +26,10 @@ class Automation:
             return cls(effects)
         return None
 
-    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None):
-        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect)
+    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None, ab_override=None,
+                  dc_override=None):
+        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect, ab_override,
+                                    dc_override)
         for effect in self.effects:
             effect.run(autoctx)
 
@@ -40,10 +43,8 @@ class Automation:
 
 
 class AutomationContext:
-    ANNOSTR_RE = re.compile(r"{(\w+)}")
-    ANNOSTR_RE_NO_SPELL = re.compile(r"(?!{spell}){(\w+)}")
-
-    def __init__(self, ctx, embed, caster, targets, args, combat, spell, conc_effect=None):
+    def __init__(self, ctx, embed, caster, targets, args, combat, spell, conc_effect=None, ab_override=None,
+                 dc_override=None):
         self.ctx = ctx
         self.embed = embed
         self.caster = caster
@@ -52,10 +53,10 @@ class AutomationContext:
         self.combat = combat
         self.spell = spell
         self.conc_effect = conc_effect
+        self.ab_override = ab_override
+        self.dc_override = dc_override
 
-        self.metavars = {
-            "spell": caster.spellcasting.sab - caster.pb_from_level()  # for healing spells
-        }
+        self.metavars = {}
         self.target = None
         self.in_crit = False
 
@@ -65,6 +66,12 @@ class AutomationContext:
         self._field_queue = []
         self._footer_queue = []
         self.pm_queue = {}
+        if isinstance(caster, PlayerCombatant):
+            self.evaluator = SpellEvaluator.with_character(caster.character)
+        elif isinstance(caster, Character):
+            self.evaluator = SpellEvaluator.with_character(caster)
+        else:
+            self.evaluator = SpellEvaluator()
 
     def queue(self, text):
         self._embed_queue.append(text)
@@ -113,10 +120,7 @@ class AutomationContext:
         return self.args.last('l', self.spell.level, int)
 
     def parse_annostr(self, annostr):
-        def metasub(match):
-            return str(self.metavars.get(match.group(1), match.group(0)))
-
-        return self.ANNOSTR_RE.sub(metasub, annostr)
+        return self.evaluator.parse(annostr, extra_names=self.metavars)
 
 
 class AutomationTarget:
@@ -234,10 +238,11 @@ class Target(Effect):
 
 
 class Attack(Effect):
-    def __init__(self, hit: list, miss: list, **kwargs):
+    def __init__(self, hit: list, miss: list, attackBonus: str = None, **kwargs):
         super(Attack, self).__init__("attack", **kwargs)
         self.hit = hit
         self.miss = miss
+        self.bonus = attackBonus
 
     @classmethod
     def from_data(cls, data):
@@ -257,8 +262,15 @@ class Attack(Effect):
 
         reroll = args.last('reroll', 0, int)
         criton = args.last('criton', 20, int)
+        bonus = None
+        if self.bonus:
+            bonus = autoctx.evaluator.parse(self.bonus, autoctx.metavars)
+            try:
+                bonus = int(bonus)
+            except (TypeError, ValueError):
+                raise AutomationException(f"{bonus} cannot be interpreted as an attack bonus.")
 
-        sab = autoctx.caster.spellcasting.sab
+        sab = bonus or autoctx.ab_override or autoctx.caster.spellcasting.sab
 
         if not sab:
             raise NoSpellAB()
@@ -336,11 +348,12 @@ class Attack(Effect):
 
 
 class Save(Effect):
-    def __init__(self, stat: str, fail: list, success: list, **kwargs):
+    def __init__(self, stat: str, fail: list, success: list, dc: str = None, **kwargs):
         super(Save, self).__init__("save", **kwargs)
         self.stat = stat
         self.fail = fail
         self.success = success
+        self.dc = dc
 
     @classmethod
     def from_data(cls, data):
@@ -350,9 +363,17 @@ class Save(Effect):
 
     def run(self, autoctx):
         super(Save, self).run(autoctx)
-        dc = autoctx.args.last('dc', type_=int) or autoctx.caster.spellcasting.dc
         save = autoctx.args.last('save') or self.stat
         adv = autoctx.args.adv(False)
+        dc_override = None
+        if self.dc:
+            try:
+                dc_override = autoctx.evaluator.parse(self.dc, autoctx.metavars)
+                dc_override = int(dc_override)
+            except (TypeError, ValueError):
+                raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")
+
+        dc = autoctx.args.last('dc', type_=int) or dc_override or autoctx.dc_override or autoctx.caster.spellcasting.dc
 
         if not dc:
             raise NoSpellDC()
@@ -418,10 +439,9 @@ class Damage(Effect):
             vuln = vuln or autoctx.target.get_vuln()
             neutral = neutral or autoctx.target.get_neutral()
 
-        if not autoctx.target.target and autoctx.ANNOSTR_RE_NO_SPELL.match(
-                damage):  # likely have output this in meta already
+        if not autoctx.target.target and self.is_meta(autoctx, True):  # likely have output this in meta already
             return
-        if autoctx.ANNOSTR_RE_NO_SPELL.search(damage):
+        if self.is_meta(autoctx):
             d = None  # d was likely applied in the Roll effect already
         damage = autoctx.parse_annostr(damage)
 
@@ -469,6 +489,11 @@ class Damage(Effect):
 
         autoctx.target.damage(autoctx, dmgroll.total)
 
+    def is_meta(self, autoctx, strict=False):
+        if strict:
+            return any(f"{{{v}}}" in self.damage for v in autoctx.metavars)
+        return any(f"{{{v}}}" == self.damage for v in autoctx.metavars)
+
 
 class IEffect(Effect):
     def __init__(self, name: str, duration: int, effects: str, **kwargs):
@@ -491,17 +516,23 @@ class IEffect(Effect):
                     raise SpellException(f"{self.duration} is not an integer (in effect duration)")
             autoctx.target.target.add_effect(effect)
         else:
-            effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects))
+            character = None
+            if isinstance(autoctx.caster, Character):
+                character = autoctx.caster
+            effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects),
+                                           character=character)
         autoctx.queue(f"**Effect**: {str(effect)}")
 
 
 class Roll(Effect):
-    def __init__(self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, **kwargs):
+    def __init__(self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, hidden: bool = False,
+                 **kwargs):
         super(Roll, self).__init__("roll", **kwargs)
         self.dice = dice
         self.name = name
         self.higher = higher
         self.cantripScale = cantripScale
+        self.hidden = hidden
 
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
@@ -537,7 +568,8 @@ class Roll(Effect):
             dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
 
         rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
-        autoctx.meta_queue(rolled.result)
+        if not self.hidden:
+            autoctx.meta_queue(rolled.result)
 
         if not rolled.raw_dice:
             raise InvalidArgument(f"Invalid roll in meta roll: {rolled.result}")
@@ -690,14 +722,32 @@ class Spell:
         if not i:
             caster.cast(self, l)
 
+        # character setup
+        character = None
+        if isinstance(caster, PlayerCombatant):
+            character = caster.character
+        elif isinstance(caster, Character):
+            character = caster
+
+        # base stat stuff
+        dc_override = None
+        ab_override = None
+        stat_override = ''
+        if character and any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
+            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
+            mod = character.get_mod(base)
+            dc_override = 8 + mod + character.get_prof_bonus()
+            ab_override = mod + character.get_prof_bonus()
+            stat_override = f" with {verbose_stat(base)}"
+
         # begin setup
         embed = discord.Embed()
         if title:
             embed.title = title.replace('[sname]', self.name)
         elif targets:
-            embed.title = f"{caster.get_name()} casts {self.name} at..."
+            embed.title = f"{caster.get_name()} casts {self.name}{stat_override} at..."
         else:
-            embed.title = f"{caster.get_name()} casts {self.name}!"
+            embed.title = f"{caster.get_name()} casts {self.name}{stat_override}!"
         if targets is None:
             targets = [None]
 
@@ -712,7 +762,8 @@ class Spell:
             conc_conflict = effect_result['conc_conflict']
 
         if self.automation and self.automation.effects:
-            await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect)
+            await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect,
+                                      ab_override=ab_override, dc_override=dc_override)
         else:
             text = self.description
             if len(text) > 1020:
@@ -762,4 +813,8 @@ class SpellException(AvraeException):
 
 
 class TargetException(SpellException):
+    pass
+
+
+class AutomationException(SpellException):
     pass

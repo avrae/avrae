@@ -263,7 +263,7 @@ class Monster:
         resists = {
             "resist": data['stats']['damageResistances'],
             "immune": data['stats']['damageImmunities'],
-            "vuln": data['stats']['conditionImmunities']
+            "vuln": data['stats']['damageVulnerabilities']
         }
 
         return cls(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],

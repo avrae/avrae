@@ -769,7 +769,7 @@ class Spell:
                 embed.add_field(name="At Higher Levels", value=self.higherlevels)
             embed.set_footer(text="No spell automation found.")
 
-        if l > 0:
+        if l > 0 and not i:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
 
         if conc_conflict:

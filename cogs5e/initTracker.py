@@ -751,6 +751,9 @@ class InitTracker:
         if combatant is None:
             return await self.bot.say("You must start combat with `!init next` first.")
 
+        if combatant.isPrivate and combatant.controller != ctx.message.author.id:
+            return await self.bot.say("You do not have permission to view this combatant's attacks.")
+
         attacks = combatant.attacks
 
         tempAttacks = []

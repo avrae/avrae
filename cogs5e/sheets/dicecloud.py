@@ -634,6 +634,8 @@ class DicecloudEvaluator(SimpleEval):
     def __init__(self, operators=None, functions=None, names=None):
         if not functions:
             functions = self.DEFAULT_FUNCTIONS
+        if not names:
+            names = {}
         super(DicecloudEvaluator, self).__init__(operators, functions, names)
 
     def eval(self, expr):

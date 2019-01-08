@@ -428,8 +428,9 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
 
         if len(combat.get_combatants()) == 0:
-            await self.bot.say("There are no combatants.")
-            return
+            return await self.bot.say("There are no combatants.")
+        if combat.index is None:
+            return await self.bot.say("Please start combat with `!init next` first.")
 
         combat.skip_rounds(numrounds)
 

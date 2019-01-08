@@ -67,6 +67,7 @@ class GoogleSheet:
         assert client is not None
         self.client = client
         self.additional = None
+        self.version = 1
 
     def _gchar(self):
         # self.client.login()
@@ -74,6 +75,7 @@ class GoogleSheet:
         self.character = TempCharacter(doc.sheet1, "A1:AQ180")
         if doc.sheet1.cell("AQ4").value == "2.0":
             self.additional = TempCharacter(doc.worksheet('index', 1), "A1:AP81")
+            self.version = 2
 
     async def get_character(self):
         loop = asyncio.get_event_loop()
@@ -93,18 +95,15 @@ class GoogleSheet:
         except ValueError:
             raise MissingAttribute("Max HP")
 
-        try:
-            armor = character.cell("R12").value
-            attacks = self.get_attacks()
-            skills = self.get_skills()
-            levels = self.get_levels()
+        armor = character.cell("R12").value
+        attacks = self.get_attacks()
+        skills = self.get_skills()
+        levels = self.get_levels()
 
-            temp_resist = self.get_resistances()
-            resistances = temp_resist['resist']
-            immunities = temp_resist['immune']
-            spellbook = self.get_spellbook()
-        except:
-            raise
+        temp_resist = self.get_resistances()
+        resistances = temp_resist['resist']
+        immunities = temp_resist['immune']
+        spellbook = self.get_spellbook()
 
         saves = {}
         for key in skills:
@@ -118,24 +117,30 @@ class GoogleSheet:
         stat_vars['armor'] = int(armor)
         stat_vars.update(saves)
 
-        sheet = {'type': 'google',
-                 'version': 6,  # v3: added stat cvars
-                 # v4: consumables
-                 # v5: spellbook
-                 # v6: v2.0 support (level vars, resistances, extra spells/attacks)
-                 'stats': stats,
-                 'levels': levels,
-                 'hp': hp,
-                 'armor': int(armor),
-                 'attacks': attacks,
-                 'skills': skills,
-                 'resist': resistances,
-                 'immune': immunities,
-                 'vuln': [],
-                 'saves': saves,
-                 'stat_cvars': stat_vars,
-                 'consumables': {},
-                 'spellbook': spellbook}
+        # v3: added stat cvars
+        # v4: consumables
+        # v5: spellbook
+        # v6: v2.0 support (level vars, resistances, extra spells/attacks)
+        # v7: race/background (experimental)
+        sheet = {
+            'type': 'google',
+            'version': 7,
+            'stats': stats,
+            'levels': levels,
+            'hp': hp,
+            'armor': int(armor),
+            'attacks': attacks,
+            'skills': skills,
+            'resist': resistances,
+            'immune': immunities,
+            'vuln': [],
+            'saves': saves,
+            'stat_cvars': stat_vars,
+            'consumables': {},
+            'spellbook': spellbook,
+            'race': self.get_race(),
+            'background': self.get_background()
+        }
 
         embed = self.get_embed(sheet)
 
@@ -406,3 +411,11 @@ class GoogleSheet:
 
         log.debug(f"Completed parsing spellbook: {spellbook}")
         return spellbook
+
+    def get_race(self):
+        return self.character.cell('T7').value.strip()
+
+    def get_background(self):
+        if self.version == 2:
+            return self.character.cell('AJ11').value.strip()
+        return self.character.cell('Z5').value.strip()

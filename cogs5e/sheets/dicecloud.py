@@ -75,24 +75,21 @@ class DicecloudParser:
     def get_sheet(self):
         """Returns a dict with character sheet data."""
         if self.character is None: raise Exception('You must call get_character() first.')
-        try:
-            stats = self.get_stats()
-            levels = self.get_levels()
-            hp = self.calculate_stat('hitPoints')
+        stats = self.get_stats()
+        levels = self.get_levels()
+        hp = self.calculate_stat('hitPoints')
 
-            self.evaluator.names['dexterityArmor'] = self.calculate_stat('dexterityArmor', base=stats['dexterityMod'])
-            armor = self.calculate_stat('armor')
+        self.evaluator.names['dexterityArmor'] = self.calculate_stat('dexterityArmor', base=stats['dexterityMod'])
+        armor = self.calculate_stat('armor')
 
-            attacks = self.get_attacks()
-            skills = self.get_skills()
-            temp_resist = self.get_resistances()
-            resistances = temp_resist['resist']
-            immunities = temp_resist['immune']
-            vulnerabilities = temp_resist['vuln']
-            skill_effects = self.get_skill_effects()
-            spellbook = self.get_spellbook()
-        except:
-            raise
+        attacks = self.get_attacks()
+        skills = self.get_skills()
+        temp_resist = self.get_resistances()
+        resistances = temp_resist['resist']
+        immunities = temp_resist['immune']
+        vulnerabilities = temp_resist['vuln']
+        skill_effects = self.get_skill_effects()
+        spellbook = self.get_spellbook()
 
         saves = {}
         for key in skills:
@@ -106,31 +103,37 @@ class DicecloudParser:
         stat_vars['armor'] = int(armor)
         stat_vars.update(saves)
 
-        sheet = {'type': 'dicecloud',
-                 'version': 13,  # v6: added stat cvars
-                 # v7: added check effects (adv/dis)
-                 # v8: consumables
-                 # v9: spellbook
-                 # v10: live tracking
-                 # v11: save effects (adv/dis)
-                 # v12: add cached dicecloud spell list id
-                 # v13: added nonstrict spells
-                 'stats': stats,
-                 'levels': levels,
-                 'hp': int(hp),
-                 'armor': int(armor),
-                 'attacks': attacks,
-                 'skills': skills,
-                 'resist': resistances,
-                 'immune': immunities,
-                 'vuln': vulnerabilities,
-                 'saves': saves,
-                 'stat_cvars': stat_vars,
-                 'skill_effects': skill_effects,
-                 'consumables': {},
-                 'spellbook': spellbook,
-                 'live': DicecloudClient.user_id in self.character['characters'][0][
-                     'writers'] or DicecloudClient.user_id == self.character['characters'][0]['owner']}
+        # v6: added stat cvars
+        # v7: added check effects (adv/dis)
+        # v8: consumables
+        # v9: spellbook
+        # v10: live tracking
+        # v11: save effects (adv/dis)
+        # v12: add cached dicecloud spell list id
+        # v13: added nonstrict spells
+        # v14: added race, background (for experimental purposes only)
+        sheet = {
+            'type': 'dicecloud',
+            'version': 14,
+            'stats': stats,
+            'levels': levels,
+            'hp': int(hp),
+            'armor': int(armor),
+            'attacks': attacks,
+            'skills': skills,
+            'resist': resistances,
+            'immune': immunities,
+            'vuln': vulnerabilities,
+            'saves': saves,
+            'stat_cvars': stat_vars,
+            'skill_effects': skill_effects,
+            'consumables': {},
+            'spellbook': spellbook,
+            'live': DicecloudClient.user_id in self.character['characters'][0]['writers'] or
+                    DicecloudClient.user_id == self.character['characters'][0]['owner'],
+            'race': self.get_race(),
+            'background': self.get_background()
+        }
 
         embed = self.get_embed(sheet)
 
@@ -599,6 +602,12 @@ class DicecloudParser:
         log.debug(f"Completed parsing spellbook: {spellbook}")
 
         return spellbook
+
+    def get_race(self):
+        return self.character['characters'][0]['race'].strip()
+
+    def get_background(self):
+        return self.character['characters'][0]['backstory'].strip()
 
     def get_custom_counters(self):
         counters = []

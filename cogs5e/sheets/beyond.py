@@ -85,21 +85,19 @@ class BeyondSheetParser:
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
 
-        try:
-            stats = self.get_stats()
-            levels = self.get_levels()
-            hp = character['overrideHitPoints'] or (character['baseHitPoints'] + (
-                    (self.get_stat('hit-points-per-level', base=stats['constitutionMod'])) * levels['level']))
-            armor = self.get_ac()
-            attacks = self.get_attacks()
-            skills = self.get_skills()
-            temp_resist = self.get_resistances()
-            resistances = temp_resist['resist']
-            immunities = temp_resist['immune']
-            vulnerabilities = temp_resist['vuln']
-            spellbook = self.get_spellbook()
-        except:
-            raise
+        stats = self.get_stats()
+        levels = self.get_levels()
+        hp = character['overrideHitPoints'] or \
+             (character['baseHitPoints'] +
+              ((self.get_stat('hit-points-per-level', base=stats['constitutionMod'])) * levels['level']))
+        armor = self.get_ac()
+        attacks = self.get_attacks()
+        skills = self.get_skills()
+        temp_resist = self.get_resistances()
+        resistances = temp_resist['resist']
+        immunities = temp_resist['immune']
+        vulnerabilities = temp_resist['vuln']
+        spellbook = self.get_spellbook()
 
         saves = {}
         for key in skills:
@@ -113,21 +111,26 @@ class BeyondSheetParser:
         stat_vars['armor'] = int(armor)
         stat_vars.update(saves)
 
-        sheet = {'type': 'beyond',
-                 'version': 1,
-                 'stats': stats,
-                 'levels': levels,
-                 'hp': int(hp),
-                 'armor': int(armor),
-                 'attacks': attacks,
-                 'skills': skills,
-                 'resist': resistances,
-                 'immune': immunities,
-                 'vuln': vulnerabilities,
-                 'saves': saves,
-                 'stat_cvars': stat_vars,
-                 'consumables': {},
-                 'spellbook': spellbook}
+        # v2: added race/background for research purposes
+        sheet = {
+            'type': 'beyond',
+            'version': 2,
+            'stats': stats,
+            'levels': levels,
+            'hp': int(hp),
+            'armor': int(armor),
+            'attacks': attacks,
+            'skills': skills,
+            'resist': resistances,
+            'immune': immunities,
+            'vuln': vulnerabilities,
+            'saves': saves,
+            'stat_cvars': stat_vars,
+            'consumables': {},
+            'spellbook': spellbook,
+            'race': self.get_race(),
+            'background': self.get_background()
+        }
 
         embed = self.get_embed(sheet)
 
@@ -615,6 +618,14 @@ class BeyondSheetParser:
         # spellbook['spells'] = list(set(spellbook['spells']))
 
         return spellbook
+
+    def get_race(self):
+        return self.character['race']['fullName']
+
+    def get_background(self):
+        if not self.character['background']['hasCustomBackground']:
+            return self.character['background']['definition']['name']
+        return "Custom"
 
     def get_prof(self, proftype):
         if not self.prof:

@@ -591,6 +591,8 @@ class InitTracker:
         if isinstance(combatant, Combatant):
             private = private and ctx.message.author.id == combatant.controller
             status = combatant.get_status(private=private)
+            if private and isinstance(combatant, MonsterCombatant):
+                status = f"{status}\n* This creature is a {combatant.monster_name}."
         else:
             status = "\n".join([co.get_status(private=private and ctx.message.author.id == co.controller) for co in
                                 combatant.get_combatants()])

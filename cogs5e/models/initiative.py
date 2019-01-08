@@ -715,13 +715,12 @@ class Combatant(Spellcaster):
         :param private: Whether to return the full revealed stats or not.
         :return: A string describing the combatant.
         """
-        csFormat = "{} {} {}{}\n{}"
-        status = csFormat.format(self.name,
-                                 self.get_hp_and_ac(private),
-                                 self.get_resist_string(private),
-                                 '\n# ' + self.notes if self.notes else '',
-                                 self.get_long_effects())
-        return status
+        name = self.name
+        hp_ac = self.get_hp_and_ac(private)
+        resists = self.get_resist_string(private)
+        notes = '\n# ' + self.notes if self.notes else ''
+        effects = self.get_long_effects()
+        return f"{name} {hp_ac} {resists}{notes}\n{effects}".strip()
 
     def get_long_effects(self):
         return '\n'.join(f"* {str(e)}" for e in self.get_effects())

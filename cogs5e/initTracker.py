@@ -751,7 +751,7 @@ class InitTracker:
         if combatant is None:
             return await self.bot.say("You must start combat with `!init next` first.")
 
-        if combatant.isPrivate and combatant.controller != ctx.message.author.id:
+        if combatant.isPrivate and combatant.controller != ctx.message.author.id and ctx.message.author.id != combat.dm:
             return await self.bot.say("You do not have permission to view this combatant's attacks.")
 
         attacks = combatant.attacks
@@ -867,7 +867,7 @@ class InitTracker:
                 embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
             if target.is_concentrating() and result['total_damage'] > 0:
                 embed.add_field(name="Concentration",
-                                value=f"Check your concentration (DC {int(max(result['total_damage']/2, 10))})!")
+                                value=f"Check your concentration (DC {int(max(result['total_damage'] / 2, 10))})!")
         else:
             embed.set_footer(text="Target AC not set.")
 
@@ -953,7 +953,7 @@ class InitTracker:
         else:
             spell = await select_spell_full(ctx, spell_name)
 
-        targets = [await combat.select_combatant(t, f"Select target #{i+1}.") for i, t in enumerate(args.get('t'))]
+        targets = [await combat.select_combatant(t, f"Select target #{i + 1}.") for i, t in enumerate(args.get('t'))]
 
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
 
@@ -1002,7 +1002,7 @@ class InitTracker:
 
             try:
                 await self.bot.send_message(ctx.message.author, f"End of combat report: {combat.round_num} rounds "
-                                                                f"{combat.get_summary(True)}")
+                f"{combat.get_summary(True)}")
 
                 summary = await combat.get_summary_msg()
                 await self.bot.edit_message(summary,

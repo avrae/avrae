@@ -122,7 +122,10 @@ async def bestiary_from_critterdb(url):
                 creatures.extend(raw)
                 index += 1
         async with session.get(f"http://critterdb.com/api/publishedbestiaries/{url}") as resp:
-            raw = await resp.json()
+            try:
+                raw = await resp.json()
+            except ValueError:
+                raise ExternalImportError("Error importing bestiary metadata. Are you sure the link is right?")
             name = raw['name']
     parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
     return Bestiary(url, name, parsed_creatures)

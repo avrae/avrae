@@ -468,11 +468,13 @@ class Damage(Effect):
         if d:
             damage = f"{damage}+{d}"
 
+        roll_for = "Damage"
         if autoctx.in_crit or crit:
             def critSub(matchobj):
                 return f"{int(matchobj.group(1)) * 2}d{matchobj.group(2)}"
 
             damage = re.sub(r'(\d+)d(\d+)', critSub, damage)
+            roll_for = "Damage (CRIT!)"
             if c:
                 damage = f"{damage}+{c}"
 
@@ -484,7 +486,7 @@ class Damage(Effect):
 
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
-        dmgroll = roll(damage, rollFor="Damage", inline=True, show_blurbs=False)
+        dmgroll = roll(damage, rollFor=roll_for, inline=True, show_blurbs=False)
         autoctx.queue(dmgroll.result)
 
         autoctx.target.damage(autoctx, dmgroll.total)

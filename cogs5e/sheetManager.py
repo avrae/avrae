@@ -628,11 +628,13 @@ class SheetManager:
         try:
             await parser.get_character()
         except (timeout, aiohttp.ClientResponseError):
-            return await self.bot.say(
-                "I'm having some issues connecting to Dicecloud or Google right now. Please try again in a few minutes.")
+            return await self.bot.edit_message(loading,
+                                               "I'm having some issues connecting to Dicecloud or Google right now. "
+                                               "Please try again in a few minutes.")
         except HttpError:
             return await self.bot.edit_message(loading,
-                                               "Google returned an error trying to access your sheet. Please ensure your sheet is shared and try again in a few minutes.")
+                                               "Google returned an error trying to access your sheet. "
+                                               "Please ensure your sheet is shared and try again in a few minutes.")
         except Exception as e:
             del parser
             log.warning(

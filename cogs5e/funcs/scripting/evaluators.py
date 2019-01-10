@@ -3,13 +3,13 @@ import copy
 import re
 from math import ceil, floor
 
-from simpleeval import SimpleEval, IterableTooLong, EvalWithCompoundTypes, DEFAULT_NAMES
+from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.errors import FunctionRequiresCharacter, EvaluationError
+from cogs5e.models.errors import EvaluationError, FunctionRequiresCharacter, InvalidArgument
 from .combat import SimpleCombat
-from .functions import DEFAULT_OPERATORS, DEFAULT_FUNCTIONS
-from .helpers import MAX_ITER_LENGTH, SCRIPTING_RE, get_uvars
+from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
+from .helpers import MAX_ITER_LENGTH, SCRIPTING_RE, get_uvars, update_uvars
 
 
 class MathEvaluator(SimpleEval):
@@ -59,7 +59,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             ast.comprehension: self._eval_comprehension
         })
 
-        self.functions.update(
+        self.functions.update(  # character-only functions
             get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
             get_cc_min=self.needs_char, mod_cc=self.needs_char,
             cc_exists=self.needs_char, create_cc_nx=self.needs_char,
@@ -71,11 +71,12 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             get_raw=self.needs_char, combat=self.needs_char
         )
 
-        self.functions.update({
-            "set": self.set_value,
-            "exists": self.exists,
-            "get_gvar": self.get_gvar
-        })
+        self.functions.update(
+            set=self.set_value, exists=self.exists,
+            get_gvar=self.get_gvar,
+            set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
+            uvar_exists=self.uvar_exists
+        )
 
         self.assign_nodes = {
             ast.Name: self._assign_name,
@@ -85,17 +86,21 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
         self._loops = 0
         self._cache = {
-            "gvars": {}
+            "gvars": {},
+            "uvars": {}
         }
 
         self.ctx = ctx
         self.character_changed = False
         self.combat_changed = False
+        self.uvars_changed = set()
 
     @classmethod
     async def new(cls, ctx):
         inst = cls(ctx)
-        inst.names.update(await get_uvars(ctx))
+        uvars = await get_uvars(ctx)
+        inst.names.update(uvars)
+        inst._cache['uvars'].update(uvars)
         return inst
 
     async def with_character(self, character):
@@ -232,6 +237,8 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             await self._cache['character'].commit(self.ctx)
         if self.combat_changed and 'combat' in self._cache and self._cache['combat']:
             await self._cache['combat'].func_commit()
+        if self.uvars_changed and 'uvars' in self._cache and self._cache['uvars']:
+            await update_uvars(self.ctx, self._cache['uvars'], self.uvars_changed)
 
     # helpers
     def needs_char(self, *args, **kwargs):
@@ -243,6 +250,9 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
     def exists(self, name):
         return name in self.names
 
+    def uvar_exists(self, name):
+        return self.exists(name) and name in self._cache['uvars']
+
     def get_gvar(self, name):
         if name not in self._cache['gvars']:
             result = self.ctx.bot.mdb.gvars.delegate.find_one({"key": name})
@@ -250,6 +260,22 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                 return None
             self._cache['gvars'][name] = result['value']
         return self._cache['gvars'][name]
+
+    def set_uvar(self, name, val: str):
+        if any(c in name for c in '/()[]\\.^$*+?|{}'):
+            raise InvalidArgument("Cvar contains invalid character.")
+        self._cache['uvars'][name] = str(val)
+        self.names[name] = str(val)
+        self.uvars_changed.add(name)
+
+    def set_uvar_nx(self, name, val: str):
+        if not name in self.names:
+            self.set_uvar(name, val)
+
+    def delete_uvar(self, name):
+        if name in self._cache['uvars']:
+            del self._cache['uvars'][name]
+            self.uvars_changed.add(name)
 
     # evaluation
     def parse(self, string, double_curly=None, curly=None, ltgt=None):
@@ -270,11 +296,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                 varstr = match.group(3)
 
                 def default_curly_func(s):
-                    out = ""
+                    curlyout = ""
                     for substr in re.split(ops, s):
                         temp = substr.strip()
-                        out += str(self.names.get(temp, temp)) + " "
-                    return str(roll(out).total)
+                        curlyout += str(self.names.get(temp, temp)) + " "
+                    return str(roll(curlyout).total)
 
                 curly_func = curly or default_curly_func
                 evalresult = curly_func(varstr)

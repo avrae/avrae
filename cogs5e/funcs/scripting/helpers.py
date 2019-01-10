@@ -19,6 +19,18 @@ async def set_uvar(ctx, name, value):
         True)
 
 
+async def update_uvars(ctx, uvar_dict, changed=None):
+    if changed is None:
+        for name, value in uvar_dict.items():
+            await set_uvar(ctx, name, value)
+    else:
+        for name in changed:
+            if name in uvar_dict:
+                await set_uvar(ctx, name, uvar_dict[name])
+            else:
+                await ctx.bot.mdb.uvars.delete_one({"owner": ctx.message.author.id, "name": name})
+
+
 async def get_gvar_values(ctx):
     gvars = {}
     async for gvar in ctx.bot.mdb.gvars.find():

@@ -518,6 +518,8 @@ def parse_critterdb_traits(data, key):
 
 def parse_resists(resists, notated=True):
     out = []
+    if not resists:
+        return out
     for dmgtype in resists:
         if isinstance(dmgtype, str):
             out.append(dmgtype)

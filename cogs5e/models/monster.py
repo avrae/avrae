@@ -1,3 +1,4 @@
+import logging
 import re
 from math import floor
 from urllib import parse
@@ -14,6 +15,8 @@ ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit
                        r'(?: or [+-]?\d+ \((.+?)\) (\w+) damage .*?[.,]?)?'
                        r'(?: plus [+-]?\d+ \((.+?)\) (\w+) damage.)?', re.IGNORECASE)
 JUST_DAMAGE_RE = re.compile(r'[+-]?\d+ \((.+?)\) (\w+) damage', re.IGNORECASE)
+
+log = logging.getLogger(__name__)
 
 
 class AbilityScores:
@@ -266,6 +269,8 @@ class Monster:
             "vuln": data['stats']['damageVulnerabilities']
         }
 
+        spellcasting = parse_critterdb_spellcasting(traits)
+
         return cls(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
                    data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
                    ability_scores, cr, data['stats']['experiencePoints'], None,
@@ -274,7 +279,8 @@ class Monster:
                    data['stats']['conditionImmunities'], raw_saves, saves, raw_skills, skills,
                    data['stats']['languages'], traits, actions, reactions, legactions,
                    data['stats']['legendaryActionsPerRound'], True, 'homebrew', attacks,
-                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'], raw_resists=resists)
+                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'], raw_resists=resists,
+                   spellcasting=spellcasting)
 
     @classmethod
     def from_bestiary(cls, data):
@@ -514,6 +520,43 @@ def parse_critterdb_traits(data, key):
 
         traits.append(Trait(name, desc, attacks))
     return traits
+
+
+def parse_critterdb_spellcasting(traits):
+    known_spells = []
+    usual_dc = (0, 0)  # dc, number of spells using dc
+    usual_sab = (0, 0)  # same thing
+    caster_level = 1
+    for trait in traits:
+        if not 'Spellcasting' in trait.name:
+            continue
+        desc = trait.desc
+        level_match = re.search(r"is a (\d+)[stndrh]{2}-level", desc)
+        ab_dc_match = re.search(r"spell save DC (\d+), [+-](\d+) to hit", desc)
+        spells = []
+        for spell_match in re.finditer(
+                r"(?:(?:(?:\d[stndrh]{2}\slevel)|(?:Cantrip))\s(?:\(.+\))|(?:At will)|(?:\d/day)): (.+)$", desc,
+                re.MULTILINE):
+            spell_texts = spell_match.group(1).split(', ')
+            for spell_text in spell_texts:
+                s = spell_text.strip('* _')
+                spells.append(s.lower())
+        if level_match:
+            caster_level = max(caster_level, int(level_match.group(1)))
+        if ab_dc_match:
+            ab = int(ab_dc_match.group(2))
+            dc = int(ab_dc_match.group(1))
+            if len(spells) > usual_dc[1]:
+                usual_dc = (dc, len(spells))
+            if len(spells) > usual_sab[1]:
+                usual_sab = (ab, len(spells))
+        known_spells.extend(s for s in spells if s not in known_spells)
+    dc = usual_dc[0]
+    sab = usual_sab[0]
+    log.debug(f"Lvl {caster_level}; DC: {dc}; SAB: {sab}; Spells: {known_spells}")
+    return {
+        'spells': known_spells, 'dc': dc, 'attackBonus': sab, 'casterLevel': caster_level
+    }
 
 
 def parse_resists(resists, notated=True):

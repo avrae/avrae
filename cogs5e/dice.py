@@ -30,24 +30,27 @@ class Dice:
     @commands.command(pass_context=True, name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
         """Rolls dice in xdy format.
-        Usage: !r xdy Attack!
-               !r xdy+z adv Attack with Advantage!
-               !r xdy-z dis Hide with Heavy Armor!
-               !r xdy+xdy*z
-               !r XdYkhZ
-               !r 4d6mi2[fire] Elemental Adept, Fire
-               !r 2d6e6 Explode on 6
-               !r 10d6ra6 Spell Bombardment
-               !r 4d6ro<3 Great Weapon Master
-        Supported Operators: k (keep)
-                             ro (reroll once)
-                             rr (reroll infinitely)
-                             mi/ma (min/max result)
-                             e (explode dice of value)
-                             ra (reroll and add)
-        Supported Selectors: lX (lowest X)
-                             hX (highest X)
-                             >X/<X (greater than or less than X)"""
+        __Examples__
+        !r xdy Attack!
+        !r xdy+z adv Attack with Advantage!
+        !r xdy-z dis Hide with Heavy Armor!
+        !r xdy+xdy*z
+        !r XdYkhZ
+        !r 4d6mi2[fire] Elemental Adept, Fire
+        !r 2d6e6 Explode on 6
+        !r 10d6ra6 Spell Bombardment
+        !r 4d6ro<3 Great Weapon Master
+        __Supported Operators__
+        k (keep)
+        ro (reroll once)
+        rr (reroll infinitely)
+        mi/ma (min/max result)
+        e (explode dice of value)
+        ra (reroll and add)
+        __Supported Selectors_
+        lX (lowest X)
+        hX (highest X)
+        >X/<X (greater than or less than X)"""
 
         if rollStr == '0/0':  # easter eggs
             return await self.bot.say("What do you expect me to do, destroy the universe?")
@@ -145,7 +148,7 @@ class Dice:
         -t [target]
         -phrase [flavor text]
         crit (automatically crit)
-        -h (hide monster name/image)"""
+        -h (hides monster name, image, and attack details)"""
 
         try:
             await self.bot.delete_message(ctx.message)
@@ -180,6 +183,12 @@ class Dice:
 
         if monster.source == 'homebrew':
             embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
+
+        if args.last('h', type_=bool):
+            try:
+                await self.bot.send_message(ctx.message.author, embed=result['full_embed'])
+            except:
+                pass
 
         await self.bot.say(embed=embed)
 

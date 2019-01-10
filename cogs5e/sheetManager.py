@@ -89,11 +89,13 @@ class SheetManager:
         -immune [damage immunity]
         -vuln [damage vulnerability]
         -neutral [damage non-resistance]
-        -hit (automatically hits)
-        -miss (automatically misses)
+        hit (automatically hits)
+        miss (automatically misses)
         crit (automatically crit)
         ea (Elven Accuracy double advantage)
+        max (deals max damage)
         -f "Field Title|Field Text" (see !embed)
+        -h (hides attack details)
         [user snippet]"""
         if atk_name is None:
             return await ctx.invoke(self.attack_list)
@@ -123,6 +125,11 @@ class SheetManager:
 
         result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
         embed = result['embed']
+        if args.last('h', type_=bool):
+            try:
+                await self.bot.send_message(ctx.message.author, embed=result['full_embed'])
+            except:
+                pass
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)

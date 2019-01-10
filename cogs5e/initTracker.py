@@ -9,6 +9,7 @@ from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
+from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import SelectionException
@@ -849,6 +850,14 @@ class InitTracker:
 
         result = sheet_attack(attack, args)
         embed = result['embed']
+
+        if args.last('h', type_=bool):
+            try:
+                await self.bot.send_message(ctx.message.server.get_member(target.controller),
+                                            embed=result['full_embed'])
+            except:
+                pass
+
         if is_player:
             embed.colour = combatant.character.get_color()
         else:
@@ -874,12 +883,7 @@ class InitTracker:
         else:
             embed.set_footer(text="Target AC not set.")
 
-        _fields = args.get('f', [])
-        if type(_fields) == list:
-            for f in _fields:
-                title = f.split('|')[0] if '|' in f else '\u200b'
-                value = "|".join(f.split('|')[1:]) if '|' in f else f
-                embed.add_field(name=title, value=value)
+        embeds.add_fields_from_args(embed, args.get('f', []))
 
         await self.bot.say(embed=embed)
         await combat.final()
@@ -1005,7 +1009,7 @@ class InitTracker:
 
             try:
                 await self.bot.send_message(ctx.message.author, f"End of combat report: {combat.round_num} rounds "
-                f"{combat.get_summary(True)}")
+                                                                f"{combat.get_summary(True)}")
 
                 summary = await combat.get_summary_msg()
                 await self.bot.edit_message(summary,

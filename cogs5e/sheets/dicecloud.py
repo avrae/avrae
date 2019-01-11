@@ -10,13 +10,11 @@ import os
 import random
 import re
 import sys
-import time
 from math import floor, ceil
 
 import aiohttp
 import discord
 import numexpr
-import requests
 from simpleeval import SimpleEval, NameNotDefined, FunctionNotDefined
 
 import credentials
@@ -51,31 +49,28 @@ class DicecloudParser:
         self._cache = {}
 
     async def get_character(self):
-        def _():
-            url = self.url
-            character = None
+        url = self.url
+        character = None
+        async with aiohttp.ClientSession() as session:
             for _ in range(10):  # 10 retries
-                resp = requests.get(f"{API_BASE}{url}/json?key={KEY}&cachebuster={generate_cachebuster()}")
-                log.info(f"Dicecloud returned {resp.status_code}")
-                if resp.status_code == 200:
-                    character = resp.json(encoding='utf-8')
-                    break
-                elif resp.status_code == 429:
-                    timeout = resp.json(encoding='utf-8')
-                    log.info(f"Ratelimit hit getting character - resets in {timeout}ms")
-                    time.sleep(timeout['timeToReset'] / 1000)  # rate-limited, just wait
-                elif resp.status_code == 403:
-                    raise ExternalImportError("Error: I do not have permission to view this character sheet. Make "
-                                              "sure it's either shared with `avrae` on Dicecloud or set so "
-                                              "anyone with link can view.")
-                else:
-                    raise ExternalImportError(f"Dicecloud returned an error: {resp.status_code} - {resp.reason}")
-            character['_id'] = url
-            self.character = character
-            return character
-
-        ch = await asyncio.get_event_loop().run_in_executor(None, _)
-        return ch
+                async with session.get(f"{API_BASE}{url}/json?key={KEY}&cachebuster={generate_cachebuster()}") as resp:
+                    log.info(f"Dicecloud returned {resp.status}")
+                    if resp.status == 200:
+                        character = await resp.json(encoding='utf-8')
+                        break
+                    elif resp.status == 429:
+                        timeout = await resp.json(encoding='utf-8')
+                        log.info(f"Ratelimit hit getting character - resets in {timeout}ms")
+                        await asyncio.sleep(timeout['timeToReset'] / 1000)  # rate-limited, just wait
+                    elif resp.status == 403:
+                        raise ExternalImportError("Error: I do not have permission to view this character sheet. Make "
+                                                  "sure it's either shared with `avrae` on Dicecloud or set so "
+                                                  "anyone with link can view.")
+                    else:
+                        raise ExternalImportError(f"Dicecloud returned an error: {resp.status} - {resp.reason}")
+        character['_id'] = url
+        self.character = character
+        return character
 
     def get_sheet(self):
         """Returns a dict with character sheet data."""

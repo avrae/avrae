@@ -4,17 +4,21 @@ astor==0.7.1
 async-timeout==2.0.0
 attrs==17.4.0
 cachetools==2.0.1
+certifi==2018.11.29
 chardet==3.0.4
 discord.py==0.16.12
 dnspython==1.15.0
 fuzzywuzzy==0.15.1
 gast==0.2.0
 google-api-python-client==1.6.4
+google-auth==1.6.2
+google-auth-oauthlib==0.2.0
 graphviz==0.8.4
 grpcio==1.17.1
 h5py==2.8.0
 html2text==2018.1.9
 httplib2==0.10.3
+idna==2.8
 Keras-Applications==1.0.6
 Keras-Preprocessing==1.0.5
 Markdown==3.0.1
@@ -24,6 +28,7 @@ multidict==3.3.2
 numexpr==2.6.4
 numpy==1.15.4
 oauth2client==4.1.2
+oauthlib==2.1.0
 objgraph==3.4.0
 Pillow==5.1.0
 pluggy==0.6.0
@@ -41,6 +46,8 @@ python-ddp==0.1.5
 python-Levenshtein==0.12.0
 python-meteor==0.1.6
 redis==2.10.6
+requests==2.21.0
+requests-oauthlib==1.0.0
 rsa==3.4.2
 simpleeval==0.9.6
 six==1.11.0
@@ -48,6 +55,7 @@ tensorboard==1.12.1
 tensorflow==1.12.0
 termcolor==1.1.0
 uritemplate==3.0.0
+urllib3==1.24.1
 websockets==3.4
 Werkzeug==0.14.1
 ws4py==0.4.2

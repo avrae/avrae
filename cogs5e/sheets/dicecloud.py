@@ -54,12 +54,12 @@ class DicecloudParser:
         async with aiohttp.ClientSession() as session:
             for _ in range(10):  # 10 retries
                 async with session.get(f"{API_BASE}{url}/json?key={KEY}&cachebuster={generate_cachebuster()}") as resp:
-                    log.debug(f"Dicecloud returned {resp.status}")
+                    log.info(f"Dicecloud returned {resp.status}")
                     if resp.status == 200:
                         character = await resp.json(encoding='utf-8')
                         break
                     elif resp.status == 429:
-                        timeout = await resp.json()
+                        timeout = await resp.json(encoding='utf-8')
                         log.info(f"Ratelimit hit getting character - resets in {timeout}ms")
                         await asyncio.sleep(timeout['timeToReset'] / 1000)  # rate-limited, just wait
                     elif resp.status == 403:

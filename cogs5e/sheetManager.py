@@ -633,7 +633,9 @@ class SheetManager:
             return await self.bot.say("Error: Unknown sheet type.")
         try:
             await parser.get_character()
-        except (timeout, aiohttp.ClientResponseError):
+        except (timeout, aiohttp.ClientResponseError) as e:
+            log.warning(
+                f"Response error importing char:\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
             return await self.bot.edit_message(loading,
                                                "I'm having some issues connecting to Dicecloud or Google right now. "
                                                "Please try again in a few minutes.")
@@ -642,7 +644,6 @@ class SheetManager:
                                                "Google returned an error trying to access your sheet. "
                                                "Please ensure your sheet is shared and try again in a few minutes.")
         except Exception as e:
-            del parser
             log.warning(
                 f"Failed to import character\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))

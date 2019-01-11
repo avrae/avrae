@@ -3,12 +3,19 @@ Created on Feb 27, 2017
 
 @author: andrew
 """
+import copy
 import re
 
 import discord
 
-from cogs5e.funcs.dice import roll, SingleDiceGroup
+from cogs5e.funcs.dice import SingleDiceGroup, roll
 from utils.functions import a_or_an, parse_resistances
+
+HIT_DICT = {
+    0: "HIT",
+    1: "CRIT!",
+    2: "MISS"
+}
 
 
 def sheet_attack(attack, args, embed=None):
@@ -58,6 +65,9 @@ def sheet_attack(attack, args, embed=None):
     else:
         embed.title = '{} attacks with {}!'.format(args.last('name'), a_or_an(attack.get('name')))
 
+    if args.last('image') is not None:
+        embed.set_thumbnail(url=args.last('image'))
+
     adv = args.adv(True)
     crit = args.last('crit', None, bool) and 1
     hit = args.last('hit', None, bool) and 1
@@ -67,9 +77,16 @@ def sheet_attack(attack, args, embed=None):
     rr = min(args.last('rr', 1, int), 25)
     reroll = args.last('reroll', 0, int)
     b = args.join('b', '+')
+    h = args.last('h', None, bool)
+
+    if h:
+        hidden_embed = copy.copy(embed)
+    else:
+        hidden_embed = discord.Embed()  # less memory? idek we don't use it anyway
 
     for r in range(rr):  # start rolling attacks
         out = ''
+        hidden_out = ''
         itercrit = 0
         if attack.get('attackBonus') is None and b:
             attack['attackBonus'] = '0'
@@ -119,8 +136,13 @@ def sheet_attack(attack, args, embed=None):
                         itercrit = 2  # miss!
                 if crit and itercrit < 2:
                     itercrit = crit
+                if ac:
+                    hidden_out += f"**To Hit**: {formatted_d20}... = `{HIT_DICT[itercrit]}`\n"
+                else:
+                    hidden_out += f"**To Hit**: {formatted_d20}... = `{toHit.total}`\n"
             else:  # output wherever was there if error
                 out += "**To Hit**: " + attack.get('attackBonus') + '\n'
+                hidden_out += "**To Hit**: Unknown"
         else:
             if hit:
                 out += "**To Hit**: Automatic hit!\n"
@@ -136,25 +158,31 @@ def sheet_attack(attack, args, embed=None):
 
         res = sheet_damage(attack.get('damage'), args, itercrit, dnum)
         out += res['damage']
+        if res['roll']:
+            hidden_out += f"**Damage**: {res['roll'].consolidated()} = `{res['roll'].total}`"
+        else:
+            hidden_out += res['damage']
         total_damage += res['total']
 
         if out is not '':
             if rr > 1:
                 embed.add_field(name='Attack {}'.format(r + 1), value=out, inline=False)
+                hidden_embed.add_field(name='Attack {}'.format(r + 1), value=hidden_out, inline=False)
             else:
                 embed.add_field(name='Attack', value=out, inline=False)
+                hidden_embed.add_field(name='Attack', value=hidden_out, inline=False)
 
     if rr > 1 and attack.get('damage') is not None:
         embed.add_field(name='Total Damage', value=str(total_damage))
+        hidden_embed.add_field(name='Total Damage', value=str(total_damage))
 
     if attack.get('details'):
         embed.add_field(name='Effect',
                         value=attack['details'] if len(attack['details']) < 1020 else f"{attack['details'][:1020]}...")
 
-    if args.last('image') is not None:
-        embed.set_thumbnail(url=args.last('image'))
-
-    return {'embed': embed, 'total_damage': total_damage}
+    if h:
+        return {'embed': hidden_embed, 'total_damage': total_damage, 'full_embed': embed}
+    return {'embed': embed, 'total_damage': total_damage, 'full_embed': embed}
 
 
 def sheet_damage(damage_str, args, itercrit=0, dnum=None):
@@ -224,6 +252,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
         # actual roll
+        dmgroll = None
         if itercrit == 2 and not showmiss:
             out = '**Miss!**\n'
         else:
@@ -231,4 +260,4 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
             out = dmgroll.result + '\n'
             if not itercrit == 2:  # if we actually hit
                 total_damage += dmgroll.total
-    return {'damage': out, 'total': total_damage}
+    return {'damage': out, 'total': total_damage, 'roll': dmgroll}

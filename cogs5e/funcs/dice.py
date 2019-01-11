@@ -500,6 +500,8 @@ class DiceResult:
 
     def consolidated(self):
         """Gets the most simplified version of the roll string."""
+        if self.raw_dice is None:
+            return "0"
         parts = []  # list of (part, annotation)
         last_part = ""
         for p in self.raw_dice.parts:
@@ -507,7 +509,7 @@ class DiceResult:
                 last_part += str(p.get_total())
             else:
                 last_part += str(p)
-            if p.annotation and not isinstance(p, Comment):
+            if not isinstance(p, Comment) and p.annotation:
                 parts.append((last_part, p.annotation))
                 last_part = ""
         if last_part:

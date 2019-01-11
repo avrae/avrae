@@ -17,7 +17,7 @@ import pygsheets
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 from googleapiclient.errors import HttpError
-from pygsheets.exceptions import SpreadsheetNotFound, NoValidUrlKeyFound
+from pygsheets.exceptions import NoValidUrlKeyFound, SpreadsheetNotFound
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
@@ -25,15 +25,14 @@ from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.character import Character, SKILL_MAP
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument, AvraeException
+from cogs5e.models.errors import AvraeException, InvalidArgument
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from cogs5e.sheets.sheetParser import SheetParser
 from utils.argparser import argparse
-from utils.functions import extract_gsheet_id_from_url, generate_token, search_and_select, \
-    camel_to_title, verbose_stat
-from utils.functions import list_get, get_positivity, a_or_an
+from utils.functions import a_or_an, get_positivity, list_get
+from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
 from utils.loggers import TextLogger
 
 log = logging.getLogger(__name__)
@@ -89,11 +88,13 @@ class SheetManager:
         -immune [damage immunity]
         -vuln [damage vulnerability]
         -neutral [damage non-resistance]
-        -hit (automatically hits)
-        -miss (automatically misses)
+        hit (automatically hits)
+        miss (automatically misses)
         crit (automatically crit)
         ea (Elven Accuracy double advantage)
+        max (deals max damage)
         -f "Field Title|Field Text" (see !embed)
+        -h (hides attack details)
         [user snippet]"""
         if atk_name is None:
             return await ctx.invoke(self.attack_list)
@@ -123,6 +124,11 @@ class SheetManager:
 
         result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
         embed = result['embed']
+        if args.last('h', type_=bool):
+            try:
+                await self.bot.send_message(ctx.message.author, embed=result['full_embed'])
+            except:
+                pass
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)
@@ -627,7 +633,9 @@ class SheetManager:
             return await self.bot.say("Error: Unknown sheet type.")
         try:
             await parser.get_character()
-        except (timeout, aiohttp.ClientResponseError):
+        except (timeout, aiohttp.ClientResponseError) as e:
+            log.warning(
+                f"Response error importing char:\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
             return await self.bot.edit_message(loading,
                                                "I'm having some issues connecting to Dicecloud or Google right now. "
                                                "Please try again in a few minutes.")
@@ -636,7 +644,6 @@ class SheetManager:
                                                "Google returned an error trying to access your sheet. "
                                                "Please ensure your sheet is shared and try again in a few minutes.")
         except Exception as e:
-            del parser
             log.warning(
                 f"Failed to import character\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
@@ -994,15 +1001,9 @@ class SheetManager:
         loading = await self.bot.say('Loading character data from Dicecloud...')
         parser = DicecloudParser(url)
         try:
-            character = await parser.get_character()
+            await parser.get_character()
         except Exception as eep:
-            return await self.bot.say(f"Dicecloud returned an error: {eep}")
-        try:
-            await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(
-                character.get('characters')[0].get('name')))
-        except (TypeError, IndexError):
-            return await self.bot.edit_message(loading,
-                                               'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
+            return await self.bot.edit_message(loading, f"Dicecloud returned an error: {eep}")
 
         try:
             sheet = parser.get_sheet()
@@ -1012,6 +1013,7 @@ class SheetManager:
                                                'Error: Invalid character sheet. Capitalization matters!\n' + str(e))
 
         c = Character(sheet['sheet'], f"dicecloud-{url}").initialize_consumables()
+        await self.bot.edit_message(loading, f'Loaded and saved data for {c.get_name()}!')
 
         if '-cc' in args:
             for counter in parser.get_custom_counters():
@@ -1030,7 +1032,8 @@ class SheetManager:
             await self.bot.say(embed=embed)
         except:
             await self.bot.say(
-                "...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
+                "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
+                "This is usually due to an invalid image.")
 
     @commands.command(pass_context=True)
     async def gsheet(self, ctx, url: str):
@@ -1056,11 +1059,15 @@ class SheetManager:
         try:
             await parser.get_character()
         except (KeyError, SpreadsheetNotFound):
-            return await self.bot.edit_message(loading,
-                                               "Invalid character sheet. Make sure you've shared it with me at `avrae-320@avrae-bot.iam.gserviceaccount.com`!")
+            return await self.bot.edit_message(
+                loading,
+                "Invalid character sheet. Make sure you've shared it with me at "
+                "`avrae-320@avrae-bot.iam.gserviceaccount.com`!")
         except HttpError:
-            return await self.bot.edit_message(loading,
-                                               "Error: Google returned an error. Please ensure your sheet is shared with `avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
+            return await self.bot.edit_message(
+                loading,
+                "Error: Google returned an error. Please ensure your sheet is shared with "
+                "`avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
         except Exception as e:
             return await self.bot.edit_message(loading, 'Error: Could not load character sheet.\n' + str(e))
 
@@ -1075,8 +1082,9 @@ class SheetManager:
                                         'Loaded and saved data for {}!'.format(sheet['sheet']['stats']['name']))
         except TypeError as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading,
-                                               'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
+            return await self.bot.edit_message(
+                loading,
+                'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
 
         char = Character(sheet['sheet'], f"google-{url}").initialize_consumables()
         await char.commit(ctx)
@@ -1087,7 +1095,8 @@ class SheetManager:
             await self.bot.say(embed=embed)
         except:
             await self.bot.say(
-                "...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
+                "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
+                "This is usually due to an invalid image.")
 
     @commands.command(pass_context=True)
     async def beyond(self, ctx, url: str):
@@ -1126,7 +1135,8 @@ class SheetManager:
             await self.bot.say(embed=embed)
         except:
             await self.bot.say(
-                "...something went wrong generating your character sheet. Don't worry, your character has been saved. This is usually due to an invalid image.")
+                "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
+                "This is usually due to an invalid image.")
 
 
 def setup(bot):

@@ -306,6 +306,7 @@ class GameTrack:
                       '7': '7th Level', '8': '8th Level', '9': '9th Level'}
         for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
             if spells:
+                spells.sort()
                 embed.add_field(name=level_name.get(level, "Unknown"), value=', '.join(spells))
         await self.bot.say(embed=embed)
 

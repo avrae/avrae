@@ -643,7 +643,7 @@ class Spell:
         raw['components'] = parse_components(raw['components'])
         return cls.from_data(raw)
 
-    # def to_dict(self):
+    # def to_dict(self):  # for scripting - use from_data to reload if necessary
     #     return {"name": self.name, "level": self.level, "school": self.school, "classes": self.classes,
     #             "subclasses": self.subclasses, "time": self.time, "range": self.range,
     #             "components": serialize_components(self.components), "duration": self.duration, "ritual": self.ritual,

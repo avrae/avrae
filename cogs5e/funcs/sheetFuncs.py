@@ -204,6 +204,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
 
     if damage_str is None and d:
         damage_str = '0'
+    dmgroll = None
     if damage_str is not None:
 
         def parsecrit(damage_str, wep=False):
@@ -252,7 +253,6 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
         # actual roll
-        dmgroll = None
         if itercrit == 2 and not showmiss:
             out = '**Miss!**\n'
         else:

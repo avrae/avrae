@@ -1146,9 +1146,13 @@ class Effect:
                 self.remove()
             self._remaining -= num_turns
 
-    def remove(self):
+    def remove(self, removed=None):
+        if removed is None:
+            removed = [self]
         for effect in self.get_children_effects():
-            effect.remove()
+            if effect not in removed:  # no infinite recursion please
+                removed.append(effect)
+                effect.remove(removed)
 
         self.combatant.remove_effect(self)
 

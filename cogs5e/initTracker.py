@@ -905,6 +905,7 @@ class InitTracker:
         **__All Spells__**
         -phrase [phrase] - adds flavor text.
         -title [title] - changes the title of the cast. Replaces [sname] with spell name.
+        -dur [duration] - changes duration of spell effects.
         int/wis/cha - different skill base for DC/AB"""
         return await self._cast(ctx, None, spell_name, args)
 

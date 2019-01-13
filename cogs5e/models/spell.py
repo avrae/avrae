@@ -506,19 +506,21 @@ class IEffect(Effect):
 
     def run(self, autoctx):
         super(IEffect, self).run(autoctx)
+        if isinstance(self.duration, str):
+            try:
+                self.duration = int(autoctx.parse_annostr(self.duration))
+            except ValueError:
+                raise SpellException(f"{self.duration} is not an integer (in effect duration)")
+
+        duration = autoctx.args.last('dur', self.duration, int)
         if isinstance(autoctx.target.target, Combatant):
             effect = initiative.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
-                                           self.duration, autoctx.parse_annostr(self.effects))
+                                           duration, autoctx.parse_annostr(self.effects))
             if autoctx.conc_effect:
                 effect.set_parent(autoctx.conc_effect)
-            if isinstance(self.duration, str):
-                try:
-                    self.duration = int(autoctx.parse_annostr(self.duration))
-                except ValueError:
-                    raise SpellException(f"{self.duration} is not an integer (in effect duration)")
             autoctx.target.target.add_effect(effect)
         else:
-            effect = initiative.Effect.new(None, None, self.name, self.duration, autoctx.parse_annostr(self.effects))
+            effect = initiative.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects))
         autoctx.queue(f"**Effect**: {str(effect)}")
 
 
@@ -755,7 +757,8 @@ class Spell:
         conc_conflict = None
         conc_effect = None
         if self.concentration and isinstance(caster, Combatant) and combat:
-            conc_effect = initiative.Effect.new(combat, caster, self.name, self.get_combat_duration(), "", True)
+            duration = args.last('dur', self.get_combat_duration(), int)
+            conc_effect = initiative.Effect.new(combat, caster, self.name, duration, "", True)
             effect_result = caster.add_effect(conc_effect)
             conc_conflict = effect_result['conc_conflict']
 

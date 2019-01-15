@@ -8,7 +8,6 @@ import logging
 import random
 import re
 import traceback
-from copy import copy
 from heapq import nlargest, nsmallest
 from math import floor
 from re import IGNORECASE
@@ -236,7 +235,7 @@ class Roll(object):
                 if last_operator is not None and op in valid_operators and not op == last_operator:
                     result.reroll(reroll_once, 1)
                     reroll_once = []
-                    result.reroll(rerollList)
+                    result.reroll(rerollList, greedy=True)
                     rerollList = []
                     result.keep(keep)
                     keep = None
@@ -268,7 +267,7 @@ class Roll(object):
                 if op in valid_operators:
                     last_operator = op
             result.reroll(reroll_once, 1)
-            result.reroll(rerollList)
+            result.reroll(rerollList, greedy=True)
             result.keep(keep)
             result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
             result.reroll(to_explode, greedy=True, keep_rerolled=True)
@@ -303,21 +302,25 @@ class SingleDiceGroup(Part):
             elif _roll.kept:
                 rolls_to_keep.remove(_roll.value)
 
-    def reroll(self, rerollList, iterations=250, greedy=False, keep_rerolled=False, unique=False):
+    def reroll(self, rerollList, max_iterations=1000, greedy=False, keep_rerolled=False, unique=False):
         if not rerollList: return  # don't reroll nothing - minor optimization
         if unique:
             rerollList = list(set(rerollList))  # remove duplicates
         if len(rerollList) > 100:
             raise OverflowError("Too many dice to reroll (max 100)")
-        for i in range(iterations):  # let's only iterate 250 times for sanity
-            temp = copy(rerollList)
-            breakCheck = True
-            for r in rerollList:
-                if r in (d.value for d in self.rolled if d.kept and not d.exploded):
-                    breakCheck = False
+        last_index = 0
+        count = 0
+        should_continue = True
+        while should_continue:  # let's only iterate 250 times for sanity
+            should_continue = False
+            if any(d.value in set(rerollList) for d in self.rolled[last_index:] if d.kept and not d.exploded):
+                should_continue = True
             to_extend = []
-            for r in self.rolled:
-                if r.value in temp and r.kept and not r.exploded:
+            for r in self.rolled[last_index:]:  # no need to recheck everything
+                count += 1
+                if count > max_iterations:
+                    should_continue = False
+                if r.value in rerollList and r.kept and not r.exploded:
                     try:
                         tempdice = SingleDice()
                         tempdice.value = random.randint(1, self.max_value)
@@ -336,10 +339,9 @@ class SingleDiceGroup(Part):
                         else:
                             r.explode()
                     if not greedy:
-                        temp.remove(r.value)
+                        rerollList.remove(r.value)
+            last_index = len(self.rolled)
             self.rolled.extend(to_extend)
-            if breakCheck:
-                break
 
     def get_total(self):
         """Returns:

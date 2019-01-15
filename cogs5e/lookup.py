@@ -231,7 +231,7 @@ class Lookup:
 
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.group(pass_context=True, invoke_without_command=True)
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -256,6 +256,21 @@ class Lookup:
             embed.add_field(name="** **", value=piece)
 
         await self.bot.send_message(destination, embed=embed)
+
+    @classfeat.command(pass_context=True, name='add')
+    async def add_classfeat(self, ctx, *, name: str):
+        """Adds a class feat to a live dicecloud sheet"""
+        result = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'])
+        character = await Character.from_ctx(ctx)
+        text = parse_data_entry(result['text'], True)
+        if character.live or True:
+            try:
+                DicecloudClient.getInstance().insert_feature(character.id[10:], result['name'], text)
+                await self.bot.say(f"Added {result['name']} to Dicecloud.")
+            except MeteorClient.MeteorClientException:
+                return await self.bot.say("Error: Failed to connect to Dicecloud. The site may be down.")
+        else:
+            await self.bot.say("Error: Sheet is not Dicecloud, or not shared with 'Avrae'.")
 
     @commands.command(pass_context=True, name='class')
     async def _class(self, ctx, name: str, level: int = None):

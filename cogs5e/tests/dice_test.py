@@ -47,4 +47,4 @@ def test_gt_lt_selectors():
 
 def test_infinite_loops():
     r = roll("1d1e1")
-    assert r.total == 251  # 1 + 250 rerolls
+    assert r.total == 1002  # 1 + 1000 rerolls + 1 extra

@@ -241,7 +241,8 @@ async def on_command(command, ctx):
     bot.rdb.incr('commands_used_life')
     try:
         log.debug(
-            "Command called in channel {0.message.channel} ({0.message.channel.id}), server {0.message.server} ({0.message.server.id}): {0.message.content}".format(
+            "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.server} ({0.message.server.id}), "
+            "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(
                 ctx))
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))

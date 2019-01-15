@@ -163,7 +163,7 @@ class Lookup:
         result = await search_and_select(ctx, c.feats, name, lambda e: e['name'])
         character = await Character.from_ctx(ctx)
         text = parse_data_entry(result['entries'], True)
-        if character.live or True:
+        if character.live:
             try:
                 DicecloudClient.getInstance().insert_feature(character.id[10:], result['name'], text)
                 await self.bot.say(f"Added {result['name']} to Dicecloud.")

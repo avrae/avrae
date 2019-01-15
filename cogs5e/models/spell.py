@@ -558,7 +558,7 @@ class Roll(Effect):
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
                 dice = f"{dice}+{higher}"
-        if d:
+        if d and not self.hidden:
             dice = f"{dice}+{d}"
 
         if maxdmg:

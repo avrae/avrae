@@ -10,6 +10,10 @@ import textwrap
 import discord
 from discord.ext import commands
 
+import MeteroClient
+from cogs5e.models.dicecloudClient import DicecloudClient, Parent
+from cogs5e.models.character import Character
+
 from cogs5e.funcs.lookupFuncs import select_monster_full, c, HOMEBREW_EMOJI, HOMEBREW_ICON, select_spell_full
 from cogs5e.funcs.lookup_ml import ml_spell_search
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
@@ -90,7 +94,7 @@ class Lookup:
 
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.group(pass_context=True, invoke_without_command=True)
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -153,6 +157,22 @@ class Lookup:
             _name = '** **'
         await self.bot.send_message(destination, embed=embed)
 
+    @feat.command(pass_context=True, name='add')
+    async def add_feat(self, ctx, *, name: str):
+        """Adds a feat to a live dicecloud sheet"""
+        result = await search_and_select(ctx, c.feats, name, lambda e: e['name'])
+        character = await Character.from_ctx(ctx)
+        text = parse_data_entry(result['entries'], True)
+        if character.live or True:
+            try:
+                DicecloudClient.getInstance().insert_feature(character.id[10:], result['name'], text)
+                await self.bot.say(f"Added {result['name']} to Dicecloud.")
+            except MeteorClient.MeteorClientException:
+                return await self.bot.say("Error: Failed to connect to Dicecloud. The site may be down.")
+        else:
+            await self.bot.say("Error: Sheet is not Dicecloud, or not shared with 'Avrae'.")
+                                  
+                                  
     @commands.command(pass_context=True)
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""

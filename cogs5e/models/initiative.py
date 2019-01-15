@@ -323,6 +323,11 @@ class Combat:
             combatantStr = ""
             for c in combatants:
                 combatantStr += ("# " if self.index == c.index else "  ") + c.get_summary(private, no_notes=True) + "\n"
+            if len(outStr.format(combatantStr)) > 2000:
+                combatantStr = ""
+                for c in combatants:
+                    combatantStr += ("# " if self.index == c.index else "  ") + c.get_summary(private, no_notes=True,
+                                                                                              minimal=True) + "\n"
         return outStr.format(combatantStr)
 
     async def update_summary(self):
@@ -489,7 +494,7 @@ class Combatant(Spellcaster):
         else:
             self._hp = new_hp
 
-    def get_hp_str(self, private=False):
+    def get_hp_str(self, private=False, minimal=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''
         hp = self.get_hp(no_temp=True)
@@ -501,15 +506,19 @@ class Combatant(Spellcaster):
         elif self.hpMax is not None and self.hpMax > 0:
             ratio = self.hp / self.hpMax
             if ratio >= 1:
-                hpStr = "<Healthy>"
+                hpStr = ["<Healthy>", "<H>"]
             elif 0.5 < ratio < 1:
-                hpStr = "<Injured>"
+                hpStr = ["<Injured>", "<I>"]
             elif 0.15 < ratio <= 0.5:
-                hpStr = "<Bloodied>"
+                hpStr = ["<Bloodied>", "<B>"]
             elif 0 < ratio <= 0.15:
-                hpStr = "<Critical>"
+                hpStr = ["<Critical>", "<C>"]
             elif ratio <= 0:
-                hpStr = "<Dead>"
+                hpStr = ["<Dead>", "<D>"]
+            if minimal:
+                hpStr = hpStr[1]
+            else:
+                hpStr = hpStr[0]
         return hpStr
 
     @property
@@ -698,14 +707,14 @@ class Combatant(Spellcaster):
         for e in self.get_effects().copy():
             e.on_turn(num_turns)
 
-    def get_summary(self, private=False, no_notes=False):
+    def get_summary(self, private=False, no_notes=False, minimal=False):
         """
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        hpStr = f"{self.get_hp_str(private)} " if self.get_hp_str(private) else ''
+        hpStr = f"{self.get_hp_str(private, minimal)} " if self.get_hp_str(private) else ''
         if not no_notes:
-            return f"{self.init}: {self.name} {hpStr}({self.get_effects_and_notes()})"
+            return f"{self.init}: {self.name} {hpStr}({self.get_effects_and_notes()})".replace('()','')
         else:
             return f"{self.init}: {self.name} {hpStr}"
 

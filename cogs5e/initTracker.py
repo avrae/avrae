@@ -991,6 +991,27 @@ class InitTracker:
         combat.remove_combatant(combatant)
         await self.bot.say("{} removed from combat.".format(combatant.name), delete_after=10)
         await combat.final()
+                                   
+    @init.command(pass_context=True, name="cleanup", aliases=['removedead', 'clean'])
+    async def removeDead(self, ctx):
+        """Removes all dead monster combatants."""
+        combat = await Combat.from_ctx(ctx)
+
+        out = ""
+        toRemove = []
+        for co in combat.get_combatants():
+            if isinstance(co, MonsterCombatant) and co.hp <= 0:
+                toRemove.append(co)
+
+        for co in toRemove:
+            combat.remove_combatant(co)
+            out += "{} removed from combat.\n".format(co.name)
+
+        if not out:
+            out = "No combatants to remove."
+
+        await self.bot.say(out)
+        await combat.final()
 
     @init.command(pass_context=True)
     async def end(self, ctx, args=None):

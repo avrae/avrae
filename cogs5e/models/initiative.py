@@ -991,7 +991,7 @@ class CombatantGroup:
         else:
             status = f"{self.init}: {self.name}"
             for c in self.get_combatants():
-                status += f'\n    - {": ".join(c.get_summary(private, no_notes).split(": ")[1:])}'
+                status += f'\n     - {": ".join(c.get_summary(private, no_notes).split(": ")[1:])}'
         return status
 
     def get_status(self, private=False):

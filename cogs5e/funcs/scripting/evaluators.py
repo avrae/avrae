@@ -75,7 +75,8 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             set=self.set_value, exists=self.exists,
             get_gvar=self.get_gvar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
-            uvar_exists=self.uvar_exists
+            uvar_exists=self.uvar_exists,
+            chanid=self.chanid, servid=self.servid
         )
 
         self.assign_nodes = {
@@ -276,6 +277,14 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         if name in self._cache['uvars']:
             del self._cache['uvars'][name]
             self.uvars_changed.add(name)
+
+    def chanid(self):
+        return self.ctx.message.channel.id
+
+    def servid(self):
+        if self.ctx.message.server:
+            return self.ctx.message.server.id
+        return None
 
     # evaluation
     def parse(self, string, double_curly=None, curly=None, ltgt=None):

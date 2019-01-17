@@ -979,9 +979,9 @@ class CombatantGroup:
         :return: A string describing the combatant.
         """
         if len(self._combatants) > 7 and not private:
-            status = f"{self.init}: {self.name} ({len(self.get_combatants())} combatants)"
+            status = f"{self.init:>2}: {self.name} ({len(self.get_combatants())} combatants)"
         else:
-            status = f"{self.init}: {self.name}"
+            status = f"{self.init:>2}: {self.name}"
             for c in self.get_combatants():
                 status += f'\n    - {": ".join(c.get_summary(private, no_notes).split(": ")[1:])}'
         return status

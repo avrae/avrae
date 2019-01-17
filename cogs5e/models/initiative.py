@@ -705,9 +705,9 @@ class Combatant(Spellcaster):
         """
         hpStr = f"{self.get_hp_str(private)} " if self.get_hp_str(private) else ''
         if not no_notes:
-            return f"{self.init}: {self.name} {hpStr}({self.get_effects_and_notes()})"
+            return f"{self.init:>2}: {self.name} {hpStr}{self.get_effects_and_notes()}"
         else:
-            return f"{self.init}: {self.name} {hpStr}"
+            return f"{self.init:>2}: {self.name} {hpStr}"
 
     def get_status(self, private=False):
         """
@@ -733,8 +733,9 @@ class Combatant(Spellcaster):
             out.append('{} [{} rds]'.format(e.name, e.remaining if not e.remaining < 0 else '∞'))
         if self.notes:
             out.append(self.notes)
-        out = ', '.join(out)
-        return out
+        if out:
+            return f"({', '.join(out)})"
+        return ""
 
     def get_hp_and_ac(self, private: bool = False):
         out = [self.get_hp_str(private)]

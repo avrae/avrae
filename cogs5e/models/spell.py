@@ -3,13 +3,14 @@ import re
 
 import discord
 
-from cogs5e.funcs.dice import roll, SingleDiceGroup
+from cogs5e.funcs.dice import SingleDiceGroup, roll
 from cogs5e.funcs.scripting import SpellEvaluator
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
-from cogs5e.models.errors import AvraeException, NoSpellAB, NoSpellDC, InvalidSaveType, InvalidArgument
+from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType, NoSpellAB, NoSpellDC
 from cogs5e.models.initiative import Combatant, PlayerCombatant
+from utils.argparser import argparse
 from utils.functions import parse_resistances, verbose_stat
 
 log = logging.getLogger(__name__)
@@ -68,10 +69,13 @@ class AutomationContext:
         self.pm_queue = {}
         if isinstance(caster, PlayerCombatant):
             self.evaluator = SpellEvaluator.with_character(caster.character)
+            self.character = caster.character
         elif isinstance(caster, Character):
             self.evaluator = SpellEvaluator.with_character(caster)
+            self.character = caster
         else:
             self.evaluator = SpellEvaluator()
+            self.character = None
 
     def queue(self, text):
         self._embed_queue.append(text)
@@ -174,6 +178,14 @@ class AutomationTarget:
                 autoctx.queue(f"**Concentration**: DC {int(max(amount/2, 10))}")
         elif isinstance(self.target, Character):
             self.target.modify_hp(-amount)
+
+    @property
+    def character(self):
+        if isinstance(self.target, PlayerCombatant):
+            return self.target.character
+        elif isinstance(self.target, Character):
+            return self.target
+        return None
 
 
 class Effect:
@@ -386,6 +398,13 @@ class Save(Effect):
 
         autoctx.meta_queue(f"**DC**: {dc}")
         if autoctx.target.target:
+            # character save effects (#408)
+            if autoctx.target.character:
+                save_args = autoctx.target.character.get_skill_effects().get(save_skill)
+                if save_args:
+                    adv = argparse(save_args).adv() + adv
+                    adv = max(-1, min(1, adv))  # bound, cancel out double dis/adv
+
             target_save_mod = autoctx.target.get_save(save_skill)
             sb = autoctx.target.target.active_effects('sb')
             if sb:

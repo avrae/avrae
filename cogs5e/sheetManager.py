@@ -213,13 +213,14 @@ class SheetManager:
     @commands.command(pass_context=True, aliases=['s'])
     async def save(self, ctx, skill, *, args: str = ''):
         """Rolls a save for your current active character.
-        Args: adv/dis
-              -b [conditional bonus]
-              -phrase [flavor text]
-              -title [title] *note: [charname] and [sname] will be replaced automatically*
-              -image [image URL]
-              -dc [dc] (does not apply to Death Saves)
-              -rr [iterations] (does not apply to Death Saves)"""
+        __Valid Arguments__
+        adv/dis
+        -b [conditional bonus]
+        -phrase [flavor text]
+        -title [title] *note: [charname] and [sname] will be replaced automatically*
+        -image [image URL]
+        -dc [dc] (does not apply to Death Saves)
+        -rr [iterations] (does not apply to Death Saves)"""
         if skill == 'death':
             ds_cmd = self.bot.get_command('game deathsave')
             if ds_cmd is None:

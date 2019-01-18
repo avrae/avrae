@@ -103,54 +103,21 @@ class Lookup:
 
         await self.add_training_data("feat", name, result['name'])
 
-        if not result['name'] == 'Grappler' and srd:  # the only SRD feat.
+        if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
-
-        text = parse_data_entry(result['entries'])
-        prereq = []
-
-        if 'prerequisite' in result:
-            for entry in result['prerequisite']:
-                if 'race' in entry:
-                    prereq.append(' or '.join(
-                        f"{r['name']}" + (f" ({r['subrace']})" if 'subrace' in r else '') for r in entry['race']))
-                if 'ability' in entry:
-                    abilities = []
-                    for ab in entry['ability']:
-                        abilities.extend(f"{ABILITY_MAP.get(a)} {s}" for a, s in ab.items())
-                    prereq.append(' or '.join(abilities))
-                if 'spellcasting' in entry:
-                    prereq.append("The ability to cast at least one spell")
-                if 'proficiency' in entry:
-                    prereq.append(f"Proficiency with {entry['proficiency'][0]['armor']} armor")
-                if 'level' in entry:
-                    prereq.append(f"Level {entry['level']}")
-                if 'special' in entry:
-                    prereq.append(entry['special'])
-
-        if prereq:
-            prereq = '\n'.join(prereq)
-        else:
-            prereq = "None"
-
-        ability = None
-        if 'ability' in result:
-            if 'choose' in result['ability']:
-                ability = ' or '.join(ABILITY_MAP.get(a) for a in result['ability']['choose'][0]['from'])
-            else:
-                ability = ' or '.join(ABILITY_MAP.get(a) for a in result['ability'].keys())
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
-        embed.add_field(name="Prerequisite", value=prereq)
-        embed.add_field(name="Source", value=result['source'])
-        if ability:
+        if result['prerequisite']:
+            embed.add_field(name="Prerequisite", value=result['prerequisite'])
+        if result['ability']:
             embed.add_field(name="Ability Improvement",
-                            value=f"Increase your {ability} score by 1, up to a maximum of 20.")
+                            value=f"Increase your {result['ability']} score by 1, up to a maximum of 20.")
         _name = 'Description'
-        for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
+        for piece in [result['desc'][i:i + 1024] for i in range(0, len(result['desc']), 1024)]:
             embed.add_field(name=_name, value=piece)
             _name = '** **'
+        embed.set_footer(text=f"Feat | {result['source']} {result['page']}")
         await self.bot.send_message(destination, embed=embed)
 
     @commands.command(pass_context=True)

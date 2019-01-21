@@ -8,7 +8,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import DicecloudClient, Parent
 from cogs5e.models.embeds import EmbedWithAuthor
-from utils.functions import parse_data_entry, ABILITY_MAP, search_and_select, get_selection
+from utils.functions import ABILITY_MAP, get_selection, parse_data_entry, search_and_select
 
 log = logging.getLogger(__name__)
 

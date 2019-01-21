@@ -62,16 +62,17 @@ class DicecloudClient(MeteorClient):
     def getInstance(cls):
         if cls.instance is None:
             try:
-                cls.instance = cls('ws://dicecloud.com/websocket', debug=TESTING)
+                cls.instance = cls('wss://dicecloud.com/websocket', debug=TESTING)
                 cls.instance.initialize()
             except:
                 return None
         return cls.instance
 
     def initialize(self):
+        log.info(f"Initializing Dicecloud client (debug={TESTING})")
         self.connect()
         loops = 0
-        while not self.connected and loops < 100:
+        while (not self.connected) and loops < 100:
             time.sleep(0.1)
             loops += 1
         log.info(f"Connected to Dicecloud in {loops/10} seconds")

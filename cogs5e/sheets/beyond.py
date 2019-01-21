@@ -284,28 +284,7 @@ class BeyondSheetParser:
 
     def get_description(self):
         if self.character is None: raise Exception('You must call get_character() first.')
-        character = self.character
-        g = character['gender']
-        n = character['name']
-        pronoun = "She" if g == "female" else "He" if g == "male" else "They"
-        verb = "is" if not pronoun == 'They' else "are"
-        verb2 = "has" if not pronoun == 'They' else "have"
-        desc = "{0} is a level {1} {2} {3}. {4} {5} {6} years old, {7} tall, and appears to weigh about {8}. " \
-               "{4} {12} {9} eyes, {10} hair, and {11} skin."
-        desc = desc.format(n,
-                           self.get_levels()['level'],
-                           character['race']['fullName'],
-                           '/'.join(c['definition']['name'] for c in character['classes']),
-                           pronoun,
-                           verb,
-                           character['age'] or "unknown",
-                           character['height'] or "unknown",
-                           character['weight'] or "unknown",
-                           (character['eyes'] or "unknown").lower(),
-                           (character['hair'] or "unknown").lower(),
-                           (character['skin'] or "unknown").lower(),
-                           verb2)
-        return desc
+        return self.character['traits']['appearance']
 
     def get_levels(self):
         """Returns a dict with the character's level and class levels."""

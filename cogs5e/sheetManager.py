@@ -391,7 +391,7 @@ class SheetManager:
         char = await Character.from_ctx(ctx)
 
         desc = char.character['stats'].get('description', 'No description available.')
-        if desc is None:
+        if not desc:
             desc = 'No description available.'
         if len(desc) > 2048:
             desc = desc[:2044] + '...'

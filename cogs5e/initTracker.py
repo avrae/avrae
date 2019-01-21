@@ -795,6 +795,7 @@ class InitTracker:
         return await self._attack(ctx, combatant_name, target_name, atk_name, args)
 
     async def _attack(self, ctx, combatant_name, target_name, atk_name, args):
+        args = await scripting.parse_snippets(args, ctx)
         combat = await Combat.from_ctx(ctx)
 
         try:
@@ -826,8 +827,6 @@ class InitTracker:
                                              message="Select your attack.")
             except SelectionException:
                 return await self.bot.say("Attack not found.")
-
-        args = await scripting.parse_snippets(args, ctx)
 
         is_player = isinstance(combatant, PlayerCombatant)
 
@@ -932,6 +931,7 @@ class InitTracker:
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     async def _cast(self, ctx, combatant_name, spell_name, args):
+        args = await scripting.parse_snippets(args, ctx)
         combat = await Combat.from_ctx(ctx)
 
         if combatant_name is None:
@@ -951,7 +951,6 @@ class InitTracker:
 
         is_character = isinstance(combatant, PlayerCombatant)
 
-        args = await scripting.parse_snippets(args, ctx)
         if is_character and combatant.character_owner == ctx.message.author.id:
             args = await combatant.character.parse_cvars(args, ctx)
         args = shlex.split(args)

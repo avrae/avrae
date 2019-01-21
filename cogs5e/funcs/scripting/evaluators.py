@@ -65,7 +65,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             cc_exists=self.needs_char, create_cc_nx=self.needs_char,
             get_slots=self.needs_char, get_slots_max=self.needs_char, set_slots=self.needs_char,
             use_slot=self.needs_char,
-            get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char,
+            get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char, hp_str=self.needs_char,
             get_temphp=self.needs_char, set_temphp=self.needs_char,
             set_cvar=self.needs_char, delete_cvar=self.needs_char, set_cvar_nx=self.needs_char,
             get_raw=self.needs_char, combat=self.needs_char
@@ -191,6 +191,9 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             else:
                 return set_hp(character.get_current_hp() + val)
 
+        def hp_str():
+            return character.get_hp_str()
+
         def get_temphp():
             return character.get_temp_hp()
 
@@ -226,7 +229,8 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, cc_str=cc_str,
             get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
             slots_str=slots_str,
-            get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, get_temphp=get_temphp, set_temphp=set_temphp,
+            get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, hp_str=hp_str,
+            get_temphp=get_temphp, set_temphp=set_temphp,
             set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
             get_raw=get_raw, combat=combat
         )

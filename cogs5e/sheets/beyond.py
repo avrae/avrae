@@ -421,16 +421,17 @@ class BeyondSheetParser:
                 )
         elif atkType == 'unarmed':
             monk_level = self.get_levels().get('MonkLevel')
+            ability_mod = self.stat_from_id(1) if not monk_level else max(self.stat_from_id(1), self.stat_from_id(2))
             if not monk_level:
-                dmg = 1 + self.stat_from_id(1)
+                dmg = 1 + ability_mod
             elif monk_level < 5:
-                dmg = f"1d4+{self.stat_from_id(1)}"
+                dmg = f"1d4+{ability_mod}"
             elif monk_level < 11:
-                dmg = f"1d6+{self.stat_from_id(1)}"
+                dmg = f"1d6+{ability_mod}"
             elif monk_level < 17:
-                dmg = f"1d8+{self.stat_from_id(1)}"
+                dmg = f"1d8+{ability_mod}"
             else:
-                dmg = f"1d10+{self.stat_from_id(1)}"
+                dmg = f"1d10+{ability_mod}"
             atkBonus = self.get_stats()['proficiencyBonus']
 
             atkBonus += self.get_stat('natural-attacks')
@@ -439,7 +440,7 @@ class BeyondSheetParser:
                 dmg = f"{dmg}+{natural_bonus}"
 
             attack = {
-                'attackBonus': str(self.stat_from_id(1) + atkBonus),
+                'attackBonus': str(ability_mod + atkBonus),
                 'damage': f"{dmg}[bludgeoning]",
                 'name': "Unarmed Strike",
                 'details': None
@@ -692,9 +693,10 @@ def pact_level_by_level(level):
 
 if __name__ == '__main__':
     import asyncio
+    import json
 
     while True:
         url = input("DDB Character ID: ").strip()
         parser = BeyondSheetParser(url)
         asyncio.get_event_loop().run_until_complete(parser.get_character())
-        print(parser.get_sheet())
+        print(json.dumps(parser.get_sheet()['sheet'], indent=2))

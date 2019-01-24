@@ -13,6 +13,8 @@ import psutil
 from discord.channel import PrivateChannel
 from discord.ext import commands
 
+PATRON_EYLESIS = "227168575469780992"
+
 
 class Core:
     """
@@ -22,6 +24,12 @@ class Core:
     def __init__(self, bot):
         self.bot = bot
         self.start_time = time.monotonic()
+
+    async def on_message(self, message):
+        if message.author.id == PATRON_EYLESIS and message.content.lower().startswith("hey avrae"):
+            await self.bot.send_message(message.channel,
+                                        "No, I will not reseed the RNG, even if you gave me all those cookies.")
+            random.seed()  # I lied
 
     @commands.command(pass_context=True, aliases=['feedback'])
     async def bug(self, ctx, *, report: str):

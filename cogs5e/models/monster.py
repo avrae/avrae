@@ -237,8 +237,9 @@ class Monster:
                     mod = skill['value']
                 except KeyError:
                     continue
-            skills[name] = mod
-            raw_skills.append(f"{skill['name']} {mod:+}")
+            if mod is not None:
+                skills[name] = mod
+                raw_skills.append(f"{skill['name']} {mod:+}")
         raw_skills = ', '.join(raw_skills)
 
         saves = {}

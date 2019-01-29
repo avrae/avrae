@@ -12,11 +12,12 @@ from itertools import zip_longest
 
 import aiohttp
 import discord
+import numpy
 from PIL import Image
-from fuzzywuzzy import process, fuzz
+from fuzzywuzzy import fuzz, process
 from pygsheets import NoValidUrlKeyFound
 
-from cogs5e.models.errors import SelectionCancelled, NoSelectionElements
+from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
 
 log = logging.getLogger(__name__)
 
@@ -535,12 +536,25 @@ async def generate_token(img_url, color_override=None):
         else:
             rgb = ((color_override >> 16) & 255, (color_override >> 8) & 255, color_override & 255)
 
+        # color the circle
         bands = template.split()
         for i, v in enumerate(rgb):
             out = bands[i].point(lambda p: int(p * v / 255))
             bands[i].paste(out)
 
-        img.putalpha(transparency_template)
+        # alpha blending
+        try:
+            alpha = img.getchannel("A")
+            alpha_pixels = numpy.array(alpha)
+            template_pixels = numpy.asarray(transparency_template)
+            for r, row in enumerate(template_pixels):
+                for c, col in enumerate(row):
+                    alpha_pixels[r][c] = min(alpha_pixels[r][c], col)
+            out = Image.fromarray(alpha_pixels, "L")
+            img.putalpha(out)
+        except ValueError:
+            img.putalpha(transparency_template)
+
         colored_template = Image.merge(template.mode, bands)
         img.paste(colored_template, mask=colored_template)
 

@@ -23,6 +23,7 @@ def test_complex_rolls():
     assert len([p for p in r.raw_dice.parts[0].rolled if p.kept]) == 7
     assert len([p for p in r.raw_dice.parts[0].rolled if not p.kept]) == 3
 
+
 def test_gt_lt_selectors():
     r = roll("10d6k>6")
     assert r.total == 0
@@ -45,6 +46,14 @@ def test_gt_lt_selectors():
     assert len([p for p in r.raw_dice.parts[0].rolled if p.kept]) <= 10
     assert all(p.value < 6 for p in r.raw_dice.parts[0].rolled if p.kept)
 
+
 def test_infinite_loops():
     r = roll("1d1e1")
     assert r.total == 1002  # 1 + 1000 rerolls + 1 extra
+
+
+def test_randomness():
+    rolls = [roll("1d1000").total for _ in range(100)]
+    # the chance of all of them being equal is 1/1000^100, so this should be safe
+    # unless, of course, I broke something horribly
+    assert len(set(rolls)) > 1

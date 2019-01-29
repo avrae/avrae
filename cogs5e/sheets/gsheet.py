@@ -248,15 +248,23 @@ class GoogleSheet:
             damageTypes = ['acid', 'bludgeoning', 'cold', 'fire', 'force',
                            'lightning', 'necrotic', 'piercing', 'poison',
                            'psychic', 'radiant', 'slashing', 'thunder']
+
+            details = None
+            if '|' in attack['damage']:
+                attack['damage'], details = attack['damage'].split('|', 1)
+
             dice, comment = get_roll_comment(attack['damage'])
+            if details:
+                attack['details'] = details.strip()
+
             if any(d in comment.lower() for d in damageTypes):
                 attack['damage'] = "{}[{}]".format(dice, comment)
             else:
                 attack['damage'] = dice
-                if comment.strip():
+                if comment.strip() and not details:
                     attack['details'] = comment.strip()
 
-        attack['attackBonus'] = attack['attackBonus'].replace('+', '', 1) if attack['attackBonus'] is not '' else None
+        attack['attackBonus'] = attack['attackBonus'].strip('+') if attack['attackBonus'] is not '' else None
 
         return attack
 

@@ -326,8 +326,11 @@ class GoogleSheet:
         character = self.character
         g = character.cell("C150").value.lower()
         n = character.cell("C6").value
-        pronoun = "She" if g == "female" else "He" if g == "male" else n
-        desc = "{0} is a level {1} {2} {3}. {4} is {5} years old, {6} tall, and appears to weigh about {7}. {4} has {8} eyes, {9} hair, and {10} skin."
+        pronoun = "She" if g == "female" else "He" if g == "male" else "They"
+        verb1 = "is" if pronoun != "They" else "are"
+        verb2 = "has" if pronoun != "They" else "have"
+        desc = "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}." \
+               "{4} {12} {8} eyes, {9} hair, and {10} skin."
         desc = desc.format(n,
                            character.cell("AL6").value,
                            character.cell("T7").value,
@@ -338,7 +341,8 @@ class GoogleSheet:
                            character.cell("I148").value or "unknown",
                            character.cell("F150").value.lower() or "unknown",
                            character.cell("I150").value.lower() or "unknown",
-                           character.cell("L150").value.lower() or "unknown")
+                           character.cell("L150").value.lower() or "unknown",
+                           verb1, verb2)
         return desc
 
     def get_resistances(self):

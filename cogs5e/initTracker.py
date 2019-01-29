@@ -854,7 +854,7 @@ class InitTracker:
 
         if args.last('h', type_=bool):
             try:
-                await self.bot.send_message(ctx.message.server.get_member(target.controller),
+                await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
                                             embed=result['full_embed'])
             except:
                 pass

@@ -689,6 +689,7 @@ class InitTracker:
         __**Valid Arguments**__
         -dur [duration]
         conc (makes effect require conc)
+        end (makes effect tick on end of turn)
         __Attacks__
         -b [bonus] (see !a)
         -d [damage bonus] (see !a)
@@ -710,9 +711,10 @@ class InitTracker:
             args = argparse(args)
         duration = args.last('dur', -1, int)
         conc = args.last('conc', False, bool)
+        end = args.last('end', False, bool)
 
         effectObj = Effect.new(combat, combatant, duration=duration, name=effect_name, effect_args=args,
-                               concentration=conc)
+                               concentration=conc, tick_on_end=end)
         result = combatant.add_effect(effectObj)
         out = "Added effect {} to {}.".format(effect_name, combatant.name)
         if result['conc_conflict']:

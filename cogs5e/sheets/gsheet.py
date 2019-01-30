@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 POS_RE = re.compile(r"([A-Z]+)(\d+)")
 IGNORED_SPELL_VALUES = ('MAX', 'SLOTS', 'CANTRIPS', '1ST LEVEL', '2ND LEVEL', '3RD LEVEL', '4TH LEVEL', '5TH LEVEL',
-                        '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL',
+                        '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL', '\u25c9',
                         "You can hide each level of spells individually by hiding the rows (on the left).")
 
 

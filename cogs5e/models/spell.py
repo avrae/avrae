@@ -517,11 +517,12 @@ class Damage(Effect):
 
 
 class IEffect(Effect):
-    def __init__(self, name: str, duration: int, effects: str, **kwargs):
+    def __init__(self, name: str, duration: int, effects: str, end: bool = False, **kwargs):
         super(IEffect, self).__init__("ieffect", **kwargs)
         self.name = name
         self.duration = duration
         self.effects = effects
+        self.tick_on_end = end
 
     def run(self, autoctx):
         super(IEffect, self).run(autoctx)
@@ -534,12 +535,13 @@ class IEffect(Effect):
         duration = autoctx.args.last('dur', self.duration, int)
         if isinstance(autoctx.target.target, Combatant):
             effect = initiative.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
-                                           duration, autoctx.parse_annostr(self.effects))
+                                           duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end)
             if autoctx.conc_effect:
                 effect.set_parent(autoctx.conc_effect)
             autoctx.target.target.add_effect(effect)
         else:
-            effect = initiative.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects))
+            effect = initiative.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects),
+                                           tick_on_end=self.tick_on_end)
         autoctx.queue(f"**Effect**: {str(effect)}")
 
 

@@ -210,6 +210,9 @@ class Combat:
         if len(self._combatants) == 0:
             raise NoCombatants
 
+        if self.current_combatant:
+            self.current_combatant.on_turn_end()
+
         changed_round = False
         if self.index is None:  # new round, no dynamic reroll
             self._current_index = 0
@@ -231,6 +234,9 @@ class Combat:
         if len(self._combatants) == 0:
             raise NoCombatants
 
+        if self.current_combatant:
+            self.current_combatant.on_turn_end()
+
         if self.index is None:  # start of combat
             self._current_index = len(self._combatants) - 1
         elif self.index == 0:  # new round
@@ -244,6 +250,9 @@ class Combat:
     def goto_turn(self, init_num, is_combatant=False):
         if len(self._combatants) == 0:
             raise NoCombatants
+
+        if self.current_combatant:
+            self.current_combatant.on_turn_end()
 
         if is_combatant:
             if init_num.group:
@@ -262,6 +271,7 @@ class Combat:
         self._round += num_rounds
         for com in self.get_combatants():
             com.on_turn(num_rounds)
+            com.on_turn_end(num_rounds)
         if self.options.get('dynamic'):
             self.reroll_dynamic()
 
@@ -698,6 +708,11 @@ class Combatant(Spellcaster):
         for e in self.get_effects().copy():
             e.on_turn(num_turns)
 
+    def on_turn_end(self, num_turns=1):
+        """A method called at the end of each of the combatant's turns."""
+        for e in self.get_effects().copy():
+            e.on_turn_end(num_turns)
+
     def get_summary(self, private=False, no_notes=False):
         """
         Gets a short summary of a combatant's status.
@@ -998,6 +1013,10 @@ class CombatantGroup:
         for c in self.get_combatants():
             c.on_turn(num_turns)
 
+    def on_turn_end(self, num_turns=1):
+        for c in self.get_combatants():
+            c.on_turn_end(num_turns)
+
     def on_remove(self):
         for c in self.get_combatants():
             c.on_remove()
@@ -1047,7 +1066,7 @@ class Effect:
                   'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus'}
 
     def __init__(self, combat, combatant, name: str, duration: int, remaining: int, effect: dict,
-                 concentration: bool = False, children: list = None, parent: dict = None):
+                 concentration: bool = False, children: list = None, parent: dict = None, tonend: bool = False):
         if children is None:
             children = []
         self.combat = combat
@@ -1059,9 +1078,11 @@ class Effect:
         self._concentration = concentration
         self.children = children
         self.parent = parent
+        self.ticks_on_end = tonend
 
     @classmethod
-    def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None):
+    def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None,
+            tick_on_end=False):
         if isinstance(effect_args, str):
             if (combatant and isinstance(combatant, PlayerCombatant)) or character:
                 effect_args = argparse(effect_args, combatant.character or character)
@@ -1079,7 +1100,8 @@ class Effect:
             duration = int(duration)
         except (ValueError, TypeError):
             raise InvalidArgument("Effect duration must be an integer.")
-        return cls(combat, combatant, name, duration, duration, effect_dict, concentration=concentration)
+        return cls(combat, combatant, name, duration, duration, effect_dict, concentration=concentration,
+                   tonend=tick_on_end)
 
     def set_parent(self, parent):
         """Sets the parent of an effect."""
@@ -1109,7 +1131,12 @@ class Effect:
 
     def __str__(self):
         desc = self.name
-        if self.remaining >= 0:
+        if 0 <= self.remaining <= 1:
+            if self.ticks_on_end:
+                desc += " [until end of turn]"
+            else:
+                desc += " [until start of next turn]"
+        elif self.remaining >= 0:  # ...an effect could have 0 duration
             desc += f" [{self.remaining} rounds]"
         desc += self.get_parenthetical()
         if self.concentration:
@@ -1140,9 +1167,18 @@ class Effect:
 
     def on_turn(self, num_turns=1):
         """
-        :return: Whether to remove the effect.
+        Reduces the turn counter if applicable, and removes itself if at 0.
         """
-        if self.remaining >= 0:
+        if self.remaining >= 0 and not self.ticks_on_end:
+            if self.remaining - num_turns <= 0:
+                self.remove()
+            self._remaining -= num_turns
+
+    def on_turn_end(self, num_turns=1):
+        """
+        Reduces the turn counter if applicable, and removes itself if at 0.
+        """
+        if self.remaining >= 0 and self.ticks_on_end:
             if self.remaining - num_turns <= 0:
                 self.remove()
             self._remaining -= num_turns
@@ -1191,4 +1227,5 @@ class Effect:
 
     def to_dict(self):
         return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect,
-                'concentration': self.concentration, 'children': self.children, 'parent': self.parent}
+                'concentration': self.concentration, 'children': self.children, 'parent': self.parent,
+                'tonend': self.ticks_on_end}

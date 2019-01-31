@@ -185,66 +185,91 @@ def camel_to_title(string):
     return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
 
 
+# noinspection PyTypeChecker
 def parse_resistances(damage, resistances, immunities, vulnerabilities, neutral=None):
     if neutral is None:
         neutral = []
+    # clean resists and whatnot
+    resistances = [r for r in resistances if r]
+    immunities = [r for r in immunities if r]
+    vulnerabilities = [r for r in vulnerabilities if r]
+    neutral = [r for r in neutral if r]
 
-    COMMENT_REGEX = r'\[(?P<comment>.*?)\]'
-    ROLL_STRING_REGEX = r'\[.*?]'
+    damage = damage.strip("*/")
 
-    comments = re.findall(COMMENT_REGEX, damage)
-    roll_strings = re.split(ROLL_STRING_REGEX, damage)
+    # PEMDAS time!
+    # split into groups
+    groups = re.split(r"(\(.*\)|[+\-])", damage)
+    groups = [g.strip() for g in groups if g.strip()]
 
-    formatted_comments = []
-    formatted_roll_strings = []
+    # P
+    for i, group in enumerate(groups):
+        paren = re.match(r"\((.*)\)", group)
+        if paren:
+            groups[i] = f"({parse_resistances(paren.group(1), resistances, immunities, vulnerabilities, neutral)})"
 
-    for t, _ in enumerate(comments):
-        if not roll_strings[t].replace(' ', '') == '':
-            formatted_roll_strings.append(roll_strings[t])
-            formatted_comments.append(comments[t])
+    # MD
+    # we shouldn't really change the resists on these, so just group them
+    for i, group in enumerate(groups.copy()):
+        if group.startswith('*') or group.startswith('/'):
+            groups[i - 1] += groups.pop(i)
+
+    # AS
+    # we kind of already did this, so...
+    # on to the resist parsing!
+
+    # split groups into (group, annotation)
+    # ignore parens, since they're already done (in theory)
+    for i, group in enumerate(groups):
+        anno_match = re.search(r"\[(.*)\]", group)
+        if anno_match and not '(' in group:
+            groups[i] = (group.replace(anno_match.group(0), "").strip(), anno_match.group(1))
         else:
-            if len(formatted_comments) > 0:
-                formatted_comments[-1] += ' ' + comments[t]
-            else:
-                pass  # eh, it'll error anyway
+            groups[i] = (group, None)
 
-    if not roll_strings[-1].replace(' ', '') == '':
-        formatted_roll_strings.append(roll_strings[-1])
-        if formatted_comments:
-            formatted_comments.append(formatted_comments[-1])  # carry over thingies
-        else:
-            formatted_comments.append('')
+    # for use in next part
+    def on_anno(unk, annotation):
+        if not annotation:
+            return unk
+        ann = annotation.lower()
+        if any(n.lower() in ann for n in neutral):  # neutral overrides all
+            return f"{unk}[{annotation}]"
+        if any(v.lower() in ann for v in vulnerabilities):
+            unk = f"({unk})*2"
+        if not (annotation.startswith('^') or annotation.endswith('^')):  # ignore resist, immune
+            if any(r.lower() in ann for r in resistances):
+                unk = f"({unk})/2"
+            if any(im.lower() in ann for im in immunities):
+                unk = f"({unk})*0"
+        return f"{unk}[{annotation}]"
 
-    for index, comment in enumerate(formatted_comments):
-        roll_string = formatted_roll_strings[index].replace(' ', '')
-        checked = neutral.copy()
+    # iterate over group, anno pairs
+    # if it's a parenthetical, clear unknown and skip
+    # if it has no annotation and (unknown is not empty or it's not an op), add the group to a running unknown string
+    # if it has an annotation, assume all unknowns are part of that annotation and apply correct multiplier
+    # if we've reached the end, assume all unknowns were part of the last annotation and apply correct multiplier
+    out = ""
+    unknown = ""
+    last_annotation = ""
+    for group, anno in groups:
+        if '(' in group:
+            out += unknown
+            out += group
+            unknown = ""
+        elif not anno and (unknown or not ('+' in group or '-' in group)):
+            unknown += group
+        elif anno:
+            last_annotation = anno
+            unknown += group
+            out += on_anno(unknown, anno)
+            unknown = ""
+        else:  # generally, ops after parens, just pass it along
+            out += group
+    if unknown:
+        out += on_anno(unknown, last_annotation)
 
-        preop = ''
-        if roll_string[0] in '-+*/().<>=':  # case: +6[blud]
-            preop = roll_string[0]
-            roll_string = roll_string[1:]
-        for vulnerability in vulnerabilities:
-            if vulnerability.lower() in comment.lower() and len(vulnerability) > 0 and vulnerability not in checked:
-                roll_string = '({0}) * 2'.format(roll_string)
-                checked.append(vulnerability)
-                break
-        if not (comment.endswith('^') or comment.startswith('^')):
-            for immunity in immunities:
-                if immunity.lower() in comment.lower() and len(immunity) > 0 and immunity not in checked:
-                    roll_string = '({0}) * 0'.format(roll_string)
-                    checked.append(immunity)
-                    break
-            for resistance in resistances:
-                if resistance.lower() in comment.lower() and len(resistance) > 0 and resistance not in checked:
-                    roll_string = '({0}) / 2'.format(roll_string)
-                    checked.append(resistance)
-                    break
-        formatted_roll_strings[index] = '{0}{1}{2}'.format(preop, roll_string,
-                                                           "[{}]".format(comment) if comment is not '' else "")
-    if formatted_roll_strings:
-        damage = ''.join(formatted_roll_strings)
-
-    return damage
+    # test string: (3d6[vuln]+(1d4 +1d6[resist]))/2+1d6[vuln]+3d6[resist]/2
+    return out
 
 
 def paginate(iterable, n, fillvalue=None):

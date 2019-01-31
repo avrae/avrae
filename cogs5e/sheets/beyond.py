@@ -414,6 +414,7 @@ class BeyondSheetParser:
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
         stats = self.get_stats()
+        profBonus = stats['proficiencyBonus']
 
         skills = {}
         profs = {}
@@ -453,13 +454,32 @@ class BeyondSheetParser:
             if 'saving-throws' in bonuses and 'Save' in skill:
                 relevantbonus += bonuses['saving-throws']
             skills[skill] = floor(
-                skills[skill] + (stats.get('proficiencyBonus') * relevantprof) + relevantbonus)
+                skills[skill] + (profBonus * relevantprof) + relevantbonus)
 
-        for charval in self.character['characterValues']:  # houseruled overrides
-            if not charval['typeId'] == 23:
-                continue
-            if charval['valueId'] in HOUSERULE_SKILL_MAP:
-                skills[HOUSERULE_SKILL_MAP[charval['valueId']]] = charval['value']
+        ignored_ids = set()
+        for charval in self.character['characterValues']:
+            if charval['valueId'] in HOUSERULE_SKILL_MAP and charval['valueId'] not in ignored_ids:
+                skill_name = HOUSERULE_SKILL_MAP[charval['valueId']]
+                if charval['typeId'] == 23:  # override
+                    skills[skill_name] = charval['value']
+                    ignored_ids.add(charval['valueId'])  # this must be the final value so we stop looking
+                elif charval['typeId'] == 24:  # PROBABLY skill magic bonus
+                    skills[skill_name] += charval['value']
+                elif charval['typeId'] == 25:  # PROBABLY skill misc bonus
+                    skills[skill_name] += charval['value']
+                elif charval['typeId'] == 26:  # proficiency stuff
+                    relevantprof = profs.get(skill_name, 0)
+                    skills[skill_name] -= relevantprof * profBonus
+                    if charval['value'] == 0:  # no prof, don't need to do anything
+                        pass
+                    elif charval['value'] == 1:  # half prof, round down
+                        skills[skill_name] += profBonus // 2
+                    elif charval['value'] == 2:  # half, round up
+                        skills[skill_name] += ceil(profBonus / 2)
+                    elif charval['value'] == 3:  # full
+                        skills[skill_name] += profBonus
+                    elif charval['value'] == 4:  # double
+                        skills[skill_name] += profBonus * 2
 
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             skills[stat] = stats.get(stat + 'Mod')

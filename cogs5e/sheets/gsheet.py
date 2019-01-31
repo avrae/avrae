@@ -21,6 +21,19 @@ POS_RE = re.compile(r"([A-Z]+)(\d+)")
 IGNORED_SPELL_VALUES = ('MAX', 'SLOTS', 'CANTRIPS', '1ST LEVEL', '2ND LEVEL', '3RD LEVEL', '4TH LEVEL', '5TH LEVEL',
                         '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL', '\u25c9',
                         "You can hide each level of spells individually by hiding the rows (on the left).")
+SKILL_MAP = (  # list of (MOD_CELL, SKILL_NAME, ADV_CELL)
+    ('I25', 'acrobatics', 'F25'), ('I26', 'animalHandling', 'F26'), ('I27', 'arcana', 'F27'),
+    ('I28', 'athletics', 'F28'), ('I22', 'charismaSave', 'F22'), ('I19', 'constitutionSave', 'F19'),
+    ('I29', 'deception', 'F29'), ('I18', 'dexteritySave', 'F18'), ('I30', 'history', 'F30'),
+    ('V12', 'initiative', 'V11'), ('I31', 'insight', 'F31'), ('I20', 'intelligenceSave', 'F20'),
+    ('I32', 'intimidation', 'F32'), ('I33', 'investigation', 'F33'), ('I34', 'medicine', 'F34'),
+    ('I35', 'nature', 'F35'), ('I36', 'perception', 'F36'), ('I37', 'performance', 'F37'),
+    ('I38', 'persuasion', 'F38'), ('I39', 'religion', 'F39'), ('I40', 'sleightOfHand', 'F40'),
+    ('I41', 'stealth', 'F41'), ('I17', 'strengthSave', 'F17'), ('I42', 'survival', 'F42'),
+    ('I21', 'wisdomSave', 'F21'), ('C13', 'strength', None), ('C18', 'dexterity', None),
+    ('C23', 'constitution', None), ('C33', 'wisdom', None), ('C28', 'intelligence', None),
+    ('C38', 'charisma', None)
+)
 
 
 def letter2num(letters, zbase=True):
@@ -97,7 +110,7 @@ class GoogleSheet:
 
         armor = character.cell("R12").value
         attacks = self.get_attacks()
-        skills = self.get_skills()
+        skills, skill_effects = self.get_skills()
         levels = self.get_levels()
 
         temp_resist = self.get_resistances()
@@ -122,6 +135,7 @@ class GoogleSheet:
         # v5: spellbook
         # v6: v2.0 support (level vars, resistances, extra spells/attacks)
         # v7: race/background (experimental)
+        # v8: skill/save effects
         sheet = {
             'type': 'google',
             'version': 7,
@@ -136,6 +150,7 @@ class GoogleSheet:
             'vuln': [],
             'saves': saves,
             'stat_cvars': stat_vars,
+            'skill_effects': skill_effects,
             'consumables': {},
             'spellbook': spellbook,
             'race': self.get_race(),
@@ -287,28 +302,23 @@ class GoogleSheet:
         """Returns a dict of all the character's skills."""
         if self.character is None: raise Exception('You must call get_character() first.')
         character = self.character
-        skillslist = ['I25', 'I26', 'I27', 'I28',
-                      'I22', 'I19', 'I29', 'I18',
-                      'I30', 'V12', 'I31', 'I20',
-                      'I32', 'I33', 'I34', 'I35',
-                      'I36', 'I37', 'I38', 'I39',
-                      'I40', 'I41', 'I17', 'I42', 'I21',
-                      'C13', 'C18', 'C23', 'C33', 'C28', 'C38']
-        skillsMap = ['acrobatics', 'animalHandling', 'arcana', 'athletics',
-                     'charismaSave', 'constitutionSave', 'deception', 'dexteritySave',
-                     'history', 'initiative', 'insight', 'intelligenceSave',
-                     'intimidation', 'investigation', 'medicine', 'nature',
-                     'perception', 'performance', 'persuasion', 'religion',
-                     'sleightOfHand', 'stealth', 'strengthSave', 'survival', 'wisdomSave',
-                     'strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma']
-        skills = {}
-        for index, skill in enumerate(skillslist):
-            try:
-                skills[skillsMap[index]] = int(character.cell(skill).value)
-            except (TypeError, ValueError):
-                raise MissingAttribute(skillsMap[index])
 
-        return skills
+        skills = {}
+        skill_effects = {}
+        for cell, skill, advcell in SKILL_MAP:
+            try:
+                skills[skill] = int(character.cell(cell).value)
+            except (TypeError, ValueError):
+                raise MissingAttribute(skill)
+
+            if self.version == 2 and advcell:
+                advtype = character.cell(advcell).value
+                if advtype in ('a', 'adv'):
+                    skill_effects[skill] = 'adv'
+                elif advtype in ('d', 'dis'):
+                    skill_effects[skill] = 'dis'
+
+        return skills, skill_effects
 
     def get_levels(self):
         if self.character is None: raise Exception('You must call get_character() first.')

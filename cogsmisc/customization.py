@@ -127,6 +127,9 @@ class Customization:
         if '&*&' in command:
             new_command = new_command.replace('&*&', rawargs.replace("\"", "\\\"").replace("'", "\\'"))
             tempargs = []
+        if '&ARGS&' in command:
+            new_command = new_command.replace('&ARGS&', str(tempargs))
+            tempargs = []
         for index, value in enumerate(args):
             key = '%{}%'.format(index + 1)
             to_remove = False

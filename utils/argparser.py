@@ -1,11 +1,16 @@
-import shlex
+from discord.ext.commands.view import StringView, quoted_word
 
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import list_get
 
 
 def argsplit(args):
-    return shlex.split(args)
+    view = StringView(args)
+    args = []
+    while not view.eof:
+        view.skip_ws()
+        args.append(quoted_word(view))
+    return args
 
 
 def argparse(args, character=None):

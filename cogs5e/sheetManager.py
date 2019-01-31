@@ -510,11 +510,7 @@ class SheetManager:
         """Prints the embed sheet of your currently active character."""
         char = await Character.from_ctx(ctx)
 
-        parser = SheetParser(char.character)
-        embed = parser.get_embed()
-        embed.colour = char.get_color()
-
-        await self.bot.say(embed=embed)
+        await self.bot.say(embed=char.get_sheet_embed())
         try:
             await self.bot.delete_message(ctx.message)
         except:
@@ -675,7 +671,6 @@ class SheetManager:
             del parser
             return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
 
-        embed = sheet['embed']
         sheet = sheet['sheet']
         sheet['settings'] = old_character.get('settings', {})
         sheet['overrides'] = old_character.get('overrides', {})
@@ -707,10 +702,6 @@ class SheetManager:
                 except InvalidArgument:
                     pass
 
-        # print(sheet)
-        embed.colour = embed.colour if sheet.get('settings', {}).get('color') is None else sheet.get('settings',
-                                                                                                     {}).get('color')
-
         # if c.get_combat_id() and not self.bot.rdb.exists(c.get_combat_id()):
         #     c.leave_combat()
         # reimplement this later
@@ -719,7 +710,7 @@ class SheetManager:
         await c.set_active(ctx)
         del parser, old_character  # pls don't freak out avrae
         if '-v' in args:
-            await self.bot.say(embed=embed)
+            await self.bot.say(embed=c.get_sheet_embed())
 
     @commands.command(pass_context=True)
     async def transferchar(self, ctx, user: discord.Member):
@@ -1028,9 +1019,8 @@ class SheetManager:
         del parser  # uh. maybe some weird instance things going on here.
         await c.commit(ctx)
         await c.set_active(ctx)
-        embed = sheet['embed']
         try:
-            await self.bot.say(embed=embed)
+            await self.bot.say(embed=c.get_sheet_embed())
         except:
             await self.bot.say(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
@@ -1091,9 +1081,8 @@ class SheetManager:
         await char.commit(ctx)
         await char.set_active(ctx)
 
-        embed = sheet['embed']
         try:
-            await self.bot.say(embed=embed)
+            await self.bot.say(embed=char.get_sheet_embed())
         except:
             await self.bot.say(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
@@ -1131,9 +1120,8 @@ class SheetManager:
         await char.commit(ctx)
         await char.set_active(ctx)
 
-        embed = sheet['embed']
         try:
-            await self.bot.say(embed=embed)
+            await self.bot.say(embed=char.get_sheet_embed())
         except:
             await self.bot.say(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. "

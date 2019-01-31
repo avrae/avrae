@@ -119,9 +119,9 @@ class GoogleSheet:
         spellbook = self.get_spellbook()
 
         saves = {}
-        for key in skills:
+        for key in skills.copy():
             if 'Save' in key:
-                saves[key] = skills[key]
+                saves[key] = skills.pop(key)
 
         stat_vars = {}
         stat_vars.update(stats)
@@ -157,65 +157,7 @@ class GoogleSheet:
             'background': self.get_background()
         }
 
-        embed = self.get_embed(sheet)
-
-        return {'embed': embed, 'sheet': sheet}
-
-    def get_embed(self, sheet):
-        stats = sheet['stats']
-        hp = sheet['hp']
-        skills = sheet['skills']
-        attacks = sheet['attacks']
-        levels = sheet['levels']
-        saves = sheet['saves']
-        armor = sheet['armor']
-        embed = discord.Embed()
-        embed.colour = random.randint(0, 0xffffff)
-        embed.title = stats['name']
-        embed.set_thumbnail(url=stats['image'])
-        embed.add_field(name="HP/Level", value="**HP:** {}\nLevel {}".format(hp, levels['level']))
-        embed.add_field(name="AC", value=str(armor))
-        embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+})\n" \
-                                            "**DEX:** {dexterity} ({dexterityMod:+})\n" \
-                                            "**CON:** {constitution} ({constitutionMod:+})\n" \
-                                            "**INT:** {intelligence} ({intelligenceMod:+})\n" \
-                                            "**WIS:** {wisdom} ({wisdomMod:+})\n" \
-                                            "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
-        embed.add_field(name="Saves", value="**STR:** {strengthSave:+}\n" \
-                                            "**DEX:** {dexteritySave:+}\n" \
-                                            "**CON:** {constitutionSave:+}\n" \
-                                            "**INT:** {intelligenceSave:+}\n" \
-                                            "**WIS:** {wisdomSave:+}\n" \
-                                            "**CHA:** {charismaSave:+}".format(**saves))
-
-        skillsStr = ''
-        tempSkills = {}
-        for skill, mod in sorted(skills.items()):
-            if 'Save' not in skill:
-                skillsStr += '**{}**: {:+}\n'.format(re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', skill),
-                                                     mod)
-                tempSkills[skill] = mod
-        sheet['skills'] = tempSkills
-
-        embed.add_field(name="Skills", value=skillsStr.title())
-
-        tempAttacks = []
-        for a in attacks:
-            if a is not None:
-                if a['attackBonus'] is not None:
-                    bonus = a['attackBonus']
-                    tempAttacks.append("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
-                                                                                  bonus,
-                                                                                  a['damage'] if a[
-                                                                                                     'damage'] is not None else 'no'))
-                else:
-                    tempAttacks.append("**{0}:** {1} damage.".format(a['name'],
-                                                                     a['damage'] if a['damage'] is not None else 'no'))
-        if not tempAttacks:
-            tempAttacks = ['No attacks.']
-        embed.add_field(name="Attacks", value='\n'.join(tempAttacks))
-
-        return embed
+        return {'embed': None, 'sheet': sheet}
 
     def get_stats(self):
         """Returns a dict of stats."""

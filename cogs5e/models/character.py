@@ -22,6 +22,7 @@ import random
 import re
 
 import MeteorClient
+import discord
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
@@ -882,3 +883,82 @@ class Character(Spellcaster):
         :return: The channel id if the character is in combat, or None.
         """
         return self.character.get('combat')
+
+    def get_sheet_embed(self):
+        stats = self.get_stats()
+        hp = self.get_max_hp()
+        skills = self.get_skills()
+        attacks = self.get_attacks()
+        saves = self.get_saves()
+        skill_effects = self.get_skill_effects()
+
+        resists = self.get_resists()
+        resist = resists['resist']
+        immune = resists['immune']
+        vuln = resists['vuln']
+        resistStr = ''
+        if len(resist) > 0:
+            resistStr += "\nResistances: " + ', '.join(resist).title()
+        if len(immune) > 0:
+            resistStr += "\nImmunities: " + ', '.join(immune).title()
+        if len(vuln) > 0:
+            resistStr += "\nVulnerabilities: " + ', '.join(vuln).title()
+
+        embed = discord.Embed()
+        embed.colour = self.get_color()
+        embed.title = self.get_name()
+        embed.set_thumbnail(url=self.get_image())
+
+        embed.add_field(name="HP/Level", value=f"**HP:** {hp}\nLevel {self.get_level()}{resistStr}")
+        embed.add_field(name="AC", value=str(self.get_ac()))
+
+        embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+})\n" \
+                                            "**DEX:** {dexterity} ({dexterityMod:+})\n" \
+                                            "**CON:** {constitution} ({constitutionMod:+})\n" \
+                                            "**INT:** {intelligence} ({intelligenceMod:+})\n" \
+                                            "**WIS:** {wisdom} ({wisdomMod:+})\n" \
+                                            "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
+
+        savesStr = ''
+        for save in ('strengthSave', 'dexteritySave', 'constitutionSave', 'intelligenceSave', 'wisdomSave',
+                     'charismaSave'):
+            if skill_effects.get(save):
+                skill_effect = f"({skill_effects.get(save)})"
+            else:
+                skill_effect = ''
+            savesStr += '**{}**: {:+} {}\n'.format(save[:3].upper(), saves.get(save), skill_effect)
+
+        embed.add_field(name="Saves", value=savesStr)
+
+        def cc_to_normal(string):
+            return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string)
+
+        skillsStr = ''
+        for skill, mod in sorted(skills.items()):
+            if 'Save' not in skill:
+                if skill_effects.get(skill):
+                    skill_effect = f"({skill_effects.get(skill)})"
+                else:
+                    skill_effect = ''
+                skillsStr += '**{}**: {:+} {}\n'.format(cc_to_normal(skill), mod, skill_effect)
+
+        embed.add_field(name="Skills", value=skillsStr.title())
+
+        tempAttacks = []
+        for a in attacks:
+            damage = a['damage'] if a['damage'] is not None else 'no'
+            if a['attackBonus'] is not None:
+                bonus = a['attackBonus']
+                tempAttacks.append(f"**{a['name']}:** +{bonus} To Hit, {damage} damage.")
+            else:
+                tempAttacks.append(f"**{a['name']}:** {damage} damage.")
+        if not tempAttacks:
+            tempAttacks = ['No attacks.']
+        a = '\n'.join(tempAttacks)
+        if len(a) > 1023:
+            a = ', '.join(atk['name'] for atk in attacks)
+        if len(a) > 1023:
+            a = "Too many attacks, values hidden!"
+        embed.add_field(name="Attacks", value=a)
+
+        return embed

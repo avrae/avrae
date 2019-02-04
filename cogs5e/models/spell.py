@@ -655,6 +655,9 @@ class Spell:
         self.srd = srd
         self.image = image
 
+        if self.concentration and 'Concentration' not in self.duration:
+            self.duration = f"Concentration, up to {self.duration}"
+
     @classmethod
     def from_data(cls, data):  # local JSON
         data["range_"] = data.pop("range")  # ignore this

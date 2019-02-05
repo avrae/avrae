@@ -74,25 +74,30 @@ class SheetManager:
         __Valid Arguments__
         adv/dis
         adv#/dis# (applies adv to the first # attacks)
+        ea (Elven Accuracy double advantage)
+        
         -ac [target ac]
+        -t [target]
+        
         -b [to hit bonus]
+        -criton [a number to crit on if rolled on or above]
         -d [damage bonus]
         -d# [applies damage to the first # hits]
-        -rr [times to reroll]
-        -t [target]
         -c [damage bonus on crit]
-        -criton [a number to crit on if rolled on or above]
-        -phrase [flavor text]
-        -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
+        -rr [times to reroll]
+        
         -resist [damage resistance]
         -immune [damage immunity]
         -vuln [damage vulnerability]
         -neutral [damage non-resistance]
+        
         hit (automatically hits)
         miss (automatically misses)
         crit (automatically crit)
-        ea (Elven Accuracy double advantage)
         max (deals max damage)
+        
+        -phrase [flavor text]
+        -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
         -f "Field Title|Field Text" (see !embed)
         -h (hides attack details)
         [user snippet]"""

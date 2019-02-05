@@ -690,6 +690,12 @@ class InitTracker:
         __Attacks__
         -b [bonus] (see !a)
         -d [damage bonus] (see !a)
+        -attack "[hit]|[damage]|[description]" (Adds an attack to the combatant)
+        __Resists__
+        -resist [resist] (gives the combatant resistance)
+        -immune [immune] (gives the combatant immunity)
+        -vuln [vulnability] (gives the combatant vulnerability)
+        -neutral [neutral] (removes immune/resist/vuln)
         __General__
         -ac [ac] (modifies ac temporarily; adds if starts with +/- or sets otherwise)
         -sb [save bonus] (Adds a bonus to saving throws)"""

@@ -296,7 +296,7 @@ class GameTrack:
                     spells_known['unknown'] = spells_known.get('unknown', []) + [f"*{spellname}*"]
                 else:
                     if spell.source == 'homebrew':
-                        formatted = f"{spell.name}\*"
+                        formatted = f"*{spell.name}*"
                     else:
                         formatted = spell.name
                     spells_known[str(spell.level)] = spells_known.get(str(spell.level), []) + [formatted]

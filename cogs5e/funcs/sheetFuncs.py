@@ -9,7 +9,7 @@ import re
 import discord
 
 from cogs5e.funcs.dice import SingleDiceGroup, roll
-from utils.functions import a_or_an, parse_resistances
+from utils.functions import a_or_an, parse_resistances, format_d20
 
 HIT_DICT = {
     0: "HIT",
@@ -97,16 +97,7 @@ def sheet_attack(attack, args, embed=None):
                     iteradv = 1 if _adv == 'adv' else -1
                     advnum[_adv] -= 1
 
-            formatted_d20 = '1d20'
-            if iteradv == 1:
-                formatted_d20 = '2d20kh1'
-            elif iteradv == 2:
-                formatted_d20 = '3d20kh1'
-            elif iteradv == -1:
-                formatted_d20 = '2d20kl1'
-
-            if reroll:
-                formatted_d20 = f"{formatted_d20}ro{reroll}"
+            formatted_d20 = format_d20(iteradv, reroll)
 
             if b:
                 toHit = roll(f"{formatted_d20}+{attack.get('attackBonus')}+{b}",

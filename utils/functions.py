@@ -636,3 +636,19 @@ def clean_content(content, ctx):
 
     pattern = re.compile('|'.join(transformations.keys()))
     return pattern.sub(repl2, result)
+
+
+def format_d20(adv, reroll=None):
+    base_d20 = '1d20'
+    if adv in (1, -1):
+        base_d20 = '2d20'
+    elif adv == 2:
+        base_d20 = '3d20'
+    if reroll:
+        base_d20 = f"{base_d20}ro{reroll}"
+
+    if adv in (1, 2):
+        return f"{base_d20}kh1"
+    elif adv == -1:
+        return f"{base_d20}kl1"
+    return base_d20

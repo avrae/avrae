@@ -30,7 +30,7 @@ from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from utils.argparser import argparse
-from utils.functions import a_or_an, get_positivity, list_get
+from utils.functions import a_or_an, get_positivity, list_get, format_d20
 from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
 from utils.loggers import TextLogger
 
@@ -252,14 +252,11 @@ class SheetManager:
         adv = args.adv()
         b = args.join('b', '+')
         phrase = args.join('phrase', '\n')
-        formatted_d20 = '1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
 
-        ro = char.get_setting('reroll')
-        if ro:
-            formatted_d20 = f"{formatted_d20}ro{ro}"
+        formatted_d20 = format_d20(adv, char.get_setting('reroll'))
 
         if b is not None:
             roll_str = formatted_d20 + '{:+}'.format(saves[save]) + '+' + b
@@ -301,14 +298,16 @@ class SheetManager:
     @commands.command(pass_context=True, aliases=['c'])
     async def check(self, ctx, check, *, args: str = ''):
         """Rolls a check for your current active character.
-        Args: adv/dis
-              -b [conditional bonus]
-              -mc [minimum roll]
-              -phrase [flavor text]
-              -title [title] *note: [charname] and [cname] will be replaced automatically*
-              -dc [dc]
-              -rr [iterations]
-              str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))"""
+        __Valid Arguments__
+        adv/dis
+        -b [conditional bonus]
+        -mc [minimum roll]
+        -phrase [flavor text]
+        -title [title] *note: [charname] and [cname] will be replaced automatically*
+        -dc [dc]
+        -rr [iterations]
+        str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
+        """
         char = await Character.from_ctx(ctx)
         skills = char.get_skills()
         if not skills:
@@ -330,14 +329,11 @@ class SheetManager:
         adv = args.adv()
         b = args.join('b', '+')
         phrase = args.join('phrase', '\n')
-        formatted_d20 = '1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
 
-        ro = char.get_setting('reroll')
-        if ro:
-            formatted_d20 = f"{formatted_d20}ro{ro}"
+        formatted_d20 = format_d20(adv, char.get_setting('reroll'))
 
         mc = args.last('mc', None)
         if mc:

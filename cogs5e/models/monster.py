@@ -428,7 +428,7 @@ def parse_type(_type):
 
 def parse_alignment(alignment):
     aligndict = {'U': 'unaligned', 'L': 'lawful', 'N': 'neutral', 'C': 'chaotic', 'G': 'good', 'E': 'evil',
-                 'A': 'any', 'NX': 'neutral', 'NY': 'neutral'}
+                 'A': 'any alignment', 'NX': 'neutral', 'NY': 'neutral'}
     out = []
     for a in alignment:
         if not isinstance(a, dict):

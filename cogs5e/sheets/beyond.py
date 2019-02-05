@@ -565,6 +565,8 @@ class BeyondSheetParser:
         return self.character['race']['fullName']
 
     def get_background(self):
+        if not self.character['background']:
+            return None
         if not self.character['background']['hasCustomBackground']:
             return self.character['background']['definition']['name']
         return "Custom"

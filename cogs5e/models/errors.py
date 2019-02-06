@@ -122,25 +122,6 @@ class SelectionCancelled(SelectionException):
         super().__init__("Selection timed out or was cancelled.")
 
 
-class MeteorClientException(AvraeException):
-    """A base exception for exceptions relating to the Dicecloud Meteor client to stem from."""
-    pass
-
-
-class LoginFailure(MeteorClientException):
-    """Raised when a login fails."""
-
-    def __init__(self):
-        super().__init__("Failed to login.")
-
-
-class InsertFailure(MeteorClientException):
-    """Raised when an insertion fails."""
-
-    def __init__(self, error):
-        super().__init__(f"Failed to insert: {error}")
-
-
 class CombatException(AvraeException):
     """A base exception for combat-related exceptions to stem from."""
     pass

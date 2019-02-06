@@ -4,23 +4,17 @@ Created on Jan 19, 2017
 @author: andrew
 """
 import ast
-import asyncio
 import logging
 import os
-import random
 import re
 import sys
-from math import floor, ceil
+from math import ceil, floor
 
-import aiohttp
-import discord
-import numexpr
-from simpleeval import SimpleEval, NameNotDefined, FunctionNotDefined
+from simpleeval import FunctionNotDefined, NameNotDefined, SimpleEval
 
 import credentials
 from cogs5e.funcs.lookupFuncs import c
-from cogs5e.models.dicecloudClient import DicecloudClient
-from cogs5e.models.errors import ExternalImportError
+from cogs5e.models.dicecloud.client import dicecloud_client
 from utils.functions import search
 
 log = logging.getLogger(__name__)
@@ -35,10 +29,6 @@ API_BASE = "https://dicecloud.com/character/"
 KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
 
 
-def generate_cachebuster():
-    return str(random.randint(100000, 1000000))
-
-
 class DicecloudParser:
     def __init__(self, url):
         self.url = url
@@ -50,24 +40,7 @@ class DicecloudParser:
 
     async def get_character(self):
         url = self.url
-        character = None
-        async with aiohttp.ClientSession() as session:
-            for _ in range(10):  # 10 retries
-                async with session.get(f"{API_BASE}{url}/json?key={KEY}&cachebuster={generate_cachebuster()}") as resp:
-                    log.info(f"Dicecloud returned {resp.status}")
-                    if resp.status == 200:
-                        character = await resp.json(encoding='utf-8')
-                        break
-                    elif resp.status == 429:
-                        timeout = await resp.json(encoding='utf-8')
-                        log.info(f"Ratelimit hit getting character - resets in {timeout}ms")
-                        await asyncio.sleep(timeout['timeToReset'] / 1000)  # rate-limited, just wait
-                    elif resp.status == 403:
-                        raise ExternalImportError("Error: I do not have permission to view this character sheet. Make "
-                                                  "sure it's either shared with `avrae` on Dicecloud or set so "
-                                                  "anyone with link can view.")
-                    else:
-                        raise ExternalImportError(f"Dicecloud returned an error: {resp.status} - {resp.reason}")
+        character = await dicecloud_client.get_character(url)
         character['_id'] = url
         self.character = character
         return character
@@ -129,8 +102,8 @@ class DicecloudParser:
             'skill_effects': skill_effects,
             'consumables': {},
             'spellbook': spellbook,
-            'live': DicecloudClient.user_id in self.character['characters'][0]['writers'] or
-                    DicecloudClient.user_id == self.character['characters'][0]['owner'],
+            'live': dicecloud_client.user_id in self.character['characters'][0]['writers'] or
+                    dicecloud_client.user_id == self.character['characters'][0]['owner'],
             'race': self.get_race(),
             'background': self.get_background()
         }

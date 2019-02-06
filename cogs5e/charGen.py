@@ -1,12 +1,13 @@
 import logging
 import random
 
-from MeteorClient import MeteorClientException
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import c
-from cogs5e.models.dicecloudClient import DicecloudClient, Parent
+from cogs5e.models.dicecloud.client import dicecloud_client
+from cogs5e.models.dicecloud.errors import DicecloudException
+from cogs5e.models.dicecloud.models import Class, Effect, Feature, Parent, Proficiency
 from cogs5e.models.embeds import EmbedWithAuthor
 from utils.functions import ABILITY_MAP, get_selection, parse_data_entry, search_and_select
 
@@ -315,8 +316,8 @@ class CharGenerator:
             if user_response is None: return await self.bot.say("Timed out waiting for a response.")
             username = user_response.content
             try:
-                userId = await DicecloudClient.getInstance().get_user_id(username)
-            except MeteorClientException:
+                userId = await dicecloud_client.get_user_id(username)
+            except DicecloudException:
                 pass
             if userId: break
             await self.bot.say(
@@ -329,7 +330,12 @@ class CharGenerator:
 
     async def createCharSheet(self, ctx, final_level, dicecloud_userId, race=None, _class=None, subclass=None,
                               background=None):
-        dc = DicecloudClient.getInstance()
+        dc = dicecloud_client
+        # things to add in batches
+        effects = []
+        features = []
+        profs_to_add = []
+
         caveats = []  # a to do list for the user
 
         # Name Gen + Setup
@@ -340,15 +346,12 @@ class CharGenerator:
         subclass = subclass or random.choice([s for s in _class['subclasses'] if not 'UA' in s['source']])
         background = background or random.choice(c.backgrounds)
 
-        try:
-            char_id = dc.create_character(name=name, race=race.name, backstory=background.name)
-        except MeteorClientException:
-            return await self.bot.say("I am having problems connecting to Dicecloud. Please try again later.")
+        char_id = await dc.create_character(name=name, race=race.name, backstory=background.name)
 
         try:
-            await dc.share_character(char_id, dicecloud_userId)
+            await dc.transfer_ownership(char_id, dicecloud_userId)
         except:
-            dc.delete_character(char_id)  # clean up
+            await dc.delete_character(char_id)  # clean up
             return await self.bot.say("Invalid dicecloud username.")
 
         loadingMessage = await self.bot.send_message(ctx.message.channel, "Generating character, please wait...")
@@ -362,45 +365,46 @@ class CharGenerator:
         #    Racial Features
         speed = race.get_speed_int()
         if speed:
-            dc.insert_effect(char_id, Parent.race(char_id), 'base', value=int(speed), stat='speed')
+            effects.append(Effect(Parent.race(char_id), 'base', value=int(speed), stat='speed'))
 
         for k, v in race.ability.items():
             if not k == 'choose':
-                dc.insert_effect(char_id, Parent.race(char_id), 'add', value=int(v), stat=ABILITY_MAP[k].lower())
+                effects.append(Effect(Parent.race(char_id), 'add', value=int(v), stat=ABILITY_MAP[k].lower()))
             else:
-                dc.insert_effect(char_id, Parent.race(char_id), 'add', value=int(v[0].get('amount', 1)))
+                effects.append(Effect(Parent.race(char_id), 'add', value=int(v[0].get('amount', 1))))
                 caveats.append(
                     f"**Racial Ability Bonus ({int(v[0].get('amount', 1)):+})**: In your race (Journal tab), select the"
                     f" score you want a bonus to (choose {v[0]['count']} from {', '.join(v[0]['from'])}).")
 
         for t in race.get_traits():
-            dc.insert_feature(char_id, t['name'], t['text'])
+            features.append(Feature(t['name'], t['text']))
         caveats.append("**Racial Features**: Check that the number of uses for each feature is correct, and apply "
                        "any effects they grant.")
 
         # Class Gen
         #    Class Features
-        class_id = dc.insert_class(char_id, final_level, _class['name'])
-        dc.insert_effect(char_id, Parent.class_(class_id), 'add', stat=f"d{_class['hd']['faces']}HitDice",
-                         calculation=f"{_class['name']}Level")
+        class_id = await dc.insert_class(char_id, Class(final_level, _class['name']))
+        effects.append(Effect(Parent.class_(class_id), 'add', stat=f"d{_class['hd']['faces']}HitDice",
+                              calculation=f"{_class['name']}Level"))
+
         hpPerLevel = (int(_class['hd']['faces']) / 2) + 1
         firstLevelHp = int(_class['hd']['faces']) - hpPerLevel
-        dc.insert_effect(char_id, Parent.class_(class_id), 'add', stat='hitPoints',
-                         calculation=f"{hpPerLevel}*{_class['name']}Level+{firstLevelHp}")
+        effects.append(Effect(Parent.class_(class_id), 'add', stat='hitPoints',
+                              calculation=f"{hpPerLevel}*{_class['name']}Level+{firstLevelHp}"))
         caveats.append("**HP**: HP is currently calculated using class average; change the value in the Journal tab "
                        "under your class if you wish to change it.")
 
         for saveProf in _class['proficiency']:
             profKey = ABILITY_MAP.get(saveProf).lower() + 'Save'
-            dc.insert_proficiency(char_id, Parent.class_(class_id), profKey, type_='save')
+            profs_to_add.append(Proficiency(Parent.class_(class_id), profKey, type_='save'))
         for prof in _class['startingProficiencies'].get('armor', []):
-            dc.insert_proficiency(char_id, Parent.class_(class_id), prof, type_='armor')
+            profs_to_add.append(Proficiency(Parent.class_(class_id), prof, type_='armor'))
         for prof in _class['startingProficiencies'].get('weapons', []):
-            dc.insert_proficiency(char_id, Parent.class_(class_id), prof, type_='weapon')
+            profs_to_add.append(Proficiency(Parent.class_(class_id), prof, type_='weapon'))
         for prof in _class['startingProficiencies'].get('tools', []):
-            dc.insert_proficiency(char_id, Parent.class_(class_id), prof, type_='tool')
+            profs_to_add.append(Proficiency(Parent.class_(class_id), prof, type_='tool'))
         for _ in range(int(_class['startingProficiencies']['skills']['choose'])):
-            dc.insert_proficiency(char_id, Parent.class_(class_id), type_='skill')  # add placeholders
+            profs_to_add.append(Proficiency(Parent.class_(class_id), type_='skill'))  # add placeholders
         caveats.append(f"**Skill Proficiencies**: You get to choose your skill proficiencies. Under your class "
                        f"in the Journal tab, you may select {_class['startingProficiencies']['skills']['choose']} "
                        f"skills from {', '.join(_class['startingProficiencies']['skills']['from'])}.")
@@ -423,7 +427,7 @@ class CharGenerator:
             stat_name = CLASS_RESOURCE_NAMES.get(res_name)
             if stat_name:
                 try:
-                    dc.insert_effect(char_id, Parent.class_(class_id), 'base', value=int(res_value), stat=stat_name)
+                    effects.append(Effect(Parent.class_(class_id), 'base', value=int(res_value), stat=stat_name))
                 except ValueError:  # edge case: level 20 barb rage
                     pass
 
@@ -434,7 +438,7 @@ class CharGenerator:
                 if f.get('gainSubclassFeature'):
                     num_subclass_features += 1
                 text = parse_data_entry(f['entries'], True)
-                dc.insert_feature(char_id, f['name'], text)
+                features.append(Feature(f['name'], text))
         for num in range(num_subclass_features):
             level_features = subclass['subclassFeatures'][num]
             for feature in level_features:
@@ -443,7 +447,7 @@ class CharGenerator:
                     if not entry.get('type') == 'entries': continue
                     fe = {'name': entry['name'],
                           'text': parse_data_entry(entry['entries'], True)}
-                    dc.insert_feature(char_id, fe['name'], fe['text'])
+                    features.append(Feature(fe['name'], fe['text']))
         caveats.append("**Class Features**: Check that the number of uses for each feature is correct, and apply "
                        "any effects they grant.")
         caveats.append("**Spellcasting**: If your class can cast spells, be sure to set your number of known spells, "
@@ -458,30 +462,32 @@ class CharGenerator:
                 continue
             if trait['name'].lower().startswith('feature'):
                 tname = trait['name'][9:]
-                dc.insert_feature(char_id, tname, text)
+                features.append(Feature(tname, text))
             elif trait['name'].lower().startswith('equipment'):
                 caveats.append(f"**Background Equipment**: Your background grants you {text}")
 
         for proftype, profs in background.proficiencies.items():
             if proftype == 'tool':
                 for prof in profs:
-                    dc.insert_proficiency(char_id, Parent.background(char_id), prof, type_='tool')
+                    profs_to_add.append(Proficiency(Parent.background(char_id), prof, type_='tool'))
             elif proftype == 'skill':
                 for prof in profs:
                     dc_prof = SKILL_MAP.get(prof, prof)
                     if dc_prof:
-                        dc.insert_proficiency(char_id, Parent.background(char_id), dc_prof)
+                        profs_to_add.append(Proficiency(Parent.background(char_id), dc_prof))
                     else:
-                        dc.insert_proficiency(char_id, Parent.background(char_id))
+                        profs_to_add.append(Proficiency(Parent.background(char_id)))
                         caveats.append(f"**Choose Skill**: Your background gives you proficiency in either {prof}. "
                                        f"Choose this in the Background section of the Persona tab.")
             elif proftype == 'language':
                 for prof in profs:
-                    dc.insert_proficiency(char_id, Parent.background(char_id), prof, type_='language')
+                    profs_to_add.append(Proficiency(Parent.background(char_id), prof, type_='language'))
                 caveats.append("**Languages**: Some backgrounds' languages may ask you to choose one or more. Fill "
                                "this out in the Background section of the Persona tab.")
 
-        await dc.transfer_ownership(char_id, dicecloud_userId)
+        await dc.insert_features(char_id, features)
+        await dc.insert_effects(char_id, effects)
+        await dc.insert_proficiencies(char_id, profs_to_add)
 
         out = f"Generated {name}! I have PMed you the link."
         await self.bot.send_message(ctx.message.author, f"https://dicecloud.com/character/{char_id}/{name}")

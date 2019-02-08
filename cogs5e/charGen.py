@@ -32,7 +32,7 @@ class CharGenerator:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(pass_context=True, name='randchar')
+    @commands.command(name='randchar')
     async def randChar(self, ctx, level="0"):
         """Makes a random 5e character."""
         try:
@@ -54,7 +54,7 @@ class CharGenerator:
 
         await self.genChar(ctx, level)
 
-    @commands.command(pass_context=True, aliases=['name'])
+    @commands.command(aliases=['name'])
     async def randname(self, ctx, race=None, option=None):
         """Generates a random name, optionally from a given race."""
         if race is None:
@@ -70,7 +70,7 @@ class CharGenerator:
         embed.description = random.choice(table['choices'])
         await self.bot.say(embed=embed)
 
-    @commands.command(pass_context=True, name='charref', aliases=['makechar'])
+    @commands.command(name='charref', aliases=['makechar'])
     async def char(self, ctx, level):
         """Gives you reference stats for a 5e character."""
         try:

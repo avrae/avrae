@@ -19,7 +19,7 @@ class PBPUtils:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def echo(self, ctx, *, msg):
         """Echos a message."""
         try:
@@ -29,7 +29,7 @@ class PBPUtils:
 
         await self.bot.say(ctx.message.author.display_name + ": " + clean_content(msg, ctx))
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def techo(self, ctx, seconds: int, *, msg):
         """Echos a message, and deletes it after a few seconds."""
         try:
@@ -41,7 +41,7 @@ class PBPUtils:
 
         await self.bot.say(ctx.message.author.display_name + ": " + clean_content(msg, ctx), delete_after=seconds)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def embed(self, ctx, *, args):
         """Creates and prints an Embed.
         Arguments: -title [title]
@@ -89,7 +89,7 @@ class PBPUtils:
         else:
             await self.bot.say(embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def br(self, ctx):
         """Prints a scene break."""
         try:
@@ -100,7 +100,7 @@ class PBPUtils:
         await self.bot.say("``` ```")
 
     @commands.command()
-    async def pythag(self, num1: int, num2: int):
+    async def pythag(self, ctx, num1: int, num2: int):
         """Performs a pythagorean theorem calculation to calculate diagonals."""
         await self.bot.say(sqrt(num1 ** 2 + num2 ** 2))
 

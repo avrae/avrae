@@ -35,7 +35,8 @@ class InitTracker:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group(pass_context=True, aliases=['i'], no_pm=True)
+    @commands.group(aliases=['i'])
+    @commands.guild_only()
     async def init(self, ctx):
         """Commands to help track initiative."""
         if ctx.invoked_subcommand is None:
@@ -45,7 +46,7 @@ class InitTracker:
         except:
             pass
 
-    @init.command(pass_context=True)
+    @init.command()
     async def begin(self, ctx, *, args: str = ''):
         """Begins combat in the channel the command is invoked.
         Usage: !init begin <ARGS (opt)>
@@ -83,7 +84,7 @@ class InitTracker:
             "Everyone roll for initiative!\nIf you have a character set up with SheetManager: `!init join`\n"
             "If it's a 5e monster: `!init madd [monster name]`\nOtherwise: `!init add [modifier] [name]`")
 
-    @init.command(pass_context=True)
+    @init.command()
     async def add(self, ctx, modifier: int, name: str, *args):
         """Adds a combatant to the initiative order.
         If a character is set up with the SheetManager module, you can use !init dcadd instead.
@@ -157,7 +158,7 @@ class InitTracker:
 
         await combat.final()
 
-    @init.command(pass_context=True)
+    @init.command()
     async def madd(self, ctx, monster_name: str, *args):
         """Adds a monster to combat.
         Args: adv/dis
@@ -258,7 +259,7 @@ class InitTracker:
         if to_pm:
             await self.bot.send_message(ctx.message.author, to_pm)
 
-    @init.command(pass_context=True, name='join', aliases=['cadd', 'dcadd'])
+    @init.command(name='join', aliases=['cadd', 'dcadd'])
     async def join(self, ctx, *, args: str = ''):
         """Adds the current active character to combat. A character must be loaded through the SheetManager module first.
         Args: adv/dis
@@ -339,7 +340,7 @@ class InitTracker:
         char.join_combat(ctx.message.channel.id)
         await char.commit(ctx)
 
-    @init.command(pass_context=True, name="next", aliases=['n'])
+    @init.command(name="next", aliases=['n'])
     async def nextInit(self, ctx):
         """Moves to the next turn in initiative order.
         It must be your turn or you must be the DM (the person who started combat) to use this command."""
@@ -380,7 +381,7 @@ class InitTracker:
         await self.bot.say(out)
         await combat.final()
 
-    @init.command(pass_context=True, name="prev", aliases=['previous', 'rewind'])
+    @init.command(name="prev", aliases=['previous', 'rewind'])
     async def prevInit(self, ctx):
         """Moves to the previous turn in initiative order."""
 
@@ -395,7 +396,7 @@ class InitTracker:
         await self.bot.say(combat.get_turn_str())
         await combat.final()
 
-    @init.command(pass_context=True, name="move", aliases=['goto'])
+    @init.command(name="move", aliases=['goto'])
     async def moveInit(self, ctx, target=None):
         """Moves to a certain initiative.
         `target` can be either a number, to go to that initiative, or a name.
@@ -422,7 +423,7 @@ class InitTracker:
         await self.bot.say(combat.get_turn_str())
         await combat.final()
 
-    @init.command(pass_context=True, name="skipround", aliases=['round', 'skiprounds'])
+    @init.command(name="skipround", aliases=['round', 'skiprounds'])
     async def skipround(self, ctx, numrounds: int = 1):
         """Skips one or more rounds of initiative."""
 
@@ -438,7 +439,7 @@ class InitTracker:
         await self.bot.say(combat.get_turn_str())
         await combat.final()
 
-    @init.command(pass_context=True, name="reroll", aliases=['shuffle'])
+    @init.command(name="reroll", aliases=['shuffle'])
     async def reroll(self, ctx):
         """Rerolls initiative for all combatants."""
         combat = await Combat.from_ctx(ctx)
@@ -446,14 +447,14 @@ class InitTracker:
         await self.bot.say(f"Rerolled initiative! New order: {combat.get_summary()}")
         await combat.final()
 
-    @init.command(pass_context=True, name="list", aliases=['summary'])
+    @init.command(name="list", aliases=['summary'])
     async def listInits(self, ctx):
         """Lists the combatants."""
         combat = await Combat.from_ctx(ctx)
         outStr = combat.get_summary()
         await self.bot.say(outStr, delete_after=60)
 
-    @init.command(pass_context=True)
+    @init.command()
     async def note(self, ctx, name: str, *, note: str = ''):
         """Attaches a note to a combatant."""
         combat = await Combat.from_ctx(ctx)
@@ -469,7 +470,7 @@ class InitTracker:
             await self.bot.say("Added note.", delete_after=10)
         await combat.final()
 
-    @init.command(pass_context=True, aliases=['opts'])
+    @init.command(aliases=['opts'])
     async def opt(self, ctx, name: str, *args):
         """Edits the options of a combatant.
         __Valid Arguments__
@@ -579,7 +580,7 @@ class InitTracker:
             await self.bot.say("{}'s options updated.\n".format(combatant.name) + out, delete_after=10)
         await combat.final()
 
-    @init.command(pass_context=True)
+    @init.command()
     async def status(self, ctx, name: str, *, args: str = ''):
         """Gets the status of a combatant or group.
         __Valid Arguments__
@@ -605,7 +606,7 @@ class InitTracker:
         else:
             await self.bot.say("```markdown\n" + status + "```", delete_after=30)
 
-    @init.command(pass_context=True)
+    @init.command()
     async def hp(self, ctx, name: str, operator: str, *, hp: str = ''):
         """Modifies the HP of a combatant.
         Usage: !init hp <NAME> <mod/set/max> <HP>
@@ -653,7 +654,7 @@ class InitTracker:
                 pass
         await combat.final()
 
-    @init.command(pass_context=True)
+    @init.command()
     async def thp(self, ctx, name: str, *, thp: int):
         """Modifies the temporary HP of a combatant.
         Usage: !init thp <NAME> <HP>
@@ -682,7 +683,7 @@ class InitTracker:
                 pass
         await combat.final()
 
-    @init.command(pass_context=True)
+    @init.command()
     async def effect(self, ctx, name: str, effect_name: str, *, args: str = ''):
         """Attaches a status effect to a combatant.
         [args] is a set of args that affects a combatant in combat.
@@ -728,7 +729,7 @@ class InitTracker:
         await self.bot.say(out, delete_after=10)
         await combat.final()
 
-    @init.command(pass_context=True, name='re')
+    @init.command(name='re')
     async def remove_effect(self, ctx, name: str, effect: str = ''):
         """Removes a status effect from a combatant. Removes all if effect is not passed."""
         combat = await Combat.from_ctx(ctx)
@@ -750,14 +751,14 @@ class InitTracker:
                                delete_after=10)
         await combat.final()
 
-    @init.group(pass_context=True, aliases=['a'], invoke_without_command=True)
+    @init.group(aliases=['a'], invoke_without_command=True)
     async def attack(self, ctx, target_name, atk_name, *, args=''):
         """Rolls an attack against another combatant.
         Valid Arguments: see !a and !ma.
         `-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit."""
         return await self._attack(ctx, None, target_name, atk_name, args)
 
-    @attack.command(pass_context=True, name="list")
+    @attack.command(name="list")
     async def attack_list(self, ctx):
         """Lists the active combatant's attacks."""
         combat = await Combat.from_ctx(ctx)
@@ -795,7 +796,7 @@ class InitTracker:
             destination = ctx.message.author
         return await self.bot.send_message(destination, "{}'s attacks:\n{}".format(combatant.name, a))
 
-    @init.command(pass_context=True)
+    @init.command()
     async def aoo(self, ctx, combatant_name, target_name, atk_name, *, args=''):
         """Rolls an attack of opportunity against another combatant.
         Valid Arguments: see !a and !ma.
@@ -897,7 +898,7 @@ class InitTracker:
         await self.bot.say(embed=embed)
         await combat.final()
 
-    @init.command(pass_context=True)
+    @init.command()
     async def cast(self, ctx, spell_name, *, args=''):
         """Casts a spell against another combatant.
         __Valid Arguments__
@@ -918,7 +919,7 @@ class InitTracker:
         int/wis/cha - different skill base for DC/AB"""
         return await self._cast(ctx, None, spell_name, args)
 
-    @init.command(pass_context=True)
+    @init.command()
     async def reactcast(self, ctx, combatant_name, spell_name, *, args=''):
         """Casts a spell against another combatant.
         __Valid Arguments__
@@ -980,7 +981,7 @@ class InitTracker:
         await self.bot.say(embed=embed)
         await combat.final()
 
-    @init.command(pass_context=True, name='remove')
+    @init.command(name='remove')
     async def remove_combatant(self, ctx, *, name: str):
         """Removes a combatant or group from the combat.
         Usage: !init remove <NAME>"""
@@ -1002,7 +1003,7 @@ class InitTracker:
         await self.bot.say("{} removed from combat.".format(combatant.name), delete_after=10)
         await combat.final()
 
-    @init.command(pass_context=True)
+    @init.command()
     async def end(self, ctx, args=None):
         """Ends combat in the channel."""
 

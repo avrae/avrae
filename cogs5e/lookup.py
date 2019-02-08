@@ -50,7 +50,7 @@ class Lookup:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(pass_context=True, aliases=['status'])
+    @commands.command(aliases=['status'])
     async def condition(self, ctx, *, name: str):
         """Looks up a condition."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -68,7 +68,7 @@ class Lookup:
 
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def rule(self, ctx, *, name: str):
         """Looks up a rule."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -90,7 +90,7 @@ class Lookup:
 
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -120,7 +120,7 @@ class Lookup:
         embed.set_footer(text=f"Feat | {result['source']} {result['page']}")
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -146,7 +146,7 @@ class Lookup:
 
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -178,7 +178,7 @@ class Lookup:
 
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -204,7 +204,7 @@ class Lookup:
 
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True, name='class')
+    @commands.command(name='class')
     async def _class(self, ctx, name: str, level: int = None):
         """Looks up a class, or all features of a certain level."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -282,7 +282,7 @@ class Lookup:
 
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def subclass(self, ctx, name: str):
         """Looks up a subclass."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -314,7 +314,7 @@ class Lookup:
 
         await self.bot.send_message(destination, embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -346,7 +346,8 @@ class Lookup:
         else:
             await self.bot.say(embed=embed)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command()
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_server=True)
     async def lookup_settings(self, ctx, *, args: str):
         """Changes settings for the lookup module.
@@ -391,7 +392,7 @@ class Lookup:
         else:
             await self.bot.say("No settings found. Make sure your syntax is correct.")
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def token(self, ctx, *, name=None):
         """Shows a token for a monster or player. May not support all monsters."""
 
@@ -440,7 +441,7 @@ class Lookup:
                                              "<http://rolladvantage.com/tokenstamp/>!",
                                      filename="image.png")
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def monster(self, ctx, *, name: str):
         """Looks up a monster.
         Generally requires a Game Master role to show full stat block.
@@ -582,7 +583,7 @@ class Lookup:
             else:
                 await self.bot.say(embed=embed)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
         guild_settings = await self.get_settings(ctx.message.server)
@@ -650,7 +651,7 @@ class Lookup:
             else:
                 await self.bot.say(embed=embed)
 
-    @commands.command(pass_context=True, name='item')
+    @commands.command(name='item')
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
         guild_settings = await self.get_settings(ctx.message.server)

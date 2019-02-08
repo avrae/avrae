@@ -30,7 +30,7 @@ from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from utils.argparser import argparse
-from utils.functions import a_or_an, get_positivity, list_get, format_d20
+from utils.functions import a_or_an, format_d20, get_positivity, list_get
 from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
 from utils.loggers import TextLogger
 
@@ -67,7 +67,7 @@ class SheetManager:
         args = argparse(args)
         return args
 
-    @commands.group(pass_context=True, aliases=['a'], invoke_without_command=True)
+    @commands.group(aliases=['a'], invoke_without_command=True)
     async def attack(self, ctx, atk_name=None, *, args: str = ''):
         """Rolls an attack for the current active character.
         __Valid Arguments__
@@ -143,7 +143,7 @@ class SheetManager:
         except:
             pass
 
-    @attack.command(pass_context=True, name="list")
+    @attack.command(name="list")
     async def attack_list(self, ctx):
         """Lists the active character's attacks."""
         char = await Character.from_ctx(ctx)
@@ -169,7 +169,7 @@ class SheetManager:
             a = "Too many attacks, values hidden!"
         return await self.bot.say("{}'s attacks:\n{}".format(char.get_name(), a))
 
-    @attack.command(pass_context=True, name="add", aliases=['create'])
+    @attack.command(name="add", aliases=['create'])
     async def attack_add(self, ctx, name, *, args=""):
         """
         Adds an attack to the active character.
@@ -199,7 +199,7 @@ class SheetManager:
             out += f" Removed a duplicate attack."
         await self.bot.say(out)
 
-    @attack.command(pass_context=True, name="delete", aliases=['remove'])
+    @attack.command(name="delete", aliases=['remove'])
     async def attack_delete(self, ctx, name):
         """
         Deletes an attack override.
@@ -214,7 +214,7 @@ class SheetManager:
 
         await self.bot.say(f"Okay, deleted attack {attack['name']}.")
 
-    @commands.command(pass_context=True, aliases=['s'])
+    @commands.command(aliases=['s'])
     async def save(self, ctx, skill, *, args: str = ''):
         """Rolls a save for your current active character.
         __Valid Arguments__
@@ -295,7 +295,7 @@ class SheetManager:
         except:
             pass
 
-    @commands.command(pass_context=True, aliases=['c'])
+    @commands.command(aliases=['c'])
     async def check(self, ctx, check, *, args: str = ''):
         """Rolls a check for your current active character.
         __Valid Arguments__
@@ -385,7 +385,7 @@ class SheetManager:
         except:
             pass
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(invoke_without_command=True)
     async def desc(self, ctx):
         """Prints or edits a description of your currently active character."""
         char = await Character.from_ctx(ctx)
@@ -408,7 +408,7 @@ class SheetManager:
         except:
             pass
 
-    @desc.command(pass_context=True, name='update', aliases=['edit'])
+    @desc.command(name='update', aliases=['edit'])
     async def edit_desc(self, ctx, *, desc):
         """Updates the character description."""
         char = await Character.from_ctx(ctx)
@@ -421,7 +421,7 @@ class SheetManager:
         await char.commit(ctx)
         await self.bot.say("Description updated!")
 
-    @desc.command(pass_context=True, name='remove', aliases=['delete'])
+    @desc.command(name='remove', aliases=['delete'])
     async def remove_desc(self, ctx):
         """Removes the character description, returning to the default."""
         char = await Character.from_ctx(ctx)
@@ -436,7 +436,7 @@ class SheetManager:
         await char.commit(ctx)
         await self.bot.say("Description override removed! Use `!update` to return to the old description.")
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(invoke_without_command=True)
     async def portrait(self, ctx):
         """Shows or edits the image of your currently active character."""
         char = await Character.from_ctx(ctx)
@@ -455,7 +455,7 @@ class SheetManager:
         except:
             pass
 
-    @portrait.command(pass_context=True, name='update', aliases=['edit'])
+    @portrait.command(name='update', aliases=['edit'])
     async def edit_portrait(self, ctx, *, url):
         """Updates the character portrait."""
         char = await Character.from_ctx(ctx)
@@ -469,7 +469,7 @@ class SheetManager:
         await char.commit(ctx)
         await self.bot.say("Portrait updated!")
 
-    @portrait.command(pass_context=True, name='remove', aliases=['delete'])
+    @portrait.command(name='remove', aliases=['delete'])
     async def remove_portrait(self, ctx):
         """Removes the character portrait, returning to the default."""
         char = await Character.from_ctx(ctx)
@@ -485,7 +485,7 @@ class SheetManager:
         await char.commit(ctx)
         await self.bot.say("Portrait override removed! Use `!update` to return to the old portrait.")
 
-    @commands.command(pass_context=True, hidden=True)  # hidden, as just called by token command
+    @commands.command(hidden=True)  # hidden, as just called by token command
     async def playertoken(self, ctx):
         """Generates and sends a token for use on VTTs."""
 
@@ -505,7 +505,7 @@ class SheetManager:
                                                                          "<http://rolladvantage.com/tokenstamp/>!",
                                  filename="image.png")
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def sheet(self, ctx):
         """Prints the embed sheet of your currently active character."""
         char = await Character.from_ctx(ctx)
@@ -516,7 +516,7 @@ class SheetManager:
         except:
             pass
 
-    @commands.group(pass_context=True, aliases=['char'], invoke_without_command=True)
+    @commands.group(aliases=['char'], invoke_without_command=True)
     async def character(self, ctx, *, name: str = None):
         """Switches the active character.
         Breaks for characters created before Jan. 20, 2017."""
@@ -551,7 +551,7 @@ class SheetManager:
 
         await self.bot.say("Active character changed to {}.".format(name), delete_after=20)
 
-    @character.command(pass_context=True, name='list')
+    @character.command(name='list')
     async def character_list(self, ctx):
         """Lists your characters."""
         user_characters = await self.bot.mdb.characters.find({"owner": ctx.message.author.id}).to_list(None)
@@ -561,7 +561,7 @@ class SheetManager:
         await self.bot.say('Your characters:\n{}'.format(
             ', '.join(c.get('stats', {}).get('name', '') for c in user_characters)))
 
-    @character.command(pass_context=True, name='delete')
+    @character.command(name='delete')
     async def character_delete(self, ctx, *, name):
         """Deletes a character."""
         user_characters = await self.bot.mdb.characters.find({"owner": ctx.message.author.id}).to_list(None)
@@ -595,7 +595,7 @@ class SheetManager:
         else:
             return await self.bot.say("OK, cancelling.")
 
-    @commands.command(pass_context=True)
+    @commands.command()
     @commands.cooldown(1, 15, BucketType.user)
     async def update(self, ctx, *, args=''):
         """Updates the current character sheet, preserving all settings.
@@ -712,7 +712,7 @@ class SheetManager:
         if '-v' in args:
             await self.bot.say(embed=c.get_sheet_embed())
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def transferchar(self, ctx, user: discord.Member):
         """Gives a copy of the active character to another user."""
         character = await Character.from_ctx(ctx)
@@ -731,7 +731,7 @@ class SheetManager:
         await character.manual_commit(self.bot, user.id)
         await self.bot.say(f"Copied {character.get_name()} to {user.display_name}'s storage.")
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def csettings(self, ctx, *, args):
         """Updates personalization settings for the currently active character.
         Valid Arguments:
@@ -897,7 +897,7 @@ class SheetManager:
         await char.commit(ctx)
         await self.bot.say(out)
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(invoke_without_command=True)
     async def cvar(self, ctx, name=None, *, value=None):
         """Commands to manage character variables for use in snippets and aliases.
         Character variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
@@ -924,7 +924,7 @@ class SheetManager:
         await character.commit(ctx)
         await self.bot.say('Character variable `{}` set to: `{}`'.format(name, value))
 
-    @cvar.command(pass_context=True, name='remove', aliases=['delete'])
+    @cvar.command(name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
         """Deletes a cvar from the currently active character."""
         char = await Character.from_ctx(ctx)
@@ -937,7 +937,7 @@ class SheetManager:
         await char.commit(ctx)
         await self.bot.say('Character variable {} removed.'.format(name))
 
-    @cvar.command(pass_context=True, name='deleteall', aliases=['removeall'])
+    @cvar.command(name='deleteall', aliases=['removeall'])
     async def cvar_deleteall(self, ctx):
         """Deletes ALL character variables for the active character."""
         char = await Character.from_ctx(ctx)
@@ -954,7 +954,7 @@ class SheetManager:
         await char.commit(ctx)
         return await self.bot.say(f"OK. I have deleted all of {char.get_name()}'s cvars.")
 
-    @cvar.command(pass_context=True, name='list')
+    @cvar.command(name='list')
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""
         character = await Character.from_ctx(ctx)
@@ -976,7 +976,7 @@ class SheetManager:
             return replyBool
         return True
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def dicecloud(self, ctx, url: str, *, args=""):
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.
@@ -1026,7 +1026,7 @@ class SheetManager:
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
                 "This is usually due to an invalid image.")
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def gsheet(self, ctx, url: str):
         """Loads a character sheet from [GSheet v2.0](http://gsheet2.avrae.io) (auto) or [GSheet v1.3](http://gsheet.avrae.io) (manual), resetting all settings.
         The sheet must be shared with Avrae for this to work.
@@ -1088,7 +1088,7 @@ class SheetManager:
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
                 "This is usually due to an invalid image.")
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def beyond(self, ctx, url: str):
         """Loads a character sheet from D&D Beyond, resetting all settings."""
 

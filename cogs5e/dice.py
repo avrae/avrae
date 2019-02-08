@@ -20,14 +20,14 @@ class Dice:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='2', hidden=True, pass_context=True)
+    @commands.command(name='2', hidden=True)
     async def quick_roll(self, ctx, *, mod: str = '0'):
         """Quickly rolls a d20."""
         self.bot.rdb.incr('dice_rolled_life')
         rollStr = '1d20+' + mod
         await ctx.invoke(self.bot.get_command("roll"), rollStr=rollStr)
 
-    @commands.command(pass_context=True, name='roll', aliases=['r'])
+    @commands.command(name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
         """Rolls dice in xdy format.
         __Examples__
@@ -74,7 +74,7 @@ class Dice:
         else:
             await ctx.send(outStr)
 
-    @commands.command(pass_context=True, name='multiroll', aliases=['rr'])
+    @commands.command(name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations: int, rollStr, *, args=''):
         """Rolls dice in xdy format a given number of times.
         Usage: !rrr <iterations> <xdy> [args]"""
@@ -102,7 +102,7 @@ class Dice:
             pass
         await ctx.send(ctx.author.mention + '\n' + outStr)
 
-    @commands.command(pass_context=True, name='iterroll', aliases=['rrr'])
+    @commands.command(name='iterroll', aliases=['rrr'])
     async def rrr(self, ctx, iterations: int, rollStr, dc: int = 0, *, args=''):
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
@@ -134,7 +134,7 @@ class Dice:
             pass
         await ctx.send(ctx.author.mention + '\n' + outStr)
 
-    @commands.command(pass_context=True, aliases=['ma', 'monster_attack'])
+    @commands.command(aliases=['ma', 'monster_attack'])
     async def monster_atk(self, ctx, monster_name, atk_name='list', *, args=''):
         """Rolls a monster's attack.
         Attack name can be "list" for a list of all of the monster's attacks.
@@ -192,7 +192,7 @@ class Dice:
 
         await ctx.send(embed=embed)
 
-    @commands.command(pass_context=True, aliases=['mc'])
+    @commands.command(aliases=['mc'])
     async def monster_check(self, ctx, monster_name, check, *, args=''):
         """Rolls a check for a monster.
         __Valid Arguments__
@@ -286,7 +286,7 @@ class Dice:
         except:
             pass
 
-    @commands.command(pass_context=True, aliases=['ms'])
+    @commands.command(aliases=['ms'])
     async def monster_save(self, ctx, monster_name, save, *, args=''):
         """Rolls a save for a monster.
         __Valid Arguments__

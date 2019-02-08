@@ -28,7 +28,7 @@ class Homebrew:
                any(r.name.lower() in BREWER_ROLES for r in ctx.message.author.roles) or \
                ctx.message.author.id == ctx.bot.owner.id
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(invoke_without_command=True)
     async def bestiary(self, ctx, *, name=None):
         """Commands to manage homebrew monsters.
         When called without an argument, lists the current bestiary and the monsters in it.
@@ -53,13 +53,13 @@ class Homebrew:
         embed.description = '\n'.join(m.name for m in bestiary.monsters)
         await self.bot.say(embed=embed)
 
-    @bestiary.command(pass_context=True, name='list')
+    @bestiary.command(name='list')
     async def bestiary_list(self, ctx):
         """Lists your available bestiaries."""
         user_bestiaries = await self.bot.mdb.bestiaries.find({"owner": ctx.message.author.id}, ['name']).to_list(None)
         await self.bot.say(f"Your bestiaries: {', '.join(b['name'] for b in user_bestiaries)}")
 
-    @bestiary.command(pass_context=True, name='delete')
+    @bestiary.command(name='delete')
     async def bestiary_delete(self, ctx, *, name):
         """Deletes a bestiary from Avrae."""
         try:
@@ -77,7 +77,7 @@ class Homebrew:
         else:
             return await self.bot.say("OK, cancelling.")
 
-    @bestiary.command(pass_context=True, name='import')
+    @bestiary.command(name='import')
     async def bestiary_import(self, ctx, url):
         """Imports a published bestiary from [CritterDB](https://critterdb.com/)."""
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
@@ -100,7 +100,7 @@ class Homebrew:
         embed.description = '\n'.join(m.name for m in bestiary.monsters)
         await self.bot.say(embed=embed)
 
-    @bestiary.command(pass_context=True, name='update')
+    @bestiary.command(name='update')
     async def bestiary_update(self, ctx):
         """Updates the active bestiary from CritterDB."""
         active_bestiary = await self.bot.mdb.bestiaries.find_one({"owner": ctx.message.author.id, "active": True})
@@ -118,7 +118,8 @@ class Homebrew:
         embed.description = '\n'.join(m.name for m in bestiary.monsters)
         await self.bot.say(embed=embed)
 
-    @bestiary.group(pass_context=True, name='server', no_pm=True, invoke_without_command=True)
+    @bestiary.group(name='server', invoke_without_command=True)
+    @commands.guild_only()
     async def bestiary_server(self, ctx):
         """Toggles whether the active bestiary should be viewable by anyone on the server.
         Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
@@ -133,7 +134,7 @@ class Homebrew:
         else:
             await self.bot.say(f"Ok, {bestiary.name} is no longer active on {ctx.message.server.name}.")
 
-    @bestiary_server.command(pass_context=True, name='list')
+    @bestiary_server.command(name='list')
     async def bestiary_server_list(self, ctx):
         """Shows what bestiaries are currently active on the server."""
         desc = ""
@@ -141,7 +142,7 @@ class Homebrew:
             desc += f"{doc['name']} (<@{doc['owner']}>)\n"
         await self.bot.say(embed=discord.Embed(title="Active Server Bestiaries", description=desc))
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(invoke_without_command=True)
     async def pack(self, ctx, *, name=None):
         """Commands to manage homebrew items.
         When called without an argument, lists the current pack and its description.
@@ -175,7 +176,7 @@ class Homebrew:
             embed.add_field(name="Items", value=f"{len(pack.items)} items.")
         await self.bot.say(embed=embed)
 
-    @pack.command(pass_context=True, name='list')
+    @pack.command(name='list')
     async def pack_list(self, ctx):
         """Lists your available packs."""
         available_pack_names = await self.bot.mdb.packs.find(
@@ -184,7 +185,7 @@ class Homebrew:
         ).to_list(None)
         await self.bot.say(f"Your available packs: {', '.join(p['name'] for p in available_pack_names)}")
 
-    @pack.command(pass_context=True, name='editor')
+    @pack.command(name='editor')
     async def pack_editor(self, ctx, user: discord.Member):
         """Allows another user to edit your active pack."""
         pack = await Pack.from_ctx(ctx)
@@ -201,7 +202,7 @@ class Homebrew:
             await self.bot.say(f"{user} removed from {pack.name}'s editors.")
         await pack.commit(ctx)
 
-    @pack.command(pass_context=True, name='subscribe', aliases=['sub'])
+    @pack.command(name='subscribe', aliases=['sub'])
     async def pack_sub(self, ctx, url):
         """Subscribes to another user's pack."""
         pack_id_match = re.search(r"homebrew/items/([0-9a-f]{24})/?", url)
@@ -225,7 +226,8 @@ class Homebrew:
         await pack.commit(ctx)
         await self.bot.say(out)
 
-    @pack.group(pass_context=True, name='server', no_pm=True, invoke_without_command=True)
+    @pack.group(name='server', invoke_without_command=True)
+    @commands.guild_only()
     async def pack_server(self, ctx):
         """Toggles whether the active pack should be viewable by anyone on the server.
         Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
@@ -240,7 +242,7 @@ class Homebrew:
         else:
             await self.bot.say(f"Ok, {pack.name} is no longer active on {ctx.message.server.name}.")
 
-    @pack_server.command(pass_context=True, name='list')
+    @pack_server.command(name='list')
     async def pack_server_list(self, ctx):
         """Shows what packs are currently active on the server."""
         desc = ""
@@ -248,7 +250,7 @@ class Homebrew:
             desc += f"{doc['name']} (<@{doc['owner']['id']}>)\n"
         await self.bot.say(embed=discord.Embed(title="Active Server Packs", description=desc))
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(invoke_without_command=True)
     async def tome(self, ctx, *, name=None):
         """Commands to manage homebrew spells.
         When called without an argument, lists the current tome and its description.
@@ -282,7 +284,7 @@ class Homebrew:
             embed.add_field(name="Spells", value=f"{len(tome.spells)} spells.")
         await self.bot.say(embed=embed)
 
-    @tome.command(pass_context=True, name='list')
+    @tome.command(name='list')
     async def tome_list(self, ctx):
         """Lists your available tomes."""
         available_tome_names = await self.bot.mdb.tomes.find(
@@ -291,7 +293,7 @@ class Homebrew:
         ).to_list(None)
         await self.bot.say(f"Your available tomes: {', '.join(p['name'] for p in available_tome_names)}")
 
-    @tome.command(pass_context=True, name='editor')
+    @tome.command(name='editor')
     async def tome_editor(self, ctx, user: discord.Member):
         """Allows another user to edit your active tome."""
         tome = await Tome.from_ctx(ctx)
@@ -308,7 +310,7 @@ class Homebrew:
             await self.bot.say(f"{user} removed from {tome.name}'s editors.")
         await tome.commit(ctx)
 
-    @tome.command(pass_context=True, name='subscribe', aliases=['sub'])
+    @tome.command(name='subscribe', aliases=['sub'])
     async def tome_sub(self, ctx, url):
         """Subscribes to another user's tome."""
         tome_id_match = re.search(r"homebrew/spells/([0-9a-f]{24})/?", url)
@@ -332,7 +334,8 @@ class Homebrew:
         await tome.commit(ctx)
         await self.bot.say(out)
 
-    @tome.group(pass_context=True, name='server', no_pm=True, invoke_without_command=True)
+    @tome.group(name='server', invoke_without_command=True)
+    @commands.guild_only()
     async def tome_server(self, ctx):
         """Toggles whether the active tome should be viewable by anyone on the server.
         Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
@@ -347,7 +350,7 @@ class Homebrew:
         else:
             await self.bot.say(f"Ok, {tome.name} is no longer active on {ctx.message.server.name}.")
 
-    @tome_server.command(pass_context=True, name='list')
+    @tome_server.command(name='list')
     async def tome_server_list(self, ctx):
         """Shows what tomes are currently active on the server."""
         desc = ""

@@ -28,7 +28,7 @@ class Help:
         self.formatter = CustomHelpFormatter(width=2000)
         self.bot = bot
 
-    @commands.command(name='help', aliases=['commands'], pass_context=True)
+    @commands.command(name='help', aliases=['commands'])
     @commands.cooldown(1, 2, BucketType.user)
     async def _default_help_command(self, ctx, *commands: str):
         """Shows this message.

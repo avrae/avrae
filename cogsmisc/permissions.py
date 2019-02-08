@@ -35,7 +35,8 @@ class Permissions:
             name = ctx.command.qualified_name.split(' ')[0]
             return name not in entry
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command()
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_server=True)
     async def prefix(self, ctx, prefix: str = None):
         """Sets the bot's prefix for this server.
@@ -53,7 +54,8 @@ class Permissions:
         self.bot.rdb.not_json_set("prefixes", self.bot.global_prefixes)
         await self.bot.say("Prefix set to `{}` for this server.".format(prefix))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command()
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_server=True)
     async def disable(self, ctx, *, command: str):
         """Disables a command for this server. Case-sensitive.
@@ -76,7 +78,8 @@ class Permissions:
         self.bot.rdb.not_json_set("permissions", global_entries)
         await self.bot.say('"%s" command disabled in this server.' % command)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command()
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_server=True)
     async def enable(self, ctx, *, command: str):
         """Enables a command for this server.

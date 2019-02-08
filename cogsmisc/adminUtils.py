@@ -57,7 +57,7 @@ class AdminUtils:
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def blacklist(self, _id):
+    async def blacklist(self, ctx, _id):
         self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
         self.blacklisted_serv_ids.append(_id)
         self.bot.rdb.not_json_set('blacklist', self.blacklisted_serv_ids)
@@ -65,19 +65,19 @@ class AdminUtils:
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def whitelist(self, _id):
+    async def whitelist(self, ctx, _id):
         whitelist = self.bot.rdb.not_json_get('server-whitelist', [])
         whitelist.append(_id)
         self.bot.rdb.not_json_set('server-whitelist', whitelist)
         await self.bot.say(':ok_hand:')
 
-    @commands.command(pass_context=True, hidden=True)
+    @commands.command(hidden=True)
     @commands.is_owner()
     async def chanSay(self, ctx, channel: str, *, message: str):
         """Like .say, but works across servers. Requires channel id."""
         await self.admin_command(ctx, "chanSay", message=message, channel=channel)
 
-    @commands.command(hidden=True, pass_context=True)
+    @commands.command(hidden=True)
     @commands.is_owner()
     async def shardping(self, ctx):
         """Pings all shards."""
@@ -85,7 +85,7 @@ class AdminUtils:
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def servInfo(self, server: str = None):
+    async def servInfo(self, ctx, server: str = None):
         out = ''
         page = None
         num_shards = int(getattr(self.bot, 'shard_count', 1))
@@ -144,7 +144,7 @@ class AdminUtils:
 
     @commands.command(hidden=True, name='leave')
     @commands.is_owner()
-    async def leave_server(self, servID: str):
+    async def leave_server(self, ctx, servID: str):
         req = self.request_leave_server(servID)
         for _ in range(300):  # timeout after 30 sec
             if len(self.requests[req]) >= 1:
@@ -162,7 +162,7 @@ class AdminUtils:
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def mute(self, target):
+    async def mute(self, ctx, target):
         """Mutes a person by ID."""
         self.muted = self.bot.rdb.not_json_get('muted', [])
         try:
@@ -179,7 +179,7 @@ class AdminUtils:
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def loglevel(self, level: int, logger=None):
+    async def loglevel(self, ctx, level: int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
         loglevels = self.bot.rdb.jget('loglevels', {})
         loglevels[logger] = level
@@ -201,7 +201,7 @@ class AdminUtils:
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def changepresence(self, status=None, *, msg=None):
+    async def changepresence(self, ctx, status=None, *, msg=None):
         """Changes Avrae's presence. Status: online, idle, dnd"""
         statuslevel = {'online': 0, 'idle': 1, 'dnd': 2}
         status = statuslevel.get(status)
@@ -221,7 +221,7 @@ class AdminUtils:
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def updatebot(self, pull_git: bool = True):
+    async def updatebot(self, ctx, pull_git: bool = True):
         successful = True
         self.bot.state = "updating"
 

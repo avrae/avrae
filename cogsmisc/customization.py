@@ -4,8 +4,6 @@ Created on Jan 30, 2017
 @author: andrew
 """
 import asyncio
-import copy
-import re
 import shlex
 import textwrap
 import traceback
@@ -13,16 +11,14 @@ import uuid
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import UserInputError, BucketType
-from discord.ext.commands.view import quoted_word, StringView
+from discord.ext.commands import BucketType, UserInputError
+from discord.ext.commands.view import StringView, quoted_word
 
 from cogs5e.funcs import scripting
-from cogs5e.funcs.dice import roll
-from cogs5e.funcs.scripting import ScriptingEvaluator, SCRIPTING_RE
+from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.character import Character
-from cogs5e.models.errors import NoCharacter, EvaluationError, FunctionRequiresCharacter, \
-    AvraeException
-from utils.functions import confirm, clean_content
+from cogs5e.models.errors import AvraeException, EvaluationError, NoCharacter
+from utils.functions import clean_content, confirm
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
@@ -43,7 +39,7 @@ class Customization:
             return
         await self.handle_aliases(message)
 
-    @commands.command(pass_context=True)
+    @commands.command()
     @commands.cooldown(1, 20, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.
@@ -161,7 +157,7 @@ class Customization:
         await evaluator.run_commits()
         return out
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(invoke_without_command=True)
     async def alias(self, ctx, alias_name=None, *, cmds=None):
         """Adds an alias for a long command.
         After an alias has been added, you can instead run the aliased command with !<alias_name>.
@@ -187,7 +183,7 @@ class Customization:
                                               {"$set": {"commands": cmds.lstrip('!')}}, True)
         await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
-    @alias.command(pass_context=True, name='list')
+    @alias.command(name='list')
     async def alias_list(self, ctx):
         """Lists all user aliases."""
         user_aliases = await scripting.get_aliases(ctx)
@@ -195,7 +191,7 @@ class Customization:
         sorted_aliases = sorted(aliases)
         return await self.bot.say('Your aliases:\n{}'.format(', '.join(sorted_aliases)))
 
-    @alias.command(pass_context=True, name='delete', aliases=['remove'])
+    @alias.command(name='delete', aliases=['remove'])
     async def alias_delete(self, ctx, alias_name):
         """Deletes a user alias."""
         result = await self.bot.mdb.aliases.delete_one({"owner": ctx.message.author.id, "name": alias_name})
@@ -203,7 +199,7 @@ class Customization:
             return await self.bot.say('Alias not found.')
         await self.bot.say('Alias {} removed.'.format(alias_name))
 
-    @alias.command(pass_context=True, name='deleteall', aliases=['removeall'])
+    @alias.command(name='deleteall', aliases=['removeall'])
     async def alias_deleteall(self, ctx):
         """Deletes ALL user aliases."""
         await self.bot.say("This will delete **ALL** of your user aliases. "
@@ -216,7 +212,8 @@ class Customization:
         await self.bot.mdb.aliases.delete_many({"owner": ctx.message.author.id})
         return await self.bot.say("OK. I have deleted all your aliases.")
 
-    @commands.group(pass_context=True, invoke_without_command=True, aliases=['serveralias'], no_pm=True)
+    @commands.group(invoke_without_command=True, aliases=['serveralias'])
+    @commands.guild_only()
     async def servalias(self, ctx, alias_name=None, *, cmds=None):
         """Adds an alias that the entire server can use.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
@@ -245,7 +242,8 @@ class Customization:
                                                   {"$set": {"commands": cmds.lstrip('!')}}, True)
         await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
-    @servalias.command(pass_context=True, name='list', no_pm=True)
+    @servalias.command(name='list')
+    @commands.guild_only()
     async def servalias_list(self, ctx):
         """Lists all server aliases."""
         server_aliases = await scripting.get_servaliases(ctx)
@@ -253,7 +251,8 @@ class Customization:
         sorted_aliases = sorted(aliases)
         return await self.bot.say('This server\'s aliases:\n{}'.format(', '.join(sorted_aliases)))
 
-    @servalias.command(pass_context=True, name='delete', aliases=['remove'], no_pm=True)
+    @servalias.command(name='delete', aliases=['remove'])
+    @commands.guild_only()
     async def servalias_delete(self, ctx, alias_name):
         """Deletes a server alias.
         Any user with permission to create a server alias can delete one from the server."""
@@ -274,7 +273,7 @@ class Customization:
                any(r.name.lower() in ALIASER_ROLES for r in ctx.message.author.roles) or \
                ctx.message.author.id == ctx.bot.owner.id
 
-    @commands.group(pass_context=True, invoke_without_command=True)
+    @commands.group(invoke_without_command=True)
     async def snippet(self, ctx, snipname=None, *, snippet=None):
         """Creates a snippet to use in attack macros.
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
@@ -293,13 +292,13 @@ class Customization:
                                                {"$set": {"snippet": snippet}}, True)
         await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
 
-    @snippet.command(pass_context=True, name='list')
+    @snippet.command(name='list')
     async def snippet_list(self, ctx):
         """Lists your user snippets."""
         user_snippets = await scripting.get_snippets(ctx)
         await self.bot.say('Your snippets:\n{}'.format(', '.join(sorted([name for name in user_snippets.keys()]))))
 
-    @snippet.command(pass_context=True, name='delete', aliases=['remove'])
+    @snippet.command(name='delete', aliases=['remove'])
     async def snippet_delete(self, ctx, snippet_name):
         """Deletes a snippet."""
         result = await self.bot.mdb.snippets.delete_one({"owner": ctx.message.author.id, "name": snippet_name})
@@ -307,7 +306,7 @@ class Customization:
             return await self.bot.say('Snippet not found.')
         await self.bot.say('Shortcut {} removed.'.format(snippet_name))
 
-    @snippet.command(pass_context=True, name='deleteall', aliases=['removeall'])
+    @snippet.command(name='deleteall', aliases=['removeall'])
     async def snippet_deleteall(self, ctx):
         """Deletes ALL user snippets."""
         await self.bot.say("This will delete **ALL** of your user snippets. "
@@ -320,7 +319,8 @@ class Customization:
         await self.bot.mdb.snippets.delete_many({"owner": ctx.message.author.id})
         return await self.bot.say("OK. I have deleted all your snippets.")
 
-    @commands.group(pass_context=True, invoke_without_command=True, no_pm=True)
+    @commands.group(invoke_without_command=True)
+    @commands.guild_only()
     async def servsnippet(self, ctx, snipname=None, *, snippet=None):
         """Creates a snippet to use in attack macros for the entire server.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
@@ -347,14 +347,16 @@ class Customization:
                                       "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                                       "is required.")
 
-    @servsnippet.command(pass_context=True, name='list', no_pm=True)
+    @servsnippet.command(name='list')
+    @commands.guild_only()
     async def servsnippet_list(self, ctx):
         """Lists this server's snippets."""
         server_snippets = await scripting.get_servsnippets(ctx)
         await self.bot.say(
             'This server\'s snippets:\n{}'.format(', '.join(sorted([name for name in server_snippets.keys()]))))
 
-    @servsnippet.command(pass_context=True, name='delete', aliases=['remove'], no_pm=True)
+    @servsnippet.command(name='delete', aliases=['remove'])
+    @commands.guild_only()
     async def servsnippet_delete(self, ctx, snippet_name):
         """Deletes a server snippet.
         Any user that can create a server snippet can delete one."""
@@ -366,7 +368,7 @@ class Customization:
             return await self.bot.say('Snippet not found.')
         await self.bot.say('Server snippet {} removed.'.format(snippet_name))
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def test(self, ctx, *, teststr):
         """Parses `str` as if it were in an alias, for testing."""
         char = await Character.from_ctx(ctx)
@@ -374,7 +376,7 @@ class Customization:
         parsed = clean_content(parsed, ctx)
         await self.bot.say(f"{ctx.message.author.display_name}: {parsed}")
 
-    @commands.group(pass_context=True, invoke_without_command=True, aliases=['uvar'])
+    @commands.group(invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name=None, *, value=None):
         """Commands to manage user variables for use in snippets and aliases.
         User variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
@@ -396,7 +398,7 @@ class Customization:
         await scripting.set_uvar(ctx, name, value)
         await self.bot.say('User variable `{}` set to: `{}`'.format(name, value))
 
-    @uservar.command(pass_context=True, name='remove', aliases=['delete'])
+    @uservar.command(name='remove', aliases=['delete'])
     async def uvar_remove(self, ctx, name):
         """Deletes a uvar from the user."""
         result = await self.bot.mdb.uvars.delete_one({"owner": ctx.message.author.id, "name": name})
@@ -404,13 +406,13 @@ class Customization:
             return await self.bot.say("Uvar does not exist.")
         await self.bot.say('User variable {} removed.'.format(name))
 
-    @uservar.command(pass_context=True, name='list')
+    @uservar.command(name='list')
     async def uvar_list(self, ctx):
         """Lists all uvars for the user."""
         user_vars = await scripting.get_uvars(ctx)
         await self.bot.say('Your user variables:\n{}'.format(', '.join(sorted([name for name in user_vars.keys()]))))
 
-    @uservar.command(pass_context=True, name='deleteall', aliases=['removeall'])
+    @uservar.command(name='deleteall', aliases=['removeall'])
     async def uvar_deleteall(self, ctx):
         """Deletes ALL user variables."""
         await self.bot.say("This will delete **ALL** of your user variables (uvars). "
@@ -423,7 +425,7 @@ class Customization:
         await self.bot.mdb.uvars.delete_many({"owner": ctx.message.author.id})
         return await self.bot.say("OK. I have deleted all your uvars.")
 
-    @commands.group(pass_context=True, invoke_without_command=True, aliases=['gvar'])
+    @commands.group(invoke_without_command=True, aliases=['gvar'])
     async def globalvar(self, ctx, name=None):
         """Commands to manage global, community variables for use in snippets and aliases.
         If run without a subcommand, shows the value of a global variable.
@@ -437,7 +439,7 @@ class Customization:
         if gvar is None: gvar = {'owner_name': 'None', 'value': 'Not defined.'}
         return await self.bot.say(f"**{name}**:\n*Owner: {gvar['owner_name']}* ```\n{gvar['value']}\n```")
 
-    @globalvar.command(pass_context=True, name='create')
+    @globalvar.command(name='create')
     async def gvar_create(self, ctx, *, value):
         """Creates a global variable.
         A name will be randomly assigned upon creation."""
@@ -447,7 +449,7 @@ class Customization:
         await self.bot.mdb.gvars.insert_one(data)
         await self.bot.say(f"Created global variable `{name}`.")
 
-    @globalvar.command(pass_context=True, name='edit')
+    @globalvar.command(name='edit')
     async def gvar_edit(self, ctx, name, *, value):
         """Edits a global variable."""
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
@@ -459,7 +461,7 @@ class Customization:
             await self.bot.mdb.gvars.update_one({"key": name}, {"$set": {"value": value}})
         await self.bot.say(f'Global variable `{name}` edited.')
 
-    @globalvar.command(pass_context=True, name='editor')
+    @globalvar.command(name='editor')
     async def gvar_editor(self, ctx, name, user: discord.Member = None):
         """Toggles the editor status of a user."""
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
@@ -482,7 +484,7 @@ class Customization:
         else:
             await self.bot.say(f"Editors: {', '.join(gvar.get('editors', []))}")
 
-    @globalvar.command(pass_context=True, name='remove', aliases=['delete'])
+    @globalvar.command(name='remove', aliases=['delete'])
     async def gvar_remove(self, ctx, name):
         """Deletes a global variable."""
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
@@ -498,7 +500,7 @@ class Customization:
 
         await self.bot.say('Global variable {} removed.'.format(name))
 
-    @globalvar.command(pass_context=True, name='list')
+    @globalvar.command(name='list')
     async def gvar_list(self, ctx):
         """Lists all global variables for the user."""
         user_vars = []

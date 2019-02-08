@@ -7,8 +7,6 @@ from contextlib import redirect_stdout
 import discord
 from discord.ext import commands
 
-from utils import checks
-
 
 class REPL:
     def __init__(self, bot):
@@ -28,8 +26,8 @@ class REPL:
     def get_syntax_error(self, e):
         return '```py\n{0.text}{1:>{0.offset}}\n{2}: {0}```'.format(e, '^', type(e).__name__)
 
-    @commands.command(pass_context=True, hidden=True)
-    @checks.is_owner()
+    @commands.command(hidden=True)
+    @commands.is_owner()
     async def repl(self, ctx):
         msg = ctx.message
 
@@ -109,8 +107,8 @@ class REPL:
             except discord.HTTPException as e:
                 await self.bot.send_message(msg.channel, 'Unexpected error: `{}`'.format(e))
 
-    @commands.command(pass_context=True, hidden=True, name='eval')
-    @checks.is_owner()
+    @commands.command(hidden=True, name='eval')
+    @commands.is_owner()
     async def _eval(self, ctx, *, body: str):
         """Evaluates some code"""
 

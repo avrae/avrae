@@ -4,22 +4,6 @@ from discord.ext import commands
 import credentials
 
 
-#
-# This is a modified version of checks.py, originally made by Rapptz
-#
-#                 https://github.com/Rapptz
-#          https://github.com/Rapptz/RoboDanny/tree/async
-#
-
-
-def is_owner_check(ctx):
-    return ctx.message.author.id == credentials.owner_id
-
-
-def is_owner():
-    return commands.check(is_owner_check)
-
-
 # The permission system of the bot is based on a "just works" basis
 # You have permissions and the bot has permissions. If you meet the permissions
 # required to execute the command (and the bot does as well) then it goes through

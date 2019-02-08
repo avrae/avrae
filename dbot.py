@@ -19,16 +19,16 @@ from utils.redisIO import RedisIO
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
-SHARD_COUNT = 20 if not TESTING else 5
+SHARD_COUNT = 20 if not TESTING else 1
 prefix = '!' if not TESTING else '#'
 
 # -----COGS-----
 # DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.gametrack", "cogs5e.homebrew", "cogs5e.initTracker",
 #                 "cogs5e.lookup", "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization"]
-# STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.core", "cogsmisc.permissions", "cogsmisc.publicity", "cogsmisc.repl",
-#                "cogsmisc.stats", "utils.help"]
+# STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.permissions", "cogsmisc.repl",
+#                "utils.help"]
 DYNAMIC_COGS = []
-STATIC_COGS = []
+STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats"]
 
 
 class Avrae(commands.AutoShardedBot):
@@ -204,20 +204,20 @@ async def on_message(message):
             "{0.content}".format(message))
     except AttributeError:
         msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
-    if message.author.id in bot.get_cog("AdminUtils").muted:
-        return
-    if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
-        return
-    try:
-        guild_prefix = bot.global_prefixes.get(message.server.id, bot.prefix)
-    except:
-        guild_prefix = bot.prefix
-    if message.content.startswith(guild_prefix):
-        message.content = message.content.replace(guild_prefix, bot.prefix, 1)
-    elif message.content.startswith(bot.prefix):
-        return
-    if message.content.startswith(bot.prefix) and bot.state in ("init", "updating"):
-        return await message.channel.send("Bot is initializing, try again in a few seconds!")
+    # if message.author.id in bot.get_cog("AdminUtils").muted:
+    #     return
+    # if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
+    #     return
+    # try:
+    #     guild_prefix = bot.global_prefixes.get(message.server.id, bot.prefix)
+    # except:
+    #     guild_prefix = bot.prefix
+    # if message.content.startswith(guild_prefix):
+    #     message.content = message.content.replace(guild_prefix, bot.prefix, 1)
+    # elif message.content.startswith(bot.prefix):
+    #     return
+    # if message.content.startswith(bot.prefix) and bot.state in ("init", "updating"):
+    #     return await message.channel.send("Bot is initializing, try again in a few seconds!")
     await bot.process_commands(message)
 
 

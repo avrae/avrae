@@ -9,9 +9,6 @@ import time
 
 log = logging.getLogger(__name__)
 
-DISCORD_BOTS_API = 'https://bots.discord.pw/api'
-CARBONITEX_API_BOTDATA = 'https://www.carbonitex.net/discord/data/botdata.php'
-
 
 class Publicity:
     """
@@ -23,14 +20,9 @@ class Publicity:
         self.bot.loop.create_task(self.background_update())
 
     async def backup(self):
-        shard_servers = self.bot.rdb.jget('shard_servers', {0: len(self.bot.servers)})
-        shard_servers[self.bot.shard_id] = len(self.bot.servers)
-        self.bot.rdb.jset('shard_servers', shard_servers)
-
-        backup_chan = self.bot.get_channel('298542945479557120')
+        backup_chan = self.bot.get_channel(298542945479557120)
         if backup_chan is None or self.bot.testing: return
-        await self.bot.send_message(backup_chan, '{0} - {1}'.format(time.time(), sum(
-            a for a in self.bot.rdb.jget('shard_servers', {0: len(self.bot.servers)}).values())))
+        await backup_chan.send('{0} - {1}'.format(time.time(), len(self.bot.guilds)))
 
     async def background_update(self):
         try:

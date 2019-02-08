@@ -47,7 +47,7 @@ async def get_aliases(ctx):
 
 async def get_servaliases(ctx):
     servaliases = {}
-    async for servalias in ctx.bot.mdb.servaliases.find({"server": ctx.message.server.id}):
+    async for servalias in ctx.bot.mdb.servaliases.find({"server": ctx.guild.id}):
         servaliases[servalias['name']] = servalias['commands']
     return servaliases
 
@@ -61,8 +61,8 @@ async def get_snippets(ctx):
 
 async def get_servsnippets(ctx):
     servsnippets = {}
-    if ctx.message.server:
-        async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": ctx.message.server.id}):
+    if ctx.guild:
+        async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": ctx.guild.id}):
             servsnippets[servsnippet['name']] = servsnippet['snippet']
     return servsnippets
 

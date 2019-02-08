@@ -53,7 +53,7 @@ class Dice:
         >X/<X (greater than or less than X)"""
 
         if rollStr == '0/0':  # easter eggs
-            return await self.bot.say("What do you expect me to do, destroy the universe?")
+            return await ctx.send("What do you expect me to do, destroy the universe?")
 
         adv = 0
         self.bot.rdb.incr('dice_rolled_life')
@@ -63,23 +63,23 @@ class Dice:
         res = roll(rollStr, adv=adv)
         out = res.result
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
-        outStr = ctx.message.author.mention + '  :game_die:\n' + out
+        outStr = ctx.author.mention + '  :game_die:\n' + out
         if len(outStr) > 1999:
-            await self.bot.say(
-                ctx.message.author.mention + '  :game_die:\n[Output truncated due to length]\n**Result:** ' + str(
+            await ctx.send(
+                ctx.author.mention + '  :game_die:\n[Output truncated due to length]\n**Result:** ' + str(
                     res.plain))
         else:
-            await self.bot.say(outStr)
+            await ctx.send(outStr)
 
     @commands.command(pass_context=True, name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations: int, rollStr, *, args=''):
         """Rolls dice in xdy format a given number of times.
         Usage: !rrr <iterations> <xdy> [args]"""
         if iterations < 1 or iterations > 100:
-            return await self.bot.say("Too many or too few iterations.")
+            return await ctx.send("Too many or too few iterations.")
         self.bot.rdb.incr('dice_rolled_life')
         adv = 0
         out = []
@@ -97,17 +97,17 @@ class Dice:
             outStr = "Rolling {} iterations...\n[Output truncated due to length]\n".format(iterations) + \
                      '{} total.'.format(sum(o.total for o in out))
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
-        await self.bot.say(ctx.message.author.mention + '\n' + outStr)
+        await ctx.send(ctx.author.mention + '\n' + outStr)
 
     @commands.command(pass_context=True, name='iterroll', aliases=['rrr'])
     async def rrr(self, ctx, iterations: int, rollStr, dc: int = 0, *, args=''):
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
         if iterations < 1 or iterations > 100:
-            return await self.bot.say("Too many or too few iterations.")
+            return await ctx.send("Too many or too few iterations.")
         self.bot.rdb.incr('dice_rolled_life')
         adv = 0
         out = []
@@ -129,10 +129,10 @@ class Dice:
                                                                                                   dc) + '{} successes.'.format(
                 str(successes))
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
-        await self.bot.say(ctx.message.author.mention + '\n' + outStr)
+        await ctx.send(ctx.author.mention + '\n' + outStr)
 
     @commands.command(pass_context=True, aliases=['ma', 'monster_attack'])
     async def monster_atk(self, ctx, monster_name, atk_name='list', *, args=''):
@@ -151,7 +151,7 @@ class Dice:
         -h (hides monster name, image, and attack details)"""
 
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
@@ -163,10 +163,10 @@ class Dice:
             attacks_string = '\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
                                                                                   a['attackBonus'],
                                                                                   a['damage'] or 'no') for a in attacks)
-            return await self.bot.say("{}'s attacks:\n{}".format(monster_name, attacks_string))
+            return await ctx.send("{}'s attacks:\n{}".format(monster_name, attacks_string))
         attack = fuzzy_search(attacks, 'name', atk_name)
         if attack is None:
-            return await self.bot.say("No attack with that name found.", delete_after=15)
+            return await ctx.send("No attack with that name found.", delete_after=15)
         args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
         if not args.last('h', type_=bool):
@@ -186,11 +186,11 @@ class Dice:
 
         if args.last('h', type_=bool):
             try:
-                await self.bot.send_message(ctx.message.author, embed=result['full_embed'])
+                await ctx.author.send(embed=result['full_embed'])
             except:
                 pass
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
 
     @commands.command(pass_context=True, aliases=['mc'])
     async def monster_check(self, ctx, monster_name, check, *, args=''):
@@ -217,7 +217,7 @@ class Dice:
             try:
                 skill = next(a for a in skills.keys() if check.lower() in a.lower())
             except StopIteration:
-                return await self.bot.say('That\'s not a valid check.')
+                return await ctx.send('That\'s not a valid check.')
 
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
@@ -280,9 +280,9 @@ class Dice:
         if monster.source == 'homebrew':
             embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
@@ -310,7 +310,7 @@ class Dice:
             try:
                 save = next(a for a in saves.keys() if save.lower() in a.lower())
             except StopIteration:
-                return await self.bot.say('That\'s not a valid save.')
+                return await ctx.send('That\'s not a valid save.')
 
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
@@ -364,9 +364,9 @@ class Dice:
         if monster.source == 'homebrew':
             embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 

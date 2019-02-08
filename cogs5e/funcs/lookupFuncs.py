@@ -87,8 +87,8 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
         custom_monsters = []
         bestiary_id = None
     choices = list(itertools.chain(c.monster_mash, custom_monsters))
-    if ctx.message.server:
-        async for servbestiary in ctx.bot.mdb.bestiaries.find({"server_active": ctx.message.server.id}, ['monsters']):
+    if ctx.guild:
+        async for servbestiary in ctx.bot.mdb.bestiaries.find({"server_active": ctx.guild.id}, ['monsters']):
             choices.extend(
                 Monster.from_bestiary(m) for m in servbestiary['monsters'] if servbestiary['_id'] != bestiary_id)
 
@@ -143,8 +143,8 @@ async def get_spell_choices(ctx):
         custom_spells = []
         tome_id = None
     choices = list(itertools.chain(c.spells, custom_spells))
-    if ctx.message.server:
-        async for servtome in ctx.bot.mdb.tomes.find({"server_active": ctx.message.server.id}, ['spells']):
+    if ctx.guild:
+        async for servtome in ctx.bot.mdb.tomes.find({"server_active": ctx.guild.id}, ['spells']):
             choices.extend(Spell.from_dict(s) for s in servtome['spells'] if servtome['_id'] != tome_id)
     return choices
 

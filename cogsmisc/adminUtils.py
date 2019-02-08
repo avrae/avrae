@@ -13,13 +13,10 @@ import sys
 import uuid
 
 import discord
-from discord import Server
-from discord.channel import PrivateChannel
 from discord.enums import ChannelType
 from discord.errors import NotFound
 from discord.ext import commands
 
-from utils import checks
 from utils.functions import discord_trim
 
 GITPATH = os.environ.get("GITPATH", "git")
@@ -59,7 +56,7 @@ class AdminUtils:
                 log.warning(f"Failed to reset loglevel of {logger}")
 
     @commands.command(hidden=True)
-    @checks.is_owner()
+    @commands.is_owner()
     async def blacklist(self, _id):
         self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
         self.blacklisted_serv_ids.append(_id)
@@ -67,7 +64,7 @@ class AdminUtils:
         await self.bot.say(':ok_hand:')
 
     @commands.command(hidden=True)
-    @checks.is_owner()
+    @commands.is_owner()
     async def whitelist(self, _id):
         whitelist = self.bot.rdb.not_json_get('server-whitelist', [])
         whitelist.append(_id)
@@ -75,19 +72,19 @@ class AdminUtils:
         await self.bot.say(':ok_hand:')
 
     @commands.command(pass_context=True, hidden=True)
-    @checks.is_owner()
+    @commands.is_owner()
     async def chanSay(self, ctx, channel: str, *, message: str):
         """Like .say, but works across servers. Requires channel id."""
         await self.admin_command(ctx, "chanSay", message=message, channel=channel)
 
     @commands.command(hidden=True, pass_context=True)
-    @checks.is_owner()
+    @commands.is_owner()
     async def shardping(self, ctx):
         """Pings all shards."""
         await self.admin_command(ctx, "ping", _expected_responses=self.bot.shard_count)
 
     @commands.command(hidden=True)
-    @checks.is_owner()
+    @commands.is_owner()
     async def servInfo(self, server: str = None):
         out = ''
         page = None
@@ -146,7 +143,7 @@ class AdminUtils:
             await self.bot.say(out[page - 1])
 
     @commands.command(hidden=True, name='leave')
-    @checks.is_owner()
+    @commands.is_owner()
     async def leave_server(self, servID: str):
         req = self.request_leave_server(servID)
         for _ in range(300):  # timeout after 30 sec
@@ -164,7 +161,7 @@ class AdminUtils:
         await self.bot.say(out)
 
     @commands.command(hidden=True)
-    @checks.is_owner()
+    @commands.is_owner()
     async def mute(self, target):
         """Mutes a person by ID."""
         self.muted = self.bot.rdb.not_json_get('muted', [])
@@ -181,7 +178,7 @@ class AdminUtils:
         self.bot.rdb.not_json_set('muted', self.muted)
 
     @commands.command(hidden=True)
-    @checks.is_owner()
+    @commands.is_owner()
     async def loglevel(self, level: int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
         loglevels = self.bot.rdb.jget('loglevels', {})
@@ -203,7 +200,7 @@ class AdminUtils:
         await self.bot.say(out)
 
     @commands.command(hidden=True)
-    @checks.is_owner()
+    @commands.is_owner()
     async def changepresence(self, status=None, *, msg=None):
         """Changes Avrae's presence. Status: online, idle, dnd"""
         statuslevel = {'online': 0, 'idle': 1, 'dnd': 2}
@@ -223,7 +220,7 @@ class AdminUtils:
         await self.bot.say(out)
 
     @commands.command(hidden=True)
-    @checks.is_owner()
+    @commands.is_owner()
     async def updatebot(self, pull_git: bool = True):
         successful = True
         self.bot.state = "updating"

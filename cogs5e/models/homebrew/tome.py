@@ -36,7 +36,7 @@ class Tome:
 
     @classmethod
     async def from_ctx(cls, ctx):
-        active_tome = await ctx.bot.mdb.tomes.find_one({"active": ctx.message.author.id})
+        active_tome = await ctx.bot.mdb.tomes.find_one({"active": str(ctx.author.id)})
         if active_tome is None:
             raise NoActiveBrew()
         return cls.from_dict(active_tome)
@@ -58,12 +58,12 @@ class Tome:
 
     async def set_active(self, ctx):
         await ctx.bot.mdb.tomes.update_many(
-            {"active": ctx.message.author.id},
-            {"$pull": {"active": ctx.message.author.id}}
+            {"active": str(ctx.author.id)},
+            {"$pull": {"active": str(ctx.author.id)}}
         )
         await ctx.bot.mdb.tomes.update_one(
             {"_id": self.id},
-            {"$push": {"active": ctx.message.author.id}}
+            {"$push": {"active": str(ctx.author.id)}}
         )
 
     async def toggle_server_active(self, ctx):
@@ -74,15 +74,15 @@ class Tome:
         """
         data = await ctx.bot.mdb.tomes.find_one({"_id": self.id}, ["server_active"])
         server_active = data.get('server_active', [])
-        if ctx.message.server.id in server_active:
-            server_active.remove(ctx.message.server.id)
+        if str(ctx.guild.id) in server_active:
+            server_active.remove(str(ctx.guild.id))
         else:
-            server_active.append(ctx.message.server.id)
+            server_active.append(str(ctx.guild.id))
         await ctx.bot.mdb.tomes.update_one(
             {"_id": self.id},
             {"$set": {"server_active": server_active}}
         )
-        return ctx.message.server.id in server_active
+        return str(ctx.guild.id) in server_active
 
     @staticmethod
     def view_query(user_id):
@@ -99,7 +99,7 @@ class Tome:
 
 async def select_tome(ctx, name):
     available_tome_names = await ctx.bot.mdb.tomes.find(
-        Tome.view_query(ctx.message.author.id),
+        Tome.view_query(str(ctx.author.id)),
         ['name', '_id']
     ).to_list(None)
 

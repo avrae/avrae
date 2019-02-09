@@ -515,13 +515,13 @@ async def confirm(ctx, message, delete_msgs=False):
     :param delete_msgs: Whether to delete the messages.
     :return: Whether the user confirmed or not. None if no reply was recieved
     """
-    msg = await ctx.bot.send_message(ctx.message.channel, message)
-    reply = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+    msg = await ctx.channel.send(message)
+    reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
     replyBool = get_positivity(reply.content) if reply is not None else None
     if delete_msgs:
         try:
-            await ctx.bot.delete_message(msg)
-            await ctx.bot.delete_message(reply)
+            await msg.delete()
+            await reply.delete()
         except:
             pass
     return replyBool
@@ -642,3 +642,12 @@ def format_d20(adv, reroll=None):
     elif adv == -1:
         return f"{base_d20}kl1"
     return base_d20
+
+
+def auth_and_chan(ctx):
+    """Message check: same author and channel"""
+
+    def chk(msg):
+        return msg.author == ctx.author and msg.channel == ctx.channel
+
+    return chk

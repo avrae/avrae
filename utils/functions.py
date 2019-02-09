@@ -291,10 +291,11 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, 
     page = 0
     pages = paginate(choices, 10)
     m = None
+    selectMsg = None
 
     def chk(msg):
         valid = [str(v) for v in range(1, len(choices) + 1)] + ["c", "n", "p"]
-        return msg.content.lower() in valid
+        return msg.author == ctx.author and msg.channel == ctx.channel and msg.content.lower() in valid
 
     for n in range(200):
         _choices = pages[page]
@@ -311,50 +312,39 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, 
         embed.colour = random.randint(0, 0xffffff)
         if message:
             embed.add_field(name="Note", value=message)
+        if selectMsg:
+            try:
+                await selectMsg.delete()
+            except:
+                pass
         if not pm:
-            if n == 0:
-                selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
-            else:
-                newSelectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
+            selectMsg = await ctx.channel.send(embed=embed)
         else:
             embed.add_field(name="Instructions",
                             value="Type your response in the channel you called the command. This message was PMed to "
                                   "you to hide the monster name.")
-            if n == 0:
-                selectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
-            else:
-                newSelectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
+            selectMsg = await ctx.author.send(embed=embed)
 
-        if n > 0:  # clean up old messages
-            try:
-                await ctx.bot.delete_message(selectMsg)
-                await ctx.bot.delete_message(m)
-            except:
-                pass
-            finally:
-                selectMsg = newSelectMsg
-
-        m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel,
-                                           check=chk)
+        m = await ctx.bot.wait_for('message', timeout=30, check=chk)
         if m is None:
             break
         if m.content.lower() == 'n':
             if page + 1 < len(pages):
                 page += 1
             else:
-                await ctx.bot.send_message(ctx.message.channel, "You are already on the last page.")
+                await ctx.channel.send("You are already on the last page.")
         elif m.content.lower() == 'p':
             if page - 1 >= 0:
                 page -= 1
             else:
-                await ctx.bot.send_message(ctx.message.channel, "You are already on the first page.")
+                await ctx.channel.send("You are already on the first page.")
         else:
             break
 
     if delete and not pm:
         try:
-            await ctx.bot.delete_message(selectMsg)
-            await ctx.bot.delete_message(m)
+            await m.delete()
+            await selectMsg.delete()
         except:
             pass
     if m is None or m.content.lower() == "c": raise SelectionCancelled()

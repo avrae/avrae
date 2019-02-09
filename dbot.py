@@ -120,8 +120,7 @@ async def on_command_error(ctx, error):
         return await ctx.send(str(error))
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if isinstance(error, commands.CheckFailure):
-        await ctx.send(
-            "Error: Either you do not have the permissions to run this command, the command is disabled, or something went wrong internally.")
+        await ctx.send("Error: You are not allowed to run this command.")
         return
     elif isinstance(error,
                     (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):

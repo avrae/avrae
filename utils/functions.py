@@ -343,8 +343,8 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, 
 
     if delete and not pm:
         try:
-            await m.delete()
             await selectMsg.delete()
+            await m.delete()
         except:
             pass
     if m is None or m.content.lower() == "c": raise SelectionCancelled()

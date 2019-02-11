@@ -98,7 +98,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
             list_filter = lambda e: old(e) and e.srd
         else:
             list_filter = lambda e: e.srd
-        message = "This server only shows results from the 5e SRD."
+        message = "Only results from the 5e SRD are included."
 
     def get_homebrew_formatted_name(monster):
         if monster.source == 'homebrew':
@@ -123,7 +123,7 @@ async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, mes
             list_filter = lambda e: old(e) and e.srd
         else:
             list_filter = lambda e: e.srd
-        message = "This server only shows results from the 5e SRD."
+        message = "Only results from the 5e SRD are included."
 
     def get_homebrew_formatted_name(spell):
         if spell.source == 'homebrew':

@@ -24,10 +24,10 @@ prefix = '!' if not TESTING else '#'
 
 # -----COGS-----
 # DYNAMIC_COGS = ["cogs5e.gametrack", "cogs5e.initTracker",
-#                 "cogs5e.lookup", "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization"]
+#                 "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization"]
 # STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.permissions", "cogsmisc.repl",
 #                "utils.help"]
-DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew"]
+DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup"]
 STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats"]
 
 
@@ -96,13 +96,15 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print('------')
-    await enter()
+    if bot.state == "init":
+        await enter()
 
 
 async def enter():
     await bot.wait_until_ready()
     appInfo = await bot.application_info()
     bot.owner = appInfo.owner
+    bot.state = "connect"
 
 
 @bot.event

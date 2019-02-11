@@ -10,13 +10,13 @@ import textwrap
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs.lookupFuncs import select_monster_full, c, HOMEBREW_EMOJI, HOMEBREW_ICON, select_spell_full
+from cogs5e.funcs.lookupFuncs import HOMEBREW_EMOJI, HOMEBREW_ICON, c, select_monster_full, select_spell_full
 from cogs5e.funcs.lookup_ml import ml_spell_search
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
 from utils import checks
-from utils.functions import get_positivity, parse_data_entry, ABILITY_MAP, search_and_select, generate_token
+from utils.functions import ABILITY_MAP, generate_token, get_positivity, parse_data_entry, search_and_select
 
 CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
                       'spellsknown': "Spells Known",
@@ -53,10 +53,10 @@ class Lookup:
     @commands.command(aliases=['status'])
     async def condition(self, ctx, *, name: str):
         """Looks up a condition."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        destination = ctx.message.author if pm else ctx.message.channel
+        destination = ctx.author if pm else ctx.channel
 
         result = await search_and_select(ctx, c.conditions, name, lambda e: e['name'])
 
@@ -66,15 +66,15 @@ class Lookup:
         embed.title = result['name']
         embed.description = result['desc']
 
-        await self.bot.send_message(destination, embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def rule(self, ctx, *, name: str):
         """Looks up a rule."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        destination = ctx.message.author if pm else ctx.message.channel
+        destination = ctx.author if pm else ctx.channel
 
         result = await search_and_select(ctx, c.rules, name, lambda e: e['name'])
 
@@ -88,16 +88,16 @@ class Lookup:
         for piece in desc[2:]:
             embed.add_field(name="** **", value=piece)
 
-        await self.bot.send_message(destination, embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
-        destination = ctx.message.author if pm else ctx.message.channel
+        destination = ctx.author if pm else ctx.channel
 
         result = await search_and_select(ctx, c.feats, name, lambda e: e['name'])
 
@@ -118,16 +118,16 @@ class Lookup:
             embed.add_field(name=_name, value=piece)
             _name = '** **'
         embed.set_footer(text=f"Feat | {result['source']} {result['page']}")
-        await self.bot.send_message(destination, embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
-        destination = ctx.message.author if pm else ctx.message.channel
+        destination = ctx.author if pm else ctx.channel
 
         result = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'], srd=srd)
 
@@ -144,16 +144,16 @@ class Lookup:
         for piece in desc[2:]:
             embed.add_field(name="** **", value=piece)
 
-        await self.bot.send_message(destination, embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
-        destination = ctx.message.author if pm else ctx.message.channel
+        destination = ctx.author if pm else ctx.channel
 
         result = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name, srd=srd and (lambda e: e.srd))
 
@@ -176,16 +176,16 @@ class Lookup:
             for piece in f_text[1:]:
                 embed.add_field(name="** **", value=piece)
 
-        await self.bot.send_message(destination, embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
-        destination = ctx.message.author if pm else ctx.message.channel
+        destination = ctx.author if pm else ctx.channel
 
         result = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'], srd=srd)
 
@@ -202,19 +202,19 @@ class Lookup:
         for piece in desc[2:]:
             embed.add_field(name="** **", value=piece)
 
-        await self.bot.send_message(destination, embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command(name='class')
     async def _class(self, ctx, name: str, level: int = None):
         """Looks up a class, or all features of a certain level."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
-        destination = ctx.message.author if pm else ctx.message.channel
+        destination = ctx.author if pm else ctx.channel
 
         if level is not None and not 0 < level < 21:
-            return await self.bot.say("Invalid level.")
+            return await ctx.send("Invalid level.")
 
         result = await search_and_select(ctx, c.classes, name, lambda e: e['name'], srd=srd)
 
@@ -280,16 +280,16 @@ class Lookup:
 
             embed.set_footer(text="Use !classfeat to look up a feature if it is cut off.")
 
-        await self.bot.send_message(destination, embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def subclass(self, ctx, name: str):
         """Looks up a subclass."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
-        destination = ctx.message.author if pm else ctx.message.channel
+        destination = ctx.author if pm else ctx.channel
 
         result = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'], srd=srd)
 
@@ -312,12 +312,12 @@ class Lookup:
 
         embed.set_footer(text="Use !classfeat to look up a feature if it is cut off.")
 
-        await self.bot.send_message(destination, embed=embed)
+        await destination.send(embed=embed)
 
     @commands.command()
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -342,9 +342,9 @@ class Lookup:
 
         # do stuff here
         if pm:
-            await self.bot.send_message(ctx.message.author, embed=embed)
+            await ctx.author.send(embed=embed)
         else:
-            await self.bot.say(embed=embed)
+            await ctx.send(embed=embed)
 
     @commands.command()
     @commands.guild_only()
@@ -356,7 +356,7 @@ class Lookup:
                               -pm_result [True/False] - PMs the result of the lookup to reduce spam.
                               -srd [True/False] - toggles SRD lookup restriction in a server."""
         args = shlex.split(args.lower())
-        guild_id = ctx.message.server.id
+        guild_id = str(ctx.guild.id)
         guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
         if guild_settings is None:
             guild_settings = {}
@@ -388,9 +388,9 @@ class Lookup:
 
         if guild_settings:
             await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
-            await self.bot.say("Lookup settings set:\n" + out)
+            await ctx.send("Lookup settings set:\n" + out)
         else:
-            await self.bot.say("No settings found. Make sure your syntax is correct.")
+            await ctx.send("No settings found. Make sure your syntax is correct.")
 
     @commands.command()
     async def token(self, ctx, *, name=None):
@@ -399,10 +399,10 @@ class Lookup:
         if name is None:
             token_cmd = self.bot.get_command('playertoken')
             if token_cmd is None:
-                return await self.bot.say("Error: SheetManager cog not loaded.")
+                return await ctx.send("Error: SheetManager cog not loaded.")
             return await ctx.invoke(token_cmd)
 
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         srd = guild_settings.get("srd", False)
 
         monster = await select_monster_full(ctx, name, srd=srd)
@@ -414,7 +414,7 @@ class Lookup:
             e = EmbedWithAuthor(ctx)
             e.title = monster.name
             e.description = "Token not available."
-            return await self.bot.say(embed=e)
+            return await ctx.send(embed=e)
 
         url = monster.get_image_url()
 
@@ -425,35 +425,33 @@ class Lookup:
             embed.set_image(url=url)
             embed.set_footer(text="This command may not support all monsters.")
 
-            await self.bot.say(embed=embed)
+            await ctx.send(embed=embed)
         else:
             if not url:
-                return await self.bot.send_message(ctx.message.channel, "This monster has no image.")
+                return await ctx.channel.send("This monster has no image.")
 
             try:
                 processed = await generate_token(url)
             except Exception as e:
-                return await self.bot.send_message(ctx.message.channel, f"Error generating token: {e}")
+                return await ctx.channel.send(f"Error generating token: {e}")
 
-            await self.bot.send_file(ctx.message.channel, processed,
-                                     content="I generated this token for you! If it seems "
-                                             "wrong, you can make your own at "
-                                             "<http://rolladvantage.com/tokenstamp/>!",
-                                     filename="image.png")
+            file = discord.File(processed, filename="image.png")
+            await ctx.channel.send("I generated this token for you! If it seems  wrong, you can make your own at "
+                                   "<http://rolladvantage.com/tokenstamp/>!", file=file)
 
     @commands.command()
     async def monster(self, ctx, *, name: str):
         """Looks up a monster.
         Generally requires a Game Master role to show full stat block.
         Game Master Roles: GM, DM, Game Master, Dungeon Master"""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
         visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
-        if guild_settings.get("req_dm_monster", True) and ctx.message.server:
+        if guild_settings.get("req_dm_monster", True) and ctx.guild:
             visible = True if any(
-                ro in [str(r).lower() for r in ctx.message.author.roles] for ro in visible_roles) else False
+                ro in [str(r).lower() for r in ctx.author.roles] for ro in visible_roles) else False
         else:
             visible = True
 
@@ -472,7 +470,7 @@ class Lookup:
             e = EmbedWithAuthor(ctx)
             e.title = monster.name
             e.description = "Description not available."
-            return await self.bot.say(embed=e)
+            return await ctx.send(embed=e)
 
         def safe_append(title, desc):
             if len(desc) < 1024:
@@ -579,14 +577,14 @@ class Lookup:
 
         for embed in embed_queue:
             if pm:
-                await self.bot.send_message(ctx.message.author, embed=embed)
+                await ctx.author.send(embed=embed)
             else:
-                await self.bot.say(embed=embed)
+                await ctx.send(embed=embed)
 
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -647,14 +645,14 @@ class Lookup:
 
         for embed in embed_queue:
             if pm:
-                await self.bot.send_message(ctx.message.author, embed=embed)
+                await ctx.author.send(embed=embed)
             else:
-                await self.bot.say(embed=embed)
+                await ctx.send(embed=embed)
 
     @commands.command(name='item')
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
-        guild_settings = await self.get_settings(ctx.message.server)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
@@ -666,8 +664,8 @@ class Lookup:
         except NoActiveBrew:
             custom_items = []
         choices = list(itertools.chain(c.items, custom_items))
-        if ctx.message.server:
-            async for servpack in ctx.bot.mdb.packs.find({"server_active": ctx.message.server.id}):
+        if ctx.guild:
+            async for servpack in ctx.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}):
                 choices.extend(Pack.from_dict(servpack).get_search_formatted_items())
 
         def get_homebrew_formatted_name(_item):
@@ -781,20 +779,20 @@ class Lookup:
             field_name = "** **"
 
         if pm:
-            await self.bot.send_message(ctx.message.author, embed=embed)
+            await ctx.author.send(embed=embed)
         else:
-            await self.bot.say(embed=embed)
+            await ctx.send(embed=embed)
 
     async def send_srd_error(self, ctx, data):
         e = EmbedWithAuthor(ctx)
         e.title = data['name']
         e.description = "Description not available."
-        return await self.bot.say(embed=e)
+        return await ctx.send(embed=e)
 
     async def get_settings(self, guild):
         settings = {}
         if guild is not None:
-            settings = await self.bot.mdb.lookupsettings.find_one({"server": guild.id})
+            settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
         return settings or {}
 
     async def add_training_data(self, lookup_type, query, result_name):

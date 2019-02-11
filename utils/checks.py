@@ -1,8 +1,6 @@
 import discord.utils
 from discord.ext import commands
 
-import credentials
-
 
 # The permission system of the bot is based on a "just works" basis
 # You have permissions and the bot has permissions. If you meet the permissions
@@ -15,11 +13,11 @@ import credentials
 # Of course, the owner will always be able to execute commands.
 
 def check_permissions(ctx, perms):
-    if is_owner_check(ctx):
+    if commands.is_owner():
         return True
 
-    ch = ctx.message.channel
-    author = ctx.message.author
+    ch = ctx.channel
+    author = ctx.author
     try:
         resolved = ch.permissions_for(author)
     except AttributeError:
@@ -43,33 +41,9 @@ def role_or_permissions(ctx, check, **perms):
     return role is not None
 
 
-def mod_or_permissions(**perms):
-    def predicate(ctx):
-        mod_role = "Bot Mod".lower()
-        admin_role = "Bot Admin".lower()
-        return role_or_permissions(ctx, lambda r: r.name.lower() in (mod_role, admin_role), **perms)
-
-    return commands.check(predicate)
-
-
 def admin_or_permissions(**perms):
     def predicate(ctx):
         admin_role = "Bot Admin".lower()
         return role_or_permissions(ctx, lambda r: r.name.lower() == admin_role.lower(), **perms)
-
-    return commands.check(predicate)
-
-
-def serverowner_or_permissions(**perms):
-    def predicate(ctx):
-        if ctx.message.server is None:
-            return False
-        server = ctx.message.server
-        owner = server.owner
-
-        if ctx.message.author.id == owner.id:
-            return True
-
-        return check_permissions(ctx, perms)
 
     return commands.check(predicate)

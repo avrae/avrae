@@ -101,7 +101,7 @@ class Combat:
     @property
     def current_combatant(self):
         """The combatant whose turn it currently is."""
-        return next((c for c in self._combatants if c.index == self.index), None) if self.index is not None else None
+        return self._combatants[self.index] if self.index is not None else None
 
     @property
     def next_combatant(self):
@@ -114,7 +114,7 @@ class Combat:
             index = 0
         else:
             index = self.index + 1
-        return next(c for c in self._combatants if c.index == index) if index is not None else None
+        return self._combatants[index] if index is not None else None
 
     def get_combatants(self, groups=False):
         """
@@ -136,8 +136,8 @@ class Combat:
         self._combatants.append(combatant)
         self.sort_combatants()
 
-    def remove_combatant(self, combatant, ignore_callback=False):
-        if not ignore_callback:
+    def remove_combatant(self, combatant, ignore_remove_hook=False):
+        if not ignore_remove_hook:
             combatant.on_remove()
         if not combatant.group:
             self._combatants.remove(combatant)

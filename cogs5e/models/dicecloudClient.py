@@ -8,7 +8,7 @@ import time
 from MeteorClient import MeteorClient
 
 import credentials
-from cogs5e.models.errors import LoginFailure, InsertFailure, MeteorClientException
+from cogs5e.models.errors import InsertFailure, LoginFailure, MeteorClientException
 
 TESTING = (os.environ.get("TESTING", False) or 'test' in sys.argv)
 UNAME = 'avrae' if not TESTING else credentials.test_dicecloud_user
@@ -69,12 +69,14 @@ class DicecloudClient(MeteorClient):
         return cls.instance
 
     def initialize(self):
-        log.info(f"Initializing Dicecloud client (debug={TESTING})")
+        log.warning(f"Initializing Dicecloud client (debug={TESTING})")
         self.connect()
         loops = 0
         while (not self.connected) and loops < 100:
             time.sleep(0.1)
             loops += 1
+        if not self.connected:
+            raise LoginFailure()
         log.info(f"Connected to Dicecloud in {loops/10} seconds")
 
         def on_login(error, data):
@@ -90,7 +92,14 @@ class DicecloudClient(MeteorClient):
         while not self.logged_in and loops < 100:
             time.sleep(0.1)
             loops += 1
+        if not self.logged_in:
+            raise LoginFailure()
         log.info(f"Logged in as {self.user_id}")
+
+    async def ensure_connected(self):
+        if self.logged_in:  # everything is fine:tm:
+            return
+        asyncio.get_event_loop().run_in_executor(None, self.initialize)
 
     async def _get_list_id(self, character, list_name=None):
         """
@@ -124,6 +133,7 @@ class DicecloudClient(MeteorClient):
 
     async def sync_add_spell(self, character, spell):
         """Adds a spell to the dicecloud list."""
+        await self.ensure_connected()
         assert character.live
         list_id = await self._get_list_id(character)
         log.info(list_id)
@@ -166,6 +176,7 @@ class DicecloudClient(MeteorClient):
         :param spells: (list) The list of spells to add
         :param spell_list: (str) The spell list name to search for in Dicecloud.
         """
+        await self.ensure_connected()
         assert character.live
         list_id = await self._get_list_id(character, spell_list)
         log.info(list_id)
@@ -227,6 +238,7 @@ class DicecloudClient(MeteorClient):
         self.remove('characters', {'_id': charId})
 
     async def get_user_id(self, username: str):
+        await self.ensure_connected()
         userId = None
 
         def get_id_cb(err, data):

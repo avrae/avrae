@@ -13,7 +13,7 @@ from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import SelectionException
-from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
+from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from utils.argparser import argparse
 from utils.functions import confirm, get_selection
 
@@ -434,9 +434,19 @@ class InitTracker:
         if combat.index is None:
             return await self.bot.say("Please start combat with `!init next` first.")
 
-        combat.skip_rounds(numrounds)
+        toRemove = []
+        for co in combat.get_combatants():
+            if isinstance(co, MonsterCombatant) and co.hp <= 0 and co is not combat.current_combatant:
+                toRemove.append(co)
 
-        await self.bot.say(combat.get_turn_str())
+        combat.skip_rounds(numrounds)
+        out = combat.get_turn_str()
+
+        for co in toRemove:
+            combat.remove_combatant(co)
+            out += "{} automatically removed from combat.\n".format(co.name)
+
+        await self.bot.say(out)
         await combat.final()
 
     @init.command(name="reroll", aliases=['shuffle'])
@@ -971,7 +981,13 @@ class InitTracker:
         else:
             spell = await select_spell_full(ctx, spell_name)
 
-        targets = [await combat.select_combatant(t, f"Select target #{i + 1}.") for i, t in enumerate(args.get('t'))]
+        targets = []
+        for i, t in enumerate(args.get('t')):
+            target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=True)
+            if isinstance(target, CombatantGroup):
+                targets.extend(target.get_combatants())
+            else:
+                targets.append(target)
 
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
 

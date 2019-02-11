@@ -433,9 +433,19 @@ class InitTracker:
         if combat.index is None:
             return await self.bot.say("Please start combat with `!init next` first.")
 
-        combat.skip_rounds(numrounds)
+        toRemove = []
+        for co in combat.get_combatants():
+            if isinstance(co, MonsterCombatant) and co.hp <= 0 and co is not combat.current_combatant:
+                toRemove.append(co)
 
-        await self.bot.say(combat.get_turn_str())
+        combat.skip_rounds(numrounds)
+        out = combat.get_turn_str()
+
+        for co in toRemove:
+            combat.remove_combatant(co)
+            out += "{} automatically removed from combat.\n".format(co.name)
+
+        await self.bot.say(out)
         await combat.final()
 
     @init.command(pass_context=True, name="reroll", aliases=['shuffle'])

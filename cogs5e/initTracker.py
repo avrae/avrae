@@ -13,7 +13,7 @@ from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import SelectionException
-from cogs5e.models.initiative import Combat, Combatant, MonsterCombatant, Effect, PlayerCombatant, CombatantGroup
+from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from utils.argparser import argparse
 from utils.functions import confirm, get_selection
 
@@ -980,7 +980,13 @@ class InitTracker:
         else:
             spell = await select_spell_full(ctx, spell_name)
 
-        targets = [await combat.select_combatant(t, f"Select target #{i + 1}.") for i, t in enumerate(args.get('t'))]
+        targets = []
+        for i, t in enumerate(args.get('t')):
+            target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=True)
+            if isinstance(target, CombatantGroup):
+                targets.extend(target.get_combatants())
+            else:
+                targets.append(target)
 
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
 

@@ -32,7 +32,6 @@ from cogs5e.sheets.gsheet import GoogleSheet
 from utils.argparser import argparse
 from utils.functions import a_or_an, format_d20, get_positivity, list_get
 from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
-from utils.loggers import TextLogger
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +42,6 @@ class SheetManager:
 
     def __init__(self, bot):
         self.bot = bot
-        self.logger = TextLogger('dicecloud.txt')
 
         self.gsheet_client = None
         self._gsheet_initializing = False
@@ -615,7 +613,6 @@ class SheetManager:
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(_id)
             loading = await self.bot.say('Updating character data from Dicecloud...')
-            self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(_id))
         elif sheet_type == 'google':
             try:
                 parser = GoogleSheet(_id, self.gsheet_client)
@@ -987,8 +984,6 @@ class SheetManager:
 
         override = await self._confirm_overwrite(ctx, f"dicecloud-{url}")
         if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
-
-        self.logger.text_log(ctx, "Dicecloud Request ({}): ".format(url))
 
         loading = await self.bot.say('Loading character data from Dicecloud...')
         parser = DicecloudParser(url)

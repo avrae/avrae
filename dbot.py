@@ -184,13 +184,13 @@ async def on_command_error(ctx, error):
         await bot.owner.send(
             f"**{error_msg}**\n" \
             + "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(
-                ctx.message.channel, ctx.message.channel.id, ctx.message.server,
-                ctx.message.server.id, repr(error),
+                ctx.channel, ctx.channel.id, ctx.guild,
+                ctx.guild.id, repr(error),
                 ctx.message.content))
     except AttributeError:
         await bot.owner.send(f"**{error_msg}**\n" \
                              + "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
-            ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
+            ctx.author.mention, str(ctx.author), repr(error), ctx.message.content))
     for o in discord_trim(tb):
         await bot.owner.send(o)
     log.error("Error caused by message: `{}`".format(ctx.message.content))
@@ -201,7 +201,7 @@ async def on_command_error(ctx, error):
 async def on_message(message):
     try:
         msglog.debug(
-            "chan {0.channel} ({0.channel.id}), serv {0.server} ({0.server.id}), author {0.author} ({0.author.id}): "
+            "chan {0.channel} ({0.channel.id}), serv {0.guild} ({0.guild.id}), author {0.author} ({0.author.id}): "
             "{0.content}".format(message))
     except AttributeError:
         msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
@@ -210,7 +210,7 @@ async def on_message(message):
     # if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
     #     return
     # try:
-    #     guild_prefix = bot.global_prefixes.get(message.server.id, bot.prefix)
+    #     guild_prefix = bot.global_prefixes.get(message.guild.id, bot.prefix)
     # except:
     #     guild_prefix = bot.prefix
     # if message.content.startswith(guild_prefix):
@@ -227,7 +227,7 @@ async def on_command(ctx):
     bot.rdb.incr('commands_used_life')
     try:
         log.debug(
-            "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.server} ({0.message.server.id}), "
+            "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "
             "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(
                 ctx))
     except AttributeError:

@@ -112,9 +112,12 @@ class GameTrack:
         -h - Hides the character summary output."""
         character = await Character.from_ctx(ctx)
         reset = character.short_rest()
+        reset_vals = "None"
         embed = EmbedWithCharacter(character, name=False)
         embed.title = f"{character.get_name()} took a Short Rest!"
-        embed.add_field(name="Reset Values", value=', '.join(set(reset)))
+        if reset:
+            reset_vals = ', '.join(set(reset))
+        embed.add_field(name="Reset Values", value=reset_vals)
         await character.commit(ctx)
         await self.bot.say(embed=embed)
         if not '-h' in args:

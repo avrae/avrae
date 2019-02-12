@@ -603,7 +603,7 @@ def clean_content(content, ctx):
 
     transformations.update(second_mention_transforms)
 
-    if ctx.message.server is not None:
+    if ctx.guild is not None:
         role_transforms = {
             re.escape('<@&{0.id}>'.format(role)): '@' + role.name
             for role in ctx.message.role_mentions

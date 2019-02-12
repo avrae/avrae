@@ -23,23 +23,22 @@ class PBPUtils:
     async def echo(self, ctx, *, msg):
         """Echos a message."""
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
-
-        await self.bot.say(ctx.message.author.display_name + ": " + clean_content(msg, ctx))
+        await ctx.send(ctx.author.display_name + ": " + clean_content(msg, ctx))
 
     @commands.command()
     async def techo(self, ctx, seconds: int, *, msg):
         """Echos a message, and deletes it after a few seconds."""
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
         seconds = min(max(0, seconds), 600)
 
-        await self.bot.say(ctx.message.author.display_name + ": " + clean_content(msg, ctx), delete_after=seconds)
+        await ctx.send(ctx.author.display_name + ": " + clean_content(msg, ctx), delete_after=seconds)
 
     @commands.command()
     async def embed(self, ctx, *, args):
@@ -54,12 +53,12 @@ class PBPUtils:
         -t [timeout (0..600)]
         """
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
         embed = discord.Embed()
-        embed.set_author(name=ctx.message.author.display_name, icon_url=ctx.message.author.avatar_url)
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         args = shlex.split(args)
         args = argparse(args)
         embed.title = args.last('title')
@@ -85,24 +84,24 @@ class PBPUtils:
                 pass
 
         if timeout:
-            await self.bot.say(embed=embed, delete_after=timeout)
+            await ctx.send(embed=embed, delete_after=timeout)
         else:
-            await self.bot.say(embed=embed)
+            await ctx.send(embed=embed)
 
     @commands.command()
     async def br(self, ctx):
         """Prints a scene break."""
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
-        await self.bot.say("``` ```")
+        await ctx.send("``` ```")
 
-    @commands.command()
+    @commands.command(hidden=True)
     async def pythag(self, ctx, num1: int, num2: int):
         """Performs a pythagorean theorem calculation to calculate diagonals."""
-        await self.bot.say(sqrt(num1 ** 2 + num2 ** 2))
+        await ctx.send(sqrt(num1 ** 2 + num2 ** 2))
 
 
 def setup(bot):

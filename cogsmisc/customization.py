@@ -56,7 +56,7 @@ class Customization:
             if not hasattr(self.bot, 'global_prefixes'):  # bot's still starting up!
                 return
             try:
-                guild_prefix = self.bot.global_prefixes.get(ctx.message.server.id, self.bot.prefix)
+                guild_prefix = self.bot.global_prefixes.get(ctx.guild.id, self.bot.prefix)
             except:
                 guild_prefix = self.bot.prefix
             if ctx.message.content.startswith(guild_prefix):
@@ -70,7 +70,7 @@ class Customization:
             if not message.channel.is_private:
                 command = (await self.bot.mdb.aliases.find_one({"owner": message.author.id, "name": alias},
                                                                ['commands'])) or \
-                          (await self.bot.mdb.servaliases.find_one({"server": message.server.id, "name": alias},
+                          (await self.bot.mdb.servaliases.find_one({"server": message.guild.id, "name": alias},
                                                                    ['commands']))
             else:
                 command = await self.bot.mdb.aliases.find_one({"owner": message.author.id, "name": alias}, ['commands'])
@@ -179,7 +179,7 @@ class Customization:
                 alias = f'!alias {alias_name} {alias}'
             return await self.bot.say(f'**{alias_name}**:\n(Copy-pastable)\n```md\n{alias}\n```')
 
-        await self.bot.mdb.aliases.update_one({"owner": ctx.message.author.id, "name": alias_name},
+        await self.bot.mdb.aliases.update_one({"owner": ctx.author.id, "name": alias_name},
                                               {"$set": {"commands": cmds.lstrip('!')}}, True)
         await self.bot.say('Alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
@@ -194,7 +194,7 @@ class Customization:
     @alias.command(name='delete', aliases=['remove'])
     async def alias_delete(self, ctx, alias_name):
         """Deletes a user alias."""
-        result = await self.bot.mdb.aliases.delete_one({"owner": ctx.message.author.id, "name": alias_name})
+        result = await self.bot.mdb.aliases.delete_one({"owner": ctx.author.id, "name": alias_name})
         if not result.deleted_count:
             return await self.bot.say('Alias not found.')
         await self.bot.say('Alias {} removed.'.format(alias_name))
@@ -205,11 +205,11 @@ class Customization:
         await self.bot.say("This will delete **ALL** of your user aliases. "
                            "Are you *absolutely sure* you want to continue?\n"
                            "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+        reply = await self.bot.wait_for_message(timeout=30, author=ctx.author, channel=ctx.message.channel)
         if not reply.content == "Yes, I am sure":
             return await self.bot.say("Unconfirmed. Aborting.")
 
-        await self.bot.mdb.aliases.delete_many({"owner": ctx.message.author.id})
+        await self.bot.mdb.aliases.delete_many({"owner": ctx.author.id})
         return await self.bot.say("OK. I have deleted all your aliases.")
 
     @commands.group(invoke_without_command=True, aliases=['serveralias'])
@@ -238,7 +238,7 @@ class Customization:
                                       "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                                       "is required.")
 
-        await self.bot.mdb.servaliases.update_one({"server": ctx.message.server.id, "name": alias_name},
+        await self.bot.mdb.servaliases.update_one({"server": ctx.guild.id, "name": alias_name},
                                                   {"$set": {"commands": cmds.lstrip('!')}}, True)
         await self.bot.say('Server alias `!{}` added for command:\n`!{}`'.format(alias_name, cmds.lstrip('!')))
 
@@ -259,7 +259,7 @@ class Customization:
         if not self.can_edit_servaliases(ctx):
             return await self.bot.say("You do not have permission to edit server aliases. Either __Administrator__ "
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
-        result = await self.bot.mdb.servaliases.delete_one({"server": ctx.message.server.id, "name": alias_name})
+        result = await self.bot.mdb.servaliases.delete_one({"server": ctx.guild.id, "name": alias_name})
         if not result.deleted_count:
             return await self.bot.say('Server alias not found.')
         await self.bot.say('Server alias {} removed.'.format(alias_name))
@@ -269,9 +269,9 @@ class Customization:
         """
         Returns whether a user can edit server aliases in the current context.
         """
-        return ctx.message.author.server_permissions.administrator or \
-               any(r.name.lower() in ALIASER_ROLES for r in ctx.message.author.roles) or \
-               ctx.message.author.id == ctx.bot.owner.id
+        return ctx.author.guild_permissions.administrator or \
+               any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles) or \
+               ctx.author.id == ctx.bot.owner.id
 
     @commands.group(invoke_without_command=True)
     async def snippet(self, ctx, snipname=None, *, snippet=None):
@@ -288,7 +288,7 @@ class Customization:
                                       f'\n```')
 
         if len(snipname) < 2: return await self.bot.say("Snippets must be at least 2 characters long!")
-        await self.bot.mdb.snippets.update_one({"owner": ctx.message.author.id, "name": snipname},
+        await self.bot.mdb.snippets.update_one({"owner": ctx.author.id, "name": snipname},
                                                {"$set": {"snippet": snippet}}, True)
         await self.bot.say('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
 
@@ -301,7 +301,7 @@ class Customization:
     @snippet.command(name='delete', aliases=['remove'])
     async def snippet_delete(self, ctx, snippet_name):
         """Deletes a snippet."""
-        result = await self.bot.mdb.snippets.delete_one({"owner": ctx.message.author.id, "name": snippet_name})
+        result = await self.bot.mdb.snippets.delete_one({"owner": ctx.author.id, "name": snippet_name})
         if not result.deleted_count:
             return await self.bot.say('Snippet not found.')
         await self.bot.say('Shortcut {} removed.'.format(snippet_name))
@@ -312,11 +312,11 @@ class Customization:
         await self.bot.say("This will delete **ALL** of your user snippets. "
                            "Are you *absolutely sure* you want to continue?\n"
                            "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+        reply = await self.bot.wait_for_message(timeout=30, author=ctx.author, channel=ctx.message.channel)
         if not reply.content == "Yes, I am sure":
             return await self.bot.say("Unconfirmed. Aborting.")
 
-        await self.bot.mdb.snippets.delete_many({"owner": ctx.message.author.id})
+        await self.bot.mdb.snippets.delete_many({"owner": ctx.author.id})
         return await self.bot.say("OK. I have deleted all your snippets.")
 
     @commands.group(invoke_without_command=True)
@@ -328,7 +328,7 @@ class Customization:
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await ctx.invoke(self.bot.get_command("servsnippet list"))
-        server_id = ctx.message.server.id
+        server_id = ctx.guild.id
         server_snippets = await scripting.get_servsnippets(ctx)
 
         if snippet is None:
@@ -363,7 +363,7 @@ class Customization:
         if not self.can_edit_servaliases(ctx):
             return await self.bot.say("You do not have permission to edit server snippets. Either __Administrator__ "
                                       "Discord permissions or a role called \"Server Aliaser\" is required.")
-        result = await self.bot.mdb.servsnippets.delete_one({"server": ctx.message.server.id, "name": snippet_name})
+        result = await self.bot.mdb.servsnippets.delete_one({"server": ctx.guild.id, "name": snippet_name})
         if not result.deleted_count:
             return await self.bot.say('Snippet not found.')
         await self.bot.say('Server snippet {} removed.'.format(snippet_name))
@@ -374,7 +374,7 @@ class Customization:
         char = await Character.from_ctx(ctx)
         parsed = await char.parse_cvars(teststr, ctx)
         parsed = clean_content(parsed, ctx)
-        await self.bot.say(f"{ctx.message.author.display_name}: {parsed}")
+        await self.bot.say(f"{ctx.author.display_name}: {parsed}")
 
     @commands.group(invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name=None, *, value=None):
@@ -401,7 +401,7 @@ class Customization:
     @uservar.command(name='remove', aliases=['delete'])
     async def uvar_remove(self, ctx, name):
         """Deletes a uvar from the user."""
-        result = await self.bot.mdb.uvars.delete_one({"owner": ctx.message.author.id, "name": name})
+        result = await self.bot.mdb.uvars.delete_one({"owner": ctx.author.id, "name": name})
         if not result.deleted_count:
             return await self.bot.say("Uvar does not exist.")
         await self.bot.say('User variable {} removed.'.format(name))
@@ -418,11 +418,11 @@ class Customization:
         await self.bot.say("This will delete **ALL** of your user variables (uvars). "
                            "Are you *absolutely sure* you want to continue?\n"
                            "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+        reply = await self.bot.wait_for_message(timeout=30, author=ctx.author, channel=ctx.message.channel)
         if (not reply) or (not reply.content == "Yes, I am sure"):
             return await self.bot.say("Unconfirmed. Aborting.")
 
-        await self.bot.mdb.uvars.delete_many({"owner": ctx.message.author.id})
+        await self.bot.mdb.uvars.delete_many({"owner": ctx.author.id})
         return await self.bot.say("OK. I have deleted all your uvars.")
 
     @commands.group(invoke_without_command=True, aliases=['gvar'])
@@ -444,7 +444,7 @@ class Customization:
         """Creates a global variable.
         A name will be randomly assigned upon creation."""
         name = str(uuid.uuid4())
-        data = {'key': name, 'owner': ctx.message.author.id, 'owner_name': str(ctx.message.author), 'value': value,
+        data = {'key': name, 'owner': ctx.author.id, 'owner_name': str(ctx.author), 'value': value,
                 'editors': []}
         await self.bot.mdb.gvars.insert_one(data)
         await self.bot.say(f"Created global variable `{name}`.")
@@ -455,7 +455,7 @@ class Customization:
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
             return await self.bot.say("Global variable not found.")
-        elif gvar['owner'] != ctx.message.author.id and not ctx.message.author.id in gvar.get('editors', []):
+        elif gvar['owner'] != ctx.author.id and not ctx.author.id in gvar.get('editors', []):
             return await self.bot.say("You are not allowed to edit this variable.")
         else:
             await self.bot.mdb.gvars.update_one({"key": name}, {"$set": {"value": value}})
@@ -469,7 +469,7 @@ class Customization:
             return await self.bot.say("Global variable not found.")
 
         if user is not None:
-            if gvar['owner'] != ctx.message.author.id:
+            if gvar['owner'] != ctx.author.id:
                 return await self.bot.say("You are not the owner of this variable.")
             else:
                 e = gvar.get('editors', [])
@@ -490,7 +490,7 @@ class Customization:
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
             return await self.bot.say("Global variable not found.")
-        elif gvar['owner'] != ctx.message.author.id:
+        elif gvar['owner'] != ctx.author.id:
             return await self.bot.say("You are not the owner of this variable.")
         else:
             if await confirm(ctx, f"Are you sure you want to delete `{name}`?"):
@@ -504,7 +504,7 @@ class Customization:
     async def gvar_list(self, ctx):
         """Lists all global variables for the user."""
         user_vars = []
-        async for gvar in self.bot.mdb.gvars.find({"owner": ctx.message.author.id}):
+        async for gvar in self.bot.mdb.gvars.find({"owner": ctx.author.id}):
             user_vars.append((gvar['key'], gvar['value']))
         gvar_list = [f"`{k}`: {textwrap.shorten(v, 20)}" for k, v in sorted(user_vars, key=lambda i: i[0])]
         say_list = ['']

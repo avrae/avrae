@@ -113,8 +113,8 @@ class InitTracker:
         if args.last('controller'):
             controllerStr = args.last('controller')
             controllerEscaped = controllerStr.strip('<>@!')
-            a = ctx.message.server.get_member(controllerEscaped)
-            b = ctx.message.server.get_member_named(controllerStr)
+            a = ctx.guild.get_member(controllerEscaped)
+            b = ctx.guild.get_member_named(controllerStr)
             controller = a.id if a is not None else b.id if b is not None else controller
         if args.last('group'):
             group = args.last('group')
@@ -516,8 +516,8 @@ class InitTracker:
             try:
                 controllerStr = args.last('controller')
                 controllerEscaped = controllerStr.strip('<>@!')
-                a = ctx.message.server.get_member(controllerEscaped)
-                b = ctx.message.server.get_member_named(controllerStr)
+                a = ctx.guild.get_member(controllerEscaped)
+                b = ctx.guild.get_member_named(controllerStr)
                 cont = a.id if a is not None else b.id if b is not None else controller
                 combatant.controller = cont
                 out += "\u2705 Combatant controller set to {}.\n".format(combatant.controller_mention())
@@ -583,7 +583,7 @@ class InitTracker:
             out += "\u2705 Combatant HP set to {}.\n".format(hp)
 
         if combatant.isPrivate:
-            await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
+            await self.bot.send_message(ctx.guild.get_member(combatant.controller),
                                         "{}'s options updated.\n".format(combatant.name) + out)
             await self.bot.say("Combatant options updated.", delete_after=10)
         else:
@@ -611,7 +611,7 @@ class InitTracker:
             status = "\n".join([co.get_status(private=private and ctx.message.author.id == co.controller) for co in
                                 combatant.get_combatants()])
         if 'private' in args.lower():
-            await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
+            await self.bot.send_message(ctx.guild.get_member(combatant.controller),
                                         "```markdown\n" + status + "```")
         else:
             await self.bot.say("```markdown\n" + status + "```", delete_after=30)
@@ -658,7 +658,7 @@ class InitTracker:
         await self.bot.say(out, delete_after=10)
         if combatant.isPrivate:
             try:
-                await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
+                await self.bot.send_message(ctx.guild.get_member(combatant.controller),
                                             "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
             except:
                 pass
@@ -687,7 +687,7 @@ class InitTracker:
         await self.bot.say(out, delete_after=10)
         if combatant.isPrivate:
             try:
-                await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
+                await self.bot.send_message(ctx.guild.get_member(combatant.controller),
                                             "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
             except:
                 pass
@@ -873,7 +873,7 @@ class InitTracker:
 
         if args.last('h', type_=bool):
             try:
-                await self.bot.send_message(ctx.message.server.get_member(combatant.controller),
+                await self.bot.send_message(ctx.guild.get_member(combatant.controller),
                                             embed=result['full_embed'])
             except:
                 pass
@@ -890,7 +890,7 @@ class InitTracker:
                 embed.set_footer(text="{}: {}".format(target.name, target.get_hp_str()))
                 if target.isPrivate:
                     try:
-                        await self.bot.send_message(ctx.message.server.get_member(target.controller),
+                        await self.bot.send_message(ctx.guild.get_member(target.controller),
                                                     f"{combatant.name} attacked with a {attack['name']}!"
                                                     f"\n{target.name}'s HP: {target.get_hp_str(True)}")
                     except:

@@ -37,7 +37,7 @@ class Automation:
         autoctx.build_embed()
         for user, msgs in autoctx.pm_queue.items():
             try:
-                await ctx.bot.send_message(ctx.message.server.get_member(user),
+                await ctx.bot.send_message(ctx.guild.get_member(user),
                                            f"{autoctx.caster.name} cast {autoctx.spell.name}!\n" + '\n'.join(msgs))
             except:
                 pass

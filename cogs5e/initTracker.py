@@ -40,47 +40,43 @@ class InitTracker:
     async def init(self, ctx):
         """Commands to help track initiative."""
         if ctx.invoked_subcommand is None:
-            await self.bot.say("Incorrect usage. Use !help init for help.")
+            await ctx.send("Incorrect usage. Use !help init for help.")
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
     @init.command()
-    async def begin(self, ctx, *, args: str = ''):
+    async def begin(self, ctx, *args):
         """Begins combat in the channel the command is invoked.
         Usage: !init begin <ARGS (opt)>
-        Valid Arguments: -dyn (dynamic init; rerolls all initiatives at the start of a round)
-                         -name <NAME> (names the combat)
-                         -turnnotif (notifies the next player)"""
+        __Valid Arguments__
+        dyn (dynamic init; rerolls all initiatives at the start of a round)
+        turnnotif (notifies the next player)
+        -name <NAME> (names the combat)"""
         await Combat.ensure_unique_chan(ctx)
 
         options = {}
-        name = 'Current initiative'
-        args = shlex.split(args.lower())
-        if '-dyn' in args:  # rerolls all inits at the start of each round
+
+        args = argparse(args)
+        if args.last('dyn', False, bool):  # rerolls all inits at the start of each round
             options['dynamic'] = True
-        if '-name' in args:
-            try:
-                a = args[args.index('-name') + 1]
-                options['name'] = a if a is not None else name
-            except IndexError:
-                await self.bot.say("You must pass in a name with the -name tag.")
-                return
-        if '-turnnotif' in args:
+        if 'name' in args:
+            options['name'] = args.last('name')
+        if args.last('turnnotif', False, bool):
             options['turnnotif'] = True
 
-        temp_summary_msg = await self.bot.say("```Awaiting combatants...```")
+        temp_summary_msg = await ctx.send("```Awaiting combatants...```")
         Combat.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
 
-        combat = Combat.new(ctx.message.channel.id, temp_summary_msg.id, str(ctx.author.id), options, ctx)
+        combat = Combat.new(str(ctx.channel.id), temp_summary_msg.id, str(ctx.author.id), options, ctx)
         await combat.final()
 
         try:
-            await self.bot.pin_message(temp_summary_msg)
+            await temp_summary_msg.pin()
         except:
             pass
-        await self.bot.say(
+        await ctx.send(
             "Everyone roll for initiative!\nIf you have a character set up with SheetManager: `!init join`\n"
             "If it's a 5e monster: `!init madd [monster name]`\nOtherwise: `!init add [modifier] [name]`")
 
@@ -121,7 +117,7 @@ class InitTracker:
         if args.last('hp'):
             hp = args.last('hp', type_=int)
             if hp < 1:
-                return await self.bot.say("You must pass in a positive, nonzero HP with the -hp tag.")
+                return await ctx.send("You must pass in a positive, nonzero HP with the -hp tag.")
         if args.last('ac'):
             ac = args.last('ac', type_=int)
 
@@ -131,7 +127,7 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
 
         if combat.get_combatant(name) is not None:
-            await self.bot.say("Combatant already exists.")
+            await ctx.send("Combatant already exists.")
             return
 
         if not place:
@@ -144,13 +140,13 @@ class InitTracker:
 
         if group is None:
             combat.add_combatant(me)
-            await self.bot.say(
+            await ctx.send(
                 "{}\n{} was added to combat with initiative {}.".format(f'<@{controller}>', name, init),
                 delete_after=10)
         else:
             grp = combat.get_group(group, create=init)
             grp.add_combatant(me)
-            await self.bot.say(
+            await ctx.send(
                 "{}\n{} was added to combat with initiative {} as part of group {}.".format(me.controller_mention(),
                                                                                             name, grp.init,
                                                                                             grp.name),
@@ -255,9 +251,9 @@ class InitTracker:
                 out += "Error adding combatant: {}\n".format(e)
 
         await combat.final()
-        await self.bot.say(out, delete_after=15)
+        await ctx.send(out, delete_after=15)
         if to_pm:
-            await self.bot.send_message(ctx.message.author, to_pm)
+            await ctx.author.send(to_pm)
 
     @init.command(name='join', aliases=['cadd', 'dcadd'])
     async def join(self, ctx, *, args: str = ''):
@@ -272,7 +268,7 @@ class InitTracker:
         character = char.character
 
         # if char.get_combat_id():
-        #     return await self.bot.say(f"This character is already in a combat. "
+        #     return await ctx.send(f"This character is already in a combat. "
         #                               f"Please leave combat in <#{char.get_combat_id()}> first.\n"
         #                               f"If this seems like an error, please `!update` your character sheet.")
         # we just ignore this for now.
@@ -280,7 +276,7 @@ class InitTracker:
 
         skills = character.get('skills')
         if skills is None:
-            return await self.bot.say('You must update your character sheet first.')
+            return await ctx.send('You must update your character sheet first.')
         skill = 'initiative'
 
         embed = EmbedWithCharacter(char, False)
@@ -324,7 +320,7 @@ class InitTracker:
                                                   char.get_resists(), ctx, combat, char.id, str(ctx.author.id), char)
 
         if combat.get_combatant(char.get_name()) is not None:
-            await self.bot.say("Combatant already exists.")
+            await ctx.send("Combatant already exists.")
             return
 
         if group is None:
@@ -336,8 +332,8 @@ class InitTracker:
             embed.set_footer(text=f"Joined group {grp.name}!")
 
         await combat.final()
-        await self.bot.say(embed=embed)
-        char.join_combat(ctx.message.channel.id)
+        await ctx.send(embed=embed)
+        char.join_combat(str(ctx.channel.id))
         await char.commit(ctx)
 
     @init.command(name="next", aliases=['n'])
@@ -348,13 +344,13 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
 
         if len(combat.get_combatants()) == 0:
-            await self.bot.say("There are no combatants.")
+            await ctx.send("There are no combatants.")
             return
 
         if combat.index is None:
             pass
         elif not str(ctx.author.id) in (combat.current_combatant.controller, combat.dm):
-            await self.bot.say("It is not your turn.")
+            await ctx.send("It is not your turn.")
             return
 
         toRemove = []
@@ -378,7 +374,7 @@ class InitTracker:
             combat.remove_combatant(co)
             out += "{} automatically removed from combat.\n".format(co.name)
 
-        await self.bot.say(out)
+        await ctx.send(out)
         await combat.final()
 
     @init.command(name="prev", aliases=['previous', 'rewind'])
@@ -388,12 +384,12 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
 
         if len(combat.get_combatants()) == 0:
-            await self.bot.say("There are no combatants.")
+            await ctx.send("There are no combatants.")
             return
 
         combat.rewind_turn()
 
-        await self.bot.say(combat.get_turn_str())
+        await ctx.send(combat.get_turn_str())
         await combat.final()
 
     @init.command(name="move", aliases=['goto'])
@@ -404,13 +400,13 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
 
         if len(combat.get_combatants()) == 0:
-            await self.bot.say("There are no combatants.")
+            await ctx.send("There are no combatants.")
             return
 
         if target is None:
             combatant = next((c for c in combat.get_combatants() if c.controller == str(ctx.author.id)), None)
             if combatant is None:
-                return await self.bot.say("You do not control any combatants.")
+                return await ctx.send("You do not control any combatants.")
             combat.goto_turn(combatant, True)
         else:
             try:
@@ -420,7 +416,7 @@ class InitTracker:
                 combatant = await combat.select_combatant(target)
                 combat.goto_turn(combatant, True)
 
-        await self.bot.say(combat.get_turn_str())
+        await ctx.send(combat.get_turn_str())
         await combat.final()
 
     @init.command(name="skipround", aliases=['round', 'skiprounds'])
@@ -430,9 +426,9 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
 
         if len(combat.get_combatants()) == 0:
-            return await self.bot.say("There are no combatants.")
+            return await ctx.send("There are no combatants.")
         if combat.index is None:
-            return await self.bot.say("Please start combat with `!init next` first.")
+            return await ctx.send("Please start combat with `!init next` first.")
 
         toRemove = []
         for co in combat.get_combatants():
@@ -446,7 +442,7 @@ class InitTracker:
             combat.remove_combatant(co)
             out += "{} automatically removed from combat.\n".format(co.name)
 
-        await self.bot.say(out)
+        await ctx.send(out)
         await combat.final()
 
     @init.command(name="reroll", aliases=['shuffle'])
@@ -454,7 +450,7 @@ class InitTracker:
         """Rerolls initiative for all combatants."""
         combat = await Combat.from_ctx(ctx)
         combat.reroll_dynamic()
-        await self.bot.say(f"Rerolled initiative! New order: {combat.get_summary()}")
+        await ctx.send(f"Rerolled initiative! New order: {combat.get_summary()}")
         await combat.final()
 
     @init.command(name="list", aliases=['summary'])
@@ -462,7 +458,7 @@ class InitTracker:
         """Lists the combatants."""
         combat = await Combat.from_ctx(ctx)
         outStr = combat.get_summary()
-        await self.bot.say(outStr, delete_after=60)
+        await ctx.send(outStr, delete_after=60)
 
     @init.command()
     async def note(self, ctx, name: str, *, note: str = ''):
@@ -471,13 +467,13 @@ class InitTracker:
 
         combatant = await combat.select_combatant(name)
         if combatant is None:
-            return await self.bot.say("Combatant not found.")
+            return await ctx.send("Combatant not found.")
 
         combatant.notes = note
         if note == '':
-            await self.bot.say("Removed note.", delete_after=10)
+            await ctx.send("Removed note.", delete_after=10)
         else:
-            await self.bot.say("Added note.", delete_after=10)
+            await ctx.send("Added note.", delete_after=10)
         await combat.final()
 
     @init.command(aliases=['opts'])
@@ -500,7 +496,7 @@ class InitTracker:
 
         combatant = await combat.select_combatant(name)
         if combatant is None:
-            await self.bot.say("Combatant not found.")
+            await ctx.send("Combatant not found.")
             return
 
         private = combatant.isPrivate
@@ -583,11 +579,11 @@ class InitTracker:
             out += "\u2705 Combatant HP set to {}.\n".format(hp)
 
         if combatant.isPrivate:
-            await self.bot.send_message(ctx.guild.get_member(combatant.controller),
-                                        "{}'s options updated.\n".format(combatant.name) + out)
-            await self.bot.say("Combatant options updated.", delete_after=10)
+            await ctx.guild.get_member(combatant.controller).send(
+                "{}'s options updated.\n".format(combatant.name) + out)
+            await ctx.send("Combatant options updated.", delete_after=10)
         else:
-            await self.bot.say("{}'s options updated.\n".format(combatant.name) + out, delete_after=10)
+            await ctx.send("{}'s options updated.\n".format(combatant.name) + out, delete_after=10)
         await combat.final()
 
     @init.command()
@@ -598,7 +594,7 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name, select_group=True)
         if combatant is None:
-            await self.bot.say("Combatant or group not found.")
+            await ctx.send("Combatant or group not found.")
             return
 
         private = 'private' in args.lower()
@@ -611,10 +607,10 @@ class InitTracker:
             status = "\n".join([co.get_status(private=private and str(ctx.author.id) == co.controller) for co in
                                 combatant.get_combatants()])
         if 'private' in args.lower():
-            await self.bot.send_message(ctx.guild.get_member(combatant.controller),
-                                        "```markdown\n" + status + "```")
+            await ctx.guild.get_member(combatant.controller).send(
+                "```markdown\n" + status + "```")
         else:
-            await self.bot.say("```markdown\n" + status + "```", delete_after=30)
+            await ctx.send("```markdown\n" + status + "```", delete_after=30)
 
     @init.command()
     async def hp(self, ctx, name: str, operator: str, *, hp: str = ''):
@@ -625,7 +621,7 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
-            await self.bot.say("Combatant not found.")
+            await ctx.send("Combatant not found.")
             return
 
         hp_roll = roll(hp, inline=True, show_blurbs=False)
@@ -640,7 +636,7 @@ class InitTracker:
             if hp == '':
                 combatant.set_hp(combatant.hpMax)
             elif hp_roll.total < 1:
-                return await self.bot.say("You can't have a negative max HP!")
+                return await ctx.send("You can't have a negative max HP!")
             else:
                 combatant.hpMax = hp_roll.total
         elif hp == '':
@@ -649,17 +645,17 @@ class InitTracker:
                 combatant.set_hp(0)
             combatant.mod_hp(hp_roll.total)
         else:
-            await self.bot.say("Incorrect operator. Use mod, set, or max.")
+            await ctx.send("Incorrect operator. Use mod, set, or max.")
             return
 
         out = "{}: {}".format(combatant.name, combatant.get_hp_str())
         if 'd' in hp: out += '\n' + hp_roll.skeleton
 
-        await self.bot.say(out, delete_after=10)
+        await ctx.send(out, delete_after=10)
         if combatant.isPrivate:
             try:
-                await self.bot.send_message(ctx.guild.get_member(combatant.controller),
-                                            "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
+                await ctx.guild.get_member(combatant.controller).send(
+                    "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
             except:
                 pass
         await combat.final()
@@ -672,7 +668,7 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
-            await self.bot.say("Combatant not found.")
+            await ctx.send("Combatant not found.")
             return
 
         if thp >= 0:
@@ -681,14 +677,14 @@ class InitTracker:
             if combatant.temphp:
                 combatant.temphp += thp
             else:
-                return await self.bot.say("Combatant has no temp hp.")
+                return await ctx.send("Combatant has no temp hp.")
 
         out = "{}: {}".format(combatant.name, combatant.get_hp_str())
-        await self.bot.say(out, delete_after=10)
+        await ctx.send(out, delete_after=10)
         if combatant.isPrivate:
             try:
-                await self.bot.send_message(ctx.guild.get_member(combatant.controller),
-                                            "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
+                await ctx.guild.get_member(combatant.controller).send(
+                    "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
             except:
                 pass
         await combat.final()
@@ -716,11 +712,11 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
-            await self.bot.say("Combatant not found.")
+            await ctx.send("Combatant not found.")
             return
 
         if effect_name.lower() in (e.name.lower() for e in combatant.get_effects()):
-            return await self.bot.say("Effect already exists.", delete_after=10)
+            return await ctx.send("Effect already exists.", delete_after=10)
 
         if isinstance(combatant, PlayerCombatant):
             args = argparse(args, combatant.character)
@@ -736,7 +732,7 @@ class InitTracker:
         out = "Added effect {} to {}.".format(effect_name, combatant.name)
         if result['conc_conflict']:
             out += f"\nRemoved {', '.join(e.name for e in result['conc_conflict'])} due to concentration conflict!"
-        await self.bot.say(out, delete_after=10)
+        await ctx.send(out, delete_after=10)
         await combat.final()
 
     @init.command(name='re')
@@ -745,20 +741,20 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
-            await self.bot.say("Combatant not found.")
+            await ctx.send("Combatant not found.")
             return
 
         if effect is '':
             combatant.remove_all_effects()
-            await self.bot.say("All effects removed from {}.".format(combatant.name), delete_after=10)
+            await ctx.send("All effects removed from {}.".format(combatant.name), delete_after=10)
         else:
             to_remove = await combatant.select_effect(effect)
             children_removed = ""
             if to_remove.children:
                 children_removed = f"Also removed {len(to_remove.children)} child effects."
             to_remove.remove()
-            await self.bot.say(f'Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}',
-                               delete_after=10)
+            await ctx.send(f'Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}',
+                           delete_after=10)
         await combat.final()
 
     @init.group(aliases=['a'], invoke_without_command=True)
@@ -774,10 +770,10 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
         combatant = combat.current_combatant
         if combatant is None:
-            return await self.bot.say("You must start combat with `!init next` first.")
+            return await ctx.send("You must start combat with `!init next` first.")
 
         if combatant.isPrivate and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
-            return await self.bot.say("You do not have permission to view this combatant's attacks.")
+            return await ctx.send("You do not have permission to view this combatant's attacks.")
 
         attacks = combatant.attacks
 
@@ -804,7 +800,7 @@ class InitTracker:
             destination = ctx.message.channel
         else:
             destination = ctx.message.author
-        return await self.bot.send_message(destination, "{}'s attacks:\n{}".format(combatant.name, a))
+        return await destination.send("{}'s attacks:\n{}".format(combatant.name, a))
 
     @init.command()
     async def aoo(self, ctx, combatant_name, target_name, atk_name, *, args=''):
@@ -820,21 +816,21 @@ class InitTracker:
         try:
             target = await combat.select_combatant(target_name, "Select the target.")
             if target is None:
-                return await self.bot.say("Target not found.")
+                return await ctx.send("Target not found.")
         except SelectionException:
-            return await self.bot.say("Target not found.")
+            return await ctx.send("Target not found.")
 
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
-                return await self.bot.say("You must start combat with `!init next` first.")
+                return await ctx.send("You must start combat with `!init next` first.")
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
                 if combatant is None:
-                    return await self.bot.say("Combatant not found.")
+                    return await ctx.send("Combatant not found.")
             except SelectionException:
-                return await self.bot.say("Combatant not found.")
+                return await ctx.send("Combatant not found.")
 
         attacks = combatant.attacks
         if '-custom' in args:
@@ -845,7 +841,7 @@ class InitTracker:
                                              [(a['name'], a) for a in attacks if atk_name.lower() in a['name'].lower()],
                                              message="Select your attack.")
             except SelectionException:
-                return await self.bot.say("Attack not found.")
+                return await ctx.send("Attack not found.")
 
         is_player = isinstance(combatant, PlayerCombatant)
 
@@ -873,8 +869,8 @@ class InitTracker:
 
         if args.last('h', type_=bool):
             try:
-                await self.bot.send_message(ctx.guild.get_member(combatant.controller),
-                                            embed=result['full_embed'])
+                await ctx.guild.get_member(combatant.controller).send(
+                    embed=result['full_embed'])
             except:
                 pass
 
@@ -890,9 +886,9 @@ class InitTracker:
                 embed.set_footer(text="{}: {}".format(target.name, target.get_hp_str()))
                 if target.isPrivate:
                     try:
-                        await self.bot.send_message(ctx.guild.get_member(target.controller),
-                                                    f"{combatant.name} attacked with a {attack['name']}!"
-                                                    f"\n{target.name}'s HP: {target.get_hp_str(True)}")
+                        await ctx.guild.get_member(target.controller).send(
+                            f"{combatant.name} attacked with a {attack['name']}!"
+                            f"\n{target.name}'s HP: {target.get_hp_str(True)}")
                     except:
                         pass
             else:
@@ -905,7 +901,7 @@ class InitTracker:
 
         embeds.add_fields_from_args(embed, args.get('f', []))
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
         await combat.final()
 
     @init.command()
@@ -956,17 +952,17 @@ class InitTracker:
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
-                return await self.bot.say("You must start combat with `!init next` first.")
+                return await ctx.send("You must start combat with `!init next` first.")
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the caster.")
                 if combatant is None:
-                    return await self.bot.say("Combatant not found.")
+                    return await ctx.send("Combatant not found.")
             except SelectionException:
-                return await self.bot.say("Combatant not found.")
+                return await ctx.send("Combatant not found.")
 
         if isinstance(combatant, CombatantGroup):
-            return await self.bot.say("Groups cannot cast spells.")
+            return await ctx.send("Groups cannot cast spells.")
 
         is_character = isinstance(combatant, PlayerCombatant)
 
@@ -994,7 +990,7 @@ class InitTracker:
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
         add_fields_from_args(embed, args.get('f'))
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
         await combat.final()
 
     @init.command(name='remove')
@@ -1005,18 +1001,18 @@ class InitTracker:
 
         combatant = await combat.select_combatant(name, select_group=True)
         if combatant is None:
-            return await self.bot.say("Combatant not found.")
+            return await ctx.send("Combatant not found.")
 
         if combatant is combat.current_combatant:
-            return await self.bot.say("You cannot remove a combatant on their own turn.")
+            return await ctx.send("You cannot remove a combatant on their own turn.")
 
         if combatant.group is not None:
             group = combat.get_group(combatant.group)
             if len(group.get_combatants()) <= 1 and group is combat.current_combatant:
-                return await self.bot.say(
+                return await ctx.send(
                     "You cannot remove a combatant if they are the only remaining combatant in this turn.")
         combat.remove_combatant(combatant)
-        await self.bot.say("{} removed from combat.".format(combatant.name), delete_after=10)
+        await ctx.send("{} removed from combat.".format(combatant.name), delete_after=10)
         await combat.final()
 
     @init.command()
@@ -1026,30 +1022,29 @@ class InitTracker:
         to_end = await confirm(ctx, 'Are you sure you want to end combat? (Reply with yes/no)', True)
 
         if to_end is None:
-            return await self.bot.say('Timed out waiting for a response or invalid response.', delete_after=10)
+            return await ctx.send('Timed out waiting for a response or invalid response.', delete_after=10)
         elif not to_end:
-            return await self.bot.say('OK, cancelling.', delete_after=10)
+            return await ctx.send('OK, cancelling.', delete_after=10)
 
-        msg = await self.bot.say("OK, ending...")
+        msg = await ctx.send("OK, ending...")
         if args != '-force':
             combat = await Combat.from_ctx(ctx)
 
             try:
-                await self.bot.send_message(ctx.message.author, f"End of combat report: {combat.round_num} rounds "
-                                                                f"{combat.get_summary(True)}")
+                await ctx.author.send(f"End of combat report: {combat.round_num} rounds "
+                                      f"{combat.get_summary(True)}")
 
                 summary = await combat.get_summary_msg()
-                await self.bot.edit_message(summary,
-                                            combat.get_summary() + " ```-----COMBAT ENDED-----```")
-                await self.bot.unpin_message(summary)
+                await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
+                await summary.unpin()
             except:
                 pass
 
             await combat.end()
         else:
-            await self.bot.mdb.combats.delete_one({"channel": ctx.message.channel.id})
+            await self.bot.mdb.combats.delete_one({"channel": str(ctx.channel.id)})
 
-        await self.bot.edit_message(msg, "Combat ended.")
+        await msg.edit(content="Combat ended.")
 
 
 def setup(bot):

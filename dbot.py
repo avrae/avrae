@@ -25,10 +25,10 @@ prefix = '!' if not TESTING else '#'
 # -----COGS-----
 # DYNAMIC_COGS = ["cogs5e.gametrack", "cogs5e.initTracker",
 #                 "cogs5e.sheetManager", "cogsmisc.customization"]
-# STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.permissions", "cogsmisc.repl",
+# STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.permissions",
 #                "utils.help"]
 DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils"]
-STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats"]
+STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl"]
 
 
 class Avrae(commands.AutoShardedBot):

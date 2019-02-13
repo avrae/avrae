@@ -968,7 +968,7 @@ class CombatantGroup:
 
     @property
     def controller(self):
-        return self.ctx.message.author.id  # workaround
+        return str(self.ctx.author.id)  # workaround
 
     @property
     def attacks(self):

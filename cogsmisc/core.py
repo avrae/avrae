@@ -12,7 +12,7 @@ import discord
 import psutil
 from discord.ext import commands
 
-PATRON_EYLESIS = "227168575469780992"
+PATRON_EYLESIS = 227168575469780992
 
 
 class Core:

@@ -518,7 +518,7 @@ class SheetManager:
     async def character(self, ctx, *, name: str = None):
         """Switches the active character.
         Breaks for characters created before Jan. 20, 2017."""
-        user_characters = await self.bot.mdb.characters.find({"owner": ctx.message.author.id}).to_list(None)
+        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         active_character = next((c for c in user_characters if c['active']), None)
         if not user_characters:
             return await self.bot.say('You have no characters.')
@@ -552,7 +552,7 @@ class SheetManager:
     @character.command(name='list')
     async def character_list(self, ctx):
         """Lists your characters."""
-        user_characters = await self.bot.mdb.characters.find({"owner": ctx.message.author.id}).to_list(None)
+        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         if not user_characters:
             return await self.bot.say('You have no characters.')
 
@@ -562,7 +562,7 @@ class SheetManager:
     @character.command(name='delete')
     async def character_delete(self, ctx, *, name):
         """Deletes a character."""
-        user_characters = await self.bot.mdb.characters.find({"owner": ctx.message.author.id}).to_list(None)
+        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         if not user_characters:
             return await self.bot.say('You have no characters.')
 
@@ -588,7 +588,7 @@ class SheetManager:
             #         combat.remove_combatant(me, True)
             #         await combat.commit()
 
-            await self.bot.mdb.characters.delete_one({"owner": ctx.message.author.id, "upstream": char_url})
+            await self.bot.mdb.characters.delete_one({"owner": str(ctx.author.id), "upstream": char_url})
             return await self.bot.say('{} has been deleted.'.format(name))
         else:
             return await self.bot.say("OK, cancelling.")
@@ -963,7 +963,7 @@ class SheetManager:
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.
         Returns True to overwrite, False or None otherwise."""
-        conflict = await self.bot.mdb.characters.find_one({"owner": ctx.message.author.id, "upstream": _id})
+        conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
             await ctx.bot.send_message(ctx.message.channel,
                                        "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"

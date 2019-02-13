@@ -73,7 +73,7 @@ class InitTracker:
         temp_summary_msg = await self.bot.say("```Awaiting combatants...```")
         Combat.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
 
-        combat = Combat.new(ctx.message.channel.id, temp_summary_msg.id, ctx.message.author.id, options, ctx)
+        combat = Combat.new(ctx.message.channel.id, temp_summary_msg.id, str(ctx.author.id), options, ctx)
         await combat.final()
 
         try:
@@ -99,7 +99,7 @@ class InitTracker:
                             -resist/immune/vuln <resistance>"""
         private = False
         place = False
-        controller = ctx.message.author.id
+        controller = str(ctx.author.id)
         group = None
         hp = None
         ac = None
@@ -230,7 +230,7 @@ class InitTracker:
                     init = check_roll.total
                 else:
                     init = int(p)
-                controller = ctx.message.author.id
+                controller = str(ctx.author.id)
 
                 rolled_hp = None
                 if rollhp:
@@ -314,14 +314,14 @@ class InitTracker:
             embed.description = "Placed at initiative `{}`.".format(init)
 
         group = args.last('group')
-        controller = ctx.message.author.id
+        controller = str(ctx.author.id)
         private = args.last('h', type_=bool)
         bonus = roll(bonus).total
 
         combat = await Combat.from_ctx(ctx)
 
         me = await PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
-                                                  char.get_resists(), ctx, combat, char.id, ctx.message.author.id, char)
+                                                  char.get_resists(), ctx, combat, char.id, str(ctx.author.id), char)
 
         if combat.get_combatant(char.get_name()) is not None:
             await self.bot.say("Combatant already exists.")
@@ -353,7 +353,7 @@ class InitTracker:
 
         if combat.index is None:
             pass
-        elif not ctx.message.author.id in (combat.current_combatant.controller, combat.dm):
+        elif not str(ctx.author.id) in (combat.current_combatant.controller, combat.dm):
             await self.bot.say("It is not your turn.")
             return
 
@@ -408,7 +408,7 @@ class InitTracker:
             return
 
         if target is None:
-            combatant = next((c for c in combat.get_combatants() if c.controller == ctx.message.author.id), None)
+            combatant = next((c for c in combat.get_combatants() if c.controller == str(ctx.author.id)), None)
             if combatant is None:
                 return await self.bot.say("You do not control any combatants.")
             combat.goto_turn(combatant, True)
@@ -603,12 +603,12 @@ class InitTracker:
 
         private = 'private' in args.lower()
         if isinstance(combatant, Combatant):
-            private = private and ctx.message.author.id == combatant.controller
+            private = private and str(ctx.author.id) == combatant.controller
             status = combatant.get_status(private=private)
             if private and isinstance(combatant, MonsterCombatant):
                 status = f"{status}\n* This creature is a {combatant.monster_name}."
         else:
-            status = "\n".join([co.get_status(private=private and ctx.message.author.id == co.controller) for co in
+            status = "\n".join([co.get_status(private=private and str(ctx.author.id) == co.controller) for co in
                                 combatant.get_combatants()])
         if 'private' in args.lower():
             await self.bot.send_message(ctx.guild.get_member(combatant.controller),
@@ -776,7 +776,7 @@ class InitTracker:
         if combatant is None:
             return await self.bot.say("You must start combat with `!init next` first.")
 
-        if combatant.isPrivate and combatant.controller != ctx.message.author.id and ctx.message.author.id != combat.dm:
+        if combatant.isPrivate and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
             return await self.bot.say("You do not have permission to view this combatant's attacks.")
 
         attacks = combatant.attacks
@@ -849,7 +849,7 @@ class InitTracker:
 
         is_player = isinstance(combatant, PlayerCombatant)
 
-        if is_player and combatant.character_owner == ctx.message.author.id:
+        if is_player and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
 
         args = argparse(shlex.split(args))  # set up all the arguments
@@ -970,7 +970,7 @@ class InitTracker:
 
         is_character = isinstance(combatant, PlayerCombatant)
 
-        if is_character and combatant.character_owner == ctx.message.author.id:
+        if is_character and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
         args = shlex.split(args)
         args = argparse(args)

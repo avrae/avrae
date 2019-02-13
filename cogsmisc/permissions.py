@@ -28,7 +28,7 @@ class Permissions:
             return True
 
         try:
-            entry = self.bot.rdb.not_json_get("permissions", {})[msg.guild.id]
+            entry = self.bot.rdb.not_json_get("permissions", {})[str(msg.guild.id)]
         except (KeyError, AttributeError):
             return True
         else:
@@ -46,7 +46,7 @@ class Permissions:
         
         Forgot the prefix? Reset it with "@Avrae#6944 prefix !".
         """
-        guild_id = ctx.guild.id
+        guild_id = str(ctx.guild.id)
         if prefix is None:
             return await self.bot.say("My current prefix is: `" + self.bot.global_prefixes.get(guild_id, '!') + '`')
         self.bot.global_prefixes = self.bot.rdb.not_json_get("prefixes", {})
@@ -70,7 +70,7 @@ class Permissions:
         if command not in self.bot.commands:
             return await self.bot.say('I do not have this command registered.')
 
-        guild_id = ctx.guild.id
+        guild_id = str(ctx.guild.id)
         global_entries = self.bot.rdb.not_json_get("permissions", {})
         guild_entries = global_entries.get(guild_id, {})
         guild_entries[command] = True
@@ -87,7 +87,7 @@ class Permissions:
         You must have Manage Server permissions or the
         Bot Admin role to use this command.
         """
-        guild_id = ctx.guild.id
+        guild_id = str(ctx.guild.id)
         global_entries = self.bot.rdb.not_json_get("permissions", {})
         guild_entries = global_entries.get(guild_id, {})
 

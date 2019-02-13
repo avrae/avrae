@@ -284,13 +284,6 @@ class AdminUtils:
             if out:
                 await self.bot.say(out)
 
-    async def on_message(self, message):
-        if message.author.id in self.muted:
-            try:
-                await self.bot.delete_message(message)
-            except:
-                pass
-
     async def on_server_join(self, server):
         if server.id in self.blacklisted_serv_ids: await self.bot.leave_server(server)
         if server.id in self.bot.rdb.jget('server-whitelist', []): return

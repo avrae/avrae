@@ -3,6 +3,7 @@ Created on Jan 19, 2017
 
 @author: andrew
 """
+import asyncio
 import copy
 import logging
 import re
@@ -30,7 +31,7 @@ from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from utils.argparser import argparse
-from utils.functions import a_or_an, format_d20, get_positivity, list_get
+from utils.functions import a_or_an, auth_and_chan, format_d20, get_positivity, list_get
 from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
 
 log = logging.getLogger(__name__)
@@ -110,7 +111,7 @@ class SheetManager:
             try:
                 attack = next(a for a in attacks if atk_name.lower() in a.get('name').lower())
             except StopIteration:
-                return await self.bot.say('No attack with that name found.')
+                return await ctx.send('No attack with that name found.')
 
         args = await self.new_arg_stuff(args, ctx, char)
         args['name'] = char.get_name()
@@ -128,16 +129,16 @@ class SheetManager:
         embed = result['embed']
         if args.last('h', type_=bool):
             try:
-                await self.bot.send_message(ctx.message.author, embed=result['full_embed'])
+                await ctx.author.send(embed=result['full_embed'])
             except:
                 pass
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
@@ -165,7 +166,7 @@ class SheetManager:
             a = ', '.join(atk['name'] for atk in attacks)
         if len(a) > 2000:
             a = "Too many attacks, values hidden!"
-        return await self.bot.say("{}'s attacks:\n{}".format(char.get_name(), a))
+        return await ctx.send("{}'s attacks:\n{}".format(char.get_name(), a))
 
     @attack.command(name="add", aliases=['create'])
     async def attack_add(self, ctx, name, *, args=""):
@@ -195,7 +196,7 @@ class SheetManager:
         out = f"Created attack {attack['name']}!"
         if duplicate:
             out += f" Removed a duplicate attack."
-        await self.bot.say(out)
+        await ctx.send(out)
 
     @attack.command(name="delete", aliases=['remove'])
     async def attack_delete(self, ctx, name):
@@ -210,7 +211,7 @@ class SheetManager:
         character.set_override("attacks", attack_overrides)
         await character.commit(ctx)
 
-        await self.bot.say(f"Okay, deleted attack {attack['name']}.")
+        await ctx.send(f"Okay, deleted attack {attack['name']}.")
 
     @commands.command(aliases=['s'])
     async def save(self, ctx, skill, *, args: str = ''):
@@ -226,20 +227,20 @@ class SheetManager:
         if skill == 'death':
             ds_cmd = self.bot.get_command('game deathsave')
             if ds_cmd is None:
-                return await self.bot.say("Error: GameTrack cog not loaded.")
+                return await ctx.send("Error: GameTrack cog not loaded.")
             return await ctx.invoke(ds_cmd, *shlex.split(args))
 
         char = await Character.from_ctx(ctx)
         saves = char.get_saves()
         if not saves:
-            return await self.bot.say('You must update your character sheet first.')
+            return await ctx.send('You must update your character sheet first.')
         try:
             save = next(a for a in saves.keys() if skill.lower() == a.lower())
         except StopIteration:
             try:
                 save = next(a for a in saves.keys() if skill.lower() in a.lower())
             except StopIteration:
-                return await self.bot.say('That\'s not a valid save.')
+                return await ctx.send('That\'s not a valid save.')
 
         embed = EmbedWithCharacter(char, name=False)
 
@@ -287,9 +288,9 @@ class SheetManager:
         if args.last('image') is not None:
             embed.set_thumbnail(url=args.last('image'))
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
@@ -309,14 +310,14 @@ class SheetManager:
         char = await Character.from_ctx(ctx)
         skills = char.get_skills()
         if not skills:
-            return await self.bot.say('You must update your character sheet first.')
+            return await ctx.send('You must update your character sheet first.')
         try:
             skill = next(a for a in skills.keys() if check.lower() == a.lower())
         except StopIteration:
             try:
                 skill = next(a for a in skills.keys() if check.lower() in a.lower())
             except StopIteration:
-                return await self.bot.say('That\'s not a valid check.')
+                return await ctx.send('That\'s not a valid check.')
 
         embed = EmbedWithCharacter(char, False)
 
@@ -377,9 +378,9 @@ class SheetManager:
 
         if args.last('image') is not None:
             embed.set_thumbnail(url=args.last('image'))
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
@@ -400,9 +401,9 @@ class SheetManager:
         embed.title = char.get_name()
         embed.description = desc
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
@@ -417,7 +418,7 @@ class SheetManager:
 
         char.character['overrides'] = overrides
         await char.commit(ctx)
-        await self.bot.say("Description updated!")
+        await ctx.send("Description updated!")
 
     @desc.command(name='remove', aliases=['delete'])
     async def remove_desc(self, ctx):
@@ -426,13 +427,13 @@ class SheetManager:
 
         overrides = char.character.get('overrides', {})
         if not 'desc' in overrides:
-            return await self.bot.say("There is no custom description set.")
+            return await ctx.send("There is no custom description set.")
         else:
             del overrides['desc']
 
         char.character['overrides'] = overrides
         await char.commit(ctx)
-        await self.bot.say("Description override removed! Use `!update` to return to the old description.")
+        await ctx.send("Description override removed! Use `!update` to return to the old description.")
 
     @commands.group(invoke_without_command=True)
     async def portrait(self, ctx):
@@ -441,15 +442,15 @@ class SheetManager:
 
         image = char.get_image()
         if not image:
-            return await self.bot.say("No image available.")
+            return await ctx.send("No image available.")
         embed = discord.Embed()
         embed.title = char.get_name()
         embed.colour = char.get_color()
         embed.set_image(url=image)
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
@@ -465,7 +466,7 @@ class SheetManager:
         char.character['overrides'] = overrides
 
         await char.commit(ctx)
-        await self.bot.say("Portrait updated!")
+        await ctx.send("Portrait updated!")
 
     @portrait.command(name='remove', aliases=['delete'])
     async def remove_portrait(self, ctx):
@@ -474,14 +475,14 @@ class SheetManager:
 
         overrides = char.character.get('overrides', {})
         if not 'image' in overrides:
-            return await self.bot.say("There is no custom portrait set.")
+            return await ctx.send("There is no custom portrait set.")
         else:
             del overrides['image']
 
         char.character['overrides'] = overrides
 
         await char.commit(ctx)
-        await self.bot.say("Portrait override removed! Use `!update` to return to the old portrait.")
+        await ctx.send("Portrait override removed! Use `!update` to return to the old portrait.")
 
     @commands.command(hidden=True)  # hidden, as just called by token command
     async def playertoken(self, ctx):
@@ -491,26 +492,25 @@ class SheetManager:
         img_url = char.get_image()
         color_override = char.get_setting('color')
         if not img_url:
-            return await self.bot.send_message(ctx.message.channel, "This character has no image.")
+            return await ctx.send("This character has no image.")
 
         try:
             processed = await generate_token(img_url, color_override)
         except Exception as e:
-            return await self.bot.send_message(ctx.message.channel, f"Error generating token: {e}")
+            return await ctx.send(f"Error generating token: {e}")
 
-        await self.bot.send_file(ctx.message.channel, processed, content="I generated this token for you! If it seems "
-                                                                         "wrong, you can make your own at "
-                                                                         "<http://rolladvantage.com/tokenstamp/>!",
-                                 filename="image.png")
+        file = discord.File(processed, filename="image.png")
+        await ctx.send("I generated this token for you! If it seems  wrong, you can make your own at "
+                       "<http://rolladvantage.com/tokenstamp/>!", file=file)
 
     @commands.command()
     async def sheet(self, ctx):
         """Prints the embed sheet of your currently active character."""
         char = await Character.from_ctx(ctx)
 
-        await self.bot.say(embed=char.get_sheet_embed())
+        await ctx.send(embed=char.get_sheet_embed())
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
@@ -521,12 +521,12 @@ class SheetManager:
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         active_character = next((c for c in user_characters if c['active']), None)
         if not user_characters:
-            return await self.bot.say('You have no characters.')
+            return await ctx.send('You have no characters.')
 
         if name is None:
             if active_character is None:
-                return await self.bot.say('You have no character active.')
-            return await self.bot.say(
+                return await ctx.send('You have no character active.')
+            return await ctx.send(
                 'Currently active: {}'.format(active_character.get('stats', {}).get('name')))
 
         _character = await search_and_select(ctx, user_characters, name,
@@ -543,20 +543,20 @@ class SheetManager:
         await char.set_active(ctx)
 
         try:
-            await self.bot.delete_message(ctx.message)
+            await ctx.message.delete()
         except:
             pass
 
-        await self.bot.say("Active character changed to {}.".format(name), delete_after=20)
+        await ctx.send("Active character changed to {}.".format(name), delete_after=20)
 
     @character.command(name='list')
     async def character_list(self, ctx):
         """Lists your characters."""
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         if not user_characters:
-            return await self.bot.say('You have no characters.')
+            return await ctx.send('You have no characters.')
 
-        await self.bot.say('Your characters:\n{}'.format(
+        await ctx.send('Your characters:\n{}'.format(
             ', '.join(c.get('stats', {}).get('name', '') for c in user_characters)))
 
     @character.command(name='delete')
@@ -564,7 +564,7 @@ class SheetManager:
         """Deletes a character."""
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         if not user_characters:
-            return await self.bot.say('You have no characters.')
+            return await ctx.send('You have no characters.')
 
         _character = await search_and_select(ctx, user_characters, name,
                                              lambda e: e.get('stats', {}).get('name', ''),
@@ -573,11 +573,14 @@ class SheetManager:
         name = _character.get('stats', {}).get('name', 'Unnamed')
         char_url = _character['upstream']
 
-        await self.bot.say('Are you sure you want to delete {}? (Reply with yes/no)'.format(name))
-        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
+        await ctx.send('Are you sure you want to delete {}? (Reply with yes/no)'.format(name))
+        try:
+            reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
+        except asyncio.TimeoutError:
+            reply = None
         reply = get_positivity(reply.content) if reply is not None else None
         if reply is None:
-            return await self.bot.say('Timed out waiting for a response or invalid response.')
+            return await ctx.send('Timed out waiting for a response or invalid response.')
         elif reply:
             # _character = Character(_character, char_url)
             # if _character.get_combat_id() is not None:
@@ -589,9 +592,9 @@ class SheetManager:
             #         await combat.commit()
 
             await self.bot.mdb.characters.delete_one({"owner": str(ctx.author.id), "upstream": char_url})
-            return await self.bot.say('{} has been deleted.'.format(name))
+            return await ctx.send('{} has been deleted.'.format(name))
         else:
-            return await self.bot.say("OK, cancelling.")
+            return await ctx.send("OK, cancelling.")
 
     @commands.command()
     @commands.cooldown(1, 15, BucketType.user)
@@ -612,35 +615,35 @@ class SheetManager:
         sheet_type = old_character.get('type', 'dicecloud')
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(_id)
-            loading = await self.bot.say('Updating character data from Dicecloud...')
+            loading = await ctx.send('Updating character data from Dicecloud...')
         elif sheet_type == 'google':
             try:
                 parser = GoogleSheet(_id, self.gsheet_client)
             except AssertionError:
                 await self.init_gsheet_client()  # attempt reconnection
-                return await self.bot.say("I am still connecting to Google. Try again in 15-30 seconds.")
-            loading = await self.bot.say('Updating character data from Google...')
+                return await ctx.send("I am still connecting to Google. Try again in 15-30 seconds.")
+            loading = await ctx.send('Updating character data from Google...')
         elif sheet_type == 'beyond':
-            loading = await self.bot.say('Updating character data from Beyond...')
+            loading = await ctx.send('Updating character data from Beyond...')
             parser = BeyondSheetParser(_id)
         else:
-            return await self.bot.say("Error: Unknown sheet type.")
+            return await ctx.send("Error: Unknown sheet type.")
         try:
             await parser.get_character()
         except (timeout, aiohttp.ClientResponseError) as e:
             log.warning(
                 f"Response error importing char:\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
-            return await self.bot.edit_message(loading,
-                                               "I'm having some issues connecting to Dicecloud or Google right now. "
-                                               "Please try again in a few minutes.")
+            return await loading.edit(content=
+                                      "I'm having some issues connecting to Dicecloud or Google right now. "
+                                      "Please try again in a few minutes.")
         except HttpError:
-            return await self.bot.edit_message(loading,
-                                               "Google returned an error trying to access your sheet. "
-                                               "Please ensure your sheet is shared and try again in a few minutes.")
+            return await loading.edit(content=
+                                      "Google returned an error trying to access your sheet. "
+                                      "Please ensure your sheet is shared and try again in a few minutes.")
         except Exception as e:
             log.warning(
                 f"Failed to import character\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+            return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
 
         try:
             if sheet_type == 'dicecloud':
@@ -652,21 +655,21 @@ class SheetManager:
             elif sheet_type == 'beyond':
                 sheet = parser.get_sheet()
             else:
-                return await self.bot.say("Error: Unknown sheet type.")
-            await self.bot.edit_message(loading,
-                                        'Updated and saved data for {}!'.format(sheet['sheet']['stats']['name']))
+                return await ctx.send("Error: Unknown sheet type.")
+            await loading.edit(content=
+                               'Updated and saved data for {}!'.format(sheet['sheet']['stats']['name']))
         except TypeError as e:
             del parser
             log.info(f"Exception in parser.get_sheet: {e}")
             log.debug('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
-            return await self.bot.edit_message(loading,
-                                               'Invalid character sheet. '
-                                               'If you are using a dicecloud sheet, '
-                                               'make sure you have shared the sheet so that anyone with the '
-                                               'link can view.')
+            return await loading.edit(content=
+                                      'Invalid character sheet. '
+                                      'If you are using a dicecloud sheet, '
+                                      'make sure you have shared the sheet so that anyone with the '
+                                      'link can view.')
         except Exception as e:
             del parser
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+            return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
 
         sheet = sheet['sheet']
         sheet['settings'] = old_character.get('settings', {})
@@ -707,7 +710,7 @@ class SheetManager:
         await c.set_active(ctx)
         del parser, old_character  # pls don't freak out avrae
         if '-v' in args:
-            await self.bot.say(embed=c.get_sheet_embed())
+            await ctx.send(embed=c.get_sheet_embed())
 
     @commands.command()
     async def transferchar(self, ctx, user: discord.Member):
@@ -719,14 +722,18 @@ class SheetManager:
         if conflict:
             overwrite = "**WARNING**: This will overwrite an existing character."
 
-        await self.bot.say(f"{user.mention}, accept a copy of {character.get_name()}? (Type yes/no)\n{overwrite}")
-        m = await self.bot.wait_for_message(timeout=300, author=user, channel=ctx.message.channel,
-                                            check=lambda msg: get_positivity(msg.content) is not None)
+        await ctx.send(f"{user.mention}, accept a copy of {character.get_name()}? (Type yes/no)\n{overwrite}")
+        try:
+            m = await self.bot.wait_for('message', timeout=300,
+                                        check=lambda me: auth_and_chan(ctx)(me) and get_positivity(
+                                            me.content) is not None)
+        except asyncio.TimeoutError:
+            m = None
 
-        if m is None or not get_positivity(m.content): return await self.bot.say("Transfer not confirmed, aborting.")
+        if m is None or not get_positivity(m.content): return await ctx.send("Transfer not confirmed, aborting.")
 
         await character.manual_commit(self.bot, user.id)
-        await self.bot.say(f"Copied {character.get_name()} to {user.display_name}'s storage.")
+        await ctx.send(f"Copied {character.get_name()} to {user.display_name}'s storage.")
 
     @commands.command()
     async def csettings(self, ctx, *, args):
@@ -892,7 +899,7 @@ class SheetManager:
             index += 1
 
         await char.commit(ctx)
-        await self.bot.say(out)
+        await ctx.send(out)
 
     @commands.group(invoke_without_command=True)
     async def cvar(self, ctx, name=None, *, value=None):
@@ -909,17 +916,17 @@ class SheetManager:
         if value is None:  # display value
             cvar = character.get_cvar(name)
             if cvar is None: cvar = 'Not defined.'
-            return await self.bot.say('**' + name + '**:\n' + cvar)
+            return await ctx.send('**' + name + '**:\n' + cvar)
 
         try:
             assert not name in character.get_stat_vars()
             assert not any(c in name for c in '-/()[]\\.^$*+?|{}')
         except AssertionError:
-            return await self.bot.say("Could not create cvar: already builtin, or contains invalid character!")
+            return await ctx.send("Could not create cvar: already builtin, or contains invalid character!")
 
         character.set_cvar(name, value)
         await character.commit(ctx)
-        await self.bot.say('Character variable `{}` set to: `{}`'.format(name, value))
+        await ctx.send('Character variable `{}` set to: `{}`'.format(name, value))
 
     @cvar.command(name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
@@ -929,27 +936,30 @@ class SheetManager:
         try:
             del char.character.get('cvars', {})[name]
         except KeyError:
-            return await self.bot.say('Character variable not found.')
+            return await ctx.send('Character variable not found.')
 
         await char.commit(ctx)
-        await self.bot.say('Character variable {} removed.'.format(name))
+        await ctx.send('Character variable {} removed.'.format(name))
 
     @cvar.command(name='deleteall', aliases=['removeall'])
     async def cvar_deleteall(self, ctx):
         """Deletes ALL character variables for the active character."""
         char = await Character.from_ctx(ctx)
 
-        await self.bot.say(f"This will delete **ALL** of your character variables for {char.get_name()}. "
-                           "Are you *absolutely sure* you want to continue?\n"
-                           "Type `Yes, I am sure` to confirm.")
-        reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+        await ctx.send(f"This will delete **ALL** of your character variables for {char.get_name()}. "
+                       "Are you *absolutely sure* you want to continue?\n"
+                       "Type `Yes, I am sure` to confirm.")
+        try:
+            reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
+        except asyncio.TimeoutError:
+            reply = None
         if (not reply) or (not reply.content == "Yes, I am sure"):
-            return await self.bot.say("Unconfirmed. Aborting.")
+            return await ctx.send("Unconfirmed. Aborting.")
 
         char.character['cvars'] = {}
 
         await char.commit(ctx)
-        return await self.bot.say(f"OK. I have deleted all of {char.get_name()}'s cvars.")
+        return await ctx.send(f"OK. I have deleted all of {char.get_name()}'s cvars.")
 
     @cvar.command(name='list')
     async def list_cvar(self, ctx):
@@ -957,8 +967,8 @@ class SheetManager:
         character = await Character.from_ctx(ctx)
         cvars = character.get_cvars()
 
-        await self.bot.say('{}\'s character variables:\n{}'.format(character.get_name(),
-                                                                   ', '.join(sorted([name for name in cvars.keys()]))))
+        await ctx.send('{}\'s character variables:\n{}'.format(character.get_name(),
+                                                               ', '.join(sorted([name for name in cvars.keys()]))))
 
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.
@@ -968,7 +978,10 @@ class SheetManager:
             await ctx.bot.send_message(ctx.message.channel,
                                        "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
                                        "If you only wanted to update your character, run `!update` instead.")
-            reply = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
+            try:
+                reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
+            except asyncio.TimeoutError:
+                reply = None
             replyBool = get_positivity(reply.content) if reply is not None else None
             return replyBool
         return True
@@ -983,24 +996,24 @@ class SheetManager:
             url = url.split('/character/')[-1].split('/')[0]
 
         override = await self._confirm_overwrite(ctx, f"dicecloud-{url}")
-        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
+        if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
-        loading = await self.bot.say('Loading character data from Dicecloud...')
+        loading = await ctx.send('Loading character data from Dicecloud...')
         parser = DicecloudParser(url)
         try:
             await parser.get_character()
         except Exception as eep:
-            return await self.bot.edit_message(loading, f"Dicecloud returned an error: {eep}")
+            return await loading.edit(content=f"Dicecloud returned an error: {eep}")
 
         try:
             sheet = parser.get_sheet()
         except Exception as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading,
-                                               'Error: Invalid character sheet. Capitalization matters!\n' + str(e))
+            return await loading.edit(content=
+                                      'Error: Invalid character sheet. Capitalization matters!\n' + str(e))
 
         c = Character(sheet['sheet'], f"dicecloud-{url}").initialize_consumables()
-        await self.bot.edit_message(loading, f'Loaded and saved data for {c.get_name()}!')
+        await loading.edit(content=f'Loaded and saved data for {c.get_name()}!')
 
         if '-cc' in args:
             for counter in parser.get_custom_counters():
@@ -1015,9 +1028,9 @@ class SheetManager:
         await c.commit(ctx)
         await c.set_active(ctx)
         try:
-            await self.bot.say(embed=c.get_sheet_embed())
+            await ctx.send(embed=c.get_sheet_embed())
         except:
-            await self.bot.say(
+            await ctx.send(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
                 "This is usually due to an invalid image.")
 
@@ -1027,59 +1040,56 @@ class SheetManager:
         The sheet must be shared with Avrae for this to work.
         Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
 
-        loading = await self.bot.say('Loading character data from Google... (This usually takes ~30 sec)')
+        loading = await ctx.send('Loading character data from Google... (This usually takes ~30 sec)')
         try:
             url = extract_gsheet_id_from_url(url)
         except NoValidUrlKeyFound:
-            return await self.bot.edit_message(loading, "This is not a Google Sheets link.")
+            return await loading.edit(content="This is not a Google Sheets link.")
 
         override = await self._confirm_overwrite(ctx, f"google-{url}")
-        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
+        if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         try:
             parser = GoogleSheet(url, self.gsheet_client)
         except AssertionError:
             await self.init_gsheet_client()  # hmm.
-            return await self.bot.edit_message(loading, "I am still connecting to Google. Try again in 15-30 seconds.")
+            return await loading.edit(content="I am still connecting to Google. Try again in 15-30 seconds.")
 
         try:
             await parser.get_character()
         except (KeyError, SpreadsheetNotFound):
-            return await self.bot.edit_message(
-                loading,
-                "Invalid character sheet. Make sure you've shared it with me at "
-                "`avrae-320@avrae-bot.iam.gserviceaccount.com`!")
+            return await loading.edit(content=
+                                      "Invalid character sheet. Make sure you've shared it with me at "
+                                      "`avrae-320@avrae-bot.iam.gserviceaccount.com`!")
         except HttpError:
-            return await self.bot.edit_message(
-                loading,
-                "Error: Google returned an error. Please ensure your sheet is shared with "
-                "`avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
+            return await loading.edit(content=
+                                      "Error: Google returned an error. Please ensure your sheet is shared with "
+                                      "`avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
         except Exception as e:
-            return await self.bot.edit_message(loading, 'Error: Could not load character sheet.\n' + str(e))
+            return await loading.edit(content='Error: Could not load character sheet.\n' + str(e))
 
         try:
             sheet = await parser.get_sheet()
         except Exception as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+            return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
 
         try:
-            await self.bot.edit_message(loading,
-                                        'Loaded and saved data for {}!'.format(sheet['sheet']['stats']['name']))
+            await loading.edit(content=
+                               'Loaded and saved data for {}!'.format(sheet['sheet']['stats']['name']))
         except TypeError as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(
-                loading,
-                'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
+            return await loading.edit(content=
+                                      'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
 
         char = Character(sheet['sheet'], f"google-{url}").initialize_consumables()
         await char.commit(ctx)
         await char.set_active(ctx)
 
         try:
-            await self.bot.say(embed=char.get_sheet_embed())
+            await ctx.send(embed=char.get_sheet_embed())
         except:
-            await self.bot.say(
+            await ctx.send(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
                 "This is usually due to an invalid image.")
 
@@ -1087,38 +1097,38 @@ class SheetManager:
     async def beyond(self, ctx, url: str):
         """Loads a character sheet from D&D Beyond, resetting all settings."""
 
-        loading = await self.bot.say('Loading character data from Beyond...')
+        loading = await ctx.send('Loading character data from Beyond...')
         url = re.search(r"/characters/(\d+)", url)
         if url is None:
-            return await self.bot.edit_message(loading, "This is not a D&D Beyond link.")
+            return await loading.edit(content="This is not a D&D Beyond link.")
         url = url.group(1)
 
         override = await self._confirm_overwrite(ctx, f"beyond-{url}")
-        if not override: return await self.bot.say("Character overwrite unconfirmed. Aborting.")
+        if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         parser = BeyondSheetParser(url)
 
         try:
             character = await parser.get_character()
         except Exception as e:
-            return await self.bot.edit_message(loading, 'Error: Could not load character sheet.\n' + str(e))
+            return await loading.edit(content='Error: Could not load character sheet.\n' + str(e))
 
         try:
             sheet = parser.get_sheet()
         except Exception as e:
             traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await self.bot.edit_message(loading, 'Error: Invalid character sheet.\n' + str(e))
+            return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
 
-        await self.bot.edit_message(loading, 'Loaded and saved data for {}!'.format(character['name']))
+        await loading.edit(content='Loaded and saved data for {}!'.format(character['name']))
 
         char = Character(sheet['sheet'], f"beyond-{url}").initialize_consumables()
         await char.commit(ctx)
         await char.set_active(ctx)
 
         try:
-            await self.bot.say(embed=char.get_sheet_embed())
+            await ctx.send(embed=char.get_sheet_embed())
         except:
-            await self.bot.say(
+            await ctx.send(
                 "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
                 "This is usually due to an invalid image.")
 

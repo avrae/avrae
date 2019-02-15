@@ -24,18 +24,24 @@ prefix = '!' if not TESTING else '#'
 
 # -----COGS-----
 # DYNAMIC_COGS = ["cogsmisc.customization"]
-# STATIC_COGS = ["cogsmisc.permissions",
-#                "utils.help"]
+# STATIC_COGS = ["utils.help"]
 DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
                 "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager"]
-STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"]
+STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils",
+               "cogsmisc.permissions"]
+
+
+def get_prefix(b, message):
+    if not message.guild:
+        return commands.when_mentioned_or(prefix)(b, message)
+    gp = b.prefixes.get(str(message.guild.id), '!')
+    return commands.when_mentioned_or(gp)(b, message)
 
 
 class Avrae(commands.AutoShardedBot):
-    def __init__(self, command_prefix, formatter=None, description=None, pm_help=False, testing=False,
+    def __init__(self, prefix, formatter=None, description=None, pm_help=False, testing=False,
                  **options):
-        super(Avrae, self).__init__(command_prefix, formatter, description, pm_help, **options)
-        self.prefix = prefix
+        super(Avrae, self).__init__(prefix, formatter, description, pm_help, **options)
         self.remove_command("help")
         self.testing = testing
         self.state = "init"
@@ -50,6 +56,10 @@ class Avrae(commands.AutoShardedBot):
         self.mdb = self.mclient.avrae  # let's just use the avrae db
         self.dynamic_cog_list = DYNAMIC_COGS
         self.owner = None
+        self.prefixes = self.rdb.not_json_get("prefixes", {})
+
+    def get_server_prefix(self, msg):
+        return get_prefix(self, msg)[-1]
 
 
 class Credentials:
@@ -73,7 +83,7 @@ Invite Avrae to your server [here](https://discordapp.com/oauth2/authorize?&clie
 Join the official testing server [here](https://discord.gg/pQbd4s6)!
 Love the bot? Donate to me [here](https://www.paypal.me/avrae)! \u2764
 '''
-bot = Avrae(command_prefix=commands.when_mentioned_or(prefix), description=desc, pm_help=True,
+bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
             shard_count=int(SHARD_COUNT), testing=TESTING, activity=discord.Game(name='D&D 5e | !help'))
 
 log_formatter = logging.Formatter('%(asctime)s %(levelname)s:%(name)s: %(message)s')
@@ -204,20 +214,8 @@ async def on_message(message):
             "{0.content}".format(message))
     except AttributeError:
         msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
-    # if message.author.id in bot.get_cog("AdminUtils").muted:
-    #     return
-    # if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
-    #     return
-    # try:
-    #     guild_prefix = bot.global_prefixes.get(message.guild.id, bot.prefix)
-    # except:
-    #     guild_prefix = bot.prefix
-    # if message.content.startswith(guild_prefix):
-    #     message.content = message.content.replace(guild_prefix, bot.prefix, 1)
-    # elif message.content.startswith(bot.prefix):
-    #     return
-    # if message.content.startswith(bot.prefix) and bot.state in ("init", "updating"):
-    #     return await message.channel.send("Bot is initializing, try again in a few seconds!")
+    if message.author.id in bot.get_cog("AdminUtils").muted:
+        return
     await bot.process_commands(message)
 
 

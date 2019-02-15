@@ -53,7 +53,7 @@ class Help:
             if name in bot.cogs:
                 command = bot.cogs[name]
             else:
-                command = bot.commands.get(name)
+                command = bot.all_commands.get(name)
                 if command is None:
                     try:
                         await bot.send_message(destination, bot.command_not_found.format(name))
@@ -65,7 +65,7 @@ class Help:
             embed = self.formatter.format_help_for(ctx, command)
         else:
             name = self._mention_pattern.sub(repl, commands[0])
-            command = bot.commands.get(name)
+            command = bot.all_commands.get(name)
             if command is None:
                 try:
                     await bot.send_message(destination, bot.command_not_found.format(name))
@@ -77,7 +77,7 @@ class Help:
             for key in commands[1:]:
                 try:
                     key = self._mention_pattern.sub(repl, key)
-                    command = command.commands.get(key)
+                    command = command.get_command(key)
                     if command is None:
                         try:
                             await bot.send_message(destination, bot.command_not_found.format(key))

@@ -12,8 +12,12 @@ from discord.ext import commands
 # the permissions required for them.
 # Of course, the owner will always be able to execute commands.
 
+def is_owner(ctx):
+    return ctx.author.id == ctx.bot.owner.id
+
+
 def check_permissions(ctx, perms):
-    if commands.is_owner():
+    if is_owner(ctx):
         return True
 
     ch = ctx.channel
@@ -31,7 +35,7 @@ def role_or_permissions(ctx, check, **perms):
 
     ch = ctx.message.channel
     author = ctx.message.author
-    if ch.is_private:
+    if isinstance(ch, discord.abc.PrivateChannel):
         return False  # can't have roles in PMs
 
     try:

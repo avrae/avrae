@@ -31,7 +31,7 @@ class Customization:
 
     async def on_ready(self):
         if getattr(self.bot, "shard_id", 0) == 0:
-            cmds = list(self.bot.commands.keys())
+            cmds = list(self.bot.all_commands.keys())
             self.bot.rdb.jset('default_commands', cmds)
 
     async def on_message(self, message):
@@ -53,21 +53,14 @@ class Customization:
         cmds = cmds.splitlines()
         for c in cmds[:20]:
             ctx.message.content = c
-            if not hasattr(self.bot, 'global_prefixes'):  # bot's still starting up!
-                return
-            try:
-                guild_prefix = self.bot.global_prefixes.get(str(ctx.guild.id), self.bot.prefix)
-            except:
-                guild_prefix = self.bot.prefix
-            if ctx.message.content.startswith(guild_prefix):
-                ctx.message.content = ctx.message.content.replace(guild_prefix, self.bot.prefix, 1)
             await self.bot.process_commands(ctx.message)
             await asyncio.sleep(1)
 
     async def handle_aliases(self, message):
-        if message.content.startswith(self.bot.prefix):
-            alias = self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[0]
-            if not message.channel.is_private:
+        prefix = self.bot.get_server_prefix(message)
+        if message.content.startswith(prefix):
+            alias = prefix.join(message.content.split(prefix)[1:]).split(' ')[0]
+            if message.guild:
                 command = (await self.bot.mdb.aliases.find_one({"owner": str(message.author.id), "name": alias},
                                                                ['commands'])) or \
                           (await self.bot.mdb.servaliases.find_one({"server": str(message.guild.id), "name": alias},
@@ -110,7 +103,8 @@ class Customization:
     def handle_alias_arguments(self, command, message):
         """Takes an alias name, alias value, and message and handles percent-encoded args.
         Returns: string"""
-        rawargs = " ".join(self.bot.prefix.join(message.content.split(self.bot.prefix)[1:]).split(' ')[1:])
+        prefix = self.bot.get_server_prefix(message)
+        rawargs = " ".join(prefix.join(message.content.split(prefix)[1:]).split(' ')[1:])
         view = StringView(rawargs)
         args = []
         while not view.eof:
@@ -143,7 +137,7 @@ class Customization:
                 except ValueError:
                     pass
 
-        return self.bot.prefix + new_command + " " + ' '.join((shlex.quote(v) if ' ' in v else v) for v in tempargs)
+        return prefix + new_command + " " + ' '.join((shlex.quote(v) if ' ' in v else v) for v in tempargs)
 
     async def parse_no_char(self, cstr, ctx):
         """
@@ -165,7 +159,7 @@ class Customization:
         If a user and a server have aliases with the same name, the user alias will take priority."""
         if alias_name is None:
             return await ctx.invoke(self.bot.get_command("alias list"))
-        if alias_name in self.bot.commands:
+        if alias_name in self.bot.all_commands:
             return await self.bot.say('There is already a built-in command with that name!')
 
         if ' ' in alias_name or not alias_name:
@@ -223,7 +217,7 @@ class Customization:
             return await ctx.invoke(self.bot.get_command("servalias list"))
 
         server_aliases = await scripting.get_servaliases(ctx)
-        if alias_name in self.bot.commands:
+        if alias_name in self.bot.all_commands:
             return await self.bot.say('There is already a built-in command with that name!')
 
         if cmds is None:

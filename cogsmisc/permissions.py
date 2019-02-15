@@ -18,17 +18,15 @@ class Permissions:
 
     def __init__(self, bot):
         self.bot = bot
+        self.disabled_commands = self.bot.rdb.not_json_get("permissions", {})
 
-    async def on_ready(self):
-        self.bot.global_prefixes = self.bot.rdb.not_json_get("prefixes", {})
-
-    def __check(self, ctx):
+    def __global_check(self, ctx):
         msg = ctx.message
-        if checks.is_owner_check(ctx):
+        if checks.is_owner(ctx):
             return True
 
         try:
-            entry = self.bot.rdb.not_json_get("permissions", {})[str(msg.guild.id)]
+            entry = self.disabled_commands[str(msg.guild.id)]
         except (KeyError, AttributeError):
             return True
         else:
@@ -41,18 +39,16 @@ class Permissions:
     async def prefix(self, ctx, prefix: str = None):
         """Sets the bot's prefix for this server.
 
-        You must have Manage Server permissions or the
-        Bot Admin role to use this command.
+        You must have Manage Server permissions or a role called "Bot Admin" to use this command.
         
         Forgot the prefix? Reset it with "@Avrae#6944 prefix !".
         """
         guild_id = str(ctx.guild.id)
         if prefix is None:
-            return await self.bot.say("My current prefix is: `" + self.bot.global_prefixes.get(guild_id, '!') + '`')
-        self.bot.global_prefixes = self.bot.rdb.not_json_get("prefixes", {})
-        self.bot.global_prefixes[guild_id] = prefix
-        self.bot.rdb.not_json_set("prefixes", self.bot.global_prefixes)
-        await self.bot.say("Prefix set to `{}` for this server.".format(prefix))
+            return await ctx.send(f"My current prefix is: `{self.bot.get_server_prefix(ctx.message)}`")
+        self.bot.prefixes[guild_id] = prefix
+        self.bot.rdb.not_json_set("prefixes", self.bot.prefixes)
+        await ctx.send("Prefix set to `{}` for this server.".format(prefix))
 
     @commands.command()
     @commands.guild_only()
@@ -60,23 +56,21 @@ class Permissions:
     async def disable(self, ctx, *, command: str):
         """Disables a command for this server. Case-sensitive.
 
-        You must have Manage Server permissions or the
-        Bot Admin role to use this command.
+        You must have Manage Server permissions or a role called "Bot Admin" to use this command.
         """
 
         if command in ('enable', 'disable'):
-            return await self.bot.say('Cannot disable that command.')
+            return await ctx.send('Cannot disable that command.')
 
-        if command not in self.bot.commands:
-            return await self.bot.say('I do not have this command registered.')
+        if command not in self.bot.all_commands:
+            return await ctx.send('I do not have this command registered.')
 
         guild_id = str(ctx.guild.id)
-        global_entries = self.bot.rdb.not_json_get("permissions", {})
-        guild_entries = global_entries.get(guild_id, {})
+        guild_entries = self.disabled_commands.get(guild_id, {})
         guild_entries[command] = True
-        global_entries[guild_id] = guild_entries
-        self.bot.rdb.not_json_set("permissions", global_entries)
-        await self.bot.say('"%s" command disabled in this server.' % command)
+        self.disabled_commands[guild_id] = guild_entries
+        self.bot.rdb.not_json_set("permissions", self.disabled_commands)
+        await ctx.send('"%s" command disabled in this server.' % command)
 
     @commands.command()
     @commands.guild_only()
@@ -84,21 +78,19 @@ class Permissions:
     async def enable(self, ctx, *, command: str):
         """Enables a command for this server.
 
-        You must have Manage Server permissions or the
-        Bot Admin role to use this command.
+        You must have Manage Server permissions or a role called "Bot Admin" to use this command.
         """
         guild_id = str(ctx.guild.id)
-        global_entries = self.bot.rdb.not_json_get("permissions", {})
-        guild_entries = global_entries.get(guild_id, {})
+        guild_entries = self.disabled_commands.get(guild_id, {})
 
         try:
             guild_entries.pop(command)
-            global_entries[guild_id] = guild_entries
+            self.disabled_commands[guild_id] = guild_entries
         except KeyError:
-            await self.bot.say('The command does not exist or is not disabled.')
+            await ctx.send('The command does not exist or is not disabled.')
         else:
-            self.bot.rdb.not_json_set("permissions", global_entries)
-            await self.bot.say('"%s" command enabled in this server.' % command)
+            self.bot.rdb.not_json_set("permissions", self.disabled_commands)
+            await ctx.send('"%s" command enabled in this server.' % command)
 
 
 def setup(bot):

@@ -23,10 +23,9 @@ SHARD_COUNT = 20 if not TESTING else 1
 prefix = '!' if not TESTING else '#'
 
 # -----COGS-----
-# DYNAMIC_COGS = ["cogsmisc.customization"]
 # STATIC_COGS = ["utils.help"]
 DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
-                "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager"]
+                "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization"]
 STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils",
                "cogsmisc.permissions"]
 
@@ -130,13 +129,12 @@ async def on_command_error(ctx, error):
     if isinstance(error, AvraeException):
         return await ctx.send(str(error))
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
-    if isinstance(error, commands.CheckFailure):
-        await ctx.send("Error: You are not allowed to run this command.")
-        return
-    elif isinstance(error,
+    if isinstance(error,
                     (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):
         return await ctx.send("Error: " + str(
-            error) + "\nUse `!help " + ctx.command.qualified_name + "` for help.")
+            error) + f"\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help.")
+    elif isinstance(error, commands.CheckFailure):
+        return await ctx.send("Error: You are not allowed to run this command.")
     elif isinstance(error, commands.CommandOnCooldown):
         return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
     elif isinstance(error, CommandInvokeError):

@@ -37,7 +37,7 @@ class Help:
         [A|B] - This means the it can be __**either A or B**__.
         [argument...] - This means you can have multiple arguments.
         Now that you know the basics, it should be noted that __**you do not type in the brackets!**__"""
-        bot = ctx.bot
+        bot = self.bot
         destination = ctx.message.author if bot.pm_help else ctx.message.channel
 
         def repl(obj):
@@ -45,33 +45,32 @@ class Help:
 
         # help by itself just lists our own commands.
         if len(commands) == 0:
-            embed = self.formatter.format_help_for(ctx, bot)
+            embed = await self.formatter.format_help_for(ctx, bot)
         elif len(commands) == 1:
             # try to see if it is a cog name
             name = self._mention_pattern.sub(repl, commands[0])
-            command = None
             if name in bot.cogs:
                 command = bot.cogs[name]
             else:
                 command = bot.all_commands.get(name)
                 if command is None:
                     try:
-                        await bot.send_message(destination, bot.command_not_found.format(name))
+                        await destination.send(bot.command_not_found.format(name))
                     except Forbidden:
-                        await bot.send_message(ctx.message.channel,
-                                               'Error: I cannot send messages to this user or channel.')
+                        await ctx.channel.send(
+                            'Error: I cannot send messages to this user or channel.')
                     return
 
-            embed = self.formatter.format_help_for(ctx, command)
+            embed = await self.formatter.format_help_for(ctx, command)
         else:
             name = self._mention_pattern.sub(repl, commands[0])
             command = bot.all_commands.get(name)
             if command is None:
                 try:
-                    await bot.send_message(destination, bot.command_not_found.format(name))
+                    await destination.send(bot.command_not_found.format(name))
                 except Forbidden:
-                    await bot.send_message(ctx.message.channel,
-                                           'Error: I cannot send messages to this user or channel.')
+                    await ctx.channel.send(
+                        'Error: I cannot send messages to this user or channel.')
                 return
 
             for key in commands[1:]:
@@ -80,29 +79,29 @@ class Help:
                     command = command.get_command(key)
                     if command is None:
                         try:
-                            await bot.send_message(destination, bot.command_not_found.format(key))
+                            await destination.send(bot.command_not_found.format(key))
                         except Forbidden:
-                            await bot.send_message(ctx.message.channel,
-                                                   'Error: I cannot send messages to this user or channel.')
+                            await ctx.channel.send(
+                                'Error: I cannot send messages to this user or channel.')
                         return
                 except AttributeError:
                     try:
-                        await bot.send_message(destination, bot.command_has_no_subcommands.format(command, key))
+                        await destination.send(bot.command_has_no_subcommands.format(command, key))
                     except Forbidden:
-                        await bot.send_message(ctx.message.channel,
-                                               'Error: I cannot send messages to this user or channel.')
+                        await ctx.channel.send(
+                            'Error: I cannot send messages to this user or channel.')
                     return
 
-            embed = self.formatter.format_help_for(ctx, command)
+            embed = await self.formatter.format_help_for(ctx, command)
 
         try:
             for e in embed:
-                await bot.send_message(destination, embed=e)
+                await destination.send(embed=e)
         except Forbidden:
-            await bot.send_message(ctx.message.channel, 'Error: I cannot send messages to this user or channel.')
+            await ctx.channel.send('Error: I cannot send messages to this user or channel.')
         else:
-            if bot.pm_help and not ctx.message.channel.is_private:
-                await bot.send_message(ctx.message.channel, 'I have sent help to your PMs.')
+            if bot.pm_help and ctx.guild:
+                await ctx.channel.send('I have sent help to your PMs.')
 
 
 class CustomHelpFormatter(HelpFormatter):
@@ -129,7 +128,7 @@ class CustomHelpFormatter(HelpFormatter):
                "Type {0}{1} command for more info on a command.\n" \
                "You can also type {0}{1} category for more info on a category.".format(self.clean_prefix, command_name)
 
-    def format(self):
+    async def format(self):
         """Handles the actual behaviour involved with formatting.
         To change the behaviour, this method should be overridden.
         Returns
@@ -175,7 +174,7 @@ class CustomHelpFormatter(HelpFormatter):
 
         current_embed = embed
         if self.is_bot():
-            data = sorted(self.filter_command_list(), key=category)
+            data = sorted(await self.filter_command_list(), key=category)
             for category, commands in itertools.groupby(data, key=category):
                 # there simply is no prettier way of doing this.
                 commands = list(commands)
@@ -203,7 +202,7 @@ class CustomHelpFormatter(HelpFormatter):
                         current_embed.add_field(name=title, value=value, inline=False)
         else:
             title = 'Commands'
-            value = self._get_subcommands(self.filter_command_list())
+            value = self._get_subcommands(await self.filter_command_list())
             _v = []
             l = ""
             for val in value.split('\n'):

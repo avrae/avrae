@@ -433,7 +433,7 @@ class SheetManager:
 
         char.character['overrides'] = overrides
         await char.commit(ctx)
-        await ctx.send("Description override removed! Use `!update` to return to the old description.")
+        await ctx.send(f"Description override removed! Use `{ctx.prefix}update` to return to the old description.")
 
     @commands.group(invoke_without_command=True)
     async def portrait(self, ctx):
@@ -482,7 +482,7 @@ class SheetManager:
         char.character['overrides'] = overrides
 
         await char.commit(ctx)
-        await ctx.send("Portrait override removed! Use `!update` to return to the old portrait.")
+        await ctx.send(f"Portrait override removed! Use `{ctx.prefix}update` to return to the old portrait.")
 
     @commands.command(hidden=True)  # hidden, as just called by token command
     async def playertoken(self, ctx):
@@ -760,9 +760,9 @@ class SheetManager:
             if arg == 'color':
                 color = list_get(index + 1, None, args)
                 if color is None:
-                    out += '\u2139 Your character\'s current color is {}. Use "!csettings color reset" to reset it to random.\n' \
-                        .format(hex(character['settings'].get('color')) if character['settings'].get(
-                        'color') is not None else "random")
+                    current_color = hex(char.get_color()) if char.get_setting('color') else "random"
+                    out += f'\u2139 Your character\'s current color is {current_color}. ' \
+                           f'Use "{ctx.prefix}csettings color reset" to reset it to random.\n'
                 elif color.lower() == 'reset':
                     character['settings']['color'] = None
                     out += "\u2705 Color reset to random.\n"
@@ -770,7 +770,7 @@ class SheetManager:
                     try:
                         color = int(color, base=16)
                     except (ValueError, TypeError):
-                        out += '\u274c Unknown color. Use "!csettings color reset" to reset it to random.\n'
+                        out += f'\u274c Unknown color. Use "{ctx.prefix}csettings color reset" to reset it to random.\n'
                     else:
                         if not 0 <= color <= 0xffffff:
                             out += '\u274c Invalid color.\n'
@@ -780,9 +780,9 @@ class SheetManager:
             if arg == 'criton':
                 criton = list_get(index + 1, None, args)
                 if criton is None:
-                    out += '\u2139 Your character\'s current crit range is {}. Use "!csettings criton reset" to reset it to 20.\n' \
-                        .format(str(character['settings'].get('criton')) + '-20' if character['settings'].get(
-                        'criton') is not None else "20")
+                    current = str(char.get_setting('criton')) + '-20' if char.get_setting('criton') else "20"
+                    out += f'\u2139 Your character\'s current crit range is {current}. ' \
+                           f'Use "{ctx.prefix}csettings criton reset" to reset it to 20.\n'
                 elif criton.lower() == 'reset':
                     character['settings']['criton'] = None
                     out += "\u2705 Crit range reset to 20.\n"
@@ -790,7 +790,7 @@ class SheetManager:
                     try:
                         criton = int(criton)
                     except (ValueError, TypeError):
-                        out += '\u274c Invalid number. Use "!csettings criton reset" to reset it to 20.\n'
+                        out += f'\u274c Invalid number. Use "{ctx.prefix}csettings criton reset" to reset it to 20.\n'
                     else:
                         if not 0 < criton <= 20:
                             out += '\u274c Crit range must be between 1 and 20.\n'
@@ -803,9 +803,10 @@ class SheetManager:
             if arg == 'reroll':
                 reroll = list_get(index + 1, None, args)
                 if reroll is None:
-                    out += '\u2139 Your character\'s current reroll is {}. Use "!csettings reroll reset" to reset it.\n' \
-                        .format(str(character['settings'].get('reroll')) if character['settings'].get(
-                        'reroll') is not '0' else "0")
+                    current = str(character['settings'].get('reroll')) if character['settings'].get(
+                        'reroll') is not '0' else "0"
+                    out += f'\u2139 Your character\'s current reroll is {current}. ' \
+                           f'Use "{ctx.prefix}csettings reroll reset" to reset it.\n'
                 elif reroll.lower() == 'reset':
                     character['settings']['reroll'] = '0'
                     out += "\u2705 Reroll reset.\n"
@@ -813,34 +814,23 @@ class SheetManager:
                     try:
                         reroll = int(reroll)
                     except (ValueError, TypeError):
-                        out += '\u274c Invalid number. Use "!csettings reroll reset" to reset it.\n'
+                        out += f'\u274c Invalid number. Use "{ctx.prefix}csettings reroll reset" to reset it.\n'
                     else:
                         if not 1 <= reroll <= 20:
                             out += '\u274c Reroll must be between 1 and 20.\n'
                         else:
                             character['settings']['reroll'] = reroll
                             out += "\u2705 Reroll set to {}.\n".format(reroll)
-            if arg == 'critdmg':  # DEPRECATED
-                critdmg = list_get(index + 1, None, args)
-                if critdmg is None:
-                    out += '\u2139 Your character\'s current critdmg is {}. Use "!csettings critdmg reset" to reset it.\n' \
-                        .format(str(character['settings'].get('critdmg')) if character['settings'].get(
-                        'critdmg') is not '0' else "0")
-                elif critdmg.lower() == 'reset':
-                    del character['settings']['critdmg']
-                    out += "\u2705 Critdmg reset.\n"
-                else:
-                    character['settings']['critdmg'] = critdmg
-                    out += "\u2705 Critdmg set to {}.\n".format(critdmg)
             if arg == 'critdice':
                 critdice = list_get(index + 1, None, args)
                 if 'hocrit' in character['settings']:
                     character['settings']['critdice'] += int(character['settings']['hocrit'])
-                    character['settings']['hocrit'] = False
+                    del character['settings']['hocrit']
                 if critdice is None:
-                    out += '\u2139 Extra crit dice are currently set to {}. Use "!csettings critdice reset" to reset it.\n' \
-                        .format(str(character['settings'].get('critdice')) if character['settings'].get(
-                        'critdice') is not '0' else "0")
+                    current = str(character['settings'].get('critdice')) if character['settings'].get(
+                        'critdice') is not '0' else "0"
+                    out += f'\u2139 Extra crit dice are currently set to {current}. ' \
+                           f'Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
                 elif critdice.lower() == 'reset':
                     character['settings']['critdice'] = 0
                     out += "\u2705 Extra crit dice reset.\n"
@@ -848,10 +838,10 @@ class SheetManager:
                     try:
                         critdice = int(critdice)
                     except (ValueError, TypeError):
-                        out += '\u274c Invalid number. Use "!csettings critdice reset" to reset it.\n'
+                        out += f'\u274c Invalid number. Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
                     else:
                         if not 0 <= critdice <= 20:
-                            out += '\u274c Extra crit dice must be between 1 and 20. Use "!csettings critdice reset" to reset it.\n'
+                            out += f'\u274c Extra crit dice must be between 1 and 20. Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
                         else:
                             character['settings']['critdice'] = critdice
                             out += "\u2705 Extra crit dice set to {}.\n".format(critdice)
@@ -864,7 +854,7 @@ class SheetManager:
                     try:
                         srslots = get_positivity(srslots)
                     except AttributeError:
-                        out += '\u274c Invalid input. Use "!csettings srslots false" to reset it.\n'
+                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings srslots false" to reset it.\n'
                     else:
                         character['settings']['srslots'] = srslots
                         out += "\u2705 Short Rest slots {}.\n".format(
@@ -878,7 +868,7 @@ class SheetManager:
                     try:
                         embedimage = get_positivity(embedimage)
                     except AttributeError:
-                        out += '\u274c Invalid input. Use "!csettings embedimage true" to reset it.\n'
+                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings embedimage true" to reset it.\n'
                     else:
                         character['settings']['embedimage'] = embedimage
                         out += "\u2705 Embed Image {}.\n".format(
@@ -892,7 +882,7 @@ class SheetManager:
                     try:
                         assert crittype in ('2x', 'default')
                     except AssertionError:
-                        out += '\u274c Invalid input. Use "!csettings crittype default" to reset it.\n'
+                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings crittype default" to reset it.\n'
                     else:
                         character['settings']['crittype'] = crittype
                         out += "\u2705 Crit type set to {}.\n".format(character['settings'].get('crittype'))
@@ -975,9 +965,10 @@ class SheetManager:
         Returns True to overwrite, False or None otherwise."""
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
-            await ctx.bot.send_message(ctx.message.channel,
-                                       "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
-                                       "If you only wanted to update your character, run `!update` instead.")
+            await ctx.bot.send_message(
+                ctx.message.channel,
+                "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
+                f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
             try:
                 reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
             except asyncio.TimeoutError:

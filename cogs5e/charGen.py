@@ -443,7 +443,8 @@ class CharGenerator:
                        "any effects they grant.")
         caveats.append("**Spellcasting**: If your class can cast spells, be sure to set your number of known spells, "
                        "max prepared, DC, attack bonus, and what spells you know in the Spells tab. You can add a "
-                       "spell to your spellbook by connecting the character to Avrae and running `!sb add <SPELL>`.")
+                       "spell to your spellbook by connecting the character to Avrae and running "
+                       f"`{ctx.prefix}sb add <SPELL>`.")
 
         # Background Gen
         #    Inventory/Trait Gen
@@ -485,7 +486,7 @@ class CharGenerator:
             "have to do manually:\n" + '\n\n'.join(caveats))
         await ctx.author.send(
             f"When you're ready, load your character into Avrae with the command "
-            f"`!dicecloud https://dicecloud.com/character/{char_id}/{name} -cc`")
+            f"`{ctx.prefix}dicecloud https://dicecloud.com/character/{char_id}/{name} -cc`")
         await loadingMessage.edit(content=out)
 
     @staticmethod

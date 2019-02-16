@@ -923,7 +923,8 @@ class PlayerCombatant(Combatant):
             from cogs5e.models.character import Character
             inst._character = await Character.from_bot_and_ids(ctx.bot, inst.character_owner, inst.character_id)
         except NoCharacter:
-            raise CombatException("A character in combat was deleted. Please run `!init end -force` to end combat.")
+            raise CombatException(f"A character in combat was deleted. "
+                                  f"Please run `{ctx.prefix}init end -force` to end combat.")
 
         return inst
 

@@ -94,7 +94,7 @@ class Core:
         embed.add_field(name="Servers", value=str(len(self.bot.guilds)))
         memory_usage = psutil.Process().memory_full_info().uss / 1024 ** 2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
-        embed.add_field(name='About', value='Bot coded by @zhu.exe#4211\nFound a bug? Report it with `!bug`!\n'
+        embed.add_field(name='About', value='Made with :heart: by @zhu.exe#4211\n'
                                             'Help me buy a cup of coffee [here](https://www.paypal.me/avrae)!\n'
                                             'Join the official testing server [here](https://discord.gg/pQbd4s6)!',
                         inline=False)

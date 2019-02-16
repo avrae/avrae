@@ -36,7 +36,7 @@ class Homebrew:
         user_bestiaries = await self.bot.mdb.bestiaries.count_documents({"owner": str(ctx.author.id)})
 
         if not user_bestiaries:
-            return await ctx.send("You have no bestiaries. Use `!bestiary import` to import one!")
+            return await ctx.send(f"You have no bestiaries. Use `{ctx.prefix}bestiary import` to import one!")
 
         if name is None:
             bestiary = await Bestiary.from_ctx(ctx)
@@ -44,7 +44,7 @@ class Homebrew:
             try:
                 bestiary = await select_bestiary(ctx, name)
             except NoActiveBrew:
-                return await ctx.send("You have no bestiaries. Use `!bestiary import` to import one!")
+                return await ctx.send(f"You have no bestiaries. Use `{ctx.prefix}bestiary import` to import one!")
             except NoSelectionElements:
                 return await ctx.send("Bestiary not found.")
             await bestiary.set_active(ctx)
@@ -65,7 +65,7 @@ class Homebrew:
         try:
             bestiary = await select_bestiary(ctx, name)
         except NoActiveBrew:
-            return await ctx.send("You have no bestiaries. Use `!bestiary import` to import one!")
+            return await ctx.send(f"You have no bestiaries. Use `{ctx.prefix}bestiary import` to import one!")
         except NoSelectionElements:
             return await ctx.send("Bestiary not found.")
 
@@ -106,7 +106,8 @@ class Homebrew:
         active_bestiary = await self.bot.mdb.bestiaries.find_one({"owner": str(ctx.author.id), "active": True})
 
         if active_bestiary is None:
-            return await ctx.send("You don't have a bestiary active. Add one with `!bestiary import` first!")
+            return await ctx.send(
+                f"You don't have a bestiary active. Add one with `{ctx.prefix}bestiary import` first!")
         loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")
 
         bestiary = await bestiary_from_critterdb(active_bestiary["critterdb_id"])
@@ -219,7 +220,8 @@ class Homebrew:
         user = ctx.author
         if str(user.id) not in [s['id'] for s in pack.subscribers]:
             pack.subscribers.append({"username": str(user), "id": str(user.id)})
-            out = f"Subscribed to {pack.name} by {pack.owner['username']}. Use `!pack {pack.name}` to select it."
+            out = f"Subscribed to {pack.name} by {pack.owner['username']}. " \
+                  f"Use `{ctx.prefix}pack {pack.name}` to select it."
         else:
             pack.subscribers.remove(next(s for s in pack.subscribers if s['id'] == str(user.id)))
             out = f"Unsubscribed from {pack.name}."
@@ -327,7 +329,8 @@ class Homebrew:
         user = ctx.author
         if str(user.id) not in [s['id'] for s in tome.subscribers]:
             tome.subscribers.append({"username": str(user), "id": str(user.id)})
-            out = f"Subscribed to {tome.name} by {tome.owner['username']}. Use `!tome {tome.name}` to select it."
+            out = f"Subscribed to {tome.name} by {tome.owner['username']}. " \
+                  f"Use `{ctx.prefix}tome {tome.name}` to select it."
         else:
             tome.subscribers.remove(next(s for s in tome.subscribers if s['id'] == str(user.id)))
             out = f"Unsubscribed from {tome.name}."

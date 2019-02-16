@@ -35,7 +35,7 @@ class GameTrack:
     async def game(self, ctx):
         """Commands to help track character information in a game. Use `!help game` to view subcommands."""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Incorrect usage. Use !help game for help.")
+            await ctx.send(f"Incorrect usage. Use {ctx.prefix}help game for help.")
         try:
             await ctx.message.delete()
         except:
@@ -333,7 +333,7 @@ class GameTrack:
         character = await Character.from_ctx(ctx)
         if not character.live:
             return await ctx.send("This command requires a live Dicecloud sheet. To set up, share your Dicecloud "
-                                  "sheet with `avrae` with edit permissions, then `!update`.")
+                                  f"sheet with `avrae` with edit permissions, then `{ctx.prefix}update`.")
         if not 0 <= level < 10:
             return await ctx.send("Invalid spell level.")
         class_spells = [sp for sp in c.spells if _class.lower() in [cl.lower() for cl in sp.classes]]
@@ -553,8 +553,8 @@ class GameTrack:
         _reset = None
         if any(r in counter for r in ('max', 'min')):
             if not counter.get('reset') == 'none':
-                _resetMap = {'short': "Short Rest completed (`!game shortrest`)",
-                             'long': "Long Rest completed (`!game longrest`)",
+                _resetMap = {'short': "Short Rest completed",
+                             'long': "Long Rest completed",
                              'reset': "`!cc reset` is called",
                              'hp': "Character has >0 HP",
                              None: "Unknown Reset"}

@@ -325,7 +325,11 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, 
                                   "you to hide the monster name.")
             selectMsg = await ctx.author.send(embed=embed)
 
-        m = await ctx.bot.wait_for('message', timeout=30, check=chk)
+        try:
+            m = await ctx.bot.wait_for('message', timeout=30, check=chk)
+        except asyncio.TimeoutError:
+            m = None
+
         if m is None:
             break
         if m.content.lower() == 'n':
@@ -516,7 +520,10 @@ async def confirm(ctx, message, delete_msgs=False):
     :return: Whether the user confirmed or not. None if no reply was recieved
     """
     msg = await ctx.channel.send(message)
-    reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
+    try:
+        reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
+    except asyncio.TimeoutError:
+        return None
     replyBool = get_positivity(reply.content) if reply is not None else None
     if delete_msgs:
         try:

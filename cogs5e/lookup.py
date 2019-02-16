@@ -259,7 +259,7 @@ class Lookup:
                 level_features_str += f"`{i+1}` {l}\n"
             embed.description = level_features_str
 
-            embed.set_footer(text="Use !classfeat to look up a feature.")
+            embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature.")
         else:
             embed.title = f"{result['name']}, Level {level}"
 
@@ -278,7 +278,7 @@ class Lookup:
                 text = parse_data_entry(f['entries'])
                 embed.add_field(name=f['name'], value=(text[:1019] + "...") if len(text) > 1023 else text)
 
-            embed.set_footer(text="Use !classfeat to look up a feature if it is cut off.")
+            embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
 
         await destination.send(embed=embed)
 
@@ -310,7 +310,7 @@ class Lookup:
                     text = parse_data_entry(entry['entries'])
                     embed.add_field(name=entry['name'], value=(text[:1019] + "...") if len(text) > 1023 else text)
 
-        embed.set_footer(text="Use !classfeat to look up a feature if it is cut off.")
+        embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
 
         await destination.send(embed=embed)
 

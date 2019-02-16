@@ -40,7 +40,7 @@ class InitTracker:
     async def init(self, ctx):
         """Commands to help track initiative."""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Incorrect usage. Use !help init for help.")
+            await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
         try:
             await ctx.message.delete()
         except:
@@ -77,8 +77,10 @@ class InitTracker:
         except:
             pass
         await ctx.send(
-            "Everyone roll for initiative!\nIf you have a character set up with SheetManager: `!init join`\n"
-            "If it's a 5e monster: `!init madd [monster name]`\nOtherwise: `!init add [modifier] [name]`")
+            f"Everyone roll for initiative!\n"
+            f"If you have a character set up with SheetManager: `{ctx.prefix}init join`\n"
+            f"If it's a 5e monster: `{ctx.prefix}init madd [monster name]`\n"
+            f"Otherwise: `{ctx.prefix}init add [modifier] [name]`")
 
     @init.command()
     async def add(self, ctx, modifier: int, name: str, *args):
@@ -428,7 +430,7 @@ class InitTracker:
         if len(combat.get_combatants()) == 0:
             return await ctx.send("There are no combatants.")
         if combat.index is None:
-            return await ctx.send("Please start combat with `!init next` first.")
+            return await ctx.send(f"Please start combat with `{ctx.prefix}init next` first.")
 
         toRemove = []
         for co in combat.get_combatants():
@@ -770,7 +772,7 @@ class InitTracker:
         combat = await Combat.from_ctx(ctx)
         combatant = combat.current_combatant
         if combatant is None:
-            return await ctx.send("You must start combat with `!init next` first.")
+            return await ctx.send(f"You must start combat with `{ctx.prefix}init next` first.")
 
         if combatant.isPrivate and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
             return await ctx.send("You do not have permission to view this combatant's attacks.")
@@ -823,7 +825,7 @@ class InitTracker:
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
-                return await ctx.send("You must start combat with `!init next` first.")
+                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` first.")
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
@@ -952,7 +954,7 @@ class InitTracker:
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
-                return await ctx.send("You must start combat with `!init next` first.")
+                return await ctx.send(f"You must start combat with `{ctx.prefix}init next` first.")
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the caster.")

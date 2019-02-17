@@ -27,7 +27,7 @@ class Publicity:
     async def background_update(self):
         try:
             await self.bot.wait_until_ready()
-            while not self.bot.is_closed:
+            while not self.bot.is_closed():
                 await asyncio.sleep(3600)  # every hour
                 await self.backup()
         except asyncio.CancelledError:

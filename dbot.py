@@ -211,7 +211,7 @@ async def on_message(message):
             "{0.content}".format(message))
     except AttributeError:
         msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
-    if message.author.id in bot.get_cog("AdminUtils").muted:
+    if str(message.author.id) in bot.get_cog("AdminUtils").muted:
         return
     await bot.process_commands(message)
 

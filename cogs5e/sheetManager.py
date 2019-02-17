@@ -718,7 +718,7 @@ class SheetManager:
         character = await Character.from_ctx(ctx)
         overwrite = ''
 
-        conflict = await self.bot.mdb.characters.find_one({"owner": user.id, "upstream": character.id})
+        conflict = await self.bot.mdb.characters.find_one({"owner": str(user.id), "upstream": character.id})
         if conflict:
             overwrite = "**WARNING**: This will overwrite an existing character."
 
@@ -732,7 +732,7 @@ class SheetManager:
 
         if m is None or not get_positivity(m.content): return await ctx.send("Transfer not confirmed, aborting.")
 
-        await character.manual_commit(self.bot, user.id)
+        await character.manual_commit(self.bot, str(user.id))
         await ctx.send(f"Copied {character.get_name()} to {user.display_name}'s storage.")
 
     @commands.command()

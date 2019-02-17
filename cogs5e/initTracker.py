@@ -113,7 +113,7 @@ class InitTracker:
             controllerEscaped = controllerStr.strip('<>@!')
             a = ctx.guild.get_member(controllerEscaped)
             b = ctx.guild.get_member_named(controllerStr)
-            controller = a.id if a is not None else b.id if b is not None else controller
+            controller = str(a.id) if a is not None else str(b.id) if b is not None else controller
         if args.last('group'):
             group = args.last('group')
         if args.last('hp'):
@@ -516,7 +516,7 @@ class InitTracker:
                 controllerEscaped = controllerStr.strip('<>@!')
                 a = ctx.guild.get_member(controllerEscaped)
                 b = ctx.guild.get_member_named(controllerStr)
-                cont = a.id if a is not None else b.id if b is not None else controller
+                cont = str(a.id) if a is not None else str(b.id) if b is not None else controller
                 combatant.controller = cont
                 out += "\u2705 Combatant controller set to {}.\n".format(combatant.controller_mention())
             except IndexError:

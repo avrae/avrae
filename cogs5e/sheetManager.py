@@ -725,8 +725,9 @@ class SheetManager:
         await ctx.send(f"{user.mention}, accept a copy of {character.get_name()}? (Type yes/no)\n{overwrite}")
         try:
             m = await self.bot.wait_for('message', timeout=300,
-                                        check=lambda me: auth_and_chan(ctx)(me) and get_positivity(
-                                            me.content) is not None)
+                                        check=lambda msg: msg.author == user
+                                                          and msg.channel == ctx.channel
+                                                          and get_positivity(msg.content) is not None)
         except asyncio.TimeoutError:
             m = None
 

@@ -111,7 +111,7 @@ class InitTracker:
         if args.last('controller'):
             controllerStr = args.last('controller')
             controllerEscaped = controllerStr.strip('<>@!')
-            a = ctx.guild.get_member(controllerEscaped)
+            a = ctx.guild.get_member(int(controllerEscaped))
             b = ctx.guild.get_member_named(controllerStr)
             controller = str(a.id) if a is not None else str(b.id) if b is not None else controller
         if args.last('group'):
@@ -514,7 +514,7 @@ class InitTracker:
             try:
                 controllerStr = args.last('controller')
                 controllerEscaped = controllerStr.strip('<>@!')
-                a = ctx.guild.get_member(controllerEscaped)
+                a = ctx.guild.get_member(int(controllerEscaped))
                 b = ctx.guild.get_member_named(controllerStr)
                 cont = str(a.id) if a is not None else str(b.id) if b is not None else controller
                 combatant.controller = cont
@@ -581,8 +581,9 @@ class InitTracker:
             out += "\u2705 Combatant HP set to {}.\n".format(hp)
 
         if combatant.isPrivate:
-            await ctx.guild.get_member(combatant.controller).send(
-                "{}'s options updated.\n".format(combatant.name) + out)
+            controller = ctx.guild.get_member(int(combatant.controller))
+            if controller:
+                await controller.send("{}'s options updated.\n".format(combatant.name) + out)
             await ctx.send("Combatant options updated.", delete_after=10)
         else:
             await ctx.send("{}'s options updated.\n".format(combatant.name) + out, delete_after=10)
@@ -609,8 +610,9 @@ class InitTracker:
             status = "\n".join([co.get_status(private=private and str(ctx.author.id) == co.controller) for co in
                                 combatant.get_combatants()])
         if 'private' in args.lower():
-            await ctx.guild.get_member(combatant.controller).send(
-                "```markdown\n" + status + "```")
+            controller = ctx.guild.get_member(int(combatant.controller))
+            if controller:
+                await controller.send("```markdown\n" + status + "```")
         else:
             await ctx.send("```markdown\n" + status + "```", delete_after=30)
 
@@ -656,8 +658,8 @@ class InitTracker:
         await ctx.send(out, delete_after=10)
         if combatant.isPrivate:
             try:
-                await ctx.guild.get_member(combatant.controller).send(
-                    "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
+                controller = ctx.guild.get_member(int(combatant.controller))
+                await controller.send("{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
             except:
                 pass
         await combat.final()
@@ -685,8 +687,8 @@ class InitTracker:
         await ctx.send(out, delete_after=10)
         if combatant.isPrivate:
             try:
-                await ctx.guild.get_member(combatant.controller).send(
-                    "{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
+                controller = ctx.guild.get_member(int(combatant.controller))
+                await controller.send("{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
             except:
                 pass
         await combat.final()
@@ -733,7 +735,8 @@ class InitTracker:
         result = combatant.add_effect(effectObj)
         out = "Added effect {} to {}.".format(effect_name, combatant.name)
         if result['conc_conflict']:
-            out += f"\nRemoved {', '.join(e.name for e in result['conc_conflict'])} due to concentration conflict!"
+            conflicts = [e.name for e in result['conc_conflict']]
+            out += f"\nRemoved {', '.join(conflicts)} due to concentration conflict!"
         await ctx.send(out, delete_after=10)
         await combat.final()
 
@@ -871,8 +874,8 @@ class InitTracker:
 
         if args.last('h', type_=bool):
             try:
-                await ctx.guild.get_member(combatant.controller).send(
-                    embed=result['full_embed'])
+                controller = ctx.guild.get_member(int(combatant.controller))
+                await controller.send(embed=result['full_embed'])
             except:
                 pass
 
@@ -888,7 +891,8 @@ class InitTracker:
                 embed.set_footer(text="{}: {}".format(target.name, target.get_hp_str()))
                 if target.isPrivate:
                     try:
-                        await ctx.guild.get_member(target.controller).send(
+                        controller = ctx.guild.get_member(int(combatant.controller))
+                        await controller.send(
                             f"{combatant.name} attacked with a {attack['name']}!"
                             f"\n{target.name}'s HP: {target.get_hp_str(True)}")
                     except:

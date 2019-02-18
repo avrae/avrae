@@ -966,8 +966,7 @@ class SheetManager:
         Returns True to overwrite, False or None otherwise."""
         conflict = await self.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "upstream": _id})
         if conflict:
-            await ctx.bot.send_message(
-                ctx.message.channel,
+            await ctx.channel.send(
                 "Warning: This will overwrite a character with the same ID. Do you wish to continue (reply yes/no)?\n"
                 f"If you only wanted to update your character, run `{ctx.prefix}update` instead.")
             try:

@@ -154,7 +154,7 @@ class AdminUtils:
         await self.bot.change_presence(status=status, activity=discord.Game(msg or "D&D 5e | !help"))
         await ctx.send("Changed presence.")
 
-    async def on_server_join(self, server):
+    async def on_guild_join(self, server):
         if str(server.id) in self.blacklisted_serv_ids: await server.leave()
         if str(server.id) in self.bot.rdb.jget('server-whitelist', []): return
         bots = sum(1 for m in server.members if m.bot)

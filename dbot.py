@@ -104,14 +104,13 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print('------')
+
+
+@bot.event
+async def on_connect():
     if not bot.owner:
-        await enter()
-
-
-async def enter():
-    await bot.wait_until_ready()
-    appInfo = await bot.application_info()
-    bot.owner = appInfo.owner
+        appInfo = await bot.application_info()
+        bot.owner = appInfo.owner
 
 
 @bot.event
@@ -129,7 +128,7 @@ async def on_command_error(ctx, error):
         return await ctx.send(str(error))
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     if isinstance(error,
-                    (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):
+                  (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):
         return await ctx.send("Error: " + str(
             error) + f"\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help.")
     elif isinstance(error, commands.CheckFailure):

@@ -36,11 +36,11 @@ class Publicity:
     async def on_ready(self):
         await self.backup()
 
-    async def on_server_join(self, server):
+    async def on_guild_join(self, server):
         log.info('Joined server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
                                                                     sum(1 for m in server.members if m.bot)))
 
-    async def on_server_remove(self, server):
+    async def on_guild_remove(self, server):
         log.info('Left server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
                                                                   sum(1 for m in server.members if m.bot)))
 

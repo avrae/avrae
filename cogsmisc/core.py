@@ -76,11 +76,8 @@ class Core:
         embed.colour = 0x7289da
         embed.set_author(name=str(self.bot.owner), icon_url=self.bot.owner.avatar_url)
         total_members = sum(len(s.members) for s in self.bot.guilds)
-        total_online = sum(1 for m in self.bot.get_all_members() if m.status != discord.Status.offline)
         unique_members = set(self.bot.get_all_members())
-        unique_online = sum(1 for m in unique_members if m.status != discord.Status.offline)
-        members = '%s total\n%s online\n%s unique\n%s unique online' % (
-            total_members, total_online, len(unique_members), unique_online)
+        members = '%s total\n%s unique' % (total_members, len(unique_members))
         embed.add_field(name='Members', value=members)
         embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
         motd = random.choice(["May the RNG be with you", "May your rolls be high",

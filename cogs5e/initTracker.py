@@ -891,7 +891,7 @@ class InitTracker:
                 embed.set_footer(text="{}: {}".format(target.name, target.get_hp_str()))
                 if target.isPrivate:
                     try:
-                        controller = ctx.guild.get_member(int(combatant.controller))
+                        controller = ctx.guild.get_member(int(target.controller))
                         await controller.send(
                             f"{combatant.name} attacked with a {attack['name']}!"
                             f"\n{target.name}'s HP: {target.get_hp_str(True)}")

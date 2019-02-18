@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 
@@ -8,6 +9,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.dicecloudClient import DicecloudClient, Parent
 from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.errors import InvalidArgument
 from utils.functions import ABILITY_MAP, get_selection, parse_data_entry, search_and_select
 
 log = logging.getLogger(__name__)
@@ -32,33 +34,33 @@ class CharGenerator:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(pass_context=True, name='randchar')
+    @commands.command(name='randchar')
     async def randChar(self, ctx, level="0"):
         """Makes a random 5e character."""
         try:
             level = int(level)
         except:
-            await self.bot.say("Invalid level.")
+            await ctx.send("Invalid level.")
             return
 
         if level == 0:
             rolls = [roll("4d6kh3", inline=True) for _ in range(6)]
             stats = '\n'.join(r.skeleton for r in rolls)
             total = sum([r.total for r in rolls])
-            await self.bot.say(f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`")
+            await ctx.send(f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`")
             return
 
         if level > 20 or level < 1:
-            await self.bot.say("Invalid level (must be 1-20).")
+            await ctx.send("Invalid level (must be 1-20).")
             return
 
         await self.genChar(ctx, level)
 
-    @commands.command(pass_context=True, aliases=['name'])
+    @commands.command(aliases=['name'])
     async def randname(self, ctx, race=None, option=None):
         """Generates a random name, optionally from a given race."""
         if race is None:
-            return await self.bot.say(f"Your random name: {self.old_name_gen()}")
+            return await ctx.send(f"Your random name: {self.old_name_gen()}")
 
         embed = EmbedWithAuthor(ctx)
         race_names = await search_and_select(ctx, c.names, race, lambda e: e['race'])
@@ -68,51 +70,66 @@ class CharGenerator:
             table = await search_and_select(ctx, race_names['tables'], option, lambda e: e['name'])
         embed.title = f"{table['name']} {race_names['race']} Name"
         embed.description = random.choice(table['choices'])
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
 
-    @commands.command(pass_context=True, name='charref', aliases=['makechar'])
+    @commands.command(name='charref', aliases=['makechar'])
     async def char(self, ctx, level):
         """Gives you reference stats for a 5e character."""
         try:
             level = int(level)
         except:
-            await self.bot.say("Invalid level.")
+            await ctx.send("Invalid level.")
             return
         if level > 20 or level < 1:
-            await self.bot.say("Invalid level (must be 1-20).")
+            await ctx.send("Invalid level (must be 1-20).")
             return
 
-        author = ctx.message.author
-        channel = ctx.message.channel
+        race, _class, subclass, background = await self.select_details(ctx)
 
-        await self.bot.say(author.mention + " What race?")
-        race_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
-        if race_response is None: return await self.bot.say("Race not found.")
+        await self.genChar(ctx, level, race, _class, subclass, background)
+
+    async def select_details(self, ctx):
+        author = ctx.author
+        channel = ctx.channel
+
+        def chk(m):
+            return m.author == author and m.channel == channel
+
+        await ctx.send(author.mention + " What race?")
+        try:
+            race_response = await self.bot.wait_for('message', timeout=90, check=chk)
+        except asyncio.TimeoutError:
+            raise InvalidArgument("Timed out waiting for race.")
         race = await search_and_select(ctx, c.fancyraces, race_response.content, lambda e: e.name)
 
-        await self.bot.say(author.mention + " What class?")
-        class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
-        if class_response is None: return await self.bot.say("Class not found.")
+        await ctx.send(author.mention + " What class?")
+        try:
+            class_response = await self.bot.wait_for('message', timeout=90, check=chk)
+        except asyncio.TimeoutError:
+            raise InvalidArgument("Timed out waiting for class.")
         _class = await search_and_select(ctx, c.classes, class_response.content, lambda e: e['name'])
 
         if 'subclasses' in _class:
-            await self.bot.say(author.mention + " What subclass?")
-            subclass_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
-            if subclass_response is None: return await self.bot.say("Subclass not found.")
+            await ctx.send(author.mention + " What subclass?")
+            try:
+                subclass_response = await self.bot.wait_for('message', timeout=90, check=chk)
+            except asyncio.TimeoutError:
+                raise InvalidArgument("Timed out waiting for subclass.")
             subclass = await search_and_select(ctx, _class['subclasses'], subclass_response.content,
                                                lambda e: e['name'])
         else:
             subclass = None
 
-        await self.bot.say(author.mention + " What background?")
-        bg_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
-        if bg_response is None: return await self.bot.say("Background not found.")
+        await ctx.send(author.mention + " What background?")
+        try:
+            bg_response = await self.bot.wait_for('message', timeout=90, check=chk)
+        except asyncio.TimeoutError:
+            raise InvalidArgument("Timed out waiting for background.")
         background = await search_and_select(ctx, c.backgrounds, bg_response.content, lambda e: e.name)
-
-        await self.genChar(ctx, level, race, _class, subclass, background)
+        return race, _class, subclass, background
 
     async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None, background=None):
-        loadingMessage = await self.bot.send_message(ctx.message.channel, "Generating character, please wait...")
+        loadingMessage = await ctx.channel.send("Generating character, please wait...")
         color = random.randint(0, 0xffffff)
 
         # Name Gen
@@ -122,7 +139,7 @@ class CharGenerator:
         #    4d6d1
         #        reroll if too low/high
         stats = self.stat_gen()
-        await self.bot.send_message(ctx.message.author, "**Stats for {0}:** `{1}`".format(name, stats))
+        await ctx.author.send("**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
         race = race or random.choice([r for r in c.fancyraces if r.source in ('PHB', 'VGM', 'MTF')])
@@ -141,7 +158,7 @@ class CharGenerator:
                 embed.add_field(name="** **", value=piece)
 
         embed.colour = color
-        await self.bot.send_message(ctx.message.author, embed=embed)
+        await ctx.author.send(embed=embed)
 
         # Class Gen
         #    Class Features
@@ -184,7 +201,7 @@ class CharGenerator:
         embed.description = level_features_str
 
         embed.colour = color
-        await self.bot.send_message(ctx.message.author, embed=embed)
+        await ctx.author.send(embed=embed)
 
         embed = EmbedWithAuthor(ctx)
         level_resources = {}
@@ -197,19 +214,19 @@ class CharGenerator:
             embed.add_field(name=res_name, value=res_value)
 
         embed.colour = color
-        await self.bot.send_message(ctx.message.author, embed=embed)
+        await ctx.author.send(embed=embed)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         num_subclass_features = 0
         num_fields = 0
 
-        def inc_fields(text):
+        def inc_fields(ftext):
             nonlocal num_fields
             num_fields += 1
             if num_fields > 25:
                 embed_queue.append(EmbedWithAuthor(ctx))
                 num_fields = 0
-            if len(str(embed_queue[-1].to_dict())) + len(text) > 5800:
+            if len(str(embed_queue[-1].to_dict())) + len(ftext) > 5800:
                 embed_queue.append(EmbedWithAuthor(ctx))
                 num_fields = 0
 
@@ -242,7 +259,7 @@ class CharGenerator:
 
         for embed in embed_queue:
             embed.colour = color
-            await self.bot.send_message(ctx.message.author, embed=embed)
+            await ctx.author.send(embed=embed)
 
         # Background Gen
         #    Inventory/Trait Gen
@@ -261,13 +278,13 @@ class CharGenerator:
             for piece in text[1:]:
                 embed.add_field(name="\u200b", value=piece)
         embed.colour = color
-        await self.bot.send_message(ctx.message.author, embed=embed)
+        await ctx.author.send(embed=embed)
 
         out = "{6}\n{0}, {1} {7} {2} {3}. {4} Background.\nStat Array: `{5}`\nI have PM'd you full character details.".format(
             name, race.name, _class['name'], final_level, background.name, stats, ctx.message.author.mention,
             subclass['name'])
 
-        await self.bot.edit_message(loadingMessage, out)
+        await loadingMessage.edit(content=out)
 
     @commands.command(pass_context=True)
     async def autochar(self, ctx, level):
@@ -275,55 +292,33 @@ class CharGenerator:
         try:
             level = int(level)
         except:
-            await self.bot.say("Invalid level.")
+            await ctx.send("Invalid level.")
             return
         if level > 20 or level < 1:
-            await self.bot.say("Invalid level (must be 1-20).")
+            await ctx.send("Invalid level (must be 1-20).")
             return
 
-        author = ctx.message.author
-        channel = ctx.message.channel
-
-        await self.bot.say(author.mention + " What race?")
-        race_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
-        if race_response is None: return await self.bot.say("Race not found.")
-        race = await search_and_select(ctx, c.fancyraces, race_response.content, lambda e: e.name)
-
-        await self.bot.say(author.mention + " What class?")
-        class_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
-        if class_response is None: return await self.bot.say("Class not found.")
-        _class = await search_and_select(ctx, c.classes, class_response.content, lambda e: e['name'])
-
-        if 'subclasses' in _class:
-            await self.bot.say(author.mention + " What subclass?")
-            subclass_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
-            if subclass_response is None: return await self.bot.say("Subclass not found.")
-            subclass = await search_and_select(ctx, _class['subclasses'], subclass_response.content,
-                                               lambda e: e['name'])
-        else:
-            subclass = None
-
-        await self.bot.say(author.mention + " What background?")
-        bg_response = await self.bot.wait_for_message(timeout=90, author=author, channel=channel)
-        if bg_response is None: return await self.bot.say("Background not found.")
-        background = await search_and_select(ctx, c.backgrounds, bg_response.content, lambda e: e.name)
+        race, _class, subclass, background = await self.select_details(ctx)
 
         userId = None
         for _ in range(2):
-            await self.bot.say(author.mention + " What is your dicecloud username?")
-            user_response = await self.bot.wait_for_message(timeout=60, author=author, channel=channel)
-            if user_response is None: return await self.bot.say("Timed out waiting for a response.")
+            await ctx.send(ctx.author.mention + " What is your dicecloud username?")
+            try:
+                user_response = await self.bot.wait_for('message', timeout=90, check=lambda
+                    m: m.channel == ctx.channel and m.author == ctx.author)
+            except asyncio.TimeoutError:
+                return await ctx.send("Timed out waiting for username.")
             username = user_response.content
             try:
                 userId = await DicecloudClient.getInstance().get_user_id(username)
             except MeteorClientException:
                 pass
             if userId: break
-            await self.bot.say(
+            await ctx.send(
                 "Dicecloud user not found. Maybe try your email, or putting it all lowercase if applicable.")
 
         if userId is None:
-            return await self.bot.say("Invalid dicecloud username.")
+            return await ctx.send("Invalid dicecloud username.")
 
         await self.createCharSheet(ctx, level, userId, race, _class, subclass, background)
 
@@ -343,15 +338,15 @@ class CharGenerator:
         try:
             char_id = dc.create_character(name=name, race=race.name, backstory=background.name)
         except MeteorClientException:
-            return await self.bot.say("I am having problems connecting to Dicecloud. Please try again later.")
+            return await ctx.send("I am having problems connecting to Dicecloud. Please try again later.")
 
         try:
             await dc.share_character(char_id, dicecloud_userId)
         except:
             dc.delete_character(char_id)  # clean up
-            return await self.bot.say("Invalid dicecloud username.")
+            return await ctx.send("Invalid dicecloud username.")
 
-        loadingMessage = await self.bot.send_message(ctx.message.channel, "Generating character, please wait...")
+        loadingMessage = await ctx.channel.send("Generating character, please wait...")
 
         # Stat Gen
         # Allow user to enter base values
@@ -448,7 +443,8 @@ class CharGenerator:
                        "any effects they grant.")
         caveats.append("**Spellcasting**: If your class can cast spells, be sure to set your number of known spells, "
                        "max prepared, DC, attack bonus, and what spells you know in the Spells tab. You can add a "
-                       "spell to your spellbook by connecting the character to Avrae and running `!sb add <SPELL>`.")
+                       "spell to your spellbook by connecting the character to Avrae and running "
+                       f"`{ctx.prefix}sb add <SPELL>`.")
 
         # Background Gen
         #    Inventory/Trait Gen
@@ -484,16 +480,17 @@ class CharGenerator:
         await dc.transfer_ownership(char_id, dicecloud_userId)
 
         out = f"Generated {name}! I have PMed you the link."
-        await self.bot.send_message(ctx.message.author, f"https://dicecloud.com/character/{char_id}/{name}")
-        await self.bot.send_message(ctx.message.author,
-                                    "**__Caveats__**\nNot everything is automagical! Here are some things you still "
-                                    "have to do manually:\n" + '\n\n'.join(caveats))
-        await self.bot.send_message(ctx.message.author,
-                                    f"When you're ready, load your character into Avrae with the command "
-                                    f"`!dicecloud https://dicecloud.com/character/{char_id}/{name} -cc`")
-        await self.bot.edit_message(loadingMessage, out)
+        await ctx.author.send(f"https://dicecloud.com/character/{char_id}/{name}")
+        await ctx.author.send(
+            "**__Caveats__**\nNot everything is automagical! Here are some things you still "
+            "have to do manually:\n" + '\n\n'.join(caveats))
+        await ctx.author.send(
+            f"When you're ready, load your character into Avrae with the command "
+            f"`{ctx.prefix}dicecloud https://dicecloud.com/character/{char_id}/{name} -cc`")
+        await loadingMessage.edit(content=out)
 
-    def old_name_gen(self):
+    @staticmethod
+    def old_name_gen():
         name = ""
         beginnings = ["", "", "", "", "A", "Be", "De", "El", "Fa", "Jo", "Ki", "La", "Ma", "Na", "O", "Pa", "Re", "Si",
                       "Ta", "Va"]
@@ -505,7 +502,8 @@ class CharGenerator:
         name = name.capitalize()
         return name
 
-    def stat_gen(self):
+    @staticmethod
+    def stat_gen():
         stats = [roll('4d6kh3').total for _ in range(6)]
         return stats
 

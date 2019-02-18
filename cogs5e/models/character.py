@@ -16,7 +16,6 @@
  'cvars': {}}
 """
 import asyncio
-import copy
 import logging
 import random
 import re
@@ -24,13 +23,12 @@ import re
 import MeteorClient
 import discord
 
-from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.scripting import SCRIPTING_RE, SimpleCombat, ScriptingEvaluator
+from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.caster import Spellcaster, Spellcasting
 from cogs5e.models.dicecloudClient import DicecloudClient
-from cogs5e.models.errors import NoCharacter, ConsumableNotFound, CounterOutOfBounds, NoReset, InvalidArgument, \
-    OutdatedSheet, EvaluationError, InvalidSpellLevel
+from cogs5e.models.errors import ConsumableNotFound, CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, \
+    NoCharacter, NoReset, OutdatedSheet
 from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
@@ -59,7 +57,7 @@ class Character(Spellcaster):
 
     @classmethod
     async def from_ctx(cls, ctx):
-        active_character = await ctx.bot.mdb.characters.find_one({"owner": ctx.message.author.id, "active": True})
+        active_character = await ctx.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "active": True})
         if active_character is None:
             raise NoCharacter()
         return cls(active_character, active_character['upstream'])
@@ -283,11 +281,11 @@ class Character(Spellcaster):
         if 'upstream' not in data:
             data['upstream'] = self.id
         if 'owner' not in data:
-            data['owner'] = ctx.message.author.id
+            data['owner'] = str(ctx.author.id)
         if '_id' in data:
             del data['_id']  # potential duplicate issues in transferchar
         await ctx.bot.mdb.characters.update_one(
-            {"owner": ctx.message.author.id, "upstream": self.id},
+            {"owner": str(ctx.author.id), "upstream": self.id},
             {"$set": data},
             upsert=True
         )
@@ -310,11 +308,11 @@ class Character(Spellcaster):
     async def set_active(self, ctx):
         """Sets the character as active."""
         await ctx.bot.mdb.characters.update_many(
-            {"owner": ctx.message.author.id, "active": True},
+            {"owner": str(ctx.author.id), "active": True},
             {"$set": {"active": False}}
         )
         await ctx.bot.mdb.characters.update_one(
-            {"owner": ctx.message.author.id, "upstream": self.id},
+            {"owner": str(ctx.author.id), "upstream": self.id},
             {"$set": {"active": True}}
         )
 

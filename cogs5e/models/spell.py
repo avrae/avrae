@@ -37,7 +37,7 @@ class Automation:
         autoctx.build_embed()
         for user, msgs in autoctx.pm_queue.items():
             try:
-                await ctx.bot.send_message(ctx.message.server.get_member(user),
+                await ctx.bot.send_message(ctx.guild.get_member(user),
                                            f"{autoctx.caster.name} cast {autoctx.spell.name}!\n" + '\n'.join(msgs))
             except:
                 pass
@@ -737,7 +737,7 @@ class Spell:
             embed = EmbedWithAuthor(ctx)
             embed.title = "Cannot cast spell!"
             embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                                "Use `!game longrest` to restore all spell slots if this is a character, " \
+                                f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, " \
                                 "or pass `-i` to ignore restrictions."
             if l > 0:
                 embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))

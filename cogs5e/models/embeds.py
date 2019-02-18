@@ -8,7 +8,7 @@ class EmbedWithAuthor(discord.Embed):
 
     def __init__(self, ctx, **kwargs):
         super(EmbedWithAuthor, self).__init__(**kwargs)
-        self.set_author(name=ctx.message.author.display_name, icon_url=ctx.message.author.avatar_url)
+        self.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         self.colour = random.randint(0, 0xffffff)
 
 
@@ -31,6 +31,7 @@ class EmbedWithCharacter(discord.Embed):
             self.set_thumbnail(url=character.get_image())
         self.colour = character.get_color()
 
+
 def add_fields_from_args(embed, _fields):
     """
     Adds fields to an embed.
@@ -44,6 +45,7 @@ def add_fields_from_args(embed, _fields):
             value = "|".join(f.split('|')[1:]) if '|' in f else f
             embed.add_field(name=title, value=value)
     return embed
+
 
 def add_homebrew_footer(embed):
     if embed.footer.text:

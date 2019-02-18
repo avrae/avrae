@@ -36,7 +36,7 @@ class Combat:
 
     @classmethod
     async def from_ctx(cls, ctx):
-        raw = await ctx.bot.mdb.combats.find_one({"channel": ctx.message.channel.id})
+        raw = await ctx.bot.mdb.combats.find_one({"channel": str(ctx.channel.id)})
         if raw is None:
             raise CombatNotFound
         return await cls.from_dict(raw, ctx)
@@ -101,7 +101,7 @@ class Combat:
     @property
     def current_combatant(self):
         """The combatant whose turn it currently is."""
-        return self._combatants[self.index] if self.index is not None else None
+        return next((c for c in self._combatants if c.index == self.index), None) if self.index is not None else None
 
     @property
     def next_combatant(self):
@@ -114,7 +114,7 @@ class Combat:
             index = 0
         else:
             index = self.index + 1
-        return self._combatants[index] if index is not None else None
+        return next(c for c in self._combatants if c.index == index) if index is not None else None
 
     def get_combatants(self, groups=False):
         """
@@ -180,9 +180,13 @@ class Combat:
         return [c for c in self._combatants if isinstance(c, CombatantGroup)]
 
     def check_empty_groups(self):
+        removed = False
         for c in self._combatants:
             if isinstance(c, CombatantGroup) and len(c.get_combatants()) == 0:
                 self.remove_combatant(c)
+                removed = True
+        if removed:
+            self.sort_combatants()
 
     def reroll_dynamic(self):
         """
@@ -300,7 +304,7 @@ class Combat:
 
     @staticmethod
     async def ensure_unique_chan(ctx):
-        if await ctx.bot.mdb.combats.find_one({"channel": ctx.message.channel.id}):
+        if await ctx.bot.mdb.combats.find_one({"channel": str(ctx.channel.id)}):
             raise ChannelInCombat
 
     async def commit(self):
@@ -337,14 +341,14 @@ class Combat:
 
     async def update_summary(self):
         """Edits the summary message with the latest summary."""
-        await self.ctx.bot.edit_message(await self.get_summary_msg(), self.get_summary())
+        await (await self.get_summary_msg()).edit(content=self.get_summary())
 
     def get_channel(self):
         """Gets the Channel object of the combat."""
         if self.ctx:
             return self.ctx.message.channel
         else:
-            chan = self.ctx.bot.get_channel(self.channel)
+            chan = self.ctx.bot.get_channel(int(self.channel))
             if chan:
                 return chan
             else:
@@ -355,7 +359,7 @@ class Combat:
         if self.summary in Combat.message_cache:
             return Combat.message_cache[self.summary]
         else:
-            msg = await self.ctx.bot.get_message(self.get_channel(), self.summary)
+            msg = await self.get_channel().get_message(self.summary)
             Combat.message_cache[msg.id] = msg
             return msg
 
@@ -919,7 +923,8 @@ class PlayerCombatant(Combatant):
             from cogs5e.models.character import Character
             inst._character = await Character.from_bot_and_ids(ctx.bot, inst.character_owner, inst.character_id)
         except NoCharacter:
-            raise CombatException("A character in combat was deleted. Please run `!init end -force` to end combat.")
+            raise CombatException(f"A character in combat was deleted. "
+                                  f"Please run `{ctx.prefix}init end -force` to end combat.")
 
         return inst
 
@@ -968,7 +973,7 @@ class CombatantGroup:
 
     @property
     def controller(self):
-        return self.ctx.message.author.id  # workaround
+        return str(self.ctx.author.id)  # workaround
 
     @property
     def attacks(self):

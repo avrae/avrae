@@ -283,11 +283,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.uvars_changed.add(name)
 
     def chanid(self):
-        return self.ctx.message.channel.id
+        return str(self.ctx.channel.id)
 
     def servid(self):
-        if self.ctx.message.server:
-            return self.ctx.message.server.id
+        if self.ctx.guild:
+            return str(self.ctx.guild.id)
         return None
 
     # evaluation

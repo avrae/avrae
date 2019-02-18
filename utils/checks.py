@@ -1,6 +1,8 @@
 import discord.utils
 from discord.ext import commands
 
+import credentials
+
 
 # The permission system of the bot is based on a "just works" basis
 # You have permissions and the bot has permissions. If you meet the permissions
@@ -12,8 +14,9 @@ from discord.ext import commands
 # the permissions required for them.
 # Of course, the owner will always be able to execute commands.
 
+
 def is_owner(ctx):
-    return ctx.author.id == ctx.bot.owner.id
+    return ctx.author.id == credentials.owner_id
 
 
 def check_permissions(ctx, perms):

@@ -348,7 +348,7 @@ class Lookup:
 
     @commands.command()
     @commands.guild_only()
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def lookup_settings(self, ctx, *, args: str):
         """Changes settings for the lookup module.
         Usage: !lookup_settings -req_dm_monster True

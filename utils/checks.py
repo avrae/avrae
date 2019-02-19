@@ -50,7 +50,7 @@ def role_or_permissions(ctx, check, **perms):
 
 def admin_or_permissions(**perms):
     def predicate(ctx):
-        admin_role = "Bot Admin".lower()
+        admin_role = "Bot Admin"
         return role_or_permissions(ctx, lambda r: r.name.lower() == admin_role.lower(), **perms)
 
     return commands.check(predicate)

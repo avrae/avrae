@@ -35,7 +35,7 @@ class Permissions:
 
     @commands.command()
     @commands.guild_only()
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def prefix(self, ctx, prefix: str = None):
         """Sets the bot's prefix for this server.
 
@@ -52,7 +52,7 @@ class Permissions:
 
     @commands.command()
     @commands.guild_only()
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def disable(self, ctx, *, command: str):
         """Disables a command for this server. Case-sensitive.
 
@@ -74,7 +74,7 @@ class Permissions:
 
     @commands.command()
     @commands.guild_only()
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def enable(self, ctx, *, command: str):
         """Enables a command for this server.
 

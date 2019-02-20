@@ -74,7 +74,7 @@ class AutomationContext:
             self.evaluator = SpellEvaluator.with_character(caster)
             self.character = caster
         else:
-            self.evaluator = SpellEvaluator()
+            self.evaluator = SpellEvaluator.with_caster(caster)
             self.character = None
 
     def queue(self, text):

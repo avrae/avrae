@@ -59,6 +59,16 @@ class Avrae(commands.AutoShardedBot):
     def get_server_prefix(self, msg):
         return get_prefix(self, msg)[-1]
 
+    async def launch_shards(self):
+        if self.shard_count is None:
+            recommended_shards, _ = await self.http.get_bot_gateway()
+            if recommended_shards >= 48 and not recommended_shards % 16:
+                # half, round up to nearest 16
+                self.shard_count = recommended_shards // 2 + (16 - (recommended_shards // 2) % 16)
+            else:
+                self.shard_count = recommended_shards // 2
+        await super(Avrae, self).launch_shards()
+
 
 class Credentials:
     def __init__(self):

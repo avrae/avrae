@@ -511,7 +511,7 @@ class Damage(Effect):
         autoctx.target.damage(autoctx, dmgroll.total)
 
     def is_meta(self, autoctx, strict=False):
-        if strict:
+        if not strict:
             return any(f"{{{v}}}" in self.damage for v in autoctx.metavars)
         return any(f"{{{v}}}" == self.damage for v in autoctx.metavars)
 

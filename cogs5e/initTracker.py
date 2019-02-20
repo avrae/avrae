@@ -109,11 +109,9 @@ class InitTracker:
         if args.last('p', type_=bool):
             place = True
         if args.last('controller'):
-            controllerStr = args.last('controller')
-            controllerEscaped = controllerStr.strip('<>@!')
-            a = ctx.guild.get_member(int(controllerEscaped))
-            b = ctx.guild.get_member_named(controllerStr)
-            controller = str(a.id) if a is not None else str(b.id) if b is not None else controller
+            controller_name = args.last('controller')
+            member = await commands.MemberConverter().convert(ctx, controller_name)
+            controller = str(member.id) if member is not None else controller
         if args.last('group'):
             group = args.last('group')
         if args.last('hp'):
@@ -512,11 +510,9 @@ class InitTracker:
             out += "\u2705 Combatant {}.\n".format('hidden' if private else 'unhidden')
         if 'controller' in args:
             try:
-                controllerStr = args.last('controller')
-                controllerEscaped = controllerStr.strip('<>@!')
-                a = ctx.guild.get_member(int(controllerEscaped))
-                b = ctx.guild.get_member_named(controllerStr)
-                cont = str(a.id) if a is not None else str(b.id) if b is not None else controller
+                controller_name = args.last('controller')
+                member = await commands.MemberConverter().convert(ctx, controller_name)
+                cont = str(member.id) if member is not None else controller
                 combatant.controller = cont
                 out += "\u2705 Combatant controller set to {}.\n".format(combatant.controller_mention())
             except IndexError:

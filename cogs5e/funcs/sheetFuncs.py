@@ -84,6 +84,8 @@ def sheet_attack(attack, args, embed=None):
     else:
         hidden_embed = discord.Embed()  # less memory? idek we don't use it anyway
 
+    raw_attacks = []
+
     for r in range(rr):  # start rolling attacks
         out = ''
         hidden_out = ''
@@ -155,6 +157,8 @@ def sheet_attack(attack, args, embed=None):
             hidden_out += res['damage']
         total_damage += res['total']
 
+        raw_attacks.append({'damage': res['total'], 'crit': itercrit})
+
         if out is not '':
             if rr > 1:
                 embed.add_field(name='Attack {}'.format(r + 1), value=out, inline=False)
@@ -171,9 +175,10 @@ def sheet_attack(attack, args, embed=None):
         embed.add_field(name='Effect',
                         value=attack['details'] if len(attack['details']) < 1020 else f"{attack['details'][:1020]}...")
 
+    out = {'embed': embed, 'total_damage': total_damage, 'full_embed': embed, 'raw_attacks': raw_attacks}
     if h:
-        return {'embed': hidden_embed, 'total_damage': total_damage, 'full_embed': embed}
-    return {'embed': embed, 'total_damage': total_damage, 'full_embed': embed}
+        out['embed'] = hidden_embed
+    return out
 
 
 def sheet_damage(damage_str, args, itercrit=0, dnum=None):

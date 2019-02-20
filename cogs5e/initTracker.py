@@ -900,8 +900,18 @@ class InitTracker:
             else:
                 embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
             if target.is_concentrating() and result['total_damage'] > 0:
-                embed.add_field(name="Concentration",
-                                value=f"Check your concentration (DC {int(max(result['total_damage'] / 2, 10))})!")
+                dcs = []
+                for atk in result['raw_attacks']:
+                    if atk['crit'] == 2:
+                        continue
+                    dcs.append(int(max(atk['damage'] / 2, 10)))
+                if len(dcs) > 1:
+                    dcs = ', '.join(map(str, dcs))
+                    embed.add_field(name="Concentration",
+                                    value=f"Check your concentration (DCs {dcs})!")
+                else:
+                    embed.add_field(name="Concentration",
+                                    value=f"Check your concentration (DC {dcs[0]})!")
         else:
             embed.set_footer(text="Target AC not set.")
 

@@ -467,11 +467,11 @@ class Customization:
                 return await ctx.send("You are not the owner of this variable.")
             else:
                 e = gvar.get('editors', [])
-                if user.id in e:
-                    e.remove(user.id)
+                if str(user.id) in e:
+                    e.remove(str(user.id))
                     msg = f"Removed {user} from the editor list."
                 else:
-                    e.append(user.id)
+                    e.append(str(user.id))
                     msg = f"Added {user} to the editor list."
                 await self.bot.mdb.gvars.update_one({"key": name}, {"$set": {"editors": e}})
             await ctx.send(f'Global variable `{name}` edited: {msg}')

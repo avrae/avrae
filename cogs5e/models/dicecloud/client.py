@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -62,6 +63,11 @@ class DicecloudClient:
             time.sleep(0.1)
             loops += 1
         log.info(f"Logged in as {self.user_id}")
+
+    async def ensure_connected(self):
+        if self.logged_in:  # everything is fine:tm:
+            return
+        asyncio.get_event_loop().run_in_executor(None, self.initialize)
 
     async def _get_list_id(self, character, list_name=None):
         """

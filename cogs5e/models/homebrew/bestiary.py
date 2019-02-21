@@ -22,7 +22,7 @@ class Bestiary:
 
     @classmethod
     async def from_ctx(cls, ctx):
-        active_bestiary = await ctx.bot.mdb.bestiaries.find_one({"owner": ctx.message.author.id, "active": True})
+        active_bestiary = await ctx.bot.mdb.bestiaries.find_one({"owner": str(ctx.author.id), "active": True})
         if active_bestiary is None:
             raise NoActiveBrew()
         return cls.from_raw(active_bestiary['critterdb_id'], active_bestiary)
@@ -32,10 +32,10 @@ class Bestiary:
 
     async def commit(self, ctx):
         """Writes a bestiary object to the database, under the contextual author. Returns self."""
-        data = {"$set": self.to_dict(), "$setOnInsert": {"owner": ctx.message.author.id, "server_active": []}}
+        data = {"$set": self.to_dict(), "$setOnInsert": {"owner": str(ctx.author.id), "server_active": []}}
 
         await ctx.bot.mdb.bestiaries.update_one(
-            {"owner": ctx.message.author.id, "critterdb_id": self.id},
+            {"owner": str(ctx.author.id), "critterdb_id": self.id},
             data,
             True
         )
@@ -43,11 +43,11 @@ class Bestiary:
 
     async def set_active(self, ctx):
         await ctx.bot.mdb.bestiaries.update_many(
-            {"owner": ctx.message.author.id, "active": True},
+            {"owner": str(ctx.author.id), "active": True},
             {"$set": {"active": False}}
         )
         await ctx.bot.mdb.bestiaries.update_one(
-            {"owner": ctx.message.author.id, "critterdb_id": self.id},
+            {"owner": str(ctx.author.id), "critterdb_id": self.id},
             {"$set": {"active": True}}
         )
         return self
@@ -58,22 +58,22 @@ class Bestiary:
         :param ctx: Context
         :return: Whether the bestiary is now active on the server.
         """
-        data = await ctx.bot.mdb.bestiaries.find_one({"owner": ctx.message.author.id, "critterdb_id": self.id},
+        data = await ctx.bot.mdb.bestiaries.find_one({"owner": str(ctx.author.id), "critterdb_id": self.id},
                                                      ["server_active"])
         server_active = data.get('server_active', [])
-        if ctx.message.server.id in server_active:
-            server_active.remove(ctx.message.server.id)
+        if str(ctx.guild.id) in server_active:
+            server_active.remove(str(ctx.guild.id))
         else:
-            server_active.append(ctx.message.server.id)
+            server_active.append(str(ctx.guild.id))
         await ctx.bot.mdb.bestiaries.update_one(
-            {"owner": ctx.message.author.id, "critterdb_id": self.id},
+            {"owner": str(ctx.author.id), "critterdb_id": self.id},
             {"$set": {"server_active": server_active}}
         )
-        return ctx.message.server.id in server_active
+        return str(ctx.guild.id) in server_active
 
 
 async def select_bestiary(ctx, name):
-    user_bestiaries = await ctx.bot.mdb.bestiaries.find({"owner": ctx.message.author.id}).to_list(None)
+    user_bestiaries = await ctx.bot.mdb.bestiaries.find({"owner": str(ctx.author.id)}).to_list(None)
 
     if not user_bestiaries:
         raise NoActiveBrew()

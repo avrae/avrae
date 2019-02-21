@@ -7,14 +7,13 @@ from contextlib import redirect_stdout
 import discord
 from discord.ext import commands
 
-from utils import checks
+from utils.functions import auth_and_chan
 
 
 class REPL:
     def __init__(self, bot):
         self.bot = bot
         self.sessions = set()
-        self._last_result = None
 
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
@@ -28,8 +27,8 @@ class REPL:
     def get_syntax_error(self, e):
         return '```py\n{0.text}{1:>{0.offset}}\n{2}: {0}```'.format(e, '^', type(e).__name__)
 
-    @commands.command(pass_context=True, hidden=True)
-    @checks.is_owner()
+    @commands.command(hidden=True)
+    @commands.is_owner()
     async def repl(self, ctx):
         msg = ctx.message
 
@@ -37,26 +36,25 @@ class REPL:
             'ctx': ctx,
             'bot': self.bot,
             'message': msg,
-            'server': msg.server,
+            'guild': msg.guild,
             'channel': msg.channel,
-            'author': msg.author,
-            '_': None,
+            'author': msg.author
         }
 
         if msg.channel.id in self.sessions:
-            await self.bot.say('Already running a REPL session in this channel. Exit it with `quit`.')
+            await ctx.send('Already running a REPL session in this channel. Exit it with `quit`.')
             return
 
         self.sessions.add(msg.channel.id)
-        await self.bot.say('Enter code to execute or evaluate. `exit()` or `quit` to exit.')
+        await ctx.send('Enter code to execute or evaluate. `exit()` or `quit` to exit.')
         while True:
-            response = await self.bot.wait_for_message(author=msg.author, channel=msg.channel,
-                                                       check=lambda m: m.content.startswith('`'))
+            response = await self.bot.wait_for('message',
+                                               check=lambda m: m.content.startswith('`') and auth_and_chan(ctx)(m))
 
             cleaned = self.cleanup_code(response.content)
 
             if cleaned in ('quit', 'exit', 'exit()'):
-                await self.bot.say('Exiting.')
+                await ctx.send('Exiting.')
                 self.sessions.remove(msg.channel.id)
                 return
 
@@ -74,7 +72,7 @@ class REPL:
                 try:
                     code = compile(cleaned, '<repl session>', 'exec')
                 except SyntaxError as e:
-                    await self.bot.say(self.get_syntax_error(e))
+                    await ctx.send(self.get_syntax_error(e))
                     continue
 
             variables['message'] = response
@@ -101,16 +99,16 @@ class REPL:
             try:
                 if fmt is not None:
                     if len(fmt) > 2000:
-                        await self.bot.send_message(msg.channel, 'Content too big to be printed.')
+                        await msg.channel.send('Content too big to be printed.')
                     else:
-                        await self.bot.send_message(msg.channel, fmt)
+                        await msg.channel.send(fmt)
             except discord.Forbidden:
                 pass
             except discord.HTTPException as e:
-                await self.bot.send_message(msg.channel, 'Unexpected error: `{}`'.format(e))
+                await msg.channel.send('Unexpected error: `{}`'.format(e))
 
-    @commands.command(pass_context=True, hidden=True, name='eval')
-    @checks.is_owner()
+    @commands.command(hidden=True, name='eval')
+    @commands.is_owner()
     async def _eval(self, ctx, *, body: str):
         """Evaluates some code"""
 
@@ -119,9 +117,8 @@ class REPL:
             'ctx': ctx,
             'channel': ctx.message.channel,
             'author': ctx.message.author,
-            'server': ctx.message.server,
-            'message': ctx.message,
-            '_': self._last_result
+            'guild': ctx.message.guild,
+            'message': ctx.message
         }
 
         env.update(globals())
@@ -134,7 +131,7 @@ class REPL:
         try:
             exec(to_compile, env)
         except Exception as e:
-            return await self.bot.say('```py\n{}: {}\n```'.format(e.__class__.__name__, e))
+            return await ctx.send('```py\n{}: {}\n```'.format(e.__class__.__name__, e))
 
         func = env['func']
         try:
@@ -142,20 +139,19 @@ class REPL:
                 ret = await func()
         except Exception as e:
             value = stdout.getvalue()
-            await self.bot.say('```py\n{}{}\n```'.format(value, traceback.format_exc()))
+            await ctx.send('```py\n{}{}\n```'.format(value, traceback.format_exc()))
         else:
             value = stdout.getvalue()
             try:
-                await self.bot.add_reaction(ctx.message, '\u2705')
+                await ctx.message.add_reaction('\u2705')
             except:
                 pass
 
             if ret is None:
                 if value:
-                    await self.bot.say('```py\n{}\n```'.format(value))
+                    await ctx.send('```py\n{}\n```'.format(value))
             else:
-                self._last_result = ret
-                await self.bot.say('```py\n{}{}\n```'.format(value, ret))
+                await ctx.send('```py\n{}{}\n```'.format(value, ret))
 
 
 def setup(bot):

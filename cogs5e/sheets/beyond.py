@@ -3,14 +3,12 @@ Created on Feb 14, 2017
 
 @author: andrew
 """
-
+import collections
 import logging
-import random
 import re
-from math import floor, ceil
+from math import ceil, floor
 
 import aiohttp
-import discord
 import html2text
 
 from cogs5e.models.character import SKILL_MAP
@@ -61,7 +59,7 @@ class BeyondSheetParser:
         self.stats = None
         self.levels = None
         self.prof = None
-        self.calculated_stats = {}
+        self.calculated_stats = collections.defaultdict(lambda: 0)
 
     async def get_character(self):
         charId = self.url
@@ -78,6 +76,7 @@ class BeyondSheetParser:
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = charId
         self.character = character
+        self.calculate_stats()
         return character
 
     def get_sheet(self):
@@ -158,25 +157,9 @@ class BeyondSheetParser:
         self.stats = stats
         return stats
 
-    def get_stat(self, stat, base=0, bonus_tags=None):
+    def get_stat(self, stat, base=0):
         """Calculates the final value of a stat, based on modifiers and feats."""
-        if bonus_tags is None:
-            bonus_tags = ['bonus']
-        if stat in self.calculated_stats and bonus_tags == ['bonus']:
-            return self.calculated_stats[stat]
-        bonus = 0
-        for modtype in self.character['modifiers'].values():
-            for mod in modtype:
-                if not mod['subType'] == stat: continue
-                if mod['type'] in bonus_tags:
-                    bonus += (mod['value'] or 0) + self.stat_from_id(mod['statId'])
-                elif mod['type'] == 'set':
-                    base = (mod['value'] or 0) + self.stat_from_id(mod['statId'])
-                elif mod['type'] == 'ignore':
-                    return 0
-
-        if bonus_tags == ['bonus']:
-            self.calculated_stats[stat] = base + bonus
+        bonus = self.calculated_stats[stat]
         return base + bonus
 
     def stat_from_id(self, _id):
@@ -286,7 +269,7 @@ class BeyondSheetParser:
             if atkIn['attackSubtype'] == 3:  # natural weapons
                 if atkBonus is not None:
                     atkBonus += self.get_stat('natural-attacks')
-                dmgBonus += self.get_stat('natural-attacks', bonus_tags=['damage'])
+                dmgBonus += self.get_stat('natural-attacks-damage')
 
             attack = {
                 'attackBonus': str(atkBonus),
@@ -311,7 +294,7 @@ class BeyondSheetParser:
             is_weapon = itemdef['filterType'] == 'Weapon'
 
             if is_melee and is_one_handed:
-                dmgBonus += self.get_stat('one-handed-melee-attacks', bonus_tags=['damage'])
+                dmgBonus += self.get_stat('one-handed-melee-attacks-damage')
             if not is_melee and is_weapon:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
 
@@ -356,7 +339,7 @@ class BeyondSheetParser:
             atkBonus = self.get_stats()['proficiencyBonus']
 
             atkBonus += self.get_stat('natural-attacks')
-            natural_bonus = self.get_stat('natural-attacks', bonus_tags=['damage'])
+            natural_bonus = self.get_stat('natural-attacks-damage')
             if natural_bonus:
                 dmg = f"{dmg}+{natural_bonus}"
 
@@ -571,6 +554,39 @@ class BeyondSheetParser:
             return self.character['background']['definition']['name']
         return "Custom"
 
+    # helper methods
+    def calculate_stats(self):
+        ignored = set()
+        has_stat_bonuses = []  # [{type, stat, subtype}]
+        for modtype in self.character['modifiers'].values():  # {race: [], class: [], ...}
+            for mod in modtype:  # [{}, ...]
+                mod_type = mod['subType']  # e.g. 'strength-score'
+                if mod_type in ignored:
+                    continue
+                if mod['statId']:
+                    has_stat_bonuses.append({'subtype': mod_type, 'type': mod['type'], 'stat': mod['statId']})
+
+                if mod['type'] == 'bonus':
+                    self.calculated_stats[mod_type] += (mod['value'] or 0)
+                elif mod['type'] == 'damage':
+                    self.calculated_stats[f"{mod_type}-damage"] += (mod['value'] or 0)
+                elif mod['type'] == 'set':
+                    self.calculated_stats[mod_type] = (mod['value'] or 0)
+                elif mod['type'] == 'ignore':
+                    self.calculated_stats[mod_type] = 0
+                    ignored.add(mod_type)
+        for mod in has_stat_bonuses:
+            mod_type = mod['subtype']
+            if mod_type in ignored:
+                continue
+            stat_mod = self.stat_from_id(mod['stat'])
+            if mod['type'] == 'bonus':
+                self.calculated_stats[mod_type] += stat_mod
+            elif mod['type'] == 'damage':
+                self.calculated_stats[f"{mod_type}-damage"] += stat_mod
+            elif mod['type'] == 'set':
+                self.calculated_stats[mod_type] = stat_mod
+
     def get_prof(self, proftype):
         if not self.prof:
             p = []
@@ -642,4 +658,5 @@ if __name__ == '__main__':
         url = input("DDB Character ID: ").strip()
         parser = BeyondSheetParser(url)
         asyncio.get_event_loop().run_until_complete(parser.get_character())
+        print(json.dumps(parser.calculated_stats, indent=2))
         print(json.dumps(parser.get_sheet()['sheet'], indent=2))

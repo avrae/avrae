@@ -141,7 +141,7 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
             list_filter = lambda e: old(e) and srd(e)
         else:
             list_filter = srd
-        message = "This server only shows results from the 5e SRD."
+        message = "Only results from the 5e SRD are included."
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))
 
@@ -291,10 +291,11 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, 
     page = 0
     pages = paginate(choices, 10)
     m = None
+    selectMsg = None
 
     def chk(msg):
         valid = [str(v) for v in range(1, len(choices) + 1)] + ["c", "n", "p"]
-        return msg.content.lower() in valid
+        return msg.author == ctx.author and msg.channel == ctx.channel and msg.content.lower() in valid
 
     for n in range(200):
         _choices = pages[page]
@@ -311,50 +312,43 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, 
         embed.colour = random.randint(0, 0xffffff)
         if message:
             embed.add_field(name="Note", value=message)
+        if selectMsg:
+            try:
+                await selectMsg.delete()
+            except:
+                pass
         if not pm:
-            if n == 0:
-                selectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
-            else:
-                newSelectMsg = await ctx.bot.send_message(ctx.message.channel, embed=embed)
+            selectMsg = await ctx.channel.send(embed=embed)
         else:
             embed.add_field(name="Instructions",
                             value="Type your response in the channel you called the command. This message was PMed to "
                                   "you to hide the monster name.")
-            if n == 0:
-                selectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
-            else:
-                newSelectMsg = await ctx.bot.send_message(ctx.message.author, embed=embed)
+            selectMsg = await ctx.author.send(embed=embed)
 
-        if n > 0:  # clean up old messages
-            try:
-                await ctx.bot.delete_message(selectMsg)
-                await ctx.bot.delete_message(m)
-            except:
-                pass
-            finally:
-                selectMsg = newSelectMsg
+        try:
+            m = await ctx.bot.wait_for('message', timeout=30, check=chk)
+        except asyncio.TimeoutError:
+            m = None
 
-        m = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel,
-                                           check=chk)
         if m is None:
             break
         if m.content.lower() == 'n':
             if page + 1 < len(pages):
                 page += 1
             else:
-                await ctx.bot.send_message(ctx.message.channel, "You are already on the last page.")
+                await ctx.channel.send("You are already on the last page.")
         elif m.content.lower() == 'p':
             if page - 1 >= 0:
                 page -= 1
             else:
-                await ctx.bot.send_message(ctx.message.channel, "You are already on the first page.")
+                await ctx.channel.send("You are already on the first page.")
         else:
             break
 
     if delete and not pm:
         try:
-            await ctx.bot.delete_message(selectMsg)
-            await ctx.bot.delete_message(m)
+            await selectMsg.delete()
+            await m.delete()
         except:
             pass
     if m is None or m.content.lower() == "c": raise SelectionCancelled()
@@ -500,13 +494,16 @@ async def confirm(ctx, message, delete_msgs=False):
     :param delete_msgs: Whether to delete the messages.
     :return: Whether the user confirmed or not. None if no reply was recieved
     """
-    msg = await ctx.bot.send_message(ctx.message.channel, message)
-    reply = await ctx.bot.wait_for_message(timeout=30, author=ctx.message.author, channel=ctx.message.channel)
+    msg = await ctx.channel.send(message)
+    try:
+        reply = await ctx.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
+    except asyncio.TimeoutError:
+        return None
     replyBool = get_positivity(reply.content) if reply is not None else None
     if delete_msgs:
         try:
-            await ctx.bot.delete_message(msg)
-            await ctx.bot.delete_message(reply)
+            await msg.delete()
+            await reply.delete()
         except:
             pass
     return replyBool
@@ -588,7 +585,7 @@ def clean_content(content, ctx):
 
     transformations.update(second_mention_transforms)
 
-    if ctx.message.server is not None:
+    if ctx.guild is not None:
         role_transforms = {
             re.escape('<@&{0.id}>'.format(role)): '@' + role.name
             for role in ctx.message.role_mentions
@@ -627,3 +624,12 @@ def format_d20(adv, reroll=None):
     elif adv == -1:
         return f"{base_d20}kl1"
     return base_d20
+
+
+def auth_and_chan(ctx):
+    """Message check: same author and channel"""
+
+    def chk(msg):
+        return msg.author == ctx.author and msg.channel == ctx.channel
+
+    return chk

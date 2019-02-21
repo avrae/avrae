@@ -7,14 +7,14 @@ MAX_ITER_LENGTH = 10000
 
 async def get_uvars(ctx):
     uvars = {}
-    async for uvar in ctx.bot.mdb.uvars.find({"owner": ctx.message.author.id}):
+    async for uvar in ctx.bot.mdb.uvars.find({"owner": str(ctx.author.id)}):
         uvars[uvar['name']] = uvar['value']
     return uvars
 
 
 async def set_uvar(ctx, name, value):
     await ctx.bot.mdb.uvars.update_one(
-        {"owner": ctx.message.author.id, "name": name},
+        {"owner": str(ctx.author.id), "name": name},
         {"$set": {"value": value}},
         True)
 
@@ -28,7 +28,7 @@ async def update_uvars(ctx, uvar_dict, changed=None):
             if name in uvar_dict:
                 await set_uvar(ctx, name, uvar_dict[name])
             else:
-                await ctx.bot.mdb.uvars.delete_one({"owner": ctx.message.author.id, "name": name})
+                await ctx.bot.mdb.uvars.delete_one({"owner": str(ctx.author.id), "name": name})
 
 
 async def get_gvar_values(ctx):
@@ -40,29 +40,29 @@ async def get_gvar_values(ctx):
 
 async def get_aliases(ctx):
     aliases = {}
-    async for alias in ctx.bot.mdb.aliases.find({"owner": ctx.message.author.id}):
+    async for alias in ctx.bot.mdb.aliases.find({"owner": str(ctx.author.id)}):
         aliases[alias['name']] = alias['commands']
     return aliases
 
 
 async def get_servaliases(ctx):
     servaliases = {}
-    async for servalias in ctx.bot.mdb.servaliases.find({"server": ctx.message.server.id}):
+    async for servalias in ctx.bot.mdb.servaliases.find({"server": str(ctx.guild.id)}):
         servaliases[servalias['name']] = servalias['commands']
     return servaliases
 
 
 async def get_snippets(ctx):
     snippets = {}
-    async for snippet in ctx.bot.mdb.snippets.find({"owner": ctx.message.author.id}):
+    async for snippet in ctx.bot.mdb.snippets.find({"owner": str(ctx.author.id)}):
         snippets[snippet['name']] = snippet['snippet']
     return snippets
 
 
 async def get_servsnippets(ctx):
     servsnippets = {}
-    if ctx.message.server:
-        async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": ctx.message.server.id}):
+    if ctx.guild:
+        async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": str(ctx.guild.id)}):
             servsnippets[servsnippet['name']] = servsnippet['snippet']
     return servsnippets
 

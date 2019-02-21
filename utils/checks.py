@@ -4,22 +4,6 @@ from discord.ext import commands
 import credentials
 
 
-#
-# This is a modified version of checks.py, originally made by Rapptz
-#
-#                 https://github.com/Rapptz
-#          https://github.com/Rapptz/RoboDanny/tree/async
-#
-
-
-def is_owner_check(ctx):
-    return ctx.message.author.id == credentials.owner_id
-
-
-def is_owner():
-    return commands.check(is_owner_check)
-
-
 # The permission system of the bot is based on a "just works" basis
 # You have permissions and the bot has permissions. If you meet the permissions
 # required to execute the command (and the bot does as well) then it goes through
@@ -30,12 +14,17 @@ def is_owner():
 # the permissions required for them.
 # Of course, the owner will always be able to execute commands.
 
+
+def is_owner(ctx):
+    return ctx.author.id == credentials.owner_id
+
+
 def check_permissions(ctx, perms):
-    if is_owner_check(ctx):
+    if is_owner(ctx):
         return True
 
-    ch = ctx.message.channel
-    author = ctx.message.author
+    ch = ctx.channel
+    author = ctx.author
     try:
         resolved = ch.permissions_for(author)
     except AttributeError:
@@ -49,7 +38,7 @@ def role_or_permissions(ctx, check, **perms):
 
     ch = ctx.message.channel
     author = ctx.message.author
-    if ch.is_private:
+    if isinstance(ch, discord.abc.PrivateChannel):
         return False  # can't have roles in PMs
 
     try:
@@ -59,33 +48,9 @@ def role_or_permissions(ctx, check, **perms):
     return role is not None
 
 
-def mod_or_permissions(**perms):
-    def predicate(ctx):
-        mod_role = "Bot Mod".lower()
-        admin_role = "Bot Admin".lower()
-        return role_or_permissions(ctx, lambda r: r.name.lower() in (mod_role, admin_role), **perms)
-
-    return commands.check(predicate)
-
-
 def admin_or_permissions(**perms):
     def predicate(ctx):
-        admin_role = "Bot Admin".lower()
+        admin_role = "Bot Admin"
         return role_or_permissions(ctx, lambda r: r.name.lower() == admin_role.lower(), **perms)
-
-    return commands.check(predicate)
-
-
-def serverowner_or_permissions(**perms):
-    def predicate(ctx):
-        if ctx.message.server is None:
-            return False
-        server = ctx.message.server
-        owner = server.owner
-
-        if ctx.message.author.id == owner.id:
-            return True
-
-        return check_permissions(ctx, perms)
 
     return commands.check(predicate)

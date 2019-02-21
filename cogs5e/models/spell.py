@@ -37,8 +37,8 @@ class Automation:
         autoctx.build_embed()
         for user, msgs in autoctx.pm_queue.items():
             try:
-                await ctx.bot.send_message(ctx.message.server.get_member(user),
-                                           f"{autoctx.caster.name} cast {autoctx.spell.name}!\n" + '\n'.join(msgs))
+                user = ctx.guild.get_member(int(user))
+                await user.send(f"{autoctx.caster.name} cast {autoctx.spell.name}!\n" + '\n'.join(msgs))
             except:
                 pass
 
@@ -74,7 +74,7 @@ class AutomationContext:
             self.evaluator = SpellEvaluator.with_character(caster)
             self.character = caster
         else:
-            self.evaluator = SpellEvaluator()
+            self.evaluator = SpellEvaluator.with_caster(caster)
             self.character = None
 
     def queue(self, text):
@@ -511,7 +511,7 @@ class Damage(Effect):
         autoctx.target.damage(autoctx, dmgroll.total)
 
     def is_meta(self, autoctx, strict=False):
-        if strict:
+        if not strict:
             return any(f"{{{v}}}" in self.damage for v in autoctx.metavars)
         return any(f"{{{v}}}" == self.damage for v in autoctx.metavars)
 
@@ -760,7 +760,7 @@ class Spell:
             embed = EmbedWithAuthor(ctx)
             embed.title = "Cannot cast spell!"
             embed.description = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                                "Use `!game longrest` to restore all spell slots if this is a character, " \
+                                f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, " \
                                 "or pass `-i` to ignore restrictions."
             if l > 0:
                 embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))

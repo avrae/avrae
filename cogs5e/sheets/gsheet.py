@@ -260,6 +260,7 @@ class GoogleSheet:
                 elif advtype in ('d', 'dis'):
                     skill_effects[skill] = 'dis'
 
+        skills = {k: v for k, v in sorted(skills.items())}
         return skills, skill_effects
 
     def get_levels(self):

@@ -1,4 +1,5 @@
-from discord.ext.commands.view import StringView, quoted_word
+from discord.ext.commands import BadArgument
+from discord.ext.commands.view import StringView
 
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import list_get
@@ -127,3 +128,58 @@ class ParsedArguments:
 
     def __iter__(self):
         return iter(self.parsed.keys())
+
+
+def quoted_word(view):
+    current = view.current
+
+    if current is None:
+        return None
+
+    quote = current if current in '"\'' else None
+    result = [] if quote else [current]
+
+    while not view.eof:
+        current = view.get()
+        if not current:
+            if quote:
+                # unexpected EOF
+                raise BadArgument('Expected closing quote')
+            return ''.join(result)
+
+        # currently we accept strings in the format of "hello world"
+        # to embed a quote inside the string you must escape it: "a \"world\""
+        if current == '\\':
+            next_char = view.get()
+            if not next_char:
+                # string ends with \ and no character after it
+                if quote:
+                    # if we're quoted then we're expecting a closing quote
+                    raise BadArgument('Expected closing quote')
+                # if we aren't then we just let it through
+                return ''.join(result)
+
+            if next_char in '"\'':
+                # escaped quote
+                result.append(next_char)
+            else:
+                # different escape character, ignore it
+                view.undo()
+                result.append(current)
+            continue
+
+        # closing quote
+        if current == quote:
+            next_char = view.get()
+            valid_eof = not next_char or next_char.isspace()
+            if not valid_eof:
+                raise BadArgument('Expected space after closing quotation')
+
+            # we're quoted so it's okay
+            return ''.join(result)
+
+        if current.isspace() and not quote:
+            # end of word found
+            return ''.join(result)
+
+        result.append(current)

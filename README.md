@@ -73,7 +73,6 @@ You will also need to run a MongoDB instance to serve as Avrae's database.
 To actually run Avrae, you need Python version >= 3.6.0 < 3.7.
 First, install the dependencies with `pip install -r requirements.txt`.
 
-- If running Avrae in unsharded+unsupervised mode (**recommended for testing**), you can just run `python dbot.py test`.
-- If running Avrae in sharded+unsupervised mode, launch each shard with `SHARDS=[NUM_SHARDS] python dbot.py test -s [SHARD_ID]`.
-- If running Avrae in sharded+supervised mode, run `SHARDS=[NUM_SHARDS] python overseer.py test 0 [NUM_SHARDS-1]`.
+- If running Avrae in unsharded mode (**recommended for testing**), run `python dbot.py test`.
+- If running Avrae in sharded mode, run `python dbot.py`.
 

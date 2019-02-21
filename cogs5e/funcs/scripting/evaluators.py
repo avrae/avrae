@@ -283,11 +283,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.uvars_changed.add(name)
 
     def chanid(self):
-        return self.ctx.message.channel.id
+        return str(self.ctx.channel.id)
 
     def servid(self):
-        if self.ctx.message.server:
-            return self.ctx.message.server.id
+        if self.ctx.guild:
+            return str(self.ctx.guild.id)
         return None
 
     # evaluation
@@ -426,6 +426,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
 
 class SpellEvaluator(MathEvaluator):
+    @classmethod
+    def with_caster(cls, caster):
+        names = {'spell': caster.spellcasting.sab - caster.pb_from_level()}
+        return cls(names=names)
+
     def parse(self, string, extra_names=None):
         """Parses a spell-formatted string (evaluating {{}} and replacing {} with rollstrings)."""
         original_names = None

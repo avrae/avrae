@@ -74,6 +74,10 @@ def raise_alias_exception(reason):
     raise AliasException(reason)
 
 
+def typeof(inst):
+    return type(inst).__name__
+
+
 DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
 DEFAULT_OPERATORS.pop(ast.Pow)
 
@@ -81,4 +85,4 @@ DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
 DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
                           'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all,
                           'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
-                          'time': time.time, 'err': raise_alias_exception})
+                          'time': time.time, 'err': raise_alias_exception, 'typeof': typeof})

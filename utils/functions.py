@@ -469,31 +469,6 @@ def parse_data_formatting(text):
     return text
 
 
-def dicecloud_parse(spell):
-    """
-    :param spell: The spell to parse.
-    :return: (dict) A dictionary with all the keys necessary for dicecloud exporting.
-    """
-    mat = re.search(r'\(([^()]+)\)', spell.components)
-    text = spell.description.replace('\n', '\n  ')
-    if spell.higherlevels:
-        text += f"\n\n**At Higher Levels**: {spell.higherlevels}"
-    return {
-        'name': spell.name,
-        'description': text,
-        'castingTime': spell.time,
-        'range': spell.range,
-        'duration': spell.duration,
-        'components.verbal': 'V' in spell.components,
-        'components.somatic': 'S' in spell.components,
-        'components.concentration': spell.concentration,
-        'components.material': mat.group(1) if mat else None,
-        'ritual': spell.ritual,
-        'level': int(spell.level),
-        'school': spell.get_school()
-    }
-
-
 URL_KEY_V1_RE = re.compile(r'key=([^&#]+)')
 URL_KEY_V2_RE = re.compile(r'/spreadsheets/d/([a-zA-Z0-9-_]+)')
 

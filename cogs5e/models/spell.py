@@ -711,6 +711,29 @@ class Spell:
                     return 10
         return -1
 
+    def to_dicecloud(self):
+        mat = re.search(r'\(([^()]+)\)', self.components)
+        text = self.description.replace('\n', '\n  ')
+        if self.higherlevels:
+            text += f"\n\n**At Higher Levels**: {self.higherlevels}"
+        return {
+            'name': self.name,
+            'description': text,
+            'castingTime': self.time,
+            'range': self.range,
+            'duration': self.duration,
+            'components': {
+                'verbal': 'V' in self.components,
+                'somatic': 'S' in self.components,
+                'concentration': self.concentration,
+                'material': mat.group(1) if mat else None,
+            },
+            'ritual': self.ritual,
+            'level': int(self.level),
+            'school': self.get_school(),
+            'prepared': 'prepared'
+        }
+
     async def cast(self, ctx, caster, targets, args, combat=None):
         """
         Casts this spell.

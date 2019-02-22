@@ -26,7 +26,7 @@ import discord
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.caster import Spellcaster, Spellcasting
-from cogs5e.models.dicecloudClient import DicecloudClient
+from cogs5e.models.dicecloud.client import DicecloudClient
 from cogs5e.models.errors import ConsumableNotFound, CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, \
     NoCharacter, NoReset, OutdatedSheet
 from utils.functions import get_selection
@@ -389,13 +389,13 @@ class Character(Spellcaster):
                 log.debug(data)
 
         try:
-            DicecloudClient.getInstance().update('characters',
-                                                 {'_id': self.id[10:]},
-                                                 {'$set': {
-                                                     "hitPoints.adjustment":
-                                                         (self.get_current_hp() - self.get_max_hp())
-                                                         - self.get_temp_hp()}
-                                                 }, callback=update_callback)
+            DicecloudClient.getInstance().meteor_client.update('characters',
+                                                               {'_id': self.id[10:]},
+                                                               {'$set': {
+                                                                   "hitPoints.adjustment":
+                                                                       (self.get_current_hp() - self.get_max_hp())
+                                                                       - self.get_temp_hp()}
+                                                               }, callback=update_callback)
         except MeteorClient.MeteorClientException:
             pass
 
@@ -563,9 +563,9 @@ class Character(Spellcaster):
             spell_dict[f'level{lvl}SpellSlots.adjustment'] = self.get_remaining_slots(lvl) - self.get_max_spellslots(
                 lvl)
         try:
-            DicecloudClient.getInstance().update('characters', {'_id': self.id[10:]},
-                                                 {'$set': spell_dict},
-                                                 callback=update_callback)
+            DicecloudClient.getInstance().meteor_client.update('characters', {'_id': self.id[10:]},
+                                                               {'$set': spell_dict},
+                                                               callback=update_callback)
         except MeteorClient.MeteorClientException:
             pass
 
@@ -740,13 +740,13 @@ class Character(Spellcaster):
 
         try:
             if counter['live'] in CLASS_RESOURCES:
-                DicecloudClient.getInstance().update('characters', {'_id': self.id[10:]},
-                                                     {'$set': {f"{counter['live']}.adjustment": -used}},
-                                                     callback=update_callback)
+                DicecloudClient.getInstance().meteor_client.update('characters', {'_id': self.id[10:]},
+                                                                   {'$set': {f"{counter['live']}.adjustment": -used}},
+                                                                   callback=update_callback)
             else:
-                DicecloudClient.getInstance().update('features', {'_id': counter['live']},
-                                                     {'$set': {"used": used}},
-                                                     callback=update_callback)
+                DicecloudClient.getInstance().meteor_client.update('features', {'_id': counter['live']},
+                                                                   {'$set': {"used": used}},
+                                                                   callback=update_callback)
         except MeteorClient.MeteorClientException:
             pass
 

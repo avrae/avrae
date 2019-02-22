@@ -8,19 +8,18 @@ Most of this module was coded 5 miles in the air. (Aug 8, 2017)
 import logging
 import shlex
 
-import MeteorClient
 import discord
 from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import c, get_castable_spell, select_spell_full, get_spell_choices
+from cogs5e.funcs.lookupFuncs import c, get_castable_spell, get_spell_choices, select_spell_full
 from cogs5e.models.character import Character
-from cogs5e.models.dicecloudClient import DicecloudClient
+from cogs5e.models.dicecloud.client import dicecloud_client
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
-from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, ConsumableException, ConsumableNotFound
+from cogs5e.models.errors import ConsumableException, ConsumableNotFound, CounterOutOfBounds, InvalidArgument
 from utils.argparser import argparse
-from utils.functions import dicecloud_parse, search
+from utils.functions import search
 
 log = logging.getLogger(__name__)
 
@@ -317,13 +316,9 @@ class GameTrack:
     async def spellbook_add(self, ctx, *, spell_name):
         """Adds a spell to the spellbook override. If character is live, will add to sheet as well."""
         spell = await select_spell_full(ctx, spell_name)
-
         character = await Character.from_ctx(ctx)
         if character.live:
-            try:
-                await DicecloudClient.getInstance().sync_add_spell(character, dicecloud_parse(spell))
-            except MeteorClient.MeteorClientException:
-                return await ctx.send("Error: Failed to connect to Dicecloud. The site may be down.")
+            await dicecloud_client.add_spell(character, spell)
         character.add_known_spell(spell)
         await character.commit(ctx)
         live = "Spell added to Dicecloud!" if character.live else ''
@@ -343,13 +338,8 @@ class GameTrack:
         if len(class_spells) == 0:
             return await ctx.send("No spells for that class found.")
         level_spells = [s for s in class_spells if level == s.level]
-        try:
-            await DicecloudClient.getInstance().sync_add_mass_spells(character,
-                                                                     [dicecloud_parse(s) for s in level_spells],
-                                                                     spell_list)
-            await character.commit(ctx)
-        except MeteorClient.MeteorClientException:
-            return await ctx.send("Error: Failed to connect to Dicecloud. The site may be down.")
+        await dicecloud_client.add_spells(character, level_spells, spell_list)
+        await character.commit(ctx)
         await ctx.send(f"{len(level_spells)} spells added to {character.get_name()}'s spell list on Dicecloud.")
 
     @spellbook.command(name='remove')
@@ -362,6 +352,8 @@ class GameTrack:
             return await ctx.send("Just delete the spell from your character sheet!")
         spell = character.remove_known_spell(spell_name)
         if spell:
+            if isinstance(spell, dict):
+                spell = spell['name']
             await character.commit(ctx)
             await ctx.send(f"{spell} removed from spellbook override.")
         else:

@@ -143,10 +143,20 @@ class AutomationTarget:
             return self.target.ac
         return None
 
-    def get_save(self, save, default=0):
-        if hasattr(self.target, "saves"):
-            return self.target.saves.get(save, default)
-        raise TargetException("Target does not have defined saves.")
+    def get_save_dice(self, save, default=0):
+        if not hasattr(self.target, "saves"):
+            raise TargetException("Target does not have defined saves.")
+
+        sb = None
+        mod = self.target.saves.get(save, default)
+        if hasattr(self.target, "active_effects"):
+            sb = self.target.active_effects('sb')
+        if sb:
+            saveroll = '1d20{:+}+{}'.format(mod, '+'.join(sb))
+        else:
+            saveroll = '1d20{:+}'.format(mod)
+
+        return saveroll
 
     def get_resists(self):
         if hasattr(self.target, "resists"):
@@ -405,12 +415,7 @@ class Save(Effect):
                     adv = argparse(save_args).adv() + adv
                     adv = max(-1, min(1, adv))  # bound, cancel out double dis/adv
 
-            target_save_mod = autoctx.target.get_save(save_skill)
-            sb = autoctx.target.target.active_effects('sb')
-            if sb:
-                saveroll = '1d20{:+}+{}'.format(target_save_mod, '+'.join(sb))
-            else:
-                saveroll = '1d20{:+}'.format(target_save_mod)
+            saveroll = autoctx.target.get_save_dice(save_skill)
             save_roll = roll(saveroll, adv=adv,
                              rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
             is_success = save_roll.total >= dc

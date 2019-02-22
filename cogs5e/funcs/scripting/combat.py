@@ -104,9 +104,16 @@ class SimpleCombatant:
                               ability.lower() in s.lower())
         except StopIteration:
             raise InvalidSaveType
-        save_roll_mod = self._combatant.saves.get(save_skill, 0)
+
+        mod = self._combatant.saves.get(save_skill, 0)
+        sb = self._combatant.active_effects('sb')
+        if sb:
+            saveroll = '1d20{:+}+{}'.format(mod, '+'.join(sb))
+        else:
+            saveroll = '1d20{:+}'.format(mod)
         adv = 0 if adv is None else 1 if adv else -1
-        save_roll = roll('1d20{:+}'.format(save_roll_mod), adv=adv,
+        
+        save_roll = roll(saveroll, adv=adv,
                          rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
         return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,
                                 [part.to_dict() for part in save_roll.raw_dice.parts])

@@ -10,15 +10,16 @@ log = logging.getLogger(__name__)
 
 
 class Bestiary:
-    def __init__(self, _id: str, name: str, monsters: list):
+    def __init__(self, _id: str, name: str, monsters: list, desc: str = None):
         self.id = _id
         self.name = name
         self.monsters = monsters
+        self.desc = desc
 
     @classmethod
     def from_raw(cls, _id, raw):
         monsters = [Monster.from_bestiary(m) for m in raw['monsters']]
-        return cls(_id, raw['name'], monsters)
+        return cls(_id, raw['name'], monsters, raw['desc'])
 
     @classmethod
     async def from_ctx(cls, ctx):
@@ -28,7 +29,8 @@ class Bestiary:
         return cls.from_raw(active_bestiary['critterdb_id'], active_bestiary)
 
     def to_dict(self):
-        return {'monsters': [m.to_dict() for m in self.monsters], 'name': self.name, 'critterdb_id': self.id}
+        return {'monsters': [m.to_dict() for m in self.monsters], 'name': self.name, 'critterdb_id': self.id,
+                'desc': self.desc}
 
     async def commit(self, ctx):
         """Writes a bestiary object to the database, under the contextual author. Returns self."""
@@ -127,5 +129,6 @@ async def bestiary_from_critterdb(url):
             except ValueError:
                 raise ExternalImportError("Error importing bestiary metadata. Are you sure the link is right?")
             name = raw['name']
+            desc = raw['description']
     parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
-    return Bestiary(url, name, parsed_creatures)
+    return Bestiary(url, name, parsed_creatures, desc)

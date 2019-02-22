@@ -50,7 +50,13 @@ class Homebrew:
             await bestiary.set_active(ctx)
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
-        embed.description = '\n'.join(m.name for m in bestiary.monsters)
+        if bestiary.desc:
+            embed.description = bestiary.desc
+        monnames = '\n'.join(m.name for m in bestiary.monsters)
+        if len(monnames) < 1020:
+            embed.add_field(name="Creatures", value=monnames)
+        else:
+            embed.add_field(name="Creatures", value=f"{len(bestiary.monsters)} creatures.")
         await ctx.send(embed=embed)
 
     @bestiary.command(name='list')

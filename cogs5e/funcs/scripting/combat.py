@@ -112,7 +112,7 @@ class SimpleCombatant:
         else:
             saveroll = '1d20{:+}'.format(mod)
         adv = 0 if adv is None else 1 if adv else -1
-        
+
         save_roll = roll(saveroll, adv=adv,
                          rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
         return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,

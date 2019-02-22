@@ -19,6 +19,8 @@ from utils.functions import confirm, get_selection
 
 log = logging.getLogger(__name__)
 
+DM_ROLES = {"dm", "gm", "dungeon master", "game master"}
+
 
 class InitTracker:
     """
@@ -347,9 +349,10 @@ class InitTracker:
             await ctx.send("There are no combatants.")
             return
 
-        if combat.index is None:
-            pass
-        elif not str(ctx.author.id) in (combat.current_combatant.controller, combat.dm):
+        allowed_to_pass = (combat.index is None) \
+                          or (str(ctx.author.id) in (combat.current_combatant.controller, combat.dm)) \
+                          or DM_ROLES.intersection({r.name.lower() for r in ctx.author.roles})
+        if not allowed_to_pass:
             await ctx.send("It is not your turn.")
             return
 

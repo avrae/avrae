@@ -19,7 +19,7 @@ class Bestiary:
     @classmethod
     def from_raw(cls, _id, raw):
         monsters = [Monster.from_bestiary(m) for m in raw['monsters']]
-        return cls(_id, raw['name'], monsters, raw['desc'])
+        return cls(_id, raw['name'], monsters, raw.get('desc'))
 
     @classmethod
     async def from_ctx(cls, ctx):

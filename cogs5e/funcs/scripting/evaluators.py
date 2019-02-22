@@ -3,6 +3,7 @@ import copy
 import re
 from math import ceil, floor
 
+import simpleeval
 from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
 from cogs5e.funcs.dice import roll
@@ -10,6 +11,9 @@ from cogs5e.models.errors import EvaluationError, FunctionRequiresCharacter, Inv
 from .combat import SimpleCombat
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
 from .helpers import MAX_ITER_LENGTH, SCRIPTING_RE, get_uvars, update_uvars
+
+if 'format_map' not in simpleeval.DISALLOW_METHODS:
+    simpleeval.DISALLOW_METHODS.append('format_map')
 
 
 class MathEvaluator(SimpleEval):

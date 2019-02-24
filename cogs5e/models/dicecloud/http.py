@@ -34,25 +34,28 @@ class DicecloudHTTP:
         data = None
         async with aiohttp.ClientSession() as session:
             for _ in range(MAX_TRIES):
-                async with session.request(method, f"{self.base}{endpoint}", data=body, headers=headers,
-                                           params=query) as resp:
-                    log.info(f"Dicecloud returned {resp.status} ({endpoint})")
-                    if resp.status == 200:
-                        data = await resp.json(encoding='utf-8')
-                        break
-                    elif resp.status == 429:
-                        timeout = await resp.json(encoding='utf-8')
-                        log.warning(f"Dicecloud ratelimit hit ({endpoint}) - resets in {timeout}ms")
-                        await asyncio.sleep(timeout['timeToReset'] / 1000)  # rate-limited, wait and try again
-                    elif 400 <= resp.status < 600:
-                        if resp.status == 403:
-                            raise Forbidden(resp.reason)
-                        elif resp.status == 404:
-                            raise NotFound(resp.reason)
+                try:
+                    async with session.request(method, f"{self.base}{endpoint}", data=body, headers=headers,
+                                               params=query) as resp:
+                        log.info(f"Dicecloud returned {resp.status} ({endpoint})")
+                        if resp.status == 200:
+                            data = await resp.json(encoding='utf-8')
+                            break
+                        elif resp.status == 429:
+                            timeout = await resp.json(encoding='utf-8')
+                            log.warning(f"Dicecloud ratelimit hit ({endpoint}) - resets in {timeout}ms")
+                            await asyncio.sleep(timeout['timeToReset'] / 1000)  # rate-limited, wait and try again
+                        elif 400 <= resp.status < 600:
+                            if resp.status == 403:
+                                raise Forbidden(resp.reason)
+                            elif resp.status == 404:
+                                raise NotFound(resp.reason)
+                            else:
+                                raise HTTPException(resp.status, resp.reason)
                         else:
-                            raise HTTPException(resp.status, resp.reason)
-                    else:
-                        log.warning(f"Unknown response from Dicecloud: {resp.status}")
+                            log.warning(f"Unknown response from Dicecloud: {resp.status}")
+                except aiohttp.ServerDisconnectedError:
+                    raise HTTPException(None, "Server disconnected")
         if not data:  # we did 10 loops and always got either 200 or 429 but we have no data, so we must have 429ed
             raise Timeout(f"Dicecloud failed to respond after {MAX_TRIES} tries. Please try again.")
 

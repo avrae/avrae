@@ -43,7 +43,7 @@ class SimpleCombat:
         return None
 
     def get_group(self, name):
-        group = self._combat.get_group(name)
+        group = self._combat.get_group(name, strict=False)
         if group:
             return SimpleGroup(group)
         return None

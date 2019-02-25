@@ -156,19 +156,23 @@ class Combat:
 
     def get_combatant(self, name, strict=True):
         if strict:
-            return next((c for c in self.get_combatants() if c.name == name), None)
+            return next((c for c in self.get_combatants() if c.name.lower() == name.lower()), None)
         else:
             return next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
 
-    def get_group(self, name, create=None):
+    def get_group(self, name, create=None, strict=True):
         """
         Gets a combatant group.
         :rtype: CombatantGroup
         :param name: The name of the combatant group.
         :param create: The initiative to create a group at if a group is not found.
+        :param strict: Whether group name must be a full case insensitive match.
         :return: The combatant group.
         """
-        grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
+        if strict:
+            grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
+        else:
+            grp = next((g for g in self.get_groups() if name.lower() in g.name.lower()), None)
 
         if grp is None and create is not None:
             grp = CombatantGroup.new(name, create, self.ctx)

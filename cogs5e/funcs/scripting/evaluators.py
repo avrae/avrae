@@ -80,7 +80,8 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             get_gvar=self.get_gvar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
-            chanid=self.chanid, servid=self.servid
+            chanid=self.chanid, servid=self.servid,
+            get=self.get
         )
 
         self.assign_nodes = {
@@ -293,6 +294,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         if self.ctx.guild:
             return str(self.ctx.guild.id)
         return None
+
+    def get(self, name, default=None):
+        if name in self.names:
+            return self.names[name]
+        return default
 
     # evaluation
     def parse(self, string, double_curly=None, curly=None, ltgt=None):

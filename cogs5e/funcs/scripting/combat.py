@@ -2,7 +2,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting.functions import SimpleRollResult
 from cogs5e.funcs.sheetFuncs import sheet_damage
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
-from cogs5e.models.initiative import Combat, CombatantGroup, Combatant, Effect
+from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
 from utils.argparser import ParsedArguments
 
 
@@ -199,11 +199,12 @@ class SimpleGroup:
     def __init__(self, group: CombatantGroup):
         self._group = group
         self.type = "group"
+        self.combatants = [SimpleCombatant(c) for c in self._group.get_combatants()]
 
     def get_combatant(self, name):
-        combatant = next((c for c in self._group.get_combatants() if name.lower() in c.name.lower()), None)
+        combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
         if combatant:
-            return SimpleCombatant(combatant)
+            return combatant
         return None
 
     def __str__(self):

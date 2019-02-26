@@ -241,15 +241,6 @@ class Character(Spellcaster):
         tempout = ''
         for substr in re.split(ops, varstr):
             temp = substr.strip()
-            if temp.startswith('/'):
-                _last = self.character
-                for path in out.split('/'):
-                    if path:
-                        try:
-                            _last = _last.get(path, {})
-                        except AttributeError:
-                            break
-                temp = str(_last)
             tempout += str(cvars.get(temp, temp)) + " "
         for substr in re.split(ops, tempout):
             temp = substr.strip()

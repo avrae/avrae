@@ -87,6 +87,7 @@ class SimpleCombatant:
             self.ratio = (self._combatant.hp - (self._combatant.temphp or 0)) / self._combatant.hpMax
         else:
             self.ratio = 0
+        self.level = self._combatant.spellcasting.casterLevel
 
     def set_hp(self, newhp: int):
         self._combatant.set_hp(int(newhp))

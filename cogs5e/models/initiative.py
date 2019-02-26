@@ -86,6 +86,10 @@ class Combat:
     def options(self):
         return self._options
 
+    @options.setter
+    def options(self, value):
+        self._options = value
+
     @property  # private write
     def round_num(self):
         return self._round

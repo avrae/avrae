@@ -456,6 +456,28 @@ class InitTracker:
         await ctx.send(f"Rerolled initiative! New order: {combat.get_summary()}")
         await combat.final()
 
+    @init.command(name="meta", aliases=['metaset'])
+    async def metasetting(self, ctx, *settings):
+        """Changes the settings of the active combat."""
+        args = argparse(settings)
+        combat = await Combat.from_ctx(ctx)
+        options = combat.options
+        out = ""
+
+        if args.last('dyn', False, bool):  # rerolls all inits at the start of each round
+            options['dynamic'] = not options.get('dynamic')
+            out += f"Dynamic initiative turned {'on' if options['dynamic'] else 'off'}.\n"
+        if 'name' in args:
+            options['name'] = args.last('name')
+            out += f"Name set to {options['name']}.\n"
+        if args.last('turnnotif', False, bool):
+            options['turnnotif'] = not options.get('turnnotif')
+            out += f"Turn notification turned {'on' if options['turnnotif'] else 'off'}.\n"
+
+        combat.options = options
+        await combat.commit()
+        await ctx.send(out)
+
     @init.command(name="list", aliases=['summary'])
     async def listInits(self, ctx):
         """Lists the combatants."""

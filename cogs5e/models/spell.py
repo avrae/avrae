@@ -67,15 +67,21 @@ class AutomationContext:
         self._field_queue = []
         self._footer_queue = []
         self.pm_queue = {}
+
+        self.character = None
         if isinstance(caster, PlayerCombatant):
-            self.evaluator = SpellEvaluator.with_character(caster.character)
             self.character = caster.character
         elif isinstance(caster, Character):
-            self.evaluator = SpellEvaluator.with_character(caster)
             self.character = caster
+
+        if self.character:
+            self.evaluator = SpellEvaluator.with_character(self.character)
         else:
             self.evaluator = SpellEvaluator.with_caster(caster)
-            self.character = None
+
+        self.combatant = None
+        if isinstance(caster, Combatant):
+            self.combatant = caster
 
     def queue(self, text):
         self._embed_queue.append(text)
@@ -272,7 +278,7 @@ class Attack(Effect):
         data['miss'] = Effect.deserialize(data['miss'])
         return super(Attack, cls).from_data(data)
 
-    def run(self, autoctx):
+    def run(self, autoctx: AutomationContext):
         super(Attack, self).run(autoctx)
         args = autoctx.args
         adv = args.adv(True)
@@ -281,18 +287,27 @@ class Attack(Effect):
         miss = (args.last('miss', None, bool) and not hit) and 1
         rr = min(args.last('rr', 1, int), 25)
         b = args.join('b', '+')
-
         reroll = args.last('reroll', 0, int)
         criton = args.last('criton', 20, int)
-        bonus = None
-        if self.bonus:
-            bonus = autoctx.evaluator.parse(self.bonus, autoctx.metavars)
-            try:
-                bonus = int(bonus)
-            except (TypeError, ValueError):
-                raise AutomationException(f"{bonus} cannot be interpreted as an attack bonus.")
 
-        sab = bonus or autoctx.ab_override or autoctx.caster.spellcasting.sab
+        # check for combatant IEffect bonus (#224)
+        if autoctx.combatant:
+            effect_b = '+'.join(autoctx.combatant.active_effects('b'))
+            if effect_b:
+                if b:
+                    b = f"{b}+{effect_b}"
+                else:
+                    b = effect_b
+
+        explicit_bonus = None
+        if self.bonus:
+            explicit_bonus = autoctx.evaluator.parse(self.bonus, autoctx.metavars)
+            try:
+                explicit_bonus = int(explicit_bonus)
+            except (TypeError, ValueError):
+                raise AutomationException(f"{explicit_bonus} cannot be interpreted as an attack bonus.")
+
+        sab = explicit_bonus or autoctx.ab_override or autoctx.caster.spellcasting.sab
 
         if not sab:
             raise NoSpellAB()
@@ -457,16 +472,30 @@ class Damage(Effect):
         neutral = args.get('neutral', [])
         crit = args.last('crit', None, bool)
         maxdmg = args.last('max', None, bool)
+
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
             vuln = vuln or autoctx.target.get_vuln()
             neutral = neutral or autoctx.target.get_neutral()
 
-        if not autoctx.target.target and self.is_meta(autoctx, True):  # likely have output this in meta already
+        # check if we actually need to run this damage roll (not in combat and roll is redundant)
+        if not autoctx.target.target and self.is_meta(autoctx, True):
             return
+
+        # add on combatant damage effects (#224)
+        if autoctx.combatant:
+            effect_d = '+'.join(autoctx.combatant.active_effects('d'))
+            if effect_d:
+                if d:
+                    d = f"{d}+{effect_d}"
+                else:
+                    d = effect_d
+
+        # check if we actually need to care about the -d tag
         if self.is_meta(autoctx):
             d = None  # d was likely applied in the Roll effect already
+
         damage = autoctx.parse_annostr(damage)
 
         if self.cantripScale:
@@ -564,6 +593,16 @@ class Roll(Effect):
         super(Roll, self).run(autoctx)
         d = autoctx.args.join('d', '+')
         maxdmg = autoctx.args.last('max', None, bool)
+
+        # add on combatant damage effects (#224)
+        if autoctx.combatant:
+            effect_d = '+'.join(autoctx.combatant.active_effects('d'))
+            if effect_d:
+                if d:
+                    d = f"{d}+{effect_d}"
+                else:
+                    d = effect_d
+
         dice = self.dice
         if self.cantripScale:
             def cantrip_scale(matchobj):

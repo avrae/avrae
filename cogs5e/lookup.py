@@ -43,6 +43,8 @@ PROPS = {"A": "ammunition", "LD": "loading", "L": "light", "F": "finesse", "T": 
          "2H": "two-handed", "V": "versatile", "S": "special", "RLD": "reload", "BF": "burst fire", "CREW": "Crew",
          "PASS": "Passengers", "CARGO": "Cargo", "DMGT": "Damage Threshold", "SHPREP": "Ship Repairs"}
 
+LARGE_THRESHOLD = 200
+
 
 class Lookup:
     """Commands to help look up items, status effects, rules, etc."""
@@ -797,6 +799,24 @@ class Lookup:
 
     async def add_training_data(self, lookup_type, query, result_name):
         await self.bot.mdb.nn_training.insert_one({"type": lookup_type, "query": query, "result": result_name})
+
+    async def on_guild_join(self, guild):
+        # This method automatically allows full monster lookup, and enforces SRD for new large servers.
+        # These settings can be changed by any server admin.
+        if guild.member_count < LARGE_THRESHOLD:
+            return
+
+        existing_guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
+        if existing_guild_settings is not None:
+            return
+
+        default_guild_settings = {
+            "req_dm_monster": False,
+            "srd": True
+        }
+
+        await self.bot.mdb.lookupsettings.update_one({"server": str(guild.id)}, {"$set": default_guild_settings},
+                                                     upsert=True)
 
 
 def setup(bot):

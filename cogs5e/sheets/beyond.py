@@ -169,8 +169,10 @@ class BeyondSheetParser:
         return 0
 
     def get_ac(self):
-        base = 10
+        min_base_armor = self.get_stat('minimum-base-armor')
+        base = min_base_armor or 10
         armortype = None
+        add_dex = True if not min_base_armor else False
         shield = 0
         for item in self.character['inventory']:
             if item['equipped'] and item['definition']['filterType'] == 'Armor':
@@ -186,7 +188,11 @@ class BeyondSheetParser:
         armoredBonus = self.get_stat('armored-armor-class')
         miscBonus = 0
 
-        baseWithDex = base + self.get_stat('unarmored-dex-ac-bonus', base=dexBonus)
+        if armortype not in (None, 'Light Armor'):
+            add_dex = False
+
+        if add_dex:
+            base = base + self.get_stat('unarmored-dex-ac-bonus', base=dexBonus)
 
         for val in self.character['characterValues']:
             if val['typeId'] == 1:  # AC override
@@ -196,12 +202,12 @@ class BeyondSheetParser:
             elif val['typeId'] == 3:  # AC misc bonus
                 miscBonus += val['value']
             elif val['typeId'] == 4:  # AC+DEX override
-                baseWithDex = val['value']
+                base = val['value']
 
         if armortype is None:
-            return baseWithDex + unarmoredBonus + shield + miscBonus
+            return base + unarmoredBonus + shield + miscBonus
         elif armortype == 'Light Armor':
-            return baseWithDex + shield + armoredBonus + miscBonus
+            return base + shield + armoredBonus + miscBonus
         elif armortype == 'Medium Armor':
             return base + min(dexBonus, 2) + shield + armoredBonus + miscBonus
         else:

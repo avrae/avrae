@@ -117,7 +117,7 @@ class SimpleCombatant:
         save_roll = roll(saveroll, adv=adv,
                          rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
         return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,
-                                [part.to_dict() for part in save_roll.raw_dice.parts])
+                                [part.to_dict() for part in save_roll.raw_dice.parts], save_roll)
 
     def wouldhit(self, to_hit: int):
         if self._combatant.ac:

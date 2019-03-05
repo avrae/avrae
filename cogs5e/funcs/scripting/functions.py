@@ -17,14 +17,18 @@ def simple_roll(rollStr):
 
 
 class SimpleRollResult:
-    def __init__(self, dice, total, full, raw):
+    def __init__(self, dice, total, full, raw, roll_obj):
         self.dice = dice.strip()
         self.total = total
         self.full = full.strip()
         self.raw = raw
+        self._roll = roll_obj
 
     def __str__(self):
         return self.full
+
+    def consolidated(self):
+        return self._roll.consolidated()
 
 
 def verbose_roll(rollStr, multiply=1, add=0):
@@ -36,7 +40,7 @@ def verbose_roll(rollStr, multiply=1, add=0):
     rolled = roll(rollStr, inline=True)
     try:
         return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
-                                [part.to_dict() for part in rolled.raw_dice.parts])
+                                [part.to_dict() for part in rolled.raw_dice.parts], rolled)
     except AttributeError:
         return None
 

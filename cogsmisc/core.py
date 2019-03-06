@@ -12,6 +12,8 @@ import discord
 import psutil
 from discord.ext import commands
 
+from cogs5e.models.embeds import EmbedWithAuthor
+
 PATRON_EYLESIS = 227168575469780992
 
 
@@ -96,6 +98,28 @@ class Core:
                                             'Join the official testing server [here](https://discord.gg/pQbd4s6)!',
                         inline=False)
 
+        await ctx.send(embed=embed)
+
+    @commands.command(hidden=True)
+    async def patron_roscoe(self, ctx):
+        embed = EmbedWithAuthor(ctx)
+        embed.title = "Roscoe's Feast"
+        embed.description = "*6th level conjuration. (Cleric, Druid)*"
+        embed.add_field(name="Casting Time", value="10 minutes")
+        embed.add_field(name="Range", value="30 feet")
+        embed.add_field(name="Components", value="V, S, M (A gem encrusted bowl worth 1000 gold pieces)")
+        embed.add_field(name="Duration", value="Instantaneous")
+        embed.add_field(
+            name="Description",
+            value="You call forth the Avatar of Roscoe who brings with him a magnificent feast of chicken and waffles.\n"
+                  "The feast takes 1 hour to consume and disappears at the end of that time, and the beneficial effects "
+                  "don't set in until this hour is over. Up to twelve creatures can partake of the feast.\n"
+                  "A creature that partakes of the feast gains several benefits. "
+                  "The creature is cured of all diseases and poison, becomes immune to poison and being frightened, and "
+                  "makes all Wisdom saving throws with advantage. Its hit point maximum also increases by 2d10, and it "
+                  "gains the same number of hit points. These benefits last for 24 hours.")
+
+        embed.set_footer(text=f"Spell | Thanks Roscoe!")
         await ctx.send(embed=embed)
 
 

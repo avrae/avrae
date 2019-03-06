@@ -586,6 +586,9 @@ class Lookup:
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
+        if name.lower().strip() == 'roscoe\'s feast':
+            return await ctx.invoke(self.bot.get_command('patron_roscoe'))
+
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)

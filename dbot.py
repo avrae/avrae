@@ -19,7 +19,7 @@ from utils.redisIO import RedisIO
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
-SHARD_COUNT = 20 if not TESTING else 1
+SHARD_COUNT = None if not TESTING else 1
 prefix = '!' if not TESTING else '#'
 
 # -----COGS-----
@@ -62,7 +62,7 @@ class Avrae(commands.AutoShardedBot):
     async def launch_shards(self):
         if self.shard_count is None:
             recommended_shards, _ = await self.http.get_bot_gateway()
-            if recommended_shards >= 48 and not recommended_shards % 16:
+            if recommended_shards >= 96 and not recommended_shards % 16:
                 # half, round up to nearest 16
                 self.shard_count = recommended_shards // 2 + (16 - (recommended_shards // 2) % 16)
             else:

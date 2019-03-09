@@ -907,7 +907,7 @@ class SheetManager:
         if value is None:  # display value
             cvar = character.get_cvar(name)
             if cvar is None: cvar = 'Not defined.'
-            return await ctx.send('**' + name + '**:\n' + cvar)
+            return await ctx.send(f'**{name}**:\n{cvar}')
 
         try:
             assert not name in character.get_stat_vars()

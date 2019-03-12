@@ -668,7 +668,7 @@ class Roll(Effect):
 
         dice = self.dice
         if self.cantripScale:
-            damage = autoctx.cantrip_scale(dice)
+            dice = autoctx.cantrip_scale(dice)
 
         if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
             higher = self.higher.get(str(autoctx.get_cast_level()))
@@ -921,8 +921,9 @@ class Spell:
             embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
 
         if conc_conflict:
+            conflicts = ', '.join(e.name for e in conc_conflict)
             embed.add_field(name="Concentration",
-                            value=f"Dropped {', '.join(e.name for e in conc_conflict)} due to concentration.")
+                            value=f"Dropped {conflicts} due to concentration.")
 
         if self.image:
             embed.set_thumbnail(url=self.image)

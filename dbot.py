@@ -67,6 +67,7 @@ class Avrae(commands.AutoShardedBot):
                 self.shard_count = recommended_shards // 2 + (16 - (recommended_shards // 2) % 16)
             else:
                 self.shard_count = recommended_shards // 2
+        log.info(f"Launching {self.shard_count} shards!")
         await super(Avrae, self).launch_shards()
 
 

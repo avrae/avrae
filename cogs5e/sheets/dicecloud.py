@@ -461,7 +461,7 @@ class DicecloudParser:
             spellbook['spellslots'][str(lvl)] = numSlots
 
         for spell in spellnames:
-            result = search(c.spells, spell, lambda sp: sp.name)
+            result = search(c.spells, spell.strip(), lambda sp: sp.name)
             if result and result[0] and result[1]:
                 spellbook['spells'].append({
                     'name': result[0].name,

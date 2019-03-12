@@ -60,6 +60,7 @@ class BeyondSheetParser:
         self.levels = None
         self.prof = None
         self.calculated_stats = collections.defaultdict(lambda: 0)
+        self.set_calculated_stats = set()
 
     async def get_character(self):
         charId = self.url
@@ -159,6 +160,8 @@ class BeyondSheetParser:
 
     def get_stat(self, stat, base=0):
         """Calculates the final value of a stat, based on modifiers and feats."""
+        if stat in self.set_calculated_stats:
+            return self.calculated_stats[stat]
         bonus = self.calculated_stats[stat]
         return base + bonus
 
@@ -573,11 +576,16 @@ class BeyondSheetParser:
                     has_stat_bonuses.append({'subtype': mod_type, 'type': mod['type'], 'stat': mod['statId']})
 
                 if mod['type'] == 'bonus':
+                    if mod_type in self.set_calculated_stats:
+                        continue
                     self.calculated_stats[mod_type] += (mod['value'] or 0)
                 elif mod['type'] == 'damage':
                     self.calculated_stats[f"{mod_type}-damage"] += (mod['value'] or 0)
                 elif mod['type'] == 'set':
+                    if mod_type in self.set_calculated_stats and self.calculated_stats[mod_type] > (mod['value'] or 0):
+                        continue
                     self.calculated_stats[mod_type] = (mod['value'] or 0)
+                    self.set_calculated_stats.add(mod_type)
                 elif mod['type'] == 'ignore':
                     self.calculated_stats[mod_type] = 0
                     ignored.add(mod_type)

@@ -353,10 +353,12 @@ class Lookup:
     @checks.admin_or_permissions(manage_guild=True)
     async def lookup_settings(self, ctx, *, args: str):
         """Changes settings for the lookup module.
-        Usage: !lookup_settings -req_dm_monster True
-        Current settings are: -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
-                              -pm_result [True/False] - PMs the result of the lookup to reduce spam.
-                              -srd [True/False] - toggles SRD lookup restriction in a server."""
+        __Valid Settings__
+        -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
+            -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
+        -pm_result [True/False] - PMs the result of the lookup to reduce spam.
+        -srd [True/False] - toggles SRD lookup restriction in a server.
+        """
         args = shlex.split(args.lower())
         guild_id = str(ctx.guild.id)
         guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
@@ -371,6 +373,14 @@ class Lookup:
             setting = get_positivity(setting)
             guild_settings['req_dm_monster'] = setting if setting is not None else True
             out += 'req_dm_monster set to {}!\n'.format(str(guild_settings['req_dm_monster']))
+        if '-pm_dm' in args:
+            try:
+                setting = args[args.index('-pm_dm') + 1]
+            except IndexError:
+                setting = 'True'
+            setting = get_positivity(setting)
+            guild_settings['pm_dm'] = setting if setting is not None else True
+            out += 'pm_dm set to {}!\n'.format(str(guild_settings['pm_dm']))
         if '-pm_result' in args:
             try:
                 setting = args[args.index('-pm_result') + 1]
@@ -449,9 +459,11 @@ class Lookup:
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
+        pm_dm = guild_settings.get("pm_dm", False)
+        req_dm_monster = guild_settings.get("req_dm_monster", True)
 
         visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
-        if guild_settings.get("req_dm_monster", True) and ctx.guild:
+        if req_dm_monster and ctx.guild:
             visible = True if any(
                 ro in [str(r).lower() for r in ctx.author.roles] for ro in visible_roles) else False
         else:
@@ -578,7 +590,7 @@ class Lookup:
         embed_queue[0].set_thumbnail(url=monster.get_image_url())
 
         for embed in embed_queue:
-            if pm:
+            if pm or (visible and pm_dm and req_dm_monster):
                 await ctx.author.send(embed=embed)
             else:
                 await ctx.send(embed=embed)

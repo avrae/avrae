@@ -132,6 +132,21 @@ class AutomationContext:
     def parse_annostr(self, annostr):
         return self.evaluator.parse(annostr, extra_names=self.metavars)
 
+    def cantrip_scale(self, damage_dice):
+        def scale(matchobj):
+            level = self.caster.spellcasting.casterLevel
+            if level < 5:
+                levelDice = "1"
+            elif level < 11:
+                levelDice = "2"
+            elif level < 17:
+                levelDice = "3"
+            else:
+                levelDice = "4"
+            return levelDice + 'd' + matchobj.group(2)
+
+        return re.sub(r'(\d+)d(\d+)', scale, damage_dice)
+
 
 class AutomationTarget:
     def __init__(self, target):
@@ -194,6 +209,13 @@ class AutomationTarget:
                 autoctx.queue(f"**Concentration**: DC {int(max(amount/2, 10))}")
         elif isinstance(self.target, Character):
             self.target.modify_hp(-amount)
+            autoctx.footer_queue("{}: {}".format(self.target.get_name(), self.target.get_hp_str()))
+
+    @property
+    def combatant(self):
+        if isinstance(self.target, Combatant):
+            return self.target
+        return None
 
     @property
     def character(self):
@@ -499,19 +521,7 @@ class Damage(Effect):
         damage = autoctx.parse_annostr(damage)
 
         if self.cantripScale:
-            def cantrip_scale(matchobj):
-                level = autoctx.caster.spellcasting.casterLevel
-                if level < 5:
-                    levelDice = "1"
-                elif level < 11:
-                    levelDice = "2"
-                elif level < 17:
-                    levelDice = "3"
-                else:
-                    levelDice = "4"
-                return levelDice + 'd' + matchobj.group(2)
-
-            damage = re.sub(r'(\d+)d(\d+)', cantrip_scale, damage)
+            damage = autoctx.cantrip_scale(damage)
 
         if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
             higher = self.higher.get(str(autoctx.get_cast_level()))
@@ -548,6 +558,59 @@ class Damage(Effect):
         if not strict:
             return any(f"{{{v}}}" in self.damage for v in autoctx.metavars)
         return any(f"{{{v}}}" == self.damage for v in autoctx.metavars)
+
+
+class TempHP(Effect):
+    def __init__(self, amount: str, higher: dict = None, cantripScale: bool = None, **kwargs):
+        super(TempHP, self).__init__("temphp", **kwargs)
+        self.amount = amount
+        self.higher = higher
+        self.cantripScale = cantripScale
+
+    def run(self, autoctx):
+        super(TempHP, self).run(autoctx)
+        args = autoctx.args
+        amount = self.amount
+        maxdmg = args.last('max', None, bool)
+
+        # check if we actually need to run this damage roll (not in combat and roll is redundant)
+        if not autoctx.target.target and self.is_meta(autoctx, True):
+            return
+
+        amount = autoctx.parse_annostr(amount)
+
+        if self.cantripScale:
+            amount = autoctx.cantrip_scale(amount)
+
+        if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
+            higher = self.higher.get(str(autoctx.get_cast_level()))
+            if higher:
+                amount = f"{amount}+{higher}"
+
+        roll_for = "THP"
+
+        if maxdmg:
+            def maxSub(matchobj):
+                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+
+            amount = re.sub(r'(\d+)d(\d+)', maxSub, amount)
+
+        dmgroll = roll(amount, rollFor=roll_for, inline=True, show_blurbs=False)
+        autoctx.queue(dmgroll.result)
+
+        if autoctx.target.combatant:
+            autoctx.target.combatant.temphp = max(dmgroll.total, 0)
+            autoctx.footer_queue(
+                "{}: {}".format(autoctx.target.combatant.get_name(), autoctx.target.combatant.get_hp_str()))
+        elif autoctx.target.character:
+            autoctx.target.character.set_temp_hp(max(dmgroll.total, 0))
+            autoctx.footer_queue(
+                "{}: {}".format(autoctx.target.character.get_name(), autoctx.target.character.get_hp_str()))
+
+    def is_meta(self, autoctx, strict=False):
+        if not strict:
+            return any(f"{{{v}}}" in self.amount for v in autoctx.metavars)
+        return any(f"{{{v}}}" == self.amount for v in autoctx.metavars)
 
 
 class IEffect(Effect):
@@ -605,19 +668,7 @@ class Roll(Effect):
 
         dice = self.dice
         if self.cantripScale:
-            def cantrip_scale(matchobj):
-                level = autoctx.caster.spellcasting.casterLevel
-                if level < 5:
-                    levelDice = "1"
-                elif level < 11:
-                    levelDice = "2"
-                elif level < 17:
-                    levelDice = "3"
-                else:
-                    levelDice = "4"
-                return levelDice + 'd' + matchobj.group(2)
-
-            dice = re.sub(r'(\d+)d(\d+)', cantrip_scale, dice)
+            damage = autoctx.cantrip_scale(dice)
 
         if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
             higher = self.higher.get(str(autoctx.get_cast_level()))
@@ -661,6 +712,7 @@ EFFECT_MAP = {
     "attack": Attack,
     "save": Save,
     "damage": Damage,
+    "temphp": TempHP,
     "ieffect": IEffect,
     "roll": Roll,
     "text": Text

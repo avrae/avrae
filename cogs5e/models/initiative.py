@@ -382,6 +382,9 @@ class Combat:
             c.on_remove()
         await self.ctx.bot.mdb.combats.delete_one({"channel": self.channel})
 
+    def __str__(self):
+        return f"Initiative in <#{self.channel}>"
+
 
 class Combatant(Spellcaster):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
@@ -790,6 +793,9 @@ class Combatant(Spellcaster):
         """
         pass
 
+    def __str__(self):
+        return f"{self.name} {self.get_hp_str()}".strip()
+
 
 class MonsterCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
@@ -1054,6 +1060,9 @@ class CombatantGroup:
     def to_dict(self):
         return {'name': self.name, 'init': self.init, 'combatants': [c.to_dict() for c in self.get_combatants()],
                 'index': self.index, 'type': 'group'}
+
+    def __str__(self):
+        return f"{self.name} ({len(self.get_combatants())} combatants)"
 
 
 def parse_attack_arg(arg, name):

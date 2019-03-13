@@ -11,7 +11,10 @@ class SimpleCombat:
         self._combat: Combat = combat
 
         self.combatants = [SimpleCombatant(c) for c in self._combat.get_combatants()]
-        self.me = SimpleCombatant(me, False)
+        if me:
+            self.me = SimpleCombatant(me, False)
+        else:
+            self.me = None
         self.round_num = self._combat.round_num
         self.turn_num = self._combat.turn_num
         current = self._combat.current_combatant
@@ -24,16 +27,12 @@ class SimpleCombat:
             self.current = None
 
     @classmethod
-    async def from_character(cls, character, ctx):
+    async def from_ctx(cls, ctx):
         try:
             combat = await Combat.from_ctx(ctx)
         except CombatNotFound:
             return None
-        me = next((c for c in combat.get_combatants() if getattr(c, 'character_id', None) == character.id), None)
-        if not me:
-            return None
-        me._character = character  # set combatant character instance
-        return cls(combat, me)
+        return cls(combat, None)
 
     # public methods
     def get_combatant(self, name):
@@ -49,6 +48,13 @@ class SimpleCombat:
         return None
 
     # private functions
+    def func_set_character(self, character):
+        me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.id), None)
+        if not me:
+            return
+        me._character = character  # set combatant character instance
+        self.me = me
+
     async def func_commit(self):
         await self._combat.commit()
 

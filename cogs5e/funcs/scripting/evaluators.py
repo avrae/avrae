@@ -72,11 +72,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char, hp_str=self.needs_char,
             get_temphp=self.needs_char, set_temphp=self.needs_char,
             set_cvar=self.needs_char, delete_cvar=self.needs_char, set_cvar_nx=self.needs_char,
-            get_raw=self.needs_char, combat=self.needs_char
+            get_raw=self.needs_char
         )
 
         self.functions.update(
-            set=self.set_value, exists=self.exists,
+            set=self.set_value, exists=self.exists, combat=self.combat,
             get_gvar=self.get_gvar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
@@ -107,6 +107,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         uvars = await get_uvars(ctx)
         inst.names.update(uvars)
         inst._cache['uvars'].update(uvars)
+        inst._cache['combat'] = await SimpleCombat.from_ctx(ctx)
         return inst
 
     async def with_character(self, character):
@@ -116,7 +117,9 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         self.names['color'] = hex(character.get_color())[2:]
         self.names["currentHp"] = character.get_current_hp()
 
-        self._cache['combat'] = await SimpleCombat.from_character(character, self.ctx)
+        if 'combat' in self._cache and self._cache['combat']:
+            self._cache['combat'].func_set_character(character)
+
         self._cache['character'] = character
 
         # define character-specific functions
@@ -223,12 +226,6 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         def get_raw():
             return copy.copy(character.character)
 
-        def combat():
-            if not 'combat' in self._cache:
-                return None
-            self.combat_changed = True
-            return self._cache['combat']
-
         self.functions.update(
             get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
             delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, cc_str=cc_str,
@@ -237,7 +234,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, hp_str=hp_str,
             get_temphp=get_temphp, set_temphp=set_temphp,
             set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
-            get_raw=get_raw, combat=combat
+            get_raw=get_raw
         )
 
         return self
@@ -259,6 +256,12 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
     def exists(self, name):
         return name in self.names
+
+    def combat(self):
+        if not 'combat' in self._cache:
+            return None
+        self.combat_changed = True
+        return self._cache['combat']
 
     def uvar_exists(self, name):
         return self.exists(name) and name in self._cache['uvars']

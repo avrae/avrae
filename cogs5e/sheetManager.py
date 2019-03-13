@@ -83,6 +83,7 @@ class SheetManager:
         -d# [applies damage to the first # hits]
         -c [damage bonus on crit]
         -rr [times to reroll]
+        -mi [minimum weapon dice roll]
         
         -resist [damage resistance]
         -immune [damage immunity]

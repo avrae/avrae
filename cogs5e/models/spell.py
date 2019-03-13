@@ -494,6 +494,7 @@ class Damage(Effect):
         neutral = args.get('neutral', [])
         crit = args.last('crit', None, bool)
         maxdmg = args.last('max', None, bool)
+        mi = args.last('mi', None, int)
 
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
@@ -527,6 +528,10 @@ class Damage(Effect):
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
                 damage = f"{damage}+{higher}"
+
+        # -mi # (#527)
+        if mi:
+            damage = re.sub(r'(\d+d\d+)', rf'\1mi{mi}', damage)
 
         if d:
             damage = f"{damage}+{d}"

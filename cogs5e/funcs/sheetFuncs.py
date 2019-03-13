@@ -197,6 +197,7 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
     vuln = args.get('vuln')
     neutral = args.get('neutral')
     maxdmg = args.last('max', None, bool)
+    mi = args.last('mi', None, int)
 
     if damage_str is None and d:
         damage_str = '0'
@@ -218,6 +219,9 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
             else:
                 critDice = damage_str
             return critDice
+
+        if mi:
+            damage_str = re.sub(r'(\d+d\d+)', rf'\1mi{mi}', damage_str)
 
         # -d, -d# parsing
         if d:

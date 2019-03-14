@@ -2,35 +2,24 @@ import itertools
 import logging
 
 import numpy as np
-
-from fuzzywuzzy import process, fuzz
-from tensorflow import keras
 import tensorflow as tf
+from fuzzywuzzy import fuzz, process
 
 from cogs5e.funcs.lookupFuncs import c
+
+MODEL_NAME = "spells"
+ALLOWED_CHARACTERS = "abcdefghijklmnopqrstuvwxyz '"
+INPUT_LENGTH = 16
 
 log = logging.getLogger(__name__)
 
 
 def build_spell_model():
-    model = keras.Sequential([
-        keras.layers.Dense(128, activation=tf.nn.relu),
-        keras.layers.Dense(497, activation=tf.nn.softmax)
-    ])
-
-    model.compile(optimizer='adam',
-                  loss='sparse_categorical_crossentropy',
-                  metrics=['accuracy'])
-
-    model.load_weights('./res/spell-nn/spells')
-
+    model = tf.keras.models.load_model(f'./res/spell-nn/{MODEL_NAME}.h5')
     return model
 
 
 spell_model = build_spell_model()
-
-ALLOWED_CHARACTERS = "abcdefghijklmnopqrstuvwxyz '"
-INPUT_LENGTH = 16
 
 
 def clean(query):
@@ -39,18 +28,23 @@ def clean(query):
     return filtered[:INPUT_LENGTH].strip()
 
 
-def tokenize(query):
-    num_chars = len(ALLOWED_CHARACTERS)
-    tokenized = [0.] * INPUT_LENGTH
-    for i, char in enumerate(query):
-        tokenized[i] = (ALLOWED_CHARACTERS.index(char) + 1) / num_chars
+def tokenize(query, magic_string, use_index=False):
+    num_chars = len(magic_string)
+    if not use_index:
+        tokenized = [0.] * INPUT_LENGTH
+        for i, char in enumerate(query):
+            tokenized[i] = (magic_string.index(char) + 1) / num_chars
+    else:
+        tokenized = [0] * INPUT_LENGTH
+        for i, char in enumerate(query):
+            tokenized[i] = magic_string.index(char) + 1
     return tokenized
 
 
 def get_spell_model_predictions(query, num_matches=5):
     log.debug(f"Query: {query}")
     query = clean(query)
-    query = tokenize(query)
+    query = tokenize(query, ALLOWED_CHARACTERS, True)  # Set to False if not using embedding
     query = np.expand_dims(query, 0)
 
     prediction = spell_model.predict(query)

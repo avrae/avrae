@@ -53,7 +53,7 @@ class SimpleCombat:
         if not me:
             return
         me._character = character  # set combatant character instance
-        self.me = me
+        self.me = SimpleCombatant(me, False)
 
     async def func_commit(self):
         await self._combat.commit()

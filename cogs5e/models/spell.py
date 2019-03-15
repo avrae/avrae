@@ -661,6 +661,7 @@ class Roll(Effect):
         super(Roll, self).run(autoctx)
         d = autoctx.args.join('d', '+')
         maxdmg = autoctx.args.last('max', None, bool)
+        mi = autoctx.args.last('mi', None, int)
 
         # add on combatant damage effects (#224)
         if autoctx.combatant:
@@ -679,8 +680,14 @@ class Roll(Effect):
             higher = self.higher.get(str(autoctx.get_cast_level()))
             if higher:
                 dice = f"{dice}+{higher}"
-        if d and not self.hidden:
-            dice = f"{dice}+{d}"
+
+        if not self.hidden:
+            # -mi # (#527)
+            if mi:
+                dice = re.sub(r'(\d+d\d+)', rf'\1mi{mi}', dice)
+
+            if d:
+                dice = f"{dice}+{d}"
 
         if maxdmg:
             def maxSub(matchobj):

@@ -357,7 +357,6 @@ class Lookup:
         -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
             -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
         -pm_result [True/False] - PMs the result of the lookup to reduce spam.
-        -srd [True/False] - toggles SRD lookup restriction in a server.
         """
         args = shlex.split(args.lower())
         guild_id = str(ctx.guild.id)
@@ -816,19 +815,16 @@ class Lookup:
         await self.bot.mdb.nn_training.insert_one({"type": lookup_type, "query": query, "result": result_name})
 
     async def on_guild_join(self, guild):
-        # This method automatically allows full monster lookup, and enforces SRD for new large servers.
+        # This method automatically allows full monster lookup for new large servers.
         # These settings can be changed by any server admin.
-        if guild.member_count < LARGE_THRESHOLD:
-            return
-
         existing_guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
         if existing_guild_settings is not None:
             return
 
-        default_guild_settings = {
-            "req_dm_monster": False,
-            "srd": True
-        }
+        default_guild_settings = {"srd": True}
+
+        if guild.member_count >= LARGE_THRESHOLD:
+            default_guild_settings["req_dm_monster"] = False
 
         await self.bot.mdb.lookupsettings.update_one({"server": str(guild.id)}, {"$set": default_guild_settings},
                                                      upsert=True)

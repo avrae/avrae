@@ -75,7 +75,7 @@ c = Compendium()
 
 # ----- Monster stuff
 async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                              srd=False):
+                              srd=False, return_metadata=False):
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
@@ -106,12 +106,12 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
         return monster.name
 
     return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
-                                   selectkey=get_homebrew_formatted_name)
+                                   selectkey=get_homebrew_formatted_name, return_metadata=return_metadata)
 
 
 # ---- SPELL STUFF ----
 async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                            srd=False, search_func=None):
+                            srd=False, search_func=None, return_metadata=False):
     """
     Gets a Spell from the compendium and active tome(s).
     """
@@ -131,7 +131,8 @@ async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, mes
         return spell.name
 
     return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
-                                   selectkey=get_homebrew_formatted_name, search_func=search_func)
+                                   selectkey=get_homebrew_formatted_name, search_func=search_func,
+                                   return_metadata=return_metadata)
 
 
 async def get_spell_choices(ctx):

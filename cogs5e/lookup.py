@@ -60,9 +60,9 @@ class Lookup:
 
         destination = ctx.author if pm else ctx.channel
 
-        result = await search_and_select(ctx, c.conditions, name, lambda e: e['name'])
+        result, metadata = await search_and_select(ctx, c.conditions, name, lambda e: e['name'], return_metadata=True)
 
-        await self.add_training_data("condition", name, result['name'])
+        await self.add_training_data("condition", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -78,9 +78,9 @@ class Lookup:
 
         destination = ctx.author if pm else ctx.channel
 
-        result = await search_and_select(ctx, c.rules, name, lambda e: e['name'])
+        result, metadata = await search_and_select(ctx, c.rules, name, lambda e: e['name'], return_metadata=True)
 
-        await self.add_training_data("rule", name, result['name'])
+        await self.add_training_data("rule", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -101,9 +101,10 @@ class Lookup:
 
         destination = ctx.author if pm else ctx.channel
 
-        result = await search_and_select(ctx, c.feats, name, lambda e: e['name'])
+        result, metadata = await search_and_select(ctx, c.feats, name, lambda e: e['name'], return_metadata=True)
 
-        await self.add_training_data("feat", name, result['name'])
+        metadata['srd'] = srd
+        await self.add_training_data("feat", name, result['name'], metadata=metadata)
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -131,9 +132,11 @@ class Lookup:
 
         destination = ctx.author if pm else ctx.channel
 
-        result = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'], srd=srd)
+        result, metadata = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'], srd=srd,
+                                                   return_metadata=True)
 
-        await self.add_training_data("racefeat", name, result['name'])
+        metadata['srd'] = srd
+        await self.add_training_data("racefeat", name, result['name'], metadata=metadata)
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -157,9 +160,11 @@ class Lookup:
 
         destination = ctx.author if pm else ctx.channel
 
-        result = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name, srd=srd and (lambda e: e.srd))
+        result, metadata = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name,
+                                                   srd=srd and (lambda e: e.srd), return_metadata=True)
 
-        await self.add_training_data("race", name, result.name)
+        metadata['srd'] = srd
+        await self.add_training_data("race", name, result.name, metadata=metadata)
 
         if not result.srd and srd:
             return await self.send_srd_error(ctx, result)
@@ -189,9 +194,11 @@ class Lookup:
 
         destination = ctx.author if pm else ctx.channel
 
-        result = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'], srd=srd)
+        result, metadata = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'], srd=srd,
+                                                   return_metadata=True)
 
-        await self.add_training_data("classfeat", name, result['name'])
+        metadata['srd'] = srd
+        await self.add_training_data("classfeat", name, result['name'], metadata=metadata)
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -218,9 +225,11 @@ class Lookup:
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        result = await search_and_select(ctx, c.classes, name, lambda e: e['name'], srd=srd)
+        result, metadata = await search_and_select(ctx, c.classes, name, lambda e: e['name'], srd=srd,
+                                                   return_metadata=True)
 
-        await self.add_training_data("class", name, result['name'])
+        metadata['srd'] = srd
+        await self.add_training_data("class", name, result['name'], metadata=metadata)
 
         if not result['srd'] and srd:
             return await self.send_srd_error(ctx, result)
@@ -293,9 +302,11 @@ class Lookup:
 
         destination = ctx.author if pm else ctx.channel
 
-        result = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'], srd=srd)
+        result, metadata = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'], srd=srd,
+                                                   return_metadata=True)
 
-        await self.add_training_data("subclass", name, result['name'])
+        metadata['srd'] = srd
+        await self.add_training_data("subclass", name, result['name'], metadata=metadata)
 
         if not result.get('srd') and srd:
             return await self.send_srd_error(ctx, result)
@@ -323,9 +334,11 @@ class Lookup:
         pm = guild_settings.get("pm_result", False)
         srd = guild_settings.get("srd", False)
 
-        result = await search_and_select(ctx, c.backgrounds, name, lambda e: e.name, srd=srd and (lambda e: e.srd))
+        result, metadata = await search_and_select(ctx, c.backgrounds, name, lambda e: e.name,
+                                                   srd=srd and (lambda e: e.srd), return_metadata=True)
 
-        await self.add_training_data("background", name, result.name)
+        metadata['srd'] = srd
+        await self.add_training_data("background", name, result.name, metadata=metadata)
 
         if not result.srd and srd:
             return await self.send_srd_error(ctx, result)
@@ -416,10 +429,11 @@ class Lookup:
         guild_settings = await self.get_settings(ctx.guild)
         srd = guild_settings.get("srd", False)
 
-        monster = await select_monster_full(ctx, name, srd=srd)
+        monster, metadata = await select_monster_full(ctx, name, srd=srd, return_metadata=True)
 
-        if not monster.source == 'homebrew':
-            await self.add_training_data("monster", name, monster.name)
+        metadata['srd'] = srd
+        metadata['homebrew'] = monster.source == 'homebrew'
+        await self.add_training_data("monster", name, monster.name, metadata=metadata)
 
         if not monster.srd and srd:
             e = EmbedWithAuthor(ctx)
@@ -469,10 +483,11 @@ class Lookup:
             visible = True
 
         self.bot.rdb.incr('monsters_looked_up_life')
-        monster = await select_monster_full(ctx, name, srd=srd)
+        monster, metadata = await select_monster_full(ctx, name, srd=srd, return_metadata=True)
 
-        if not monster.source == 'homebrew':
-            await self.add_training_data("monster", name, monster.name)
+        metadata['srd'] = srd
+        metadata['homebrew'] = monster.source == 'homebrew'
+        await self.add_training_data("monster", name, monster.name, metadata=metadata)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -606,10 +621,11 @@ class Lookup:
 
         self.bot.rdb.incr('spells_looked_up_life')
 
-        spell = await select_spell_full(ctx, name, srd=srd, search_func=ml_spell_search)
+        spell, metadata = await select_spell_full(ctx, name, srd=srd, search_func=ml_spell_search, return_metadata=True)
 
-        if spell.source != 'homebrew':
-            await self.add_training_data("spell", name, spell.name)
+        metadata['srd'] = srd
+        metadata['homebrew'] = spell.source == 'homebrew'
+        await self.add_training_data("spell", name, spell.name, metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         color = embed.colour
@@ -689,11 +705,12 @@ class Lookup:
                 return f"{_item['name']} ({HOMEBREW_EMOJI})"
             return _item['name']
 
-        result = await search_and_select(ctx, choices, name, lambda e: e['name'], srd=srd,
-                                         selectkey=get_homebrew_formatted_name)
+        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'], srd=srd,
+                                                   selectkey=get_homebrew_formatted_name, return_metadata=True)
 
-        if not result.get('source') == 'homebrew':
-            await self.add_training_data("item", name, result['name'])
+        metadata['srd'] = srd
+        metadata['homebrew'] = result.get('source') == 'homebrew'
+        await self.add_training_data("item", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         item = result
@@ -811,8 +828,14 @@ class Lookup:
             settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
         return settings or {}
 
-    async def add_training_data(self, lookup_type, query, result_name):
-        await self.bot.mdb.nn_training.insert_one({"type": lookup_type, "query": query, "result": result_name})
+    async def add_training_data(self, lookup_type, query, result_name, metadata=None):
+        data = {"type": lookup_type, "query": query, "result": result_name}
+        if metadata:
+            data['given_options'] = metadata.get('num_options', 1)
+            data['chosen_index'] = metadata.get('chosen_index', 0)
+            data['srd'] = metadata.get('srd', False)
+            data['homebrew'] = metadata.get('homebrew', False)
+        await self.bot.mdb.nn_training.insert_one(data)
 
     async def on_guild_join(self, guild):
         # This method automatically allows full monster lookup for new large servers.

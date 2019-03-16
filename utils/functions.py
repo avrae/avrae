@@ -116,7 +116,8 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
 
 
 async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False,
-                            message=None, list_filter=None, srd=False, selectkey=None, search_func=search):
+                            message=None, list_filter=None, srd=False, selectkey=None, search_func=search,
+                            return_metadata=False):
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
     :param ctx: The context of the search.
@@ -170,7 +171,13 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
                 result = await get_selection(ctx, [(r, r) for r in results], pm=pm, message=message)
             else:
                 result = await get_selection(ctx, [(key(r), r) for r in results], pm=pm, message=message)
-    return result
+    if not return_metadata:
+        return result
+    metadata = {
+        "num_options": 1 if strict else len(results),
+        "chosen_index": 0 if strict else results.index(result)
+    }
+    return result, metadata
 
 
 def a_or_an(string, upper=False):

@@ -823,10 +823,10 @@ class Lookup:
         return await ctx.send(embed=e)
 
     async def get_settings(self, guild):
-        settings = {}
+        settings = {"srd": True}  # default PM settings
         if guild is not None:
             settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
-        return settings or {}
+        return settings
 
     async def add_training_data(self, lookup_type, query, result_name, metadata=None):
         data = {"type": lookup_type, "query": query, "result": result_name}

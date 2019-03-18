@@ -36,10 +36,10 @@ class HelpGen:
 
     @commands.command(name='helpgen', pass_context=True)
     async def _default_help_command(self, ctx):
-        result = self.parse(ctx.bot.commands)
+        result = self.parse(ctx.bot.all_commands)
         with open('temp.json', 'w') as f:
             json.dump(result, f)
-        await self.bot.say("Saved to `temp.json`.")
+        await ctx.send("Saved to `temp.json`.")
 
 
 
@@ -79,7 +79,7 @@ class HelpGen:
                 "example": ""
             }
             if isinstance(command, GroupMixin):
-                cmd['subcommands'] = self.parse_commands(filter_command_list(command.commands))
+                cmd['subcommands'] = self.parse_commands(filter_command_list(command.all_commands))
             out.append(cmd)
         return out
 

@@ -317,30 +317,14 @@ class GameTrack:
         """Adds a spell to the spellbook override. If character is live, will add to sheet as well."""
         spell = await select_spell_full(ctx, spell_name)
         character = await Character.from_ctx(ctx)
-        if character.live:
-            await dicecloud_client.add_spell(character, spell)
         character.add_known_spell(spell)
         await character.commit(ctx)
         live = "Spell added to Dicecloud!" if character.live else ''
         await ctx.send(f"{spell.name} added to known spell list!\n{live}")
 
-    @spellbook.command(name='addall')
-    async def spellbook_addall(self, ctx, _class, level: int, spell_list=None):
-        """Adds all spells of a given level from a given class list to the spellbook override. Requires live sheet.
-        If `spell_list` is passed, will add these spells to the list named so in Dicecloud."""
-        character = await Character.from_ctx(ctx)
-        if not character.live:
-            return await ctx.send("This command requires a live Dicecloud sheet. To set up, share your Dicecloud "
-                                  f"sheet with `avrae` with edit permissions, then `{ctx.prefix}update`.")
-        if not 0 <= level < 10:
-            return await ctx.send("Invalid spell level.")
-        class_spells = [sp for sp in c.spells if _class.lower() in [cl.lower() for cl in sp.classes]]
-        if len(class_spells) == 0:
-            return await ctx.send("No spells for that class found.")
-        level_spells = [s for s in class_spells if level == s.level]
-        await dicecloud_client.add_spells(character, level_spells, spell_list)
-        await character.commit(ctx)
-        await ctx.send(f"{len(level_spells)} spells added to {character.get_name()}'s spell list on Dicecloud.")
+    @spellbook.command(name='addall', hidden=True)
+    async def spellbook_addall(self, ctx):
+        await ctx.send("This command has been removed. Check out <https://andrew-zhu.com/dnd/dicecloudtools/> instead!")
 
     @spellbook.command(name='remove')
     async def spellbook_remove(self, ctx, *, spell_name):
@@ -348,8 +332,6 @@ class GameTrack:
         Removes a spell from the spellbook override. Must type in full name.
         """
         character = await Character.from_ctx(ctx)
-        if character.live:
-            return await ctx.send("Just delete the spell from your character sheet!")
         spell = character.remove_known_spell(spell_name)
         if spell:
             if isinstance(spell, dict):

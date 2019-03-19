@@ -735,7 +735,7 @@ class Spell:
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
                  description: str, classes=None, subclasses=None, ritual: bool = False, higherlevels: str = None,
                  source: str = "homebrew", page: int = None, concentration: bool = False, automation: Automation = None,
-                 srd: bool = False, image: str = None):
+                 srd: bool = True, image: str = None):
         if classes is None:
             classes = []
         if isinstance(classes, str):

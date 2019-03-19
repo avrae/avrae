@@ -18,9 +18,9 @@ from cogs5e.models import errors
 
 log = logging.getLogger(__name__)
 
-VALID_OPERATORS = 'k|rr|ro|mi|ma|ra|e'
-VALID_OPERATORS_2 = re.compile('|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')]))
+VALID_OPERATORS = 'k|rr|ro|mi|ma|ra|e|p'
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
+VALID_OPERATORS_2 = re.compile('|'.join(["({})".format(i) for i in VALID_OPERATORS_ARRAY]))
 DICE_PATTERN = re.compile(
     r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:[lh<>]?\d+))*|(\d+)|([-+*/().=])?)\s*(\[.*\])?)(.*?)\s*$',
     IGNORECASE)
@@ -248,6 +248,9 @@ class Roll(object):
                 if op == 'k':
                     keep = [] if keep is None else keep
                     keep += parse_selectors([list_get(index + 1, 0, ops)], result)
+                if op == 'p':
+                    keep = [] if keep is None else keep
+                    keep += parse_selectors([list_get(index + 1, 0, ops)], result, inverse=True)
                 if op == 'ro':
                     reroll_once += parse_selectors([list_get(index + 1, 0, ops)], result)
                 if op == 'mi':
@@ -453,7 +456,7 @@ class Comment(Part):
         return {'type': 'comment', 'value': self.comment}
 
 
-def parse_selectors(opts, res, greedy=False):
+def parse_selectors(opts, res, greedy=False, inverse=False):
     """Returns a list of ints."""
     for o in range(len(opts)):
         if opts[o][0] is 'h':
@@ -478,7 +481,17 @@ def parse_selectors(opts, res, greedy=False):
             out.extend(int(o) for a in res.rolled if a.value is int(o) and a.kept)
         else:
             out.append(int(o))
-    return out
+
+    if not inverse:
+        return out
+
+    inverse_out = []
+    for rolled in res.rolled:
+        if rolled.kept and rolled.value in out:
+            out.remove(rolled.value)
+        elif rolled.kept:
+            inverse_out.append(rolled.value)
+    return inverse_out
 
 
 class DiceResult:

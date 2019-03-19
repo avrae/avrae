@@ -97,7 +97,7 @@ class Lookup:
         """Looks up a feat."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         destination = ctx.author if pm else ctx.channel
 
@@ -128,7 +128,7 @@ class Lookup:
         """Looks up a racial feature."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         destination = ctx.author if pm else ctx.channel
 
@@ -156,7 +156,7 @@ class Lookup:
         """Looks up a race."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         destination = ctx.author if pm else ctx.channel
 
@@ -190,7 +190,7 @@ class Lookup:
         """Looks up a class feature."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         destination = ctx.author if pm else ctx.channel
 
@@ -218,7 +218,7 @@ class Lookup:
         """Looks up a class, or all features of a certain level."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         destination = ctx.author if pm else ctx.channel
 
@@ -298,7 +298,7 @@ class Lookup:
         """Looks up a subclass."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         destination = ctx.author if pm else ctx.channel
 
@@ -332,7 +332,7 @@ class Lookup:
         """Looks up a background."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         result, metadata = await search_and_select(ctx, c.backgrounds, name, lambda e: e.name,
                                                    srd=srd and (lambda e: e.srd), return_metadata=True)
@@ -426,8 +426,7 @@ class Lookup:
                 return await ctx.send("Error: SheetManager cog not loaded.")
             return await ctx.invoke(token_cmd)
 
-        guild_settings = await self.get_settings(ctx.guild)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         monster, metadata = await select_monster_full(ctx, name, srd=srd, return_metadata=True)
 
@@ -471,7 +470,7 @@ class Lookup:
         Game Master Roles: GM, DM, Game Master, Dungeon Master"""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
         pm_dm = guild_settings.get("pm_dm", False)
         req_dm_monster = guild_settings.get("req_dm_monster", True)
 
@@ -617,7 +616,7 @@ class Lookup:
 
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         self.bot.rdb.incr('spells_looked_up_life')
 
@@ -686,7 +685,7 @@ class Lookup:
         """Looks up an item."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
+        srd = True
 
         self.bot.rdb.incr('items_looked_up_life')
 

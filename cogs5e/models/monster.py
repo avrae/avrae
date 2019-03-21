@@ -161,7 +161,8 @@ class Monster:
         else:
             hp = 0
             hitdice = data['hp']['special']
-        scores = AbilityScores(data['str'], data['dex'], data['con'], data['int'], data['wis'], data['cha'])
+        scores = AbilityScores(data['str'] or 10, data['dex'] or 10, data['con'] or 10, data['int'] or 10,
+                               data['wis'] or 10, data['cha'] or 10)
         if isinstance(data['cr'], dict):
             cr = data['cr']['cr']
         else:

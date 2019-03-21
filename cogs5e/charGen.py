@@ -140,7 +140,7 @@ class CharGenerator:
         await ctx.author.send("**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
-        race = race or random.choice([r for r in c.fancyraces if r.srd])
+        race = race or random.choice(c.fancyraces)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = race.name
@@ -160,8 +160,8 @@ class CharGenerator:
 
         # Class Gen
         #    Class Features
-        _class = _class or random.choice([cl for cl in c.classes if cl.get('srd')])
-        subclass = subclass or random.choice([s for s in _class['subclasses'] if s.get('srd')])
+        _class = _class or random.choice(c.classes)
+        subclass = subclass or random.choice(_class['subclasses'])
         embed = EmbedWithAuthor(ctx)
         embed.title = f"{_class['name']} ({subclass['name']})"
         embed.add_field(name="Hit Die", value=f"1d{_class['hd']['faces']}")
@@ -261,7 +261,7 @@ class CharGenerator:
 
         # Background Gen
         #    Inventory/Trait Gen
-        background = background or random.choice(b for b in c.backgrounds if b.srd)
+        background = background or random.choice(c.backgrounds)
         embed = EmbedWithAuthor(ctx)
         embed.title = background.name
         embed.description = f"*Source: {background.source}*"

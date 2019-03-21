@@ -209,12 +209,12 @@ class Monster:
 
     @classmethod
     def from_critterdb(cls, data):
-        ability_scores = AbilityScores(data['stats']['abilityScores']['strength'],
-                                       data['stats']['abilityScores']['dexterity'],
-                                       data['stats']['abilityScores']['constitution'],
-                                       data['stats']['abilityScores']['intelligence'],
-                                       data['stats']['abilityScores']['wisdom'],
-                                       data['stats']['abilityScores']['charisma'])
+        ability_scores = AbilityScores(data['stats']['abilityScores']['strength'] or 10,
+                                       data['stats']['abilityScores']['dexterity'] or 10,
+                                       data['stats']['abilityScores']['constitution'] or 10,
+                                       data['stats']['abilityScores']['intelligence'] or 10,
+                                       data['stats']['abilityScores']['wisdom'] or 10,
+                                       data['stats']['abilityScores']['charisma'] or 10)
         cr = {0.125: '1/8', 0.25: '1/4', 0.5: '1/2'}.get(data['stats']['challengeRating'],
                                                          str(data['stats']['challengeRating']))
         num_hit_die = data['stats']['numHitDie']

@@ -28,9 +28,9 @@ class Compendium:
             self.conditions = json.load(f)
         with open('./res/rules.json', 'r') as f:
             self.rules = json.load(f)
-        with open('./res/feats.json', 'r') as f:
+        with open('./res/srd-feats.json', 'r') as f:
             self.feats = json.load(f)
-        with open('./res/races.json', 'r') as f:
+        with open('./res/srd-races.json', 'r') as f:
             _raw = json.load(f)
             self.rfeats = []
             self.fancyraces = [Race.from_data(r) for r in _raw]
@@ -40,19 +40,19 @@ class Compendium:
                         temp = {'name': "{}: {}".format(race['name'], entry['name']),
                                 'text': parse_data_entry(entry['entries']), 'srd': race['srd']}
                         self.rfeats.append(temp)
-        with open('./res/classes.json', 'r') as f:
+        with open('./res/srd-classes.json', 'r') as f:
             self.classes = json.load(f)
-        with open('./res/classfeats.json') as f:
+        with open('./res/srd-classfeats.json') as f:
             self.cfeats = json.load(f)
-        with open('./res/bestiary.json', 'r') as f:
+        with open('./res/srd-bestiary.json', 'r') as f:
             self.monsters = json.load(f)
             self.monster_mash = [Monster.from_data(m) for m in self.monsters]
-        with open('./res/spells.json', 'r') as f:
+        with open('./res/srd-spells.json', 'r') as f:
             self.spells = [Spell.from_data(r) for r in json.load(f)]
-        with open('./res/items.json', 'r') as f:
+        with open('./res/srd-items.json', 'r') as f:
             _items = json.load(f)
             self.items = [i for i in _items if i.get('type') is not '$']
-        with open('./res/backgrounds.json', 'r') as f:
+        with open('./res/srd-backgrounds.json', 'r') as f:
             self.backgrounds = [Background.from_data(b) for b in json.load(f)]
         self.subclasses = self.load_subclasses()
         with open('./res/itemprops.json', 'r') as f:
@@ -75,7 +75,7 @@ c = Compendium()
 
 # ----- Monster stuff
 async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                              srd=False, return_metadata=False):
+                              return_metadata=False):
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
@@ -92,14 +92,6 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
             choices.extend(
                 Monster.from_bestiary(m) for m in servbestiary['monsters'] if servbestiary['_id'] != bestiary_id)
 
-    if srd:
-        if list_filter:
-            old = list_filter
-            list_filter = lambda e: old(e) and e.srd
-        else:
-            list_filter = lambda e: e.srd
-        message = "Only results from the 5e SRD are included."
-
     def get_homebrew_formatted_name(monster):
         if monster.source == 'homebrew':
             return f"{monster.name} ({HOMEBREW_EMOJI})"
@@ -111,19 +103,11 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
 
 # ---- SPELL STUFF ----
 async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                            srd=False, search_func=None, return_metadata=False):
+                            search_func=None, return_metadata=False):
     """
     Gets a Spell from the compendium and active tome(s).
     """
     choices = await get_spell_choices(ctx)
-
-    if srd:
-        if list_filter:
-            old = list_filter
-            list_filter = lambda e: old(e) and e.srd
-        else:
-            list_filter = lambda e: e.srd
-        message = "Only results from the 5e SRD are included."
 
     def get_homebrew_formatted_name(spell):
         if spell.source == 'homebrew':

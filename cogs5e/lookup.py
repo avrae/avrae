@@ -97,17 +97,10 @@ class Lookup:
         """Looks up a feat."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
-
         destination = ctx.author if pm else ctx.channel
 
         result, metadata = await search_and_select(ctx, c.feats, name, lambda e: e['name'], return_metadata=True)
-
-        metadata['srd'] = srd
         await self.add_training_data("feat", name, result['name'], metadata=metadata)
-
-        if not result['srd'] and srd:
-            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -128,18 +121,10 @@ class Lookup:
         """Looks up a racial feature."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
-
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'], srd=srd,
-                                                   return_metadata=True)
-
-        metadata['srd'] = srd
+        result, metadata = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'], return_metadata=True)
         await self.add_training_data("racefeat", name, result['name'], metadata=metadata)
-
-        if not result['srd'] and srd:
-            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -156,18 +141,10 @@ class Lookup:
         """Looks up a race."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
-
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name,
-                                                   srd=srd and (lambda e: e.srd), return_metadata=True)
-
-        metadata['srd'] = srd
+        result, metadata = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name, return_metadata=True)
         await self.add_training_data("race", name, result.name, metadata=metadata)
-
-        if not result.srd and srd:
-            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -190,18 +167,10 @@ class Lookup:
         """Looks up a class feature."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
-
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'], srd=srd,
-                                                   return_metadata=True)
-
-        metadata['srd'] = srd
+        result, metadata = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'], return_metadata=True)
         await self.add_training_data("classfeat", name, result['name'], metadata=metadata)
-
-        if not result['srd'] and srd:
-            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -218,21 +187,13 @@ class Lookup:
         """Looks up a class, or all features of a certain level."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
-
         destination = ctx.author if pm else ctx.channel
 
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        result, metadata = await search_and_select(ctx, c.classes, name, lambda e: e['name'], srd=srd,
-                                                   return_metadata=True)
-
-        metadata['srd'] = srd
+        result, metadata = await search_and_select(ctx, c.classes, name, lambda e: e['name'], return_metadata=True)
         await self.add_training_data("class", name, result['name'], metadata=metadata)
-
-        if not result['srd'] and srd:
-            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         if level is None:
@@ -298,18 +259,10 @@ class Lookup:
         """Looks up a subclass."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
-
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'], srd=srd,
-                                                   return_metadata=True)
-
-        metadata['srd'] = srd
+        result, metadata = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'], return_metadata=True)
         await self.add_training_data("subclass", name, result['name'], metadata=metadata)
-
-        if not result.get('srd') and srd:
-            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -332,16 +285,9 @@ class Lookup:
         """Looks up a background."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
 
-        result, metadata = await search_and_select(ctx, c.backgrounds, name, lambda e: e.name,
-                                                   srd=srd and (lambda e: e.srd), return_metadata=True)
-
-        metadata['srd'] = srd
+        result, metadata = await search_and_select(ctx, c.backgrounds, name, lambda e: e.name, return_metadata=True)
         await self.add_training_data("background", name, result.name, metadata=metadata)
-
-        if not result.srd and srd:
-            return await self.send_srd_error(ctx, result)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -401,14 +347,6 @@ class Lookup:
             setting = get_positivity(setting)
             guild_settings['pm_result'] = setting if setting is not None else False
             out += 'pm_result set to {}!\n'.format(str(guild_settings['pm_result']))
-        if '-srd' in args:
-            try:
-                setting = args[args.index('-srd') + 1]
-            except IndexError:
-                setting = 'False'
-            setting = get_positivity(setting)
-            guild_settings['srd'] = setting if setting is not None else False
-            out += 'srd set to {}!\n'.format(str(guild_settings['srd']))
 
         if guild_settings:
             await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
@@ -426,20 +364,10 @@ class Lookup:
                 return await ctx.send("Error: SheetManager cog not loaded.")
             return await ctx.invoke(token_cmd)
 
-        guild_settings = await self.get_settings(ctx.guild)
-        srd = guild_settings.get("srd", False)
+        monster, metadata = await select_monster_full(ctx, name, return_metadata=True)
 
-        monster, metadata = await select_monster_full(ctx, name, srd=srd, return_metadata=True)
-
-        metadata['srd'] = srd
         metadata['homebrew'] = monster.source == 'homebrew'
         await self.add_training_data("monster", name, monster.name, metadata=metadata)
-
-        if not monster.srd and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = monster.name
-            e.description = "Token not available."
-            return await ctx.send(embed=e)
 
         url = monster.get_image_url()
 
@@ -471,7 +399,6 @@ class Lookup:
         Game Master Roles: GM, DM, Game Master, Dungeon Master"""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
         pm_dm = guild_settings.get("pm_dm", False)
         req_dm_monster = guild_settings.get("req_dm_monster", True)
 
@@ -483,9 +410,8 @@ class Lookup:
             visible = True
 
         self.bot.rdb.incr('monsters_looked_up_life')
-        monster, metadata = await select_monster_full(ctx, name, srd=srd, return_metadata=True)
+        monster, metadata = await select_monster_full(ctx, name, return_metadata=True)
 
-        metadata['srd'] = srd
         metadata['homebrew'] = monster.source == 'homebrew'
         await self.add_training_data("monster", name, monster.name, metadata=metadata)
 
@@ -493,12 +419,6 @@ class Lookup:
         color = embed_queue[-1].colour
 
         embed_queue[-1].title = monster.name
-
-        if not monster.srd and srd:
-            e = EmbedWithAuthor(ctx)
-            e.title = monster.name
-            e.description = "Description not available."
-            return await ctx.send(embed=e)
 
         def safe_append(title, desc):
             if len(desc) < 1024:
@@ -617,13 +537,11 @@ class Lookup:
 
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
 
         self.bot.rdb.incr('spells_looked_up_life')
 
-        spell, metadata = await select_spell_full(ctx, name, srd=srd, search_func=ml_spell_search, return_metadata=True)
+        spell, metadata = await select_spell_full(ctx, name, search_func=ml_spell_search, return_metadata=True)
 
-        metadata['srd'] = srd
         metadata['homebrew'] = spell.source == 'homebrew'
         await self.add_training_data("spell", name, spell.name, metadata=metadata)
 
@@ -644,10 +562,6 @@ class Lookup:
 
         text = spell.description
         higher_levels = spell.higherlevels
-
-        if not spell.srd and srd:
-            text = "No description available."
-            higher_levels = ''
 
         if len(text) > 1020:
             pieces = [text[:1020]] + [text[i:i + 2040] for i in range(1020, len(text), 2040)]
@@ -686,7 +600,6 @@ class Lookup:
         """Looks up an item."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-        srd = guild_settings.get("srd", False)
 
         self.bot.rdb.incr('items_looked_up_life')
 
@@ -705,18 +618,14 @@ class Lookup:
                 return f"{_item['name']} ({HOMEBREW_EMOJI})"
             return _item['name']
 
-        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'], srd=srd,
+        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
                                                    selectkey=get_homebrew_formatted_name, return_metadata=True)
 
-        metadata['srd'] = srd
         metadata['homebrew'] = result.get('source') == 'homebrew'
         await self.add_training_data("item", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         item = result
-
-        if not item['srd'] and srd:
-            return await self.send_srd_error(ctx, result)
 
         name = item['name']
         proptext = ""
@@ -816,24 +725,17 @@ class Lookup:
         else:
             await ctx.send(embed=embed)
 
-    async def send_srd_error(self, ctx, data):
-        e = EmbedWithAuthor(ctx)
-        e.title = data['name']
-        e.description = "Description not available."
-        return await ctx.send(embed=e)
-
     async def get_settings(self, guild):
-        settings = {"srd": True}  # default PM settings
+        settings = {}  # default PM settings
         if guild is not None:
             settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
         return settings
 
     async def add_training_data(self, lookup_type, query, result_name, metadata=None):
-        data = {"type": lookup_type, "query": query, "result": result_name}
+        data = {"type": lookup_type, "query": query, "result": result_name, "srd": True}
         if metadata:
             data['given_options'] = metadata.get('num_options', 1)
             data['chosen_index'] = metadata.get('chosen_index', 0)
-            data['srd'] = metadata.get('srd', False)
             data['homebrew'] = metadata.get('homebrew', False)
         await self.bot.mdb.nn_training.insert_one(data)
 
@@ -844,13 +746,10 @@ class Lookup:
         if existing_guild_settings is not None:
             return
 
-        default_guild_settings = {"srd": True}
-
         if guild.member_count >= LARGE_THRESHOLD:
-            default_guild_settings["req_dm_monster"] = False
-
-        await self.bot.mdb.lookupsettings.update_one({"server": str(guild.id)}, {"$set": default_guild_settings},
-                                                     upsert=True)
+            default_guild_settings = {"req_dm_monster": False}
+            await self.bot.mdb.lookupsettings.update_one({"server": str(guild.id)}, {"$set": default_guild_settings},
+                                                         upsert=True)
 
 
 def setup(bot):

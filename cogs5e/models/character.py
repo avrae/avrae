@@ -633,7 +633,6 @@ class Character(Spellcaster):
         :param spell_name: (str) The name of the spell to remove.
         :return: (str) The name of the removed spell.
         """
-        assert not self.live
         self._initialize_spellbook()
         self._initialize_spell_overrides()
 

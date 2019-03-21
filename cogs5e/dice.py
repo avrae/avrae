@@ -42,6 +42,7 @@ class Dice:
         !r 4d6ro<3 Great Weapon Master
         __Supported Operators__
         k (keep)
+        p (drop)
         ro (reroll once)
         rr (reroll infinitely)
         mi/ma (min/max result)

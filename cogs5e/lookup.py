@@ -729,7 +729,7 @@ class Lookup:
         settings = {}  # default PM settings
         if guild is not None:
             settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
-        return settings
+        return settings or {}
 
     async def add_training_data(self, lookup_type, query, result_name, metadata=None):
         data = {"type": lookup_type, "query": query, "result": result_name, "srd": True}

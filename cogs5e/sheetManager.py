@@ -530,8 +530,7 @@ class SheetManager:
             return await ctx.send(
                 'Currently active: {}'.format(active_character.get('stats', {}).get('name')))
 
-        _character = await search_and_select(ctx, user_characters, name,
-                                             lambda e: e.get('stats', {}).get('name', ''),
+        _character = await search_and_select(ctx, user_characters, name, lambda e: e.get('stats', {}).get('name', ''),
                                              selectkey=lambda
                                                  e: f"{e.get('stats', {}).get('name', '')} (`{e['upstream']}`)")
 
@@ -567,8 +566,7 @@ class SheetManager:
         if not user_characters:
             return await ctx.send('You have no characters.')
 
-        _character = await search_and_select(ctx, user_characters, name,
-                                             lambda e: e.get('stats', {}).get('name', ''),
+        _character = await search_and_select(ctx, user_characters, name, lambda e: e.get('stats', {}).get('name', ''),
                                              selectkey=lambda e: f"{e['stats'].get('name', '')} (`{e['upstream']}`)")
 
         name = _character.get('stats', {}).get('name', 'Unnamed')

@@ -115,9 +115,8 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
         return result, True
 
 
-async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False,
-                            message=None, list_filter=None, srd=False, selectkey=None, search_func=search,
-                            return_metadata=False):
+async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False, message=None,
+                            list_filter=None, selectkey=None, search_func=search, return_metadata=False):
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
     :param ctx: The context of the search.
@@ -129,19 +128,13 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
     :param pm: Whether to PM the user the select prompt.
     :param message: A message to add to the select prompt.
     :param list_filter: A filter to filter the list to search by.
-    :param srd: Whether to only search items that have a property ['srd'] set to true, or a search function.
     :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
     :param search_func: The function to use to search.
     :return:
     """
-    if srd:
-        if isinstance(srd, bool):
-            srd = lambda e: e.get('srd')
-        if list_filter:
-            old = list_filter
-            list_filter = lambda e: old(e) and srd(e)
-        else:
-            list_filter = srd
+    if message:
+        message = f"{message}\nOnly results from the 5e SRD are included."
+    else:
         message = "Only results from the 5e SRD are included."
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))

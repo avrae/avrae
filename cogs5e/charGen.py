@@ -98,15 +98,14 @@ class CharGenerator:
             race_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for race.")
-        race = await search_and_select(ctx, c.fancyraces, race_response.content, lambda e: e.name,
-                                       srd=(lambda e: e.srd))
+        race = await search_and_select(ctx, c.fancyraces, race_response.content, lambda e: e.name)
 
         await ctx.send(author.mention + " What class?")
         try:
             class_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for class.")
-        _class = await search_and_select(ctx, c.classes, class_response.content, lambda e: e['name'], srd=True)
+        _class = await search_and_select(ctx, c.classes, class_response.content, lambda e: e['name'])
 
         if 'subclasses' in _class:
             await ctx.send(author.mention + " What subclass?")
@@ -115,7 +114,7 @@ class CharGenerator:
             except asyncio.TimeoutError:
                 raise InvalidArgument("Timed out waiting for subclass.")
             subclass = await search_and_select(ctx, _class['subclasses'], subclass_response.content,
-                                               lambda e: e['name'], srd=True)
+                                               lambda e: e['name'])
         else:
             subclass = None
 
@@ -124,8 +123,7 @@ class CharGenerator:
             bg_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for background.")
-        background = await search_and_select(ctx, c.backgrounds, bg_response.content, lambda e: e.name,
-                                             srd=(lambda e: e.srd))
+        background = await search_and_select(ctx, c.backgrounds, bg_response.content, lambda e: e.name)
         return race, _class, subclass, background
 
     async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None, background=None):

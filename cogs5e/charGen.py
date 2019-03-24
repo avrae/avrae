@@ -281,7 +281,7 @@ class CharGenerator:
 
         out = "{6}\n{0}, {1} {7} {2} {3}. {4} Background.\nStat Array: `{5}`\nI have PM'd you full character details.".format(
             name, race.name, _class['name'], final_level, background.name, stats, ctx.message.author.mention,
-            subclass['name'])
+            subclass['name'] if subclass else "")
 
         await loadingMessage.edit(content=out)
 

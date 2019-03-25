@@ -25,7 +25,7 @@ class Help:
 
         self._mention_pattern = re.compile('|'.join(self._mentions_transforms.keys()))
 
-        self.formatter = CustomHelpFormatter(width=2000)
+        self.formatter = CustomHelpFormatter(width=2000, show_check_failure=True)
         self.bot = bot
 
     @commands.command(name='help', aliases=['commands'])

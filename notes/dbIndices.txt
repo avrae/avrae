@@ -14,3 +14,10 @@ db.tomes.createIndex({"editors.id": 1});
 db.tomes.createIndex({"subscribers.id": 1});
 db.tomes.createIndex({"active": 1});
 db.tomes.createIndex({"server_active": 1});
+
+compendiums:
+db.compendiums.createIndex({"owner.id": 1});
+db.compendiums.createIndex({"editors.id": 1});
+db.compendiums.createIndex({"subscribers.id": 1});
+db.compendiums.createIndex({"active": 1});
+db.compendiums.createIndex({"server_active": 1});

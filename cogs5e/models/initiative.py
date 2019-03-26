@@ -794,7 +794,7 @@ class Combatant(Spellcaster):
         pass
 
     def __str__(self):
-        return f"{self.name} {self.get_hp_str()}".strip()
+        return f"{self.name}: {self.get_hp_str()}".strip()
 
 
 class MonsterCombatant(Combatant):

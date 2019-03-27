@@ -79,6 +79,8 @@ async def run(mdb):
     await mdb.bestiaries.create_index("editors.id")
     print("Creating index on subscribers.id...")
     await mdb.bestiaries.create_index("subscribers.id")
+    print("Creating index on stargazers.id...")
+    await mdb.bestiaries.create_index("stargazers.id")
     print("Creating index on active...")
     await mdb.bestiaries.create_index("active")
     print("Creating index on server_active...")

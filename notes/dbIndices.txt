@@ -19,5 +19,6 @@ compendiums:
 db.compendiums.createIndex({"owner.id": 1});
 db.compendiums.createIndex({"editors.id": 1});
 db.compendiums.createIndex({"subscribers.id": 1});
+db.compendiums.createIndex({"stargazers.id": 1});
 db.compendiums.createIndex({"active": 1});
 db.compendiums.createIndex({"server_active": 1});

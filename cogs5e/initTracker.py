@@ -794,7 +794,7 @@ class InitTracker:
     async def attack(self, ctx, target_name, atk_name, *, args=''):
         """Rolls an attack against another combatant.
         Valid Arguments: see !a and !ma.
-        `-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit."""
+        `-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage."""
         return await self._attack(ctx, None, target_name, atk_name, args)
 
     @attack.command(name="list")

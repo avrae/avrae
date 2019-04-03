@@ -34,7 +34,7 @@ class MathEvaluator(SimpleEval):
         names = {}
         names.update(character.get_cvars())
         names.update(character.get_stat_vars())
-        names['spell'] = spell_override or character.get_spell_ab() - character.get_prof_bonus()
+        names['spell'] = spell_override or (character.get_spell_ab() - character.get_prof_bonus())
         return cls(names=names)
 
     def parse(self, string):
@@ -441,7 +441,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 class SpellEvaluator(MathEvaluator):
     @classmethod
     def with_caster(cls, caster, spell_override=None):
-        names = {'spell': spell_override or caster.spellcasting.sab - caster.pb_from_level()}
+        names = {'spell': spell_override or (caster.spellcasting.sab - caster.pb_from_level())}
         return cls(names=names)
 
     def parse(self, string, extra_names=None):

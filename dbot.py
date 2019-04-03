@@ -90,7 +90,7 @@ desc = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.
 A full command list can be found [here](https://avrae.io/commands)!
 Invite Avrae to your server [here](https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808)!
 Join the official testing server [here](https://discord.gg/pQbd4s6)!
-Love the bot? Donate to me [here](https://www.paypal.me/avrae)! \u2764
+Love the bot? Donate to me [here (PayPal)](https://www.paypal.me/avrae) or [here (Patreon)](https://www.patreon.com/zhuexe)! \u2764
 '''
 bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
             shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name='D&D 5e | !help'))
@@ -151,7 +151,8 @@ async def on_command_error(ctx, error):
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
             e = original.original
             if not isinstance(e, AvraeException):
-                tb = f"```py\n{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
+                tb = f"```py\n" \
+                    f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
                 try:
                     await ctx.author.send(tb)
                 except Exception as e:

@@ -61,7 +61,8 @@ class Core:
     @commands.command()
     async def donate(self, ctx):
         """Prints a link to donate to the bot developer."""
-        await ctx.send("You can donate to me here:\n<https://www.paypal.me/avrae>\n\u2764")
+        await ctx.send("You can donate to me on PayPal (<https://www.paypal.me/avrae>) "
+                       "or Patreon (<https://www.patreon.com/zhuexe>)!\n\u2764")
 
     @commands.command(aliases=['stats', 'info'])
     async def about(self, ctx):

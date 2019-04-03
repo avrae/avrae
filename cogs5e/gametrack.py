@@ -314,13 +314,12 @@ class GameTrack:
 
     @spellbook.command(name='add')
     async def spellbook_add(self, ctx, *, spell_name):
-        """Adds a spell to the spellbook override. If character is live, will add to sheet as well."""
+        """Adds a spell to the spellbook override."""
         spell = await select_spell_full(ctx, spell_name)
         character = await Character.from_ctx(ctx)
         character.add_known_spell(spell)
         await character.commit(ctx)
-        live = "Spell added to Dicecloud!" if character.live else ''
-        await ctx.send(f"{spell.name} added to known spell list!\n{live}")
+        await ctx.send(f"{spell.name} added to known spell list!")
 
     @spellbook.command(name='addall', hidden=True)
     async def spellbook_addall(self, ctx):

@@ -331,7 +331,7 @@ class Attack(Effect):
 
         sab = explicit_bonus or autoctx.ab_override or autoctx.caster.spellcasting.sab
 
-        if not sab:
+        if not (sab or b):
             raise NoSpellAB()
 
         # roll attack(s) against autoctx.target

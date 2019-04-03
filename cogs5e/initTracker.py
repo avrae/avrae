@@ -11,7 +11,7 @@ from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
+from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from utils.argparser import argparse
@@ -722,50 +722,61 @@ class InitTracker:
         await combat.final()
 
     @init.command()
-    async def effect(self, ctx, name: str, effect_name: str, *, args: str = ''):
+    async def effect(self, ctx, name: str, effect_name: str, *args):
         """Attaches a status effect to a combatant.
         [args] is a set of args that affects a combatant in combat.
         __**Valid Arguments**__
-        -dur [duration]
-        conc (makes effect require conc)
-        end (makes effect tick on end of turn)
+        -dur [duration] - sets the duration of the effect, in rounds
+        conc - makes effect require conc
+        end - makes effect tick on end of turn
+        -t [target] - specifies more combatants to add this effect to
         __Attacks__
         -b [bonus] (see !a)
         -d [damage bonus] (see !a)
-        -attack "[hit]|[damage]|[description]" (Adds an attack to the combatant)
+        -attack "[hit]|[damage]|[description]" - Adds an attack to the combatant
         __Resists__
-        -resist [resist] (gives the combatant resistance)
-        -immune [immune] (gives the combatant immunity)
-        -vuln [vulnability] (gives the combatant vulnerability)
-        -neutral [neutral] (removes immune/resist/vuln)
+        -resist [resist] - gives the combatant resistance
+        -immune [immune] - gives the combatant immunity
+        -vuln [vulnability] - gives the combatant vulnerability
+        -neutral [neutral] - removes immune/resist/vuln
         __General__
-        -ac [ac] (modifies ac temporarily; adds if starts with +/- or sets otherwise)
-        -sb [save bonus] (Adds a bonus to saving throws)"""
+        -ac [ac] - modifies ac temporarily; adds if starts with +/- or sets otherwise
+        -sb [save bonus] - Adds a bonus to saving throws"""
         combat = await Combat.from_ctx(ctx)
-        combatant = await combat.select_combatant(name)
-        if combatant is None:
+        args = argparse(args)
+
+        targets = []
+        first_target = await combat.select_combatant(name)
+        if first_target is None:
             await ctx.send("Combatant not found.")
             return
+        targets.append(first_target)
 
-        if effect_name.lower() in (e.name.lower() for e in combatant.get_effects()):
-            return await ctx.send("Effect already exists.", delete_after=10)
+        for i, t in enumerate(args.get('t')):
+            target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=True)
+            if isinstance(target, CombatantGroup):
+                targets.extend(target.get_combatants())
+            else:
+                targets.append(target)
 
-        if isinstance(combatant, PlayerCombatant):
-            args = argparse(args, combatant.character)
-        else:
-            args = argparse(args)
         duration = args.last('dur', -1, int)
         conc = args.last('conc', False, bool)
         end = args.last('end', False, bool)
 
-        effectObj = Effect.new(combat, combatant, duration=duration, name=effect_name, effect_args=args,
-                               concentration=conc, tick_on_end=end)
-        result = combatant.add_effect(effectObj)
-        out = "Added effect {} to {}.".format(effect_name, combatant.name)
-        if result['conc_conflict']:
-            conflicts = [e.name for e in result['conc_conflict']]
-            out += f"\nRemoved {', '.join(conflicts)} due to concentration conflict!"
-        await ctx.send(out, delete_after=10)
+        embed = EmbedWithAuthor(ctx)
+        for combatant in targets:
+            if effect_name.lower() in (e.name.lower() for e in combatant.get_effects()):
+                out = "Effect already exists."
+            else:
+                effectObj = Effect.new(combat, combatant, duration=duration, name=effect_name, effect_args=args,
+                                       concentration=conc, tick_on_end=end)
+                result = combatant.add_effect(effectObj)
+                out = "Added effect {} to {}.".format(effect_name, combatant.name)
+                if result['conc_conflict']:
+                    conflicts = [e.name for e in result['conc_conflict']]
+                    out += f"\nRemoved {', '.join(conflicts)} due to concentration conflict!"
+            embed.add_field(name=combatant.name, value=out)
+        await ctx.send(embed=embed, delete_after=10 * len(targets))
         await combat.final()
 
     @init.command(name='re')

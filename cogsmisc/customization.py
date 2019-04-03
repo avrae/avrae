@@ -4,7 +4,6 @@ Created on Jan 30, 2017
 @author: andrew
 """
 import asyncio
-import shlex
 import textwrap
 import traceback
 import uuid
@@ -12,12 +11,12 @@ import uuid
 import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType, UserInputError
-from discord.ext.commands.view import StringView, quoted_word
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, NoCharacter
+from utils.argparser import argquote, argsplit
 from utils.functions import auth_and_chan, clean_content, confirm
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
@@ -104,15 +103,11 @@ class Customization:
         Returns: string"""
         prefix = self.bot.get_server_prefix(message)
         rawargs = " ".join(prefix.join(message.content.split(prefix)[1:]).split(' ')[1:])
-        view = StringView(rawargs)
-        args = []
-        while not view.eof:
-            view.skip_ws()
-            args.append(quoted_word(view))
+        args = argsplit(rawargs)
         tempargs = args[:]
         new_command = command
         if '%*%' in command:
-            new_command = new_command.replace('%*%', shlex.quote(rawargs) if ' ' in rawargs else rawargs)
+            new_command = new_command.replace('%*%', argquote(rawargs) if ' ' in rawargs else rawargs)
             tempargs = []
         if '&*&' in command:
             new_command = new_command.replace('&*&', rawargs.replace("\"", "\\\"").replace("'", "\\'"))
@@ -124,7 +119,7 @@ class Customization:
             key = '%{}%'.format(index + 1)
             to_remove = False
             if key in command:
-                new_command = new_command.replace(key, shlex.quote(value) if ' ' in value else value)
+                new_command = new_command.replace(key, argquote(value) if ' ' in value else value)
                 to_remove = True
             key = '&{}&'.format(index + 1)
             if key in command:
@@ -136,7 +131,8 @@ class Customization:
                 except ValueError:
                     pass
 
-        return prefix + new_command + " " + ' '.join((shlex.quote(v) if ' ' in v else v) for v in tempargs)
+        quoted_args = ' '.join(map(argquote, tempargs))
+        return f"{prefix}{new_command} {quoted_args}".strip()
 
     async def parse_no_char(self, cstr, ctx):
         """
@@ -328,7 +324,7 @@ class Customization:
         if snippet is None:
             return await ctx.send(f'**{snipname}**:\n'
                                   f'(Copy-pastable)```md\n'
-                                  f'{ctx.prefix}snippet {snipname} {server_snippets.get(snipname,"Not defined.")}\n'
+                                  f'{ctx.prefix}snippet {snipname} {server_snippets.get(snipname, "Not defined.")}\n'
                                   f'```')
 
         if self.can_edit_servaliases(ctx):

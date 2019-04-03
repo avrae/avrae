@@ -46,6 +46,13 @@ def argparse(args, character=None):
     return ParsedArguments(args, parsed)
 
 
+def argquote(arg: str):
+    if ' ' in arg:
+        arg = arg.replace("\"", "\\\"")  # re.sub(r'(?<!\\)"', r'\"', arg)
+        arg = f'"{arg}"'
+    return arg
+
+
 class ParsedArguments:
     def __init__(self, raw, parsed):
         self._raw = raw
@@ -128,6 +135,9 @@ class ParsedArguments:
 
     def __iter__(self):
         return iter(self.parsed.keys())
+
+    def __str__(self):
+        return str(self.parsed)
 
 
 def quoted_word(view):

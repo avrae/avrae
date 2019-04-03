@@ -1,6 +1,8 @@
 import re
 import shlex
 
+from utils.argparser import argquote
+
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
 MAX_ITER_LENGTH = 10000
 
@@ -82,5 +84,5 @@ async def parse_snippets(args: str, ctx) -> str:
         if snippet_value:
             tempargs[index] = snippet_value
         elif ' ' in arg:
-            tempargs[index] = shlex.quote(arg)
+            tempargs[index] = argquote(arg)
     return " ".join(tempargs)

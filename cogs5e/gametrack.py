@@ -554,7 +554,9 @@ class GameTrack:
         -phrase [phrase] - adds flavor text.
         -title [title] - changes the title of the cast. Replaces [sname] with spell name.
         -dur [duration] - changes the duration of any effect applied by the spell.
-        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)"""
+        -mod [spellcasting mod] - sets the value of the spellcasting ability modifier.
+        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
+        """
         try:
             await ctx.message.delete()
         except:

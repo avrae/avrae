@@ -885,11 +885,17 @@ class Spell:
             character = caster
 
         # base stat stuff
+        mod_arg = args.last("mod", type_=int)
         dc_override = None
         ab_override = None
         spell_override = None
         stat_override = ''
-        if character and any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
+        if mod_arg is not None:
+            mod = mod_arg
+            dc_override = 8 + mod + character.get_prof_bonus()
+            ab_override = mod + character.get_prof_bonus()
+            spell_override = mod
+        elif character and any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
             base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
             mod = character.get_mod(base)
             dc_override = 8 + mod + character.get_prof_bonus()

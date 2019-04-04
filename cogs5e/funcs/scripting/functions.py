@@ -23,6 +23,7 @@ class SimpleRollResult:
         self.full = full.strip()
         self.raw = raw
         self._roll = roll_obj
+        self.crit = roll_obj.crit
 
     def __str__(self):
         return self.full

@@ -75,8 +75,6 @@ class DicecloudClient:
         :param list_name: (str) The name of the spell list to look for. Returns default if not passed.
         :return: (str) The default list id.
         """
-        if character.get_cached_spell_list_id():
-            return character.get_cached_spell_list_id()
         char_id = character.id[10:]
 
         char = await self.get_character(char_id)
@@ -84,7 +82,6 @@ class DicecloudClient:
             list_id = next((l for l in char.get('spellLists', []) if l['name'].lower() == list_name.lower()), None)
         else:
             list_id = next((l for l in char.get('spellLists', [])), None)
-        character.update_cached_spell_list_id(list_id)
         return list_id
 
     async def get_character(self, charId):

@@ -1,12 +1,35 @@
+"""
+{'type': 'dicecloud',
+ 'version': 6, #v6: added stat cvars
+ 'stats': stats,
+ 'levels': levels,
+ 'hp': int(hp),
+ 'armor': int(armor),
+ 'attacks': attacks,
+ 'skills': skills,
+ 'resist': resistances,
+ 'immune': immunities,
+ 'vuln': vulnerabilities,
+ 'saves': saves,
+ 'stat_cvars': stat_vars,
+ 'overrides': {},
+ 'cvars': {}}
+"""
+import asyncio
 import logging
 import random
+import re
 
-from bson import ObjectId
+import MeteorClient
+import discord
 
-from cogs5e.models.caster import Spellcaster
-from cogs5e.models.errors import NoCharacter
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
-from utils.constants import STAT_NAMES
+from cogs5e.funcs.dice import roll
+from cogs5e.funcs.scripting import ScriptingEvaluator
+from cogs5e.models.caster import Spellcaster, Spellcasting
+from cogs5e.models.dicecloud.client import DicecloudClient
+from cogs5e.models.errors import ConsumableNotFound, CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, \
+    NoCharacter, NoReset, OutdatedSheet
+from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
 
@@ -23,83 +46,40 @@ SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'i
 CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiorityDice")
 
 
-class ManualOverrides:
-    pass
-
-
 class Character(Spellcaster):
-    def __init__(self, _id: ObjectId, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
-                 name: str, description: str, image: str, stats: dict, levels: dict, attacks: list, skills: dict,
-                 resistances: dict, saves: dict, ac: int, max_hp: int, hp: int, temp_hp: int, cvars: dict,
-                 options: dict, overrides: dict, consumables: list, death_saves: dict, spellbook: dict, live: str,
-                 race: str, background: str):
-        # sheet metadata
-        self._id = ''
-        self._owner = ''
-        self._upstream = ''
-        self._active = True
-        self._sheet_type = ''
-        self._import_version = 0
+    def __init__(self, _dict, _id):
+        self.character = _dict
+        self.id = _id
+        self.live = self.character.get('live') and self.character.get('type') == 'dicecloud'
 
-        # main character info
-        self.name = ''
-        self.description = ''
-        self.image = ''
-        self.stats = BaseStats.from_dict(stats)
-        self.levels = Levels.from_dict(levels)
-        self.attacks = [Attack()]
-        self.skills = Skills.from_dict(skills)
-        self.resistances = Resistances.from_dict(resistances)
-        self.saves = Saves.from_dict(saves)
-
-        # hp/ac
-        self.ac = 0
-        self.max_hp = 0
-        self.hp = 0
-        self.temp_hp = 0
-
-        # customization
-        self.cvars = {}
-        self.options = {}
-        self.overrides = ManualOverrides()
-
-        # ccs, spellcasting
-        self.consumables = [CustomCounter()]
-        self.death_saves = DeathSaves()
-        self.spellbook = Spellbook()
-
-        # live sheet integrations
-        self._live_integration = DicecloudIntegration()
-
-        # misc research things
-        self.race = ''
-        self.background = ''
+        spellcasting = Spellcasting(self.get_spell_list(), self.get_save_dc(), self.get_spell_ab(), self.get_level())
+        super(Character, self).__init__(spellcasting)
 
     @classmethod
     async def from_ctx(cls, ctx):
         active_character = await ctx.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "active": True})
         if active_character is None:
             raise NoCharacter()
-        return cls()
+        return cls(active_character, active_character['upstream'])
 
     @classmethod
-    async def from_bot_and_ids(cls, bot, owner_id, character_id):
-        character = await bot.mdb.characters.find_one({"owner": owner_id, "upstream": character_id})
+    async def from_bot_and_ids(cls, bot, author_id, character_id):
+        character = await bot.mdb.characters.find_one({"owner": author_id, "upstream": character_id})
         if character is None:
             raise NoCharacter()
-        return cls()
+        return cls(character, character_id)
 
     def get_name(self):
-        return self.name
+        return self.character.get('stats', {}).get('name', "Unnamed")
 
     def get_image(self):
-        return self.image
+        return self.character.get('stats', {}).get('image', '')
 
     def get_color(self):
-        return self.options.get('color', random.randint(0, 0xffffff))
+        return self.character.get('settings', {}).get('color') or random.randint(0, 0xffffff)
 
     def get_ac(self):
-        return self.ac
+        return self.character['armor']
 
     def get_resists(self):
         """
@@ -110,45 +90,50 @@ class Character(Spellcaster):
         return {'resist': self.character['resist'], 'immune': self.character['immune'], 'vuln': self.character['vuln']}
 
     def get_max_hp(self):
-        return self.max_hp
+        return self.character.get('hp', 0)
 
     def get_level(self):
-        """:returns int - the character's total level."""
-        return self.levels.total_level
+        """@:returns int - the character's total level."""
+        return self.character.get('levels', {}).get('level', 0)
 
     def get_prof_bonus(self):
-        """:returns int - the character's proficiency bonus."""
-        return self.stats.prof_bonus
+        """@:returns int - the character's proficiency bonus."""
+        return self.character.get('stats', {}).get('proficiencyBonus', 0)
+
+    def get_stats(self):
+        """@:returns dict - the character's stats."""
+        return self.character.get('stats', {})
 
     def get_mod(self, stat):
         """
         Gets the character's stat modifier for a core stat.
-        :param stat: The core stat to get. Can be of the form "cha", or "charisma".
+        :param stat: The core stat to get. Can be of the form "cha", "charisma", or "charismaMod".
         :return: The character's relevant stat modifier.
         """
-        if not any(stat in s for s in STAT_NAMES):
+        valid = ["strengthMod", "dexterityMod", "constitutionMod", "intelligenceMod", "wisdomMod", "charismaMod"]
+        if not any(stat in s for s in valid):
             raise ValueError(f"{stat} is not a valid stat.")
-        return self.get_stats()[next(s for s in STAT_NAMES if stat in s)]
+        return self.get_stats()[next(s for s in valid if stat in s)]
 
     def get_saves(self):
-        """:returns dict - the character's saves and modifiers."""
+        """@:returns dict - the character's saves and modifiers."""
         return self.character.get('saves', {})
 
     def get_skills(self):
-        """:returns dict - the character's skills and modifiers."""
+        """@:returns dict - the character's skills and modifiers."""
         return self.character.get('skills', {})
 
     def get_skill_effects(self):
-        """:returns dict - the character's skill effects and modifiers."""
+        """@:returns dict - the character's skill effects and modifiers."""
         return self.character.get('skill_effects', {})
 
     def get_attacks(self):
-        """:returns list - the character's list of attack dicts."""
+        """@:returns list - the character's list of attack dicts."""
         return self.character.get('attacks', []) + self.get_override('attacks', [])
 
     def get_max_spellslots(self, level: int):
-        """:returns the maximum number of spellslots of level level a character has.
-        :returns 0 if none.
+        """@:returns the maximum number of spellslots of level level a character has.
+        @:returns 0 if none.
         @:raises OutdatedSheet if character does not have spellbook."""
         try:
             assert 'spellbook' in self.character
@@ -161,7 +146,7 @@ class Character(Spellcaster):
         return self.character.get('spellbook', {}).get('spells', [])
 
     def get_spell_list(self):
-        """:returns list - a list of the names of all spells the character can cast.
+        """@:returns list - a list of the names of all spells the character can cast.
         @:raises OutdatedSheet if character does not have spellbook."""
         try:
             assert 'spellbook' in self.character
@@ -176,8 +161,19 @@ class Character(Spellcaster):
                 out.append(spell)
         return out
 
+    def get_cached_spell_list_id(self):
+        """Gets the Dicecloud ID of the most recently used spell list ID.
+        Returns None if v12 or earlier, not a DC sheet, or not set."""
+        return self.character.get('spellbook', {}).get('dicecloud_id')
+
+    def update_cached_spell_list_id(self, new_id):
+        """Updates the cached Dicecloud spell list ID."""
+        if not 'spellbook' in self.character:
+            raise OutdatedSheet()
+        self.character['spellbook']['dicecloud_id'] = new_id
+
     def get_save_dc(self):
-        """:returns int - the character's spell save DC.
+        """@:returns int - the character's spell save DC.
         @:raises OutdatedSheet if character does not have spellbook."""
         try:
             assert 'spellbook' in self.character
@@ -187,7 +183,7 @@ class Character(Spellcaster):
         return self.character.get('spellbook', {}).get('dc', 0)
 
     def get_spell_ab(self):
-        """:returns int - the character's spell attack bonus.
+        """@:returns int - the character's spell attack bonus.
         @:raises OutdatedSheet if character does not have spellbook."""
         try:
             assert 'spellbook' in self.character
@@ -198,14 +194,14 @@ class Character(Spellcaster):
 
     def get_setting(self, setting, default=None):
         """Gets the value of a csetting.
-        :returns the csetting's value, or default."""
+        @:returns the csetting's value, or default."""
         setting = self.character.get('settings', {}).get(setting)
         if setting is None: return default
         return setting
 
     def set_setting(self, setting, value):
         """Sets the value of a csetting.
-                :returns self"""
+                @:returns self"""
         if self.character.get('settings') is None:
             self.character['settings'] = {}
         self.character['settings'][setting] = value
@@ -488,7 +484,7 @@ class Character(Spellcaster):
 
     def get_remaining_slots(self, level: int):
         """@:param level - The spell level.
-        :returns the integer value representing the number of spellslots remaining."""
+        @:returns the integer value representing the number of spellslots remaining."""
         try:
             assert 0 <= level < 10
         except AssertionError:
@@ -498,7 +494,7 @@ class Character(Spellcaster):
 
     def get_remaining_slots_str(self, level: int = None):
         """@:param level: The level of spell slot to return.
-        :returns A string representing the character's remaining spell slots."""
+        @:returns A string representing the character's remaining spell slots."""
         out = ''
         if level:
             assert 0 < level < 10
@@ -525,7 +521,7 @@ class Character(Spellcaster):
         """Sets the character's remaining spell slots of level level.
         @:param level - The spell level.
         @:param value - The number of remaining spell slots.
-        :returns self"""
+        @:returns self"""
         try:
             assert 0 < level < 10
         except AssertionError:
@@ -566,7 +562,7 @@ class Character(Spellcaster):
 
     def use_slot(self, level: int):
         """Uses one spell slot of level level.
-        :returns self
+        @:returns self
         @:raises CounterOutOfBounds if there are no remaining slots of the requested level."""
         try:
             assert 0 <= level < 10
@@ -581,7 +577,7 @@ class Character(Spellcaster):
 
     def reset_spellslots(self):
         """Resets all spellslots to their max value.
-        :returns self"""
+        @:returns self"""
         for level in range(1, 10):
             self.set_remaining_slots(level, self.get_max_spellslots(level), False)
         self._sync_slots()
@@ -752,12 +748,12 @@ class Character(Spellcaster):
         return counter
 
     def get_consumable_value(self, name):
-        """:returns int - the integer value of the consumable."""
+        """@:returns int - the integer value of the consumable."""
         return int(self.get_consumable(name).get('value', 0))
 
     async def select_consumable(self, ctx, name):
         """@:param name (str): The name of the consumable to search for.
-        :returns dict - the consumable.
+        @:returns dict - the consumable.
         @:raises ConsumableNotFound if the consumable does not exist."""
         custom_counters = self.character.get('consumables', {}).get('custom', {})
         choices = [(cname, counter) for cname, counter in custom_counters.items() if cname.lower() == name.lower()]
@@ -851,6 +847,30 @@ class Character(Spellcaster):
         reset.extend(self.long_rest())
         reset.extend(self._reset_custom(None))
         return reset
+
+    def join_combat(self, channel_id):
+        """
+        Puts the character into combat.
+        :param channel_id: The channel id of the combat
+        :return: self
+        """
+        self.character['combat'] = channel_id
+        return self
+
+    def leave_combat(self):
+        """
+        Removes the character from all combats.
+        :return: self
+        """
+        if 'combat' in self.character:
+            del self.character['combat']
+        return self
+
+    def get_combat_id(self):
+        """
+        :return: The channel id if the character is in combat, or None.
+        """
+        return self.character.get('combat')
 
     def get_sheet_embed(self):
         stats = self.get_stats()

@@ -48,31 +48,51 @@ class Levels:
         return {"total_level": self.total_level, "classes": self.classes}
 
 
-class Skills:
-    class Skill:
-        pass
+class Skill:
+    def __init__(self, value, prof, bonus):
+        # mod = value = base + (pb * prof) + bonus
+        self.value = value
+        self.prof = prof
+        self.bonus = bonus
 
     @classmethod
     def from_dict(cls, d):
-        pass
+        return cls(**d)
 
     def to_dict(self):
-        pass
+        return {"value": self.value, "prof": self.prof, "bonus": self.bonus}
+
+
+class Skills:
+    def __init__(self, skills):
+        self.skills = skills
+
+    @classmethod
+    def from_dict(cls, d):
+        skills = {k: Skill.from_dict(v) for k, v in d.items()}
+        return cls(skills)
+
+    def to_dict(self):
+        return {k: v.to_dict() for k, v in self.skills}
+
+
+class Saves:
+    def __init__(self, saves):
+        self.saves = saves
+
+    @classmethod
+    def from_dict(cls, d):
+        saves = {k: Skill.from_dict(v) for k, v in d.items()}
+        return cls(saves)
+
+    def to_dict(self):
+        return {k: v.to_dict() for k, v in self.saves}
 
 
 class Resistances:
     @classmethod
     def from_dict(cls, d):
-        pass
-
-    def to_dict(self):
-        pass
-
-
-class Saves:
-    @classmethod
-    def from_dict(cls, d):
-        pass
+        return cls(**d)
 
     def to_dict(self):
         pass

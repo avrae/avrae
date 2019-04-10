@@ -34,17 +34,17 @@ class Character(Spellcaster):
                  options: dict, overrides: dict, consumables: list, death_saves: dict, spellbook: dict, live: str,
                  race: str, background: str):
         # sheet metadata
-        self._id = ''
-        self._owner = ''
-        self._upstream = ''
-        self._active = True
-        self._sheet_type = ''
-        self._import_version = 0
+        self._id = _id
+        self._owner = owner
+        self._upstream = upstream
+        self._active = active
+        self._sheet_type = sheet_type
+        self._import_version = import_version
 
         # main character info
-        self.name = ''
-        self.description = ''
-        self.image = ''
+        self.name = name
+        self.description = description
+        self.image = import_version
         self.stats = BaseStats.from_dict(stats)
         self.levels = Levels.from_dict(levels)
         self.attacks = [Attack()]
@@ -53,27 +53,27 @@ class Character(Spellcaster):
         self.saves = Saves.from_dict(saves)
 
         # hp/ac
-        self.ac = 0
-        self.max_hp = 0
-        self.hp = 0
-        self.temp_hp = 0
+        self.ac = ac
+        self.max_hp = max_hp
+        self.hp = hp
+        self.temp_hp = temp_hp
 
         # customization
-        self.cvars = {}
-        self.options = {}
-        self.overrides = ManualOverrides()
+        self.cvars = cvars
+        self.options = options
+        self.overrides = ManualOverrides.from_dict(overrides)
 
         # ccs, spellcasting
         self.consumables = [CustomCounter()]
-        self.death_saves = DeathSaves()
-        self.spellbook = Spellbook()
+        self.death_saves = DeathSaves.from_dict(death_saves)
+        self.spellbook = Spellbook.from_dict(spellbook)
 
         # live sheet integrations
         self._live_integration = DicecloudIntegration()
 
         # misc research things
-        self.race = ''
-        self.background = ''
+        self.race = race
+        self.background = background
 
     @classmethod
     async def from_ctx(cls, ctx):

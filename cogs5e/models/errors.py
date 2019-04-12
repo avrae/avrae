@@ -75,13 +75,6 @@ class ConsumableException(AvraeException):
     pass
 
 
-class ConsumableNotFound(ConsumableException):
-    """Raised when a consumable is not found."""
-
-    def __init__(self):
-        super().__init__("The requested counter does not exist.")
-
-
 class CounterOutOfBounds(ConsumableException):
     """Raised when a counter is set to a value out of bounds."""
 

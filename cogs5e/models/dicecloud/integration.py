@@ -42,16 +42,16 @@ class DicecloudIntegration(LiveIntegration):
             pass
 
     def sync_consumable(self, consumable):
-        used = consumable.value - consumable.max
+        used = consumable.value - consumable.get_max()
         try:
-            if consumable.sync_id in CLASS_RESOURCES:
+            if consumable.live_id in CLASS_RESOURCES:
                 DicecloudClient.getInstance().meteor_client.update('self.characters',
                                                                    {'_id': self.character.upstream[10:]},
                                                                    {'$set': {
-                                                                       f"{consumable.sync_id}.adjustment": -used}},
+                                                                       f"{consumable.live_id}.adjustment": -used}},
                                                                    callback=update_callback)
             else:
-                DicecloudClient.getInstance().meteor_client.update('features', {'_id': consumable.sync_id},
+                DicecloudClient.getInstance().meteor_client.update('features', {'_id': consumable.live_id},
                                                                    {'$set': {"used": used}},
                                                                    callback=update_callback)
         except MeteorClient.MeteorClientException:

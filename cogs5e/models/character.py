@@ -9,10 +9,10 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.caster import Spellbook, Spellcaster
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
-from cogs5e.models.errors import ConsumableNotFound, CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, \
-    NoCharacter, OutdatedSheet
+from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset, \
+    OutdatedSheet
 from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
-from utils.functions import get_selection
+from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -98,14 +98,68 @@ class DeathSaves:
 
 
 class CustomCounter:
+    def __init__(self, character, name, value, minv=None, maxv=None, reset=None, display_type=None, live_id=None):
+        self._character = character
+        self.name = name
+        self.value = value
+        self.min = minv
+        self.max = maxv
+        self.reset_on = reset
+        self.display_type = display_type
+        self.live_id = live_id
+
     @classmethod
-    def from_dict(cls, d):
-        return cls(**d)
+    def from_dict(cls, char, d):
+        return cls(char, **d)
 
     def to_dict(self):
-        return 
+        return {"name": self.name, "value": self.value, "minv": self.min, "maxv": self.max, "reset": self.reset_on,
+                "display_type": self.display_type, "live_id": self.live_id}
+
+    @classmethod
+    def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None):
+        if reset not in ('short', 'long', 'none', None):
+            raise InvalidArgument("Invalid reset.")
+        if any(c in name for c in ".$"):
+            raise InvalidArgument("Invalid character in CC name.")
+        if minv is not None and maxv is not None:
+            max_value = character.evaluate_cvar(maxv)
+            if max_value < character.evaluate_cvar(minv):
+                raise InvalidArgument("Max value is less than min value.")
+            if max_value == 0:
+                raise InvalidArgument("Max value cannot be 0.")
+        if reset and maxv is None:
+            raise InvalidArgument("Reset passed but no maximum passed.")
+        if display_type == 'bubble' and (maxv is None or minv is None):
+            raise InvalidArgument("Bubble display requires a max and min value.")
+
+        value = character.evaluate_cvar(maxv) or 0
+        return cls(character, name, value, minv, maxv, reset, display_type, live_id)
 
     # ---------- main funcs ----------
+    def get_min(self):
+        return self._character.evaluate_cvar(self.min)
+
+    def get_max(self):
+        return self._character.evaluate_cvar(self.max)
+
+    def set(self, new_value: int, strict=False):
+        minv = self.get_min()
+        maxv = self.get_max()
+
+        if strict and not minv <= new_value <= maxv:
+            raise CounterOutOfBounds()
+
+        new_value = min(max(minv, new_value), maxv)
+        self.value = new_value
+
+        if self.live_id:
+            self._character.sync_consumable(self)
+
+    def reset(self):
+        if self.reset_on == 'none' or self.max is None:
+            raise NoReset()
+        self.set(self.get_max())
 
 
 class Character(Spellcaster):
@@ -144,7 +198,7 @@ class Character(Spellcaster):
         self.overrides = ManualOverrides.from_dict(overrides)
 
         # ccs
-        self.consumables = [CustomCounter.from_dict(cons) for cons in consumables]
+        self.consumables = [CustomCounter.from_dict(self, cons) for cons in consumables]
         self.death_saves = DeathSaves.from_dict(death_saves)
 
         # spellcasting
@@ -223,10 +277,6 @@ class Character(Spellcaster):
         """:returns dict - the character's skills and modifiers."""
         return self.skills
 
-    def get_skill_effects(self):
-        """:returns dict - the character's skill effects and modifiers."""
-        return self.character.get('skill_effects', {})
-
     def get_attacks(self):
         """
         :returns the character's list of attacks.
@@ -244,7 +294,7 @@ class Character(Spellcaster):
         """Sets the value of a csetting."""
         self.options.set(setting, value)
 
-    # ---------- SCRIPTING ----------
+    # ---------- SCRIPTING ---------- TODO
     async def parse_cvars(self, cstr, ctx):
         """Parses cvars.
         :param ctx: The Context the cvar is parsed in.
@@ -258,9 +308,9 @@ class Character(Spellcaster):
         return out
 
     def evaluate_cvar(self, varstr):
-        """Evaluates a cvar.
-        :param varstr - the name of the cvar to parse.
-        :returns int - the value of the cvar, or 0 if evaluation failed."""
+        """Evaluates a cvar expression.
+        :param varstr - the expression to evaluate.
+        :returns int - the value of the expression, or 0 if evaluation failed."""
         ops = r"([-+*/().<>=])"
         varstr = str(varstr).strip('<>{}')
 
@@ -292,7 +342,7 @@ class Character(Spellcaster):
     def get_stat_vars(self):
         return self.character.get('stat_cvars', {})
 
-    # ---------- DATABASE ----------
+    # ---------- DATABASE ---------- TODO
     async def commit(self, ctx):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
@@ -558,126 +608,26 @@ class Character(Spellcaster):
                 self.character['spellbook']['spells'].remove(override)
         return override
 
-    # ---------- CUSTOM COUNTERS ---------- TODO
-    def create_consumable(self, name, **kwargs):
-        """Creates a custom consumable, returning the character object."""
-        _max = kwargs.get('maxValue')
-        _min = kwargs.get('minValue')
-        _reset = kwargs.get('reset')
-        _type = kwargs.get('displayType')
-        _live_id = kwargs.get('live')
-        if not (_reset in ('short', 'long', 'none') or _reset is None):
-            raise InvalidArgument("Invalid reset.")
-        if any(c in name for c in ".$"):
-            raise InvalidArgument("Invalid character in CC name.")
-        if _max is not None and _min is not None:
-            maxV = self.evaluate_cvar(_max)
-            try:
-                assert maxV >= self.evaluate_cvar(_min)
-            except AssertionError:
-                raise InvalidArgument("Max value is less than min value.")
-            if maxV == 0:
-                raise InvalidArgument("Max value cannot be 0.")
-        if _reset and _max is None: raise InvalidArgument("Reset passed but no maximum passed.")
-        if _type == 'bubble' and (_max is None or _min is None): raise InvalidArgument(
-            "Bubble display requires a max and min value.")
-        newCounter = {'value': self.evaluate_cvar(_max) or 0}
-        if _max is not None: newCounter['max'] = _max
-        if _min is not None: newCounter['min'] = _min
-        if _reset and _max is not None: newCounter['reset'] = _reset
-        newCounter['type'] = _type
-        newCounter['live'] = _live_id
-        log.debug(f"Creating new counter {newCounter}")
-
-        self.character['consumables']['custom'][name] = newCounter
-
-        return self
-
-    def set_consumable(self, name, newValue: int, strict=False):
-        """Sets the value of a character's consumable, returning the Character object.
-        Raises CounterOutOfBounds if newValue is out of bounds."""
-        try:
-            assert self.character['consumables']['custom'].get(name) is not None
-        except AssertionError:
-            raise ConsumableNotFound()
-        try:
-            _min = self.evaluate_cvar(self.character['consumables']['custom'][name].get('min', str(-(2 ** 32))))
-            _max = self.evaluate_cvar(self.character['consumables']['custom'][name].get('max', str(2 ** 32 - 1)))
-            if strict:
-                assert _min <= int(newValue) <= _max
-            else:
-                newValue = min(max(_min, int(newValue)), _max)
-
-        except AssertionError:
-            raise CounterOutOfBounds()
-        self.character['consumables']['custom'][name]['value'] = int(newValue)
-
-        if self.character['consumables']['custom'][name].get('live') and self._live_integration:
-            self._live_integration.sync_consumable(counter)
-
-        return self
-
-    def get_consumable(self, name):
-        """Returns the dict object of the consumable, or raises NoConsumable."""
-        custom_counters = self.character.get('consumables', {}).get('custom', {})
-        counter = custom_counters.get(name)
-        if counter is None: raise ConsumableNotFound()
-        return counter
-
-    def get_consumable_value(self, name):
-        """:returns int - the integer value of the consumable."""
-        return int(self.get_consumable(name).get('value', 0))
-
+    # ---------- CUSTOM COUNTERS ----------
     async def select_consumable(self, ctx, name):
-        """@:param name (str): The name of the consumable to search for.
-        :returns dict - the consumable.
-        @:raises ConsumableNotFound if the consumable does not exist."""
-        custom_counters = self.character.get('consumables', {}).get('custom', {})
-        choices = [(cname, counter) for cname, counter in custom_counters.items() if cname.lower() == name.lower()]
-        if not choices:
-            choices = [(cname, counter) for cname, counter in custom_counters.items() if name.lower() in cname.lower()]
-        if not choices:
-            raise ConsumableNotFound()
-        else:
-            return await get_selection(ctx, choices, return_name=True)
+        """:param name (str): The name of the consumable to search for.
+        :returns dict - the consumable."""
+        return await search_and_select(ctx, self.consumables, name, lambda ctr: ctr.name)
 
-    def get_all_consumables(self):
-        """Returns the dict object of all custom counters."""
-        custom_counters = self.character.get('consumables', {}).get('custom', {})
-        return custom_counters
-
-    def delete_consumable(self, name):
-        """Deletes a consumable. Returns the Character object."""
-        custom_counters = self.character.get('consumables', {}).get('custom', {})
-        try:
-            del custom_counters[name]
-        except KeyError:
-            raise ConsumableNotFound()
-        self.character['consumables']['custom'] = custom_counters
-        return self
-
-    def reset_consumable(self, name):
-        """Resets a consumable to its maximum value, if applicable.
-        Returns the Character object."""
-        counter = self.get_consumable(name)
-        if counter.get('reset') == 'none': raise NoReset()
-        if counter.get('max') is None: raise NoReset()
-
-        self.set_consumable(name, self.evaluate_cvar(counter.get('max')))
-
-        return self
+    def sync_consumable(self, ctr):
+        if self._live_integration:
+            self._live_integration.sync_consumable(ctr)
 
     def _reset_custom(self, scope):
         """Resets custom counters with given scope."""
         reset = []
-        for name, value in self.character.get('consumables', {}).get('custom', {}).items():
-            if value.get('reset') == scope:
+        for ctr in self.consumables:
+            if ctr.reset_on == scope:
                 try:
-                    self.reset_consumable(name)
+                    ctr.reset()
                 except NoReset:
-                    pass
-                else:
-                    reset.append(name)
+                    continue
+                reset.append(ctr.name)
         return reset
 
     # ---------- RESTING ---------- TODO

@@ -49,18 +49,20 @@ class Levels:
 
 
 class Skill:
-    def __init__(self, value, prof, bonus):
+    def __init__(self, value, prof=0, bonus=0, adv=None):
         # mod = value = base + (pb * prof) + bonus
+        # adv = tribool (False, None, True) = (dis, normal, adv)
         self.value = value
         self.prof = prof
         self.bonus = bonus
+        self.adv = adv
 
     @classmethod
     def from_dict(cls, d):
         return cls(**d)
 
     def to_dict(self):
-        return {"value": self.value, "prof": self.prof, "bonus": self.bonus}
+        return {"value": self.value, "prof": self.prof, "bonus": self.bonus, "adv": self.adv}
 
 
 class Skills:

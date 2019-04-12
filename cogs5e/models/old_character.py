@@ -25,7 +25,7 @@ import discord
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import ScriptingEvaluator
-from cogs5e.models.caster import Spellcaster, Spellcasting
+from cogs5e.models.caster import Spellcaster, Spellbook
 from cogs5e.models.dicecloud.client import DicecloudClient
 from cogs5e.models.errors import ConsumableNotFound, CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, \
     NoCharacter, NoReset, OutdatedSheet
@@ -52,7 +52,7 @@ class Character(Spellcaster):
         self.id = _id
         self.live = self.character.get('live') and self.character.get('type') == 'dicecloud'
 
-        spellcasting = Spellcasting(self.get_spell_list(), self.get_save_dc(), self.get_spell_ab(), self.get_level())
+        spellcasting = Spellbook(self.get_spell_list(), self.get_save_dc(), self.get_spell_ab(), self.get_level())
         super(Character, self).__init__(spellcasting)
 
     @classmethod

@@ -1,4 +1,4 @@
-class Spellcasting:
+class Spellbook:
     def __init__(self, spells=None, dc=0, sab=0, casterLevel=0):
         if spells is None:
             spells = []
@@ -20,7 +20,7 @@ class Spellcasting:
 class Spellcaster:
     def __init__(self, spellcasting=None):
         if spellcasting is None:
-            spellcasting = Spellcasting()
+            spellcasting = Spellbook()
         self._spellcasting = spellcasting
 
     @property

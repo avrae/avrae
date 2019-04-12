@@ -90,9 +90,14 @@ class Saves:
 
 
 class Resistances:
+    def __init__(self, resist, immune, vuln):
+        self.resist = resist
+        self.immune = immune
+        self.vuln = vuln
+
     @classmethod
     def from_dict(cls, d):
         return cls(**d)
 
     def to_dict(self):
-        pass
+        return {"resist": self.resist, "immune": self.immune, "vuln": self.vuln}

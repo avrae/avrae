@@ -3,7 +3,7 @@ import copy
 import cachetools
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.caster import Spellcasting, Spellcaster
+from cogs5e.models.caster import Spellbook, Spellcaster
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants, NoCharacter, InvalidArgument
 from utils.argparser import argparse
@@ -426,7 +426,7 @@ class Combatant(Spellcaster):
         inst = cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, combat, index=raw['index'],
                    notes=raw['notes'], effects=[], group=raw['group'],  # begin backwards compatibility
-                   temphp=raw.get('temphp'), spellcasting=Spellcasting.from_dict(raw.get('spellcasting', {})))
+                   temphp=raw.get('temphp'), spellcasting=Spellbook.from_dict(raw.get('spellcasting', {})))
         inst._effects = [Effect.from_dict(e, combat, inst) for e in raw['effects']]
         return inst
 
@@ -829,9 +829,9 @@ class MonsterCombatant(Combatant):
                    'vuln': [v.lower() for v in vuln]}
         attacks = monster.attacks
         saves = monster.saves
-        spellcasting = Spellcasting(monster.spellcasting.get('spells', []), monster.spellcasting.get('dc', 0),
-                                    monster.spellcasting.get('attackBonus', 0),
-                                    monster.spellcasting.get('casterLevel', 0))
+        spellcasting = Spellbook(monster.spellcasting.get('spells', []), monster.spellcasting.get('dc', 0),
+                                 monster.spellcasting.get('attackBonus', 0),
+                                 monster.spellcasting.get('casterLevel', 0))
 
         return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, combat, index,
                    monster_name, spellcasting=spellcasting)
@@ -915,8 +915,8 @@ class PlayerCombatant(Combatant):
 
     @property
     def spellcasting(self):
-        return Spellcasting(self.character.get_spell_list(), self.character.get_save_dc(),
-                            self.character.get_spell_ab(), self.character.get_level())
+        return Spellbook(self.character.get_spell_list(), self.character.get_save_dc(),
+                         self.character.get_spell_ab(), self.character.get_level())
 
     def can_cast(self, spell, level) -> bool:
         return self.character.can_cast(spell, level)

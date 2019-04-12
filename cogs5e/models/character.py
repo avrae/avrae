@@ -1,12 +1,18 @@
+import asyncio
 import logging
 import random
+import re
 
-from bson import ObjectId
+import discord
 
-from cogs5e.models.caster import Spellcaster
-from cogs5e.models.errors import NoCharacter
+from cogs5e.funcs.dice import roll
+from cogs5e.funcs.scripting import ScriptingEvaluator
+from cogs5e.models.caster import Spellbook, Spellcaster
+from cogs5e.models.dicecloud.integration import DicecloudIntegration
+from cogs5e.models.errors import ConsumableNotFound, CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, \
+    NoCharacter, OutdatedSheet
 from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
-from utils.constants import STAT_NAMES
+from utils.functions import get_selection
 
 log = logging.getLogger(__name__)
 
@@ -20,21 +26,95 @@ SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'i
              'charismaSave': 'charisma',
              'strength': 'strength', 'dexterity': 'dexterity', 'constitution': 'constitution',
              'intelligence': 'intelligence', 'wisdom': 'wisdom', 'charisma': 'charisma'}
-CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiorityDice")
+INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
+
+
+class CharOptions:
+    def __init__(self, options):
+        self.options = options
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+    def to_dict(self):
+        return {"options": self.options}
+
+    # ---------- main funcs ----------
+    def get(self, option, default=None):
+        return self.options.get(option, default)
+
+    def set(self, option, value):
+        self.options[option] = value
 
 
 class ManualOverrides:
-    pass
+    def __init__(self, desc=None, image=None, attacks=None, spells=None):
+        if attacks is None:
+            attacks = []
+        if spells is None:
+            spells = []
+        self.desc = desc
+        self.image = image
+        self.attacks = attacks
+        self.spells = spells
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+    def to_dict(self):
+        return {"desc": self.desc, "image": self.image, "attacks": self.attacks, "spells": self.spells}
+
+
+class DeathSaves:
+    def __init__(self, successes, fails):
+        self.successes = successes
+        self.fails = fails
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+    def to_dict(self):
+        return {"successes": self.successes, "fails": self.fails}
+
+    # ---------- main funcs ----------
+    def succeed(self, num=1):
+        self.successes = min(3, self.successes + num)
+
+    def fail(self, num=1):
+        self.fails = min(3, self.fails + num)
+
+    def is_stable(self):
+        return self.successes == 3
+
+    def is_dead(self):
+        return self.fails == 3
+
+    def reset(self):
+        self.successes = 0
+        self.fails = 0
+
+
+class CustomCounter:
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+    def to_dict(self):
+        return 
+
+    # ---------- main funcs ----------
 
 
 class Character(Spellcaster):
-    def __init__(self, _id: ObjectId, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
+    def __init__(self, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
                  name: str, description: str, image: str, stats: dict, levels: dict, attacks: list, skills: dict,
                  resistances: dict, saves: dict, ac: int, max_hp: int, hp: int, temp_hp: int, cvars: dict,
                  options: dict, overrides: dict, consumables: list, death_saves: dict, spellbook: dict, live: str,
-                 race: str, background: str):
+                 race: str, background: str, **kwargs):
         # sheet metadata
-        self._id = _id
         self._owner = owner
         self._upstream = upstream
         self._active = active
@@ -44,10 +124,10 @@ class Character(Spellcaster):
         # main character info
         self.name = name
         self.description = description
-        self.image = import_version
+        self.image = image
         self.stats = BaseStats.from_dict(stats)
         self.levels = Levels.from_dict(levels)
-        self.attacks = [Attack()]
+        self.attacks = [Attack.from_dict(atk) for atk in attacks]
         self.skills = Skills.from_dict(skills)
         self.resistances = Resistances.from_dict(resistances)
         self.saves = Saves.from_dict(saves)
@@ -60,16 +140,23 @@ class Character(Spellcaster):
 
         # customization
         self.cvars = cvars
-        self.options = options
+        self.options = CharOptions.from_dict(options)
         self.overrides = ManualOverrides.from_dict(overrides)
 
-        # ccs, spellcasting
-        self.consumables = [CustomCounter()]
+        # ccs
+        self.consumables = [CustomCounter.from_dict(cons) for cons in consumables]
         self.death_saves = DeathSaves.from_dict(death_saves)
-        self.spellbook = Spellbook.from_dict(spellbook)
+
+        # spellcasting
+        spellbook = Spellbook.from_dict(spellbook)
+        super(Character, self).__init__(spellbook)
 
         # live sheet integrations
-        self._live_integration = DicecloudIntegration()
+        integration = INTEGRATION_MAP.get(live)
+        if integration:
+            self._live_integration = integration(self)
+        else:
+            self._live_integration = None
 
         # misc research things
         self.race = race
@@ -80,14 +167,14 @@ class Character(Spellcaster):
         active_character = await ctx.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "active": True})
         if active_character is None:
             raise NoCharacter()
-        return cls()
+        return cls(**active_character)
 
     @classmethod
     async def from_bot_and_ids(cls, bot, owner_id, character_id):
         character = await bot.mdb.characters.find_one({"owner": owner_id, "upstream": character_id})
         if character is None:
             raise NoCharacter()
-        return cls()
+        return cls(**character)
 
     def get_name(self):
         return self.name
@@ -107,7 +194,7 @@ class Character(Spellcaster):
         :return: The resistances, immunities, and vulnerabilites of a character.
         :rtype: dict
         """
-        return {'resist': self.character['resist'], 'immune': self.character['immune'], 'vuln': self.character['vuln']}
+        return {'resist': self.resistances.resist, 'immune': self.resistances.immune, 'vuln': self.resistances.vuln}
 
     def get_max_hp(self):
         return self.max_hp
@@ -126,26 +213,175 @@ class Character(Spellcaster):
         :param stat: The core stat to get. Can be of the form "cha", or "charisma".
         :return: The character's relevant stat modifier.
         """
-        if not any(stat in s for s in STAT_NAMES):
-            raise ValueError(f"{stat} is not a valid stat.")
-        return self.get_stats()[next(s for s in STAT_NAMES if stat in s)]
+        return self.stats.get_mod(stat)
 
     def get_saves(self):
         """:returns dict - the character's saves and modifiers."""
-        return self.character.get('saves', {})
+        return self.saves
 
     def get_skills(self):
         """:returns dict - the character's skills and modifiers."""
-        return self.character.get('skills', {})
+        return self.skills
 
     def get_skill_effects(self):
         """:returns dict - the character's skill effects and modifiers."""
         return self.character.get('skill_effects', {})
 
     def get_attacks(self):
-        """:returns list - the character's list of attack dicts."""
-        return self.character.get('attacks', []) + self.get_override('attacks', [])
+        """
+        :returns the character's list of attacks.
+        :rtype list[Attack]
+        """
+        return self.attacks + self.overrides.attacks
 
+    # ---------- CSETTINGS ----------
+    def get_setting(self, setting, default=None):
+        """Gets the value of a csetting.
+        :returns the csetting's value, or default."""
+        return self.options.get(setting, default)
+
+    def set_setting(self, setting, value):
+        """Sets the value of a csetting."""
+        self.options.set(setting, value)
+
+    # ---------- SCRIPTING ----------
+    async def parse_cvars(self, cstr, ctx):
+        """Parses cvars.
+        :param ctx: The Context the cvar is parsed in.
+        :param cstr: The string to parse.
+        :returns string - the parsed string."""
+        evaluator = await (await ScriptingEvaluator.new(ctx)).with_character(self)
+
+        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.parse, cstr)
+        await evaluator.run_commits()
+
+        return out
+
+    def evaluate_cvar(self, varstr):
+        """Evaluates a cvar.
+        :param varstr - the name of the cvar to parse.
+        :returns int - the value of the cvar, or 0 if evaluation failed."""
+        ops = r"([-+*/().<>=])"
+        varstr = str(varstr).strip('<>{}')
+
+        cvars = self.character.get('cvars', {})
+        stat_vars = self.character.get('stat_cvars', {})
+        stat_vars['spell'] = self.get_spell_ab() - self.get_prof_bonus()
+        out = ""
+        tempout = ''
+        for substr in re.split(ops, varstr):
+            temp = substr.strip()
+            tempout += str(cvars.get(temp, temp)) + " "
+        for substr in re.split(ops, tempout):
+            temp = substr.strip()
+            out += str(stat_vars.get(temp, temp)) + " "
+        return roll(out).total
+
+    def get_cvar(self, name):
+        return self.cvars.get(name)
+
+    def set_cvar(self, name, val: str):
+        """Sets a cvar to a string value."""
+        if any(c in name for c in '/()[]\\.^$*+?|{}'):
+            raise InvalidArgument("Cvar contains invalid character.")
+        self.cvars[name] = str(val)
+
+    def get_cvars(self):
+        return self.cvars
+
+    def get_stat_vars(self):
+        return self.character.get('stat_cvars', {})
+
+    # ---------- DATABASE ----------
+    async def commit(self, ctx):
+        """Writes a character object to the database, under the contextual author."""
+        data = self.to_dict()
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": self._owner, "upstream": self._upstream},
+            {"$set": data},
+            upsert=True
+        )
+
+    async def set_active(self, ctx):
+        """Sets the character as active."""
+        await ctx.bot.mdb.characters.update_many(
+            {"owner": str(ctx.author.id), "active": True},
+            {"$set": {"active": False}}
+        )
+        await ctx.bot.mdb.characters.update_one(
+            {"owner": str(ctx.author.id), "upstream": self._upstream},
+            {"$set": {"active": True}}
+        )
+
+    # ---------- HP ----------
+    def get_current_hp(self):
+        """Returns the integer value of the remaining HP."""
+        return self.hp
+
+    def get_hp_str(self):
+        hp = self.get_current_hp()
+        out = f"{hp}/{self.get_max_hp()}"
+        if self.get_temp_hp():
+            out += f' ({self.get_temp_hp()} temp)'
+        return out
+
+    def set_hp(self, newValue):
+        """Sets the character's hit points. Doesn't touch THP."""
+        self.hp = newValue
+        self.on_hp()
+
+        if self._live_integration:
+            self._live_integration.sync_hp()
+
+    def modify_hp(self, value, ignore_temp=False):
+        """Modifies the character's hit points. If ignore_temp is True, will deal damage to raw HP, ignoring temp."""
+        if value < 0 and not ignore_temp:
+            thp = self.temp_hp
+            self.set_temp_hp(self.temp_hp + value)
+            value += min(thp, -value)  # how much did the THP absorb?
+        self.hp += value
+
+        if self._live_integration:
+            self._live_integration.sync_hp()
+
+    def reset_hp(self):
+        """Resets the character's HP to max and THP to 0."""
+        self.set_temp_hp(0)
+        self.set_hp(self.get_max_hp())
+
+    def get_temp_hp(self):
+        return self.temp_hp
+
+    def set_temp_hp(self, temp_hp):
+        self.temp_hp = max(0, temp_hp)  # 0 ≤ temp_hp
+
+    # ---------- DEATH SAVES ----------
+    def get_ds_str(self):
+        """
+        :rtype: str
+        :return: A bubble representation of a character's death saves.
+        """
+        successes = '\u25c9' * self.death_saves.successes + '\u3007' * (3 - self.death_saves.successes)
+        fails = '\u3007' * (3 - self.death_saves.fails) + '\u25c9' * self.death_saves.fails
+        return f"F {fails} | {successes} S"
+
+    def add_successful_ds(self):
+        """Adds a successful death save to the character.
+        Returns True if the character is stable."""
+        self.death_saves.succeed()
+        return self.death_saves.is_stable()
+
+    def add_failed_ds(self):
+        """Adds a failed death save to the character.
+        Returns True if the character is dead."""
+        self.death_saves.fail()
+        return self.death_saves.is_dead()
+
+    def reset_death_saves(self):
+        """Resets successful and failed death saves to 0."""
+        self.death_saves.reset()
+
+    # ---------- SPELLBOOK ---------- TODO
     def get_max_spellslots(self, level: int):
         """:returns the maximum number of spellslots of level level a character has.
         :returns 0 if none.
@@ -196,294 +432,8 @@ class Character(Spellcaster):
 
         return self.character.get('spellbook', {}).get('attackBonus', 0)
 
-    def get_setting(self, setting, default=None):
-        """Gets the value of a csetting.
-        :returns the csetting's value, or default."""
-        setting = self.character.get('settings', {}).get(setting)
-        if setting is None: return default
-        return setting
-
-    def set_setting(self, setting, value):
-        """Sets the value of a csetting.
-                :returns self"""
-        if self.character.get('settings') is None:
-            self.character['settings'] = {}
-        self.character['settings'][setting] = value
-        return self
-
-    def get_override(self, override, default):
-        return self.character.get('overrides', {}).get(override, default)
-
-    def set_override(self, override, value):
-        if not 'overrides' in self.character:
-            self.character['overrides'] = {}
-        self.character['overrides'][override] = value
-
-    async def parse_cvars(self, cstr, ctx):
-        """Parses cvars.
-        :param ctx: The Context the cvar is parsed in.
-        :param cstr: The string to parse.
-        :returns string - the parsed string."""
-        evaluator = await (await ScriptingEvaluator.new(ctx)).with_character(self)
-
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.parse, cstr)
-        await evaluator.run_commits()
-
-        return out
-
-    def evaluate_cvar(self, varstr):
-        """Evaluates a cvar.
-        :param varstr - the name of the cvar to parse.
-        :returns int - the value of the cvar, or 0 if evaluation failed."""
-        ops = r"([-+*/().<>=])"
-        varstr = str(varstr).strip('<>{}')
-
-        cvars = self.character.get('cvars', {})
-        stat_vars = self.character.get('stat_cvars', {})
-        stat_vars['spell'] = self.get_spell_ab() - self.get_prof_bonus()
-        out = ""
-        tempout = ''
-        for substr in re.split(ops, varstr):
-            temp = substr.strip()
-            tempout += str(cvars.get(temp, temp)) + " "
-        for substr in re.split(ops, tempout):
-            temp = substr.strip()
-            out += str(stat_vars.get(temp, temp)) + " "
-        return roll(out).total
-
-    def get_cvar(self, name):
-        return self.character.get('cvars', {}).get(name)
-
-    def set_cvar(self, name, val: str):
-        """Sets a cvar to a string value."""
-        if any(c in name for c in '/()[]\\.^$*+?|{}'):
-            raise InvalidArgument("Cvar contains invalid character.")
-        self.character['cvars'] = self.character.get('cvars', {})  # set value
-        self.character['cvars'][name] = str(val)
-        return self
-
-    def get_cvars(self):
-        return self.character.get('cvars', {})
-
-    def get_stat_vars(self):
-        return self.character.get('stat_cvars', {})
-
-    async def commit(self, ctx):
-        """Writes a character object to the database, under the contextual author."""
-        data = self.character
-        if 'active' not in data:
-            data['active'] = False
-        if 'upstream' not in data:
-            data['upstream'] = self.id
-        if 'owner' not in data:
-            data['owner'] = str(ctx.author.id)
-        if '_id' in data:
-            del data['_id']  # potential duplicate issues in transferchar
-        await ctx.bot.mdb.characters.update_one(
-            {"owner": str(ctx.author.id), "upstream": self.id},
-            {"$set": data},
-            upsert=True
-        )
-
-    async def manual_commit(self, bot, author_id):
-        data = self.character
-        if 'active' not in data:
-            data['active'] = False
-        if 'upstream' not in data:
-            data['upstream'] = self.id
-        data['owner'] = author_id
-        if '_id' in data:
-            del data['_id']
-        await bot.mdb.characters.update_one(
-            {"owner": author_id, "upstream": self.id},
-            {"$set": data},
-            upsert=True
-        )
-
-    async def set_active(self, ctx):
-        """Sets the character as active."""
-        await ctx.bot.mdb.characters.update_many(
-            {"owner": str(ctx.author.id), "active": True},
-            {"$set": {"active": False}}
-        )
-        await ctx.bot.mdb.characters.update_one(
-            {"owner": str(ctx.author.id), "upstream": self.id},
-            {"$set": {"active": True}}
-        )
-
-    def initialize_consumables(self):
-        """Initializes a character's consumable counters. Returns self."""
-        try:
-            assert self.character.get('consumables') is not None
-        except AssertionError:
-            self.character['consumables'] = {}
-        self._initialize_hp()
-        self._initialize_deathsaves()
-        self._initialize_spellslots()
-        return self
-
-    def _initialize_hp(self):
-        try:
-            assert self.character.get('consumables') is not None
-        except AssertionError:
-            self.character['consumables'] = {}
-        try:
-            assert self.character['consumables'].get('hp') is not None
-        except AssertionError:
-            self.character['consumables']['hp'] = {'value': self.get_max_hp(), 'reset': 'long',
-                                                   'max': self.get_max_hp(), 'min': 0}
-        if self.character['consumables'].get('temphp') is None:
-            self.character['consumables']['temphp'] = {'value': 0, 'reset': 'long',
-                                                       'max': None, 'min': 0}
-
-    def get_hp(self):
-        """Returns the Counter dictionary."""
-        self._initialize_hp()
-        return self.character['consumables']['hp']
-
-    def get_current_hp(self):
-        """Returns the integer value of the remaining HP."""
-        return self.get_hp()['value']
-
-    def get_hp_str(self):
-        hp = self.get_current_hp() - self.get_temp_hp()
-        out = f"{hp}/{self.get_max_hp()}"
-        if self.get_temp_hp():
-            out += f' ({self.get_temp_hp()} temp)'
-        return out
-
-    def set_hp(self, newValue, ignore_temp=False):
-        """Sets the character's hit points. Returns the Character object."""
-        self._initialize_hp()
-        hp = self.get_hp()
-        if not ignore_temp:
-            if self.get_temp_hp():
-                delta = newValue - hp['value']  # hp includes all temp hp
-                if delta < 0:  # don't add thp by adding to hp
-                    self.set_temp_hp(max(self.get_temp_hp() + delta, 0))
-        else:
-            if self.get_temp_hp():
-                newValue = newValue + self.get_temp_hp()
-        self.character['consumables']['hp']['value'] = max(hp['min'], int(newValue))  # bounding
-
-        self.on_hp()
-
-        if self.live:
-            self._sync_hp()
-
-        return self
-
-    def _sync_hp(self):
-        def update_callback(error, data):
-            if error:
-                log.warning(error)
-                if error.get('error') == 403:  # character no longer shared
-                    self.character['live'] = False
-                    self.live = False
-            else:
-                log.debug(data)
-
-        try:
-            DicecloudClient.getInstance().meteor_client.update('characters',
-                                                               {'_id': self.id[10:]},
-                                                               {'$set': {
-                                                                   "hitPoints.adjustment":
-                                                                       (self.get_current_hp() - self.get_max_hp())
-                                                                       - self.get_temp_hp()}
-                                                               }, callback=update_callback)
-        except MeteorClient.MeteorClientException:
-            pass
-
-    def modify_hp(self, value, ignore_temp=False):
-        """Modifies the character's hit points. Returns the Character object."""
-        self.set_hp(self.get_current_hp() + value, ignore_temp)
-        return self
-
-    def reset_hp(self):
-        """Resets the character's HP to max and THP to 0. Returns the Character object."""
-        self.set_temp_hp(0)
-        self.set_hp(self.get_max_hp())
-        return self
-
-    def get_temp_hp(self):
-        self._initialize_hp()
-        return self.character['consumables']['temphp']['value']
-
-    def set_temp_hp(self, temp_hp):
-        self._initialize_hp()
-        hp = self.get_hp()
-        delta = max(temp_hp - (self.get_temp_hp() or 0), -self.get_temp_hp())
-        self.character['consumables']['temphp']['value'] = max(temp_hp, 0)
-        self.character['consumables']['hp']['value'] = max(hp['min'], hp['value'] + delta)  # bounding
-        return self
-
-    def _initialize_deathsaves(self):
-        try:
-            assert self.character.get('consumables') is not None
-        except AssertionError:
-            self.character['consumables'] = {}
-        try:
-            assert self.character['consumables'].get('deathsaves') is not None
-        except AssertionError:
-            self.character['consumables']['deathsaves'] = {'fail': {'value': 0, 'reset': 'hp', 'max': 3, 'min': 0},
-                                                           'success': {'value': 0, 'reset': 'hp', 'max': 3, 'min': 0}}
-
-    def get_deathsaves(self):
-        self._initialize_deathsaves()
-        return self.character['consumables']['deathsaves']
-
-    def get_ds_str(self):
-        """
-        :rtype: str
-        :return: A bubble representation of a character's death saves.
-        """
-        ds = self.get_deathsaves()
-        successes = '\u25c9' * ds['success']['value'] + '\u3007' * (3 - ds['success']['value'])
-        fails = '\u3007' * (3 - ds['fail']['value']) + '\u25c9' * ds['fail']['value']
-        return f"F {fails} | {successes} S"
-
-    def add_successful_ds(self):
-        """Adds a successful death save to the character.
-        Returns True if the character is stable."""
-        self._initialize_deathsaves()
-        self.character['consumables']['deathsaves']['success']['value'] = min(3, self.character['consumables'][
-            'deathsaves']['success']['value'] + 1)
-        return self.character['consumables']['deathsaves']['success']['value'] == 3
-
-    def add_failed_ds(self):
-        """Adds a failed death save to the character.
-        Returns True if the character is dead."""
-        self._initialize_deathsaves()
-        self.character['consumables']['deathsaves']['fail']['value'] = min(3, self.character['consumables'][
-            'deathsaves']['fail']['value'] + 1)
-        return self.character['consumables']['deathsaves']['fail']['value'] == 3
-
-    def reset_death_saves(self):
-        """Resets successful and failed death saves to 0. Returns the Character object."""
-        self._initialize_deathsaves()
-        self.character['consumables']['deathsaves']['success']['value'] = 0
-        self.character['consumables']['deathsaves']['fail']['value'] = 0
-        return self
-
-    def _initialize_spellslots(self):
-        """Sets up a character's spellslot consumables.
-        @:raises OutdatedSheet if sheet does not have spellbook."""
-        try:
-            assert self.character.get('consumables') is not None
-        except AssertionError:
-            self.character['consumables'] = {}
-        try:
-            assert self.character['consumables'].get('spellslots') is not None
-        except AssertionError:
-            ss = {}
-            for lvl in range(1, 10):
-                m = self.get_max_spellslots(lvl)
-                ss[str(lvl)] = {'value': m, 'reset': 'long', 'max': m, 'min': 0}
-            self.character['consumables']['spellslots'] = ss
-
     def get_spellslots(self):
         """Returns the Counter dictionary."""
-        self._initialize_spellslots()
         return self.character['consumables']['spellslots']
 
     def get_remaining_slots(self, level: int):
@@ -538,31 +488,10 @@ class Character(Spellcaster):
         self._initialize_spellslots()
         self.character['consumables']['spellslots'][str(level)]['value'] = int(value)
 
-        if self.live and sync:
-            self._sync_slots()
+        if self._live_integration and sync:
+            self._live_integration.sync_slots()
 
         return self
-
-    def _sync_slots(self):
-        def update_callback(error, data):
-            if error:
-                log.warning(error)
-                if error.get('error') == 403:  # character no longer shared
-                    self.character['live'] = False
-                    self.live = False
-            else:
-                log.debug(data)
-
-        spell_dict = {}
-        for lvl in range(1, 10):
-            spell_dict[f'level{lvl}SpellSlots.adjustment'] = self.get_remaining_slots(lvl) - self.get_max_spellslots(
-                lvl)
-        try:
-            DicecloudClient.getInstance().meteor_client.update('characters', {'_id': self.id[10:]},
-                                                               {'$set': spell_dict},
-                                                               callback=update_callback)
-        except MeteorClient.MeteorClientException:
-            pass
 
     def use_slot(self, level: int):
         """Uses one spell slot of level level.
@@ -584,7 +513,8 @@ class Character(Spellcaster):
         :returns self"""
         for level in range(1, 10):
             self.set_remaining_slots(level, self.get_max_spellslots(level), False)
-        self._sync_slots()
+        if self._live_integration:
+            self._live_integration.sync_slots()
         return self
 
     def can_cast(self, spell, level) -> bool:
@@ -596,28 +526,10 @@ class Character(Spellcaster):
     def remaining_casts_of(self, spell, level):
         return self.get_remaining_slots_str(level)
 
-    def _initialize_spellbook(self):
-        """Sets up a character's spellbook override.
-        @:raises OutdatedSheet if sheet does not have spellbook."""
-        try:
-            assert self.character.get('spellbook') is not None
-        except AssertionError:
-            raise OutdatedSheet()
-
-    def _initialize_spell_overrides(self):
-        """Sets up a character's spell overrides."""
-        try:
-            assert self.character.get('overrides') is not None
-        except AssertionError:
-            self.character['overrides'] = {}
-        if not 'spells' in self.character['overrides']:
-            self.character['overrides']['spells'] = []
-
     def add_known_spell(self, spell):
         """Adds a spell to the character's known spell list.
         :param spell (Spell) - the Spell.
         :returns self"""
-        self._initialize_spellbook()
         self.character['spellbook']['spells'].append({
             'name': spell.name,
             'strict': spell.source != 'homebrew'
@@ -637,9 +549,6 @@ class Character(Spellcaster):
         :param spell_name: (str) The name of the spell to remove.
         :return: (str) The name of the removed spell.
         """
-        self._initialize_spellbook()
-        self._initialize_spell_overrides()
-
         override = next((s for s in self.character['overrides'].get('spells', [])
                          if isinstance(s, str) and spell_name.lower() == s.lower() or
                          isinstance(s, dict) and s['name'].lower() == spell_name.lower()), None)
@@ -649,19 +558,9 @@ class Character(Spellcaster):
                 self.character['spellbook']['spells'].remove(override)
         return override
 
-    def _initialize_custom_counters(self):
-        try:
-            assert self.character.get('consumables') is not None
-        except AssertionError:
-            self.character['consumables'] = {}
-        try:
-            assert self.character['consumables'].get('custom') is not None
-        except AssertionError:
-            self.character['consumables']['custom'] = {}
-
+    # ---------- CUSTOM COUNTERS ---------- TODO
     def create_consumable(self, name, **kwargs):
         """Creates a custom consumable, returning the character object."""
-        self._initialize_custom_counters()
         _max = kwargs.get('maxValue')
         _min = kwargs.get('minValue')
         _reset = kwargs.get('reset')
@@ -697,7 +596,6 @@ class Character(Spellcaster):
     def set_consumable(self, name, newValue: int, strict=False):
         """Sets the value of a character's consumable, returning the Character object.
         Raises CounterOutOfBounds if newValue is out of bounds."""
-        self._initialize_custom_counters()
         try:
             assert self.character['consumables']['custom'].get(name) is not None
         except AssertionError:
@@ -714,35 +612,10 @@ class Character(Spellcaster):
             raise CounterOutOfBounds()
         self.character['consumables']['custom'][name]['value'] = int(newValue)
 
-        if self.character['consumables']['custom'][name].get('live') and self.live:
-            used = _max - newValue
-            self._sync_consumable(self.character['consumables']['custom'][name], used)
+        if self.character['consumables']['custom'][name].get('live') and self._live_integration:
+            self._live_integration.sync_consumable(counter)
 
         return self
-
-    def _sync_consumable(self, counter, used):
-        """Syncs a consumable's uses with dicecloud."""
-
-        def update_callback(error, data):
-            if error:
-                log.warning(error)
-                if error.get('error') == 403:  # character no longer shared
-                    self.character['live'] = False  # this'll be committed since we're modifying something to sync
-                    self.live = False
-            else:
-                log.debug(data)
-
-        try:
-            if counter['live'] in CLASS_RESOURCES:
-                DicecloudClient.getInstance().meteor_client.update('characters', {'_id': self.id[10:]},
-                                                                   {'$set': {f"{counter['live']}.adjustment": -used}},
-                                                                   callback=update_callback)
-            else:
-                DicecloudClient.getInstance().meteor_client.update('features', {'_id': counter['live']},
-                                                                   {'$set': {"used": used}},
-                                                                   callback=update_callback)
-        except MeteorClient.MeteorClientException:
-            pass
 
     def get_consumable(self, name):
         """Returns the dict object of the consumable, or raises NoConsumable."""
@@ -807,6 +680,7 @@ class Character(Spellcaster):
                     reset.append(name)
         return reset
 
+    # ---------- RESTING ---------- TODO
     def on_hp(self):
         """Resets all applicable consumables.
         Returns a list of the names of all reset counters."""
@@ -852,6 +726,7 @@ class Character(Spellcaster):
         reset.extend(self._reset_custom(None))
         return reset
 
+    # ---------- MISC ---------- TODO
     def get_sheet_embed(self):
         stats = self.get_stats()
         hp = self.get_max_hp()

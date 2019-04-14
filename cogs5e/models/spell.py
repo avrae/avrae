@@ -134,7 +134,7 @@ class AutomationContext:
 
     def cantrip_scale(self, damage_dice):
         def scale(matchobj):
-            level = self.caster.spellcasting.casterLevel
+            level = self.caster.spellbook.casterLevel
             if level < 5:
                 levelDice = "1"
             elif level < 11:
@@ -329,7 +329,7 @@ class Attack(Effect):
             except (TypeError, ValueError):
                 raise AutomationException(f"{explicit_bonus} cannot be interpreted as an attack bonus.")
 
-        sab = explicit_bonus or autoctx.ab_override or autoctx.caster.spellcasting.sab
+        sab = explicit_bonus or autoctx.ab_override or autoctx.caster.spellbook.sab
 
         if not (sab or b):
             raise NoSpellAB()
@@ -432,7 +432,7 @@ class Save(Effect):
             except (TypeError, ValueError):
                 raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")
 
-        dc = autoctx.args.last('dc', type_=int) or dc_override or autoctx.dc_override or autoctx.caster.spellcasting.dc
+        dc = autoctx.args.last('dc', type_=int) or dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
 
         if not dc:
             raise NoSpellDC()

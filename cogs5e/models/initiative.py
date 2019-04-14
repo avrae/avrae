@@ -3,7 +3,7 @@ import copy
 import cachetools
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.caster import Spellbook, Spellcaster
+from cogs5e.models.sheet.spellcasting import Spellbook, Spellcaster
 from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
     CombatChannelNotFound, NoCombatants, NoCharacter, InvalidArgument
 from utils.argparser import argparse
@@ -388,8 +388,8 @@ class Combat:
 
 class Combatant(Spellcaster):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
-                 index=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None, *args, **kwargs):
-        super(Combatant, self).__init__(spellcasting)
+                 index=None, notes=None, effects=None, group=None, temphp=None, spellbook=None, *args, **kwargs):
+        super(Combatant, self).__init__(spellbook)
         if resists is None:
             resists = {}
         if attacks is None:
@@ -426,7 +426,7 @@ class Combatant(Spellcaster):
         inst = cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, combat, index=raw['index'],
                    notes=raw['notes'], effects=[], group=raw['group'],  # begin backwards compatibility
-                   temphp=raw.get('temphp'), spellcasting=Spellbook.from_dict(raw.get('spellcasting', {})))
+                   temphp=raw.get('temphp'), spellcasting=Spellbook.from_dict(raw.get('spellbook', {})))
         inst._effects = [Effect.from_dict(e, combat, inst) for e in raw['effects']]
         return inst
 
@@ -435,7 +435,7 @@ class Combatant(Spellcaster):
                 'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
                 'resists': self._resists, 'attacks': self._attacks, 'saves': self._saves, 'index': self.index,
                 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
-                'temphp': self.temphp, 'spellcasting': self.spellcasting.to_dict(), 'type': 'common'}
+                'temphp': self.temphp, 'spellbook': self.spellbook.to_dict(), 'type': 'common'}
 
     @property
     def name(self):
@@ -799,10 +799,10 @@ class Combatant(Spellcaster):
 
 class MonsterCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
-                 index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None):
+                 index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None, spellbook=None):
         super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
                                                attacks, saves, ctx, combat, index, notes, effects, group, temphp,
-                                               spellcasting)
+                                               spellbook)
         self._monster_name = monster_name
 
     @classmethod
@@ -829,9 +829,9 @@ class MonsterCombatant(Combatant):
                    'vuln': [v.lower() for v in vuln]}
         attacks = monster.attacks
         saves = monster.saves
-        spellcasting = Spellbook(monster.spellcasting.get('spells', []), monster.spellcasting.get('dc', 0),
-                                 monster.spellcasting.get('attackBonus', 0),
-                                 monster.spellcasting.get('casterLevel', 0))
+        spellcasting = Spellbook(monster.spellbook.get('spells', []), monster.spellbook.get('dc', 0),
+                                 monster.spellbook.get('attackBonus', 0),
+                                 monster.spellbook.get('casterLevel', 0))
 
         return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, combat, index,
                    monster_name, spellcasting=spellcasting)
@@ -856,10 +856,10 @@ class MonsterCombatant(Combatant):
 class PlayerCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
                  index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None,
-                 temphp=None, spellcasting=None):
+                 temphp=None, spellbook=None):
         super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
                                               attacks, saves, ctx, combat, index, notes, effects, group, temphp,
-                                              spellcasting)
+                                              spellbook)
         self.character_id = character_id
         self.character_owner = character_owner
         self._character = None  # shenanigans
@@ -914,7 +914,7 @@ class PlayerCombatant(Combatant):
         return self.character.get_saves()
 
     @property
-    def spellcasting(self):
+    def spellbook(self):
         return Spellbook(self.character.get_spell_list(), self.character.get_save_dc(),
                          self.character.get_spell_ab(), self.character.get_level())
 

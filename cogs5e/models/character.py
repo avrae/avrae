@@ -7,7 +7,7 @@ import discord
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import ScriptingEvaluator
-from cogs5e.models.caster import Spellbook, Spellcaster
+from cogs5e.models.sheet.spellcasting import Spellbook, Spellcaster, SpellbookSpell
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset, \
     OutdatedSheet
@@ -108,6 +108,10 @@ class CustomCounter:
         self.display_type = display_type
         self.live_id = live_id
 
+        # cached values
+        self._max = None
+        self._min = None
+
     @classmethod
     def from_dict(cls, char, d):
         return cls(char, **d)
@@ -138,10 +142,14 @@ class CustomCounter:
 
     # ---------- main funcs ----------
     def get_min(self):
-        return self._character.evaluate_cvar(self.min)
+        if self._min is None:
+            self._min = self._character.evaluate_cvar(self.min) or -(2 ** 32)
+        return self._min
 
     def get_max(self):
-        return self._character.evaluate_cvar(self.max)
+        if self._max is None:
+            self._max = self._character.evaluate_cvar(self.max) or 2 ** 32
+        return self._max
 
     def set(self, new_value: int, strict=False):
         minv = self.get_min()
@@ -201,7 +209,7 @@ class Character(Spellcaster):
         self.consumables = [CustomCounter.from_dict(self, cons) for cons in consumables]
         self.death_saves = DeathSaves.from_dict(death_saves)
 
-        # spellcasting
+        # spellbook
         spellbook = Spellbook.from_dict(spellbook)
         super(Character, self).__init__(spellbook)
 
@@ -432,69 +440,9 @@ class Character(Spellcaster):
         self.death_saves.reset()
 
     # ---------- SPELLBOOK ---------- TODO
-    def get_max_spellslots(self, level: int):
-        """:returns the maximum number of spellslots of level level a character has.
-        :returns 0 if none.
-        @:raises OutdatedSheet if character does not have spellbook."""
-        try:
-            assert 'spellbook' in self.character
-        except AssertionError:
-            raise OutdatedSheet()
-
-        return int(self.character.get('spellbook', {}).get('spellslots', {}).get(str(level), 0))
-
-    def get_raw_spells(self):
-        return self.character.get('spellbook', {}).get('spells', [])
-
     def get_spell_list(self):
-        """:returns list - a list of the names of all spells the character can cast.
-        @:raises OutdatedSheet if character does not have spellbook."""
-        try:
-            assert 'spellbook' in self.character
-        except AssertionError:
-            raise OutdatedSheet()
-        spells = self.get_raw_spells()
-        out = []
-        for spell in spells:
-            if isinstance(spell, dict):
-                out.append(spell['name'])
-            else:
-                out.append(spell)
-        return out
-
-    def get_save_dc(self):
-        """:returns int - the character's spell save DC.
-        @:raises OutdatedSheet if character does not have spellbook."""
-        try:
-            assert 'spellbook' in self.character
-        except AssertionError:
-            raise OutdatedSheet()
-
-        return self.character.get('spellbook', {}).get('dc', 0)
-
-    def get_spell_ab(self):
-        """:returns int - the character's spell attack bonus.
-        @:raises OutdatedSheet if character does not have spellbook."""
-        try:
-            assert 'spellbook' in self.character
-        except AssertionError:
-            raise OutdatedSheet()
-
-        return self.character.get('spellbook', {}).get('attackBonus', 0)
-
-    def get_spellslots(self):
-        """Returns the Counter dictionary."""
-        return self.character['consumables']['spellslots']
-
-    def get_remaining_slots(self, level: int):
-        """@:param level - The spell level.
-        :returns the integer value representing the number of spellslots remaining."""
-        try:
-            assert 0 <= level < 10
-        except AssertionError:
-            raise InvalidSpellLevel()
-        if level == 0: return 1  # cantrips
-        return int(self.get_spellslots()[str(level)]['value'])
+        """:returns list - a list of the names of all spells the character can cast. """
+        return [s.name for s in self.spellbook.spells]
 
     def get_remaining_slots_str(self, level: int = None):
         """@:param level: The level of spell slot to return.
@@ -523,52 +471,41 @@ class Character(Spellcaster):
 
     def set_remaining_slots(self, level: int, value: int, sync: bool = True):
         """Sets the character's remaining spell slots of level level.
-        @:param level - The spell level.
-        @:param value - The number of remaining spell slots.
-        :returns self"""
-        try:
-            assert 0 < level < 10
-        except AssertionError:
+        :param level - The spell level.
+        :param value - The number of remaining spell slots."""
+        if not 0 < level < 10:
             raise InvalidSpellLevel()
-        try:
-            assert 0 <= value <= self.get_max_spellslots(level)
-        except AssertionError:
+        if not 0 <= value <= self.get_max_spellslots(level):
             raise CounterOutOfBounds()
 
-        self._initialize_spellslots()
-        self.character['consumables']['spellslots'][str(level)]['value'] = int(value)
+        self.spellbook.set_slots(level, value)
 
         if self._live_integration and sync:
             self._live_integration.sync_slots()
 
-        return self
-
     def use_slot(self, level: int):
         """Uses one spell slot of level level.
-        :returns self
-        @:raises CounterOutOfBounds if there are no remaining slots of the requested level."""
-        try:
-            assert 0 <= level < 10
-        except AssertionError:
+        :raises CounterOutOfBounds if there are no remaining slots of the requested level."""
+        if not 0 < level < 10:
             raise InvalidSpellLevel()
-        if level == 0: return self
-        ss = self.get_spellslots()
-        val = ss[str(level)]['value'] - 1
-        if val < ss[str(level)]['min']: raise CounterOutOfBounds()
+        if level == 0:
+            return
+
+        val = self.spellbook.get_slots(level) - 1
+        if val < 0:
+            raise CounterOutOfBounds()
+
         self.set_remaining_slots(level, val)
-        return self
 
     def reset_spellslots(self):
         """Resets all spellslots to their max value.
         :returns self"""
-        for level in range(1, 10):
-            self.set_remaining_slots(level, self.get_max_spellslots(level), False)
+        self.spellbook.reset_slots()
         if self._live_integration:
             self._live_integration.sync_slots()
-        return self
 
     def can_cast(self, spell, level) -> bool:
-        return self.get_remaining_slots(level) > 0 and spell.name in self.spellcasting.spells
+        return self.spellbook.get_slots(level) > 0 and spell.name in self.spellbook
 
     def cast(self, spell, level):
         self.use_slot(level)
@@ -580,13 +517,9 @@ class Character(Spellcaster):
         """Adds a spell to the character's known spell list.
         :param spell (Spell) - the Spell.
         :returns self"""
-        self.character['spellbook']['spells'].append({
-            'name': spell.name,
-            'strict': spell.source != 'homebrew'
-        })
+        self.spellbook.add(SpellbookSpell.from_spell(spell))
 
         if not self.live:
-            self._initialize_spell_overrides()
             self.character['overrides']['spells'].append({
                 'name': spell.name,
                 'strict': spell.source != 'homebrew'

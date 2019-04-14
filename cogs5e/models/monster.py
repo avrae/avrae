@@ -199,7 +199,7 @@ class Monster:
         proper = bool(data.get('isNamedCreature') or data.get('isNPC'))
 
         attacks = data.get('attacks', [])
-        spellcasting = data.get('spellcasting', {})
+        spellcasting = data.get('spellbook', {})
 
         return cls(data['name'], parsesize(data['size']), _type, alignment, ac, armortype, hp, hitdice,
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
@@ -310,7 +310,7 @@ class Monster:
                 'reactions': [t.to_dict() for t in self.reactions],
                 'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
                 'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
-                'image_url': self.image_url, 'spellcasting': self.spellcasting, 'raw_resists': self.raw_resists}
+                'image_url': self.image_url, 'spellbook': self.spellcasting, 'raw_resists': self.raw_resists}
 
     def get_stat_array(self):
         """

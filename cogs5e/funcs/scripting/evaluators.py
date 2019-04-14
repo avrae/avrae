@@ -441,7 +441,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 class SpellEvaluator(MathEvaluator):
     @classmethod
     def with_caster(cls, caster, spell_override=None):
-        names = {'spell': spell_override or (caster.spellcasting.sab - caster.pb_from_level())}
+        names = {'spell': spell_override or (caster.spellbook.sab - caster.pb_from_level())}
         return cls(names=names)
 
     def parse(self, string, extra_names=None):

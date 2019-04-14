@@ -25,7 +25,7 @@ import discord
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import ScriptingEvaluator
-from cogs5e.models.caster import Spellcaster, Spellbook
+from cogs5e.models.sheet.spellcasting import Spellcaster, Spellbook
 from cogs5e.models.dicecloud.client import DicecloudClient
 from cogs5e.models.errors import ConsumableNotFound, CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, \
     NoCharacter, NoReset, OutdatedSheet
@@ -584,7 +584,7 @@ class Character(Spellcaster):
         return self
 
     def can_cast(self, spell, level) -> bool:
-        return self.get_remaining_slots(level) > 0 and spell.name in self.spellcasting.spells
+        return self.get_remaining_slots(level) > 0 and spell.name in self.spellbook.spells
 
     def cast(self, spell, level):
         self.use_slot(level)

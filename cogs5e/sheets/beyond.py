@@ -198,14 +198,15 @@ class BeyondSheetParser:
             base = base + self.get_stat('unarmored-dex-ac-bonus', base=dexBonus)
 
         for val in self.character['characterValues']:
-            if val['typeId'] == 1:  # AC override
-                return val['value']
-            elif val['typeId'] == 2:  # AC magic bonus
-                miscBonus += val['value']
-            elif val['typeId'] == 3:  # AC misc bonus
-                miscBonus += val['value']
-            elif val['typeId'] == 4:  # AC+DEX override
-                base = val['value']
+            if val['value'] is not None:
+                if val['typeId'] == 1:  # AC override
+                    return val['value']
+                elif val['typeId'] == 2:  # AC magic bonus
+                    miscBonus += val['value']
+                elif val['typeId'] == 3:  # AC misc bonus
+                    miscBonus += val['value']
+                elif val['typeId'] == 4:  # AC+DEX override
+                    base = val['value']
 
         if armortype is None:
             return base + unarmoredBonus + shield + miscBonus

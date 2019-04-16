@@ -388,7 +388,7 @@ class Combat:
 
 class Combatant(Spellcaster):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
-                 index=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None, *args, **kwargs):
+                 ping, index=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None, *args, **kwargs):
         super(Combatant, self).__init__(spellcasting)
         if resists is None:
             resists = {}
@@ -414,19 +414,21 @@ class Combatant(Spellcaster):
         self._effects = effects
         self._group = group
         self._temphp = temphp
+        self._ping = ping
 
         self._cache = {}
 
     @classmethod
-    def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat):
-        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat)
+    def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat, ping):
+        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat, ping)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
         inst = cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, combat, index=raw['index'],
                    notes=raw['notes'], effects=[], group=raw['group'],  # begin backwards compatibility
-                   temphp=raw.get('temphp'), spellcasting=Spellcasting.from_dict(raw.get('spellcasting', {})))
+                   temphp=raw.get('temphp'), spellcasting=Spellcasting.from_dict(raw.get('spellcasting', {})),
+                   ping=raw['ping'])
         inst._effects = [Effect.from_dict(e, combat, inst) for e in raw['effects']]
         return inst
 
@@ -435,7 +437,7 @@ class Combatant(Spellcaster):
                 'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
                 'resists': self._resists, 'attacks': self._attacks, 'saves': self._saves, 'index': self.index,
                 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
-                'temphp': self.temphp, 'spellcasting': self.spellcasting.to_dict(), 'type': 'common'}
+                'temphp': self.temphp, 'spellcasting': self.spellcasting.to_dict(), 'type': 'common', 'ping': self.isPing}
 
     @property
     def name(self):
@@ -571,6 +573,16 @@ class Combatant(Spellcaster):
     @isPrivate.setter
     def isPrivate(self, new_privacy):
         self._private = new_privacy
+
+    @property
+    def isPing(self):
+        return self._ping
+
+    @isPing.setter
+    def isPing(self, new_ping):
+        self._ping = new_ping
+
+
 
     @property
     def resists(self):
@@ -799,9 +811,9 @@ class Combatant(Spellcaster):
 
 class MonsterCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
-                 index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None):
+                 ping, index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None):
         super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                               attacks, saves, ctx, combat, index, notes, effects, group, temphp,
+                                               attacks, saves, ctx, combat, ping, index, notes, effects, group, temphp,
                                                spellcasting)
         self._monster_name = monster_name
 
@@ -855,20 +867,20 @@ class MonsterCombatant(Combatant):
 
 class PlayerCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
-                 index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None,
+                 ping, index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None,
                  temphp=None, spellcasting=None):
         super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                              attacks, saves, ctx, combat, index, notes, effects, group, temphp,
+                                              attacks, saves, ctx, combat, ping, index, notes, effects, group, temphp,
                                               spellcasting)
         self.character_id = character_id
         self.character_owner = character_owner
         self._character = None  # shenanigans
 
     @classmethod
-    async def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, combat, character_id,
+    async def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, combat, ping, character_id,
                              character_owner, char):
         inst = cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx, combat,
-                   character_id=character_id, character_owner=character_owner)
+                   ping, character_id=character_id, character_owner=character_owner)
         inst._character = char
         return inst
 

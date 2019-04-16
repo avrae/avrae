@@ -9,8 +9,8 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
-from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell, Spellcaster
+from cogs5e.models.sheet import Attack, BaseStats, Levels, Resistances, Saves, Skills, Spellbook, SpellbookSpell, \
+    Spellcaster
 from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
@@ -94,6 +94,11 @@ class DeathSaves:
     def reset(self):
         self.successes = 0
         self.fails = 0
+
+    def __str__(self):
+        successes = '\u25c9' * self.successes + '\u3007' * (3 - self.successes)
+        fails = '\u3007' * (3 - self.fails) + '\u25c9' * self.fails
+        return f"F {fails} | {successes} S"
 
 
 class CustomCounter:
@@ -225,20 +230,29 @@ class Character(Spellcaster):
         self.race = race
         self.background = background
 
+    # ---------- Serialization ----------
+    @classmethod
+    def from_dict(cls, d):  # TODO
+        return cls(**d)
+
+    def to_dict(self):  # TODO
+        pass
+
     @classmethod
     async def from_ctx(cls, ctx):
         active_character = await ctx.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "active": True})
         if active_character is None:
             raise NoCharacter()
-        return cls(**active_character)
+        return cls.from_dict(active_character)
 
     @classmethod
     async def from_bot_and_ids(cls, bot, owner_id, character_id):
         character = await bot.mdb.characters.find_one({"owner": owner_id, "upstream": character_id})
         if character is None:
             raise NoCharacter()
-        return cls(**character)
+        return cls.from_dict(character)
 
+    # ---------- Basic CRUD ----------
     def get_name(self):
         return self.name
 
@@ -415,15 +429,6 @@ class Character(Spellcaster):
         self.temp_hp = max(0, temp_hp)  # 0 ≤ temp_hp
 
     # ---------- DEATH SAVES ----------
-    def get_ds_str(self):
-        """
-        :rtype: str
-        :return: A bubble representation of a character's death saves.
-        """
-        successes = '\u25c9' * self.death_saves.successes + '\u3007' * (3 - self.death_saves.successes)
-        fails = '\u3007' * (3 - self.death_saves.fails) + '\u25c9' * self.death_saves.fails
-        return f"F {fails} | {successes} S"
-
     def add_successful_ds(self):
         """Adds a successful death save to the character.
         Returns True if the character is stable."""
@@ -446,7 +451,7 @@ class Character(Spellcaster):
         return [s.name for s in self.spellbook.spells]
 
     def get_remaining_slots_str(self, level: int = None):
-        """@:param level: The level of spell slot to return.
+        """:param level: The level of spell slot to return.
         :returns A string representing the character's remaining spell slots."""
         out = ''
         if level:
@@ -466,7 +471,7 @@ class Character(Spellcaster):
                     filled = '\u25c9' * remaining
                     empty = '\u3007' * numEmpty
                     out += f"`{level}` {filled}{empty}\n"
-        if out == '':
+        if not out:
             out = "No spell slots."
         return out
 
@@ -494,7 +499,7 @@ class Character(Spellcaster):
 
         val = self.spellbook.get_slots(level) - 1
         if val < 0:
-            raise CounterOutOfBounds()
+            raise CounterOutOfBounds("You do not have any spell slots of this level remaining.")
 
         self.set_remaining_slots(level, val)
 

@@ -78,8 +78,8 @@ class ConsumableException(AvraeException):
 class CounterOutOfBounds(ConsumableException):
     """Raised when a counter is set to a value out of bounds."""
 
-    def __init__(self):
-        super().__init__("The new value is out of bounds.")
+    def __init__(self, msg=None):
+        super().__init__(msg or "The new value is out of bounds.")
 
 
 class NoReset(ConsumableException):

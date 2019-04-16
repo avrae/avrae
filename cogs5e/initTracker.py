@@ -265,7 +265,8 @@ class InitTracker:
               -phrase [flavor text]
               -p [init value]
               -h (same as !init add)
-              --group (same as !init add)"""
+              --group (same as !init add)
+              -ping (same as !init opt)"""
         char = await Character.from_ctx(ctx)
         character = char.character
 
@@ -314,12 +315,13 @@ class InitTracker:
         group = args.last('group')
         controller = str(ctx.author.id)
         private = args.last('h', type_=bool)
+        ping = args.last('ping', type_=bool)
         bonus = roll(bonus).total
 
         combat = await Combat.from_ctx(ctx)
 
         me = await PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
-                                                  char.get_resists(), ctx, combat, char.id, str(ctx.author.id), char)
+                                                  char.get_resists(), ctx, combat, ping, char.id, str(ctx.author.id), char)
 
         if combat.get_combatant(char.get_name()) is not None:
             await ctx.send("Combatant already exists.")
@@ -523,7 +525,8 @@ class InitTracker:
         -neutral <DMGTYPE>
         -group <GROUP> (changes group)
         -max <MAXHP> (sets max hp)
-        -hp <HP> (sets current hp)"""
+        -hp <HP> (sets current hp)
+        -ping (toggles whether the controller gets a ping when attacked)"""
         combat = await Combat.from_ctx(ctx)
 
         combatant = await combat.select_combatant(name)
@@ -533,8 +536,10 @@ class InitTracker:
 
         private = combatant.isPrivate
         controller = combatant.controller
+        ping = combatant.isPing
         args = argparse(args)
         out = ''
+        print(ping)
 
         if args.last('h', type_=bool):
             private = not private
@@ -607,6 +612,10 @@ class InitTracker:
             hp = args.last('hp', type_=int)
             combatant.set_hp(hp)
             out += "\u2705 Combatant HP set to {}.\n".format(hp)
+        if args.last('ping', type_=bool):
+            ping = not ping
+            combatant.isPing = ping
+            out += "\u2705 Combatant will {} pinged when attack.\n".format('be' if ping else 'not be')
 
         if combatant.isPrivate:
             controller = ctx.guild.get_member(int(combatant.controller))
@@ -634,6 +643,8 @@ class InitTracker:
             status = combatant.get_status(private=private)
             if private and isinstance(combatant, MonsterCombatant):
                 status = f"{status}\n* This creature is a {combatant.monster_name}."
+            if combatant.isPing:
+                status = f"{status}\n* The controller of this combatant will be pinged when attacked."
         else:
             status = "\n".join([co.get_status(private=private and str(ctx.author.id) == co.controller) for co in
                                 combatant.get_combatants()])
@@ -928,7 +939,7 @@ class InitTracker:
         if target.ac is not None:
             if target.hp is not None:
                 embed.set_footer(text="{}: {}".format(target.name, target.get_hp_str()))
-                if target.isPrivate:
+                if target.isPrivate or target.isPing:
                     try:
                         controller = ctx.guild.get_member(int(target.controller))
                         await controller.send(

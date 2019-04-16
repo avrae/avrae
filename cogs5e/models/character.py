@@ -7,11 +7,10 @@ import discord
 
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import ScriptingEvaluator
-from cogs5e.models.sheet.spellcasting import Spellbook, Spellcaster, SpellbookSpell
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
-from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset, \
-    OutdatedSheet
+from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset
 from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
+from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell, Spellcaster
 from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
@@ -176,6 +175,8 @@ class Character(Spellcaster):
                  resistances: dict, saves: dict, ac: int, max_hp: int, hp: int, temp_hp: int, cvars: dict,
                  options: dict, overrides: dict, consumables: list, death_saves: dict, spellbook: dict, live: str,
                  race: str, background: str, **kwargs):
+        if kwargs:
+            log.warning(f"Unused kwargs: {kwargs}")
         # sheet metadata
         self._owner = owner
         self._upstream = upstream
@@ -439,7 +440,7 @@ class Character(Spellcaster):
         """Resets successful and failed death saves to 0."""
         self.death_saves.reset()
 
-    # ---------- SPELLBOOK ---------- TODO
+    # ---------- SPELLBOOK ----------
     def get_spell_list(self):
         """:returns list - a list of the names of all spells the character can cast. """
         return [s.name for s in self.spellbook.spells]
@@ -450,16 +451,16 @@ class Character(Spellcaster):
         out = ''
         if level:
             assert 0 < level < 10
-            _max = self.get_max_spellslots(level)
-            remaining = self.get_remaining_slots(level)
+            _max = self.spellbook.get_max_slots(level)
+            remaining = self.spellbook.get_slots(level)
             numEmpty = _max - remaining
             filled = '\u25c9' * remaining
             empty = '\u3007' * numEmpty
             out += f"`{level}` {filled}{empty}\n"
         else:
             for level in range(1, 10):
-                _max = self.get_max_spellslots(level)
-                remaining = self.get_remaining_slots(level)
+                _max = self.spellbook.get_max_slots(level)
+                remaining = self.spellbook.get_slots(level)
                 if _max:
                     numEmpty = _max - remaining
                     filled = '\u25c9' * remaining
@@ -469,18 +470,18 @@ class Character(Spellcaster):
             out = "No spell slots."
         return out
 
-    def set_remaining_slots(self, level: int, value: int, sync: bool = True):
+    def set_remaining_slots(self, level: int, value: int):
         """Sets the character's remaining spell slots of level level.
         :param level - The spell level.
         :param value - The number of remaining spell slots."""
         if not 0 < level < 10:
             raise InvalidSpellLevel()
-        if not 0 <= value <= self.get_max_spellslots(level):
+        if not 0 <= value <= self.spellbook.get_max_slots(level):
             raise CounterOutOfBounds()
 
         self.spellbook.set_slots(level, value)
 
-        if self._live_integration and sync:
+        if self._live_integration:
             self._live_integration.sync_slots()
 
     def use_slot(self, level: int):
@@ -517,34 +518,21 @@ class Character(Spellcaster):
         """Adds a spell to the character's known spell list.
         :param spell (Spell) - the Spell.
         :returns self"""
-        self.spellbook.add(SpellbookSpell.from_spell(spell))
+        sbs = SpellbookSpell.from_spell(spell)
+        self.spellbook.spells.append(sbs)
+        self.overrides.spells.append(sbs)
 
-        if not self.live:
-            self.character['overrides']['spells'].append({
-                'name': spell.name,
-                'strict': spell.source != 'homebrew'
-            })
-        return self
-
-    def remove_known_spell(self, spell_name):
+    def remove_known_spell(self, sb_spell):
         """
         Removes a spell from the character's spellbook override.
-        :param spell_name: (str) The name of the spell to remove.
-        :return: (str) The name of the removed spell.
+        :param sb_spell: The spell to remove.
+        :type sb_spell SpellbookSpell
         """
-        override = next((s for s in self.character['overrides'].get('spells', [])
-                         if isinstance(s, str) and spell_name.lower() == s.lower() or
-                         isinstance(s, dict) and s['name'].lower() == spell_name.lower()), None)
-        if override:
-            self.character['overrides']['spells'].remove(override)
-            if override in self.character['spellbook']['spells']:
-                self.character['spellbook']['spells'].remove(override)
-        return override
+        self.overrides.spells.remove(sb_spell)
+        self.spellbook.spells.remove(sb_spell)
 
     # ---------- CUSTOM COUNTERS ----------
     async def select_consumable(self, ctx, name):
-        """:param name (str): The name of the consumable to search for.
-        :returns dict - the consumable."""
         return await search_and_select(ctx, self.consumables, name, lambda ctr: ctr.name)
 
     def sync_consumable(self, ctr):
@@ -563,13 +551,13 @@ class Character(Spellcaster):
                 reset.append(ctr.name)
         return reset
 
-    # ---------- RESTING ---------- TODO
+    # ---------- RESTING ----------
     def on_hp(self):
         """Resets all applicable consumables.
         Returns a list of the names of all reset counters."""
         reset = []
         reset.extend(self._reset_custom('hp'))
-        if self.get_current_hp() > 0:  # lel
+        if self.get_current_hp() > 0:
             self.reset_death_saves()
             reset.append("Death Saves")
         return reset

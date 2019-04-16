@@ -26,10 +26,11 @@ class Spellbook:
         self.slots[level] = value
 
     def reset_slots(self):
-        pass
+        for level in range(1, 10):
+            self.set_slots(level, self.get_max_slots(level))
 
-    def add(self):
-        pass
+    def get_max_slots(self, level):
+        return self.max_slots.get(level, 0)
 
 
 class SpellbookSpell:

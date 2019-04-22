@@ -3,11 +3,10 @@ import logging
 import random
 import re
 
-import discord
-
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
+from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Resistances, Saves, Skills, Spellbook, SpellbookSpell, \
     Spellcaster
@@ -15,16 +14,6 @@ from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
 
-SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'intelligence', 'athletics': 'strength',
-             'deception': 'charisma', 'history': 'intelligence', 'initiative': 'dexterity', 'insight': 'wisdom',
-             'intimidation': 'charisma', 'investigation': 'intelligence', 'medicine': 'wisdom',
-             'nature': 'intelligence', 'perception': 'wisdom', 'performance': 'charisma',
-             'persuasion': 'charisma', 'religion': 'intelligence', 'sleightOfHand': 'dexterity', 'stealth': 'dexterity',
-             'survival': 'wisdom', 'strengthSave': 'strength', 'dexteritySave': 'dexterity',
-             'constitutionSave': 'constitution', 'intelligenceSave': 'intelligence', 'wisdomSave': 'wisdom',
-             'charismaSave': 'charisma',
-             'strength': 'strength', 'dexterity': 'dexterity', 'constitution': 'constitution',
-             'intelligence': 'intelligence', 'wisdom': 'wisdom', 'charisma': 'charisma'}
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
 
 
@@ -256,14 +245,8 @@ class Character(Spellcaster):
     def get_name(self):
         return self.name
 
-    def get_image(self):
-        return self.image
-
     def get_color(self):
         return self.options.get('color', random.randint(0, 0xffffff))
-
-    def get_ac(self):
-        return self.ac
 
     def get_resists(self):
         """
@@ -273,16 +256,9 @@ class Character(Spellcaster):
         """
         return {'resist': self.resistances.resist, 'immune': self.resistances.immune, 'vuln': self.resistances.vuln}
 
-    def get_max_hp(self):
-        return self.max_hp
-
     def get_level(self):
         """:returns int - the character's total level."""
         return self.levels.total_level
-
-    def get_prof_bonus(self):
-        """:returns int - the character's proficiency bonus."""
-        return self.stats.prof_bonus
 
     def get_mod(self, stat):
         """
@@ -291,14 +267,6 @@ class Character(Spellcaster):
         :return: The character's relevant stat modifier.
         """
         return self.stats.get_mod(stat)
-
-    def get_saves(self):
-        """:returns dict - the character's saves and modifiers."""
-        return self.saves
-
-    def get_skills(self):
-        """:returns dict - the character's skills and modifiers."""
-        return self.skills
 
     def get_attacks(self):
         """
@@ -393,9 +361,9 @@ class Character(Spellcaster):
 
     def get_hp_str(self):
         hp = self.get_current_hp()
-        out = f"{hp}/{self.get_max_hp()}"
-        if self.get_temp_hp():
-            out += f' ({self.get_temp_hp()} temp)'
+        out = f"{hp}/{self.max_hp}"
+        if self.temp_hp:
+            out += f' ({self.temp_hp} temp)'
         return out
 
     def set_hp(self, newValue):
@@ -420,10 +388,7 @@ class Character(Spellcaster):
     def reset_hp(self):
         """Resets the character's HP to max and THP to 0."""
         self.set_temp_hp(0)
-        self.set_hp(self.get_max_hp())
-
-    def get_temp_hp(self):
-        return self.temp_hp
+        self.set_hp(self.max_hp)
 
     def set_temp_hp(self, temp_hp):
         self.temp_hp = max(0, temp_hp)  # 0 ≤ temp_hp
@@ -604,80 +569,59 @@ class Character(Spellcaster):
 
     # ---------- MISC ---------- TODO
     def get_sheet_embed(self):
-        stats = self.get_stats()
-        hp = self.get_max_hp()
-        skills = self.get_skills()
-        attacks = self.get_attacks()
-        saves = self.get_saves()
-        skill_effects = self.get_skill_effects()
+        embed = EmbedWithCharacter(self)
+        desc_details = []
 
-        resists = self.get_resists()
-        resist = resists['resist']
-        immune = resists['immune']
-        vuln = resists['vuln']
-        resistStr = ''
-        if len(resist) > 0:
-            resistStr += "\nResistances: " + ', '.join(resist).title()
-        if len(immune) > 0:
-            resistStr += "\nImmunities: " + ', '.join(immune).title()
-        if len(vuln) > 0:
-            resistStr += "\nVulnerabilities: " + ', '.join(vuln).title()
+        # race/class (e.g. Tiefling Bard/Warlock)
+        classes = '/'.join(f"{cls} {lvl}" for cls, lvl in self.levels)
+        desc_details.append(f"{self.race} {classes}")
 
-        embed = discord.Embed()
-        embed.colour = self.get_color()
-        embed.title = self.get_name()
-        embed.set_thumbnail(url=self.get_image())
+        # prof bonus
+        desc_details.append(f"**Proficiency Bonus**: {self.stats.prof_bonus:+}")
 
-        embed.add_field(name="HP/Level", value=f"**HP:** {hp}\nLevel {self.get_level()}{resistStr}")
-        embed.add_field(name="AC", value=str(self.get_ac()))
+        # combat details
+        desc_details.append(f"**AC**: {self.ac}")
+        desc_details.append(f"**HP**: {self.get_hp_str()}")
+        desc_details.append(f"**Initiative**: {self.skills.initiative.value:+}")
 
-        embed.add_field(name="Stats", value="**STR:** {strength} ({strengthMod:+})\n" \
-                                            "**DEX:** {dexterity} ({dexterityMod:+})\n" \
-                                            "**CON:** {constitution} ({constitutionMod:+})\n" \
-                                            "**INT:** {intelligence} ({intelligenceMod:+})\n" \
-                                            "**WIS:** {wisdom} ({wisdomMod:+})\n" \
-                                            "**CHA:** {charisma} ({charismaMod:+})".format(**stats))
+        # stats
+        desc_details.append(str(self.stats))
+        save_profs = str(self.saves)
+        if save_profs:
+            desc_details.append(f"**Save Proficiencies**: {save_profs}")
+        skill_profs = str(self.skills)
+        if skill_profs:
+            desc_details.append(f"**Skill Proficiencies**: {skill_profs}")
+        desc_details.append(f"**Senses**: passive Perception {10 + self.skills.perception.value}")
 
-        savesStr = ''
-        for save in ('strengthSave', 'dexteritySave', 'constitutionSave', 'intelligenceSave', 'wisdomSave',
-                     'charismaSave'):
-            if skill_effects.get(save):
-                skill_effect = f"({skill_effects.get(save)})"
-            else:
-                skill_effect = ''
-            savesStr += '**{}**: {:+} {}\n'.format(save[:3].upper(), saves.get(save), skill_effect)
+        # resists
+        resists = str(self.resistances)
+        if resists:
+            desc_details.append(resists)
 
-        embed.add_field(name="Saves", value=savesStr)
+        embed.description = '\n'.join(desc_details)
 
-        def cc_to_normal(string):
-            return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string)
+        # attacks TODO
 
-        skillsStr = ''
-        for skill, mod in sorted(skills.items()):
-            if 'Save' not in skill:
-                if skill_effects.get(skill):
-                    skill_effect = f"({skill_effects.get(skill)})"
-                else:
-                    skill_effect = ''
-                skillsStr += '**{}**: {:+} {}\n'.format(cc_to_normal(skill), mod, skill_effect)
+        # sheet url?
 
-        embed.add_field(name="Skills", value=skillsStr.title())
-
-        tempAttacks = []
-        for a in attacks:
-            damage = a['damage'] if a['damage'] is not None else 'no'
-            if a['attackBonus'] is not None:
-                bonus = a['attackBonus']
-                tempAttacks.append(f"**{a['name']}:** +{bonus} To Hit, {damage} damage.")
-            else:
-                tempAttacks.append(f"**{a['name']}:** {damage} damage.")
-        if not tempAttacks:
-            tempAttacks = ['No attacks.']
-        a = '\n'.join(tempAttacks)
-        if len(a) > 1023:
-            a = ', '.join(atk['name'] for atk in attacks)
-        if len(a) > 1023:
-            a = "Too many attacks, values hidden!"
-        embed.add_field(name="Attacks", value=a)
+        # attacks = self.get_attacks()
+        #
+        # tempAttacks = []
+        # for a in attacks:
+        #     damage = a['damage'] if a['damage'] is not None else 'no'
+        #     if a['attackBonus'] is not None:
+        #         bonus = a['attackBonus']
+        #         tempAttacks.append(f"**{a['name']}:** +{bonus} To Hit, {damage} damage.")
+        #     else:
+        #         tempAttacks.append(f"**{a['name']}:** {damage} damage.")
+        # if not tempAttacks:
+        #     tempAttacks = ['No attacks.']
+        # a = '\n'.join(tempAttacks)
+        # if len(a) > 1023:
+        #     a = ', '.join(atk['name'] for atk in attacks)
+        # if len(a) > 1023:
+        #     a = "Too many attacks, values hidden!"
+        # embed.add_field(name="Attacks", value=a)
 
         return embed

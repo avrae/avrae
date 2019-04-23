@@ -45,15 +45,16 @@ class ManualOverrides:
             spells = []
         self.desc = desc
         self.image = image
-        self.attacks = attacks
-        self.spells = spells
+        self.attacks = [Attack.from_dict(a) for a in attacks]
+        self.spells = [SpellbookSpell.from_dict(s) for s in spells]
 
     @classmethod
     def from_dict(cls, d):
         return cls(**d)
 
     def to_dict(self):
-        return {"desc": self.desc, "image": self.image, "attacks": self.attacks, "spells": self.spells}
+        return {"desc": self.desc, "image": self.image, "attacks": [a.to_dict() for a in self.attacks],
+                "spells": [s.to_dict() for s in self.spells]}
 
 
 class DeathSaves:

@@ -57,7 +57,7 @@ class SpellbookSpell:
 class Spellcaster:
     def __init__(self, spellbook=None):
         if spellbook is None:
-            spellbook = Spellbook({}, [])
+            spellbook = Spellbook({}, {}, [])
         self._spellbook = spellbook
 
     @property

@@ -1,5 +1,5 @@
 from utils.constants import SAVE_NAMES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
-from utils.functions import camel_to_title
+from utils.functions import camel_to_title, verbose_stat
 
 
 class BaseStats:
@@ -42,6 +42,11 @@ class BaseStats:
             f"**INT**: {self.intelligence} ({(self.intelligence - 10) // 2:+}) " \
             f"**WIS**: {self.wisdom} ({(self.wisdom - 10) // 2:+}) " \
             f"**CHA**: {self.charisma} ({(self.charisma - 10) // 2:+})"
+
+    def __getitem__(self, item):  # little bit hacky, but works
+        if item not in STAT_NAMES:
+            raise ValueError(f"{item} is not a stat.")
+        return getattr(self, item)
 
 
 class Levels:
@@ -146,6 +151,12 @@ class Saves:
         return {k: self.saves[k].to_dict() for k in SAVE_NAMES}
 
     # ---------- main funcs ----------
+    def get(self, base_stat: str):
+        stat = base_stat[:3].lower()
+        if stat not in STAT_ABBREVIATIONS:
+            raise ValueError(f"{base_stat} is not a base stat.")
+        return self.saves[f"{verbose_stat(stat).lower()}Save"]
+
     def __str__(self):
         out = []
         for stat_name, save_key in zip(STAT_NAMES, SAVE_NAMES):

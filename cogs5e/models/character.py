@@ -10,6 +10,7 @@ from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Resistances, Saves, Skills, Spellbook, SpellbookSpell, \
     Spellcaster
+from utils.constants import STAT_NAMES
 from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
@@ -209,6 +210,7 @@ class Character(Spellcaster):
         super(Character, self).__init__(spellbook)
 
         # live sheet integrations
+        self._live = live
         integration = INTEGRATION_MAP.get(live)
         if integration:
             self._live_integration = integration(self)
@@ -221,11 +223,21 @@ class Character(Spellcaster):
 
     # ---------- Serialization ----------
     @classmethod
-    def from_dict(cls, d):  # TODO
+    def from_dict(cls, d):
         return cls(**d)
 
-    def to_dict(self):  # TODO
-        pass
+    def to_dict(self):
+        return {
+            "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
+            "import_version": self._import_version, "name": self.name, "description": self.description,
+            "image": self.image, "stats": self.stats.to_dict(), "levels": self.levels.to_dict(),
+            "attacks": [a.to_dict() for a in self.attacks], "skills": self.skills.to_dict(),
+            "resistances": self.resistances.to_dict(), "saves": self.saves.to_dict(), "ac": self.ac,
+            "max_hp": self.max_hp, "hp": self.hp, "temp_hp": self.temp_hp, "cvars": self.cvars,
+            "options": self.options.to_dict(), "overrides": self.overrides.to_dict(),
+            "consumables": [co.to_dict() for co in self.consumables], "death_saves": self.death_saves.to_dict(),
+            "spellbook": self._spellbook.to_dict(), "live": self._live, "race": self.race, "background": self.background
+        }
 
     @classmethod
     async def from_ctx(cls, ctx):
@@ -285,7 +297,7 @@ class Character(Spellcaster):
         """Sets the value of a csetting."""
         self.options.set(setting, value)
 
-    # ---------- SCRIPTING ---------- TODO
+    # ---------- SCRIPTING ----------
     async def parse_cvars(self, cstr, ctx):
         """Parses cvars.
         :param ctx: The Context the cvar is parsed in.
@@ -305,35 +317,35 @@ class Character(Spellcaster):
         ops = r"([-+*/().<>=])"
         varstr = str(varstr).strip('<>{}')
 
-        cvars = self.character.get('cvars', {})
-        stat_vars = self.character.get('stat_cvars', {})
-        stat_vars['spell'] = self.get_spell_ab() - self.get_prof_bonus()
+        scope_locals = self.get_scope_locals()
         out = ""
-        tempout = ''
         for substr in re.split(ops, varstr):
             temp = substr.strip()
-            tempout += str(cvars.get(temp, temp)) + " "
-        for substr in re.split(ops, tempout):
-            temp = substr.strip()
-            out += str(stat_vars.get(temp, temp)) + " "
+            out += str(scope_locals.get(temp, temp)) + " "
         return roll(out).total
 
-    def get_cvar(self, name):
-        return self.cvars.get(name)
-
-    def set_cvar(self, name, val: str):
+    def set_cvar(self, name: str, val: str):
         """Sets a cvar to a string value."""
-        if any(c in name for c in '/()[]\\.^$*+?|{}'):
-            raise InvalidArgument("Cvar contains invalid character.")
+        if not name.isidentifier():
+            raise InvalidArgument("Cvar name must be a valid identifier "
+                                  "(contains only a-z, A-Z, 0-9, and _, and not start with a number).")
         self.cvars[name] = str(val)
 
-    def get_cvars(self):
-        return self.cvars
+    def get_scope_locals(self):
+        out = self.cvars
+        out.update({
+            "armor": self.ac, "description": self.description, "hp": self.max_hp, "image": self.image,
+            "level": self.levels.total_level, "proficiencyBonus": self.stats.prof_bonus
+        })
+        for cls, lvl in self.levels:
+            out[f"{cls}Level"] = lvl
+        for stat in STAT_NAMES:
+            out[stat] = self.stats[stat]
+            out[f"{stat}Mod"] = self.stats.get_mod(stat)
+            out[f"{stat}Save"] = self.saves.get(stat)
+        return out
 
-    def get_stat_vars(self):
-        return self.character.get('stat_cvars', {})
-
-    # ---------- DATABASE ---------- TODO
+    # ---------- DATABASE ----------
     async def commit(self, ctx):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
@@ -567,7 +579,7 @@ class Character(Spellcaster):
         reset.extend(self._reset_custom(None))
         return reset
 
-    # ---------- MISC ---------- TODO
+    # ---------- MISC ----------
     def get_sheet_embed(self):
         embed = EmbedWithCharacter(self)
         desc_details = []
@@ -603,10 +615,14 @@ class Character(Spellcaster):
 
         # attacks
         atks = self.get_attacks()
-        out = []
-        for attack in atks[:3]:
-            out.append(str(attack))
-        embed.add_field(name="Attacks", value='\n'.join(out))
+        atk_str = ""
+        for attack in atks:
+            a = f"{str(attack)}\n"
+            if len(atk_str) + len(a) > 1000:
+                atk_str += "[...]"
+                break
+            atk_str += a
+        embed.add_field(name="Attacks", value=atk_str.strip())
 
         # sheet url?
 

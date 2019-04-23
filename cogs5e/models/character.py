@@ -601,27 +601,13 @@ class Character(Spellcaster):
 
         embed.description = '\n'.join(desc_details)
 
-        # attacks TODO
+        # attacks
+        atks = self.get_attacks()
+        out = []
+        for attack in atks[:3]:
+            out.append(str(attack))
+        embed.add_field(name="Attacks", value='\n'.join(out))
 
         # sheet url?
-
-        # attacks = self.get_attacks()
-        #
-        # tempAttacks = []
-        # for a in attacks:
-        #     damage = a['damage'] if a['damage'] is not None else 'no'
-        #     if a['attackBonus'] is not None:
-        #         bonus = a['attackBonus']
-        #         tempAttacks.append(f"**{a['name']}:** +{bonus} To Hit, {damage} damage.")
-        #     else:
-        #         tempAttacks.append(f"**{a['name']}:** {damage} damage.")
-        # if not tempAttacks:
-        #     tempAttacks = ['No attacks.']
-        # a = '\n'.join(tempAttacks)
-        # if len(a) > 1023:
-        #     a = ', '.join(atk['name'] for atk in attacks)
-        # if len(a) > 1023:
-        #     a = "Too many attacks, values hidden!"
-        # embed.add_field(name="Attacks", value=a)
 
         return embed

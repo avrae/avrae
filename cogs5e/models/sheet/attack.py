@@ -13,3 +13,7 @@ class Attack:
         return {"name": self.name, "bonus": self.bonus, "damage": self.damage, "details": self.details}
 
     # ---------- main funcs ----------
+    def __str__(self):
+        if self.bonus:
+            return f"**{self.name}**: {self.bonus:+} to hit, {self.damage or 'no'} damage."
+        return f"**{self.name}**: {self.damage or 'no'} damage."

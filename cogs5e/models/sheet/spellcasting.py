@@ -20,10 +20,10 @@ class Spellbook:
         return spell.name.lower() in {s.name.lower() for s in self.spells}
 
     def get_slots(self, level):
-        return self.slots.get(level, 0)
+        return self.slots.get(str(level), 0)
 
     def set_slots(self, level, value):
-        self.slots[level] = value
+        self.slots[str(level)] = value
 
     def reset_slots(self):
         for level in range(1, 10):

@@ -489,7 +489,7 @@ class Character(Spellcaster):
             self._live_integration.sync_slots()
 
     def can_cast(self, spell, level) -> bool:
-        return self.spellbook.get_slots(level) > 0 and spell.name in self.spellbook
+        return self.spellbook.get_slots(level) > 0 and spell.name in self.spellbook  # todo overrides?
 
     def cast(self, spell, level):
         self.use_slot(level)

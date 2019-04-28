@@ -1,4 +1,6 @@
 import json
+import sys
+import time
 
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.sheet import SpellbookSpell
@@ -8,15 +10,15 @@ from utils.constants import SAVE_NAMES, SKILL_NAMES
 
 def migrate(character):
     name = character['stats']['name']
-    sheet_type = character['type']
-    import_version = character['version']
+    sheet_type = character.get('type')
+    import_version = character.get('version')
     print(f"Migrating {name} - {sheet_type} v{import_version}")
 
     owner = character['owner']
     upstream = character['upstream']
     active = character['active']
 
-    description = character['stats']['description']
+    description = character['stats'].get('description', "No description")
     image = character['stats']['image']
 
     stats = {
@@ -69,12 +71,12 @@ def migrate(character):
 
     # combat
     resistances = {
-        "resist": character['resist'], "immune": character['immune'], "vuln": character['vuln']
+        "resist": character.get('resist', []), "immune": character.get('immune', []), "vuln": character.get('vuln', [])
     }
-    ac = character['armor']
-    max_hp = character['hp']
-    hp = character['consumables']['hp']['value']
-    temp_hp = character['consumables'].get('temphp', {}).get('value', 0)
+    ac = character.get('armor', 10)
+    max_hp = character.get('hp', 4)  # you get 4 hp if your character is that old
+    hp = character.get('consumables', {}).get('hp', {}).get('value', max_hp)
+    temp_hp = character.get('consumables', {}).get('temphp', {}).get('value', 0)
 
     cvars = character.get('cvars', {})
     options = {"options": character.get('settings', {})}
@@ -98,7 +100,7 @@ def migrate(character):
         if isinstance(old_spell, dict):
             spl = SpellbookSpell(old_spell['name'], old_spell['strict'])
         else:
-            spl = SpellbookSpell(old_spell, False)
+            spl = SpellbookSpell(old_spell, True)
         override_spells.append(spl.to_dict())
     overrides = {
         "desc": character.get('overrides', {}).get('desc'), "image": character.get('overrides', {}).get('image'),
@@ -107,7 +109,7 @@ def migrate(character):
 
     # other things
     consumables = []
-    for cname, cons in character['consumables'].get('custom', {}).items():
+    for cname, cons in character.get('consumables', {}).get('custom', {}).items():
         value = cons['value']
         minv = cons.get('min')
         maxv = cons.get('max')
@@ -118,26 +120,26 @@ def migrate(character):
         consumables.append(counter.to_dict())
 
     death_saves = {
-        "successes": character['consumables']['deathsaves']['success']['value'],
-        "fails": character['consumables']['deathsaves']['fail']['value']
+        "successes": character.get('consumables', {}).get('deathsaves', {}).get('success', {}).get('value', 0),
+        "fails": character.get('consumables', {}).get('deathsaves', {}).get('fail', {}).get('value', 0)
     }
 
     # spellcasting
     slots = {}
     max_slots = {}
     for l in range(1, 10):
-        slots[str(l)] = character['consumables']['spellslots'][str(l)]['value']
-        max_slots[str(l)] = character['spellbook']['spellslots'][str(l)]
+        slots[str(l)] = character.get('consumables', {}).get('spellslots', {}).get(str(l), {}).get('value', 0)
+        max_slots[str(l)] = character.get('spellbook', {}).get('spellslots', {}).get(str(l), 0)
     spells = []
-    for old_spell in character['spellbook']['spells']:
+    for old_spell in character.get('spellbook', {}).get('spells', []):
         if isinstance(old_spell, dict):
             spl = SpellbookSpell(old_spell['name'], old_spell['strict'])
         else:
-            spl = SpellbookSpell(old_spell, False)
+            spl = SpellbookSpell(old_spell, True)
         spells.append(spl.to_dict())
     spellbook = {
         "slots": slots, "max_slots": max_slots, "spells": spells,
-        "dc": character['spellbook']['dc'], "sab": character['spellbook']['attackBonus'],
+        "dc": character.get('spellbook', {}).get('dc'), "sab": character.get('spellbook', {}).get('attackBonus'),
         "caster_level": character['levels']['level']
     }
 
@@ -156,18 +158,60 @@ def migrate(character):
 def local_test(fp):
     with open(fp) as f:
         characters = json.load(f)
+    print(f"Migrating {len(characters)} characters...")
 
     new_characters = []
     for c in characters:
         new_characters.append(migrate(c).to_dict())
     out = fp.split('/')[-1]
     with open(f"temp/new-{out}", 'w') as f:
-        json.dump(new_characters, f)
+        json.dump(new_characters, f, indent=2)
+    print(f"Done migrating {len(new_characters)} characters.")
 
 
-def from_db(mdb):
-    pass
+async def from_db(mdb):
+    import pymongo
+    from bson import ObjectId
 
+    coll_names = await mdb.list_collection_names()
+    if "old_characters" not in coll_names:
+        print("Renaming characters to old_characters...")
+        await mdb.characters.rename("old_characters")
+
+    num_old_chars = await mdb.old_characters.count_documents({})
+    print(f"Migrating {num_old_chars} characters...")
+
+    async for old_char in mdb.old_characters.find({}):
+        new_char = migrate(old_char).to_dict()
+        new_char['_id'] = ObjectId(old_char['_id'])
+        await mdb.characters.insert_one(new_char)
+
+    print("Creating compound index on owner|upstream...")
+    await mdb.characters.create_index([("owner", pymongo.ASCENDING),
+                                       ("upstream", pymongo.ASCENDING)],
+                                      unique=True)
+
+    num_chars = await mdb.old_characters.count_documents({})
+    print(f"Done migrating {num_chars}/{num_old_chars} characters.")
+    if num_chars == num_old_chars:
+        print("It's probably safe to drop the collection old_characters now.")
 
 if __name__ == '__main__':
-    local_test("temp/collection_char.json")
+    import asyncio
+    import motor.motor_asyncio
+    import credentials
+
+    start = time.time()
+
+    if 'mdb' not in sys.argv:
+        local_test("temp/characters.json")
+    else:
+        input("Running full MDB migration. Press enter to continue.")
+        mdb = motor.motor_asyncio.AsyncIOMotorClient(credentials.test_mongo_url
+                                                     if 'test' in sys.argv else
+                                                     "mongodb://localhost:27017").avrae
+
+        asyncio.get_event_loop().run_until_complete(from_db(mdb))
+
+    end = time.time()
+    print(f"Done! Took {end - start} seconds.")

@@ -7,7 +7,7 @@ import traceback
 import discord
 import motor.motor_asyncio
 import redis
-from aiohttp import ClientResponseError
+from aiohttp import ClientResponseError, ClientOSError
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
@@ -174,23 +174,15 @@ async def on_command_error(ctx, error):
             return await ctx.send("Error: I tried to edit or delete a message that no longer exists.")
         if isinstance(original, ValueError) and str(original) in ("No closing quotation", "No escaped character"):
             return await ctx.send("Error: No closing quotation.")
-        if isinstance(original, AttributeError) and str(original) in ("'NoneType' object has no attribute 'name'",):
-            return await ctx.send("Error in Discord API. Please try again.")
-        if isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError)):
+        if isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError)):
             return await ctx.send("Error in Discord API. Please try again.")
         if isinstance(original, HTTPException):
             if original.response.status == 400:
                 return await ctx.send("Error: Message is too long, malformed, or empty.")
             if original.response.status == 500:
                 return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
-        if isinstance(original, redis.ResponseError):
-            await ctx.send(
-                "Error: I am having an issue writing to my database. Please report this to the dev!")
-            return await bot.owner.send(f"Database error!\n{repr(original)}")
         if isinstance(original, OverflowError):
-            return await ctx.send(
-                f"Error: A number is too large for me to store. "
-                f"This generally means you've done something terribly wrong.")
+            return await ctx.send(f"Error: A number is too large for me to store.")
 
     error_msg = gen_error_message()
 

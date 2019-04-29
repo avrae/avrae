@@ -12,8 +12,6 @@ import discord
 import psutil
 from discord.ext import commands
 
-from cogs5e.models.embeds import EmbedWithAuthor
-
 PATRON_EYLESIS = 227168575469780992
 
 

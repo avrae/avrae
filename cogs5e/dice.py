@@ -261,7 +261,7 @@ class Dice:
                 result = roll(roll_str, adv=adv, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
-                embed.add_field(name=f"Check {i+1}", value=result.skeleton)
+                embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:
@@ -345,7 +345,7 @@ class Dice:
                 result = roll(roll_str, adv=adv, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
-                embed.add_field(name=f"Check {i+1}", value=result.skeleton)
+                embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:

@@ -6,8 +6,7 @@ import traceback
 
 import discord
 import motor.motor_asyncio
-import redis
-from aiohttp import ClientResponseError, ClientOSError
+from aiohttp import ClientOSError, ClientResponseError
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError

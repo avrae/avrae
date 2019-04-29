@@ -336,7 +336,8 @@ class Character(Spellcaster):
         out = self.cvars
         out.update({
             "armor": self.ac, "description": self.description, "hp": self.max_hp, "image": self.image,
-            "level": self.levels.total_level, "proficiencyBonus": self.stats.prof_bonus
+            "level": self.levels.total_level, "proficiencyBonus": self.stats.prof_bonus,
+            "spell": self.stats.prof_bonus - self.spellbook.sab, "color": hex(self.get_color())[2:]
         })
         for cls, lvl in self.levels:
             out[f"{cls}Level"] = lvl

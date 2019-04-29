@@ -31,10 +31,9 @@ class MathEvaluator(SimpleEval):
 
     @classmethod
     def with_character(cls, character, spell_override=None):
-        names = {}
-        names.update(character.get_cvars())
-        names.update(character.get_stat_vars())
-        names['spell'] = spell_override or (character.get_spell_ab() - character.get_prof_bonus())
+        names = character.get_scope_locals()
+        if spell_override:
+            names['spell'] = spell_override
         return cls(names=names)
 
     def parse(self, string):
@@ -111,18 +110,14 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         return inst
 
     async def with_character(self, character):
-        self.names.update(character.get_cvars())
-        self.names.update(character.get_stat_vars())
-        self.names['spell'] = character.get_spell_ab() - character.get_prof_bonus()
-        self.names['color'] = hex(character.get_color())[2:]
-        self.names["currentHp"] = character.get_current_hp()
+        self.names.update(character.get_scope_locals())
 
         if 'combat' in self._cache and self._cache['combat']:
             self._cache['combat'].func_set_character(character)
 
         self._cache['character'] = character
 
-        # define character-specific functions
+        # define character-specific functions TODO here and below
         def get_cc(name):
             return character.get_consumable_value(name)
 

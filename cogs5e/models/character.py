@@ -93,10 +93,15 @@ class DeathSaves:
 
 
 class CustomCounter:
+    RESET_MAP = {'short': "Short Rest",
+                 'long': "Long Rest",
+                 'reset': "`!cc reset`",
+                 'hp': "Gaining HP"}
+
     def __init__(self, character, name, value, minv=None, maxv=None, reset=None, display_type=None, live_id=None):
         self._character = character
         self.name = name
-        self.value = value
+        self._value = value
         self.min = minv
         self.max = maxv
         self.reset_on = reset
@@ -112,7 +117,7 @@ class CustomCounter:
         return cls(char, **d)
 
     def to_dict(self):
-        return {"name": self.name, "value": self.value, "minv": self.min, "maxv": self.max, "reset": self.reset_on,
+        return {"name": self.name, "value": self._value, "minv": self.min, "maxv": self.max, "reset": self.reset_on,
                 "display_type": self.display_type, "live_id": self.live_id}
 
     @classmethod
@@ -133,7 +138,7 @@ class CustomCounter:
             raise InvalidArgument("Bubble display requires a max and min value.")
 
         value = character.evaluate_cvar(maxv) or 0
-        return cls(character, name, value, minv, maxv, reset, display_type, live_id)
+        return cls(character, name.strip(), value, minv, maxv, reset, display_type, live_id)
 
     # ---------- main funcs ----------
     def get_min(self):
@@ -146,6 +151,10 @@ class CustomCounter:
             self._max = self._character.evaluate_cvar(self.max) or 2 ** 32
         return self._max
 
+    @property
+    def value(self):
+        return self._value
+
     def set(self, new_value: int, strict=False):
         minv = self.get_min()
         maxv = self.get_max()
@@ -154,7 +163,7 @@ class CustomCounter:
             raise CounterOutOfBounds()
 
         new_value = min(max(minv, new_value), maxv)
-        self.value = new_value
+        self._value = new_value
 
         if self.live_id:
             self._character.sync_consumable(self)
@@ -163,6 +172,46 @@ class CustomCounter:
         if self.reset_on == 'none' or self.max is None:
             raise NoReset()
         self.set(self.get_max())
+
+    def full_str(self):
+        _min = self.get_min()
+        _max = self.get_max()
+        _reset = self.RESET_MAP.get(self.reset_on)
+
+        if self.display_type == 'bubble':
+            assert _max is not None
+            numEmpty = _max - self.value
+            filled = '\u25c9' * self.value
+            empty = '\u3007' * numEmpty
+            val = f"{filled}{empty}\n"
+        else:
+            val = f"**Current Value**: {self.value}\n"
+            if _min is not None and _max is not None:
+                val += f"**Range**: {_min} - {_max}\n"
+            elif _min is not None:
+                val += f"**Range**: {_min}+\n"
+            elif _max is not None:
+                val += f"**Range**: <={_max}\n"
+        if _reset:
+            val += f"**Resets On**: {_reset}\n"
+        return val.strip()
+
+    def __str__(self):
+        _max = self.get_max()
+
+        if self.display_type == 'bubble':
+            assert _max is not None
+            numEmpty = _max - self.value
+            filled = '\u25c9' * self.value
+            empty = '\u3007' * numEmpty
+            out = f"{filled}{empty}"
+        else:
+            if _max is not None:
+                out = f"{self.value}/{_max}"
+            else:
+                out = str(self.value)
+
+        return out
 
 
 class Character(Spellcaster):
@@ -194,8 +243,8 @@ class Character(Spellcaster):
         # hp/ac
         self.ac = ac
         self.max_hp = max_hp
-        self.hp = hp
-        self.temp_hp = temp_hp
+        self._hp = hp
+        self._temp_hp = temp_hp
 
         # customization
         self.cvars = cvars
@@ -234,7 +283,7 @@ class Character(Spellcaster):
             "image": self.image, "stats": self.stats.to_dict(), "levels": self.levels.to_dict(),
             "attacks": [a.to_dict() for a in self.attacks], "skills": self.skills.to_dict(),
             "resistances": self.resistances.to_dict(), "saves": self.saves.to_dict(), "ac": self.ac,
-            "max_hp": self.max_hp, "hp": self.hp, "temp_hp": self.temp_hp, "cvars": self.cvars,
+            "max_hp": self.max_hp, "hp": self._hp, "temp_hp": self._temp_hp, "cvars": self.cvars,
             "options": self.options.to_dict(), "overrides": self.overrides.to_dict(),
             "consumables": [co.to_dict() for co in self.consumables], "death_saves": self.death_saves.to_dict(),
             "spellbook": self._spellbook.to_dict(), "live": self._live, "race": self.race, "background": self.background
@@ -369,60 +418,44 @@ class Character(Spellcaster):
         )
 
     # ---------- HP ----------
-    def get_current_hp(self):
-        """Returns the integer value of the remaining HP."""
-        return self.hp
+    @property
+    def hp(self):
+        return self._hp
 
-    def get_hp_str(self):
-        hp = self.get_current_hp()
-        out = f"{hp}/{self.max_hp}"
-        if self.temp_hp:
-            out += f' ({self.temp_hp} temp)'
-        return out
-
-    def set_hp(self, newValue):
-        """Sets the character's hit points. Doesn't touch THP."""
-        self.hp = newValue
+    @hp.setter
+    def hp(self, value):
+        self._hp = value
         self.on_hp()
 
         if self._live_integration:
             self._live_integration.sync_hp()
 
+    def get_hp_str(self):
+        out = f"{self.hp}/{self.max_hp}"
+        if self.temp_hp:
+            out += f' ({self.temp_hp} temp)'
+        return out
+
     def modify_hp(self, value, ignore_temp=False):
         """Modifies the character's hit points. If ignore_temp is True, will deal damage to raw HP, ignoring temp."""
         if value < 0 and not ignore_temp:
             thp = self.temp_hp
-            self.set_temp_hp(self.temp_hp + value)
+            self.temp_hp += value
             value += min(thp, -value)  # how much did the THP absorb?
         self.hp += value
 
-        if self._live_integration:
-            self._live_integration.sync_hp()
-
     def reset_hp(self):
         """Resets the character's HP to max and THP to 0."""
-        self.set_temp_hp(0)
-        self.set_hp(self.max_hp)
+        self.temp_hp = 0
+        self.hp = self.max_hp
 
-    def set_temp_hp(self, temp_hp):
-        self.temp_hp = max(0, temp_hp)  # 0 ≤ temp_hp
+    @property
+    def temp_hp(self):
+        return self._temp_hp
 
-    # ---------- DEATH SAVES ----------
-    def add_successful_ds(self):
-        """Adds a successful death save to the character.
-        Returns True if the character is stable."""
-        self.death_saves.succeed()
-        return self.death_saves.is_stable()
-
-    def add_failed_ds(self):
-        """Adds a failed death save to the character.
-        Returns True if the character is dead."""
-        self.death_saves.fail()
-        return self.death_saves.is_dead()
-
-    def reset_death_saves(self):
-        """Resets successful and failed death saves to 0."""
-        self.death_saves.reset()
+    @temp_hp.setter
+    def temp_hp(self, value):
+        self.temp_hp = max(0, value)  # 0 ≤ temp_hp
 
     # ---------- SPELLBOOK ----------
     def get_spell_list(self):
@@ -490,7 +523,7 @@ class Character(Spellcaster):
             self._live_integration.sync_slots()
 
     def can_cast(self, spell, level) -> bool:
-        return self.spellbook.get_slots(level) > 0 and spell.name in self.spellbook  # todo overrides?
+        return self.spellbook.get_slots(level) > 0 and spell.name in self.spellbook
 
     def cast(self, spell, level):
         self.use_slot(level)
@@ -502,6 +535,8 @@ class Character(Spellcaster):
         """Adds a spell to the character's known spell list.
         :param spell (Spell) - the Spell.
         :returns self"""
+        if spell in self.spellbook:
+            raise InvalidArgument("You already know this spell.")
         sbs = SpellbookSpell.from_spell(spell)
         self.spellbook.spells.append(sbs)
         self.overrides.spells.append(sbs)
@@ -512,6 +547,8 @@ class Character(Spellcaster):
         :param sb_spell: The spell to remove.
         :type sb_spell SpellbookSpell
         """
+        if sb_spell not in self.overrides.spells:
+            raise InvalidArgument("This spell is not in the overrides.")
         self.overrides.spells.remove(sb_spell)
         self.spellbook.spells.remove(sb_spell)
 
@@ -541,8 +578,8 @@ class Character(Spellcaster):
         Returns a list of the names of all reset counters."""
         reset = []
         reset.extend(self._reset_custom('hp'))
-        if self.get_current_hp() > 0:
-            self.reset_death_saves()
+        if self.hp > 0:
+            self.death_saves.reset()
             reset.append("Death Saves")
         return reset
 

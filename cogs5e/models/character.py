@@ -291,6 +291,7 @@ class Character(Spellcaster):
 
     @classmethod
     async def from_ctx(cls, ctx):
+        """:type Character"""
         active_character = await ctx.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "active": True})
         if active_character is None:
             raise NoCharacter()
@@ -336,6 +337,10 @@ class Character(Spellcaster):
         :rtype list[Attack]
         """
         return self.attacks + self.overrides.attacks
+
+    @property
+    def upstream(self):
+        return self._upstream
 
     # ---------- CSETTINGS ----------
     def get_setting(self, setting, default=None):

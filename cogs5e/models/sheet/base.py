@@ -88,6 +88,28 @@ class Skill:
     def to_dict(self):
         return {"value": self.value, "prof": self.prof, "bonus": self.bonus, "adv": self.adv}
 
+    # ---------- main funcs ----------
+    def d20(self, base_adv=None):
+        if base_adv is None:
+            adv = self.adv
+        elif self.adv is None:
+            adv = base_adv
+        elif base_adv is self.adv:
+            adv = self.adv
+        else:
+            adv = None
+
+        if adv is False:
+            base = f"2d20kl1{self.value:+}"
+        elif adv is True:
+            base = f"2d20kh1{self.value:+}"
+        else:
+            base = f"1d20{self.value:+}"
+
+        if self.bonus:
+            return f"{base}{self.bonus:+}"
+        return base
+
 
 class Skills:
     def __init__(self, skills):

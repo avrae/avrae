@@ -266,26 +266,10 @@ class InitTracker:
               -p [init value]
               -h (same as !init add)
               --group (same as !init add)"""
-        char = await Character.from_ctx(ctx)
-        character = char.character
-
-        # if char.get_combat_id():
-        #     return await ctx.send(f"This character is already in a combat. "
-        #                               f"Please leave combat in <#{char.get_combat_id()}> first.\n"
-        #                               f"If this seems like an error, please `!update` your character sheet.")
-        # we just ignore this for now.
-        # I'll figure out a better solution when I actually need it
-
-        skills = character.get('skills')
-        if skills is None:
-            return await ctx.send('You must update your character sheet first.')
-        skill = 'initiative'
+        char: Character = await Character.from_ctx(ctx)
 
         embed = EmbedWithCharacter(char, False)
         embed.colour = char.get_color()
-
-        skill_effects = character.get('skill_effects', {})
-        args += ' ' + skill_effects.get(skill, '')  # dicecloud v7 - autoadv
 
         args = shlex.split(args)
         args = argparse(args)
@@ -293,35 +277,33 @@ class InitTracker:
         b = args.join('b', '+') or None
         p = args.last('p', type_=int)
         phrase = args.join('phrase', '\n') or None
+        group = args.last('group')
 
         if p is None:
+            roll_str = char.skills.initiative.d20(base_adv=adv)
             if b:
-                bonus = '{:+}'.format(skills[skill]) + '+' + b
-                check_roll = roll('1d20' + bonus, adv=adv, inline=True)
-            else:
-                bonus = '{:+}'.format(skills[skill])
-                check_roll = roll('1d20' + bonus, adv=adv, inline=True)
+                roll_str = f"{roll_str}+{b}"
+            check_roll = roll(roll_str, inline=True)
 
-            embed.title = '{} makes an Initiative check!'.format(char.get_name())
+            embed.title = '{} makes an Initiative check!'.format(char.name)
             embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
             init = check_roll.total
         else:
             init = p
-            bonus = 0
-            embed.title = "{} already rolled initiative!".format(char.get_name())
+            embed.title = "{} already rolled initiative!".format(char.name)
             embed.description = "Placed at initiative `{}`.".format(init)
 
-        group = args.last('group')
         controller = str(ctx.author.id)
         private = args.last('h', type_=bool)
-        bonus = roll(bonus).total
+        bonus = char.skills.initiative.value
 
         combat = await Combat.from_ctx(ctx)
 
-        me = await PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
-                                                  char.get_resists(), ctx, combat, char.id, str(ctx.author.id), char)
+        me = await PlayerCombatant.from_character(char.name, controller, init, bonus, char.ac, private,
+                                                  char.get_resists(), ctx, combat, char.upstream, str(ctx.author.id),
+                                                  char)
 
-        if combat.get_combatant(char.get_name()) is not None:
+        if combat.get_combatant(char.name) is not None:
             await ctx.send("Combatant already exists.")
             return
 
@@ -335,7 +317,6 @@ class InitTracker:
 
         await combat.final()
         await ctx.send(embed=embed)
-        char.join_combat(str(ctx.channel.id))
         await char.commit(ctx)
 
     @init.command(name="next", aliases=['n'])

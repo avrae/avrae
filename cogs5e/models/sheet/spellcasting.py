@@ -16,8 +16,8 @@ class Spellbook:
         return {"slots": self.slots, "max_slots": self.max_slots, "spells": [s.to_dict() for s in self.spells],
                 "dc": self.dc, "sab": self.sab, "caster_level": self.caster_level}
 
-    def __contains__(self, spell):
-        return spell.name.lower() in {s.name.lower() for s in self.spells}
+    def __contains__(self, spell_name: str):
+        return spell_name.lower() in {s.name.lower() for s in self.spells}
 
     def get_slots(self, level):
         return self.slots.get(str(level), 0)
@@ -30,7 +30,7 @@ class Spellbook:
             self.set_slots(level, self.get_max_slots(level))
 
     def get_max_slots(self, level):
-        return self.max_slots.get(level, 0)
+        return self.max_slots.get(str(level), 0)
 
 
 class SpellbookSpell:

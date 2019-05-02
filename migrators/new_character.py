@@ -177,6 +177,11 @@ async def from_db(mdb):
     if "old_characters" not in coll_names:
         print("Renaming characters to old_characters...")
         await mdb.characters.rename("old_characters")
+    else:
+        print("Dropping characters_bak and making backup...")
+        if "characters_bak" in coll_names:
+            await mdb.characters_bak.drop()
+        await mdb.characters.rename("characters_bak")
 
     num_old_chars = await mdb.old_characters.count_documents({})
     print(f"Migrating {num_old_chars} characters...")
@@ -194,7 +199,7 @@ async def from_db(mdb):
     num_chars = await mdb.old_characters.count_documents({})
     print(f"Done migrating {num_chars}/{num_old_chars} characters.")
     if num_chars == num_old_chars:
-        print("It's probably safe to drop the collection old_characters now.")
+        print("It's probably safe to drop the collections old_characters and characters_bak now.")
 
 if __name__ == '__main__':
     import asyncio

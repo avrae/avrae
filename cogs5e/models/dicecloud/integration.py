@@ -21,10 +21,10 @@ class DicecloudIntegration(LiveIntegration):
     def sync_hp(self):
         try:
             DicecloudClient.getInstance().meteor_client.update(
-                'self.characters',
+                'characters',
                 {'_id': self.character.upstream[10:]},
                 {'$set': {
-                    "hitPoints.adjustment": self.character.get_current_hp() - self.character.get_max_hp()}
+                    "hitPoints.adjustment": self.character.hp - self.character.max_hp}
                 }, callback=update_callback)
         except MeteorClient.MeteorClientException:
             pass
@@ -33,9 +33,9 @@ class DicecloudIntegration(LiveIntegration):
         spell_dict = {}
         for lvl in range(1, 10):
             spell_dict[f'level{lvl}SpellSlots.adjustment'] = \
-                self.character.get_remaining_slots(lvl) - self.character.get_max_spellslots(lvl)
+                self.character.spellbook.get_slots(lvl) - self.character.spellbook.get_max_slots(lvl)
         try:
-            DicecloudClient.getInstance().meteor_client.update('self.characters', {'_id': self.character.upstream[10:]},
+            DicecloudClient.getInstance().meteor_client.update('characters', {'_id': self.character.upstream[10:]},
                                                                {'$set': spell_dict},
                                                                callback=update_callback)
         except MeteorClient.MeteorClientException:
@@ -45,7 +45,7 @@ class DicecloudIntegration(LiveIntegration):
         used = consumable.value - consumable.get_max()
         try:
             if consumable.live_id in CLASS_RESOURCES:
-                DicecloudClient.getInstance().meteor_client.update('self.characters',
+                DicecloudClient.getInstance().meteor_client.update('characters',
                                                                    {'_id': self.character.upstream[10:]},
                                                                    {'$set': {
                                                                        f"{consumable.live_id}.adjustment": -used}},

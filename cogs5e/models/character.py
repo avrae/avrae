@@ -143,12 +143,18 @@ class CustomCounter:
     # ---------- main funcs ----------
     def get_min(self):
         if self._min is None:
-            self._min = self._character.evaluate_cvar(self.min) or -(2 ** 32)
+            if self.min is None:
+                self._min = -(2 ** 31)
+            else:
+                self._min = self._character.evaluate_cvar(self.min)
         return self._min
 
     def get_max(self):
         if self._max is None:
-            self._max = self._character.evaluate_cvar(self.max) or 2 ** 32
+            if self.max is None:
+                self._max = 2 ** 31 - 1
+            else:
+                self._max = self._character.evaluate_cvar(self.max)
         return self._max
 
     @property
@@ -179,19 +185,19 @@ class CustomCounter:
         _reset = self.RESET_MAP.get(self.reset_on)
 
         if self.display_type == 'bubble':
-            assert _max is not None
+            assert self.max is not None
             numEmpty = _max - self.value
             filled = '\u25c9' * self.value
             empty = '\u3007' * numEmpty
             val = f"{filled}{empty}\n"
         else:
             val = f"**Current Value**: {self.value}\n"
-            if _min is not None and _max is not None:
+            if self.min is not None and self.max is not None:
                 val += f"**Range**: {_min} - {_max}\n"
-            elif _min is not None:
+            elif self.min is not None:
                 val += f"**Range**: {_min}+\n"
-            elif _max is not None:
-                val += f"**Range**: <={_max}\n"
+            elif self.max is not None:
+                val += f"**Range**: \u2264{_max}\n"
         if _reset:
             val += f"**Resets On**: {_reset}\n"
         return val.strip()
@@ -200,13 +206,13 @@ class CustomCounter:
         _max = self.get_max()
 
         if self.display_type == 'bubble':
-            assert _max is not None
+            assert self.max is not None
             numEmpty = _max - self.value
             filled = '\u25c9' * self.value
             empty = '\u3007' * numEmpty
             out = f"{filled}{empty}"
         else:
-            if _max is not None:
+            if self.max is not None:
                 out = f"{self.value}/{_max}"
             else:
                 out = str(self.value)
@@ -398,7 +404,7 @@ class Character(Spellcaster):
         for stat in STAT_NAMES:
             out[stat] = self.stats[stat]
             out[f"{stat}Mod"] = self.stats.get_mod(stat)
-            out[f"{stat}Save"] = self.saves.get(stat)
+            out[f"{stat}Save"] = self.saves.get(stat).value
         return out
 
     # ---------- DATABASE ----------
@@ -438,7 +444,7 @@ class Character(Spellcaster):
     def get_hp_str(self):
         out = f"{self.hp}/{self.max_hp}"
         if self.temp_hp:
-            out += f' ({self.temp_hp} temp)'
+            out += f' (+{self.temp_hp} temp)'
         return out
 
     def modify_hp(self, value, ignore_temp=False):
@@ -460,7 +466,7 @@ class Character(Spellcaster):
 
     @temp_hp.setter
     def temp_hp(self, value):
-        self.temp_hp = max(0, value)  # 0 ≤ temp_hp
+        self._temp_hp = max(0, value)  # 0 ≤ temp_hp
 
     # ---------- SPELLBOOK ----------
     def get_spell_list(self):
@@ -555,7 +561,8 @@ class Character(Spellcaster):
         if sb_spell not in self.overrides.spells:
             raise InvalidArgument("This spell is not in the overrides.")
         self.overrides.spells.remove(sb_spell)
-        self.spellbook.spells.remove(sb_spell)
+        spell_in_book = next(s for s in self.spellbook.spells if s.name == sb_spell.name)
+        self.spellbook.spells.remove(spell_in_book)
 
     # ---------- CUSTOM COUNTERS ----------
     async def select_consumable(self, ctx, name):

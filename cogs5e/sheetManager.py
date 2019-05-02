@@ -24,13 +24,14 @@ from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
-from cogs5e.models.character import Character, SKILL_MAP
+from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import AvraeException, InvalidArgument
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from utils.argparser import argparse
+from utils.constants import SKILL_MAP
 from utils.functions import a_or_an, auth_and_chan, format_d20, get_positivity, list_get
 from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
 
@@ -274,7 +275,7 @@ class SheetManager:
                 result = roll(roll_str, adv=adv, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
-                embed.add_field(name=f"Save {i+1}", value=result.skeleton)
+                embed.add_field(name=f"Save {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:
@@ -365,7 +366,7 @@ class SheetManager:
                 result = roll(roll_str, adv=adv, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
-                embed.add_field(name=f"Check {i+1}", value=result.skeleton)
+                embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:
@@ -516,30 +517,20 @@ class SheetManager:
             pass
 
     @commands.group(aliases=['char'], invoke_without_command=True)
-    async def character(self, ctx, *, name: str = None):
-        """Switches the active character.
-        Breaks for characters created before Jan. 20, 2017."""
+    async def character(self, ctx, *, name: str = None):  # updated
+        """Switches the active character."""
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
-        active_character = next((c for c in user_characters if c['active']), None)
         if not user_characters:
             return await ctx.send('You have no characters.')
 
         if name is None:
-            if active_character is None:
-                return await ctx.send('You have no character active.')
-            return await ctx.send(
-                'Currently active: {}'.format(active_character.get('stats', {}).get('name')))
+            active_character = await Character.from_ctx(ctx)
+            return await ctx.send(f'Currently active: {active_character.name}')
 
-        _character = await search_and_select(ctx, user_characters, name, lambda e: e.get('stats', {}).get('name', ''),
-                                             selectkey=lambda
-                                                 e: f"{e.get('stats', {}).get('name', '')} (`{e['upstream']}`)")
+        selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
+                                                selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
 
-        char_name = _character.get('stats', {}).get('name', 'Unnamed')
-        char_url = _character['upstream']
-
-        name = char_name
-
-        char = Character(_character, char_url)
+        char = Character.from_dict(selected_char)
         await char.set_active(ctx)
 
         try:
@@ -547,7 +538,7 @@ class SheetManager:
         except:
             pass
 
-        await ctx.send("Active character changed to {}.".format(name), delete_after=20)
+        await ctx.send(f"Active character changed to {char.name}.", delete_after=20)
 
     @character.command(name='list')
     async def character_list(self, ctx):
@@ -762,7 +753,7 @@ class SheetManager:
                 if color is None:
                     current_color = hex(char.get_color()) if char.get_setting('color') else "random"
                     out += f'\u2139 Your character\'s current color is {current_color}. ' \
-                           f'Use "{ctx.prefix}csettings color reset" to reset it to random.\n'
+                        f'Use "{ctx.prefix}csettings color reset" to reset it to random.\n'
                 elif color.lower() == 'reset':
                     character['settings']['color'] = None
                     out += "\u2705 Color reset to random.\n"
@@ -782,7 +773,7 @@ class SheetManager:
                 if criton is None:
                     current = str(char.get_setting('criton')) + '-20' if char.get_setting('criton') else "20"
                     out += f'\u2139 Your character\'s current crit range is {current}. ' \
-                           f'Use "{ctx.prefix}csettings criton reset" to reset it to 20.\n'
+                        f'Use "{ctx.prefix}csettings criton reset" to reset it to 20.\n'
                 elif criton.lower() == 'reset':
                     character['settings']['criton'] = None
                     out += "\u2705 Crit range reset to 20.\n"
@@ -806,7 +797,7 @@ class SheetManager:
                     current = str(character['settings'].get('reroll')) if character['settings'].get(
                         'reroll') is not '0' else "0"
                     out += f'\u2139 Your character\'s current reroll is {current}. ' \
-                           f'Use "{ctx.prefix}csettings reroll reset" to reset it.\n'
+                        f'Use "{ctx.prefix}csettings reroll reset" to reset it.\n'
                 elif reroll.lower() == 'reset':
                     character['settings']['reroll'] = '0'
                     out += "\u2705 Reroll reset.\n"
@@ -830,7 +821,7 @@ class SheetManager:
                     current = str(character['settings'].get('critdice')) if character['settings'].get(
                         'critdice') is not '0' else "0"
                     out += f'\u2139 Extra crit dice are currently set to {current}. ' \
-                           f'Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
+                        f'Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
                 elif critdice.lower() == 'reset':
                     character['settings']['critdice'] = 0
                     out += "\u2705 Extra crit dice reset.\n"

@@ -413,7 +413,7 @@ class GameTrack:
         counter = await character.select_consumable(ctx, name)
         character.consumables.remove(counter)
         await character.commit(ctx)
-        await ctx.send(f"Deleted counter {name}.")
+        await ctx.send(f"Deleted counter {counter.name}.")
 
     @customcounter.command(name='summary', aliases=['list'])
     async def customcounter_summary(self, ctx):
@@ -481,7 +481,7 @@ class GameTrack:
         except:
             pass
 
-        char = await Character.from_ctx(ctx)
+        char: Character = await Character.from_ctx(ctx)
 
         if not '-i' in args:
             spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.get_spell_list())
@@ -497,7 +497,7 @@ class GameTrack:
         embed = result['embed']
 
         embed.colour = char.get_color()
-        embed.set_thumbnail(url=char.get_image())
+        embed.set_thumbnail(url=char.image)
 
         add_fields_from_args(embed, args.get('f'))
 

@@ -11,8 +11,8 @@ from math import ceil, floor
 import aiohttp
 import html2text
 
-from cogs5e.models.character import SKILL_MAP
 from cogs5e.models.errors import ExternalImportError
+from utils.constants import SKILL_MAP
 
 log = logging.getLogger(__name__)
 
@@ -283,7 +283,7 @@ class BeyondSheetParser:
             attack = {
                 'attackBonus': str(atkBonus),
                 'damage': f"{atkIn['diceCount']}d{atkIn['diceType']}+{dmgBonus}"
-                          f"[{parse_dmg_type(atkIn)}]",
+                f"[{parse_dmg_type(atkIn)}]",
                 'name': atkIn['name'],
                 'details': atkIn['snippet']
             }
@@ -310,8 +310,8 @@ class BeyondSheetParser:
             damage = None
             if itemdef['fixedDamage'] or itemdef['damage']:
                 damage = f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}" \
-                         f"[{itemdef['damageType'].lower()}" \
-                         f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+                    f"[{itemdef['damageType'].lower()}" \
+                    f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
 
             attack = {
                 'attackBonus': str(weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus),
@@ -326,8 +326,8 @@ class BeyondSheetParser:
                     {
                         'attackBonus': attack['attackBonus'],
                         'damage': f"{versDmg}+{dmgBonus}"
-                                  f"[{itemdef['damageType'].lower()}"
-                                  f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",
+                        f"[{itemdef['damageType'].lower()}"
+                        f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]",
                         'name': f"{itemdef['name']} 2H",
                         'details': attack['details']
                     }

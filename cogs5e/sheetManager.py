@@ -26,13 +26,14 @@ from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import AvraeException, InvalidArgument
+from cogs5e.models.errors import InvalidArgument
+from cogs5e.models.sheet import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from utils.argparser import argparse
-from utils.constants import SKILL_MAP
-from utils.functions import a_or_an, auth_and_chan, format_d20, get_positivity, list_get
+from utils.constants import SKILL_MAP, SKILL_NAMES
+from utils.functions import a_or_an, auth_and_chan, get_positivity, list_get
 from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
 
 log = logging.getLogger(__name__)
@@ -104,30 +105,18 @@ class SheetManager:
         if atk_name is None:
             return await ctx.invoke(self.attack_list)
 
-        char = await Character.from_ctx(ctx)
-        attacks = char.get_attacks()
+        char: Character = await Character.from_ctx(ctx)
 
-        try:  # fuzzy search for atk_name
-            attack = next(a for a in attacks if atk_name.lower() == a.get('name').lower())
-        except StopIteration:
-            try:
-                attack = next(a for a in attacks if atk_name.lower() in a.get('name').lower())
-            except StopIteration:
-                return await ctx.send('No attack with that name found.')
+        attack = await search_and_select(ctx, char.attacks, atk_name, lambda a: a.name)
 
         args = await self.new_arg_stuff(args, ctx, char)
-        args['name'] = char.get_name()
+        args['name'] = char.name
         args['criton'] = args.last('criton') or char.get_setting('criton', 20)
         args['reroll'] = char.get_setting('reroll', 0)
-        args['critdice'] = int(char.get_setting('hocrit', False)) + char.get_setting('critdice', 0)
+        args['critdice'] = char.get_setting('critdice', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
-        if attack.get('details') is not None:
-            try:
-                attack['details'] = await char.parse_cvars(attack['details'], ctx)
-            except AvraeException:
-                pass  # failed to eval, probably DDB nonsense
 
-        result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))
+        result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))  # TODO
         embed = result['embed']
         if args.last('h', type_=bool):
             try:
@@ -147,31 +136,20 @@ class SheetManager:
     @attack.command(name="list")
     async def attack_list(self, ctx):
         """Lists the active character's attacks."""
-        char = await Character.from_ctx(ctx)
-        attacks = char.get_attacks()
+        char: Character = await Character.from_ctx(ctx)
 
-        tempAttacks = []
-        for a in attacks:
-            damage = a['damage'] if a['damage'] is not None else 'no'
-            if a['attackBonus'] is not None:
-                try:
-                    bonus = roll(a['attackBonus']).total
-                except:
-                    bonus = a['attackBonus']
-                tempAttacks.append(f"**{a['name']}:** +{bonus} To Hit, {damage} damage.")
-            else:
-                tempAttacks.append(f"**{a['name']}:** {damage} damage.")
-        if not tempAttacks:
-            tempAttacks = ['No attacks.']
-        a = '\n'.join(tempAttacks)
-        if len(a) > 2000:
-            a = ', '.join(atk['name'] for atk in attacks)
-        if len(a) > 2000:
-            a = "Too many attacks, values hidden!"
-        return await ctx.send("{}'s attacks:\n{}".format(char.get_name(), a))
+        atks = char.attacks
+        atk_str = ""
+        for attack in atks:
+            a = f"{str(attack)}\n"
+            if len(atk_str) + len(a) > 1000:
+                atk_str += "[...]"
+                break
+            atk_str += a
+        return await ctx.send(f"{char.name}'s attacks:\n{atk_str}")
 
     @attack.command(name="add", aliases=['create'])
-    async def attack_add(self, ctx, name, *, args=""):
+    async def attack_add(self, ctx, name, *args):
         """
         Adds an attack to the active character.
         __Arguments__
@@ -179,24 +157,20 @@ class SheetManager:
         -b [to-hit]: The to-hit bonus of the attack.
         -desc [description]: A description of the attack.
         """
+        character: Character = await Character.from_ctx(ctx)
         parsed = argparse(args)
-        attack = {
-            "name": name,
-            "attackBonus": parsed.join('b', '+'),
-            "damage": parsed.join('d', '+'),
-            "details": parsed.join('desc', '\n')
-        }
-        character = await Character.from_ctx(ctx)
-        attack_overrides = character.get_override("attacks", [])
-        duplicate = next((a for a in attack_overrides if a['name'].lower() == attack['name'].lower()), None)
-        if duplicate:
-            attack_overrides.remove(duplicate)
-        attack_overrides.append(attack)
-        character.set_override("attacks", attack_overrides)
 
+        attack = await Attack.new(character, name, bonus_calc=parsed.join('b', '+'),
+                                  damage=parsed.join('d', '+'), details=parsed.join('desc', '\n'))
+
+        conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
+        if conflict:
+            character.overrides.attacks.remove(conflict)
+        character.overrides.attacks.append(attack)
         await character.commit(ctx)
-        out = f"Created attack {attack['name']}!"
-        if duplicate:
+
+        out = f"Created attack {attack.name}!"
+        if conflict:
             out += f" Removed a duplicate attack."
         await ctx.send(out)
 
@@ -205,18 +179,14 @@ class SheetManager:
         """
         Deletes an attack override.
         """
-        character = await Character.from_ctx(ctx)
-        attack_overrides = character.get_override("attacks", [])
-        attack = await search_and_select(ctx, attack_overrides, name, lambda a: a['name'])
-
-        attack_overrides.remove(attack)
-        character.set_override("attacks", attack_overrides)
+        character: Character = await Character.from_ctx(ctx)
+        attack = await search_and_select(ctx, character.overrides.attacks, name, lambda a: a.name)
+        character.overrides.attacks.remove(attack)
         await character.commit(ctx)
-
-        await ctx.send(f"Okay, deleted attack {attack['name']}.")
+        await ctx.send(f"Okay, deleted attack {attack.name}.")
 
     @commands.command(aliases=['s'])
-    async def save(self, ctx, skill, *, args: str = ''):
+    async def save(self, ctx, skill, *args):
         """Rolls a save for your current active character.
         __Valid Arguments__
         adv/dis
@@ -230,56 +200,50 @@ class SheetManager:
             ds_cmd = self.bot.get_command('game deathsave')
             if ds_cmd is None:
                 return await ctx.send("Error: GameTrack cog not loaded.")
-            return await ctx.invoke(ds_cmd, *shlex.split(args))
+            return await ctx.invoke(ds_cmd, *args)
 
-        char = await Character.from_ctx(ctx)
-        saves = char.get_saves()
-        if not saves:
-            return await ctx.send('You must update your character sheet first.')
+        char: Character = await Character.from_ctx(ctx)
         try:
-            save = next(a for a in saves.keys() if skill.lower() == a.lower())
-        except StopIteration:
-            try:
-                save = next(a for a in saves.keys() if skill.lower() in a.lower())
-            except StopIteration:
-                return await ctx.send('That\'s not a valid save.')
+            save = char.saves.get(skill)
+        except ValueError:
+            return await ctx.send('That\'s not a valid save.')
 
         embed = EmbedWithCharacter(char, name=False)
 
-        skill_effects = char.get_skill_effects()
-        args += ' ' + skill_effects.get(save, '')  # dicecloud v11 - autoadv
-
         args = await self.new_arg_stuff(args, ctx, char)
-        adv = args.adv()
+        adv = args.adv(boolwise=True)
         b = args.join('b', '+')
         phrase = args.join('phrase', '\n')
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
 
-        formatted_d20 = format_d20(adv, char.get_setting('reroll'))
+        formatted_d20 = save.d20(base_adv=adv, reroll=char.get_setting('reroll'))
 
-        if b is not None:
-            roll_str = formatted_d20 + '{:+}'.format(saves[save]) + '+' + b
+        if b:
+            roll_str = f"{formatted_d20}+{b}"
         else:
-            roll_str = formatted_d20 + '{:+}'.format(saves[save])
+            roll_str = formatted_d20
 
-        embed.title = args.last('title', '') \
-                          .replace('[charname]', char.get_name()) \
-                          .replace('[sname]', camel_to_title(save)) \
-                      or '{} makes {}!'.format(char.get_name(), a_or_an(camel_to_title(save)))
+        save_name = f"{verbose_stat(skill[:3]).title()} Save"
+        if args.last('title'):
+            embed.title = args.last('title', '') \
+                .replace('[charname]', char.name) \
+                .replace('[sname]', save_name)
+        else:
+            embed.title = f'{char.name} makes {a_or_an(save_name)}!'
 
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
             for i in range(iterations):
-                result = roll(roll_str, adv=adv, inline=True)
+                result = roll(roll_str, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
                 embed.add_field(name=f"Save {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:
-            result = roll(roll_str, adv=adv, inline=True)
+            result = roll(roll_str, inline=True)
             if dc:
                 embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
@@ -297,7 +261,7 @@ class SheetManager:
             pass
 
     @commands.command(aliases=['c'])
-    async def check(self, ctx, check, *, args: str = ''):
+    async def check(self, ctx, check, *args):
         """Rolls a check for your current active character.
         __Valid Arguments__
         adv/dis
@@ -309,68 +273,53 @@ class SheetManager:
         -rr [iterations]
         str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
         """
-        char = await Character.from_ctx(ctx)
-        skills = char.get_skills()
-        if not skills:
-            return await ctx.send('You must update your character sheet first.')
-        try:
-            skill = next(a for a in skills.keys() if check.lower() == a.lower())
-        except StopIteration:
-            try:
-                skill = next(a for a in skills.keys() if check.lower() in a.lower())
-            except StopIteration:
-                return await ctx.send('That\'s not a valid check.')
+        char: Character = await Character.from_ctx(ctx)
+        skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
+        skill_name = camel_to_title(skill_key)
 
         embed = EmbedWithCharacter(char, False)
 
-        skill_effects = char.get_skill_effects()
-        args += ' ' + skill_effects.get(skill, '')  # dicecloud v7 - autoadv
-
         args = await self.new_arg_stuff(args, ctx, char)
-        adv = args.adv()
+        adv = args.adv(boolwise=True)
         b = args.join('b', '+')
         phrase = args.join('phrase', '\n')
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
 
-        formatted_d20 = format_d20(adv, char.get_setting('reroll'))
+        skill = char.skills[skill_key]
+        mod = skill.value
+        formatted_d20 = skill.d20(base_adv=adv, reroll=char.get_setting('reroll'),
+                                  min_val=args.last('mc'), base_only=True)
 
-        mc = args.last('mc', None)
-        if mc:
-            formatted_d20 = f"{formatted_d20}mi{mc}"
-
-        mod = skills[skill]
-        skill_name = skill
         if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
             base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
-            mod = mod - char.get_mod(SKILL_MAP[skill]) + char.get_mod(base)
-            skill_name = f"{verbose_stat(base)} ({skill})"
-
-        skill_name = camel_to_title(skill_name)
-        default_title = '{} makes {} check!'.format(char.get_name(), a_or_an(skill_name))
+            mod = mod - char.get_mod(SKILL_MAP[skill_key]) + char.get_mod(base)
+            skill_name = f"{verbose_stat(base)} ({skill_name})"
 
         if b is not None:
-            roll_str = formatted_d20 + '{:+}'.format(mod) + '+' + b
+            roll_str = f"{formatted_d20}{mod:+}+{b}"
         else:
-            roll_str = formatted_d20 + '{:+}'.format(mod)
+            roll_str = f"{formatted_d20}{mod:+}"
 
-        embed.title = args.last('title', '') \
-                          .replace('[charname]', char.get_name()) \
-                          .replace('[cname]', skill_name) \
-                      or default_title
+        if args.last('title'):
+            embed.title = args.last('title', '') \
+                .replace('[charname]', char.name) \
+                .replace('[cname]', skill_name)
+        else:
+            embed.title = f'{char.name} makes {a_or_an(skill_name)} check!'
 
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
             for i in range(iterations):
-                result = roll(roll_str, adv=adv, inline=True)
+                result = roll(roll_str, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
                 embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:
-            result = roll(roll_str, adv=adv, inline=True)
+            result = roll(roll_str, inline=True)
             if dc:
                 embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
@@ -389,18 +338,19 @@ class SheetManager:
     @commands.group(invoke_without_command=True)
     async def desc(self, ctx):
         """Prints or edits a description of your currently active character."""
-        char = await Character.from_ctx(ctx)
+        char: Character = await Character.from_ctx(ctx)
 
-        desc = char.character['stats'].get('description', 'No description available.')
+        desc = char.description
         if not desc:
             desc = 'No description available.'
+
         if len(desc) > 2048:
             desc = desc[:2044] + '...'
         elif len(desc) < 2:
             desc = 'No description available.'
 
         embed = EmbedWithCharacter(char, name=False)
-        embed.title = char.get_name()
+        embed.title = char.name
         embed.description = desc
 
         await ctx.send(embed=embed)
@@ -412,43 +362,31 @@ class SheetManager:
     @desc.command(name='update', aliases=['edit'])
     async def edit_desc(self, ctx, *, desc):
         """Updates the character description."""
-        char = await Character.from_ctx(ctx)
-
-        overrides = char.character.get('overrides', {})
-        overrides['desc'] = desc
-        char.character['stats']['description'] = desc
-
-        char.character['overrides'] = overrides
+        char: Character = await Character.from_ctx(ctx)
+        char.overrides.desc = desc
         await char.commit(ctx)
         await ctx.send("Description updated!")
 
     @desc.command(name='remove', aliases=['delete'])
     async def remove_desc(self, ctx):
         """Removes the character description, returning to the default."""
-        char = await Character.from_ctx(ctx)
-
-        overrides = char.character.get('overrides', {})
-        if not 'desc' in overrides:
-            return await ctx.send("There is no custom description set.")
-        else:
-            del overrides['desc']
-
-        char.character['overrides'] = overrides
+        char: Character = await Character.from_ctx(ctx)
+        char.overrides.desc = None
         await char.commit(ctx)
-        await ctx.send(f"Description override removed! Use `{ctx.prefix}update` to return to the old description.")
+        await ctx.send(f"Description override removed!")
 
     @commands.group(invoke_without_command=True)
     async def portrait(self, ctx):
         """Shows or edits the image of your currently active character."""
-        char = await Character.from_ctx(ctx)
+        char: Character = await Character.from_ctx(ctx)
 
-        image = char.get_image()
-        if not image:
+        if not char.image:
             return await ctx.send("No image available.")
+
         embed = discord.Embed()
-        embed.title = char.get_name()
+        embed.title = char.name
         embed.colour = char.get_color()
-        embed.set_image(url=image)
+        embed.set_image(url=char.image)
 
         await ctx.send(embed=embed)
         try:
@@ -459,45 +397,30 @@ class SheetManager:
     @portrait.command(name='update', aliases=['edit'])
     async def edit_portrait(self, ctx, *, url):
         """Updates the character portrait."""
-        char = await Character.from_ctx(ctx)
-
-        overrides = char.character.get('overrides', {})
-        overrides['image'] = url
-        char.character['stats']['image'] = url
-
-        char.character['overrides'] = overrides
-
+        char: Character = await Character.from_ctx(ctx)
+        char.overrides.image = url
         await char.commit(ctx)
         await ctx.send("Portrait updated!")
 
     @portrait.command(name='remove', aliases=['delete'])
     async def remove_portrait(self, ctx):
         """Removes the character portrait, returning to the default."""
-        char = await Character.from_ctx(ctx)
-
-        overrides = char.character.get('overrides', {})
-        if not 'image' in overrides:
-            return await ctx.send("There is no custom portrait set.")
-        else:
-            del overrides['image']
-
-        char.character['overrides'] = overrides
-
+        char: Character = await Character.from_ctx(ctx)
+        char.overrides.image = None
         await char.commit(ctx)
-        await ctx.send(f"Portrait override removed! Use `{ctx.prefix}update` to return to the old portrait.")
+        await ctx.send(f"Portrait override removed!")
 
     @commands.command(hidden=True)  # hidden, as just called by token command
     async def playertoken(self, ctx):
         """Generates and sends a token for use on VTTs."""
 
-        char = await Character.from_ctx(ctx)
-        img_url = char.get_image()
+        char: Character = await Character.from_ctx(ctx)
         color_override = char.get_setting('color')
-        if not img_url:
+        if not char.image:
             return await ctx.send("This character has no image.")
 
         try:
-            processed = await generate_token(img_url, color_override)
+            processed = await generate_token(char.image, color_override)
         except Exception as e:
             return await ctx.send(f"Error generating token: {e}")
 
@@ -508,7 +431,7 @@ class SheetManager:
     @commands.command()
     async def sheet(self, ctx):
         """Prints the embed sheet of your currently active character."""
-        char = await Character.from_ctx(ctx)
+        char: Character = await Character.from_ctx(ctx)
 
         await ctx.send(embed=char.get_sheet_embed())
         try:
@@ -517,14 +440,14 @@ class SheetManager:
             pass
 
     @commands.group(aliases=['char'], invoke_without_command=True)
-    async def character(self, ctx, *, name: str = None):  # updated
+    async def character(self, ctx, *, name: str = None):
         """Switches the active character."""
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
 
         if name is None:
-            active_character = await Character.from_ctx(ctx)
+            active_character: Character = await Character.from_ctx(ctx)
             return await ctx.send(f'Currently active: {active_character.name}')
 
         selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
@@ -546,9 +469,7 @@ class SheetManager:
         user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
-
-        await ctx.send('Your characters:\n{}'.format(
-            ', '.join(c.get('stats', {}).get('name', '') for c in user_characters)))
+        await ctx.send('Your characters:\n{}'.format(', '.join(c['name'] for c in user_characters)))
 
     @character.command(name='delete')
     async def character_delete(self, ctx, *, name):
@@ -557,13 +478,10 @@ class SheetManager:
         if not user_characters:
             return await ctx.send('You have no characters.')
 
-        _character = await search_and_select(ctx, user_characters, name, lambda e: e.get('stats', {}).get('name', ''),
-                                             selectkey=lambda e: f"{e['stats'].get('name', '')} (`{e['upstream']}`)")
+        selected_char = await search_and_select(ctx, user_characters, name, lambda e: e['name'],
+                                                selectkey=lambda e: f"{e['name']} (`{e['upstream']}`)")
 
-        name = _character.get('stats', {}).get('name', 'Unnamed')
-        char_url = _character['upstream']
-
-        await ctx.send('Are you sure you want to delete {}? (Reply with yes/no)'.format(name))
+        await ctx.send(f"Are you sure you want to delete {selected_char['name']}? (Reply with yes/no)")
         try:
             reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
         except asyncio.TimeoutError:
@@ -572,27 +490,19 @@ class SheetManager:
         if reply is None:
             return await ctx.send('Timed out waiting for a response or invalid response.')
         elif reply:
-            # _character = Character(_character, char_url)
-            # if _character.get_combat_id() is not None:
-            #     combat = await Combat.from_id(_character.get_combat_id(), ctx)
-            #     me = next((c for c in combat.get_combatants() if getattr(c, 'character_id', None) == char_url),
-            #               None)
-            #     if me:
-            #         combat.remove_combatant(me, True)
-            #         await combat.commit()
-
-            await self.bot.mdb.characters.delete_one({"owner": str(ctx.author.id), "upstream": char_url})
-            return await ctx.send('{} has been deleted.'.format(name))
+            await self.bot.mdb.characters.delete_one(
+                {"owner": str(ctx.author.id), "upstream": selected_char['upstream']})
+            return await ctx.send(f"{selected_char['name']} has been deleted.")
         else:
             return await ctx.send("OK, cancelling.")
 
     @commands.command()
     @commands.cooldown(1, 15, BucketType.user)
-    async def update(self, ctx, *, args=''):
+    async def update(self, ctx, *, args=''):  # TODO
         """Updates the current character sheet, preserving all settings.
         Valid Arguments: `-v` - Shows character sheet after update is complete.
         `-cc` - Updates custom counters from Dicecloud."""
-        char = await Character.from_ctx(ctx)
+        char: Character = await Character.from_ctx(ctx)
         url = char.id
         old_character = char.character
 
@@ -705,14 +615,14 @@ class SheetManager:
     @commands.command()
     async def transferchar(self, ctx, user: discord.Member):
         """Gives a copy of the active character to another user."""
-        character = await Character.from_ctx(ctx)
+        character: Character = await Character.from_ctx(ctx)
         overwrite = ''
 
         conflict = await self.bot.mdb.characters.find_one({"owner": str(user.id), "upstream": character.id})
         if conflict:
             overwrite = "**WARNING**: This will overwrite an existing character."
 
-        await ctx.send(f"{user.mention}, accept a copy of {character.get_name()}? (Type yes/no)\n{overwrite}")
+        await ctx.send(f"{user.mention}, accept a copy of {character.name}? (Type yes/no)\n{overwrite}")
         try:
             m = await self.bot.wait_for('message', timeout=300,
                                         check=lambda msg: msg.author == user
@@ -723,8 +633,9 @@ class SheetManager:
 
         if m is None or not get_positivity(m.content): return await ctx.send("Transfer not confirmed, aborting.")
 
-        await character.manual_commit(self.bot, str(user.id))
-        await ctx.send(f"Copied {character.get_name()} to {user.display_name}'s storage.")
+        character.owner = str(user.id)
+        await character.commit(ctx)
+        await ctx.send(f"Copied {character.name} to {user.display_name}'s storage.")
 
     @commands.command()
     async def csettings(self, ctx, *, args):
@@ -737,13 +648,9 @@ class SheetManager:
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
         `crittype 2x/default` - Sets whether crits double damage or dice.
         `critdice <number>` - Adds additional dice for to critical attacks."""
-        char = await Character.from_ctx(ctx)
-        character = char.character
+        char: Character = await Character.from_ctx(ctx)
 
         args = shlex.split(args)
-
-        if character.get('settings') is None:
-            character['settings'] = {}
 
         out = 'Operations complete!\n'
         index = 0
@@ -755,7 +662,7 @@ class SheetManager:
                     out += f'\u2139 Your character\'s current color is {current_color}. ' \
                         f'Use "{ctx.prefix}csettings color reset" to reset it to random.\n'
                 elif color.lower() == 'reset':
-                    character['settings']['color'] = None
+                    char.set_setting('color', None)
                     out += "\u2705 Color reset to random.\n"
                 else:
                     try:
@@ -766,7 +673,7 @@ class SheetManager:
                         if not 0 <= color <= 0xffffff:
                             out += '\u274c Invalid color.\n'
                         else:
-                            character['settings']['color'] = color
+                            char.set_setting('color', color)
                             out += "\u2705 Color set to {}.\n".format(hex(color))
             if arg == 'criton':
                 criton = list_get(index + 1, None, args)
@@ -775,7 +682,7 @@ class SheetManager:
                     out += f'\u2139 Your character\'s current crit range is {current}. ' \
                         f'Use "{ctx.prefix}csettings criton reset" to reset it to 20.\n'
                 elif criton.lower() == 'reset':
-                    character['settings']['criton'] = None
+                    char.set_setting('criton', None)
                     out += "\u2705 Crit range reset to 20.\n"
                 else:
                     try:
@@ -786,20 +693,19 @@ class SheetManager:
                         if not 0 < criton <= 20:
                             out += '\u274c Crit range must be between 1 and 20.\n'
                         elif criton == 20:
-                            character['settings']['criton'] = None
+                            char.set_setting('criton', None)
                             out += "\u2705 Crit range reset to 20.\n"
                         else:
-                            character['settings']['criton'] = criton
+                            char.set_setting('criton', criton)
                             out += "\u2705 Crit range set to {}-20.\n".format(criton)
             if arg == 'reroll':
                 reroll = list_get(index + 1, None, args)
                 if reroll is None:
-                    current = str(character['settings'].get('reroll')) if character['settings'].get(
-                        'reroll') is not '0' else "0"
+                    current = char.get_setting('reroll')
                     out += f'\u2139 Your character\'s current reroll is {current}. ' \
                         f'Use "{ctx.prefix}csettings reroll reset" to reset it.\n'
                 elif reroll.lower() == 'reset':
-                    character['settings']['reroll'] = '0'
+                    char.set_setting('reroll', None)
                     out += "\u2705 Reroll reset.\n"
                 else:
                     try:
@@ -810,20 +716,16 @@ class SheetManager:
                         if not 1 <= reroll <= 20:
                             out += '\u274c Reroll must be between 1 and 20.\n'
                         else:
-                            character['settings']['reroll'] = reroll
+                            char.set_setting('reroll', reroll)
                             out += "\u2705 Reroll set to {}.\n".format(reroll)
             if arg == 'critdice':
                 critdice = list_get(index + 1, None, args)
-                if 'hocrit' in character['settings']:
-                    character['settings']['critdice'] += int(character['settings']['hocrit'])
-                    del character['settings']['hocrit']
                 if critdice is None:
-                    current = str(character['settings'].get('critdice')) if character['settings'].get(
-                        'critdice') is not '0' else "0"
+                    current = char.get_setting('critdice')
                     out += f'\u2139 Extra crit dice are currently set to {current}. ' \
                         f'Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
                 elif critdice.lower() == 'reset':
-                    character['settings']['critdice'] = 0
+                    char.set_setting('critdice', None)
                     out += "\u2705 Extra crit dice reset.\n"
                 else:
                     try:
@@ -834,76 +736,61 @@ class SheetManager:
                         if not 0 <= critdice <= 20:
                             out += f'\u274c Extra crit dice must be between 1 and 20. Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
                         else:
-                            character['settings']['critdice'] = critdice
+                            char.set_setting('critdice', critdice)
                             out += "\u2705 Extra crit dice set to {}.\n".format(critdice)
             if arg == 'srslots':
                 srslots = list_get(index + 1, None, args)
                 if srslots is None:
                     out += '\u2139 Short rest slots are currently {}.\n' \
-                        .format("enabled" if character['settings'].get('srslots') else "disabled")
+                        .format("enabled" if char.get_setting('srslots') else "disabled")
                 else:
                     try:
                         srslots = get_positivity(srslots)
                     except AttributeError:
                         out += f'\u274c Invalid input. Use "{ctx.prefix}csettings srslots false" to reset it.\n'
                     else:
-                        character['settings']['srslots'] = srslots
+                        char.set_setting('srslots', srslots)
                         out += "\u2705 Short Rest slots {}.\n".format(
-                            "enabled" if character['settings'].get('srslots') else "disabled")
+                            "enabled" if char.get_setting('srslots') else "disabled")
             if arg == 'embedimage':
                 embedimage = list_get(index + 1, None, args)
                 if embedimage is None:
                     out += '\u2139 Embed Image is currently {}.\n' \
-                        .format("enabled" if character['settings'].get('embedimage') else "disabled")
+                        .format("enabled" if char.get_setting('embedimage') else "disabled")
                 else:
                     try:
                         embedimage = get_positivity(embedimage)
                     except AttributeError:
                         out += f'\u274c Invalid input. Use "{ctx.prefix}csettings embedimage true" to reset it.\n'
                     else:
-                        character['settings']['embedimage'] = embedimage
+                        char.set_setting('embedimage', embedimage)
                         out += "\u2705 Embed Image {}.\n".format(
-                            "enabled" if character['settings'].get('embedimage') else "disabled")
-            if arg == 'crittype':
-                crittype = list_get(index + 1, None, args)
-                if crittype is None:
-                    out += '\u2139 Crit type is currently {}.\n' \
-                        .format(character['settings'].get('crittype', 'default'))
-                else:
-                    try:
-                        assert crittype in ('2x', 'default')
-                    except AssertionError:
-                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings crittype default" to reset it.\n'
-                    else:
-                        character['settings']['crittype'] = crittype
-                        out += "\u2705 Crit type set to {}.\n".format(character['settings'].get('crittype'))
+                            "enabled" if char.get_setting('embedimage') else "disabled")
             index += 1
 
         await char.commit(ctx)
         await ctx.send(out)
 
     @commands.group(invoke_without_command=True)
-    async def cvar(self, ctx, name=None, *, value=None):
+    async def cvar(self, ctx, name: str = None, *, value=None):
         """Commands to manage character variables for use in snippets and aliases.
-        Character variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
-        Arguments surrounded with `{{}}` will be evaluated as a custom script.
-        See http://avrae.io/cheatsheets/aliasing for more help.
-        Dicecloud `statMod` and `stat` variables are also available."""
+        See the [aliasing guide](https://avrae.io/cheatsheets/aliasing) for more help."""
         if name is None:
             return await ctx.invoke(self.bot.get_command("cvar list"))
 
-        character = await Character.from_ctx(ctx)
+        character: Character = await Character.from_ctx(ctx)
 
         if value is None:  # display value
-            cvar = character.get_cvar(name)
-            if cvar is None: cvar = 'Not defined.'
+            cvar = character.cvars.get(value)
+            if cvar is None:
+                cvar = 'Not defined.'
             return await ctx.send(f'**{name}**:\n{cvar}')
 
-        try:
-            assert not name in character.get_stat_vars()
-            assert not any(c in name for c in '-/()[]\\.^$*+?|{}')
-        except AssertionError:
-            return await ctx.send("Could not create cvar: already builtin, or contains invalid character!")
+        if not name.isidentifier():
+            return await ctx.send("Cvar names must be identifiers "
+                                  "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+        if name in character.get_scope_locals(True):
+            return await ctx.send("This variable is already built in!")
 
         character.set_cvar(name, value)
         await character.commit(ctx)
@@ -912,12 +799,11 @@ class SheetManager:
     @cvar.command(name='remove', aliases=['delete'])
     async def remove_cvar(self, ctx, name):
         """Deletes a cvar from the currently active character."""
-        char = await Character.from_ctx(ctx)
-
-        try:
-            del char.character.get('cvars', {})[name]
-        except KeyError:
+        char: Character = await Character.from_ctx(ctx)
+        if name not in char.cvars:
             return await ctx.send('Character variable not found.')
+
+        del char.cvars[name]
 
         await char.commit(ctx)
         await ctx.send('Character variable {} removed.'.format(name))
@@ -925,9 +811,9 @@ class SheetManager:
     @cvar.command(name='deleteall', aliases=['removeall'])
     async def cvar_deleteall(self, ctx):
         """Deletes ALL character variables for the active character."""
-        char = await Character.from_ctx(ctx)
+        char: Character = await Character.from_ctx(ctx)
 
-        await ctx.send(f"This will delete **ALL** of your character variables for {char.get_name()}. "
+        await ctx.send(f"This will delete **ALL** of your character variables for {char.name}. "
                        "Are you *absolutely sure* you want to continue?\n"
                        "Type `Yes, I am sure` to confirm.")
         try:
@@ -937,19 +823,17 @@ class SheetManager:
         if (not reply) or (not reply.content == "Yes, I am sure"):
             return await ctx.send("Unconfirmed. Aborting.")
 
-        char.character['cvars'] = {}
+        char.cvars = {}
 
         await char.commit(ctx)
-        return await ctx.send(f"OK. I have deleted all of {char.get_name()}'s cvars.")
+        return await ctx.send(f"OK. I have deleted all of {char.name}'s cvars.")
 
     @cvar.command(name='list')
     async def list_cvar(self, ctx):
         """Lists all cvars for the currently active character."""
-        character = await Character.from_ctx(ctx)
-        cvars = character.get_cvars()
-
-        await ctx.send('{}\'s character variables:\n{}'.format(character.get_name(),
-                                                               ', '.join(sorted([name for name in cvars.keys()]))))
+        character: Character = await Character.from_ctx(ctx)
+        await ctx.send('{}\'s character variables:\n{}'.format(character.name,
+                                                               ', '.join(sorted(character.cvars.keys()))))
 
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.
@@ -967,7 +851,7 @@ class SheetManager:
             return replyBool
         return True
 
-    @commands.command()
+    @commands.command()  # TODO
     async def dicecloud(self, ctx, url: str, *, args=""):
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.

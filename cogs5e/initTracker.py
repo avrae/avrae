@@ -273,7 +273,7 @@ class InitTracker:
 
         args = shlex.split(args)
         args = argparse(args)
-        adv = args.adv()
+        adv = args.adv(boolwise=True)
         b = args.join('b', '+') or None
         p = args.last('p', type_=int)
         phrase = args.join('phrase', '\n') or None

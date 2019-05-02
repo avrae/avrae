@@ -89,7 +89,7 @@ class Skill:
         return {"value": self.value, "prof": self.prof, "bonus": self.bonus, "adv": self.adv}
 
     # ---------- main funcs ----------
-    def d20(self, base_adv=None):
+    def d20(self, base_adv=None, reroll: int = None, min_val: int = None, base_only=False):
         if base_adv is None:
             adv = self.adv
         elif self.adv is None:
@@ -100,15 +100,23 @@ class Skill:
             adv = None
 
         if adv is False:
-            base = f"2d20kl1{self.value:+}"
+            base = f"2d20kl1"
         elif adv is True:
-            base = f"2d20kh1{self.value:+}"
+            base = f"2d20kh1"
         else:
-            base = f"1d20{self.value:+}"
+            base = f"1d20"
 
-        if self.bonus:
-            return f"{base}{self.bonus:+}"
-        return base
+        if reroll:
+            base = f"{base}ro{reroll}"
+
+        if min_val:
+            base = f"{base}mi{min_val}"
+
+        if base_only:
+            return base
+
+        out = f"{base}{self.value:+}"
+        return out
 
 
 class Skills:
@@ -131,6 +139,9 @@ class Skills:
         if item not in self.skills:
             raise ValueError(f"{item} is not a skill.")
         return self.skills[item]
+
+    def __getitem__(self, item):
+        return self.__getattr__(item)
 
     def __str__(self):
         out = []

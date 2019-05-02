@@ -14,7 +14,7 @@ COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
 
 class Combat:
-    message_cache = cachetools.LRUCache(100)
+    message_cache = cachetools.LRUCache(500)
 
     def __init__(self, channelId, summaryMsgId, dmId, options, ctx, combatants=None, roundNum=0, turnNum=0,
                  currentIndex=None):
@@ -834,7 +834,7 @@ class MonsterCombatant(Combatant):
                                  monster.spellbook.get('casterLevel', 0))
 
         return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, combat, index,
-                   monster_name, spellcasting=spellcasting)
+                   monster_name, spellbook=spellcasting)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
@@ -878,7 +878,7 @@ class PlayerCombatant(Combatant):
 
     @property
     def hpMax(self):
-        return self._hpMax or self.character.get_max_hp()
+        return self._hpMax or self.character.max_hp
 
     @hpMax.setter
     def hpMax(self, new_hpMax):
@@ -886,37 +886,36 @@ class PlayerCombatant(Combatant):
 
     @property
     def hp(self):
-        return self.character.get_current_hp()
+        return self.character.hp
 
     @hp.setter
     def hp(self, new_hp):
-        self.character.set_hp(new_hp)
+        self.character.hp = new_hp
 
     def set_hp(self, new_hp):
-        self.character.set_hp(new_hp, False)
+        self.character.hp = new_hp
 
     @property
     def temphp(self):
-        return self.character.get_temp_hp()
+        return self.character.temp_hp
 
     @temphp.setter
     def temphp(self, new_hp):
-        self.character.set_temp_hp(new_hp)
+        self.character.temp_hp = new_hp
 
     @property
-    def attacks(self):
+    def attacks(self):  # TODO
         attacks = super(PlayerCombatant, self).attacks
-        attacks.extend(self.attack_effects(self.character.get_attacks()))
+        attacks.extend(self.attack_effects(self.character.attacks))
         return attacks
 
     @property
     def saves(self):
-        return self.character.get_saves()
+        return self.character.saves
 
     @property
     def spellbook(self):
-        return Spellbook(self.character.get_spell_list(), self.character.get_save_dc(),
-                         self.character.get_spell_ab(), self.character.get_level())
+        return self.character.spellbook
 
     def can_cast(self, spell, level) -> bool:
         return self.character.can_cast(spell, level)

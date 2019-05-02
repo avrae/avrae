@@ -34,7 +34,10 @@ class CharOptions:
         return self.options.get(option, default)
 
     def set(self, option, value):
-        self.options[option] = value
+        if value is None and option in self.options:
+            del self.options[option]
+        else:
+            self.options[option] = value
 
 
 class ManualOverrides:
@@ -237,11 +240,11 @@ class Character(Spellcaster):
 
         # main character info
         self.name = name
-        self.description = description
-        self.image = image
+        self._description = description
+        self._image = image
         self.stats = BaseStats.from_dict(stats)
         self.levels = Levels.from_dict(levels)
-        self.attacks = [Attack.from_dict(atk) for atk in attacks]
+        self._attacks = [Attack.from_dict(atk) for atk in attacks]
         self.skills = Skills.from_dict(skills)
         self.resistances = Resistances.from_dict(resistances)
         self.saves = Saves.from_dict(saves)
@@ -285,9 +288,9 @@ class Character(Spellcaster):
     def to_dict(self):
         return {
             "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
-            "import_version": self._import_version, "name": self.name, "description": self.description,
-            "image": self.image, "stats": self.stats.to_dict(), "levels": self.levels.to_dict(),
-            "attacks": [a.to_dict() for a in self.attacks], "skills": self.skills.to_dict(),
+            "import_version": self._import_version, "name": self.name, "description": self._description,
+            "image": self._image, "stats": self.stats.to_dict(), "levels": self.levels.to_dict(),
+            "attacks": [a.to_dict() for a in self._attacks], "skills": self.skills.to_dict(),
             "resistances": self.resistances.to_dict(), "saves": self.saves.to_dict(), "ac": self.ac,
             "max_hp": self.max_hp, "hp": self._hp, "temp_hp": self._temp_hp, "cvars": self.cvars,
             "options": self.options.to_dict(), "overrides": self.overrides.to_dict(),
@@ -297,7 +300,6 @@ class Character(Spellcaster):
 
     @classmethod
     async def from_ctx(cls, ctx):
-        """:type Character"""
         active_character = await ctx.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "active": True})
         if active_character is None:
             raise NoCharacter()
@@ -337,16 +339,30 @@ class Character(Spellcaster):
         """
         return self.stats.get_mod(stat)
 
-    def get_attacks(self):
-        """
-        :returns the character's list of attacks.
-        :rtype list[Attack]
-        """
-        return self.attacks + self.overrides.attacks
+    @property
+    def owner(self):
+        return self._owner
+
+    @owner.setter
+    def owner(self, value: str):
+        self._owner = value
+        self._active = False  # don't have any conflicts
+
+    @property
+    def attacks(self):
+        return self._attacks + self.overrides.attacks
 
     @property
     def upstream(self):
         return self._upstream
+
+    @property
+    def description(self):
+        return self.overrides.desc or self._description
+
+    @property
+    def image(self):
+        return self.overrides.image or self._image
 
     # ---------- CSETTINGS ----------
     def get_setting(self, setting, default=None):
@@ -392,11 +408,14 @@ class Character(Spellcaster):
                                   "(contains only a-z, A-Z, 0-9, and _, and not start with a number).")
         self.cvars[name] = str(val)
 
-    def get_scope_locals(self):
-        out = self.cvars
+    def get_scope_locals(self, no_cvars=False):
+        if no_cvars:
+            out = {}
+        else:
+            out = self.cvars.copy()
         out.update({
-            "armor": self.ac, "description": self.description, "hp": self.max_hp, "image": self.image,
-            "level": self.levels.total_level, "proficiencyBonus": self.stats.prof_bonus,
+            "name": self.name, "armor": self.ac, "description": self.description, "hp": self.max_hp,
+            "image": self.image, "level": self.levels.total_level, "proficiencyBonus": self.stats.prof_bonus,
             "spell": self.stats.prof_bonus - self.spellbook.sab, "color": hex(self.get_color())[2:]
         })
         for cls, lvl in self.levels:
@@ -665,7 +684,7 @@ class Character(Spellcaster):
         embed.description = '\n'.join(desc_details)
 
         # attacks
-        atks = self.get_attacks()
+        atks = self.attacks
         atk_str = ""
         for attack in atks:
             a = f"{str(attack)}\n"

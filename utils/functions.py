@@ -370,7 +370,7 @@ ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
 
 
 def verbose_stat(stat):
-    return ABILITY_MAP[stat]
+    return ABILITY_MAP[stat.lower()]
 
 
 def parse_data_entry(text, md_breaks=False):

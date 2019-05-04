@@ -216,7 +216,7 @@ class Saves:
 
 
 class Resistances:
-    def __init__(self, resist, immune, vuln):
+    def __init__(self, resist: list, immune: list, vuln: list):
         self.resist = resist
         self.immune = immune
         self.vuln = vuln

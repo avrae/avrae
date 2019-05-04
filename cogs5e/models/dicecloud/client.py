@@ -75,7 +75,7 @@ class DicecloudClient:
         :param list_name: (str) The name of the spell list to look for. Returns default if not passed.
         :return: (str) The default list id.
         """
-        char_id = character.id[10:]
+        char_id = character.upstream[10:]
 
         char = await self.get_character(char_id)
         if list_name:
@@ -97,11 +97,10 @@ class DicecloudClient:
         :param spells: (list) The list of spells to add
         :param spell_list: (str) The spell list name to search for in Dicecloud.
         """
-        assert character.live
         list_id = await self._get_list_id(character, spell_list)
         if not list_id:  # still
             raise InsertFailure("No matching spell lists on origin sheet. Run `!update` if this seems incorrect.")
-        return await self.http.post(f'/api/character/{character.id[10:]}/spellList/{list_id}',
+        return await self.http.post(f'/api/character/{character.upstream[10:]}/spellList/{list_id}',
                                     [s.to_dicecloud() for s in spells])
 
     async def create_character(self, name: str = "New Character", gender: str = None, race: str = None,

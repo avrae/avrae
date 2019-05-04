@@ -34,7 +34,7 @@ class Spellbook:
 
 
 class SpellbookSpell:
-    def __init__(self, name, strict, level=None, dc=None, sab=None):
+    def __init__(self, name, strict=False, level=None, dc=None, sab=None):
         self.name = name
         self.strict = strict
         self.level = level
@@ -44,7 +44,7 @@ class SpellbookSpell:
     @classmethod
     def from_spell(cls, spell):
         strict = spell.source != 'homebrew'
-        return cls(spell.name, strict)
+        return cls(spell.name, strict, spell.level)
 
     @classmethod
     def from_dict(cls, d):

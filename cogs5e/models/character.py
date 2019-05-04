@@ -19,7 +19,9 @@ INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
 
 
 class CharOptions:
-    def __init__(self, options):
+    def __init__(self, options=None):
+        if options is None:
+            options = {}
         self.options = options
 
     @classmethod
@@ -61,7 +63,7 @@ class ManualOverrides:
 
 
 class DeathSaves:
-    def __init__(self, successes, fails):
+    def __init__(self, successes=0, fails=0):
         self.successes = successes
         self.fails = fails
 

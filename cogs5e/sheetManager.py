@@ -26,7 +26,7 @@ from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument
+from cogs5e.models.errors import AvraeException, InvalidArgument
 from cogs5e.models.sheet import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
@@ -40,8 +40,9 @@ log = logging.getLogger(__name__)
 
 
 class SheetManager:
-    """Commands to import a character sheet from [Dicecloud](https://dicecloud.com),
-    a [Google Sheet](https://gsheet.avrae.io), or a D&D Beyond PDF."""
+    """
+    Commands to load a character sheet into Avrae, and supporting commands to modify the character, as well as basic macros.
+    """
 
     def __init__(self, bot):
         self.bot = bot
@@ -64,7 +65,6 @@ class SheetManager:
     async def new_arg_stuff(self, args, ctx, character):
         args = await scripting.parse_snippets(args, ctx)
         args = await character.parse_cvars(args, ctx)
-        args = shlex.split(args)
         args = argparse(args)
         return args
 
@@ -852,7 +852,7 @@ class SheetManager:
         return True
 
     @commands.command()  # TODO
-    async def dicecloud(self, ctx, url: str, *, args=""):
+    async def dicecloud(self, ctx, url: str, *args):
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.
         __Valid Arguments__
@@ -865,39 +865,29 @@ class SheetManager:
 
         loading = await ctx.send('Loading character data from Dicecloud...')
         parser = DicecloudParser(url)
+
         try:
-            await parser.get_character()
+            character = await parser.load_character(str(ctx.author.id))
+        except AvraeException as eep:
+            return await loading.edit(content=f"Error loading character: {eep}")
         except Exception as eep:
-            return await loading.edit(content=f"Dicecloud returned an error: {eep}")
+            traceback.print_exc()
+            return await loading.edit(content=f"Error loading character: {eep}")
 
-        try:
-            sheet = parser.get_sheet()
-        except Exception as e:
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await loading.edit(content=
-                                      'Error: Invalid character sheet. Capitalization matters!\n' + str(e))
+        await loading.edit(content=f'Loaded and saved data for {character.name}!')
 
-        c = Character(sheet['sheet'], f"dicecloud-{url}").initialize_consumables()
-        await loading.edit(content=f'Loaded and saved data for {c.get_name()}!')
+        # if '-cc' in args:  # TODO
+        #     for counter in parser.get_custom_counters():
+        #         displayType = 'bubble' if c.evaluate_cvar(counter['max']) < 6 else None
+        #         try:
+        #             c.create_consumable(counter['name'], maxValue=str(counter['max']), minValue=str(counter['min']),
+        #                                 reset=counter['reset'], displayType=displayType, live=counter['live'])
+        #         except InvalidArgument:
+        #             pass
 
-        if '-cc' in args:
-            for counter in parser.get_custom_counters():
-                displayType = 'bubble' if c.evaluate_cvar(counter['max']) < 6 else None
-                try:
-                    c.create_consumable(counter['name'], maxValue=str(counter['max']), minValue=str(counter['min']),
-                                        reset=counter['reset'], displayType=displayType, live=counter['live'])
-                except InvalidArgument:
-                    pass
-
-        del parser  # uh. maybe some weird instance things going on here.
-        await c.commit(ctx)
-        await c.set_active(ctx)
-        try:
-            await ctx.send(embed=c.get_sheet_embed())
-        except:
-            await ctx.send(
-                "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
-                "This is usually due to an invalid image.")
+        await character.commit(ctx)
+        await character.set_active(ctx)
+        await ctx.send(embed=character.get_sheet_embed())
 
     @commands.command()
     async def gsheet(self, ctx, url: str):

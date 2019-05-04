@@ -1,4 +1,6 @@
 RESIST_TYPES = ('resist', 'immune', 'vuln', 'neutral')
+DAMAGE_TYPES = ('acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic', 'piercing', 'poison',
+                'psychic', 'radiant', 'slashing', 'thunder')
 
 STAT_NAMES = ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma')
 

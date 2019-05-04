@@ -5,7 +5,7 @@ async-timeout==3.0.1
 attrs==17.4.0
 cachetools==2.0.1
 chardet==3.0.4
-git+https://github.com/Rapptz/discord.py@rewrite
+git+https://github.com/Rapptz/discord.py@3f06f247c039a23948e7bb0014ea31db533b4ba2
 dnspython==1.15.0
 fuzzywuzzy==0.15.1
 gast==0.2.0

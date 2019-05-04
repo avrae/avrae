@@ -54,8 +54,11 @@ You will need to create a folder named `temp`.
 ###### Search Algorithm
 You will also need to change the search algorithm used by spell lookup to the standard algorithm.
 
-In `cogs5e/lookup.py`, delete line 14 (`from cogs5e.funcs.lookup_ml import ml_spell_search`) and
-edit line 627
+In `cogs5e/lookup.py`, delete  
+```py
+from cogs5e.funcs.lookup_ml import ml_spell_search
+``` 
+from the top, and edit the line that says: 
 ```py
 spell = await select_spell_full(ctx, name, srd=srd, search_func=ml_spell_search)
 ```

@@ -4,15 +4,11 @@ Created on Jan 19, 2017
 @author: andrew
 """
 import asyncio
-import copy
 import logging
 import re
-import shlex
 import sys
 import traceback
-from socket import timeout
 
-import aiohttp
 import discord
 import pygsheets
 from discord.ext import commands
@@ -26,7 +22,7 @@ from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import AvraeException, InvalidArgument
+from cogs5e.models.errors import AvraeException, ExternalImportError
 from cogs5e.models.sheet import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
@@ -498,119 +494,107 @@ class SheetManager:
 
     @commands.command()
     @commands.cooldown(1, 15, BucketType.user)
-    async def update(self, ctx, *, args=''):  # TODO
+    async def update(self, ctx, *args):  # TODO
         """Updates the current character sheet, preserving all settings.
-        Valid Arguments: `-v` - Shows character sheet after update is complete.
+        __Valid Arguments__
+        `-v` - Shows character sheet after update is complete.
         `-cc` - Updates custom counters from Dicecloud."""
-        char: Character = await Character.from_ctx(ctx)
-        url = char.id
-        old_character = char.character
+        old_character: Character = await Character.from_ctx(ctx)
+        url = old_character.upstream
+        args = argparse(args)
 
         prefixes = 'dicecloud-', 'pdf-', 'google-', 'beyond-'
-        _id = copy.copy(url)
+        _id = url[:]
         for p in prefixes:
             if url.startswith(p):
                 _id = url[len(p):]
                 break
-        sheet_type = old_character.get('type', 'dicecloud')
+        sheet_type = old_character.sheet_type
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(_id)
             loading = await ctx.send('Updating character data from Dicecloud...')
-        elif sheet_type == 'google':
-            try:
-                parser = GoogleSheet(_id, self.gsheet_client)
-            except AssertionError:
-                await self.init_gsheet_client()  # attempt reconnection
-                return await ctx.send("I am still connecting to Google. Try again in 15-30 seconds.")
-            loading = await ctx.send('Updating character data from Google...')
-        elif sheet_type == 'beyond':
-            loading = await ctx.send('Updating character data from Beyond...')
-            parser = BeyondSheetParser(_id)
+        # elif sheet_type == 'google':  TODO
+        #     try:
+        #         parser = GoogleSheet(_id, self.gsheet_client)
+        #     except AssertionError:
+        #         await self.init_gsheet_client()  # attempt reconnection
+        #         return await ctx.send("I am still connecting to Google. Try again in 15-30 seconds.")
+        #     loading = await ctx.send('Updating character data from Google...')
+        # elif sheet_type == 'beyond':
+        #     loading = await ctx.send('Updating character data from Beyond...')
+        #     parser = BeyondSheetParser(_id)
         else:
-            return await ctx.send("Error: Unknown sheet type.")
-        try:
-            await parser.get_character()
-        except (timeout, aiohttp.ClientResponseError) as e:
-            log.warning(
-                f"Response error importing char:\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
-            return await loading.edit(content=
-                                      "I'm having some issues connecting to Dicecloud or Google right now. "
-                                      "Please try again in a few minutes.")
-        except HttpError:
-            return await loading.edit(content=
-                                      "Google returned an error trying to access your sheet. "
-                                      "Please ensure your sheet is shared and try again in a few minutes.")
-        except Exception as e:
-            log.warning(
-                f"Failed to import character\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
-            return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
+            return await ctx.send(f"Error: Unknown sheet type {sheet_type}.")
+        # try:
+        #     await parser.get_character()
+        # except (timeout, aiohttp.ClientResponseError) as e:
+        #     log.warning(
+        #         f"Response error importing char:\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
+        #     return await loading.edit(content=
+        #                               "I'm having some issues connecting to Dicecloud or Google right now. "
+        #                               "Please try again in a few minutes.")
+        # except HttpError:
+        #     return await loading.edit(content=
+        #                               "Google returned an error trying to access your sheet. "
+        #                               "Please ensure your sheet is shared and try again in a few minutes.")
+        # except Exception as e:
+        #     log.warning(
+        #         f"Failed to import character\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
+        #     return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
+
+        # try:
+        #     if sheet_type == 'dicecloud':
+        #         sheet = parser.get_sheet()
+        #     elif sheet_type == 'pdf':
+        #         sheet = parser.get_sheet()
+        #     elif sheet_type == 'google':
+        #         sheet = await parser.get_sheet()
+        #     elif sheet_type == 'beyond':
+        #         sheet = parser.get_sheet()
+        #     else:
+        #         return await ctx.send("Error: Unknown sheet type.")
+        #     await loading.edit(content=
+        #                        'Updated and saved data for {}!'.format(sheet['sheet']['stats']['name']))
+        # except TypeError as e:
+        #     del parser
+        #     log.info(f"Exception in parser.get_sheet: {e}")
+        #     log.debug('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
+        #     return await loading.edit(content=
+        #                               'Invalid character sheet. '
+        #                               'If you are using a dicecloud sheet, '
+        #                               'make sure you have shared the sheet so that anyone with the '
+        #                               'link can view.')
+        # except Exception as e:
+        #     del parser
+        #     return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
 
         try:
-            if sheet_type == 'dicecloud':
-                sheet = parser.get_sheet()
-            elif sheet_type == 'pdf':
-                sheet = parser.get_sheet()
-            elif sheet_type == 'google':
-                sheet = await parser.get_sheet()
-            elif sheet_type == 'beyond':
-                sheet = parser.get_sheet()
-            else:
-                return await ctx.send("Error: Unknown sheet type.")
-            await loading.edit(content=
-                               'Updated and saved data for {}!'.format(sheet['sheet']['stats']['name']))
-        except TypeError as e:
-            del parser
-            log.info(f"Exception in parser.get_sheet: {e}")
-            log.debug('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
-            return await loading.edit(content=
-                                      'Invalid character sheet. '
-                                      'If you are using a dicecloud sheet, '
-                                      'make sure you have shared the sheet so that anyone with the '
-                                      'link can view.')
-        except Exception as e:
-            del parser
-            return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
+            character = await parser.load_character(str(ctx.author.id), args)
+        except ExternalImportError as eep:
+            return await loading.edit(content=f"Error loading character: {eep}")
+        except Exception as eep:
+            log.warning(f"Error importing character {old_character.upstream}")
+            traceback.print_exc()
+            return await loading.edit(content=f"Error loading character: {eep}")
 
-        sheet = sheet['sheet']
-        sheet['settings'] = old_character.get('settings', {})
-        sheet['overrides'] = old_character.get('overrides', {})
-        sheet['cvars'] = old_character.get('cvars', {})
-        sheet['consumables'] = old_character.get('consumables', {})
+        character.update(old_character)
 
-        overrides = old_character.get('overrides', {})
-        sheet['stats']['description'] = overrides.get('desc') or sheet.get('stats', {}).get("description",
-                                                                                            "No description available.")
-        sheet['stats']['image'] = overrides.get('image') or sheet.get('stats', {}).get('image', '')
-        override_spells = []
-        for s in overrides.get('spells', []):
-            if isinstance(s, str):
-                override_spells.append({'name': s, 'strict': True})
-            else:
-                override_spells.append(s)
-        sheet['spellbook']['spells'].extend(override_spells)
+        # if '-cc' in args and sheet_type == 'dicecloud':  # TODO
+        #     counters = parser.get_custom_counters()
+        #     for counter in counters:
+        #         displayType = 'bubble' if character.evaluate_cvar(counter['max']) < 6 else None
+        #         try:
+        #             character.create_consumable(counter['name'], maxValue=str(counter['max']),
+        #                                 minValue=str(counter['min']),
+        #                                 reset=counter['reset'], displayType=displayType, live=counter['live'])
+        #         except InvalidArgument:
+        #             pass
 
-        c = Character(sheet, url).initialize_consumables()
-
-        if '-cc' in args and sheet_type == 'dicecloud':
-            counters = parser.get_custom_counters()
-            for counter in counters:
-                displayType = 'bubble' if c.evaluate_cvar(counter['max']) < 6 else None
-                try:
-                    c.create_consumable(counter['name'], maxValue=str(counter['max']),
-                                        minValue=str(counter['min']),
-                                        reset=counter['reset'], displayType=displayType, live=counter['live'])
-                except InvalidArgument:
-                    pass
-
-        # if c.get_combat_id() and not self.bot.rdb.exists(c.get_combat_id()):
-        #     c.leave_combat()
-        # reimplement this later
-
-        await c.commit(ctx)
-        await c.set_active(ctx)
-        del parser, old_character  # pls don't freak out avrae
-        if '-v' in args:
-            await ctx.send(embed=c.get_sheet_embed())
+        await character.commit(ctx)
+        await character.set_active(ctx)
+        await loading.edit(content=f"Updated and saved data for {character.name}!")
+        if args.last('v'):
+            await ctx.send(embed=character.get_sheet_embed())
 
     @commands.command()
     async def transferchar(self, ctx, user: discord.Member):
@@ -618,7 +602,7 @@ class SheetManager:
         character: Character = await Character.from_ctx(ctx)
         overwrite = ''
 
-        conflict = await self.bot.mdb.characters.find_one({"owner": str(user.id), "upstream": character.id})
+        conflict = await self.bot.mdb.characters.find_one({"owner": str(user.id), "upstream": character.upstream})
         if conflict:
             overwrite = "**WARNING**: This will overwrite an existing character."
 
@@ -638,7 +622,7 @@ class SheetManager:
         await ctx.send(f"Copied {character.name} to {user.display_name}'s storage.")
 
     @commands.command()
-    async def csettings(self, ctx, *, args):
+    async def csettings(self, ctx, *args):
         """Updates personalization settings for the currently active character.
         Valid Arguments:
         `color <hex color>` - Colors all embeds this color.
@@ -649,8 +633,6 @@ class SheetManager:
         `crittype 2x/default` - Sets whether crits double damage or dice.
         `critdice <number>` - Adds additional dice for to critical attacks."""
         char: Character = await Character.from_ctx(ctx)
-
-        args = shlex.split(args)
 
         out = 'Operations complete!\n'
         index = 0
@@ -851,7 +833,7 @@ class SheetManager:
             return replyBool
         return True
 
-    @commands.command()  # TODO
+    @commands.command()
     async def dicecloud(self, ctx, url: str, *args):
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.
@@ -867,23 +849,15 @@ class SheetManager:
         parser = DicecloudParser(url)
 
         try:
-            character = await parser.load_character(str(ctx.author.id))
-        except AvraeException as eep:
+            character = await parser.load_character(str(ctx.author.id), argparse(args))
+        except ExternalImportError as eep:
             return await loading.edit(content=f"Error loading character: {eep}")
         except Exception as eep:
+            log.warning(f"Error importing character dicecloud-{url}")
             traceback.print_exc()
             return await loading.edit(content=f"Error loading character: {eep}")
 
         await loading.edit(content=f'Loaded and saved data for {character.name}!')
-
-        # if '-cc' in args:  # TODO
-        #     for counter in parser.get_custom_counters():
-        #         displayType = 'bubble' if c.evaluate_cvar(counter['max']) < 6 else None
-        #         try:
-        #             c.create_consumable(counter['name'], maxValue=str(counter['max']), minValue=str(counter['min']),
-        #                                 reset=counter['reset'], displayType=displayType, live=counter['live'])
-        #         except InvalidArgument:
-        #             pass
 
         await character.commit(ctx)
         await character.set_active(ctx)

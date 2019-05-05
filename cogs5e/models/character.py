@@ -351,12 +351,16 @@ class Character(Spellcaster):
         self._active = False  # don't have any conflicts
 
     @property
-    def attacks(self):
-        return self._attacks + self.overrides.attacks
-
-    @property
     def upstream(self):
         return self._upstream
+
+    @property
+    def sheet_type(self):
+        return self._sheet_type
+
+    @property
+    def attacks(self):
+        return self._attacks + self.overrides.attacks
 
     @property
     def description(self):
@@ -652,6 +656,25 @@ class Character(Spellcaster):
         return reset
 
     # ---------- MISC ----------
+    def update(self, old_character):
+        """
+        Updates certain attributes to match an old character's.
+        Currently updates settings, overrides, cvars, consumables, overriden spellbook spells,
+        hp, temp hp, death saves, used spell slots
+        :type old_character Character
+        """
+        self.options = old_character.options
+        self.overrides = old_character.overrides
+        self.cvars = old_character.cvars
+
+        existing_cons_names = set(con.name.lower() for con in self.consumables)
+        self.consumables.extend(con for con in old_character.consumables if con.name.lower() not in existing_cons_names)
+
+        self.spellbook.spells.extend(self.overrides.spells)
+        self._hp = old_character._hp
+        self._temp_hp = old_character._temp_hp
+        self.spellbook.slots = old_character.spellbook.slots
+
     def get_sheet_embed(self):
         embed = EmbedWithCharacter(self)
         desc_details = []

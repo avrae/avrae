@@ -27,10 +27,13 @@ import credentials
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import dicecloud_client
+from cogs5e.models.dicecloud.errors import DicecloudException
+from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Resistances, Skills, Spellbook, SpellbookSpell
-from cogs5e.models.sheet.base import Skill, Saves
-from utils.constants import DAMAGE_TYPES, SKILL_MAP, SKILL_NAMES, SAVE_NAMES
+from cogs5e.models.sheet.base import Saves, Skill
+from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES
 from utils.functions import search
+from .abc import SheetLoaderABC
 
 log = logging.getLogger(__name__)
 
@@ -44,18 +47,24 @@ API_BASE = "https://dicecloud.com/character/"
 KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
 
 
-class DicecloudParser:
+class DicecloudParser(SheetLoaderABC):
     def __init__(self, url):
-        self.url = url
-        self.character_data = None
+        super(DicecloudParser, self).__init__(url)
         self.stats = None
         self.levels = None
         self.evaluator = DicecloudEvaluator()
         self._cache = {}
 
-    async def load_character(self, owner_id: str):
-        """Downloads and parses the character data, returning a fully-formed Character object."""
-        await self.get_character()
+    async def load_character(self, owner_id: str, args):
+        """
+        Downloads and parses the character data, returning a fully-formed Character object.
+        :raises ExternalImportError if something went wrong during the import that we can expect
+        :raises Exception if something weirder happened
+        """
+        try:
+            await self.get_character()
+        except DicecloudException as e:
+            raise ExternalImportError(f"Dicecloud returned an error: {e}")
 
         upstream = f"dicecloud-{self.url}"
         active = False
@@ -82,8 +91,11 @@ class DicecloudParser:
         cvars = {}
         options = {}
         overrides = {}
-        consumables = []
         death_saves = {}
+
+        consumables = []
+        if args.last('cc'):
+            consumables = self.get_custom_counters()
 
         spellbook = self.get_spellbook().to_dict()
         live = self.is_live()
@@ -111,8 +123,7 @@ class DicecloudParser:
             return self.stats
         self.get_levels()
 
-        stat_dict = {}
-        stat_dict['proficiencyBonus'] = int(self.calculate_stat('proficiencyBonus'))
+        stat_dict = {'proficiencyBonus': int(self.calculate_stat('proficiencyBonus'))}
 
         for stat in ('strength', 'dexterity', 'constitution', 'wisdom', 'intelligence', 'charisma'):
             stat_dict[stat] = int(self.calculate_stat(stat))
@@ -283,6 +294,42 @@ class DicecloudParser:
             return 'dicecloud'
         return None
 
+    def get_custom_counters(self):
+        counters = []
+
+        for res in CLASS_RESOURCES:
+            res_value = self.calculate_stat(res)
+            if res_value > 0:
+                display_type = 'bubble' if res_value < 6 else None
+                co = {  # we have to initialize counters this way, which is meh
+                    "name": CLASS_RESOURCE_NAMES.get(res, 'Unknown'),
+                    "value": res_value, "minv": '0', "maxv": str(res_value),
+                    "reset": CLASS_RESOURCE_RESETS.get(res),
+                    "display_type": display_type, "live_id": res
+                }
+                counters.append(co)
+        for f in self.character_data.get('features', []):
+            if not f.get('enabled'): continue
+            if f.get('removed'): continue
+            if not 'uses' in f: continue
+            reset = None
+            desc = f.get('description', '').lower()
+            if 'short rest' in desc or 'short or long rest' in desc:
+                reset = 'short'
+            elif 'long rest' in desc:
+                reset = 'long'
+            initial_value = self.evaluator.eval(f['uses'])
+            display_type = 'bubble' if initial_value < 6 else None
+            co = {
+                "name": f['name'],
+                "value": initial_value, "minv": '0', "maxv": f['uses'],
+                "reset": reset,
+                "display_type": display_type, "live_id": f['_id']
+            }
+            counters.append(co)
+
+        return counters
+
     # helper funcs
     def calculate_stat(self, stat, base=0):
         """Calculates and returns the stat value."""
@@ -404,29 +451,6 @@ class DicecloudParser:
 
         return attack
 
-    def get_custom_counters(self):
-        counters = []
-        for res in CLASS_RESOURCES:
-            resValue = self.calculate_stat(res)
-            if resValue > 0:
-                co = {'name': CLASS_RESOURCE_NAMES.get(res, 'Unknown'), 'max': resValue, 'min': 0,
-                     'reset': CLASS_RESOURCE_RESETS.get(res), 'live': res}
-                counters.append(co)
-        for f in self.character_data.get('features', []):
-            if not f.get('enabled'): continue
-            if f.get('removed'): continue
-            if not 'uses' in f: continue
-            reset = None
-            desc = f.get('description', '').lower()
-            if 'short rest' in desc or 'short or long rest' in desc:
-                reset = 'short'
-            elif 'long rest' in desc:
-                reset = 'long'
-            co = {'name': f['name'], 'max': f['uses'], 'min': 0,
-                 'reset': reset, 'live': f['_id']}
-            counters.append(co)
-        return counters
-
 
 def func_if(condition, t, f):
     return t if condition else f
@@ -474,9 +498,10 @@ class DicecloudEvaluator(SimpleEval):
 if __name__ == '__main__':
     import asyncio
     import json
+    from utils.argparser import argparse
 
     while True:
         url_ = input("Dicecloud sheet ID: ")
         parser = DicecloudParser(url_)
-        char = asyncio.get_event_loop().run_until_complete(parser.load_character(''))
+        char = asyncio.get_event_loop().run_until_complete(parser.load_character('', argparse('')))
         print(json.dumps(char.to_dict(), indent=2))

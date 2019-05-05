@@ -5,15 +5,13 @@ Created on May 8, 2017
 """
 import asyncio
 import logging
-import random
 import re
-
-import discord
 
 from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.sheets.errors import MissingAttribute
 from utils.functions import search
+from .abc import SheetLoaderABC
 
 log = logging.getLogger(__name__)
 
@@ -73,10 +71,9 @@ class TempCharacter:
         return self.worksheet.range(rng)
 
 
-class GoogleSheet:
+class GoogleSheet(SheetLoaderABC):
     def __init__(self, url, client):
-        self.url = url
-        self.character = None
+        super(GoogleSheet, self).__init__(url)
         assert client is not None
         self.client = client
         self.additional = None

@@ -13,6 +13,7 @@ import html2text
 
 from cogs5e.models.errors import ExternalImportError
 from utils.constants import SKILL_MAP
+from .abc import SheetLoaderABC
 
 log = logging.getLogger(__name__)
 
@@ -50,10 +51,9 @@ HOUSERULE_SKILL_MAP = {
 }
 
 
-class BeyondSheetParser:
-
+class BeyondSheetParser(SheetLoaderABC):
     def __init__(self, charId):
-        self.url = charId
+        super(BeyondSheetParser, self).__init__(charId)
         self.character = None
 
         self.stats = None

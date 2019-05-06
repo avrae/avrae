@@ -720,5 +720,8 @@ class Character(Spellcaster):
         embed.add_field(name="Attacks", value=atk_str.strip())
 
         # sheet url?
+        if self._import_version < 15:
+            embed.set_footer(text=f"You are using an old sheet version ({self.sheet_type} v{self._import_version}). "
+            f"Please run !update.")
 
         return embed

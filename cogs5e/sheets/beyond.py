@@ -134,20 +134,18 @@ class BeyondSheetParser(SheetLoaderABC):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         if self.stats: return self.stats
         character = self.character_data
-        stat_dict = {}
 
         profByLevel = floor(self.get_levels().total_level / 4 + 1.75)
         prof_bonus = self.get_stat('proficiency-bonus', base=int(profByLevel))
 
+        stat_dict = {}
         for i, stat in enumerate(('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma')):
             base = next(s for s in character['stats'] if s['id'] == i + 1)['value']
             bonus = next(s for s in character['bonusStats'] if s['id'] == i + 1)['value'] or 0
             override = next(s for s in character['overrideStats'] if s['id'] == i + 1)['value']
             stat_dict[stat] = override or self.get_stat(f"{stat}-score", base=base + bonus)
 
-        stats = BaseStats(prof_bonus, stat_dict['strength'], stat_dict['dexterity'],
-                          stat_dict['constitution'], stat_dict['intelligence'], stat_dict['wisdom'],
-                          stat_dict['charisma'])
+        stats = BaseStats(prof_bonus, **stat_dict)
 
         self.stats = stats
         return stats

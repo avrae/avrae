@@ -219,7 +219,7 @@ class DicecloudParser(SheetLoaderABC):
                 int(self.calculate_stat(skill, base=base_val)),
                 prof=prof_mult,
                 adv=adv
-            ).to_dict()
+            )
 
         # and saves
         saves = {}
@@ -231,9 +231,9 @@ class DicecloudParser(SheetLoaderABC):
                 int(self.calculate_stat(save, base=base_val)),
                 prof=prof_mult,
                 adv=adv
-            ).to_dict()
+            )
 
-        return Skills.from_dict(skills), Saves.from_dict(saves)
+        return Skills(skills), Saves(saves)
 
     def get_resistances(self) -> Resistances:
         if self.character_data is None: raise Exception('You must call get_character() first.')

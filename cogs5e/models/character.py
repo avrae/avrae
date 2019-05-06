@@ -229,7 +229,7 @@ class Character(Spellcaster):
     def __init__(self, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
                  name: str, description: str, image: str, stats: dict, levels: dict, attacks: list, skills: dict,
                  resistances: dict, saves: dict, ac: int, max_hp: int, hp: int, temp_hp: int, cvars: dict,
-                 options: dict, overrides: dict, consumables: list, death_saves: dict, spellbook: dict, live: str,
+                 options: dict, overrides: dict, consumables: list, death_saves: dict, spellbook: dict, live,
                  race: str, background: str, **kwargs):
         if kwargs:
             log.warning(f"Unused kwargs: {kwargs}")

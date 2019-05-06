@@ -22,7 +22,7 @@ from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import AvraeException, ExternalImportError
+from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
@@ -42,21 +42,6 @@ class SheetManager:
 
     def __init__(self, bot):
         self.bot = bot
-
-        self.gsheet_client = None
-        self._gsheet_initializing = False
-        self.bot.loop.create_task(self.init_gsheet_client())
-
-    async def init_gsheet_client(self):
-        if self._gsheet_initializing:
-            return
-        self._gsheet_initializing = True
-
-        def _():
-            return pygsheets.authorize(service_file='avrae-google.json', no_cache=True)
-
-        self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
-        self._gsheet_initializing = False
 
     async def new_arg_stuff(self, args, ctx, character):
         args = await scripting.parse_snippets(args, ctx)
@@ -112,7 +97,7 @@ class SheetManager:
         args['critdice'] = char.get_setting('critdice', 0)
         args['crittype'] = char.get_setting('crittype', 'default')
 
-        result = sheet_attack(attack, args, EmbedWithCharacter(char, name=False))  # TODO
+        result = sheet_attack(attack.to_old(), args, EmbedWithCharacter(char, name=False))
         embed = result['embed']
         if args.last('h', type_=bool):
             try:
@@ -520,9 +505,9 @@ class SheetManager:
         #         await self.init_gsheet_client()  # attempt reconnection
         #         return await ctx.send("I am still connecting to Google. Try again in 15-30 seconds.")
         #     loading = await ctx.send('Updating character data from Google...')
-        # elif sheet_type == 'beyond':
-        #     loading = await ctx.send('Updating character data from Beyond...')
-        #     parser = BeyondSheetParser(_id)
+        elif sheet_type == 'beyond':
+            loading = await ctx.send('Updating character data from Beyond...')
+            parser = BeyondSheetParser(_id)
         else:
             return await ctx.send(f"Error: Unknown sheet type {sheet_type}.")
         # try:
@@ -578,17 +563,6 @@ class SheetManager:
             return await loading.edit(content=f"Error loading character: {eep}")
 
         character.update(old_character)
-
-        # if '-cc' in args and sheet_type == 'dicecloud':  # TODO
-        #     counters = parser.get_custom_counters()
-        #     for counter in counters:
-        #         displayType = 'bubble' if character.evaluate_cvar(counter['max']) < 6 else None
-        #         try:
-        #             character.create_consumable(counter['name'], maxValue=str(counter['max']),
-        #                                 minValue=str(counter['min']),
-        #                                 reset=counter['reset'], displayType=displayType, live=counter['live'])
-        #         except InvalidArgument:
-        #             pass
 
         await character.commit(ctx)
         await character.set_active(ctx)
@@ -923,7 +897,7 @@ class SheetManager:
                 "This is usually due to an invalid image.")
 
     @commands.command()
-    async def beyond(self, ctx, url: str):
+    async def beyond(self, ctx, url: str, *args):
         """Loads a character sheet from D&D Beyond, resetting all settings."""
 
         loading = await ctx.send('Loading character data from Beyond...')
@@ -938,28 +912,19 @@ class SheetManager:
         parser = BeyondSheetParser(url)
 
         try:
-            character = await parser.get_character()
-        except Exception as e:
-            return await loading.edit(content='Error: Could not load character sheet.\n' + str(e))
+            character = await parser.load_character(str(ctx.author.id), argparse(args))
+        except ExternalImportError as eep:
+            return await loading.edit(content=f"Error loading character: {eep}")
+        except Exception as eep:
+            log.warning(f"Error importing character beyond-{url}")
+            traceback.print_exc()
+            return await loading.edit(content=f"Error loading character: {eep}")
 
-        try:
-            sheet = parser.get_sheet()
-        except Exception as e:
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
+        await loading.edit(content=f'Loaded and saved data for {character.name}!')
 
-        await loading.edit(content='Loaded and saved data for {}!'.format(character['name']))
-
-        char = Character(sheet['sheet'], f"beyond-{url}").initialize_consumables()
-        await char.commit(ctx)
-        await char.set_active(ctx)
-
-        try:
-            await ctx.send(embed=char.get_sheet_embed())
-        except:
-            await ctx.send(
-                "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
-                "This is usually due to an invalid image.")
+        await character.commit(ctx)
+        await character.set_active(ctx)
+        await ctx.send(embed=character.get_sheet_embed())
 
 
 def setup(bot):

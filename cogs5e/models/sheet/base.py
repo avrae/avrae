@@ -69,6 +69,9 @@ class Levels:
             if lvl > 0:
                 yield cls, lvl
 
+    def get(self, cls_name: str, default=0):
+        return self.classes.get(cls_name, default)
+
 
 class Skill:
     def __init__(self, value, prof=0, bonus=0, adv=None):

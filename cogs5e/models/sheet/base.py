@@ -74,7 +74,7 @@ class Levels:
 
 
 class Skill:
-    def __init__(self, value, prof=0, bonus=0, adv=None):
+    def __init__(self, value, prof: float = 0, bonus: int = 0, adv=None):
         # mod = value = base + (pb * prof) + bonus
         # adv = tribool (False, None, True) = (dis, normal, adv)
         if prof not in (0, 0.5, 1, 2):

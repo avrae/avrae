@@ -15,13 +15,15 @@ import logging
 import re
 
 import pygsheets
+from googleapiclient.errors import HttpError
+from pygsheets.exceptions import SpreadsheetNotFound
 
 from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet import Attack, BaseStats, Levels
-from cogs5e.models.sheet.base import Saves, Skill, Skills
+from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
+from cogs5e.models.sheet.base import Resistances, Saves, Skill, Skills
 from cogs5e.sheets.errors import MissingAttribute
 from utils.constants import DAMAGE_TYPES
 from utils.functions import search
@@ -94,6 +96,8 @@ class GoogleSheet(SheetLoaderABC):
         self.additional = None
         self.version = 1
 
+        self.total_level = 0
+
     # google api stuff
     @staticmethod
     async def init_gsheet_client():
@@ -104,13 +108,14 @@ class GoogleSheet(SheetLoaderABC):
         def _():
             return pygsheets.authorize(service_file='avrae-google.json', no_cache=True)
 
-        GoogleSheet.gsheet_client = await asyncio.get_event_loop().run_in_executor(None, _)
-        GoogleSheet._gsheet_initializing = False
+        GoogleSheet.g_client = await asyncio.get_event_loop().run_in_executor(None, _)
+        GoogleSheet._client_initializing = False
+        log.info("Logged in to google")
 
     def _gchar(self):
         # self.client.login()
-        doc = self.g_client.open_by_key(self.url)
-        self.character_data = TempCharacter(doc.sheet1, "A1:AQ180")
+        doc = GoogleSheet.g_client.open_by_key(self.url)
+        self.character_data = TempCharacter(doc.sheet1, "A1:AR180")
         if doc.sheet1.cell("AQ4").value == "2.0":
             self.additional = TempCharacter(doc.worksheet('index', 1), "A1:AP81")
             self.version = 2
@@ -122,7 +127,16 @@ class GoogleSheet(SheetLoaderABC):
         :raises ExternalImportError if something went wrong during the import that we can expect
         :raises Exception if something weirder happened
         """
-        await self.get_character()
+        try:
+            await self.get_character()
+        except (KeyError, SpreadsheetNotFound):
+            raise ExternalImportError("Invalid character sheet. Make sure you've shared it with me at "
+                                      "`avrae-320@avrae-bot.iam.gserviceaccount.com`!")
+        except HttpError:
+            raise ExternalImportError("Google returned an error. Please ensure your sheet is shared with "
+                                      "`avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
+        except Exception:
+            raise
         return await asyncio.get_event_loop().run_in_executor(None, self._load_character, owner_id, args)
 
     def _load_character(self, owner_id: str, args):
@@ -141,7 +155,7 @@ class GoogleSheet(SheetLoaderABC):
         skls, svs = self.get_skills_and_saves()
         skills = skls.to_dict()
         saves = svs.to_dict()
-        # TODO
+
         resistances = self.get_resistances().to_dict()
         ac = self.get_ac()
         max_hp = self.get_hp()
@@ -156,7 +170,7 @@ class GoogleSheet(SheetLoaderABC):
 
         spellbook = self.get_spellbook().to_dict()
         live = None
-        race = self.character_data['race']['fullName']
+        race = self.get_race()
         background = self.get_background()
 
         character = Character(
@@ -167,65 +181,10 @@ class GoogleSheet(SheetLoaderABC):
         return character
 
     async def get_character(self):
-        if self.g_client is None:
+        if GoogleSheet.g_client is None:
             await self.init_gsheet_client()
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self._gchar)
-
-    def _get_sheet(self):
-        """Returns a dict with character sheet data."""
-        if self.character_data is None: raise Exception('You must call get_character() first.')
-        character = self.character_data
-        try:
-            stats = self.get_stats()
-            hp = int(character.cell("U16").value)
-        except ValueError:
-            raise MissingAttribute("Max HP")
-
-        armor = character.cell("R12").value
-        attacks = self.get_attacks()
-        skills, skill_effects = self.get_skills()
-        levels = self.get_levels()
-
-        temp_resist = self.get_resistances()
-        resistances = temp_resist['resist']
-        immunities = temp_resist['immune']
-        spellbook = self.get_spellbook()
-
-        saves = {}
-        for key in skills.copy():
-            if 'Save' in key:
-                saves[key] = skills.pop(key)
-
-        stat_vars = {}
-        stat_vars.update(stats)
-        stat_vars.update(levels)
-        stat_vars['hp'] = hp
-        stat_vars['armor'] = int(armor)
-        stat_vars.update(saves)
-
-        sheet = {
-            'type': 'google',
-            'version': 7,
-            'stats': stats,
-            'levels': levels,
-            'hp': hp,
-            'armor': int(armor),
-            'attacks': attacks,
-            'skills': skills,
-            'resist': resistances,
-            'immune': immunities,
-            'vuln': [],
-            'saves': saves,
-            'stat_cvars': stat_vars,
-            'skill_effects': skill_effects,
-            'consumables': {},
-            'spellbook': spellbook,
-            'race': self.get_race(),
-            'background': self.get_background()
-        }
-
-        return {'embed': None, 'sheet': sheet}
 
     # calculator functions
     def get_description(self):
@@ -277,6 +236,7 @@ class GoogleSheet(SheetLoaderABC):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         try:
             total_level = int(self.character_data.cell("AL6").value)
+            self.total_level = total_level
         except ValueError:
             raise MissingAttribute("Character level")
 
@@ -322,9 +282,9 @@ class GoogleSheet(SheetLoaderABC):
         is_joat = self.version == 2 and bool(character.cell("AR45").value)
         for cell, skill, advcell in SKILL_CELL_MAP:
             if isinstance(cell, int):
-                cell = f"I{cell}"
                 advcell = f"F{cell}"
                 profcell = f"H{cell}"
+                cell = f"I{cell}"
             else:
                 profcell = None
             try:
@@ -344,7 +304,7 @@ class GoogleSheet(SheetLoaderABC):
             if "Save" not in skill and is_joat:
                 prof = 0.5
             if profcell:
-                proftype = character.cell(profcell).value
+                proftype = character.cell(profcell).value_unformatted
                 if proftype == 'e':
                     prof = 2
                 elif proftype and proftype != '0':
@@ -352,13 +312,94 @@ class GoogleSheet(SheetLoaderABC):
 
             skl_obj = Skill(value, prof, adv=adv)
             if "Save" in skill:
-                skills[skill] = skl_obj
-            else:
                 saves[skill] = skl_obj
+            else:
+                skills[skill] = skl_obj
 
         skills = Skills(skills)
         saves = Saves(saves)
         return skills, saves
+
+    def get_resistances(self):
+        out = {'resist': [], 'immune': [], 'vuln': []}
+        if not self.additional:  # requires 2.0
+            return out
+
+        for resist_row in range(69, 80):  # T69:T79
+            resist = self.additional.cell(f"T{resist_row}").value
+            if resist:
+                out['resist'].append(resist.lower())
+
+        for immune_row in range(69, 80):  # AE69:AE79
+            immune = self.additional.cell(f"AE{immune_row}").value
+            if immune:
+                out['immune'].append(immune.lower())
+
+        return Resistances.from_dict(out)
+
+    def get_ac(self):
+        try:
+            return int(self.character_data.cell("R12").value)
+        except (TypeError, ValueError):
+            raise MissingAttribute("AC")
+
+    def get_hp(self):
+        try:
+            return int(self.character_data.cell("U16").value)
+        except (TypeError, ValueError):
+            raise MissingAttribute("Max HP")
+
+    def get_race(self):
+        return self.character_data.cell('T7').value.strip()
+
+    def get_background(self):
+        if self.version == 2:
+            return self.character_data.cell('AJ11').value.strip()
+        return self.character_data.cell('Z5').value.strip()
+
+    def get_spellbook(self):
+        if self.character_data is None: raise Exception('You must call get_character() first.')
+        # max slots
+        slots = {
+            '1': int(self.character_data.cell('AK101').value or 0),
+            '2': int(self.character_data.cell('E107').value or 0),
+            '3': int(self.character_data.cell('AK113').value or 0),
+            '4': int(self.character_data.cell('E119').value or 0),
+            '5': int(self.character_data.cell('AK124').value or 0),
+            '6': int(self.character_data.cell('E129').value or 0),
+            '7': int(self.character_data.cell('AK134').value or 0),
+            '8': int(self.character_data.cell('E138').value or 0),
+            '9': int(self.character_data.cell('AK142').value or 0)
+        }
+
+        # spells C96:AH143
+        potential_spells = self.character_data.range("D96:AH143")  # returns a matrix, the docs lie
+        if self.additional:
+            potential_spells.extend(self.additional.range("D17:AH64"))
+
+        spells = []
+        for row in potential_spells:
+            for cell in row:
+                if cell.value and not cell.value in IGNORED_SPELL_VALUES:
+                    value = cell.value.strip()
+                    result = search(c.spells, value, lambda sp: sp.name, strict=True)
+                    if result and result[0] and result[1]:
+                        spells.append(SpellbookSpell(result[0].name, True))
+                    elif len(value) > 2:
+                        spells.append(SpellbookSpell(value))
+
+        try:
+            dc = int(self.character_data.cell('AB91').value or 0)
+        except ValueError:
+            dc = None
+
+        try:
+            sab = int(self.character_data.cell('AI91').value or 0)
+        except ValueError:
+            sab = None
+
+        spellbook = Spellbook(slots, slots, spells, dc, sab, self.total_level)
+        return spellbook
 
     # helper methods
     def parse_attack(self, name_index, bonus_index, damage_index, sheet=None):
@@ -402,83 +443,4 @@ class GoogleSheet(SheetLoaderABC):
             bonus = None
 
         attack = Attack(name, bonus, damage, details)
-        return attack.to_dict()
-
-    def get_resistances(self):
-        out = {'resist': [], 'immune': []}
-        if not self.additional:  # requires 2.0
-            return out
-
-        for resist_row in range(69, 80):  # T69:T79
-            resist = self.additional.cell(f"T{resist_row}").value
-            if resist:
-                out['resist'].append(resist.lower())
-
-        for immune_row in range(69, 80):  # AE69:AE79
-            immune = self.additional.cell(f"AE{immune_row}").value
-            if immune:
-                out['immune'].append(immune.lower())
-
-        return out
-
-    def get_spellbook(self):
-        if self.character_data is None: raise Exception('You must call get_character() first.')
-        spellbook = {'spellslots': {},
-                     'spells': [],  # C96:AH143 - gah.
-                     'dc': 0,
-                     'attackBonus': 0}
-
-        spellslots = {'1': int(self.character_data.cell('AK101').value or 0),
-                      '2': int(self.character_data.cell('E107').value or 0),
-                      '3': int(self.character_data.cell('AK113').value or 0),
-                      '4': int(self.character_data.cell('E119').value or 0),
-                      '5': int(self.character_data.cell('AK124').value or 0),
-                      '6': int(self.character_data.cell('E129').value or 0),
-                      '7': int(self.character_data.cell('AK134').value or 0),
-                      '8': int(self.character_data.cell('E138').value or 0),
-                      '9': int(self.character_data.cell('AK142').value or 0)}
-        spellbook['spellslots'] = spellslots
-
-        potential_spells = self.character_data.range("D96:AH143")  # returns a matrix, the docs lie
-        if self.additional:
-            potential_spells.extend(self.additional.range("D17:AH64"))
-        spells = []
-
-        for row in potential_spells:
-            for cell in row:
-                if cell.value and not cell.value in IGNORED_SPELL_VALUES:
-                    value = cell.value.strip()
-                    result = search(c.spells, value, lambda sp: sp.name, strict=True)
-                    if result and result[0] and result[1]:
-                        spells.append({
-                            'name': result[0].name,
-                            'strict': True
-                        })
-                    elif len(value) > 2:
-                        spells.append({
-                            'name': value,
-                            'strict': False
-                        })
-
-        spellbook['spells'] = spells
-
-        try:
-            spellbook['dc'] = int(self.character_data.cell('AB91').value or 0)
-        except ValueError:
-            pass
-
-        try:
-            spellbook['attackBonus'] = int(self.character_data.cell('AI91').value or 0)
-        except ValueError:
-            pass
-
-        log.debug(f"Completed parsing spellbook: {spellbook}")
-        return spellbook
-
-    def get_race(self):
-        return self.character_data.cell('T7').value.strip()
-
-    def get_background(self):
-        if self.version == 2:
-            return self.character_data.cell('AJ11').value.strip()
-        return self.character_data.cell('Z5').value.strip()
+        return attack

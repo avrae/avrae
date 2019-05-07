@@ -6,14 +6,12 @@ Created on Jan 19, 2017
 import asyncio
 import logging
 import re
-import sys
 import traceback
 
 import discord
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
-from googleapiclient.errors import HttpError
-from pygsheets.exceptions import NoValidUrlKeyFound, SpreadsheetNotFound
+from pygsheets.exceptions import NoValidUrlKeyFound
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
@@ -478,7 +476,7 @@ class SheetManager:
 
     @commands.command()
     @commands.cooldown(1, 15, BucketType.user)
-    async def update(self, ctx, *args):  # TODO
+    async def update(self, ctx, *args):
         """Updates the current character sheet, preserving all settings.
         __Valid Arguments__
         `-v` - Shows character sheet after update is complete.
@@ -497,60 +495,14 @@ class SheetManager:
         if sheet_type == 'dicecloud':
             parser = DicecloudParser(_id)
             loading = await ctx.send('Updating character data from Dicecloud...')
-        # elif sheet_type == 'google':  TODO
-        #     try:
-        #         parser = GoogleSheet(_id, self.gsheet_client)
-        #     except AssertionError:
-        #         await self.init_gsheet_client()  # attempt reconnection
-        #         return await ctx.send("I am still connecting to Google. Try again in 15-30 seconds.")
-        #     loading = await ctx.send('Updating character data from Google...')
+        elif sheet_type == 'google':
+            parser = GoogleSheet(_id)
+            loading = await ctx.send('Updating character data from Google...')
         elif sheet_type == 'beyond':
-            loading = await ctx.send('Updating character data from Beyond...')
             parser = BeyondSheetParser(_id)
+            loading = await ctx.send('Updating character data from Beyond...')
         else:
             return await ctx.send(f"Error: Unknown sheet type {sheet_type}.")
-        # try:
-        #     await parser.get_character()
-        # except (timeout, aiohttp.ClientResponseError) as e:
-        #     log.warning(
-        #         f"Response error importing char:\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
-        #     return await loading.edit(content=
-        #                               "I'm having some issues connecting to Dicecloud or Google right now. "
-        #                               "Please try again in a few minutes.")
-        # except HttpError:
-        #     return await loading.edit(content=
-        #                               "Google returned an error trying to access your sheet. "
-        #                               "Please ensure your sheet is shared and try again in a few minutes.")
-        # except Exception as e:
-        #     log.warning(
-        #         f"Failed to import character\n{''.join(traceback.format_exception(type(e), e, e.__traceback__))}")
-        #     return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
-
-        # try:
-        #     if sheet_type == 'dicecloud':
-        #         sheet = parser.get_sheet()
-        #     elif sheet_type == 'pdf':
-        #         sheet = parser.get_sheet()
-        #     elif sheet_type == 'google':
-        #         sheet = await parser.get_sheet()
-        #     elif sheet_type == 'beyond':
-        #         sheet = parser.get_sheet()
-        #     else:
-        #         return await ctx.send("Error: Unknown sheet type.")
-        #     await loading.edit(content=
-        #                        'Updated and saved data for {}!'.format(sheet['sheet']['stats']['name']))
-        # except TypeError as e:
-        #     del parser
-        #     log.info(f"Exception in parser.get_sheet: {e}")
-        #     log.debug('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
-        #     return await loading.edit(content=
-        #                               'Invalid character sheet. '
-        #                               'If you are using a dicecloud sheet, '
-        #                               'make sure you have shared the sheet so that anyone with the '
-        #                               'link can view.')
-        # except Exception as e:
-        #     del parser
-        #     return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
 
         try:
             character = await parser.load_character(str(ctx.author.id), args)
@@ -837,7 +789,7 @@ class SheetManager:
         await ctx.send(embed=character.get_sheet_embed())
 
     @commands.command()
-    async def gsheet(self, ctx, url: str):
+    async def gsheet(self, ctx, url: str, *args):
         """Loads a character sheet from [GSheet v2.0](http://gsheet2.avrae.io) (auto) or [GSheet v1.3](http://gsheet.avrae.io) (manual), resetting all settings.
         The sheet must be shared with Avrae for this to work.
         Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
@@ -851,49 +803,22 @@ class SheetManager:
         override = await self._confirm_overwrite(ctx, f"google-{url}")
         if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
-        try:
-            parser = GoogleSheet(url, self.gsheet_client)
-        except AssertionError:
-            await self.init_gsheet_client()  # hmm.
-            return await loading.edit(content="I am still connecting to Google. Try again in 15-30 seconds.")
+        parser = GoogleSheet(url)
 
         try:
-            await parser.get_character()
-        except (KeyError, SpreadsheetNotFound):
-            return await loading.edit(content=
-                                      "Invalid character sheet. Make sure you've shared it with me at "
-                                      "`avrae-320@avrae-bot.iam.gserviceaccount.com`!")
-        except HttpError:
-            return await loading.edit(content=
-                                      "Error: Google returned an error. Please ensure your sheet is shared with "
-                                      "`avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
-        except Exception as e:
-            return await loading.edit(content='Error: Could not load character sheet.\n' + str(e))
+            character = await parser.load_character(str(ctx.author.id), argparse(args))
+        except ExternalImportError as eep:
+            return await loading.edit(content=f"Error loading character: {eep}")
+        except Exception as eep:
+            log.warning(f"Error importing character google-{url}")
+            traceback.print_exc()
+            return await loading.edit(content=f"Error loading character: {eep}")
 
-        try:
-            sheet = await parser.get_sheet()
-        except Exception as e:
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await loading.edit(content='Error: Invalid character sheet.\n' + str(e))
+        await loading.edit(content=f'Loaded and saved data for {character.name}!')
 
-        try:
-            await loading.edit(content=
-                               'Loaded and saved data for {}!'.format(sheet['sheet']['stats']['name']))
-        except TypeError as e:
-            traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            return await loading.edit(content=
-                                      'Invalid character sheet. Make sure you have shared the sheet so that anyone with the link can view.')
-
-        char = Character(sheet['sheet'], f"google-{url}").initialize_consumables()
-        await char.commit(ctx)
-        await char.set_active(ctx)
-
-        try:
-            await ctx.send(embed=char.get_sheet_embed())
-        except:
-            await ctx.send(
-                "...something went wrong generating your character sheet. Don't worry, your character has been saved. "
-                "This is usually due to an invalid image.")
+        await character.commit(ctx)
+        await character.set_active(ctx)
+        await ctx.send(embed=character.get_sheet_embed())
 
     @commands.command()
     async def beyond(self, ctx, url: str, *args):

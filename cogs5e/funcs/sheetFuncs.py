@@ -188,7 +188,6 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
         dnum = {}
 
     d = args.join('d', '+')
-    crittype = args.last('crittype', 'default')
     c = args.join('c', '+')
     critdice = args.last('critdice', 0, int)
     showmiss = args.last('showmiss', False, bool)
@@ -206,16 +205,11 @@ def sheet_damage(damage_str, args, itercrit=0, dnum=None):
 
         def parsecrit(damage_str, wep=False):
             if itercrit == 1:
-                if crittype == '2x':
-                    critDice = f"({damage_str})*2"
-                    if c:
-                        critDice += '+' + c
-                else:
-                    def critSub(matchobj):
-                        extracritdice = critdice if critdice and wep else 0
-                        return f"{int(matchobj.group(1)) * 2 + extracritdice}d{matchobj.group(2)}"
+                def critSub(matchobj):
+                    extracritdice = critdice if critdice and wep else 0
+                    return f"{int(matchobj.group(1)) * 2 + extracritdice}d{matchobj.group(2)}"
 
-                    critDice = re.sub(r'(\d+)d(\d+)', critSub, damage_str)
+                critDice = re.sub(r'(\d+)d(\d+)', critSub, damage_str)
             else:
                 critDice = damage_str
             return critDice

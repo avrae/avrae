@@ -439,7 +439,7 @@ class InitTracker:
 
     @init.command(name="meta", aliases=['metaset'])
     async def metasetting(self, ctx, *settings):
-        """Changes the settings of the active combat."""
+        """Changes the settings of the active combat. See !help init begin for a list of settings."""
         args = argparse(settings)
         combat = await Combat.from_ctx(ctx)
         options = combat.options

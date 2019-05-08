@@ -6,6 +6,7 @@ from urllib import parse
 import html2text
 
 from cogs5e.models import errors
+from cogs5e.models.sheet import Spellbook, SpellbookSpell
 from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
@@ -90,7 +91,7 @@ class Monster:
         if attacks is None:
             attacks = []
         if spellcasting is None:
-            spellcasting = {}
+            spellcasting = Spellbook({}, {}, [])
         for skill, stat in SKILL_MAP.items():
             if skill not in skills:
                 skills[skill] = ability_scores.get_mod(stat)
@@ -143,7 +144,7 @@ class Monster:
         self.attacks = attacks
         self.proper = proper
         self.image_url = image_url
-        self.spellcasting = spellcasting
+        self.spellbook = spellcasting
         self.page = page  # this should really be by source, but oh well
         self.raw_resists = raw_resists
 
@@ -200,12 +201,15 @@ class Monster:
 
         attacks = data.get('attacks', [])
         spellcasting = data.get('spellbook', {})
+        spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
+        spellbook = Spellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
+                              spellcasting.get('casterLevel'))
 
         return cls(data['name'], parsesize(data['size']), _type, alignment, ac, armortype, hp, hitdice,
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, save_text, saves, skill_text, skills, languages, traits,
                    actions, reactions, legactions, 3, data.get('srd', False), source, attacks,
-                   spellcasting=spellcasting, page=data.get('page'), proper=proper, raw_resists=raw_resists)
+                   spellcasting=spellbook, page=data.get('page'), proper=proper, raw_resists=raw_resists)
 
     @classmethod
     def from_critterdb(cls, data):
@@ -295,6 +299,13 @@ class Monster:
         data['ability_scores'] = AbilityScores(strength, dexterity, constitution, intelligence, wisdom, charisma)
         for key in ('traits', 'actions', 'reactions', 'legactions'):
             data[key] = [Trait(**t) for t in data.pop(key)]
+        if 'spellbook' in data:
+            data['spellcasting'] = Spellbook.from_dict(data['spellbook'])
+        else:
+            old_spellcasting = data['spellcasting']
+            data['spellcasting'] = Spellbook({}, {}, [SpellbookSpell(s) for s in old_spellcasting['spells']],
+                                             old_spellcasting['dc'], old_spellcasting['attackBonus'],
+                                             old_spellcasting['casterLevel'])
         return cls(**data)
 
     def to_dict(self):
@@ -310,7 +321,7 @@ class Monster:
                 'reactions': [t.to_dict() for t in self.reactions],
                 'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
                 'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
-                'image_url': self.image_url, 'spellbook': self.spellcasting, 'raw_resists': self.raw_resists}
+                'image_url': self.image_url, 'spellbook': self.spellbook.to_dict(), 'raw_resists': self.raw_resists}
 
     def get_stat_array(self):
         """
@@ -323,8 +334,8 @@ class Monster:
         wis_mod = self.wisdom // 2 - 5
         cha_mod = self.charisma // 2 - 5
         return f"**STR**: {self.strength} ({str_mod:+}) **DEX**: {self.dexterity} ({dex_mod:+}) " \
-               f"**CON**: {self.constitution} ({con_mod:+})\n**INT**: {self.intelligence} ({int_mod:+}) " \
-               f"**WIS**: {self.wisdom} ({wis_mod:+}) **CHA**: {self.charisma} ({cha_mod:+})"
+            f"**CON**: {self.constitution} ({con_mod:+})\n**INT**: {self.intelligence} ({int_mod:+}) " \
+            f"**WIS**: {self.wisdom} ({wis_mod:+}) **CHA**: {self.charisma} ({cha_mod:+})"
 
     def get_hidden_stat_array(self):
         stats = ["Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"]
@@ -343,7 +354,7 @@ class Monster:
             elif 25 < stat:
                 stats[i] = "Ludicrous"
         return f"**STR**: {stats[0]} **DEX**: {stats[1]} **CON**: {stats[2]}\n" \
-               f"**INT**: {stats[3]} **WIS**: {stats[4]} **CHA**: {stats[5]}"
+            f"**INT**: {stats[3]} **WIS**: {stats[4]} **CHA**: {stats[5]}"
 
     def get_senses_str(self):
         if self.senses:
@@ -556,9 +567,9 @@ def parse_critterdb_spellcasting(traits):
     dc = usual_dc[0]
     sab = usual_sab[0]
     log.debug(f"Lvl {caster_level}; DC: {dc}; SAB: {sab}; Spells: {known_spells}")
-    return {
-        'spells': known_spells, 'dc': dc, 'attackBonus': sab, 'casterLevel': caster_level
-    }
+    spells = [SpellbookSpell(s) for s in known_spells]
+    spellbook = Spellbook({}, {}, spells, dc, sab, caster_level)
+    return spellbook
 
 
 def parse_resists(resists, notated=True):
@@ -572,13 +583,11 @@ def parse_resists(resists, notated=True):
             if 'special' in dmgtype:
                 out.append(dmgtype['special'])
             else:
+                rs = parse_resists(dmgtype.get('resist') or dmgtype.get('immune') or dmgtype.get('vulnerable'))
                 if notated:
-                    out.append(
-                        f"{', '.join(parse_resists(dmgtype.get('resist') or dmgtype.get('immune') or dmgtype.get('vulnerable')))} "
-                        f"{dmgtype.get('note')}")
+                    out.append(f"{', '.join(rs)} {dmgtype.get('note')}")
                 else:
-                    out.extend(
-                        parse_resists(dmgtype.get('resist') or dmgtype.get('immune') or dmgtype.get('vulnerable')))
+                    out.extend(rs)
     return out
 
 

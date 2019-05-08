@@ -509,42 +509,31 @@ class Combatant(Spellcaster):
         return self._hp
 
     @hp.setter
-    def hp(self, new_hp):  # may have odd side effects with temp hp
-        if self._temphp:
-            delta = new_hp - self._hp  # _hp includes all temp hp
-            if delta < 0:  # don't add thp by adding to hp
-                self._temphp = max(self._temphp + delta, 0)
+    def hp(self, new_hp):
         self._hp = new_hp
 
-    def get_hp(self, no_temp=False):
-        if not no_temp:
-            return self.hp
+    def get_hp(self):
+        return self.hp
 
-        if self.temphp and self.temphp > 0:
-            hp = self.hp - self.temphp
+    def mod_hp(self, delta, overheal=True, ignore_temp=False):
+        if delta < 0 and not ignore_temp:
+            thp = self._temphp
+            self.temphp += delta
+            delta += min(thp, -delta)  # how much did the THP absorb?
+        if overheal:
+            self.hp += delta
         else:
-            hp = self.hp
-        return hp
-
-    def mod_hp(self, delta, overheal=True):
-        if not overheal and delta > 0:
-            if self.get_hp(True) + delta > self.hpMax:
-                delta = max(self.hpMax - self.get_hp(True), 0)  # don't do damage by over-overhealing
-        self.hp += delta
+            self.hp = min(self.hp + delta, self.hpMax)
 
     def set_hp(self, new_hp):  # set hp before temp hp
-        if self._temphp:
-            self._hp = new_hp + self._temphp
-        else:
-            self._hp = new_hp
+        self._hp = new_hp
 
     def get_hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''
-        hp = self.get_hp(no_temp=True)
         if not self.isPrivate or private:
-            hpStr = '<{}/{} HP>'.format(hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
-                hp) if hp is not None else ''
+            hpStr = '<{}/{} HP>'.format(self.hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
+                self.hp) if self.hp is not None else ''
             if self.temphp and self.temphp > 0:
                 hpStr += f' <{self.temphp} THP>'
         elif self.hpMax is not None and self.hpMax > 0:
@@ -567,9 +556,7 @@ class Combatant(Spellcaster):
 
     @temphp.setter
     def temphp(self, new_hp):
-        delta = max(new_hp - (self._temphp or 0), -(self._temphp or 0))
         self._temphp = max(new_hp, 0)
-        self._hp += delta  # hp includes thp
 
     @property
     def ac(self):
@@ -625,8 +612,7 @@ class Combatant(Spellcaster):
 
     @property
     def attacks(self):
-        attacks = self.attack_effects(self._attacks)
-        attacks.extend(self.attack_effects(self.active_effects('attack')))
+        attacks = self.attack_effects(self._attacks) + self.attack_effects(self.active_effects('attack'))
         return attacks
 
     @property
@@ -853,9 +839,7 @@ class MonsterCombatant(Combatant):
                    'vuln': [v.lower() for v in vuln]}
         attacks = monster.attacks
         saves = monster.saves
-        spellcasting = Spellbook(monster.spellbook.get('spells', []), monster.spellbook.get('dc', 0),
-                                 monster.spellbook.get('attackBonus', 0),
-                                 monster.spellbook.get('casterLevel', 0))
+        spellcasting = monster.spellbook
 
         return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, combat, index,
                    monster_name, spellbook=spellcasting)

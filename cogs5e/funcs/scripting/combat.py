@@ -10,7 +10,7 @@ class SimpleCombat:
     def __init__(self, combat, me):
         self._combat: Combat = combat
 
-        self.combatants = [SimpleCombatant(c) for c in self._combat.get_combatants()]
+        self.combatants = [SimpleCombatant(c) for c in combat.get_combatants()]
         if me:
             self.me = SimpleCombatant(me, False)
         else:
@@ -27,9 +27,9 @@ class SimpleCombat:
             self.current = None
 
     @classmethod
-    async def from_ctx(cls, ctx):
+    def from_ctx(cls, ctx):
         try:
-            combat = await Combat.from_ctx(ctx)
+            combat = Combat.from_ctx_sync(ctx)
         except CombatNotFound:
             return None
         return cls(combat, None)
@@ -49,7 +49,8 @@ class SimpleCombat:
 
     # private functions
     def func_set_character(self, character):
-        me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.id), None)
+        me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
+                  None)
         if not me:
             return
         me._character = character  # set combatant character instance
@@ -71,7 +72,7 @@ class SimpleCombatant:
         if not self._hidden:
             self.ac = self._combatant.ac
             if self._combatant.hp is not None:
-                self.hp = self._combatant.hp - (self._combatant.temphp or 0)
+                self.hp = self._combatant.hp
             else:
                 self.hp = None
             self.maxhp = self._combatant.hpMax
@@ -92,10 +93,10 @@ class SimpleCombatant:
         self.note = self._combatant.notes
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
         if self._combatant.hp is not None and self._combatant.hpMax:
-            self.ratio = (self._combatant.hp - (self._combatant.temphp or 0)) / self._combatant.hpMax
+            self.ratio = self._combatant.hp / self._combatant.hpMax
         else:
             self.ratio = 0
-        self.level = self._combatant.spellbook.casterLevel
+        self.level = self._combatant.spellbook.caster_level
 
     def set_hp(self, newhp: int):
         self._combatant.set_hp(int(newhp))

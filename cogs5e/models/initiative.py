@@ -3,9 +3,9 @@ import copy
 import cachetools
 
 from cogs5e.funcs.dice import roll
+from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
+    InvalidArgument, NoCharacter, NoCombatants, RequiresContext
 from cogs5e.models.sheet.spellcasting import Spellbook, Spellcaster
-from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
-    CombatChannelNotFound, NoCombatants, NoCharacter, InvalidArgument
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
 from utils.functions import get_selection
@@ -54,6 +54,30 @@ class Combat:
                 inst._combatants.append(await PlayerCombatant.from_dict(c, ctx, inst))
             elif c['type'] == 'group':
                 inst._combatants.append(await CombatantGroup.from_dict(c, ctx, inst))
+            else:
+                raise CombatException("Unknown combatant type")
+        return inst
+
+    @classmethod
+    def from_ctx_sync(cls, ctx):
+        raw = ctx.bot.mdb.combats.delegate.find_one({"channel": str(ctx.channel.id)})
+        if raw is None:
+            raise CombatNotFound
+        return cls.from_dict_sync(raw, ctx)
+
+    @classmethod
+    def from_dict_sync(cls, raw, ctx):
+        inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+                   raw['turn'], raw['current'])
+        for c in raw['combatants']:
+            if c['type'] == 'common':
+                inst._combatants.append(Combatant.from_dict(c, ctx, inst))
+            elif c['type'] == 'monster':
+                inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
+            elif c['type'] == 'player':
+                inst._combatants.append(PlayerCombatant.from_dict_sync(c, ctx, inst))
+            elif c['type'] == 'group':
+                inst._combatants.append(CombatantGroup.from_dict_sync(c, ctx, inst))
             else:
                 raise CombatException("Unknown combatant type")
         return inst
@@ -321,7 +345,7 @@ class Combat:
             raise RequiresContext
         for pc in self.get_combatants():
             if isinstance(pc, PlayerCombatant):
-                await pc.character.manual_commit(self.ctx.bot, pc.character_owner)
+                await pc.character.commit(self.ctx)
         await self.ctx.bot.mdb.combats.update_one(
             {"channel": self.channel},
             {"$set": self.to_dict(), "$currentDate": {"lastchanged": True}},
@@ -426,7 +450,7 @@ class Combatant(Spellcaster):
         inst = cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, combat, index=raw['index'],
                    notes=raw['notes'], effects=[], group=raw['group'],  # begin backwards compatibility
-                   temphp=raw.get('temphp'), spellcasting=Spellbook.from_dict(raw.get('spellbook', {})))
+                   temphp=raw.get('temphp'), spellbook=Spellbook.from_dict(raw.get('spellbook', {})))
         inst._effects = [Effect.from_dict(e, combat, inst) for e in raw['effects']]
         return inst
 
@@ -690,7 +714,7 @@ class Combatant(Spellcaster):
                 if a['damage'] is not None and d:
                     a['damage'] += f" + {'+'.join(d)}"
             return at
-        return attacks.copy()
+        return attacks
 
     def active_effects(self, key=None):
         if 'parsed_effects' not in self._cache:
@@ -904,9 +928,9 @@ class PlayerCombatant(Combatant):
         self.character.temp_hp = new_hp
 
     @property
-    def attacks(self):  # TODO
+    def attacks(self):
         attacks = super(PlayerCombatant, self).attacks
-        attacks.extend(self.attack_effects(self.character.attacks))
+        attacks.extend(self.attack_effects([a.to_old() for a in self.character.attacks]))
         return attacks
 
     @property
@@ -939,6 +963,20 @@ class PlayerCombatant(Combatant):
             raise CombatException(f"A character in combat was deleted. "
                                   f"Please run `{ctx.prefix}init end -force` to end combat.")
 
+        return inst
+
+    @classmethod
+    def from_dict_sync(cls, raw, ctx, combat):
+        inst = super(PlayerCombatant, cls).from_dict(raw, ctx, combat)
+        inst.character_id = raw['character_id']
+        inst.character_owner = raw['character_owner']
+
+        from cogs5e.models.character import Character
+        char = ctx.bot.mdb.characters.delegate.find_one({"owner": inst.character_owner, "upstream": inst.character_id})
+        if char is None:
+            raise CombatException(f"A character in combat was deleted. "
+                                  f"Please run `{ctx.prefix}init end -force` to end combat.")
+        inst._character = Character.from_dict(char)
         return inst
 
     def to_dict(self):
@@ -1052,6 +1090,20 @@ class CombatantGroup:
                 combatants.append(MonsterCombatant.from_dict(c, ctx, combat))
             elif c['type'] == 'player':
                 combatants.append(await PlayerCombatant.from_dict(c, ctx, combat))
+            else:
+                raise CombatException("Unknown combatant type")
+        return cls(raw['name'], raw['init'], combatants, ctx, raw['index'])
+
+    @classmethod
+    def from_dict_sync(cls, raw, ctx, combat):
+        combatants = []
+        for c in raw['combatants']:
+            if c['type'] == 'common':
+                combatants.append(Combatant.from_dict(c, ctx, combat))
+            elif c['type'] == 'monster':
+                combatants.append(MonsterCombatant.from_dict(c, ctx, combat))
+            elif c['type'] == 'player':
+                combatants.append(PlayerCombatant.from_dict_sync(c, ctx, combat))
             else:
                 raise CombatException("Unknown combatant type")
         return cls(raw['name'], raw['init'], combatants, ctx, raw['index'])

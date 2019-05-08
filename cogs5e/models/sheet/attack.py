@@ -21,7 +21,7 @@ class Attack:
         return cls(name, bonus, damage, details, bonus_calc)
 
     def to_old(self):
-        return {"name": self.name, "attackBonus": self.bonus, "damage": self.damage, "details": self.details}
+        return {"name": self.name, "attackBonus": str(self.bonus), "damage": self.damage, "details": self.details}
 
     def __str__(self):
         if self.bonus:

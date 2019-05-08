@@ -40,7 +40,8 @@ class SheetManager:
     def __init__(self, bot):
         self.bot = bot
 
-    async def new_arg_stuff(self, args, ctx, character):
+    @staticmethod
+    async def new_arg_stuff(args, ctx, character):
         args = await scripting.parse_snippets(args, ctx)
         args = await character.parse_cvars(args, ctx)
         args = argparse(args)
@@ -138,8 +139,8 @@ class SheetManager:
         character: Character = await Character.from_ctx(ctx)
         parsed = argparse(args)
 
-        attack = await Attack.new(character, name, bonus_calc=parsed.join('b', '+'),
-                                  damage=parsed.join('d', '+'), details=parsed.join('desc', '\n'))
+        attack = Attack.new(character, name, bonus_calc=parsed.join('b', '+'),
+                            damage=parsed.join('d', '+'), details=parsed.join('desc', '\n'))
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:
@@ -219,7 +220,7 @@ class SheetManager:
                     num_successes += 1
                 embed.add_field(name=f"Save {i + 1}", value=result.skeleton)
             if dc:
-                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
+                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failures")
         else:
             result = roll(roll_str, inline=True)
             if dc:
@@ -295,7 +296,7 @@ class SheetManager:
                     num_successes += 1
                 embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
             if dc:
-                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
+                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failures")
         else:
             result = roll(roll_str, inline=True)
             if dc:
@@ -688,7 +689,7 @@ class SheetManager:
         character: Character = await Character.from_ctx(ctx)
 
         if value is None:  # display value
-            cvar = character.cvars.get(value)
+            cvar = character.cvars.get(name)
             if cvar is None:
                 cvar = 'Not defined.'
             return await ctx.send(f'**{name}**:\n{cvar}')
@@ -772,21 +773,7 @@ class SheetManager:
 
         loading = await ctx.send('Loading character data from Dicecloud...')
         parser = DicecloudParser(url)
-
-        try:
-            character = await parser.load_character(str(ctx.author.id), argparse(args))
-        except ExternalImportError as eep:
-            return await loading.edit(content=f"Error loading character: {eep}")
-        except Exception as eep:
-            log.warning(f"Error importing character dicecloud-{url}")
-            traceback.print_exc()
-            return await loading.edit(content=f"Error loading character: {eep}")
-
-        await loading.edit(content=f'Loaded and saved data for {character.name}!')
-
-        await character.commit(ctx)
-        await character.set_active(ctx)
-        await ctx.send(embed=character.get_sheet_embed())
+        await self._load_sheet(ctx, parser, args, loading)
 
     @commands.command()
     async def gsheet(self, ctx, url: str, *args):
@@ -804,21 +791,7 @@ class SheetManager:
         if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         parser = GoogleSheet(url)
-
-        try:
-            character = await parser.load_character(str(ctx.author.id), argparse(args))
-        except ExternalImportError as eep:
-            return await loading.edit(content=f"Error loading character: {eep}")
-        except Exception as eep:
-            log.warning(f"Error importing character google-{url}")
-            traceback.print_exc()
-            return await loading.edit(content=f"Error loading character: {eep}")
-
-        await loading.edit(content=f'Loaded and saved data for {character.name}!')
-
-        await character.commit(ctx)
-        await character.set_active(ctx)
-        await ctx.send(embed=character.get_sheet_embed())
+        await self._load_sheet(ctx, parser, args, loading)
 
     @commands.command()
     async def beyond(self, ctx, url: str, *args):
@@ -834,13 +807,16 @@ class SheetManager:
         if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         parser = BeyondSheetParser(url)
+        await self._load_sheet(ctx, parser, args, loading)
 
+    @staticmethod
+    async def _load_sheet(ctx, parser, args, loading):
         try:
             character = await parser.load_character(str(ctx.author.id), argparse(args))
         except ExternalImportError as eep:
             return await loading.edit(content=f"Error loading character: {eep}")
         except Exception as eep:
-            log.warning(f"Error importing character beyond-{url}")
+            log.warning(f"Error importing character {parser.url}")
             traceback.print_exc()
             return await loading.edit(content=f"Error loading character: {eep}")
 

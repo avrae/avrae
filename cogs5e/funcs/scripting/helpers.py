@@ -72,15 +72,17 @@ async def get_servsnippets(ctx):
     return servsnippets
 
 
-async def parse_snippets(args: str, ctx) -> str:
+async def parse_snippets(args, ctx) -> str:
     """
     Parses user and server snippets.
     :param args: The string to parse. Will be split automatically
     :param ctx: The Context.
     :return: The string, with snippets replaced.
     """
-    if not isinstance(args, list):
+    if isinstance(args, str):
         args = argsplit(args)
+    if not isinstance(args, list):
+        args = list(args)
     snippets = await get_servsnippets(ctx)
     snippets.update(await get_snippets(ctx))
     for index, arg in enumerate(args):  # parse snippets

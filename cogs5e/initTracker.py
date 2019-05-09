@@ -174,8 +174,6 @@ class InitTracker:
         monster = await select_monster_full(ctx, monster_name, pm=True)
         self.bot.rdb.incr("monsters_looked_up_life")
 
-        dexMod = monster.skills['dexterity']
-
         args = argparse(args)
         private = not args.last('h', type_=bool)
 
@@ -189,6 +187,7 @@ class InitTracker:
         npr = args.last('npr', type_=bool)
         n = args.last('n', 1, int)
         name_template = args.last('name', monster.name[:2].upper() + '#')
+        init_mod = monster.skills.initiative.value
 
         opts = {}
         if npr:
@@ -222,9 +221,9 @@ class InitTracker:
                 check_roll = None  # to make things happy
                 if p is None:
                     if b:
-                        check_roll = roll('1d20' + '{:+}'.format(dexMod) + '+' + b, adv=adv, inline=True)
+                        check_roll = roll(f'1d20{init_mod:+}+{b}', adv=adv, inline=True)
                     else:
-                        check_roll = roll('1d20' + '{:+}'.format(dexMod), adv=adv, inline=True)
+                        check_roll = roll(f'1d20{init_mod:+}', adv=adv, inline=True)
                     init = check_roll.total
                 else:
                     init = int(p)
@@ -236,17 +235,15 @@ class InitTracker:
                     to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
-                me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, combat, opts,
-                                                   hp=hp or rolled_hp, ac=ac)
+                me = MonsterCombatant.from_monster(name, controller, init, init_mod, private, monster, ctx, combat,
+                                                   opts, hp=hp or rolled_hp, ac=ac)
                 if group is None:
                     combat.add_combatant(me)
-                    out += "{} was added to combat with initiative {}.\n".format(name,
-                                                                                 check_roll.skeleton if p is None else p)
+                    out += f"{name} was added to combat with initiative {check_roll.skeleton if p is None else p}.\n"
                 else:
                     grp = combat.get_group(group, create=init)
                     grp.add_combatant(me)
-                    out += "{} was added to combat with initiative {} as part of group {}.\n".format(
-                        name, grp.init, grp.name)
+                    out += f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.\n"
 
             except Exception as e:
                 log.error('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))

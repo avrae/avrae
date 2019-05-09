@@ -1,4 +1,4 @@
-from utils.constants import SAVE_NAMES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
+from utils.constants import SAVE_NAMES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES, SKILL_MAP
 from utils.functions import camel_to_title, verbose_stat
 
 
@@ -138,6 +138,22 @@ class Skills:
         return {k: self.skills[k].to_dict() for k in SKILL_NAMES}
 
     # ---------- main funcs ----------
+    @classmethod
+    def default(cls, base_stats: BaseStats):
+        """Returns a skills object with skills set to default values, based on stats."""
+        skills = {}
+        for skill in SKILL_NAMES:
+            skills[skill] = Skill(base_stats.get_mod(SKILL_MAP[skill]))
+        return cls(skills)
+
+    def update(self, explicit_skills: dict):
+        """Updates skills with an explicit dictionary of modifiers. All provided are assumed to have prof=1."""
+        for skill, mod in explicit_skills.items():
+            if skill not in self.skills:
+                raise ValueError(f"{skill} is not a skill.")
+            self.skills[skill].value = mod
+            self.skills[skill].prof = 1
+
     def __getattr__(self, item):
         if item not in self.skills:
             raise ValueError(f"{item} is not a skill.")
@@ -192,6 +208,25 @@ class Saves:
         if stat not in STAT_ABBREVIATIONS:
             raise ValueError(f"{base_stat} is not a base stat.")
         return self.saves[f"{verbose_stat(stat).lower()}Save"]
+
+    @classmethod
+    def default(cls, base_stats: BaseStats):
+        """Returns a saves object with saves set to default values, based on stats."""
+        saves = {}
+        for save in SAVE_NAMES:
+            saves[save] = Skill(base_stats.get_mod(SKILL_MAP[save]))
+        return cls(saves)
+
+    def update(self, explicit_saves: dict):
+        """Updates saves with an explicit dictionary of modifiers. All provided are assumed to have prof=1."""
+        for save, mod in explicit_saves.items():
+            if save not in self.saves:
+                raise ValueError(f"{save} is not a save.")
+            self.saves[save].value = mod
+            self.saves[save].prof = 1
+
+    def __getitem__(self, item):
+        return self.saves[item]
 
     def __str__(self):
         out = []

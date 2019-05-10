@@ -167,7 +167,7 @@ class Monster:
         spellcasting = data.get('spellbook', {})
         spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
         spellbook = Spellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
-                              spellcasting.get('casterLevel'))
+                              spellcasting.get('casterLevel', 1))
 
         return cls(data['name'], parsesize(data['size']), _type, alignment, ac, armortype, hp, hitdice,
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),

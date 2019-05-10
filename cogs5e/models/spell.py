@@ -331,7 +331,7 @@ class Attack(Effect):
 
         sab = explicit_bonus or autoctx.ab_override or autoctx.caster.spellbook.sab
 
-        if not (sab or b):
+        if sab is None and b is None:
             raise NoSpellAB()
 
         # roll attack(s) against autoctx.target
@@ -433,7 +433,7 @@ class Save(Effect):
 
         dc = autoctx.args.last('dc', type_=int) or dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
 
-        if not dc:
+        if dc is None:
             raise NoSpellDC()
         try:
             save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',
@@ -883,8 +883,12 @@ class Spell:
         stat_override = ''
         if mod_arg is not None:
             mod = mod_arg
-            dc_override = 8 + mod + character.stats.prof_bonus
-            ab_override = mod + character.stats.prof_bonus
+            if character:
+                prof_bonus = character.stats.prof_bonus
+            else:
+                prof_bonus = 0
+            dc_override = 8 + mod + prof_bonus
+            ab_override = mod + prof_bonus
             spell_override = mod
         elif character and any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
             base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
@@ -893,6 +897,9 @@ class Spell:
             ab_override = mod + character.stats.prof_bonus
             spell_override = mod
             stat_override = f" with {verbose_stat(base)}"
+
+        if spell_override is None and (caster.spellbook.sab is None or caster.spellbook.dc is None):
+            raise SpellException("This caster does not have the ability to cast spells.")
 
         # begin setup
         embed = discord.Embed()

@@ -413,7 +413,7 @@ class Combat:
 
 class Combatant(Spellcaster):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
-                 index=None, notes=None, effects=None, group=None, temphp=None, spellbook=None, *args, **kwargs):
+                 index=None, notes=None, effects=None, group=None, temphp=0, spellbook=None, *args, **kwargs):
         super(Combatant, self).__init__(spellbook)
         if resists is None:
             resists = {}
@@ -444,13 +444,17 @@ class Combatant(Spellcaster):
 
     @classmethod
     def default(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, ctx, combat):
-        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, [], Saves.default(), ctx, combat)
+        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, [], None, ctx, combat)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
+        if raw['saves']:
+            saves = Saves.from_dict(raw['saves'])
+        else:
+            saves = None
         inst = cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
-                   raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, combat, index=raw['index'],
-                   notes=raw['notes'], effects=[], group=raw['group'],  # begin backwards compatibility
+                   raw['private'], raw['resists'], raw['attacks'], saves, ctx, combat,
+                   index=raw['index'], notes=raw['notes'], effects=[], group=raw['group'],  # begin backwards compatibility
                    temphp=raw.get('temphp'), spellbook=Spellbook.from_dict(raw.get('spellbook', {})))
         inst._effects = [Effect.from_dict(e, combat, inst) for e in raw['effects']]
         return inst
@@ -458,7 +462,8 @@ class Combatant(Spellcaster):
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
                 'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
-                'resists': self._resists, 'attacks': self._attacks, 'saves': self._saves.to_dict(), 'index': self.index,
+                'resists': self._resists, 'attacks': self._attacks,
+                'saves': self._saves and self._saves.to_dict(), 'index': self.index,
                 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
                 'temphp': self.temphp, 'spellbook': self.spellbook.to_dict(), 'type': 'common'}
 
@@ -518,7 +523,7 @@ class Combatant(Spellcaster):
 
     def mod_hp(self, delta, overheal=True, ignore_temp=False):
         if delta < 0 and not ignore_temp:
-            thp = self._temphp
+            thp = self._temphp or 0
             self.temphp += delta
             delta += min(thp, -delta)  # how much did the THP absorb?
         if overheal:
@@ -553,7 +558,7 @@ class Combatant(Spellcaster):
 
     @property
     def temphp(self):
-        return self._temphp
+        return self._temphp or 0
 
     @temphp.setter
     def temphp(self, new_hp):
@@ -618,7 +623,7 @@ class Combatant(Spellcaster):
 
     @property
     def saves(self):
-        return self._saves
+        return self._saves or Saves.default()
 
     @property
     def index(self):

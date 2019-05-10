@@ -5,6 +5,7 @@ import cachetools
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
+from cogs5e.models.sheet import Saves
 from cogs5e.models.sheet.spellcasting import Spellbook, Spellcaster
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
@@ -442,8 +443,8 @@ class Combatant(Spellcaster):
         self._cache = {}
 
     @classmethod
-    def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat):
-        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat)
+    def default(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, ctx, combat):
+        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, [], Saves.default(), ctx, combat)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
@@ -457,7 +458,7 @@ class Combatant(Spellcaster):
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
                 'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
-                'resists': self._resists, 'attacks': self._attacks, 'saves': self._saves, 'index': self.index,
+                'resists': self._resists, 'attacks': self._attacks, 'saves': self._saves.to_dict(), 'index': self.index,
                 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
                 'temphp': self.temphp, 'spellbook': self.spellbook.to_dict(), 'type': 'common'}
 

@@ -138,7 +138,7 @@ class InitTracker:
             init = modifier
             modifier = 0
 
-        me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private, resists, [], {}, ctx, combat)
+        me = Combatant.default(name, controller, init, modifier, hp, hp, ac, private, resists, ctx, combat)
 
         if group is None:
             combat.add_combatant(me)

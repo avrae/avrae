@@ -25,6 +25,10 @@ class BaseStats:
         }
 
     # ---------- main funcs ----------
+    @classmethod
+    def default(cls):
+        return cls(0, 10, 10, 10, 10, 10, 10)
+
     def get_mod(self, stat: str):
         abbr_stat = stat.lower()[:3]
         if abbr_stat not in STAT_ABBREVIATIONS:
@@ -210,8 +214,10 @@ class Saves:
         return self.saves[f"{verbose_stat(stat).lower()}Save"]
 
     @classmethod
-    def default(cls, base_stats: BaseStats):
+    def default(cls, base_stats: BaseStats = None):
         """Returns a saves object with saves set to default values, based on stats."""
+        if base_stats is None:
+            base_stats = BaseStats.default()
         saves = {}
         for save in SAVE_NAMES:
             saves[save] = Skill(base_stats.get_mod(SKILL_MAP[save]))

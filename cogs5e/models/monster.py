@@ -252,15 +252,10 @@ class Monster:
     def from_bestiary(cls, data):
         for key in ('traits', 'actions', 'reactions', 'legactions'):
             data[key] = [Trait(**t) for t in data.pop(key)]
-        if 'spellbook' in data:
-            data['spellcasting'] = Spellbook.from_dict(data['spellbook'])
-        else:
-            old_spellcasting = data['spellcasting']
-            data['spellcasting'] = Spellbook({}, {}, [SpellbookSpell(s) for s in old_spellcasting['spells']],
-                                             old_spellcasting['dc'], old_spellcasting['attackBonus'],
-                                             old_spellcasting['casterLevel'])
+        data['spellcasting'] = Spellbook.from_dict(data.pop('spellbook'))
         data['saves'] = Saves.from_dict(data['saves'])
         data['skills'] = Skills.from_dict(data['skills'])
+        data['ability_scores'] = BaseStats.from_dict(data['ability_scores'])
         return cls(**data)
 
     def to_dict(self):

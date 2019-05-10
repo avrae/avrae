@@ -255,14 +255,14 @@ class Dice:
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
             for i in range(iterations):
-                result = roll(roll_str, adv=adv, inline=True)
+                result = roll(roll_str, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
                 embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:
-            result = roll(roll_str, adv=adv, inline=True)
+            result = roll(roll_str, inline=True)
             if dc:
                 embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
@@ -285,7 +285,7 @@ class Dice:
             pass
 
     @commands.command(aliases=['ms'])
-    async def monster_save(self, ctx, monster_name, save, *args):
+    async def monster_save(self, ctx, monster_name, save_stat, *args):
         """Rolls a save for a monster.
         __Valid Arguments__
         adv/dis
@@ -301,7 +301,8 @@ class Dice:
         monster_name = monster.get_title_name()
 
         try:
-            save = monster.saves.get(save)
+            save = monster.saves.get(save_stat)
+            save_name = f"{verbose_stat(save_stat[:3]).title()} Save"
         except ValueError:
             return await ctx.send('That\'s not a valid save.')
 
@@ -325,26 +326,26 @@ class Dice:
             roll_str = formatted_d20
 
         if not args.last('h', type_=bool):
-            default_title = f'{monster_name} makes {a_or_an(camel_to_title(save))}!'
+            default_title = f'{monster_name} makes {a_or_an(save_name)}!'
         else:
-            default_title = f"An unknown creature makes {a_or_an(camel_to_title(save))}!"
+            default_title = f"An unknown creature makes {a_or_an(save_name)}!"
 
         embed.title = args.last('title', '') \
                           .replace('[mname]', monster_name) \
-                          .replace('[sname]', camel_to_title(save)) \
+                          .replace('[sname]', save_name) \
                       or default_title
 
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
             for i in range(iterations):
-                result = roll(roll_str, adv=adv, inline=True)
+                result = roll(roll_str, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
                 embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:
-            result = roll(roll_str, adv=adv, inline=True)
+            result = roll(roll_str, inline=True)
             if dc:
                 embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (

@@ -17,13 +17,23 @@ class Attack:
     # ---------- main funcs ----------
     @classmethod
     def new(cls, character, name, bonus_calc: str = None, damage: str = None, details: str = None):
-        bonus = character.evaluate_cvar(bonus_calc)
+        if bonus_calc:
+            bonus = character.evaluate_cvar(bonus_calc)
+        else:
+            bonus = None
         return cls(name, bonus, damage, details, bonus_calc)
 
     def to_old(self):
-        return {"name": self.name, "attackBonus": str(self.bonus), "damage": self.damage, "details": self.details}
+        bonus = None
+        if self.bonus is not None:
+            bonus = str(bonus)
+        elif self.bonus_calc is not None:
+            bonus = self.bonus_calc
+        return {"name": self.name, "attackBonus": bonus, "damage": self.damage, "details": self.details}
 
     def __str__(self):
-        if self.bonus:
+        if self.bonus is not None:
             return f"**{self.name}**: {self.bonus:+} to hit, {self.damage or 'no'} damage."
+        elif self.bonus_calc:
+            return f"**{self.name}**: {self.bonus_calc} to hit, {self.damage or 'no'} damage."
         return f"**{self.name}**: {self.damage or 'no'} damage."

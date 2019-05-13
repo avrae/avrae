@@ -1006,7 +1006,7 @@ class InitTracker:
 
         if not args.last('i', type_=bool):
             spell = await select_spell_full(ctx, spell_name,
-                                            list_filter=lambda s: s.name.lower() in combatant.spellbook.lower_spells)
+                                            list_filter=lambda s: s.name in combatant.spellbook.spells)
         else:
             spell = await select_spell_full(ctx, spell_name)
 

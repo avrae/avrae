@@ -77,7 +77,7 @@ class Monster:
         if spellcasting is None:
             spellcasting = Spellbook({}, {}, [])
         if passiveperc is None:
-            passiveperc = 10 + skills.perception
+            passiveperc = 10 + skills.perception.value
         if raw_resists is None:
             raw_resists = {}
         self.name = name
@@ -200,7 +200,7 @@ class Monster:
         for skill in data['stats']['skills']:
             name = spaced_to_camel(skill['name'])
             if skill['proficient']:
-                mod = skills[name] + proficiency
+                mod = skills[name].value + proficiency
             else:
                 mod = skill.get('value')
             if mod is not None:
@@ -212,7 +212,7 @@ class Monster:
         for save in data['stats']['savingThrows']:
             name = save['ability'].lower() + 'Save'
             if save['proficient']:
-                mod = saves.get(name) + proficiency
+                mod = saves.get(name).value + proficiency
             else:
                 mod = save.get('value')
             if mod is not None:

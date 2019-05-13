@@ -556,7 +556,6 @@ class SheetManager:
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
-        `crittype 2x/default` - Sets whether crits double damage or dice.
         `critdice <number>` - Adds additional dice for to critical attacks."""
         char: Character = await Character.from_ctx(ctx)
 

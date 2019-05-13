@@ -32,9 +32,11 @@ from .abc import SheetLoaderABC
 log = logging.getLogger(__name__)
 
 POS_RE = re.compile(r"([A-Z]+)(\d+)")
-IGNORED_SPELL_VALUES = ('MAX', 'SLOTS', 'CANTRIPS', '1ST LEVEL', '2ND LEVEL', '3RD LEVEL', '4TH LEVEL', '5TH LEVEL',
-                        '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL', '\u25c9',
-                        "You can hide each level of spells individually by hiding the rows (on the left).")
+IGNORED_SPELL_VALUES = {
+    'MAX', 'SLOTS', 'CANTRIPS', '1ST LEVEL', '2ND LEVEL', '3RD LEVEL', '4TH LEVEL', '5TH LEVEL',
+    '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL', '\u25c9', '\u25cd',
+    "You can hide each level of spells individually by hiding the rows (on the left)."
+}
 SKILL_CELL_MAP = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
     ('C13', 'strength', None), ('C18', 'dexterity', None), ('C23', 'constitution', None),
     ('C33', 'wisdom', None), ('C28', 'intelligence', None), ('C38', 'charisma', None),
@@ -323,7 +325,7 @@ class GoogleSheet(SheetLoaderABC):
     def get_resistances(self):
         out = {'resist': [], 'immune': [], 'vuln': []}
         if not self.additional:  # requires 2.0
-            return out
+            return Resistances.from_dict(out)
 
         for resist_row in range(69, 80):  # T69:T79
             resist = self.additional.cell(f"T{resist_row}").value
@@ -434,13 +436,15 @@ class GoogleSheet(SheetLoaderABC):
                 if comment.strip() and not details:
                     damage = comment.strip()
 
+        bonus_calc = None
         if bonus:
             try:
                 bonus = int(bonus)
             except (TypeError, ValueError):
-                pass
+                bonus_calc = bonus
+                bonus = None
         else:
             bonus = None
 
-        attack = Attack(name, bonus, damage, details)
+        attack = Attack(name, bonus, damage, details, bonus_calc)
         return attack

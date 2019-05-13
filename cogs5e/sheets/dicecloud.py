@@ -419,7 +419,7 @@ class DicecloudParser(SheetLoaderABC):
             try:
                 bonus = int(self.evaluator.eval(bonus_calc))
             except:
-                bonus = bonus_calc
+                bonus = None
 
         # damage
         def damage_sub(match):

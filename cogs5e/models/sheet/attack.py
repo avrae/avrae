@@ -26,7 +26,7 @@ class Attack:
     def to_old(self):
         bonus = None
         if self.bonus is not None:
-            bonus = str(bonus)
+            bonus = str(self.bonus)
         elif self.bonus_calc is not None:
             bonus = self.bonus_calc
         return {"name": self.name, "attackBonus": bonus, "damage": self.damage, "details": self.details}

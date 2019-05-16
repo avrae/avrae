@@ -14,11 +14,13 @@ from math import ceil, floor
 import aiohttp
 import html2text
 
+from cogs5e.funcs.lookupFuncs import c
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
 from cogs5e.models.sheet.base import Resistances, Saves, Skill, Skills
 from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES
+from utils.functions import search
 from .abc import SheetLoaderABC
 
 log = logging.getLogger(__name__)
@@ -393,13 +395,19 @@ class BeyondSheetParser(SheetLoaderABC):
         dc = 8 + spellMod + prof
         sab = spellMod + prof + attack_bonus_bonus
 
-        spells = []
+        spellnames = []
         for src in self.character_data['classSpells']:
-            spellnames = [s['definition']['name'].replace('\u2019', "'") for s in src['spells']]
-            spells.extend(SpellbookSpell(s, True) for s in spellnames)
+            spellnames.extend(s['definition']['name'].replace('\u2019', "'") for s in src['spells'])
         for src in self.character_data['spells'].values():
-            spellnames = [s['definition']['name'].replace('\u2019', "'") for s in src]
-            spells.extend(SpellbookSpell(s, True) for s in spellnames)
+            spellnames.extend(s['definition']['name'].replace('\u2019', "'") for s in src)
+
+        spells = []
+        for value in spellnames:
+            result = search(c.spells, value, lambda sp: sp.name, strict=True)
+            if result and result[0] and result[1]:
+                spells.append(SpellbookSpell(result[0].name, True))
+            elif len(value) > 2:
+                spells.append(SpellbookSpell(value))
 
         spellbook = Spellbook(slots, slots, spells, dc, sab, spellcasterLevel)
         return spellbook

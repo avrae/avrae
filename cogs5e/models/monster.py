@@ -164,7 +164,7 @@ class Monster:
         proper = bool(data.get('isNamedCreature') or data.get('isNPC'))
 
         attacks = data.get('attacks', [])
-        spellcasting = data.get('spellbook', {})
+        spellcasting = data.get('spellcasting', {})
         spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
         spellbook = Spellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
                               spellcasting.get('casterLevel', 1))

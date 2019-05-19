@@ -203,6 +203,12 @@ class SimpleCombatant:
     def __str__(self):
         return str(self._combatant)
 
+    def __getitem__(self, item):
+        attr = getattr(self, item)
+        if callable(attr) or item.startswith("_"):
+            raise AttributeError
+        return attr
+
 
 class SimpleGroup:
     def __init__(self, group: CombatantGroup):

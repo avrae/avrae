@@ -54,7 +54,7 @@ class Core:
         """Prints a link to invite Avrae to your server."""
         await ctx.send(
             "You can invite Avrae to your server here:\n"
-            "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808")
+            "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=388160")
 
     @commands.command()
     async def donate(self, ctx):

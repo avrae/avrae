@@ -33,7 +33,7 @@ class MathEvaluator(SimpleEval):
     @classmethod
     def with_character(cls, character, spell_override=None):
         names = character.get_scope_locals()
-        if spell_override:
+        if spell_override is not None:
             names['spell'] = spell_override
         return cls(names=names)
 
@@ -434,8 +434,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 class SpellEvaluator(MathEvaluator):
     @classmethod
     def with_caster(cls, caster, spell_override=None):
-        names = {'spell': spell_override or (caster.spellbook.sab - caster.pb_from_level()),
-                 'proficiencyBonus': caster.pb_from_level()}
+        if spell_override is not None:
+            spell = spell_override
+        else:
+            spell = caster.spellbook.sab - caster.pb_from_level()
+        names = {'spell': spell, 'proficiencyBonus': caster.pb_from_level()}
         return cls(names=names)
 
     def parse(self, string, extra_names=None):

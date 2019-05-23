@@ -7,7 +7,6 @@ from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, Si
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
-from cogs5e.models.initiative import Combat
 from cogs5e.models.sheet import CustomCounter
 from .combat import SimpleCombat
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS

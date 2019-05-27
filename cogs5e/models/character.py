@@ -369,7 +369,7 @@ class Character(Spellcaster):
         """Adds a spell to the character's known spell list.
         :param spell (Spell) - the Spell.
         :returns self"""
-        if spell in self.spellbook:
+        if spell.name in self.spellbook:
             raise InvalidArgument("You already know this spell.")
         sbs = SpellbookSpell.from_spell(spell)
         self.spellbook.spells.append(sbs)

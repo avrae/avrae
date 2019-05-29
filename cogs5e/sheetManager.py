@@ -54,7 +54,7 @@ class SheetManager:
         self._gsheet_initializing = True
 
         def _():
-            return pygsheets.authorize(service_file='avrae-google.json', no_cache=True)
+            return pygsheets.authorize(service_account_file='avrae-google.json', no_cache=True)
 
         self.gsheet_client = await self.bot.loop.run_in_executor(None, _)
         self._gsheet_initializing = False

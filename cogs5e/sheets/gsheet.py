@@ -108,7 +108,7 @@ class GoogleSheet(SheetLoaderABC):
         GoogleSheet._client_initializing = True
 
         def _():
-            return pygsheets.authorize(service_file='avrae-google.json', no_cache=True)
+            return pygsheets.authorize(service_account_file='avrae-google.json', no_cache=True)
 
         GoogleSheet.g_client = await asyncio.get_event_loop().run_in_executor(None, _)
         GoogleSheet._client_initializing = False

@@ -6,8 +6,7 @@ import traceback
 
 import discord
 import motor.motor_asyncio
-import redis
-from aiohttp import ClientResponseError, ClientOSError
+from aiohttp import ClientOSError, ClientResponseError
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
@@ -89,8 +88,7 @@ class Credentials:
 desc = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.
 A full command list can be found [here](https://avrae.io/commands)!
 Invite Avrae to your server [here](https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808)!
-Join the official testing server [here](https://discord.gg/pQbd4s6)!
-Love the bot? Donate to me [here (PayPal)](https://www.paypal.me/avrae) or [here (Patreon)](https://www.patreon.com/zhuexe)! \u2764
+Join the official development server [here](https://discord.gg/pQbd4s6)!
 '''
 bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
             shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name='D&D 5e | !help'))

@@ -44,11 +44,11 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
         self.credentials = Credentials()
         if TESTING:
-            self.rdb = RedisIO(testing=True, test_database_url=self.credentials.test_redis_url)
+            self.rdb = RedisIO(testing=True, database_url=self.credentials.test_redis_url)
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
         else:
-            self.rdb = RedisIO()
-            self.mclient = motor.motor_asyncio.AsyncIOMotorClient("mongodb://localhost:27017")
+            self.rdb = RedisIO(database_url=os.getenv('REDIS_URL', ''))
+            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
 
         self.mdb = self.mclient.avrae  # let's just use the avrae db
         self.dynamic_cog_list = DYNAMIC_COGS

@@ -338,10 +338,10 @@ class Character(Spellcaster):
     def use_slot(self, level: int):
         """Uses one spell slot of level level.
         :raises CounterOutOfBounds if there are no remaining slots of the requested level."""
-        if not 0 < level < 10:
-            raise InvalidSpellLevel()
         if level == 0:
             return
+        if not 0 < level < 10:
+            raise InvalidSpellLevel()
 
         val = self.spellbook.get_slots(level) - 1
         if val < 0:

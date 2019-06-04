@@ -54,6 +54,7 @@ class Avrae(commands.AutoShardedBot):
         self.dynamic_cog_list = DYNAMIC_COGS
         self.owner = None
         self.prefixes = self.rdb.not_json_get("prefixes", {})
+        self.muted = set()
 
     def get_server_prefix(self, msg):
         return get_prefix(self, msg)[-1]
@@ -212,7 +213,7 @@ async def on_message(message):
             "{0.content}".format(message))
     except AttributeError:
         msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
-    if str(message.author.id) in bot.get_cog("AdminUtils").muted:
+    if str(message.author.id) in bot.muted:
         return
     await bot.process_commands(message)
 

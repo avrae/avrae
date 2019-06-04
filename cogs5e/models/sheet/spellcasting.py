@@ -20,6 +20,8 @@ class Spellbook:
         return spell_name.lower() in {s.name.lower() for s in self.spells}
 
     def get_slots(self, level):
+        if level == 0:
+            return 1
         return self.slots.get(str(level), 0)
 
     def set_slots(self, level, value):

@@ -34,7 +34,7 @@ class Customization:
             self.bot.rdb.jset('default_commands', cmds)
 
     async def on_message(self, message):
-        if str(message.author.id) in self.bot.get_cog("AdminUtils").muted:
+        if str(message.author.id) in self.bot.muted:
             return
         await self.handle_aliases(message)
 

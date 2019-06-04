@@ -114,7 +114,7 @@ class Character(Spellcaster):
         return self.name
 
     def get_color(self):
-        return self.options.get('color', random.randint(0, 0xffffff))
+        return self.options.get('color') or random.randint(0, 0xffffff)
 
     def get_resists(self):
         """

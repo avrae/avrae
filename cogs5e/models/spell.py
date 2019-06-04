@@ -133,7 +133,7 @@ class AutomationContext:
 
     def cantrip_scale(self, damage_dice):
         def scale(matchobj):
-            level = self.caster.spellbook.casterLevel
+            level = self.caster.spellbook.caster_level
             if level < 5:
                 levelDice = "1"
             elif level < 11:

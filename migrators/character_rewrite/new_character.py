@@ -33,6 +33,9 @@ def migrate(character):
     for c, l in character['levels'].items():
         if c.endswith("Level"):
             classes[c[:-5]] = l
+    for cls, lvl in list(classes.items())[:]:
+        if any(inv in cls for inv in ".$"):
+            classes.pop(cls)
     levels = {
         "total_level": character['levels']['level'], "classes": classes
     }
@@ -189,14 +192,17 @@ async def from_db(mdb):
     async for old_char in mdb.old_characters.find({}):
         new_char = migrate(old_char).to_dict()
         new_char['_id'] = ObjectId(old_char['_id'])
-        await mdb.characters.insert_one(new_char)
+        try:
+            await mdb.characters.insert_one(new_char)
+        except:
+            pass
 
     print("Creating compound index on owner|upstream...")
     await mdb.characters.create_index([("owner", pymongo.ASCENDING),
                                        ("upstream", pymongo.ASCENDING)],
                                       unique=True)
 
-    num_chars = await mdb.old_characters.count_documents({})
+    num_chars = await mdb.characters.count_documents({})
     print(f"Done migrating {num_chars}/{num_old_chars} characters.")
     if num_chars == num_old_chars:
         print("It's probably safe to drop the collections old_characters and characters_bak now.")

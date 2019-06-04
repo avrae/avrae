@@ -24,11 +24,11 @@ class EmbedWithCharacter(discord.Embed):
     """An embed with character image and name set."""
 
     def __init__(self, character, name=True, **kwargs):
-        """@:param name: bool - If True, sets author name to character name."""
+        """:param name: bool - If True, sets author name to character name."""
         super(EmbedWithCharacter, self).__init__(**kwargs)
-        if name: self.set_author(name=character.get_name())
+        if name: self.set_author(name=character.name)
         if character.get_setting('embedimage', True):
-            self.set_thumbnail(url=character.get_image())
+            self.set_thumbnail(url=character.image)
         self.colour = character.get_color()
 
 

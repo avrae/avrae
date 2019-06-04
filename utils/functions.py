@@ -370,7 +370,7 @@ ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
 
 
 def verbose_stat(stat):
-    return ABILITY_MAP[stat]
+    return ABILITY_MAP[stat.lower()]
 
 
 def parse_data_entry(text, md_breaks=False):
@@ -487,7 +487,7 @@ def extract_gsheet_id_from_url(url):
 
 async def confirm(ctx, message, delete_msgs=False):
     """
-    Confirms whether a user wants to take an actions.
+    Confirms whether a user wants to take an action.
     :rtype: bool|None
     :param ctx: The current Context.
     :param message: The message for the user to confirm.

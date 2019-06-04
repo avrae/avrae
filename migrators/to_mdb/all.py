@@ -2,7 +2,7 @@ import asyncio
 
 import motor.motor_asyncio
 
-from migrators import bestiary, character, combat, customization, lookupsettings
+from migrators.to_mdb import bestiary, character, combat, lookupsettings, customization
 from utils.redisIO import RedisIO
 
 

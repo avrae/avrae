@@ -6,6 +6,7 @@ Created on Jan 13, 2017
 import itertools
 import json
 import logging
+import os
 
 from cogs5e.models.background import Background
 from cogs5e.models.errors import NoActiveBrew
@@ -24,41 +25,31 @@ log = logging.getLogger(__name__)
 
 class Compendium:
     def __init__(self):
-        with open('./res/conditions.json', 'r') as f:
-            self.conditions = json.load(f)
-        with open('./res/rules.json', 'r') as f:
-            self.rules = json.load(f)
-        with open('./res/srd-feats.json', 'r') as f:
-            self.feats = json.load(f)
-        with open('./res/srd-races.json', 'r') as f:
-            _raw = json.load(f)
-            self.rfeats = []
-            self.fancyraces = [Race.from_data(r) for r in _raw]
-            for race in _raw:
-                for entry in race['entries']:
-                    if isinstance(entry, dict) and 'name' in entry:
-                        temp = {'name': "{}: {}".format(race['name'], entry['name']),
-                                'text': parse_data_entry(entry['entries']), 'srd': race['srd']}
-                        self.rfeats.append(temp)
-        with open('./res/srd-classes.json', 'r') as f:
-            self.classes = json.load(f)
-        with open('./res/srd-classfeats.json') as f:
-            self.cfeats = json.load(f)
-        with open('./res/srd-bestiary.json', 'r') as f:
-            self.monsters = json.load(f)
-            self.monster_mash = [Monster.from_data(m) for m in self.monsters]
-        with open('./res/srd-spells.json', 'r') as f:
-            self.spells = [Spell.from_data(r) for r in json.load(f)]
-        with open('./res/srd-items.json', 'r') as f:
-            _items = json.load(f)
-            self.items = [i for i in _items if i.get('type') is not '$']
-        with open('./res/srd-backgrounds.json', 'r') as f:
-            self.backgrounds = [Background.from_data(b) for b in json.load(f)]
+        self.cfeats = self.load_json('srd-classfeats.json', [])
+        self.classes = self.load_json('srd-classes.json', [])
+        self.conditions = self.load_json('conditions.json', [])
+        self.feats = self.load_json('srd-feats.json', [])
+        self.itemprops = self.load_json('itemprops.json', {})
+        self.monsters = self.load_json('srd-bestiary.json', [])
+        self.names = self.load_json('names.json', [])
+        self.rules = self.load_json('rules.json', [])
+        self.spells = self.load_json('srd-spells.json', [])
+
+        self.backgrounds = [Background.from_data(b) for b in self.load_json('srd-backgrounds.json', [])]
+        self.items = [i for i in self.load_json('srd-items.json', []) if i.get('type') is not '$']
+        self.monster_mash = [Monster.from_data(m) for m in self.monsters]
+        
         self.subclasses = self.load_subclasses()
-        with open('./res/itemprops.json', 'r') as f:
-            self.itemprops = json.load(f)
-        with open('./res/names.json', 'r') as f:
-            self.names = json.load(f)
+
+        srd_races = self.load_json('srd-races.json', [])
+        self.fancyraces = [Race.from_data(r) for r in srd_races]
+        self.rfeats = []
+        for race in srd_races:
+            for entry in race['entries']:
+                if isinstance(entry, dict) and 'name' in entry:
+                    temp = {'name': "{}: {}".format(race['name'], entry['name']),
+                            'text': parse_data_entry(entry['entries']), 'srd': race['srd']}
+                    self.rfeats.append(temp)
 
     def load_subclasses(self):
         s = []
@@ -69,6 +60,16 @@ class Compendium:
             s.extend(subclasses)
         return s
 
+    def load_json(self, filename, default):
+        data = default
+        filepath = os.path.join('res', filename)
+        try:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            log.error("File not found: {}".format(filepath))
+            pass
+        return data
 
 c = Compendium()
 

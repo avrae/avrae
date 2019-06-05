@@ -109,13 +109,11 @@ class SimpleCombatant:
 
     def save(self, ability: str, adv: bool = None):
         try:
-            save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',
-                                          'intelligenceSave', 'wisdomSave', 'charismaSave') if
-                              ability.lower() in s.lower())
-        except StopIteration:
+            save = self._combatant.saves.get(ability)
+            mod = save.value
+        except ValueError:
             raise InvalidSaveType
 
-        mod = self._combatant.saves.get(save_skill, 0)
         sb = self._combatant.active_effects('sb')
         if sb:
             saveroll = '1d20{:+}+{}'.format(mod, '+'.join(sb))
@@ -124,7 +122,7 @@ class SimpleCombatant:
         adv = 0 if adv is None else 1 if adv else -1
 
         save_roll = roll(saveroll, adv=adv,
-                         rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
+                         rollFor='{} Save'.format(ability[:3].upper()), inline=True, show_blurbs=False)
         return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,
                                 [part.to_dict() for part in save_roll.raw_dice.parts], save_roll)
 

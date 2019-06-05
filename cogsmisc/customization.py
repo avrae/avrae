@@ -15,6 +15,7 @@ from discord.ext.commands import BucketType, UserInputError
 from cogs5e.funcs import scripting
 from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.character import Character
+from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, EvaluationError, NoCharacter
 from utils.argparser import argquote, argsplit
 from utils.functions import auth_and_chan, clean_content, confirm
@@ -473,7 +474,13 @@ class Customization:
                 await self.bot.mdb.gvars.update_one({"key": name}, {"$set": {"editors": e}})
             await ctx.send(f'Global variable `{name}` edited: {msg}')
         else:
-            await ctx.send(f"Editors: {', '.join(gvar.get('editors', []))}")
+            embed = EmbedWithAuthor(ctx)
+            embed.title = "Editors"
+            editor_mentions = []
+            for editor in gvar.get('editors', []):
+                editor_mentions.append(f"<@{editor}>")
+            embed.description = ', '.join(editor_mentions) or "No editors."
+            await ctx.send(embed=embed)
 
     @globalvar.command(name='remove', aliases=['delete'])
     async def gvar_remove(self, ctx, name):

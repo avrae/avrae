@@ -34,9 +34,10 @@ class InvalidArgument(AvraeException):
 class EvaluationError(AvraeException):
     """Raised when a cvar evaluation causes an error."""
 
-    def __init__(self, original):
+    def __init__(self, original, expression=None):
         super().__init__(f"Error evaluating expression: {original}")
         self.original = original
+        self.expression = expression
 
 
 class FunctionRequiresCharacter(AvraeException):

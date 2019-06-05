@@ -90,7 +90,8 @@ class Customization:
                     if not isinstance(e, AvraeException):
                         tb = ''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))
                         try:
-                            await message.author.send(f"```py\n{tb}\n```")
+                            await message.author.send(f"```py\nError when parsing expression {err.expression}:\n"
+                                                      f"{tb}\n```")
                         except Exception:
                             pass
                     return await message.channel.send(err)

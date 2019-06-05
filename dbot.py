@@ -150,7 +150,7 @@ async def on_command_error(ctx, error):
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
             e = original.original
             if not isinstance(e, AvraeException):
-                tb = f"```py\n" \
+                tb = f"```py\nError when parsing expression {original.expression}:\n" \
                     f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
                 try:
                     await ctx.author.send(tb)

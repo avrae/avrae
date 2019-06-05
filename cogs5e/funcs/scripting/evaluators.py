@@ -302,35 +302,36 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):
-            if match.group(1):  # {{}}
-                double_func = double_curly or self.eval
-                evalresult = double_func(match.group(1))
-            elif match.group(2):  # <>
-                if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
-                    return match.group(0)
-                out = match.group(2)
-                ltgt_func = ltgt or (lambda s: str(self.names.get(s, s)))
-                evalresult = ltgt_func(out)
-            elif match.group(3):  # {}
-                varstr = match.group(3)
+            try:
+                if match.group(1):  # {{}}
+                    double_func = double_curly or self.eval
+                    evalresult = double_func(match.group(1))
+                elif match.group(2):  # <>
+                    if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
+                        return match.group(0)
+                    out = match.group(2)
+                    ltgt_func = ltgt or (lambda s: str(self.names.get(s, s)))
+                    evalresult = ltgt_func(out)
+                elif match.group(3):  # {}
+                    varstr = match.group(3)
 
-                def default_curly_func(s):
-                    curlyout = ""
-                    for substr in re.split(ops, s):
-                        temp = substr.strip()
-                        curlyout += str(self.names.get(temp, temp)) + " "
-                    return str(roll(curlyout).total)
+                    def default_curly_func(s):
+                        curlyout = ""
+                        for substr in re.split(ops, s):
+                            temp = substr.strip()
+                            curlyout += str(self.names.get(temp, temp)) + " "
+                        return str(roll(curlyout).total)
 
-                curly_func = curly or default_curly_func
-                evalresult = curly_func(varstr)
-            else:
-                evalresult = None
+                    curly_func = curly or default_curly_func
+                    evalresult = curly_func(varstr)
+                else:
+                    evalresult = None
+            except Exception as ex:
+                raise EvaluationError(ex, match.group(0))
+
             return str(evalresult) if evalresult is not None else ''
 
-        try:
-            output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
-        except Exception as ex:
-            raise EvaluationError(ex)
+        output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
         return output
 
@@ -449,18 +450,19 @@ class SpellEvaluator(MathEvaluator):
             self.names.update(extra_names)
 
         def evalrepl(match):
-            if match.group(1):  # {{}}
-                evalresult = self.eval(match.group(1))
-            elif match.group(3):  # {}
-                evalresult = self.names.get(match.group(3), match.group(0))
-            else:
-                evalresult = None
+            try:
+                if match.group(1):  # {{}}
+                    evalresult = self.eval(match.group(1))
+                elif match.group(3):  # {}
+                    evalresult = self.names.get(match.group(3), match.group(0))
+                else:
+                    evalresult = None
+            except Exception as ex:
+                raise EvaluationError(ex, match.group(0))
+
             return str(evalresult) if evalresult is not None else ''
 
-        try:
-            output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
-        except Exception as ex:
-            raise EvaluationError(ex)
+        output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
         if original_names:
             self.names = original_names

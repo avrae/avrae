@@ -526,7 +526,7 @@ class Combatant(Spellcaster):
             thp = self._temphp or 0
             self.temphp += delta
             delta += min(thp, -delta)  # how much did the THP absorb?
-        if overheal:
+        if overheal or self.hpMax is None:
             self.hp += delta
         else:
             self.hp = min(self.hp + delta, self.hpMax)

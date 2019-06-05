@@ -515,7 +515,9 @@ class Character(Spellcaster):
                 atk_str += "[...]"
                 break
             atk_str += a
-        embed.add_field(name="Attacks", value=atk_str.strip())
+        atk_str = atk_str.strip()
+        if atk_str:
+            embed.add_field(name="Attacks", value=atk_str)
 
         # sheet url?
         if self._import_version < 15:

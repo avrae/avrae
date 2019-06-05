@@ -31,7 +31,7 @@ from cogs5e.models.dicecloud.errors import DicecloudException
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Resistances, Skills, Spellbook, SpellbookSpell
 from cogs5e.models.sheet.base import Saves, Skill
-from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES
+from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from .abc import SheetLoaderABC
 
@@ -215,8 +215,12 @@ class DicecloudParser(SheetLoaderABC):
             prof_mult = profs.get(skill, 0)
             base_val = floor(stats.get_mod(SKILL_MAP[skill]) + stats.prof_bonus * prof_mult)
             adv = ADV_INT_MAP.get(effects.get(skill))
+            if skill not in STAT_NAMES:
+                value = int(self.calculate_stat(skill, base=base_val))
+            else:
+                value = base_val
             skills[skill] = Skill(
-                int(self.calculate_stat(skill, base=base_val)),
+                value,
                 prof=prof_mult,
                 adv=adv
             )

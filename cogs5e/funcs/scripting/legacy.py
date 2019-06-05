@@ -1,3 +1,6 @@
+from utils.constants import STAT_NAMES
+
+
 class LegacyRawCharacter:
     def __init__(self, character):
         self.character = character
@@ -31,7 +34,9 @@ class LegacyRawCharacter:
 
             "skill_effects": skill_effects,
             "skills": skills,
+            "stats": self.legacy_stats(),
             "saves": self.legacy_saves(),
+            "cvars": self.character.cvars,
 
             "spellbook": self.legacy_spellbook(),
 
@@ -73,6 +78,19 @@ class LegacyRawCharacter:
             elif skill.adv is False:
                 effects[name] = 'dis'
         return skills, effects
+
+    def legacy_stats(self):
+        stats = {
+            "proficiencyBonus": self.character.stats.prof_bonus,
+            'name': self.character.name,
+            'image': self.character.image
+        }
+
+        for stat in STAT_NAMES:
+            stats[stat] = self.character.stats[stat]
+            stats[f"{stat}Mod"] = self.character.stats.get_mod(stat)
+
+        return stats
 
     def legacy_saves(self):
         saves = {}

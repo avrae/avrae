@@ -138,7 +138,7 @@ class InitTracker:
             init = modifier
             modifier = 0
 
-        me = Combatant.new(name, controller, init, modifier, hp, hp, ac, private, resists, [], {}, ctx, combat)
+        me = Combatant.default(name, controller, init, modifier, hp, hp, ac, private, resists, ctx, combat)
 
         if group is None:
             combat.add_combatant(me)
@@ -174,8 +174,6 @@ class InitTracker:
         monster = await select_monster_full(ctx, monster_name, pm=True)
         self.bot.rdb.incr("monsters_looked_up_life")
 
-        dexMod = monster.skills['dexterity']
-
         args = argparse(args)
         private = not args.last('h', type_=bool)
 
@@ -189,6 +187,7 @@ class InitTracker:
         npr = args.last('npr', type_=bool)
         n = args.last('n', 1, int)
         name_template = args.last('name', monster.name[:2].upper() + '#')
+        init_mod = monster.skills.initiative.value
 
         opts = {}
         if npr:
@@ -222,9 +221,9 @@ class InitTracker:
                 check_roll = None  # to make things happy
                 if p is None:
                     if b:
-                        check_roll = roll('1d20' + '{:+}'.format(dexMod) + '+' + b, adv=adv, inline=True)
+                        check_roll = roll(f'1d20{init_mod:+}+{b}', adv=adv, inline=True)
                     else:
-                        check_roll = roll('1d20' + '{:+}'.format(dexMod), adv=adv, inline=True)
+                        check_roll = roll(f'1d20{init_mod:+}', adv=adv, inline=True)
                     init = check_roll.total
                 else:
                     init = int(p)
@@ -236,17 +235,15 @@ class InitTracker:
                     to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
-                me = MonsterCombatant.from_monster(name, controller, init, dexMod, private, monster, ctx, combat, opts,
-                                                   hp=hp or rolled_hp, ac=ac)
+                me = MonsterCombatant.from_monster(name, controller, init, init_mod, private, monster, ctx, combat,
+                                                   opts, hp=hp or rolled_hp, ac=ac)
                 if group is None:
                     combat.add_combatant(me)
-                    out += "{} was added to combat with initiative {}.\n".format(name,
-                                                                                 check_roll.skeleton if p is None else p)
+                    out += f"{name} was added to combat with initiative {check_roll.skeleton if p is None else p}.\n"
                 else:
                     grp = combat.get_group(group, create=init)
                     grp.add_combatant(me)
-                    out += "{} was added to combat with initiative {} as part of group {}.\n".format(
-                        name, grp.init, grp.name)
+                    out += f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.\n"
 
             except Exception as e:
                 log.error('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
@@ -266,62 +263,44 @@ class InitTracker:
               -p [init value]
               -h (same as !init add)
               --group (same as !init add)"""
-        char = await Character.from_ctx(ctx)
-        character = char.character
-
-        # if char.get_combat_id():
-        #     return await ctx.send(f"This character is already in a combat. "
-        #                               f"Please leave combat in <#{char.get_combat_id()}> first.\n"
-        #                               f"If this seems like an error, please `!update` your character sheet.")
-        # we just ignore this for now.
-        # I'll figure out a better solution when I actually need it
-
-        skills = character.get('skills')
-        if skills is None:
-            return await ctx.send('You must update your character sheet first.')
-        skill = 'initiative'
+        char: Character = await Character.from_ctx(ctx)
 
         embed = EmbedWithCharacter(char, False)
         embed.colour = char.get_color()
 
-        skill_effects = character.get('skill_effects', {})
-        args += ' ' + skill_effects.get(skill, '')  # dicecloud v7 - autoadv
-
         args = shlex.split(args)
         args = argparse(args)
-        adv = args.adv()
+        adv = args.adv(boolwise=True)
         b = args.join('b', '+') or None
         p = args.last('p', type_=int)
         phrase = args.join('phrase', '\n') or None
+        group = args.last('group')
 
         if p is None:
+            roll_str = char.skills.initiative.d20(base_adv=adv)
             if b:
-                bonus = '{:+}'.format(skills[skill]) + '+' + b
-                check_roll = roll('1d20' + bonus, adv=adv, inline=True)
-            else:
-                bonus = '{:+}'.format(skills[skill])
-                check_roll = roll('1d20' + bonus, adv=adv, inline=True)
+                roll_str = f"{roll_str}+{b}"
+            check_roll = roll(roll_str, inline=True)
 
-            embed.title = '{} makes an Initiative check!'.format(char.get_name())
+            embed.title = '{} makes an Initiative check!'.format(char.name)
             embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
             init = check_roll.total
         else:
             init = p
-            bonus = 0
-            embed.title = "{} already rolled initiative!".format(char.get_name())
+            embed.title = "{} already rolled initiative!".format(char.name)
             embed.description = "Placed at initiative `{}`.".format(init)
 
-        group = args.last('group')
         controller = str(ctx.author.id)
         private = args.last('h', type_=bool)
-        bonus = roll(bonus).total
+        bonus = char.skills.initiative.value
 
         combat = await Combat.from_ctx(ctx)
 
-        me = await PlayerCombatant.from_character(char.get_name(), controller, init, bonus, char.get_ac(), private,
-                                                  char.get_resists(), ctx, combat, char.id, str(ctx.author.id), char)
+        me = await PlayerCombatant.from_character(char.name, controller, init, bonus, char.ac, private,
+                                                  char.get_resists(), ctx, combat, char.upstream, str(ctx.author.id),
+                                                  char)
 
-        if combat.get_combatant(char.get_name()) is not None:
+        if combat.get_combatant(char.name) is not None:
             await ctx.send("Combatant already exists.")
             return
 
@@ -335,7 +314,6 @@ class InitTracker:
 
         await combat.final()
         await ctx.send(embed=embed)
-        char.join_combat(str(ctx.channel.id))
         await char.commit(ctx)
 
     @init.command(name="next", aliases=['n'])
@@ -458,7 +436,7 @@ class InitTracker:
 
     @init.command(name="meta", aliases=['metaset'])
     async def metasetting(self, ctx, *settings):
-        """Changes the settings of the active combat."""
+        """Changes the settings of the active combat. See !help init begin for a list of settings."""
         args = argparse(settings)
         combat = await Combat.from_ctx(ctx)
         options = combat.options
@@ -1028,7 +1006,7 @@ class InitTracker:
 
         if not args.last('i', type_=bool):
             spell = await select_spell_full(ctx, spell_name,
-                                            list_filter=lambda s: s.name.lower() in combatant.spellcasting.lower_spells)
+                                            list_filter=lambda s: s.name in combatant.spellbook)
         else:
             spell = await select_spell_full(ctx, spell_name)
 

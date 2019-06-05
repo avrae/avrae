@@ -10,7 +10,7 @@ class SimpleCombat:
     def __init__(self, combat, me):
         self._combat: Combat = combat
 
-        self.combatants = [SimpleCombatant(c) for c in self._combat.get_combatants()]
+        self.combatants = [SimpleCombatant(c) for c in combat.get_combatants()]
         if me:
             self.me = SimpleCombatant(me, False)
         else:
@@ -27,9 +27,9 @@ class SimpleCombat:
             self.current = None
 
     @classmethod
-    async def from_ctx(cls, ctx):
+    def from_ctx(cls, ctx):
         try:
-            combat = await Combat.from_ctx(ctx)
+            combat = Combat.from_ctx_sync(ctx)
         except CombatNotFound:
             return None
         return cls(combat, None)
@@ -49,7 +49,8 @@ class SimpleCombat:
 
     # private functions
     def func_set_character(self, character):
-        me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.id), None)
+        me = next((c for c in self._combat.get_combatants() if getattr(c, 'character_id', None) == character.upstream),
+                  None)
         if not me:
             return
         me._character = character  # set combatant character instance
@@ -71,7 +72,7 @@ class SimpleCombatant:
         if not self._hidden:
             self.ac = self._combatant.ac
             if self._combatant.hp is not None:
-                self.hp = self._combatant.hp - (self._combatant.temphp or 0)
+                self.hp = self._combatant.hp
             else:
                 self.hp = None
             self.maxhp = self._combatant.hpMax
@@ -92,10 +93,10 @@ class SimpleCombatant:
         self.note = self._combatant.notes
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
         if self._combatant.hp is not None and self._combatant.hpMax:
-            self.ratio = (self._combatant.hp - (self._combatant.temphp or 0)) / self._combatant.hpMax
+            self.ratio = self._combatant.hp / self._combatant.hpMax
         else:
             self.ratio = 0
-        self.level = self._combatant.spellcasting.casterLevel
+        self.level = self._combatant.spellbook.caster_level
 
     def set_hp(self, newhp: int):
         self._combatant.set_hp(int(newhp))
@@ -108,13 +109,11 @@ class SimpleCombatant:
 
     def save(self, ability: str, adv: bool = None):
         try:
-            save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',
-                                          'intelligenceSave', 'wisdomSave', 'charismaSave') if
-                              ability.lower() in s.lower())
-        except StopIteration:
+            save = self._combatant.saves.get(ability)
+            mod = save.value
+        except ValueError:
             raise InvalidSaveType
 
-        mod = self._combatant.saves.get(save_skill, 0)
         sb = self._combatant.active_effects('sb')
         if sb:
             saveroll = '1d20{:+}+{}'.format(mod, '+'.join(sb))
@@ -123,7 +122,7 @@ class SimpleCombatant:
         adv = 0 if adv is None else 1 if adv else -1
 
         save_roll = roll(saveroll, adv=adv,
-                         rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
+                         rollFor='{} Save'.format(ability[:3].upper()), inline=True, show_blurbs=False)
         return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,
                                 [part.to_dict() for part in save_roll.raw_dice.parts], save_roll)
 

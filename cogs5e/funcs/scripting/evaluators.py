@@ -1,5 +1,4 @@
 import ast
-import copy
 import re
 from math import ceil, floor
 
@@ -7,10 +6,12 @@ import simpleeval
 from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.errors import EvaluationError, FunctionRequiresCharacter, InvalidArgument
+from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
+from cogs5e.models.sheet import CustomCounter
 from .combat import SimpleCombat
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
 from .helpers import MAX_ITER_LENGTH, SCRIPTING_RE, get_uvars, update_uvars
+from .legacy import LegacyRawCharacter
 
 if 'format_map' not in simpleeval.DISALLOW_METHODS:
     simpleeval.DISALLOW_METHODS.append('format_map')
@@ -31,10 +32,9 @@ class MathEvaluator(SimpleEval):
 
     @classmethod
     def with_character(cls, character, spell_override=None):
-        names = {}
-        names.update(character.get_cvars())
-        names.update(character.get_stat_vars())
-        names['spell'] = spell_override or (character.get_spell_ab() - character.get_prof_bonus())
+        names = character.get_scope_locals()
+        if spell_override is not None:
+            names['spell'] = spell_override
         return cls(names=names)
 
     def parse(self, string):
@@ -107,76 +107,71 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         uvars = await get_uvars(ctx)
         inst.names.update(uvars)
         inst._cache['uvars'].update(uvars)
-        inst._cache['combat'] = await SimpleCombat.from_ctx(ctx)
         return inst
 
     async def with_character(self, character):
-        self.names.update(character.get_cvars())
-        self.names.update(character.get_stat_vars())
-        self.names['spell'] = character.get_spell_ab() - character.get_prof_bonus()
-        self.names['color'] = hex(character.get_color())[2:]
-        self.names["currentHp"] = character.get_current_hp()
-
-        if 'combat' in self._cache and self._cache['combat']:
-            self._cache['combat'].func_set_character(character)
+        self.names.update(character.get_scope_locals())
 
         self._cache['character'] = character
 
         # define character-specific functions
+
+        # helpers
+        def _get_consumable(name) -> CustomCounter:
+            consumable = next((con for con in character.consumables if con.name == name), None)
+            if consumable is None:
+                raise ConsumableException(f"There is no counter named {name}.")
+            return consumable
+
+        # funcs
+        def combat():
+            cmbt = self.combat()
+            if cmbt and not cmbt.me:
+                cmbt.func_set_character(character)
+            return cmbt
+
         def get_cc(name):
-            return character.get_consumable_value(name)
+            return _get_consumable(name).value
 
         def get_cc_max(name):
-            return character.evaluate_cvar(character.get_consumable(name).get('max', str(2 ** 32 - 1)))
+            return _get_consumable(name).get_max()
 
         def get_cc_min(name):
-            return character.evaluate_cvar(character.get_consumable(name).get('min', str(-(2 ** 32))))
+            return _get_consumable(name).get_min()
 
         def set_cc(name, value: int, strict=False):
-            character.set_consumable(name, value, strict)
+            _get_consumable(name).set(value, strict)
             self.character_changed = True
 
         def mod_cc(name, val: int, strict=False):
             return set_cc(name, get_cc(name) + val, strict)
 
         def delete_cc(name):
-            character.delete_consumable(name)
+            to_delete = _get_consumable(name)
+            character.consumables.remove(to_delete)
             self.character_changed = True
 
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                          dispType: str = None):
-            if not name in character.get_all_consumables():
-                character.create_consumable(name, minValue=minVal, maxValue=maxVal, reset=reset, displayType=dispType)
+            if not name in set(con.name for con in character.consumables):
+                new_consumable = CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
+                character.consumables.append(new_consumable)
                 self.character_changed = True
 
         def cc_exists(name):
-            return name in character.get_all_consumables()
+            return name in set(con.name for con in character.consumables)
 
         def cc_str(name):
-            counter = character.get_consumable(name)
-            _max = counter.get('max')
-            val = str(counter.get('value', 0))
-            if counter.get('type') == 'bubble':
-                if _max is not None:
-                    _max = character.evaluate_cvar(_max)
-                    numEmpty = _max - counter.get('value', 0)
-                    filled = '\u25c9' * counter.get('value', 0)
-                    empty = '\u3007' * numEmpty
-                    val = f"{filled}{empty}"
-            else:
-                if _max is not None:
-                    _max = character.evaluate_cvar(_max)
-                    val = f"{counter.get('value')} / {_max}"
-            return val
+            return str(_get_consumable(name))
 
         def get_slots(level: int):
-            return character.get_remaining_slots(level)
+            return character.spellbook.get_slots(level)
 
         def get_slots_max(level: int):
-            return character.get_max_spellslots(level)
+            return character.spellbook.get_max_slots(level)
 
         def slots_str(level: int):
-            return character.get_remaining_slots_str(level).strip()
+            return character.get_remaining_slots_str(level)
 
         def set_slots(level: int, value: int):
             character.set_remaining_slots(level, value)
@@ -187,26 +182,23 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.character_changed = True
 
         def get_hp():
-            return character.get_current_hp() - character.get_temp_hp()
+            return character.hp
 
         def set_hp(val: int):
-            character.set_hp(val, True)
+            character.hp = val
             self.character_changed = True
 
         def mod_hp(val: int, overflow: bool = True):
-            if not overflow:
-                return set_hp(min(character.get_current_hp() + val, character.get_max_hp()))
-            else:
-                return set_hp(character.get_current_hp() + val)
+            character.modify_hp(val, overflow=overflow)
 
         def hp_str():
             return character.get_hp_str()
 
         def get_temphp():
-            return character.get_temp_hp()
+            return character.temp_hp
 
         def set_temphp(val: int):
-            character.set_temp_hp(val)
+            character.temp_hp = val
             self.character_changed = True
 
         def set_cvar(name, val: str):
@@ -215,18 +207,19 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.character_changed = True
 
         def set_cvar_nx(name, val: str):
-            if not name in character.get_cvars():
+            if name not in character.cvars:
                 set_cvar(name, val)
 
         def delete_cvar(name):
-            if name in character.get_cvars():
-                del character.get_cvars()[name]
+            if name in character.cvars:
+                del character.cvars[name]
                 self.character_changed = True
 
         def get_raw():
-            return copy.copy(character.character)
+            return LegacyRawCharacter(character).to_dict()
 
         self.functions.update(
+            combat=combat,
             get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
             delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, cc_str=cc_str,
             get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
@@ -258,8 +251,8 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         return name in self.names
 
     def combat(self):
-        if not 'combat' in self._cache:
-            return None
+        if 'combat' not in self._cache:
+            self._cache['combat'] = SimpleCombat.from_ctx(self.ctx)
         self.combat_changed = True
         return self._cache['combat']
 
@@ -309,35 +302,36 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):
-            if match.group(1):  # {{}}
-                double_func = double_curly or self.eval
-                evalresult = double_func(match.group(1))
-            elif match.group(2):  # <>
-                if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
-                    return match.group(0)
-                out = match.group(2)
-                ltgt_func = ltgt or (lambda s: str(self.names.get(s, s)))
-                evalresult = ltgt_func(out)
-            elif match.group(3):  # {}
-                varstr = match.group(3)
+            try:
+                if match.group(1):  # {{}}
+                    double_func = double_curly or self.eval
+                    evalresult = double_func(match.group(1))
+                elif match.group(2):  # <>
+                    if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
+                        return match.group(0)
+                    out = match.group(2)
+                    ltgt_func = ltgt or (lambda s: str(self.names.get(s, s)))
+                    evalresult = ltgt_func(out)
+                elif match.group(3):  # {}
+                    varstr = match.group(3)
 
-                def default_curly_func(s):
-                    curlyout = ""
-                    for substr in re.split(ops, s):
-                        temp = substr.strip()
-                        curlyout += str(self.names.get(temp, temp)) + " "
-                    return str(roll(curlyout).total)
+                    def default_curly_func(s):
+                        curlyout = ""
+                        for substr in re.split(ops, s):
+                            temp = substr.strip()
+                            curlyout += str(self.names.get(temp, temp)) + " "
+                        return str(roll(curlyout).total)
 
-                curly_func = curly or default_curly_func
-                evalresult = curly_func(varstr)
-            else:
-                evalresult = None
+                    curly_func = curly or default_curly_func
+                    evalresult = curly_func(varstr)
+                else:
+                    evalresult = None
+            except Exception as ex:
+                raise EvaluationError(ex, match.group(0))
+
             return str(evalresult) if evalresult is not None else ''
 
-        try:
-            output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
-        except Exception as ex:
-            raise EvaluationError(ex)
+        output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
         return output
 
@@ -441,7 +435,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 class SpellEvaluator(MathEvaluator):
     @classmethod
     def with_caster(cls, caster, spell_override=None):
-        names = {'spell': spell_override or (caster.spellcasting.sab - caster.pb_from_level())}
+        if spell_override is not None:
+            spell = spell_override
+        else:
+            spell = caster.spellbook.sab - caster.pb_from_level()
+        names = {'spell': spell, 'proficiencyBonus': caster.pb_from_level()}
         return cls(names=names)
 
     def parse(self, string, extra_names=None):
@@ -452,18 +450,19 @@ class SpellEvaluator(MathEvaluator):
             self.names.update(extra_names)
 
         def evalrepl(match):
-            if match.group(1):  # {{}}
-                evalresult = self.eval(match.group(1))
-            elif match.group(3):  # {}
-                evalresult = self.names.get(match.group(3), match.group(0))
-            else:
-                evalresult = None
+            try:
+                if match.group(1):  # {{}}
+                    evalresult = self.eval(match.group(1))
+                elif match.group(3):  # {}
+                    evalresult = self.names.get(match.group(3), match.group(0))
+                else:
+                    evalresult = None
+            except Exception as ex:
+                raise EvaluationError(ex, match.group(0))
+
             return str(evalresult) if evalresult is not None else ''
 
-        try:
-            output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
-        except Exception as ex:
-            raise EvaluationError(ex)
+        output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
         if original_names:
             self.names = original_names

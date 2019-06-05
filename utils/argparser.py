@@ -5,8 +5,8 @@ from cogs5e.models.errors import InvalidArgument
 from utils.functions import list_get
 
 
-def argsplit(args):
-    view = StringView(args)
+def argsplit(args: str):
+    view = StringView(args.strip())
     args = []
     while not view.eof:
         view.skip_ws()
@@ -95,10 +95,11 @@ class ParsedArguments:
         except (ValueError, TypeError):
             raise InvalidArgument(f"{last_arg} cannot be cast to {type_.__name__} (in `{arg}`)")
 
-    def adv(self, ea=False):
+    def adv(self, ea=False, boolwise=False):
         """
         Determines whether to roll with advantage, disadvantage, Elven Accuracy, or no special effect.
         :param ea: Whether to parse for elven accuracy.
+        :param boolwise: Whether to return an integer or tribool representation.
         :return: -1 for dis, 0 for normal, 1 for adv, 2 for ea
         """
         adv = 0
@@ -108,7 +109,10 @@ class ParsedArguments:
             adv += -1
         if ea and self.last("ea", type_=bool) and adv > -1:
             return 2
-        return adv
+        if not boolwise:
+            return adv
+        else:
+            return {-1: False, 0: None, 1: True}.get(adv)
 
     def join(self, arg, connector: str, default=None):
         """

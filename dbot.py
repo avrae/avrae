@@ -54,6 +54,7 @@ class Avrae(commands.AutoShardedBot):
         self.dynamic_cog_list = DYNAMIC_COGS
         self.owner = None
         self.prefixes = self.rdb.not_json_get("prefixes", {})
+        self.muted = set()
 
     def get_server_prefix(self, msg):
         return get_prefix(self, msg)[-1]
@@ -149,7 +150,7 @@ async def on_command_error(ctx, error):
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
             e = original.original
             if not isinstance(e, AvraeException):
-                tb = f"```py\n" \
+                tb = f"```py\nError when parsing expression {original.expression}:\n" \
                     f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
                 try:
                     await ctx.author.send(tb)
@@ -212,7 +213,7 @@ async def on_message(message):
             "{0.content}".format(message))
     except AttributeError:
         msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
-    if str(message.author.id) in bot.get_cog("AdminUtils").muted:
+    if str(message.author.id) in bot.muted:
         return
     await bot.process_commands(message)
 
@@ -237,6 +238,6 @@ for cog in STATIC_COGS:
 
 if __name__ == '__main__':
     bot.state = "run"
-    if not bot.rdb.exists('build_num'): bot.rdb.set('build_num', 114)  # this was added in build 114
+    if not bot.rdb.exists('build_num'): bot.rdb.set('build_num', 0)
     bot.rdb.incr('build_num')
     bot.run(bot.credentials.token)

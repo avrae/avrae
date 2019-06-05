@@ -10,7 +10,6 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType, NoSpellAB, NoSpellDC
 from cogs5e.models.initiative import Combatant, PlayerCombatant
-from utils.argparser import argparse
 from utils.functions import parse_resistances, verbose_stat
 
 log = logging.getLogger(__name__)
@@ -134,7 +133,7 @@ class AutomationContext:
 
     def cantrip_scale(self, damage_dice):
         def scale(matchobj):
-            level = self.caster.spellcasting.casterLevel
+            level = self.caster.spellbook.caster_level
             if level < 5:
                 levelDice = "1"
             elif level < 11:
@@ -164,18 +163,19 @@ class AutomationTarget:
             return self.target.ac
         return None
 
-    def get_save_dice(self, save, default=0):
+    def get_save_dice(self, save, adv=None):
         if not hasattr(self.target, "saves"):
             raise TargetException("Target does not have defined saves.")
 
         sb = None
-        mod = self.target.saves.get(save, default)
+        save_obj = self.target.saves.get(save)
         if hasattr(self.target, "active_effects"):
             sb = self.target.active_effects('sb')
+
+        saveroll = save_obj.d20(base_adv=adv)
+
         if sb:
-            saveroll = '1d20{:+}+{}'.format(mod, '+'.join(sb))
-        else:
-            saveroll = '1d20{:+}'.format(mod)
+            saveroll = f"{saveroll}+{'+'.join(sb)}"
 
         return saveroll
 
@@ -329,9 +329,9 @@ class Attack(Effect):
             except (TypeError, ValueError):
                 raise AutomationException(f"{explicit_bonus} cannot be interpreted as an attack bonus.")
 
-        sab = explicit_bonus or autoctx.ab_override or autoctx.caster.spellcasting.sab
+        sab = explicit_bonus or autoctx.ab_override or autoctx.caster.spellbook.sab
 
-        if not (sab or b):
+        if sab is None and b is None:
             raise NoSpellAB()
 
         # roll attack(s) against autoctx.target
@@ -423,7 +423,6 @@ class Save(Effect):
     def run(self, autoctx):
         super(Save, self).run(autoctx)
         save = autoctx.args.last('save') or self.stat
-        adv = autoctx.args.adv(False)
         dc_override = None
         if self.dc:
             try:
@@ -432,9 +431,9 @@ class Save(Effect):
             except (TypeError, ValueError):
                 raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")
 
-        dc = autoctx.args.last('dc', type_=int) or dc_override or autoctx.dc_override or autoctx.caster.spellcasting.dc
+        dc = autoctx.args.last('dc', type_=int) or dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
 
-        if not dc:
+        if dc is None:
             raise NoSpellDC()
         try:
             save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',
@@ -445,16 +444,8 @@ class Save(Effect):
 
         autoctx.meta_queue(f"**DC**: {dc}")
         if autoctx.target.target:
-            # character save effects (#408)
-            if autoctx.target.character:
-                save_args = autoctx.target.character.get_skill_effects().get(save_skill)
-                if save_args:
-                    adv = argparse(save_args).adv() + adv
-                    adv = max(-1, min(1, adv))  # bound, cancel out double dis/adv
-
-            saveroll = autoctx.target.get_save_dice(save_skill)
-            save_roll = roll(saveroll, adv=adv,
-                             rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
+            saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
+            save_roll = roll(saveroll, rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
             is_success = save_roll.total >= dc
             autoctx.queue(save_roll.result + ("; Success!" if is_success else "; Failure!"))
         else:
@@ -608,9 +599,9 @@ class TempHP(Effect):
             autoctx.footer_queue(
                 "{}: {}".format(autoctx.target.combatant.get_name(), autoctx.target.combatant.get_hp_str()))
         elif autoctx.target.character:
-            autoctx.target.character.set_temp_hp(max(dmgroll.total, 0))
+            autoctx.target.character.temp_hp = max(dmgroll.total, 0)
             autoctx.footer_queue(
-                "{}: {}".format(autoctx.target.character.get_name(), autoctx.target.character.get_hp_str()))
+                "{}: {}".format(autoctx.target.character.name, autoctx.target.character.get_hp_str()))
 
     def is_meta(self, autoctx, strict=False):
         if not strict:
@@ -892,16 +883,23 @@ class Spell:
         stat_override = ''
         if mod_arg is not None:
             mod = mod_arg
-            dc_override = 8 + mod + character.get_prof_bonus()
-            ab_override = mod + character.get_prof_bonus()
+            if character:
+                prof_bonus = character.stats.prof_bonus
+            else:
+                prof_bonus = 0
+            dc_override = 8 + mod + prof_bonus
+            ab_override = mod + prof_bonus
             spell_override = mod
         elif character and any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
             base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
             mod = character.get_mod(base)
-            dc_override = 8 + mod + character.get_prof_bonus()
-            ab_override = mod + character.get_prof_bonus()
+            dc_override = 8 + mod + character.stats.prof_bonus
+            ab_override = mod + character.stats.prof_bonus
             spell_override = mod
             stat_override = f" with {verbose_stat(base)}"
+
+        if spell_override is None and (caster.spellbook.sab is None or caster.spellbook.dc is None):
+            raise SpellException("This caster does not have the ability to cast spells.")
 
         # begin setup
         embed = discord.Embed()

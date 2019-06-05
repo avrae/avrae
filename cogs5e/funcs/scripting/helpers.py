@@ -1,7 +1,7 @@
 import re
-import shlex
 
-from utils.argparser import argquote
+from cogs5e.models.errors import InvalidArgument
+from utils.argparser import argquote, argsplit
 
 SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
 MAX_ITER_LENGTH = 10000
@@ -15,6 +15,9 @@ async def get_uvars(ctx):
 
 
 async def set_uvar(ctx, name, value):
+    if not name.isidentifier():
+        raise InvalidArgument("Uvar names must be valid identifiers "
+                              "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
     await ctx.bot.mdb.uvars.update_one(
         {"owner": str(ctx.author.id), "name": name},
         {"$set": {"value": value}},
@@ -69,20 +72,23 @@ async def get_servsnippets(ctx):
     return servsnippets
 
 
-async def parse_snippets(args: str, ctx) -> str:
+async def parse_snippets(args, ctx) -> str:
     """
     Parses user and server snippets.
     :param args: The string to parse. Will be split automatically
     :param ctx: The Context.
     :return: The string, with snippets replaced.
     """
-    tempargs = shlex.split(args)
+    if isinstance(args, str):
+        args = argsplit(args)
+    if not isinstance(args, list):
+        args = list(args)
     snippets = await get_servsnippets(ctx)
     snippets.update(await get_snippets(ctx))
-    for index, arg in enumerate(tempargs):  # parse snippets
+    for index, arg in enumerate(args):  # parse snippets
         snippet_value = snippets.get(arg)
         if snippet_value:
-            tempargs[index] = snippet_value
+            args[index] = snippet_value
         elif ' ' in arg:
-            tempargs[index] = argquote(arg)
-    return " ".join(tempargs)
+            args[index] = argquote(arg)
+    return " ".join(args)

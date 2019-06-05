@@ -34,9 +34,10 @@ class InvalidArgument(AvraeException):
 class EvaluationError(AvraeException):
     """Raised when a cvar evaluation causes an error."""
 
-    def __init__(self, original):
+    def __init__(self, original, expression=None):
         super().__init__(f"Error evaluating expression: {original}")
         self.original = original
+        self.expression = expression
 
 
 class FunctionRequiresCharacter(AvraeException):
@@ -75,18 +76,11 @@ class ConsumableException(AvraeException):
     pass
 
 
-class ConsumableNotFound(ConsumableException):
-    """Raised when a consumable is not found."""
-
-    def __init__(self):
-        super().__init__("The requested counter does not exist.")
-
-
 class CounterOutOfBounds(ConsumableException):
     """Raised when a counter is set to a value out of bounds."""
 
-    def __init__(self):
-        super().__init__("The new value is out of bounds.")
+    def __init__(self, msg=None):
+        super().__init__(msg or "The new value is out of bounds.")
 
 
 class NoReset(ConsumableException):

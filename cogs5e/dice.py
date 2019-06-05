@@ -11,7 +11,8 @@ from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.monster import Monster, SKILL_MAP
 from utils.argparser import argparse
-from utils.functions import fuzzy_search, a_or_an, verbose_stat, camel_to_title
+from utils.constants import SKILL_NAMES
+from utils.functions import fuzzy_search, a_or_an, verbose_stat, camel_to_title, search_and_select
 
 
 class Dice:
@@ -194,7 +195,7 @@ class Dice:
         await ctx.send(embed=embed)
 
     @commands.command(aliases=['mc'])
-    async def monster_check(self, ctx, monster_name, check, *, args=''):
+    async def monster_check(self, ctx, monster_name, check, *args):
         """Rolls a check for a monster.
         __Valid Arguments__
         adv/dis
@@ -210,30 +211,26 @@ class Dice:
         self.bot.rdb.incr('monsters_looked_up_life')
 
         monster_name = monster.get_title_name()
-        skills = monster.skills
-
-        try:
-            skill = next(a for a in skills.keys() if check.lower() == a.lower())
-        except StopIteration:
-            try:
-                skill = next(a for a in skills.keys() if check.lower() in a.lower())
-            except StopIteration:
-                return await ctx.send('That\'s not a valid check.')
+        skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
+        skill_name = camel_to_title(skill_key)
 
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
+
         args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
-        adv = args.adv()
+
+        adv = args.adv(boolwise=True)
         b = args.join('b', '+')
         phrase = args.join('phrase', '\n')
-        formatted_d20 = '1d20' if adv == 0 else '2d20' + ('kh1' if adv == 1 else 'kl1')
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
 
-        mod = skills[skill]
-        skill_name = skill
+        skill = monster.skills[skill_key]
+        mod = skill.value
+        formatted_d20 = skill.d20(base_adv=adv, base_only=True)
+
         if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
             base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
             mod = mod - monster.get_mod(SKILL_MAP[skill]) + monster.get_mod(base)
@@ -258,14 +255,14 @@ class Dice:
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
             for i in range(iterations):
-                result = roll(roll_str, adv=adv, inline=True)
+                result = roll(roll_str, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
-                embed.add_field(name=f"Check {i+1}", value=result.skeleton)
+                embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:
-            result = roll(roll_str, adv=adv, inline=True)
+            result = roll(roll_str, inline=True)
             if dc:
                 embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
@@ -288,7 +285,7 @@ class Dice:
             pass
 
     @commands.command(aliases=['ms'])
-    async def monster_save(self, ctx, monster_name, save, *, args=''):
+    async def monster_save(self, ctx, monster_name, save_stat, *args):
         """Rolls a save for a monster.
         __Valid Arguments__
         adv/dis
@@ -302,54 +299,53 @@ class Dice:
         monster: Monster = await select_monster_full(ctx, monster_name)
         self.bot.rdb.incr('monsters_looked_up_life')
         monster_name = monster.get_title_name()
-        args = await scripting.parse_snippets(args, ctx)
-        saves = monster.saves
 
         try:
-            save = next(a for a in saves.keys() if save.lower() == a.lower())
-        except StopIteration:
-            try:
-                save = next(a for a in saves.keys() if save.lower() in a.lower())
-            except StopIteration:
-                return await ctx.send('That\'s not a valid save.')
+            save = monster.saves.get(save_stat)
+            save_name = f"{verbose_stat(save_stat[:3]).title()} Save"
+        except ValueError:
+            return await ctx.send('That\'s not a valid save.')
 
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
 
+        args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
-        adv = args.adv()
+        adv = args.adv(boolwise=True)
         b = args.join('b', '+')
         phrase = args.join('phrase', '\n')
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
 
-        if b is not None:
-            roll_str = '1d20{:+}'.format(saves[save]) + '+' + b
+        formatted_d20 = save.d20(base_adv=adv)
+
+        if b:
+            roll_str = f"{formatted_d20}+{b}"
         else:
-            roll_str = '1d20{:+}'.format(saves[save])
+            roll_str = formatted_d20
 
         if not args.last('h', type_=bool):
-            default_title = f'{monster_name} makes {a_or_an(camel_to_title(save))}!'
+            default_title = f'{monster_name} makes {a_or_an(save_name)}!'
         else:
-            default_title = f"An unknown creature makes {a_or_an(camel_to_title(save))}!"
+            default_title = f"An unknown creature makes {a_or_an(save_name)}!"
 
         embed.title = args.last('title', '') \
                           .replace('[mname]', monster_name) \
-                          .replace('[sname]', camel_to_title(save)) \
+                          .replace('[sname]', save_name) \
                       or default_title
 
         if iterations > 1:
             embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
             for i in range(iterations):
-                result = roll(roll_str, adv=adv, inline=True)
+                result = roll(roll_str, inline=True)
                 if dc and result.total >= dc:
                     num_successes += 1
-                embed.add_field(name=f"Check {i+1}", value=result.skeleton)
+                embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
             if dc:
                 embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
         else:
-            result = roll(roll_str, adv=adv, inline=True)
+            result = roll(roll_str, inline=True)
             if dc:
                 embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
             embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (

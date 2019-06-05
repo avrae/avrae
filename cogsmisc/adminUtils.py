@@ -22,7 +22,7 @@ class AdminUtils:
 
     def __init__(self, bot):
         self.bot: commands.AutoShardedBot = bot
-        self.muted = set(self.bot.rdb.not_json_get('muted', []))
+        self.bot.muted = set(self.bot.rdb.not_json_get('muted', []))
         self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
 
         loglevels = self.bot.rdb.jget('loglevels', {})
@@ -122,18 +122,18 @@ class AdminUtils:
     @commands.is_owner()
     async def mute(self, ctx, target):
         """Mutes a person by ID."""
-        self.muted = set(self.bot.rdb.not_json_get('muted', []))
+        self.bot.muted = set(self.bot.rdb.not_json_get('muted', []))
         try:
             target_user = await self.bot.get_user_info(target)
         except NotFound:
             target_user = "Not Found"
-        if target in self.muted:
-            self.muted.remove(target)
+        if target in self.bot.muted:
+            self.bot.muted.remove(target)
             await ctx.send("{} ({}) unmuted.".format(target, target_user))
         else:
-            self.muted.add(target)
+            self.bot.muted.add(target)
             await ctx.send("{} ({}) muted.".format(target, target_user))
-        self.bot.rdb.not_json_set('muted', list(self.muted))
+        self.bot.rdb.not_json_set('muted', list(self.bot.muted))
 
     @commands.command(hidden=True)
     @commands.is_owner()

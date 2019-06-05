@@ -169,19 +169,19 @@ class CharGenerator:
 
         levels = []
         starting_profs = f"You are proficient with the following items, " \
-                         f"in addition to any proficiencies provided by your race or background.\n" \
-                         f"Armor: {', '.join(_class['startingProficiencies'].get('armor', ['None']))}\n" \
-                         f"Weapons: {', '.join(_class['startingProficiencies'].get('weapons', ['None']))}\n" \
-                         f"Tools: {', '.join(_class['startingProficiencies'].get('tools', ['None']))}\n" \
-                         f"Skills: Choose {_class['startingProficiencies']['skills']['choose']} from " \
-                         f"{', '.join(_class['startingProficiencies']['skills']['from'])}"
+            f"in addition to any proficiencies provided by your race or background.\n" \
+            f"Armor: {', '.join(_class['startingProficiencies'].get('armor', ['None']))}\n" \
+            f"Weapons: {', '.join(_class['startingProficiencies'].get('weapons', ['None']))}\n" \
+            f"Tools: {', '.join(_class['startingProficiencies'].get('tools', ['None']))}\n" \
+            f"Skills: Choose {_class['startingProficiencies']['skills']['choose']} from " \
+            f"{', '.join(_class['startingProficiencies']['skills']['from'])}"
 
         equip_choices = '\n'.join(f"• {i}" for i in _class['startingEquipment']['default'])
         gold_alt = f"Alternatively, you may start with {_class['startingEquipment']['goldAlternative']} gp " \
-                   f"to buy your own equipment." if 'goldAlternative' in _class['startingEquipment'] else ''
+            f"to buy your own equipment." if 'goldAlternative' in _class['startingEquipment'] else ''
         starting_items = f"You start with the following items, plus anything provided by your background.\n" \
-                         f"{equip_choices}\n" \
-                         f"{gold_alt}"
+            f"{equip_choices}\n" \
+            f"{gold_alt}"
 
         for level in range(1, final_level + 1):
             level_str = []
@@ -195,7 +195,7 @@ class CharGenerator:
 
         level_features_str = ""
         for i, l in enumerate(levels):
-            level_features_str += f"`{i+1}` {l}\n"
+            level_features_str += f"`{i + 1}` {l}\n"
         embed.description = level_features_str
 
         embed.colour = color
@@ -284,11 +284,6 @@ class CharGenerator:
             subclass['name'] if subclass else "")
 
         await loadingMessage.edit(content=out)
-
-    @commands.command(pass_context=True, hidden=True)
-    async def autochar(self, ctx):
-        """This command has been removed."""
-        await ctx.send("This command has been removed. Try https://andrew-zhu.com/dnd/dicecloudtools instead!")
 
     @staticmethod
     def old_name_gen():

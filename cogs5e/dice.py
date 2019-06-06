@@ -79,7 +79,7 @@ class Dice:
     @commands.command(name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations: int, rollStr, *, args=''):
         """Rolls dice in xdy format a given number of times.
-        Usage: !rrr <iterations> <xdy> [args]"""
+        Usage: !rr <iterations> <xdy> [args]"""
         if iterations < 1 or iterations > 100:
             return await ctx.send("Too many or too few iterations.")
         self.bot.rdb.incr('dice_rolled_life')

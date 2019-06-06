@@ -105,7 +105,11 @@ class Homebrew:
         await loading.edit(content=f"Imported {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
-        embed.description = '\n'.join(m.name for m in bestiary.monsters)
+        monnames = '\n'.join(m.name for m in bestiary.monsters)
+        if len(monnames) < 2040:
+            embed.description = monnames
+        else:
+            embed.description = f"{len(bestiary.monsters)} creatures."
         await ctx.send(embed=embed)
 
     @bestiary.command(name='update')
@@ -229,7 +233,7 @@ class Homebrew:
         if str(user.id) not in [s['id'] for s in pack.subscribers]:
             pack.subscribers.append({"username": str(user), "id": str(user.id)})
             out = f"Subscribed to {pack.name} by {pack.owner['username']}. " \
-                  f"Use `{ctx.prefix}pack {pack.name}` to select it."
+                f"Use `{ctx.prefix}pack {pack.name}` to select it."
         else:
             pack.subscribers.remove(next(s for s in pack.subscribers if s['id'] == str(user.id)))
             out = f"Unsubscribed from {pack.name}."
@@ -338,7 +342,7 @@ class Homebrew:
         if str(user.id) not in [s['id'] for s in tome.subscribers]:
             tome.subscribers.append({"username": str(user), "id": str(user.id)})
             out = f"Subscribed to {tome.name} by {tome.owner['username']}. " \
-                  f"Use `{ctx.prefix}tome {tome.name}` to select it."
+                f"Use `{ctx.prefix}tome {tome.name}` to select it."
         else:
             tome.subscribers.remove(next(s for s in tome.subscribers if s['id'] == str(user.id)))
             out = f"Unsubscribed from {tome.name}."

@@ -178,7 +178,7 @@ class SimpleCombatant:
         self._combatant.notes = note
 
     def get_effect(self, name: str):
-        effect = self._combatant.get_effect(name)
+        effect = self._combatant.get_effect(name, False)
         if effect:
             return SimpleEffect(effect)
         return None

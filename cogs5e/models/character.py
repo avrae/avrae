@@ -296,10 +296,6 @@ class Character(Spellcaster):
         self._temp_hp = max(0, value)  # 0 ≤ temp_hp
 
     # ---------- SPELLBOOK ----------
-    def get_spell_list(self):
-        """:returns list - a list of the names of all spells the character can cast. """
-        return [s.name for s in self.spellbook.spells]
-
     def get_remaining_slots_str(self, level: int = None):
         """:param level: The level of spell slot to return.
         :returns A string representing the character's remaining spell slots."""

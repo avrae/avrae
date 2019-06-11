@@ -42,7 +42,7 @@ class DicecloudIntegration(LiveIntegration):
             pass
 
     def sync_consumable(self, consumable):
-        used = consumable.value - consumable.get_max()
+        used = consumable.get_max() - consumable.value
         try:
             if consumable.live_id in CLASS_RESOURCES:
                 DicecloudClient.getInstance().meteor_client.update('characters',

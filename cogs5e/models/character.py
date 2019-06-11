@@ -214,10 +214,14 @@ class Character(Spellcaster):
             out = {}
         else:
             out = self.cvars.copy()
+        if self.spellbook.sab is not None:
+            spell_mod = self.spellbook.sab - self.stats.prof_bonus
+        else:
+            spell_mod = None
         out.update({
             "name": self.name, "armor": self.ac, "description": self.description, "hp": self.max_hp,
             "image": self.image, "level": self.levels.total_level, "proficiencyBonus": self.stats.prof_bonus,
-            "spell": self.spellbook.sab - self.stats.prof_bonus, "color": hex(self.get_color())[2:]
+            "spell": spell_mod, "color": hex(self.get_color())[2:]
         })
         for cls, lvl in self.levels:
             out[f"{cls}Level"] = lvl
@@ -292,10 +296,6 @@ class Character(Spellcaster):
         self._temp_hp = max(0, value)  # 0 ≤ temp_hp
 
     # ---------- SPELLBOOK ----------
-    def get_spell_list(self):
-        """:returns list - a list of the names of all spells the character can cast. """
-        return [s.name for s in self.spellbook.spells]
-
     def get_remaining_slots_str(self, level: int = None):
         """:param level: The level of spell slot to return.
         :returns A string representing the character's remaining spell slots."""

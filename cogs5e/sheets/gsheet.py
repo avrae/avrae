@@ -388,7 +388,7 @@ class GoogleSheet(SheetLoaderABC):
                     if result and result[0] and result[1]:
                         spells.append(SpellbookSpell(result[0].name, True))
                     elif len(value) > 2:
-                        spells.append(SpellbookSpell(value))
+                        spells.append(SpellbookSpell(value.strip()))
 
         try:
             dc = int(self.character_data.cell('AB91').value or 0)

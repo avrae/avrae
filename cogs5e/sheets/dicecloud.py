@@ -272,7 +272,7 @@ class DicecloudParser(SheetLoaderABC):
             if result and result[0] and result[1]:
                 spells.append(SpellbookSpell.from_spell(result[0]))
             else:
-                spells.append(SpellbookSpell(spell))
+                spells.append(SpellbookSpell(spell.strip()))
 
         spell_lists = [(0, 0)]  # ab, dc
         for sl in self.character_data.get('spellLists', []):

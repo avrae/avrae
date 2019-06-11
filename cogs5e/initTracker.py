@@ -555,8 +555,8 @@ class InitTracker:
                     combat.add_combatant(combatant)
                     out += "\u2705 Combatant removed from all groups.\n"
                 else:
-                    group = combat.get_group(group, combatant.init)
                     combat.remove_combatant(combatant)
+                    group = combat.get_group(group, create=combatant.init)
                     group.add_combatant(combatant)
                     out += "\u2705 Combatant group set to {}.\n".format(group.name)
         if 'name' in args:

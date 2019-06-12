@@ -454,7 +454,8 @@ class Combatant(Spellcaster):
             saves = None
         inst = cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], saves, ctx, combat,
-                   index=raw['index'], notes=raw['notes'], effects=[], group=raw['group'],  # begin backwards compatibility
+                   index=raw['index'], notes=raw['notes'], effects=[], group=raw['group'],
+                   # begin backwards compatibility
                    temphp=raw.get('temphp'), spellbook=Spellbook.from_dict(raw.get('spellbook', {})))
         inst._effects = [Effect.from_dict(e, combat, inst) for e in raw['effects']]
         return inst
@@ -682,17 +683,16 @@ class Combatant(Spellcaster):
         try:
             self._effects.remove(effect)
         except ValueError:
-            raise CombatException("Effect does not exist on combatant.")
+            # this should be safe
+            # the only case where this occurs is if a parent removes an effect while it's trying to remove itself
+            pass
 
     def remove_all_effects(self, _filter=None):
         if _filter is None:
             _filter = lambda _: True
         to_remove = list(filter(_filter, self._effects))
         for e in to_remove:
-            try:
-                e.remove()
-            except CombatException:  # effect was likely removed already, possibly by its parent being removed
-                continue
+            e.remove()
         return to_remove
 
     def attack_effects(self, attacks):
@@ -1253,7 +1253,6 @@ class Effect:
             if effect not in removed:  # no infinite recursion please
                 removed.append(effect)
                 effect.remove(removed)
-
         self.combatant.remove_effect(self)
 
     def on_name_change(self, old_name, new_name):

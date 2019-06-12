@@ -79,7 +79,7 @@ class Dice:
     @commands.command(name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations: int, rollStr, *, args=''):
         """Rolls dice in xdy format a given number of times.
-        Usage: !rrr <iterations> <xdy> [args]"""
+        Usage: !rr <iterations> <xdy> [args]"""
         if iterations < 1 or iterations > 100:
             return await ctx.send("Too many or too few iterations.")
         self.bot.rdb.incr('dice_rolled_life')
@@ -233,8 +233,8 @@ class Dice:
 
         if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
             base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
-            mod = mod - monster.get_mod(SKILL_MAP[skill]) + monster.get_mod(base)
-            skill_name = f"{verbose_stat(base)} ({skill})"
+            mod = mod - monster.get_mod(SKILL_MAP[skill_key]) + monster.get_mod(base)
+            skill_name = f"{verbose_stat(base)} ({skill_name})"
 
         skill_name = skill_name.title()
         if not args.last('h', type_=bool):

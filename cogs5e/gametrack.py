@@ -277,7 +277,7 @@ class GameTrack:
         """Commands to display a character's known spells and metadata."""
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
-        embed.description = f"{character.name} knows {len(character.get_spell_list())} spells."
+        embed.description = f"{character.name} knows {len(character.spellbook.spells)} spells."
         embed.add_field(name="DC", value=str(character.spellbook.dc))
         embed.add_field(name="Spell Attack Bonus", value=str(character.spellbook.sab))
         embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
@@ -483,8 +483,8 @@ class GameTrack:
 
         char: Character = await Character.from_ctx(ctx)
 
-        if not '-i' in args:
-            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.get_spell_list())
+        if '-i' not in args:
+            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.spellbook)
         else:
             spell = await select_spell_full(ctx, spell_name)
 

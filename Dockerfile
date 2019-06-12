@@ -1,6 +1,6 @@
 FROM python:3.6-stretch
 
-ARG DBOT_ARGS=
+ARG DBOT_ARGS
 ARG ENVIRONMENT=production
 
 WORKDIR /app

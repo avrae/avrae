@@ -124,7 +124,7 @@ class AdminUtils(commands.Cog):
         """Mutes a person by ID."""
         self.bot.muted = set(self.bot.rdb.not_json_get('muted', []))
         try:
-            target_user = await self.bot.get_user_info(target)
+            target_user = await self.bot.fetch_user(target)
         except NotFound:
             target_user = "Not Found"
         if target in self.bot.muted:

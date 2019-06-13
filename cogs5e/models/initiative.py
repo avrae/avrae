@@ -392,7 +392,7 @@ class Combat:
         if self.summary in Combat.message_cache:
             return Combat.message_cache[self.summary]
         else:
-            msg = await self.get_channel().get_message(self.summary)
+            msg = await self.get_channel().fetch_message(self.summary)
             Combat.message_cache[msg.id] = msg
             return msg
 

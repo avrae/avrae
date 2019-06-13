@@ -16,7 +16,7 @@ BREWER_ROLES = ("server brewer", "dragonspeaker")
 log = logging.getLogger(__name__)
 
 
-class Homebrew:
+class Homebrew(commands.Cog):
     """Commands to manage homebrew in Avrae."""
 
     def __init__(self, bot):

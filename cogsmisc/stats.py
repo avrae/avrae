@@ -9,7 +9,7 @@ from collections import Counter
 from discord.ext import commands
 
 
-class Stats:
+class Stats(commands.Cog):
     """Statistics about bot usage."""
 
     def __init__(self, bot):

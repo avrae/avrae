@@ -15,7 +15,7 @@ from utils.constants import SKILL_NAMES
 from utils.functions import fuzzy_search, a_or_an, verbose_stat, camel_to_title, search_and_select
 
 
-class Dice:
+class Dice(commands.Cog):
     """Dice and math related commands."""
 
     def __init__(self, bot):

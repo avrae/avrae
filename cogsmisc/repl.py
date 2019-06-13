@@ -10,7 +10,7 @@ from discord.ext import commands
 from utils.functions import auth_and_chan
 
 
-class REPL:
+class REPL(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.sessions = set()

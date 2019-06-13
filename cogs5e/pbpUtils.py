@@ -13,7 +13,7 @@ from utils.argparser import argparse
 from utils.functions import clean_content
 
 
-class PBPUtils:
+class PBPUtils(commands.Cog):
     """Commands to help streamline playing-by-post over Discord."""
 
     def __init__(self, bot):

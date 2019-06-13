@@ -8,6 +8,7 @@ import logging
 import time
 
 import aiohttp
+from discord.ext import commands
 
 import credentials
 
@@ -16,7 +17,7 @@ log = logging.getLogger(__name__)
 DBL_API = "https://discordbots.org/api/bots/"
 
 
-class Publicity:
+class Publicity(commands.Cog):
     """
     Sends updates to bot repos.
     """

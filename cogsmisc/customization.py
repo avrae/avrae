@@ -23,7 +23,7 @@ from utils.functions import auth_and_chan, clean_content, confirm
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
 
-class Customization:
+class Customization(commands.Cog):
     """Commands to help streamline using the bot."""
 
     def __init__(self, bot):

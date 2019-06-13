@@ -13,7 +13,7 @@ import psutil
 from discord.ext import commands
 
 
-class Core:
+class Core(commands.Cog):
     """
     Core utilty and general commands.
     """

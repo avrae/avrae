@@ -46,7 +46,7 @@ PROPS = {"A": "ammunition", "LD": "loading", "L": "light", "F": "finesse", "T": 
 LARGE_THRESHOLD = 200
 
 
-class Lookup:
+class Lookup(commands.Cog):
     """Commands to help look up items, status effects, rules, etc."""
 
     def __init__(self, bot):

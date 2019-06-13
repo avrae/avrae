@@ -15,7 +15,7 @@ from utils.functions import discord_trim
 log = logging.getLogger(__name__)
 
 
-class AdminUtils:
+class AdminUtils(commands.Cog):
     """
     Administrative Utilities.
     """

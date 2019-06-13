@@ -24,7 +24,7 @@ from utils.functions import confirm, search_and_select
 log = logging.getLogger(__name__)
 
 
-class GameTrack:
+class GameTrack(commands.Cog):
     """Commands to help track game resources."""
 
     def __init__(self, bot):

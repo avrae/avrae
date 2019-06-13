@@ -52,12 +52,12 @@ class Publicity(commands.Cog):
         except asyncio.CancelledError:
             pass
 
-    @commands.Cog.listener
+    @commands.Cog.listener()
     async def on_guild_join(self, server):
         log.info('Joined server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
                                                                     sum(1 for m in server.members if m.bot)))
 
-    @commands.Cog.listener
+    @commands.Cog.listener()
     async def on_guild_remove(self, server):
         log.info('Left server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
                                                                   sum(1 for m in server.members if m.bot)))

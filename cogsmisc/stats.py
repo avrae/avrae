@@ -19,12 +19,12 @@ class Stats(commands.Cog):
         self.socket_bandwidth = Counter()
         self.start_time = time.monotonic()
 
-    @commands.Cog.listener
+    @commands.Cog.listener()
     async def on_command(self, ctx):
         command = ctx.command.qualified_name
         self.command_stats[command] += 1
 
-    @commands.Cog.listener
+    @commands.Cog.listener()
     async def on_socket_response(self, msg):
         self.socket_stats[msg.get('t')] += 1
         self.socket_bandwidth[msg.get('t')] += len(str(msg).encode())

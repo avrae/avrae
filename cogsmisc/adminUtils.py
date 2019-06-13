@@ -154,7 +154,7 @@ class AdminUtils(commands.Cog):
         await self.bot.change_presence(status=status, activity=discord.Game(msg or "D&D 5e | !help"))
         await ctx.send("Changed presence.")
 
-    @commands.Cog.listener
+    @commands.Cog.listener()
     async def on_guild_join(self, server):
         if str(server.id) in self.blacklisted_serv_ids: await server.leave()
         if str(server.id) in self.bot.rdb.jget('server-whitelist', []): return

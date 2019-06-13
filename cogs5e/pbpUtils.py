@@ -26,7 +26,7 @@ class PBPUtils(commands.Cog):
             await ctx.message.delete()
         except:
             pass
-        await ctx.send(ctx.author.display_name + ": " + clean_content(msg, ctx))
+        await ctx.send(f"{ctx.author.display_name}: {clean_content(msg, ctx)}")
 
     @commands.command()
     async def techo(self, ctx, seconds: int, *, msg):
@@ -38,7 +38,7 @@ class PBPUtils(commands.Cog):
 
         seconds = min(max(0, seconds), 600)
 
-        await ctx.send(ctx.author.display_name + ": " + clean_content(msg, ctx), delete_after=seconds)
+        await ctx.send(f"{ctx.author.display_name}: {clean_content(msg, ctx)}", delete_after=seconds)
 
     @commands.command()
     async def embed(self, ctx, *, args):

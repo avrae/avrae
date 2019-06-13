@@ -6,8 +6,7 @@ attrs==17.4.0
 cachetools==2.0.1
 certifi==2019.3.9
 chardet==3.0.4
-# discord.py==1.0.0a1659+g700dbb5  # todo move to most recent d.py version
-git+https://github.com/Rapptz/discord.py@700dbb5
+discord.py==1.2.2
 dnspython==1.15.0
 fuzzywuzzy==0.15.1
 gast==0.2.0

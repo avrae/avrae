@@ -29,11 +29,13 @@ class Customization(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.Cog.listener
     async def on_ready(self):
         if getattr(self.bot, "shard_id", 0) == 0:
             cmds = list(self.bot.all_commands.keys())
             self.bot.rdb.jset('default_commands', cmds)
 
+    @commands.Cog.listener
     async def on_message(self, message):
         if str(message.author.id) in self.bot.muted:
             return

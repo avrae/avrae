@@ -736,6 +736,7 @@ class Lookup(commands.Cog):
             data['homebrew'] = metadata.get('homebrew', False)
         await self.bot.mdb.nn_training.insert_one(data)
 
+    @commands.Cog.listener
     async def on_guild_join(self, guild):
         # This method automatically allows full monster lookup for new large servers.
         # These settings can be changed by any server admin.

@@ -20,7 +20,7 @@ TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
 SHARD_COUNT = None if not TESTING else 1
-prefix = '!' if not TESTING else '#'
+DEFAULT_PREFIX = '!' if not TESTING else '#'
 
 # -----COGS-----
 DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
@@ -31,7 +31,7 @@ STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmis
 
 def get_prefix(b, message):
     if not message.guild:
-        return commands.when_mentioned_or(prefix)(b, message)
+        return commands.when_mentioned_or(DEFAULT_PREFIX)(b, message)
     gp = b.prefixes.get(str(message.guild.id), '!')
     return commands.when_mentioned_or(gp)(b, message)
 

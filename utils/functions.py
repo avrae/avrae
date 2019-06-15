@@ -68,9 +68,9 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
     if result is None:
         partial_matches = [a for a in list_to_search if value.lower() in key(a).lower()]
         if len(partial_matches) > 1 or not partial_matches:
-            names = [key(d) for d in list_to_search]
-            fuzzy_map = {key(d): d for d in list_to_search}
-            fuzzy_results = [r for r in process.extract(value, names, scorer=fuzz.ratio) if r[1] >= cutoff]
+            names = [key(d).lower() for d in list_to_search]
+            fuzzy_map = {key(d).lower(): d for d in list_to_search}
+            fuzzy_results = [r for r in process.extract(value.lower(), names, scorer=fuzz.ratio) if r[1] >= cutoff]
             fuzzy_sum = sum(r[1] for r in fuzzy_results)
             fuzzy_matches_and_confidences = [(fuzzy_map[r[0]], r[1] / fuzzy_sum) for r in fuzzy_results]
 
@@ -97,13 +97,13 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
         return result, True
 
 
-async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, return_key=False, pm=False, message=None,
+async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, return_key=False, pm=False, message=None,
                             list_filter=None, selectkey=None, search_func=search, return_metadata=False):
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
     :param ctx: The context of the search.
     :param list_to_search: The list of objects to search.
-    :param value: The value to search for.
+    :param query: The value to search for.
     :param key: How to search - compares key(obj) to value
     :param cutoff: The cutoff percentage of fuzzy searches.
     :param return_key: Whether to return key(match) or match.
@@ -112,6 +112,7 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
     :param list_filter: A filter to filter the list to search by.
     :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
     :param search_func: The function to use to search.
+    :param return_metadata Whether to return a metadata object {num_options, chosen_index}.
     :return:
     """
     if message:
@@ -125,9 +126,9 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
         search_func = search
 
     if asyncio.iscoroutinefunction(search_func):
-        result = await search_func(list_to_search, value, key, cutoff, return_key)
+        result = await search_func(list_to_search, query, key, cutoff, return_key)
     else:
-        result = search_func(list_to_search, value, key, cutoff, return_key)
+        result = search_func(list_to_search, query, key, cutoff, return_key)
 
     if result is None:
         raise NoSelectionElements("No matches found.")
@@ -137,15 +138,18 @@ async def search_and_select(ctx, list_to_search: list, value, key, cutoff=5, ret
     if strict:
         result = results
     else:
-        if len(results) == 1:
-            result = results[0]
+        first_result = results[0]
+        confidence = fuzz.partial_ratio(key(first_result).lower(), query.lower())
+        if len(results) == 1 and confidence > 75:
+            result = first_result
         else:
             if selectkey:
-                result = await get_selection(ctx, [(selectkey(r), r) for r in results], pm=pm, message=message)
+                options = [(selectkey(r), r) for r in results]
             elif return_key:
-                result = await get_selection(ctx, [(r, r) for r in results], pm=pm, message=message)
+                options = [(r, r) for r in results]
             else:
-                result = await get_selection(ctx, [(key(r), r) for r in results], pm=pm, message=message)
+                options = [(key(r), r) for r in results]
+            result = await get_selection(ctx, options, pm=pm, message=message, force_select=True)
     if not return_metadata:
         return result
     metadata = {
@@ -259,17 +263,17 @@ def paginate(iterable, n, fillvalue=None):
     return [i for i in zip_longest(*args, fillvalue=fillvalue) if i is not None]
 
 
-async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, message=None):
+async def get_selection(ctx, choices, delete=True, pm=False, message=None, force_select=False):
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
     If delete is True, will delete the selection message and the response.
-    If length of choices is 1, will return the only choice.
+    If length of choices is 1, will return the only choice unless force_select is True.
     :raises NoSelectionElements if len(choices) is 0.
     :raises SelectionCancelled if selection is cancelled."""
-    if len(choices) < 2:
-        if len(choices):
-            return choices[0][1] if not return_name else choices[0]
-        else:
-            raise NoSelectionElements()
+    if len(choices) == 0:
+        raise NoSelectionElements()
+    elif len(choices) == 1 and not force_select:
+        return choices[0][1]
+
     page = 0
     pages = paginate(choices, 10)
     m = None
@@ -287,9 +291,9 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, 
         selectStr = "Which one were you looking for? (Type the number or \"c\" to cancel)\n"
         if len(pages) > 1:
             selectStr += "`n` to go to the next page, or `p` for previous\n"
-            embed.set_footer(text=f"Page {page+1}/{len(pages)}")
+            embed.set_footer(text=f"Page {page + 1}/{len(pages)}")
         for i, r in enumerate(names):
-            selectStr += f"**[{i+1+page*10}]** - {r}\n"
+            selectStr += f"**[{i + 1 + page * 10}]** - {r}\n"
         embed.description = selectStr
         embed.colour = random.randint(0, 0xffffff)
         if message:
@@ -333,9 +337,8 @@ async def get_selection(ctx, choices, delete=True, return_name=False, pm=False, 
             await m.delete()
         except:
             pass
-    if m is None or m.content.lower() == "c": raise SelectionCancelled()
-    if return_name:
-        return choices[int(m.content) - 1]
+    if m is None or m.content.lower() == "c":
+        raise SelectionCancelled()
     return choices[int(m.content) - 1][1]
 
 

@@ -321,9 +321,8 @@ class GameTrack:
         """
         character: Character = await Character.from_ctx(ctx)
 
-        spell_to_remove = await search_and_select(
-            ctx, character.overrides.spells, spell_name, lambda s: s.name,
-            message="To remove a spell on your sheet, just delete it there and `!update`.")
+        spell_to_remove = await search_and_select(ctx, character.overrides.spells, spell_name, lambda s: s.name,
+                                                  message="To remove a spell on your sheet, just delete it there and `!update`.")
         character.remove_known_spell(spell_to_remove)
 
         await character.commit(ctx)

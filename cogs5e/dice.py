@@ -12,7 +12,7 @@ from cogs5e.models import embeds
 from cogs5e.models.monster import Monster, SKILL_MAP
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import fuzzy_search, a_or_an, verbose_stat, camel_to_title, search_and_select
+from utils.functions import a_or_an, camel_to_title, search_and_select, verbose_stat
 
 
 class Dice:
@@ -166,9 +166,7 @@ class Dice:
                                                                                   a['attackBonus'],
                                                                                   a['damage'] or 'no') for a in attacks)
             return await ctx.send("{}'s attacks:\n{}".format(monster_name, attacks_string))
-        attack = fuzzy_search(attacks, 'name', atk_name)
-        if attack is None:
-            return await ctx.send("No attack with that name found.", delete_after=15)
+        attack = await search_and_select(ctx, attacks, atk_name, lambda a: a['name'])
         args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
         if not args.last('h', type_=bool):

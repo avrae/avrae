@@ -53,24 +53,6 @@ def get_positivity(string):
         return None
 
 
-def strict_search(list_to_search: list, key, value):
-    """Fuzzy searches a list for a dict with a key "key" of value "value" """
-    result = next((a for a in list_to_search if value.lower() == a.get(key, '').lower()), None)
-    return result
-
-
-def fuzzy_search(list_to_search: list, key, value):
-    """Fuzzy searches a list for a dict with a key "key" of value "value" """
-    try:
-        result = next(a for a in list_to_search if value.lower() == a.get(key, '').lower())
-    except StopIteration:
-        try:
-            result = next(a for a in list_to_search if value.lower() in a.get(key, '').lower())
-        except StopIteration:
-            return None
-    return result
-
-
 def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=False):
     """Fuzzy searches a list for an object
     result can be either an object or list of objects

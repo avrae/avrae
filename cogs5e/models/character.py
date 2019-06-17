@@ -319,7 +319,7 @@ class Character(Spellcaster):
                     out += f"`{level}` {filled}{empty}\n"
         if not out:
             out = "No spell slots."
-        return out
+        return out.strip()
 
     def set_remaining_slots(self, level: int, value: int):
         """Sets the character's remaining spell slots of level level.

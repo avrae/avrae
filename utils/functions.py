@@ -138,6 +138,9 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
     if strict:
         result = results
     else:
+        if len(results) == 0:
+            raise NoSelectionElements()
+
         first_result = results[0]
         confidence = fuzz.partial_ratio(key(first_result).lower(), query.lower())
         if len(results) == 1 and confidence > 75:

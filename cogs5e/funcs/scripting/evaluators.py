@@ -158,10 +158,10 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                 character.consumables.append(new_consumable)
                 self.character_changed = True
 
-        def create_cc(name: str, **kwargs):
+        def create_cc(name: str, *args, **kwargs):
             if cc_exists(name):
                 delete_cc(name)
-            create_cc_nx(name, **kwargs)
+            create_cc_nx(name, *args, **kwargs)
 
         def cc_exists(name):
             return name in set(con.name for con in character.consumables)

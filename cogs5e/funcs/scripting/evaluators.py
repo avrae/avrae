@@ -153,7 +153,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                          dispType: str = None):
-            if not name in set(con.name for con in character.consumables):
+            if not cc_exists(name):
                 new_consumable = CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
                 character.consumables.append(new_consumable)
                 self.character_changed = True

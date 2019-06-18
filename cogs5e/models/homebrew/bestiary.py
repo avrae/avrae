@@ -2,7 +2,7 @@ import logging
 
 import aiohttp
 
-from cogs5e.models.errors import NoActiveBrew, ExternalImportError, NoSelectionElements, SelectionCancelled
+from cogs5e.models.errors import ExternalImportError, NoActiveBrew, NoSelectionElements, SelectionCancelled
 from cogs5e.models.monster import Monster
 from utils.functions import get_selection
 

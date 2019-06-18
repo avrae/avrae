@@ -15,7 +15,7 @@ from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, add_fields
 from cogs5e.models.errors import SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from utils.argparser import argparse
-from utils.functions import confirm, get_selection
+from utils.functions import confirm, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -859,9 +859,8 @@ class InitTracker:
             attack = {'attackBonus': None, 'damage': None, 'name': atk_name}
         else:
             try:
-                attack = await get_selection(ctx,
-                                             [(a['name'], a) for a in attacks if atk_name.lower() in a['name'].lower()],
-                                             message="Select your attack.")
+                attack = await search_and_select(ctx, attacks, atk_name, lambda a: a['name'],
+                                                 message="Select your attack.")
             except SelectionException:
                 return await ctx.send("Attack not found.")
 

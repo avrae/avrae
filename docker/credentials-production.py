@@ -21,10 +21,10 @@ redis_url = os.environ['REDIS_URL']
 dicecloud_user = os.environ['DICECLOUD_USER']
 
 # The Dicecloud password of the Dicecloud user.
-dicecloud_pass = os.getenv['DICECLOUD_PASS']
+dicecloud_pass = os.environ['DICECLOUD_PASS']
 
 # A Dicecloud API token.
-dicecloud_token = os.getenv['DICECLOUD_TOKEN']
+dicecloud_token = os.environ['DICECLOUD_TOKEN']
 
 
 # - Should probably fix the code to not demand these

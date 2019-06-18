@@ -17,12 +17,15 @@ class RedisIO:
     A simple class to interface with the redis database.
     """
 
-    def __init__(self, testing=False, test_database_url=''):
+    def __init__(self, testing=False, database_url=''):
         if not testing:
-            self._db = Redis(host="127.0.0.1", db=0, socket_connect_timeout=2, socket_timeout=2,
-                             password=credentials.redis_pass)
+            if database_url != '':
+                self._db = redis.from_url(redis_url, socket_connect_timeout=2, socket_timeout=2)
+            else:
+                self._db = Redis(host="127.0.0.1", db=0, socket_connect_timeout=2, socket_timeout=2,
+                                 password=credentials.redis_pass)
         else:
-            self._db = redis.from_url(test_database_url)
+            self._db = redis.from_url(database_url)
         self.pubsub = self._db.pubsub(ignore_subscribe_messages=True)
 
     def get(self, key, default=None):

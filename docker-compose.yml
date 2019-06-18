@@ -24,6 +24,8 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: topsecret
+    ports:
+      - 58017:27017
     volumes:
       - mongo:/data/db
 
@@ -38,6 +40,8 @@ services:
 
   redis:
     image: redis:5
+    ports:
+      - 58379:6379
     volumes:
       - redis:/data
 

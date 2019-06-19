@@ -1,12 +1,11 @@
-language: python
-python:
-- '3.6'
+language: minimal
 script:
-- pytest
-after_failure:
-- wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
-- chmod +x send.sh
-- "./send.sh failure $WEBHOOK_URL"
-notifications:
-  slack:
-    secure: sxRAdcZ6C+Bpm3RXZ4ePs9++XwkNvpjDDUhFCSd3ntWom/qNRswNXlivR2ZvXQW482dlDM6SlJvHb/AGCJPzXPbosYDJwnF/y5cHweuwJ4q7+u0dcXbOXYwLRMDVl7cy5mugyt+MN7gf9qhpAyJwlCaj0C4XZuk/qoseJZqPiG1wE7RSAfVMLie1H5choIRfwHXokB24KP+6Vgg6E2CjtF2KsCYrdgXBMTE2nna+zbSbrf52hJF2E4p6n/vosYUuL/8FES3tUT/lAmLdO9QhupK68Gasn3ietfvU5x0wnx08HtZK827LoP60Ag1TY4/gxCCThaG/VJjS+CNMTB0piOOsOSjmxOLiy0KW3goQM8awC7Z85OHcvxkkzsuPyCLIHMUo1UUFCHqCvrW0HKbC5r53cJE/bdmUVJzu1iG/Nz9nr1GkjsVuPkv9acRGHVeocKFAmdIZRtp100aXa6w2voVEDdAwiSJFcXDrAHAA+UNxMdruBhsKOKWB1yJggDXmTBJBGdlxowogIzow48UnSrwUD+c9noQD3nVOk1LfjPX42gpgG8w7bZQH/iVq4weyONJhPQcB/JZLSmlTRMoe74FY3fbpTOk0DoA9E0HfYz4jymAdtpvh74ZKQm5+fkEw8AlaWNr6X/XGCpERZECIzOWP8h0pxY56mNXC1S2a+7o=
+  - docker build -t avrae-bot .
+before_deploy:
+  - pip install --user awscli
+  - export PATH=$PATH:$HOME/.local/bin
+deploy:
+  provider: script
+  script: bash scripts/ecr_push.sh
+  on:
+    branch: master

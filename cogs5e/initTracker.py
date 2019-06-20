@@ -344,18 +344,20 @@ class InitTracker(commands.Cog):
                 if isinstance(co, MonsterCombatant) and co.hp <= 0:
                     toRemove.append(co)
 
-        advanced_round = combat.advance_turn()
+        advanced_round, messages = combat.advance_turn()
+        out = messages
+
         self.bot.rdb.incr('turns_init_tracked_life')
         if advanced_round:
             self.bot.rdb.incr('rounds_init_tracked_life')
 
-        out = combat.get_turn_str()
+        out.append(combat.get_turn_str())
 
         for co in toRemove:
             combat.remove_combatant(co)
-            out += "{} automatically removed from combat.\n".format(co.name)
+            out.append("{} automatically removed from combat.\n".format(co.name))
 
-        await ctx.send(out)
+        await ctx.send("\n".join(out))
         await combat.final()
 
     @init.command(name="prev", aliases=['previous', 'rewind'])
@@ -416,22 +418,24 @@ class InitTracker(commands.Cog):
             if isinstance(co, MonsterCombatant) and co.hp <= 0 and co is not combat.current_combatant:
                 toRemove.append(co)
 
-        combat.skip_rounds(numrounds)
-        out = combat.get_turn_str()
+        messages = combat.skip_rounds(numrounds)
+        out = messages
+
+        out.append(combat.get_turn_str())
 
         for co in toRemove:
             combat.remove_combatant(co)
-            out += "{} automatically removed from combat.\n".format(co.name)
+            out.append("{} automatically removed from combat.".format(co.name))
 
-        await ctx.send(out)
+        await ctx.send("\n".join(out))
         await combat.final()
 
     @init.command(name="reroll", aliases=['shuffle'])
     async def reroll(self, ctx):
         """Rerolls initiative for all combatants."""
         combat = await Combat.from_ctx(ctx)
-        combat.reroll_dynamic()
-        await ctx.send(f"Rerolled initiative! New order: {combat.get_summary()}")
+        new_order = combat.reroll_dynamic()
+        await ctx.send(f"Rerolled initiative! New order:\n{new_order}")
         await combat.final()
 
     @init.command(name="meta", aliases=['metaset'])

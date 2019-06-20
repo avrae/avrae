@@ -136,10 +136,9 @@ async def on_command_error(ctx, error):
     if isinstance(error, AvraeException):
         return await ctx.send(str(error))
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
-    if isinstance(error,
-                  (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):
-        return await ctx.send("Error: " + str(
-            error) + f"\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help.")
+    if isinstance(error, (commands.UserInputError, commands.NoPrivateMessage, ValueError)):
+        return await ctx.send(
+            f"Error: {str(error)}\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help.")
     elif isinstance(error, commands.CheckFailure):
         return await ctx.send("Error: You are not allowed to run this command.")
     elif isinstance(error, commands.CommandOnCooldown):

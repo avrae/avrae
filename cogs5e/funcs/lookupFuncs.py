@@ -33,12 +33,12 @@ class Compendium:
         self.monsters = self.load_json('srd-bestiary.json', [])
         self.names = self.load_json('names.json', [])
         self.rules = self.load_json('rules.json', [])
-        self.spells = self.load_json('srd-spells.json', [])
 
+        self.spells = [Spell.from_data(r) for r in self.load_json('srd-spells.json', [])]
         self.backgrounds = [Background.from_data(b) for b in self.load_json('srd-backgrounds.json', [])]
         self.items = [i for i in self.load_json('srd-items.json', []) if i.get('type') is not '$']
         self.monster_mash = [Monster.from_data(m) for m in self.monsters]
-        
+
         self.subclasses = self.load_subclasses()
 
         srd_races = self.load_json('srd-races.json', [])
@@ -70,6 +70,7 @@ class Compendium:
             log.error("File not found: {}".format(filepath))
             pass
         return data
+
 
 c = Compendium()
 

@@ -66,7 +66,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         self.functions.update(  # character-only functions
             get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
             get_cc_min=self.needs_char, mod_cc=self.needs_char,
-            cc_exists=self.needs_char, create_cc_nx=self.needs_char,
+            cc_exists=self.needs_char, create_cc_nx=self.needs_char, create_cc=self.needs_char,
             get_slots=self.needs_char, get_slots_max=self.needs_char, set_slots=self.needs_char,
             use_slot=self.needs_char,
             get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char, hp_str=self.needs_char,
@@ -153,10 +153,15 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                          dispType: str = None):
-            if not name in set(con.name for con in character.consumables):
+            if not cc_exists(name):
                 new_consumable = CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
                 character.consumables.append(new_consumable)
                 self.character_changed = True
+
+        def create_cc(name: str, *args, **kwargs):
+            if cc_exists(name):
+                delete_cc(name)
+            create_cc_nx(name, *args, **kwargs)
 
         def cc_exists(name):
             return name in set(con.name for con in character.consumables)
@@ -221,7 +226,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         self.functions.update(
             combat=combat,
             get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
-            delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, cc_str=cc_str,
+            delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, create_cc=create_cc, cc_str=cc_str,
             get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
             slots_str=slots_str,
             get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, hp_str=hp_str,

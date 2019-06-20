@@ -39,7 +39,10 @@ class MathEvaluator(SimpleEval):
 
     def parse(self, string):
         """Parses a dicecloud-formatted string (evaluating text in {})."""
-        return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1))), string)
+        try:
+            return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1))), string)
+        except Exception as ex:
+            raise EvaluationError(ex, string)
 
 
 class ScriptingEvaluator(EvalWithCompoundTypes):

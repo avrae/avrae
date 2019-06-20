@@ -7,6 +7,7 @@ import asyncio
 import textwrap
 import traceback
 import uuid
+import shlex
 
 import discord
 from discord.ext import commands
@@ -17,7 +18,7 @@ from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, EvaluationError, NoCharacter
-from utils.argparser import argquote, argsplit
+from utils.argparser import argquote, argsplit, argparse
 from utils.functions import auth_and_chan, clean_content, confirm
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")

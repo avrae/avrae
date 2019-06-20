@@ -14,7 +14,7 @@ A clear and concise description of what the bug is.
 Trivial (typos, etc) / Low (formatting issues, things that don't impact operation) / Medium (minor functional impact) / High (a broken feature, major functional impact) / Critical (bot crash, extremely major functional impact)
 
 **Context**
-The command run that the bug occured in and any choice trees.
+The command run that the bug occurs in and any choice trees.
 
 **To Reproduce**
 Steps to reproduce the behavior:

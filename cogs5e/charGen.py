@@ -26,7 +26,7 @@ CLASS_RESOURCE_NAMES = {"Ki Points": "ki", "Rage Damage": "rageDamage", "Rages":
                         "7th": "level7SpellSlots", "8th": "level8SpellSlots", "9th": "level9SpellSlots"}
 
 
-class CharGenerator:
+class CharGenerator(commands.Cog):
     """Random character generator."""
 
     def __init__(self, bot):

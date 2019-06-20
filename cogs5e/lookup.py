@@ -46,7 +46,7 @@ PROPS = {"A": "ammunition", "LD": "loading", "L": "light", "F": "finesse", "T": 
 LARGE_THRESHOLD = 200
 
 
-class Lookup:
+class Lookup(commands.Cog):
     """Commands to help look up items, status effects, rules, etc."""
 
     def __init__(self, bot):
@@ -736,6 +736,7 @@ class Lookup:
             data['homebrew'] = metadata.get('homebrew', False)
         await self.bot.mdb.nn_training.insert_one(data)
 
+    @commands.Cog.listener()
     async def on_guild_join(self, guild):
         # This method automatically allows full monster lookup for new large servers.
         # These settings can be changed by any server admin.

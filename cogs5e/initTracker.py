@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 DM_ROLES = {"dm", "gm", "dungeon master", "game master"}
 
 
-class InitTracker:
+class InitTracker(commands.Cog):
     """
     Initiative tracking commands. Use !help init for more details.
     To use, first start combat in a channel by saying "!init begin".

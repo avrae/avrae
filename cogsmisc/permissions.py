@@ -9,7 +9,7 @@ from discord.ext import commands
 from utils import checks
 
 
-class Permissions:
+class Permissions(commands.Cog):
     """Handles the bot's permission system.
 
     This is how you disable or enable certain commands

@@ -8,6 +8,7 @@ import logging
 import time
 
 import aiohttp
+from discord.ext import commands
 
 import credentials
 
@@ -16,7 +17,7 @@ log = logging.getLogger(__name__)
 DBL_API = "https://discordbots.org/api/bots/"
 
 
-class Publicity:
+class Publicity(commands.Cog):
     """
     Sends updates to bot repos.
     """
@@ -51,10 +52,12 @@ class Publicity:
         except asyncio.CancelledError:
             pass
 
+    @commands.Cog.listener()
     async def on_guild_join(self, server):
         log.info('Joined server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
                                                                     sum(1 for m in server.members if m.bot)))
 
+    @commands.Cog.listener()
     async def on_guild_remove(self, server):
         log.info('Left server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
                                                                   sum(1 for m in server.members if m.bot)))

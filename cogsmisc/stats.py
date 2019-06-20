@@ -9,7 +9,7 @@ from collections import Counter
 from discord.ext import commands
 
 
-class Stats:
+class Stats(commands.Cog):
     """Statistics about bot usage."""
 
     def __init__(self, bot):
@@ -19,10 +19,12 @@ class Stats:
         self.socket_bandwidth = Counter()
         self.start_time = time.monotonic()
 
+    @commands.Cog.listener()
     async def on_command(self, ctx):
         command = ctx.command.qualified_name
         self.command_stats[command] += 1
 
+    @commands.Cog.listener()
     async def on_socket_response(self, msg):
         self.socket_stats[msg.get('t')] += 1
         self.socket_bandwidth[msg.get('t')] += len(str(msg).encode())

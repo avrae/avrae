@@ -13,33 +13,32 @@ from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.models.errors import AvraeException, EvaluationError
 from utils.functions import discord_trim, gen_error_message, get_positivity
+from utils.help import help_command
 from utils.redisIO import RedisIO
 
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
 SHARD_COUNT = None if not TESTING else 1
-prefix = '!' if not TESTING else '#'
+DEFAULT_PREFIX = '!' if not TESTING else '#'
 
 # -----COGS-----
 DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
                 "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization"]
 STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils",
-               "cogsmisc.permissions", "utils.help"]
+               "cogsmisc.permissions"]
 
 
 def get_prefix(b, message):
     if not message.guild:
-        return commands.when_mentioned_or(prefix)(b, message)
+        return commands.when_mentioned_or(DEFAULT_PREFIX)(b, message)
     gp = b.prefixes.get(str(message.guild.id), '!')
     return commands.when_mentioned_or(gp)(b, message)
 
 
 class Avrae(commands.AutoShardedBot):
-    def __init__(self, prefix, formatter=None, description=None, pm_help=False, testing=False,
-                 **options):
-        super(Avrae, self).__init__(prefix, formatter, description, pm_help, **options)
-        self.remove_command("help")
+    def __init__(self, prefix, description=None, testing=False, **options):
+        super(Avrae, self).__init__(prefix, help_command=help_command, description=description, **options)
         self.testing = testing
         self.state = "init"
         self.credentials = Credentials()

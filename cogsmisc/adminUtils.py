@@ -15,7 +15,7 @@ from utils.functions import discord_trim
 log = logging.getLogger(__name__)
 
 
-class AdminUtils:
+class AdminUtils(commands.Cog):
     """
     Administrative Utilities.
     """
@@ -124,7 +124,7 @@ class AdminUtils:
         """Mutes a person by ID."""
         self.bot.muted = set(self.bot.rdb.not_json_get('muted', []))
         try:
-            target_user = await self.bot.get_user_info(target)
+            target_user = await self.bot.fetch_user(target)
         except NotFound:
             target_user = "Not Found"
         if target in self.bot.muted:
@@ -154,6 +154,7 @@ class AdminUtils:
         await self.bot.change_presence(status=status, activity=discord.Game(msg or "D&D 5e | !help"))
         await ctx.send("Changed presence.")
 
+    @commands.Cog.listener()
     async def on_guild_join(self, server):
         if str(server.id) in self.blacklisted_serv_ids: await server.leave()
         if str(server.id) in self.bot.rdb.jget('server-whitelist', []): return

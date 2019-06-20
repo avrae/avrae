@@ -32,7 +32,7 @@ from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate
 log = logging.getLogger(__name__)
 
 
-class SheetManager:
+class SheetManager(commands.Cog):
     """
     Commands to load a character sheet into Avrae, and supporting commands to modify the character, as well as basic macros.
     """

@@ -369,6 +369,58 @@ class Customization(commands.Cog):
         parsed = await char.parse_cvars(teststr, ctx)
         parsed = clean_content(parsed, ctx)
         await ctx.send(f"{ctx.author.display_name}: {parsed}")
+                       
+    @commands.command()
+    async def tembed(self, ctx, *, teststr):
+	    """Parses `str` as if it were in an alias, for testing, then creates and prints an Embed.
+	    Arguments: -title [title]
+	    -desc [description text]
+	    -thumb [image url]
+	    -image [image url]
+	    -footer [footer text]
+	    -f ["Field Title|Field Text"]
+	    -color [hex color]
+	    -t [timeout (0..600)]
+	    """
+	    try:
+	        await ctx.message.delete()
+	    except:
+	        pass
+
+        char = await Character.from_ctx(ctx)
+        parsed = await char.parse_cvars(teststr, ctx)
+        parsed = clean_content(parsed, ctx)
+
+        embed = discord.Embed()
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+        args = shlex.split(parsed)
+        args = argparse(args)
+        embed.title = args.last('title')
+        embed.description = args.last('desc')
+        embed.set_thumbnail(url=args.last('thumb', '') if 'http' in str(args.last('thumb')) else '')
+        embed.set_image(url=args.last('image', '') if 'http' in str(args.last('image')) else '')
+        embed.set_footer(text=args.last('footer', ''))
+        try:
+            embed.colour = int(args.last('color', "0").strip('#'), base=16)
+        except:
+            pass
+        for f in args.get('f'):
+            if f:
+                title = f.split('|')[0] if '|' in f else '\u200b'
+                value = "|".join(f.split('|')[1:]) if '|' in f else f
+                embed.add_field(name=title, value=value)
+
+        timeout = 0
+        if 't' in args:
+            try:
+                timeout = min(max(args.last('t', type_=int), 0), 600)
+            except:
+                pass
+
+        if timeout:
+            await ctx.send(embed=embed, delete_after=timeout)
+        else:
+            await ctx.send(embed=embed)
 
     @commands.group(invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name=None, *, value=None):

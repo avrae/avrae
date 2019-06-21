@@ -81,8 +81,8 @@ class InitTracker(commands.Cog):
         await ctx.send(
             f"Everyone roll for initiative!\n"
             f"If you have a character set up with SheetManager: `{ctx.prefix}init join`\n"
-            f"If it's a 5e monster: `{ctx.prefix}init madd [monster name]`\n"
-            f"Otherwise: `{ctx.prefix}init add [modifier] [name]`")
+            f"If it's a 5e monster: `{ctx.prefix}init madd <monster name>`\n"
+            f"Otherwise: `{ctx.prefix}init add <modifier> <name>`")
 
     @init.command()
     async def add(self, ctx, modifier: int, name: str, *args):
@@ -96,10 +96,10 @@ class InitTracker(commands.Cog):
         -controller <controller> - Pings a different person on turn.
         -group <group> - Adds the combatant to a group.
         -hp <hp> - Sets starting HP. Default: None.
-        -ac [ac] - Sets combatants AC. Default: None.
-        -resist [damage type] - Gives the combatant resistance to the given damage type.
-        -immune [damage type] - Gives the combatant immunity to the given damage type.
-        -vuln [damage type] - Gives the combatant vulnerability to the given damage type."""
+        -ac <ac> - Sets combatants AC. Default: None.
+        -resist <damage type> - Gives the combatant resistance to the given damage type.
+        -immune <damage type> - Gives the combatant immunity to the given damage type.
+        -vuln <damage type> - Gives the combatant vulnerability to the given damage type."""
         private = False
         place = False
         controller = str(ctx.author.id)
@@ -164,8 +164,8 @@ class InitTracker(commands.Cog):
         """Adds a monster to combat.
         __Valid Arguments__
         adv/dis - Give advantage or disadvantage to the initiative roll.
-        -b [condition bonus] - Adds a bonus to the combatants nitiative roll.
-        -n [number] - Adds more than one of that monster.
+        -b <condition bonus> - Adds a bonus to the combatants initiative roll.
+        -n <number> - Adds more than one of that monster.
         -p <value> - Places combatant at the given value, instead of rolling.
         -name <name> - Sets the combatants name. Use "#" for auto-numbering, e.g. "Orc#"
         -h - Hides HP, AC, Resists, etc. Default: True.
@@ -173,7 +173,7 @@ class InitTracker(commands.Cog):
         -npr - Removes physical resistances when added.
         -rollhp - Rolls the monsters HP, instead of using the default value.
         -hp <hp> - Sets starting HP.
-        -ac [ac] - Sets combatants starting AC."""
+        -ac <ac> - Sets combatants starting AC."""
 
         monster = await select_monster_full(ctx, monster_name, pm=True)
         self.bot.rdb.incr("monsters_looked_up_life")
@@ -263,8 +263,8 @@ class InitTracker(commands.Cog):
         """Adds the current active character to combat. A character must be loaded through the SheetManager module first.
         __Valid Arguments__ 
         adv/dis - Give advantage or disadvantage to the initiative roll.
-        -b [condition bonus] - Adds a bonus to the combatants Initiative roll.
-        -phrase [phrase] - Adds flavor text.
+        -b <condition bonus> - Adds a bonus to the combatants Initiative roll.
+        -phrase <phrase> - Adds flavor text.
         -p <value> - Places combatant at the given value, instead of rolling.
         -h - Hides HP, AC, Resists, etc.
         -group <group> - Adds the combatant to a group."""
@@ -503,11 +503,12 @@ class InitTracker(commands.Cog):
         -p <value> - Changes the combatants placement in the Initiative.
         -name <name> - Changes the combatants name.
         -controller <controller> - Pings a different person on turn.
-        -ac [ac] - Sets combatants AC.
-        -resist [damage type] - Gives the combatant resistance to the given damage type.
-        -immune [damage type] - Gives the combatants immunity to the given damage type.
-        -vuln [damage type] - Gives the combatant vulnerability to the given damage type.
-        -neutral [damage type] - Removes the combatants immunity, resistance, or vulnerability to the given damage type.        -group <group> - Adds the combatant to a group. To remove them from group, use -group None.
+        -ac <ac> - Sets combatants AC.
+        -resist <damage type> - Gives the combatant resistance to the given damage type.
+        -immune <damage type> - Gives the combatants immunity to the given damage type.
+        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
+        -neutral <damage type> - Removes the combatants immunity, resistance, or vulnerability to the given damage type.
+        -group <group> - Adds the combatant to a group. To remove them from group, use -group None.
         -max <maxhp> - Sets the combatants Max HP.
         -hp <hp> - Sets current HP."""
         combat = await Combat.from_ctx(ctx)
@@ -710,25 +711,25 @@ class InitTracker(commands.Cog):
     @init.command()
     async def effect(self, ctx, target_name: str, effect_name: str, *args):
         """Attaches a status effect to a combatant.
-        [args] is a set of args that affects a combatant in combat.
+        ]args] is a set of args that affects a combatant in combat.
         See `!help init re` to remove effects.
         __**Valid Arguments**__
-        -dur [duration] - Sets the duration of the effect, in rounds.
+        -dur <duration> - Sets the duration of the effect, in rounds.
         conc - Makes the effect require concentration. Will end any other concentration effects.
         end - Makes the effect duration tick on the end of turn, rather than the beginning.
-        -t [target] - Specifies more combatants to target, chainable (e.g., "-t or1 -t or2").
+        -t <target> - Specifies more combatants to target, chainable (e.g., "-t or1 -t or2").
         __Attacks__
-        -b [bonus] - Adds a bonus to hit.
-        -d [damage] - Adds additional damage.
-        -attack <"[hit]|[damage]|[description]"> - Adds an attack to the combatant. Args can be blank, no `hit` will autohit (e.g., -attack "|1d6[fire]|")
+        -b <bonus> - Adds a bonus to hit.
+        -d <damage> - Adds additional damage.
+        -attack <"[hit]|[damage]|[description]"> - Adds an attack to the combatant. The effect name will be the name of the attack. No [hit] will autohit (e.g., -attack "|1d6<fire>|")
         __Resists__
-        -resist [damage type] - Gives the combatant resistance to the given damage type.
-        -immune [damage type] - Gives the combatants immunity to the given damage type.
-        -vuln [damage type] - Gives the combatant vulnerability to the given damage type.`-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit.
-        -neutral [damage type] - Removes the combatants immunity, resistance, or vulnerability to the given damage type.
+        -resist <damage type> - Gives the combatant resistance to the given damage type.
+        -immune <damage type> - Gives the combatants immunity to the given damage type.
+        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.`-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit.
+        -neutral <damage type> - Removes the combatants immunity, resistance, or vulnerability to the given damage type.
         __General__
-        -ac [ac] - modifies ac temporarily; adds if starts with +/- or sets otherwise.
-        -sb [save bonus] - Adds a bonus to all saving throws."""
+        -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
+        -sb <save bonus> - Adds a bonus to all saving throws."""
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
 
@@ -796,28 +797,27 @@ class InitTracker(commands.Cog):
         adv#/dis# - Give advantage or disadvantage to the first # attack roll(s).
         ea - Elven Accuracy, double advantage on the attack roll.
 
-        -b [bonus] - Adds a bonus to hit.
-        -criton [a number to crit on if rolled on or above]
+        -b <bonus> - Adds a bonus to hit.
 
-        -criton [value] - The number the attack crits on if rolled on or above.
-        -d [damage] - Adds additional damage.
-        -d# [damage] - Adds additional damage to the first # attacks that hit.
-        -c [damage] - Adds additional damage for when the attack crits, not doubled.
-        -rr [value] - How many attacks to make at the target.
-        -mi [value] - Minimum value on the attack roll.
+        -criton <value> - The number the attack crits on if rolled on or above.
+        -d <damage> - Adds additional damage.
+        -d# <damage> - Adds additional damage to the first # attacks that hit.
+        -c <damage> - Adds additional damage for when the attack crits, not doubled.
+        -rr <value> - How many attacks to make at the target.
+        -mi <value> - Minimum value on the attack roll.
 
-        -resist [damage type] - Gives the target resistance to the given damage type.
-        -immune [damage type] - Gives the target immunity to the given damage type.
-        -vuln [damage type] - Gives the target vulnerability to the given damage type.
-        -neutral [damage type] - Removes the targets immunity, resistance, or vulnerability to the given damage type.
+        -resist <damage type> - Gives the target resistance to the given damage type.
+        -immune <damage type> - Gives the target immunity to the given damage type.
+        -vuln <damage type> - Gives the target vulnerability to the given damage type.
+        -neutral <damage type> - Removes the targets immunity, resistance, or vulnerability to the given damage type.
 
         hit - The attack automatically hits.
         miss - The attack automatically misses.
         crit - The attack automatically crits.
         max - Maximizes damage rolls.
 
-        -phrase [phrase] - Adds flavor text.
-        -title [title] - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
+        -phrase <phrase> - Adds flavor text.
+        -title <title> - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
         -f "Field Title|Field Text" - Creates a field with the given title and text.
         -h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
         [user snippet] - Allows the user to use snippets on the attack.
@@ -871,28 +871,28 @@ class InitTracker(commands.Cog):
         adv#/dis# - Give advantage or disadvantage to the first # attack roll(s).
         ea - Elven Accuracy, double advantage on the attack roll.
 
-        -b [bonus] - Adds a bonus to hit.
-        -criton [a number to crit on if rolled on or above]
+        -b <bonus> - Adds a bonus to hit.
+        -criton <a number to crit on if rolled on or above>
 
-        -criton [value] - The number the attack crits on if rolled on or above.
-        -d [damage] - Adds additional damage.
-        -d# [damage] - Adds additional damage to the first # attacks that hit.
-        -c [damage] - Adds additional damage for when the attack crits, not doubled.
-        -rr [value] - How many attacks to make at the target.
-        -mi [value] - Minimum value on the attack roll.
+        -criton <value> - The number the attack crits on if rolled on or above.
+        -d <damage> - Adds additional damage.
+        -d# <damage> - Adds additional damage to the first # attacks that hit.
+        -c <damage> - Adds additional damage for when the attack crits, not doubled.
+        -rr <value> - How many attacks to make at the target.
+        -mi <value> - Minimum value on the attack roll.
 
-        -resist [damage type] - Gives the target resistance to the given damage type.
-        -immune [damage type] - Gives the target immunity to the given damage type.
-        -vuln [damage type] - Gives the target vulnerability to the given damage type.
-        -neutral [damage type] - Removes the targets immunity, resistance, or vulnerability to the given damage type.
+        -resist <damage type> - Gives the target resistance to the given damage type.
+        -immune <damage type> - Gives the target immunity to the given damage type.
+        -vuln <damage type> - Gives the target vulnerability to the given damage type.
+        -neutral <damage type> - Removes the targets immunity, resistance, or vulnerability to the given damage type.
 
         hit - The attack automatically hits.
         miss - The attack automatically misses.
         crit - The attack automatically crits.
         max - Maximizes damage rolls.
 
-        -phrase [phrase] - Adds flavor text.
-        -title [title] - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
+        -phrase <phrase> - Adds flavor text.
+        -title <title> - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
         -f "Field Title|Field Text" - Creates a field with the given title and text.
         -h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
         [user snippet] - Allows the user to use snippets on the attack.
@@ -1009,20 +1009,20 @@ class InitTracker(commands.Cog):
     async def cast(self, ctx, spell_name, *, args=''):
         """Casts a spell against another combatant.
         __Valid Arguments__
-        -t [target] - Specifies one or more combatants to target, chainable (e.g., "-t or1 -t or2").
+        -t <target> - Specifies one or more combatants to target, chainable (e.g., "-t or1 -t or2").
         -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
-        -l [level] - Specifies the level to cast the spell at.
+        -l <level> - Specifies the level to cast the spell at.
         **__Save Spells__**
-        -dc [save dc] - Changes the DC of the save. Default: Pulls a cvar called `dc`.
+        -dc <save dc> - Changes the DC of the save.
         -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.
-        -d [damage] - Adds additional damage.
+        -d <damage> - Adds additional damage.
         adv/dis - Forces all targets to make saves at advantage or disadvantage.
         **__Attack Spells__**
         See `!init attack`.
         **__All Spells__**
-        -phrase [phrase] - Adds flavor text.
-        -title [title] - Changes the title of the cast. Replaces [sname] with spell name.
-        -dur [duration] - Changes the duration of the spell effects, in rounds.
+        -phrase <phrase> - Adds flavor text.
+        -title <title> - Changes the title of the cast. Replaces [sname] with spell name.
+        -dur <duration> - Changes the duration of the spell effects, in rounds.
         int/wis/cha - Uses a different ability score for spell DC and attack bonus."""
         return await self._cast(ctx, None, spell_name, args)
 
@@ -1030,20 +1030,20 @@ class InitTracker(commands.Cog):
     async def reactcast(self, ctx, combatant_name, spell_name, *, args=''):
         """Casts a spell against another combatant, as a reaction.
         __Valid Arguments__
-        -t [target] - Specifies one or more combatants to target, chainable (e.g., "-t or1 -t or2").
+        -t <target> - Specifies one or more combatants to target, chainable (e.g., "-t or1 -t or2").
         -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
-        -l [level] - Specifies the level to cast the spell at.
+        -l <level> - Specifies the level to cast the spell at.
         **__Save Spells__**
-        -dc [save dc] - Changes the DC of the save. Default: Pulls a cvar called `dc`.
+        -dc <save dc> - Changes the DC of the save. Default: Pulls a cvar called `dc`.
         -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.
-        -d [damage] - Adds additional damage.
+        -d <damage> - Adds additional damage.
         adv/dis - Forces all targets to make saves at advantage or disadvantage.
         **__Attack Spells__**
         See `!init attack`.
         **__All Spells__**
-        -phrase [phrase] - Adds flavor text.
-        -title [title] - Changes the title of the cast. Replaces [sname] with spell name.
-        -dur [duration] - Changes the duration of the spell effects, in rounds.
+        -phrase <phrase> - Adds flavor text.
+        -title <title> - Changes the title of the cast. Replaces [sname] with spell name.
+        -dur <duration> - Changes the duration of the spell effects, in rounds.
         int/wis/cha - Uses a different ability score for spell DC and attack bonus."""
         return await self._cast(ctx, combatant_name, spell_name, args)
 

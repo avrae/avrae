@@ -98,8 +98,8 @@ class InitTracker(commands.Cog):
         -hp <hp> - Sets starting HP. Default: None.
         -ac [ac] - Sets combatants AC. Default: None.
         -resist [damage type] - Gives the combatant resistance to the given damage type.
-		-immune [damage type] - Gives the combatant immunity to the given damage type.
-		-vuln [damage type] - Gives the combatant vulnerability to the given damage type."""
+        -immune [damage type] - Gives the combatant immunity to the given damage type.
+        -vuln [damage type] - Gives the combatant vulnerability to the given damage type."""
         private = False
         place = False
         controller = str(ctx.author.id)
@@ -163,17 +163,17 @@ class InitTracker(commands.Cog):
     async def madd(self, ctx, monster_name: str, *args):
         """Adds a monster to combat.
         __Valid Arguments__
-		adv/dis - Give advantage or disadvantage to the initiative roll.
-      	-b [condition bonus] - Adds a bonus to their Initiative roll.
-      	-n [number] - Adds more than one of that monster.
-      	-p <value> - Places combatant at the given value, instead of rolling.
-      	-name <name> - Sets the combatants name. Use "#" for auto-numbering, e.g. "Orc#"
-      	-h - Hides HP, AC, Resists, etc. Default: True.
-      	-group <group> - Adds the combatant to a group.
-      	-npr - Removes physical resistances when added.
-      	-rollhp - Rolls the monsters HP, instead of using the default value.
-      	-hp <hp> - Sets starting HP.
-      	-ac [ac] - Sets combatants starting AC."""
+        adv/dis - Give advantage or disadvantage to the initiative roll.
+        -b [condition bonus] - Adds a bonus to their Initiative roll.
+        -n [number] - Adds more than one of that monster.
+        -p <value> - Places combatant at the given value, instead of rolling.
+        -name <name> - Sets the combatants name. Use "#" for auto-numbering, e.g. "Orc#"
+        -h - Hides HP, AC, Resists, etc. Default: True.
+        -group <group> - Adds the combatant to a group.
+        -npr - Removes physical resistances when added.
+        -rollhp - Rolls the monsters HP, instead of using the default value.
+        -hp <hp> - Sets starting HP.
+        -ac [ac] - Sets combatants starting AC."""
 
         monster = await select_monster_full(ctx, monster_name, pm=True)
         self.bot.rdb.incr("monsters_looked_up_life")
@@ -442,10 +442,10 @@ class InitTracker(commands.Cog):
     @init.command(name="meta", aliases=['metaset'])
     async def metasetting(self, ctx, *settings):
         """Changes the settings of the active combat. 
-		__Valid Settings__
-		dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
-		turnnotif - Notifies the controller of the next combatant in initiative.
-		-name <name> - Sets a name for the combat instance"""
+        __Valid Settings__
+        dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
+        turnnotif - Notifies the controller of the next combatant in initiative.
+        -name <name> - Sets a name for the combat instance"""
         args = argparse(settings)
         combat = await Combat.from_ctx(ctx)
         options = combat.options
@@ -793,34 +793,34 @@ class InitTracker(commands.Cog):
         """Rolls an attack against another combatant.
         __Valid Arguments__
         adv/dis - Give advantage or disadvantage to the attack roll(s).
-		adv#/dis# - Give advantage or disadvantage to the first # attack roll(s).
-		ea - Elven Accuracy, double advantage on the attack roll.
+        adv#/dis# - Give advantage or disadvantage to the first # attack roll(s).
+        ea - Elven Accuracy, double advantage on the attack roll.
 
-		-b [bonus] - Adds a bonus to hit.
-		-criton [a number to crit on if rolled on or above]
+        -b [bonus] - Adds a bonus to hit.
+        -criton [a number to crit on if rolled on or above]
 
-		-criton [value] - The number the attack crits on if rolled on or above.
-		-d [damage] - Adds additional damage.
-		-d# [damage] - Adds additional damage to the first # attacks that hit.
-		-c [damage] - Adds additional damage for when the attack crits, not doubled.
-		-rr [value] - How many attacks to make at the target.
-		-mi [value] - Minimum value on the attack roll.
+        -criton [value] - The number the attack crits on if rolled on or above.
+        -d [damage] - Adds additional damage.
+        -d# [damage] - Adds additional damage to the first # attacks that hit.
+        -c [damage] - Adds additional damage for when the attack crits, not doubled.
+        -rr [value] - How many attacks to make at the target.
+        -mi [value] - Minimum value on the attack roll.
 
-		-resist [damage type] - Gives the target resistance to the given damage type.
-		-immune [damage type] - Gives the target immunity to the given damage type.
-		-vuln [damage type] - Gives the target vulnerability to the given damage type.
-		-neutral [damage type] - Removes the targets immunity, resistance, or vulnerability to the given damage type.
+        -resist [damage type] - Gives the target resistance to the given damage type.
+        -immune [damage type] - Gives the target immunity to the given damage type.
+        -vuln [damage type] - Gives the target vulnerability to the given damage type.
+        -neutral [damage type] - Removes the targets immunity, resistance, or vulnerability to the given damage type.
 
-		hit - The attack automatically hits.
-		miss - The attack automatically misses.
-		crit - The attack automatically crits.
-		max - Maximizes damage rolls.
+        hit - The attack automatically hits.
+        miss - The attack automatically misses.
+        crit - The attack automatically crits.
+        max - Maximizes damage rolls.
 
-		-phrase [phrase] - Adds flavor text.
-		-title [title] - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
-		-f "Field Title|Field Text" - Creates a field with the given title and text.
-		-h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
-		[user snippet] - Allows the user to use snippets on the attack.
+        -phrase [phrase] - Adds flavor text.
+        -title [title] - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
+        -f "Field Title|Field Text" - Creates a field with the given title and text.
+        -h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
+        [user snippet] - Allows the user to use snippets on the attack.
         
         -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage."""
         return await self._attack(ctx, None, target_name, atk_name, args)
@@ -868,34 +868,34 @@ class InitTracker(commands.Cog):
         """Rolls an attack of opportunity against another combatant.
         __Valid Arguments__
         adv/dis - Give advantage or disadvantage to the attack roll(s).
-		adv#/dis# - Give advantage or disadvantage to the first # attack roll(s).
-		ea - Elven Accuracy, double advantage on the attack roll.
+        adv#/dis# - Give advantage or disadvantage to the first # attack roll(s).
+        ea - Elven Accuracy, double advantage on the attack roll.
 
-		-b [bonus] - Adds a bonus to hit.
-		-criton [a number to crit on if rolled on or above]
+        -b [bonus] - Adds a bonus to hit.
+        -criton [a number to crit on if rolled on or above]
 
-		-criton [value] - The number the attack crits on if rolled on or above.
-		-d [damage] - Adds additional damage.
-		-d# [damage] - Adds additional damage to the first # attacks that hit.
-		-c [damage] - Adds additional damage for when the attack crits, not doubled.
-		-rr [value] - How many attacks to make at the target.
-		-mi [value] - Minimum value on the attack roll.
+        -criton [value] - The number the attack crits on if rolled on or above.
+        -d [damage] - Adds additional damage.
+        -d# [damage] - Adds additional damage to the first # attacks that hit.
+        -c [damage] - Adds additional damage for when the attack crits, not doubled.
+        -rr [value] - How many attacks to make at the target.
+        -mi [value] - Minimum value on the attack roll.
 
-		-resist [damage type] - Gives the target resistance to the given damage type.
-		-immune [damage type] - Gives the target immunity to the given damage type.
-		-vuln [damage type] - Gives the target vulnerability to the given damage type.
-		-neutral [damage type] - Removes the targets immunity, resistance, or vulnerability to the given damage type.
+        -resist [damage type] - Gives the target resistance to the given damage type.
+        -immune [damage type] - Gives the target immunity to the given damage type.
+        -vuln [damage type] - Gives the target vulnerability to the given damage type.
+        -neutral [damage type] - Removes the targets immunity, resistance, or vulnerability to the given damage type.
 
-		hit - The attack automatically hits.
-		miss - The attack automatically misses.
-		crit - The attack automatically crits.
-		max - Maximizes damage rolls.
+        hit - The attack automatically hits.
+        miss - The attack automatically misses.
+        crit - The attack automatically crits.
+        max - Maximizes damage rolls.
 
-		-phrase [phrase] - Adds flavor text.
-		-title [title] - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
-		-f "Field Title|Field Text" - Creates a field with the given title and text.
-		-h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
-		[user snippet] - Allows the user to use snippets on the attack.
+        -phrase [phrase] - Adds flavor text.
+        -title [title] - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
+        -f "Field Title|Field Text" - Creates a field with the given title and text.
+        -h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
+        [user snippet] - Allows the user to use snippets on the attack.
         
         -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage."""
         return await self._attack(ctx, combatant_name, target_name, atk_name, args)

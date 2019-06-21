@@ -164,7 +164,7 @@ class InitTracker(commands.Cog):
         """Adds a monster to combat.
         __Valid Arguments__
         adv/dis - Give advantage or disadvantage to the initiative roll.
-        -b [condition bonus] - Adds a bonus to their Initiative roll.
+        -b [condition bonus] - Adds a bonus to the combatants nitiative roll.
         -n [number] - Adds more than one of that monster.
         -p <value> - Places combatant at the given value, instead of rolling.
         -name <name> - Sets the combatants name. Use "#" for auto-numbering, e.g. "Orc#"
@@ -263,7 +263,7 @@ class InitTracker(commands.Cog):
         """Adds the current active character to combat. A character must be loaded through the SheetManager module first.
         __Valid Arguments__ 
         adv/dis - Give advantage or disadvantage to the initiative roll.
-        -b [condition bonus] - Adds a bonus to their Initiative roll.
+        -b [condition bonus] - Adds a bonus to the combatants Initiative roll.
         -phrase [phrase] - Adds flavor text.
         -p <value> - Places combatant at the given value, instead of rolling.
         -h - Hides HP, AC, Resists, etc.
@@ -720,7 +720,7 @@ class InitTracker(commands.Cog):
         __Attacks__
         -b [bonus] - Adds a bonus to hit.
         -d [damage] - Adds additional damage.
-        -attack "[hit]|[damage]|[description]" - Adds an attack to the combatant. Args can be blank, no `hit` will autohit (e.g., -attack "|1d6[fire]|")
+        -attack <"[hit]|[damage]|[description]"> - Adds an attack to the combatant. Args can be blank, no `hit` will autohit (e.g., -attack "|1d6[fire]|")
         __Resists__
         -resist [damage type] - Gives the combatant resistance to the given damage type.
         -immune [damage type] - Gives the combatants immunity to the given damage type.
@@ -1010,13 +1010,13 @@ class InitTracker(commands.Cog):
         """Casts a spell against another combatant.
         __Valid Arguments__
         -t [target] - Specifies one or more combatants to target, chainable (e.g., "-t or1 -t or2").
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spellslot.
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
         -l [level] - Specifies the level to cast the spell at.
         **__Save Spells__**
         -dc [save dc] - Changes the DC of the save. Default: Pulls a cvar called `dc`.
         -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.
         -d [damage] - Adds additional damage.
-        adv/dis - Forces all saves to at advantage or disadvantage.
+        adv/dis - Forces all targets to make saves at advantage or disadvantage.
         **__Attack Spells__**
         See `!init attack`.
         **__All Spells__**
@@ -1031,13 +1031,13 @@ class InitTracker(commands.Cog):
         """Casts a spell against another combatant, as a reaction.
         __Valid Arguments__
         -t [target] - Specifies one or more combatants to target, chainable (e.g., "-t or1 -t or2").
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spellslot.
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
         -l [level] - Specifies the level to cast the spell at.
         **__Save Spells__**
         -dc [save dc] - Changes the DC of the save. Default: Pulls a cvar called `dc`.
         -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.
         -d [damage] - Adds additional damage.
-        adv/dis - Forces all saves to at advantage or disadvantage.
+        adv/dis - Forces all targets to make saves at advantage or disadvantage.
         **__Attack Spells__**
         See `!init attack`.
         **__All Spells__**

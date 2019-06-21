@@ -724,7 +724,7 @@ class InitTracker(commands.Cog):
         args = argparse(args)
 
         targets = []
-        first_target = await combat.select_combatant(targe_name)
+        first_target = await combat.select_combatant(target_name)
         if first_target is None:
             await ctx.send("Combatant not found.")
             return

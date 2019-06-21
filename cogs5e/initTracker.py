@@ -700,7 +700,7 @@ class InitTracker(commands.Cog):
         await combat.final()
 
     @init.command()
-    async def effect(self, ctx, name: str, effect_name: str, *args):
+    async def effect(self, ctx, target_name: str, effect_name: str, *args):
         """Attaches a status effect to a combatant.
         [args] is a set of args that affects a combatant in combat.
         __**Valid Arguments**__
@@ -724,7 +724,7 @@ class InitTracker(commands.Cog):
         args = argparse(args)
 
         targets = []
-        first_target = await combat.select_combatant(name)
+        first_target = await combat.select_combatant(targe_name)
         if first_target is None:
             await ctx.send("Combatant not found.")
             return

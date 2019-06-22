@@ -385,10 +385,8 @@ class Customization(commands.Cog):
 
         char = await Character.from_ctx(ctx)
         parsed = await char.parse_cvars(teststr, ctx)
-        parsed = clean_content(parsed, ctx)
-        
-        tst_cmd = self.bot.get_command('embed')
-        return await ctx.invoke(ds_cmd, parsed)
+
+        return await ctx.invoke(self.bot.get_command('embed'), args=parsed)
 
     @commands.group(invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name=None, *, value=None):

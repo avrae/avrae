@@ -390,7 +390,7 @@ class Customization(commands.Cog):
         if em_tst == None:
             return await ctx.send("Error: pbpUtils cog not loaded.")
         else:
-            return await ctx.invoke( args=parsed)
+            return await ctx.invoke(em_tst, args=parsed)
 
     @commands.group(invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name=None, *, value=None):

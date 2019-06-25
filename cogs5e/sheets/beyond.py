@@ -409,7 +409,7 @@ class BeyondSheetParser(SheetLoaderABC):
             elif len(value) > 2:
                 spells.append(SpellbookSpell(value))
 
-        spellbook = Spellbook(slots, slots, spells, dc, sab, spellcasterLevel)
+        spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level)
         return spellbook
 
     def get_background(self):

@@ -369,28 +369,28 @@ class Customization(commands.Cog):
         parsed = await char.parse_cvars(teststr, ctx)
         parsed = clean_content(parsed, ctx)
         await ctx.send(f"{ctx.author.display_name}: {parsed}")
-                       
+
     @commands.command()
     async def tembed(self, ctx, *, teststr):
-	    """Parses `str` as if it were in an alias, for testing, then creates and prints an Embed.
-	    Arguments: -title [title]
-	    -desc [description text]
-	    -thumb [image url]
-	    -image [image url]
-	    -footer [footer text]
-	    -f ["Field Title|Field Text"]
-	    -color [hex color]
-	    -t [timeout (0..600)]
-	    """
+        """Parses `str` as if it were in an alias, for testing, then creates and prints an Embed.
+        Arguments: -title [title]
+        -desc [description text]
+        -thumb [image url]
+        -image [image url]
+        -footer [footer text]
+        -f ["Field Title|Field Text"]
+        -color [hex color]
+        -t [timeout (0..600)]
+        """
 
         char = await Character.from_ctx(ctx)
         parsed = await char.parse_cvars(teststr, ctx)
 
-        em_tst = self.bot.get_command('embed')
-        if em_tst == None:
+        embed_command = self.bot.get_command('embed')
+        if embed_command is None:
             return await ctx.send("Error: pbpUtils cog not loaded.")
         else:
-            return await ctx.invoke(em_tst, args=parsed)
+            return await ctx.invoke(embed_command, args=parsed)
 
     @commands.group(invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name=None, *, value=None):

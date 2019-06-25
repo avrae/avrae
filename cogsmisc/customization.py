@@ -386,7 +386,11 @@ class Customization(commands.Cog):
         char = await Character.from_ctx(ctx)
         parsed = await char.parse_cvars(teststr, ctx)
 
-        return await ctx.invoke(self.bot.get_command('embed'), args=parsed)
+        em_tst = self.bot.get_command('embed')
+        if em_tst == None:
+            return await ctx.send("Error: pbpUtils cog not loaded.")
+        else:
+            return await ctx.invoke( args=parsed)
 
     @commands.group(invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name=None, *, value=None):

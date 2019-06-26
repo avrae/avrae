@@ -566,7 +566,7 @@ class SheetManager(commands.Cog):
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
         `critdice <number>` - Adds additional dice for to critical attacks.
-        `talent true/false` - Enables/disables whether to apply a rogues Reliable Talent on checks you're proficient with."""
+        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with."""
         char: Character = await Character.from_ctx(ctx)
 
         out = 'Operations complete!\n'

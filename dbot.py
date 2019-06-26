@@ -138,7 +138,8 @@ async def on_command_error(ctx, error):
         return await ctx.send(
             f"Error: {str(error)}\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help.")
     elif isinstance(error, commands.CheckFailure):
-        return await ctx.send("Error: You are not allowed to run this command.")
+        msg = str(error) or "You are not allowed to run this command."
+        return await ctx.send(f"Error: {msg}")
     elif isinstance(error, commands.CommandOnCooldown):
         return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
     elif isinstance(error, CommandInvokeError):

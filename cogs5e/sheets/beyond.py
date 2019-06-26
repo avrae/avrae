@@ -416,9 +416,9 @@ class BeyondSheetParser(SheetLoaderABC):
         if not self.character_data['background']:
             return None
         if not self.character_data['background']['hasCustomBackground']:
-            return self.character_data['background']['definition']['name']
-        return "Custom"
-
+            return self.character_data['background'].get('definition',{}).get('name','None')
+        return self.character_date['background']['customBackground'].get('name','Custom')
+        
     # helper funcs
     def get_stat(self, stat, base=0):
         """Calculates the final value of a stat, based on modifiers and feats."""

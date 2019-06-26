@@ -257,22 +257,28 @@ class SheetManager(commands.Cog):
         skill_name = camel_to_title(skill_key)
 
         embed = EmbedWithCharacter(char, False)
+        skill = char.skills[skill_key]
 
         args = await self.new_arg_stuff(args, ctx, char)
+        # advantage
         adv = args.adv(boolwise=True)
+        # roll bonus
         b = args.join('b', '+')
+        # phrase
         phrase = args.join('phrase', '\n')
+        # num rolls
         iterations = min(args.last('rr', 1, int), 25)
+        # dc
         dc = args.last('dc', type_=int)
-        num_successes = 0
-        rt = char.get_setting('talent', 0) and char.skills[skill_key].prof >= 1
+        # reliable talent (#654)
+        rt = char.get_setting('talent', 0) and skill.prof >= 1
         mc = args.last('mc') or 10 * rt
-        mc = mc or None
-        
-        skill = char.skills[skill_key]
+        # halfling luck
+        ro = char.get_setting('reroll')
+
+        num_successes = 0
         mod = skill.value
-        formatted_d20 = skill.d20(base_adv=adv, reroll=char.get_setting('reroll'),
-                                  min_val=mc, base_only=True)
+        formatted_d20 = skill.d20(base_adv=adv, reroll=ro, min_val=mc, base_only=True)
 
         if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
             base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))

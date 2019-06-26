@@ -265,7 +265,8 @@ class SheetManager(commands.Cog):
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
-        mc = args.last('mc') or 10*(char.get_setting('reliabletalent',0) and char.skills[skill_key].prof in [1,2]) 
+        rt = char.get_setting('reliabletalent', 0) and char.skills[skill_key].prof >= 1
+        mc = args.last('mc') or 10 * rt
         mc = mc or None
         
         skill = char.skills[skill_key]

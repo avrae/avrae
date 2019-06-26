@@ -21,6 +21,7 @@ if 'test' in sys.argv:
     TESTING = True
 SHARD_COUNT = None if not TESTING else 1
 DEFAULT_PREFIX = '!' if not TESTING else '#'
+ERROR_CHANNEL_ID = 593104417646182401
 
 # -----COGS-----
 DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
@@ -51,7 +52,6 @@ class Avrae(commands.AutoShardedBot):
 
         self.mdb = self.mclient.avrae  # let's just use the avrae db
         self.dynamic_cog_list = DYNAMIC_COGS
-        self.owner = None
         self.prefixes = self.rdb.not_json_get("prefixes", {})
         self.muted = set()
 
@@ -116,13 +116,6 @@ async def on_ready():
 
 
 @bot.event
-async def on_connect():
-    if not bot.owner:
-        appInfo = await bot.application_info()
-        bot.owner = appInfo.owner
-
-
-@bot.event
 async def on_resumed():
     log.info('resumed.')
 
@@ -184,20 +177,25 @@ async def on_command_error(ctx, error):
 
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-        f"Please join <http://support.avrae.io> and tell the developer that {error_msg}!")
-    try:
-        await bot.owner.send(
-            f"**{error_msg}**\n" \
-            + "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(
-                ctx.channel, ctx.channel.id, ctx.guild,
-                ctx.guild.id, repr(error),
-                ctx.message.content))
-    except AttributeError:
-        await bot.owner.send(f"**{error_msg}**\n" \
-                             + "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
-            ctx.author.mention, str(ctx.author), repr(error), ctx.message.content))
-    for o in discord_trim(tb):
-        await bot.owner.send(o)
+        f"Please join <http://support.avrae.io> and let us know about the error!\n"
+        f"Error code: {error_msg}")
+
+    # send error to error channel
+    error_channel = bot.get_channel(ERROR_CHANNEL_ID)
+    if error_channel is not None:
+        try:
+            await error_channel.send(
+                f"**{error_msg}**\n" \
+                + "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(
+                    ctx.channel, ctx.channel.id, ctx.guild,
+                    ctx.guild.id, repr(error),
+                    ctx.message.content))
+        except AttributeError:
+            await error_channel.send(f"**{error_msg}**\n" \
+                                     + "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
+                ctx.author.mention, str(ctx.author), repr(error), ctx.message.content))
+        for o in discord_trim(tb):
+            await error_channel.send(o)
     log.error("Error caused by message: `{}`".format(ctx.message.content))
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 

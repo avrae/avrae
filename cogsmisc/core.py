@@ -62,7 +62,6 @@ class Core(commands.Cog):
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808"
         embed.colour = 0x7289da
-        embed.set_author(name=str(self.bot.owner), icon_url=self.bot.owner.avatar_url)
         total_members = sum(len(s.members) for s in self.bot.guilds)
         unique_members = set(self.bot.get_all_members())
         members = '%s total\n%s unique' % (total_members, len(unique_members))
@@ -79,8 +78,8 @@ class Core(commands.Cog):
         embed.add_field(name="Servers", value=str(len(self.bot.guilds)))
         memory_usage = psutil.Process().memory_full_info().uss / 1024 ** 2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
-        embed.add_field(name='About', value='Made with :heart: by @zhu.exe#4211\n'
-                                            'Join the official testing server [here](https://discord.gg/pQbd4s6)!',
+        embed.add_field(name='About', value='Made with :heart: by zhu.exe#4211 and the D&D Beyond team\n'
+                                            'Join the official development server [here](https://discord.gg/pQbd4s6)!',
                         inline=False)
 
         await ctx.send(embed=embed)

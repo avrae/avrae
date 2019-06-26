@@ -15,12 +15,12 @@ import credentials
 # Of course, the owner will always be able to execute commands.
 
 # ===== predicates =====
-def _is_owner(ctx):
+def author_is_owner(ctx):
     return ctx.author.id == credentials.owner_id
 
 
 def _check_permissions(ctx, perms):
-    if _is_owner(ctx):
+    if author_is_owner(ctx):
         return True
 
     ch = ctx.channel
@@ -51,7 +51,7 @@ def _role_or_permissions(ctx, role_filter, **perms):
 # ===== checks =====
 def is_owner():
     def predicate(ctx):
-        if _is_owner(ctx):
+        if author_is_owner(ctx):
             return True
         raise commands.CheckFailure("Only the bot owner may run this command.")
 

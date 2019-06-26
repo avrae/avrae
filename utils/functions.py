@@ -346,7 +346,7 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
 
 
 def gen_error_message():
-    subject = random.choice(['a kobold', 'the green dragon', 'the Frost Mage', 'Avrae', 'the wizard',
+    subject = random.choice(['a kobold', 'the green dragon', 'the Frost Mage', 'the wizard',
                              'an iron golem'])
     verb = random.choice(['must be', 'should be', 'has been', 'will be'])
     thing_to_do = random.choice(['stopped', 'killed', 'talked to', 'found', 'destroyed', 'fought'])

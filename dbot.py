@@ -131,8 +131,6 @@ async def on_resumed():
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         return
-    log.debug("Error caused by message: `{}`".format(ctx.message.content))
-    log.debug('\n'.join(traceback.format_exception(type(error), error, error.__traceback__)))
     if isinstance(error, AvraeException):
         return await ctx.send(str(error))
     tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))

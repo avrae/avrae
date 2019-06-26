@@ -265,7 +265,7 @@ class SheetManager(commands.Cog):
         iterations = min(args.last('rr', 1, int), 25)
         dc = args.last('dc', type_=int)
         num_successes = 0
-        rt = char.get_setting('reliabletalent', 0) and char.skills[skill_key].prof >= 1
+        rt = char.get_setting('talent', 0) and char.skills[skill_key].prof >= 1
         mc = args.last('mc') or 10 * rt
         mc = mc or None
         
@@ -560,7 +560,7 @@ class SheetManager(commands.Cog):
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
         `critdice <number>` - Adds additional dice for to critical attacks.
-        `reliabletalent true/false` - Enables/disables whether to have a minimum of 10 on checks you're proficient with."""
+        `talent true/false` - Enables/disables whether to apply a rogues Reliable Talent on checks you're proficient with."""
         char: Character = await Character.from_ctx(ctx)
 
         out = 'Operations complete!\n'
@@ -663,20 +663,20 @@ class SheetManager(commands.Cog):
                         char.set_setting('srslots', srslots)
                         out += "\u2705 Short Rest slots {}.\n".format(
                             "enabled" if char.get_setting('srslots') else "disabled")
-            if arg == 'reliabletalent':
-                reliabletalent = list_get(index + 1, None, args)
-                if reliabletalent is None:
+            if arg == 'talent':
+                talent = list_get(index + 1, None, args)
+                if talent is None:
                     out += '\u2139 Reliable Talent is currently {}.\n' \
-                        .format("enabled" if char.get_setting('reliabletalent') else "disabled")
+                        .format("enabled" if char.get_setting('talent') else "disabled")
                 else:
                     try:
-                        reliabletalent = get_positivity(reliabletalent)
+                        talent = get_positivity(talent)
                     except AttributeError:
-                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings reliabletalent false" to reset it.\n'
+                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings talent false" to reset it.\n'
                     else:
-                        char.set_setting('reliabletalent', reliabletalent)
+                        char.set_setting('talent', talent)
                         out += "\u2705 Reliable Talent {}.\n".format(
-                            "enabled" if char.get_setting('reliabletalent') else "disabled")
+                            "enabled" if char.get_setting('talent') else "disabled")
             if arg == 'embedimage':
                 embedimage = list_get(index + 1, None, args)
                 if embedimage is None:

@@ -9,6 +9,7 @@ from cogs5e.models.errors import NoActiveBrew, NoSelectionElements
 from cogs5e.models.homebrew.bestiary import Bestiary, bestiary_from_critterdb, select_bestiary
 from cogs5e.models.homebrew.pack import Pack, select_pack
 from cogs5e.models.homebrew.tome import Tome, select_tome
+from utils import checks
 from utils.functions import confirm
 
 BREWER_ROLES = ("server brewer", "dragonspeaker")
@@ -26,7 +27,7 @@ class Homebrew(commands.Cog):
     def can_manage_serverbrew(ctx):
         return ctx.author.guild_permissions.manage_guild or \
                any(r.name.lower() in BREWER_ROLES for r in ctx.author.roles) or \
-               str(ctx.author.id) == ctx.bot.owner.id
+               checks.author_is_owner(ctx)
 
     @commands.group(invoke_without_command=True)
     async def bestiary(self, ctx, *, name=None):

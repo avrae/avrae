@@ -17,6 +17,7 @@ from cogs5e.funcs.scripting import ScriptingEvaluator
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, EvaluationError, NoCharacter
+from utils import checks
 from utils.argparser import argquote, argsplit
 from utils.functions import auth_and_chan, clean_content, confirm
 
@@ -265,7 +266,7 @@ class Customization(commands.Cog):
         """
         return ctx.author.guild_permissions.administrator or \
                any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles) or \
-               ctx.author.id == ctx.bot.owner.id
+               checks.author_is_owner(ctx)
 
     @commands.group(invoke_without_command=True)
     async def snippet(self, ctx, snipname=None, *, snippet=None):

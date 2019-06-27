@@ -7,6 +7,7 @@ from contextlib import redirect_stdout
 import discord
 from discord.ext import commands
 
+from utils import checks
 from utils.functions import auth_and_chan
 
 
@@ -28,7 +29,7 @@ class REPL(commands.Cog):
         return '```py\n{0.text}{1:>{0.offset}}\n{2}: {0}```'.format(e, '^', type(e).__name__)
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @checks.is_owner()
     async def repl(self, ctx):
         msg = ctx.message
 
@@ -108,7 +109,7 @@ class REPL(commands.Cog):
                 await msg.channel.send('Unexpected error: `{}`'.format(e))
 
     @commands.command(hidden=True, name='eval')
-    @commands.is_owner()
+    @checks.is_owner()
     async def _eval(self, ctx, *, body: str):
         """Evaluates some code"""
 

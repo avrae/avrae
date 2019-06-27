@@ -12,7 +12,7 @@ from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, add_fields_from_args
-from cogs5e.models.errors import SelectionException
+from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from utils.argparser import argparse
 from utils.functions import confirm, search_and_select
@@ -518,82 +518,107 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant not found.")
             return
 
-        private = combatant.isPrivate
-        controller = combatant.controller
         args = argparse(args)
-        out = ''
+        out = []
+        options = {}
 
-        if args.last('h', type_=bool):
-            private = not private
-            combatant.isPrivate = private
-            out += "\u2705 Combatant {}.\n".format('hidden' if private else 'unhidden')
-        if 'controller' in args:
+        def option(opt_name=None):
+            def wrapper(func):
+                options[opt_name or func.__name__] = func
+                return func
+
+            return wrapper
+
+        @option()
+        async def h():
+            combatant.isPrivate = not combatant.isPrivate
+            return "\u2705 Combatant {}.".format('hidden' if combatant.isPrivate else 'unhidden')
+
+        @option()
+        async def controller():
             try:
                 controller_name = args.last('controller')
                 member = await commands.MemberConverter().convert(ctx, controller_name)
                 cont = str(member.id) if member is not None else controller
                 combatant.controller = cont
-                out += "\u2705 Combatant controller set to {}.\n".format(combatant.controller_mention())
+                return "\u2705 Combatant controller set to {}.".format(combatant.controller_mention())
             except IndexError:
-                out += "\u274c You must pass in a controller with the --controller tag.\n"
-        if 'ac' in args:
+                return "\u274c You must pass in a controller with the -controller tag."
+
+        @option()
+        async def ac():
             try:
-                ac = args.last('ac', type_=int)
-                combatant.ac = ac
-                out += "\u2705 Combatant AC set to {}.\n".format(ac)
-            except:
-                out += "\u274c You must pass in an AC with the --ac tag.\n"
-        if 'p' in args:
+                combatant.ac = args.last('ac', type_=int)
+                return "\u2705 Combatant AC set to {}.".format(ac)
+            except InvalidArgument:
+                return "\u274c You must pass in a valid AC with the -ac tag."
+
+        @option()
+        async def p():
             if combatant is combat.current_combatant:
-                out += "\u274c You cannot change a combatant's initiative on their own turn.\n"
-            else:
-                try:
-                    p = args.last('p', type_=int)
-                    combatant.init = p
-                    combat.sort_combatants()
-                    out += "\u2705 Combatant initiative set to {}.\n".format(p)
-                except:
-                    out += "\u274c You must pass in a number with the -p tag.\n"
-        if 'group' in args:
+                return "\u274c You cannot change a combatant's initiative on their own turn."
+            try:
+                combatant.init = args.last('p', type_=int)
+                combat.sort_combatants()
+                return "\u2705 Combatant initiative set to {}.".format(p)
+            except InvalidArgument:
+                return "\u274c You must pass in a number with the -p tag."
+
+        @option()
+        async def group():
             if combatant is combat.current_combatant:
-                out += "\u274c You cannot change a combatant's group on their own turn.\n"
+                return "\u274c You cannot change a combatant's group on their own turn."
+            group_name = args.last('group')
+            if group_name.lower() == 'none':
+                combat.remove_combatant(combatant)
+                combat.add_combatant(combatant)
+                return "\u2705 Combatant removed from all groups."
             else:
-                group = args.last('group')
-                if group.lower() == 'none':
-                    combat.remove_combatant(combatant)
-                    combat.add_combatant(combatant)
-                    out += "\u2705 Combatant removed from all groups.\n"
-                else:
-                    combat.remove_combatant(combatant)
-                    group = combat.get_group(group, create=combatant.init)
-                    group.add_combatant(combatant)
-                    out += "\u2705 Combatant group set to {}.\n".format(group.name)
-        if 'name' in args:
-            name = args.last('name')
-            if combat.get_combatant(name, True) is not None:
-                out += "\u274c There is already another combatant with that name.\n"
-            elif name:
-                combatant.name = name
-                out += "\u2705 Combatant name set to {}.\n".format(name)
+                combat.remove_combatant(combatant)
+                c_group = combat.get_group(group_name, create=combatant.init)
+                c_group.add_combatant(combatant)
+                return "\u2705 Combatant group_name set to {}.".format(group_name.name)
+
+        @option()
+        async def name():
+            new_name = args.last('name')
+            if combat.get_combatant(new_name, True) is not None:
+                return "\u274c There is already another combatant with that name."
+            elif new_name:
+                combatant.name = new_name
+                return "\u2705 Combatant name set to {}.".format(new_name)
             else:
-                out += "\u274c You must pass in a name with the -name tag.\n"
+                return "\u274c You must pass in a name with the -name tag."
+
+        @option("max")
+        async def max_hp():
+            maxhp = args.last('max', type_=int)
+            if maxhp < 1:
+                return "\u274c Max HP must be at least 1."
+            else:
+                combatant.hpMax = maxhp
+                return "\u2705 Combatant HP max set to {}.".format(maxhp)
+
+        @option()
+        async def hp():
+            hp = args.last('hp', type_=int)
+            combatant.set_hp(hp)
+            return "\u2705 Combatant HP set to {}.".format(hp)
+
+        # no clean way to do this with the option wrapper
         for resisttype in ("resist", "immune", "vuln", "neutral"):
             if resisttype in args:
                 for resist in args.get(resisttype):
                     resist = resist.lower()
                     combatant.set_resist(resist, resisttype)
-                    out += f"\u2705 Now {resisttype} to {resist}.\n"
-        if 'max' in args:
-            maxhp = args.last('max', type_=int)
-            if maxhp < 1:
-                out += "\u274c Max HP must be at least 1.\n"
-            else:
-                combatant.hpMax = maxhp
-                out += "\u2705 Combatant HP max set to {}.\n".format(maxhp)
-        if 'hp' in args:
-            hp = args.last('hp', type_=int)
-            combatant.set_hp(hp)
-            out += "\u2705 Combatant HP set to {}.\n".format(hp)
+                    out.append(f"\u2705 Now {resisttype} to {resist}.")
+
+        # run options
+        for arg_name, func in options.items():
+            if arg_name in args:
+                out.append(await func())
+
+        out = '\n'.join(out)
 
         if combatant.isPrivate:
             controller = ctx.guild.get_member(int(combatant.controller))

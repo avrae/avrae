@@ -546,23 +546,20 @@ class InitTracker(commands.Cog):
 
         @option()
         async def controller(combatant):
-            try:
-                controller_name = args.last('controller')
-                member = await commands.MemberConverter().convert(ctx, controller_name)
-                if member is None:
-                    return "\u274c New controller not found."
-                combatant.controller = str(member.id)
-                return f"\u2705 {combatant.name}'s controller set to {combatant.controller_mention()}."
-            except IndexError:
-                return "\u274c You must pass in a controller with the -controller tag."
+            controller_name = args.last('controller')
+            member = await commands.MemberConverter().convert(ctx, controller_name)
+            if member is None:
+                return "\u274c New controller not found."
+            combatant.controller = str(member.id)
+            return f"\u2705 {combatant.name}'s controller set to {combatant.controller_mention()}."
 
         @option()
         async def ac(combatant):
             try:
                 combatant.ac = args.last('ac', type_=int)
                 return f"\u2705 {combatant.name}'s AC set to {combatant.ac}."
-            except InvalidArgument:
-                return "\u274c You must pass in a valid AC with the -ac tag."
+            except InvalidArgument as e:
+                return f"\u274c {str(e)}"
 
         @option()
         async def p(combatant):
@@ -572,8 +569,8 @@ class InitTracker(commands.Cog):
                 combatant.init = args.last('p', type_=int)
                 combat.sort_combatants()
                 return f"\u2705 {combatant.name}'s initiative set to {combatant.init}."
-            except InvalidArgument:
-                return "\u274c You must pass in a number with the -p tag."
+            except InvalidArgument as e:
+                return f"\u274c {str(e)}"
 
         @option()
         async def group(combatant):

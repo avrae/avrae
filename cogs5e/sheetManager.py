@@ -257,19 +257,28 @@ class SheetManager(commands.Cog):
         skill_name = camel_to_title(skill_key)
 
         embed = EmbedWithCharacter(char, False)
+        skill = char.skills[skill_key]
 
         args = await self.new_arg_stuff(args, ctx, char)
+        # advantage
         adv = args.adv(boolwise=True)
+        # roll bonus
         b = args.join('b', '+')
+        # phrase
         phrase = args.join('phrase', '\n')
+        # num rolls
         iterations = min(args.last('rr', 1, int), 25)
+        # dc
         dc = args.last('dc', type_=int)
-        num_successes = 0
+        # reliable talent (#654)
+        rt = char.get_setting('talent', 0) and skill.prof >= 1
+        mc = args.last('mc') or 10 * rt
+        # halfling luck
+        ro = char.get_setting('reroll')
 
-        skill = char.skills[skill_key]
+        num_successes = 0
         mod = skill.value
-        formatted_d20 = skill.d20(base_adv=adv, reroll=char.get_setting('reroll'),
-                                  min_val=args.last('mc'), base_only=True)
+        formatted_d20 = skill.d20(base_adv=adv, reroll=ro, min_val=mc, base_only=True)
 
         if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
             base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
@@ -556,7 +565,8 @@ class SheetManager(commands.Cog):
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
-        `critdice <number>` - Adds additional dice for to critical attacks."""
+        `critdice <number>` - Adds additional dice for to critical attacks.
+        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with."""
         char: Character = await Character.from_ctx(ctx)
 
         out = 'Operations complete!\n'
@@ -659,6 +669,20 @@ class SheetManager(commands.Cog):
                         char.set_setting('srslots', srslots)
                         out += "\u2705 Short Rest slots {}.\n".format(
                             "enabled" if char.get_setting('srslots') else "disabled")
+            if arg == 'talent':
+                talent = list_get(index + 1, None, args)
+                if talent is None:
+                    out += '\u2139 Reliable Talent is currently {}.\n' \
+                        .format("enabled" if char.get_setting('talent') else "disabled")
+                else:
+                    try:
+                        talent = get_positivity(talent)
+                    except AttributeError:
+                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings talent false" to reset it.\n'
+                    else:
+                        char.set_setting('talent', talent)
+                        out += "\u2705 Reliable Talent {}.\n".format(
+                            "enabled" if char.get_setting('talent') else "disabled")
             if arg == 'embedimage':
                 embedimage = list_get(index + 1, None, args)
                 if embedimage is None:

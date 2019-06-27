@@ -539,8 +539,9 @@ class InitTracker(commands.Cog):
             try:
                 controller_name = args.last('controller')
                 member = await commands.MemberConverter().convert(ctx, controller_name)
-                cont = str(member.id) if member is not None else controller
-                combatant.controller = cont
+                if member is None:
+                    return "\u274c New controller not found."
+                combatant.controller = str(member.id)
                 return "\u2705 Combatant controller set to {}.".format(combatant.controller_mention())
             except IndexError:
                 return "\u274c You must pass in a controller with the -controller tag."
@@ -549,7 +550,7 @@ class InitTracker(commands.Cog):
         async def ac():
             try:
                 combatant.ac = args.last('ac', type_=int)
-                return "\u2705 Combatant AC set to {}.".format(ac)
+                return "\u2705 Combatant AC set to {}.".format(combatant.ac)
             except InvalidArgument:
                 return "\u274c You must pass in a valid AC with the -ac tag."
 
@@ -560,7 +561,7 @@ class InitTracker(commands.Cog):
             try:
                 combatant.init = args.last('p', type_=int)
                 combat.sort_combatants()
-                return "\u2705 Combatant initiative set to {}.".format(p)
+                return "\u2705 Combatant initiative set to {}.".format(combatant.init)
             except InvalidArgument:
                 return "\u274c You must pass in a number with the -p tag."
 
@@ -601,9 +602,9 @@ class InitTracker(commands.Cog):
 
         @option()
         async def hp():
-            hp = args.last('hp', type_=int)
-            combatant.set_hp(hp)
-            return "\u2705 Combatant HP set to {}.".format(hp)
+            new_hp = args.last('hp', type_=int)
+            combatant.set_hp(new_hp)
+            return "\u2705 Combatant HP set to {}.".format(new_hp)
 
         # no clean way to do this with the option wrapper
         for resisttype in ("resist", "immune", "vuln", "neutral"):

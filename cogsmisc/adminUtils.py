@@ -10,6 +10,7 @@ import discord
 from discord.errors import NotFound
 from discord.ext import commands
 
+from utils import checks
 from utils.functions import discord_trim
 
 log = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class AdminUtils(commands.Cog):
                 log.warning(f"Failed to reset loglevel of {logger}")
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @checks.is_owner()
     async def blacklist(self, ctx, _id):
         self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
         self.blacklisted_serv_ids.append(_id)
@@ -41,7 +42,7 @@ class AdminUtils(commands.Cog):
         await ctx.send(':ok_hand:')
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @checks.is_owner()
     async def whitelist(self, ctx, _id):
         whitelist = self.bot.rdb.not_json_get('server-whitelist', [])
         whitelist.append(_id)
@@ -49,7 +50,7 @@ class AdminUtils(commands.Cog):
         await ctx.send(':ok_hand:')
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @checks.is_owner()
     async def chanSay(self, ctx, channel: int, *, message: str):
         """Like .say, but works across servers. Requires channel id."""
         chan = self.bot.get_channel(channel)
@@ -59,7 +60,7 @@ class AdminUtils(commands.Cog):
         await ctx.send(f"Sent message to {chan.name}.")
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @checks.is_owner()
     async def servInfo(self, ctx, server: int):
         out = ''
         page = None
@@ -110,7 +111,7 @@ class AdminUtils(commands.Cog):
             await ctx.send(out[page - 1])
 
     @commands.command(hidden=True, name='leave')
-    @commands.is_owner()
+    @checks.is_owner()
     async def leave_server(self, ctx, guild_id: int):
         guild = self.bot.get_guild(guild_id)
         if not guild:
@@ -119,7 +120,7 @@ class AdminUtils(commands.Cog):
         await ctx.send(f"Left {guild.name}.")
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @checks.is_owner()
     async def mute(self, ctx, target):
         """Mutes a person by ID."""
         self.bot.muted = set(self.bot.rdb.not_json_get('muted', []))
@@ -136,7 +137,7 @@ class AdminUtils(commands.Cog):
         self.bot.rdb.not_json_set('muted', list(self.bot.muted))
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @checks.is_owner()
     async def loglevel(self, ctx, level: int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
         loglevels = self.bot.rdb.jget('loglevels', {})
@@ -146,7 +147,7 @@ class AdminUtils(commands.Cog):
         await ctx.send(f"Set level of {logger} to {level}.")
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @checks.is_owner()
     async def changepresence(self, ctx, status=None, *, msg=None):
         """Changes Avrae's presence. Status: online, idle, dnd"""
         statuslevel = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd}

@@ -42,7 +42,9 @@ CHARACTER_SETTINGS = {
                         display_func=lambda val: 'enabled' if val else 'disabled'),
     "embedimage": CSetting("embedimage", "boolean", description="embed image", default='disabled',
                            display_func=lambda val: 'enabled' if val else 'disabled'),
-    "critdice": CSetting("critdice", "number", description="extra crit dice", default=0)
+    "critdice": CSetting("critdice", "number", description="extra crit dice", default=0),
+    "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
+                       display_func=lambda val: 'enabled' if val else 'disabled')
 }
 
 
@@ -271,19 +273,28 @@ class SheetManager(commands.Cog):
         skill_name = camel_to_title(skill_key)
 
         embed = EmbedWithCharacter(char, False)
+        skill = char.skills[skill_key]
 
         args = await self.new_arg_stuff(args, ctx, char)
+        # advantage
         adv = args.adv(boolwise=True)
+        # roll bonus
         b = args.join('b', '+')
+        # phrase
         phrase = args.join('phrase', '\n')
+        # num rolls
         iterations = min(args.last('rr', 1, int), 25)
+        # dc
         dc = args.last('dc', type_=int)
-        num_successes = 0
+        # reliable talent (#654)
+        rt = char.get_setting('talent', 0) and skill.prof >= 1
+        mc = args.last('mc') or 10 * rt
+        # halfling luck
+        ro = char.get_setting('reroll')
 
-        skill = char.skills[skill_key]
+        num_successes = 0
         mod = skill.value
-        formatted_d20 = skill.d20(base_adv=adv, reroll=char.get_setting('reroll'),
-                                  min_val=args.last('mc'), base_only=True)
+        formatted_d20 = skill.d20(base_adv=adv, reroll=ro, min_val=mc, base_only=True)
 
         if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
             base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
@@ -570,7 +581,8 @@ class SheetManager(commands.Cog):
         `reroll <number>` - Defines a number that a check will automatically reroll on, for cases such as Halfling Luck.
         `srslots true/false` - Enables/disables whether spell slots reset on a Short Rest.
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
-        `critdice <number>` - Adds additional dice for to critical attacks."""
+        `critdice <number>` - Adds additional dice for to critical attacks.
+        `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with."""
         char = await Character.from_ctx(ctx)
 
         out = ['Operations complete!']

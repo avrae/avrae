@@ -181,7 +181,9 @@ class Combat:
         self._combatants = sorted(self._combatants, key=lambda k: (k.init, int(k.init_skill)), reverse=True)
         for n, c in enumerate(self._combatants):
             c.index = n
-        self._current_index = current.index if current is not None else None
+        if current is not None:
+            self._current_index = current.index
+            self._turn = current.init
 
     def get_combatant(self, name, strict=True):
         if strict:
@@ -223,11 +225,22 @@ class Combat:
 
     def reroll_dynamic(self):
         """
-        Rerolls all combatant initiatives.
+        Rerolls all combatant initiatives. Returns a string representing the new init order.
         """
+        rolls = {}
         for c in self._combatants:
-            c.init = roll(c.init_skill.d20()).total
+            init_roll = roll(c.init_skill.d20(), inline=True)
+            c.init = init_roll.total
+            rolls[c.name] = init_roll
         self.sort_combatants()
+
+        order = []
+        for combatant_name, init_roll in sorted(rolls.items(), key=lambda r: r[1].total, reverse=True):
+            order.append(f"{init_roll.skeleton}: {combatant_name}")
+
+        order = "\n".join(order)
+
+        return order
 
     async def select_combatant(self, name, choice_message=None, select_group=False):
         """
@@ -244,8 +257,11 @@ class Combat:
         return await get_selection(self.ctx, matching, message=choice_message)
 
     def advance_turn(self):
+        """Advances the turn. If any caveats should be noted, returns them in messages."""
         if len(self._combatants) == 0:
             raise NoCombatants
+
+        messages = []
 
         if self.current_combatant:
             self.current_combatant.on_turn_end()
@@ -256,7 +272,7 @@ class Combat:
             self._round += 1
         elif self.index + 1 >= len(self._combatants):  # new round
             if self.options.get('dynamic'):
-                self.reroll_dynamic()
+                messages.append(f"New initiatives:\n{self.reroll_dynamic()}")
             self._current_index = 0
             self._round += 1
             changed_round = True
@@ -265,7 +281,7 @@ class Combat:
 
         self._turn = self.current_combatant.init
         self.current_combatant.on_turn()
-        return changed_round
+        return changed_round, messages
 
     def rewind_turn(self):
         if len(self._combatants) == 0:
@@ -305,12 +321,16 @@ class Combat:
         self._turn = self.current_combatant.init
 
     def skip_rounds(self, num_rounds):
+        messages = []
+
         self._round += num_rounds
         for com in self.get_combatants():
             com.on_turn(num_rounds)
             com.on_turn_end(num_rounds)
         if self.options.get('dynamic'):
-            self.reroll_dynamic()
+            messages.append(f"New initiatives:\n{self.reroll_dynamic()}")
+
+        return messages
 
     def get_turn_str(self):
         nextCombatant = self.current_combatant

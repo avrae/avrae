@@ -8,7 +8,7 @@ from cogs5e.funcs.scripting import SpellEvaluator
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
-from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType, NoSpellAB, NoSpellDC
+from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType, NoSpellAB, NoSpellDC, EvaluationError
 from cogs5e.models.initiative import Combatant, PlayerCombatant
 from utils.functions import parse_resistances, verbose_stat
 
@@ -323,7 +323,7 @@ class Attack(Effect):
 
         explicit_bonus = None
         if self.bonus:
-            explicit_bonus = autoctx.evaluator.parse(self.bonus, autoctx.metavars)
+            explicit_bonus = autoctx.parse_annostr(self.bonus)
             try:
                 explicit_bonus = int(explicit_bonus)
             except (TypeError, ValueError):

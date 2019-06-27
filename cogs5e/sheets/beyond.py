@@ -124,6 +124,9 @@ class BeyondSheetParser(SheetLoaderABC):
                 elif resp.status == 404:
                     raise ExternalImportError("Error: I do not have permission to view this character sheet. "
                                               "Make sure you've generated a sharable link for your character.")
+                elif resp.status == 429:
+                    raise ExternalImportError("Too many people are trying to import characters! Please try again in "
+                                              "a few minutes.")
                 else:
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = charId
@@ -409,7 +412,7 @@ class BeyondSheetParser(SheetLoaderABC):
             elif len(value) > 2:
                 spells.append(SpellbookSpell(value))
 
-        spellbook = Spellbook(slots, slots, spells, dc, sab, spellcasterLevel)
+        spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level)
         return spellbook
 
     def get_background(self):

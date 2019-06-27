@@ -474,7 +474,7 @@ class Combatant(Spellcaster):
         else:
             saves = None
         # backcompat
-        if 'mod' in raw:
+        if 'mod' in raw:  # todo remove after 30 days (aug 1)
             init_skill = Skill(raw['mod'])
         else:
             init_skill = Skill.from_dict(raw['init_skill'])

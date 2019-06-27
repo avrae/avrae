@@ -194,7 +194,7 @@ class InitTracker(commands.Cog):
         npr = args.last('npr', type_=bool)
         n = args.last('n', 1, int)
         name_template = args.last('name', monster.name[:2].upper() + '#')
-        init_skill = monster.skills.initiative.copy_with_adv(adv)
+        init_skill = monster.skills.initiative
 
         opts = {}
         if npr:
@@ -228,9 +228,9 @@ class InitTracker(commands.Cog):
                 check_roll = None  # to make things happy
                 if p is None:
                     if b:
-                        check_roll = roll(f'{init_skill.d20()}+{b}', inline=True)
+                        check_roll = roll(f'{init_skill.d20(base_adv=adv)}+{b}', inline=True)
                     else:
-                        check_roll = roll(init_skill.d20(), inline=True)
+                        check_roll = roll(init_skill.d20(base_adv=adv), inline=True)
                     init = check_roll.total
                 else:
                     init = int(p)
@@ -283,10 +283,10 @@ class InitTracker(commands.Cog):
         p = args.last('p', type_=int)
         phrase = args.join('phrase', '\n') or None
         group = args.last('group')
-        init_skill = char.skills.initiative.copy_with_adv(adv)
+        init_skill = char.skills.initiative
 
         if p is None:
-            roll_str = init_skill.d20()
+            roll_str = init_skill.d20(base_adv=adv)
             if b:
                 roll_str = f"{roll_str}+{b}"
             check_roll = roll(roll_str, inline=True)
@@ -304,7 +304,7 @@ class InitTracker(commands.Cog):
 
         combat = await Combat.from_ctx(ctx)
 
-        me = await PlayerCombatant.from_character(char.name, controller, init, init_skill, char.ac, private,
+        me = await PlayerCombatant.from_character(char.name, controller, init, char.ac, private,
                                                   char.get_resists(), ctx, combat, char.upstream, str(ctx.author.id),
                                                   char)
 

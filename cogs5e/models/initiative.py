@@ -891,9 +891,9 @@ class PlayerCombatant(Combatant):
         self._character = None  # shenanigans
 
     @classmethod
-    async def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, combat, character_id,
+    async def from_character(cls, name, controllerId, init, ac, private, resists, ctx, combat, character_id,
                              character_owner, char):
-        inst = cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx, combat,
+        inst = cls(name, controllerId, init, None, None, None, ac, private, resists, None, None, ctx, combat,
                    character_id=character_id, character_owner=character_owner)
         inst._character = char
         return inst
@@ -901,6 +901,10 @@ class PlayerCombatant(Combatant):
     @property
     def character(self):
         return self._character
+
+    @property
+    def init_skill(self):
+        return self._character.skills.initiative
 
     @property
     def hpMax(self):

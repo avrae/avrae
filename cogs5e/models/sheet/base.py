@@ -96,6 +96,17 @@ class Skill:
         return {"value": self.value, "prof": self.prof, "bonus": self.bonus, "adv": self.adv}
 
     # ---------- main funcs ----------
+    def copy_with_adv(self, adv):
+        if adv is None:
+            adv = self.adv
+        elif self.adv is None:
+            adv = adv
+        elif adv is self.adv:
+            adv = self.adv
+        else:
+            adv = None
+        return Skill(self.value, self.prof, self.bonus, adv)
+
     def d20(self, base_adv=None, reroll: int = None, min_val: int = None, base_only=False):
         if base_adv is None:
             adv = self.adv
@@ -124,6 +135,9 @@ class Skill:
 
         out = f"{base}{self.value:+}"
         return out
+
+    def __int__(self):
+        return self.value
 
 
 class Skills:

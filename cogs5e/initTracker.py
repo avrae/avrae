@@ -1,4 +1,5 @@
 import collections
+import copy
 import functools
 import logging
 import random
@@ -16,6 +17,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
+from cogs5e.models.sheet import Skill
 from utils.argparser import argparse
 from utils.functions import confirm, search_and_select
 
@@ -143,7 +145,7 @@ class InitTracker(commands.Cog):
             init = modifier
             modifier = 0
 
-        me = Combatant.default(name, controller, init, modifier, hp, hp, ac, private, resists, ctx, combat)
+        me = Combatant.default(name, controller, init, Skill(modifier), hp, hp, ac, private, resists, ctx, combat)
 
         if group is None:
             combat.add_combatant(me)
@@ -184,7 +186,7 @@ class InitTracker(commands.Cog):
         private = not args.last('h', type_=bool)
 
         group = args.last('group')
-        adv = args.adv()
+        adv = args.adv(boolwise=True)
         b = args.join('b', '+')
         p = args.last('p', type_=int)
         rollhp = args.last('rollhp', False, bool)
@@ -193,7 +195,7 @@ class InitTracker(commands.Cog):
         npr = args.last('npr', type_=bool)
         n = args.last('n', 1, int)
         name_template = args.last('name', monster.name[:2].upper() + '#')
-        init_mod = monster.skills.initiative.value
+        init_skill = monster.skills.initiative.copy_with_adv(adv)
 
         opts = {}
         if npr:
@@ -227,9 +229,9 @@ class InitTracker(commands.Cog):
                 check_roll = None  # to make things happy
                 if p is None:
                     if b:
-                        check_roll = roll(f'1d20{init_mod:+}+{b}', adv=adv, inline=True)
+                        check_roll = roll(f'{init_skill.d20()}+{b}', inline=True)
                     else:
-                        check_roll = roll(f'1d20{init_mod:+}', adv=adv, inline=True)
+                        check_roll = roll(init_skill.d20(), inline=True)
                     init = check_roll.total
                 else:
                     init = int(p)
@@ -241,7 +243,7 @@ class InitTracker(commands.Cog):
                     to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
-                me = MonsterCombatant.from_monster(name, controller, init, init_mod, private, monster, ctx, combat,
+                me = MonsterCombatant.from_monster(name, controller, init, init_skill, private, monster, ctx, combat,
                                                    opts, hp=hp or rolled_hp, ac=ac)
                 if group is None:
                     combat.add_combatant(me)
@@ -282,9 +284,10 @@ class InitTracker(commands.Cog):
         p = args.last('p', type_=int)
         phrase = args.join('phrase', '\n') or None
         group = args.last('group')
+        init_skill = char.skills.initiative.copy_with_adv(adv)
 
         if p is None:
-            roll_str = char.skills.initiative.d20(base_adv=adv)
+            roll_str = init_skill.d20()
             if b:
                 roll_str = f"{roll_str}+{b}"
             check_roll = roll(roll_str, inline=True)
@@ -299,11 +302,10 @@ class InitTracker(commands.Cog):
 
         controller = str(ctx.author.id)
         private = args.last('h', type_=bool)
-        bonus = char.skills.initiative.value
 
         combat = await Combat.from_ctx(ctx)
 
-        me = await PlayerCombatant.from_character(char.name, controller, init, bonus, char.ac, private,
+        me = await PlayerCombatant.from_character(char.name, controller, init, init_skill, char.ac, private,
                                                   char.get_resists(), ctx, combat, char.upstream, str(ctx.author.id),
                                                   char)
 

@@ -454,7 +454,7 @@ class InitTracker(commands.Cog):
         if args.last('dyn', False, bool):  # rerolls all inits at the start of each round
             options['dynamic'] = not options.get('dynamic')
             out += f"Dynamic initiative turned {'on' if options['dynamic'] else 'off'}.\n"
-        if 'name' in args:
+        if args.last('name'):
             options['name'] = args.last('name')
             out += f"Name set to {options['name']}.\n"
         if args.last('turnnotif', False, bool):
@@ -615,9 +615,9 @@ class InitTracker(commands.Cog):
                     out.append(f"\u2705 Now {resisttype} to {resist}.")
 
         # run options
-        for arg_name, func in options.items():
+        for arg_name, opt_func in options.items():
             if arg_name in args:
-                out.append(await func())
+                out.append(await opt_func())
 
         out = '\n'.join(out)
 

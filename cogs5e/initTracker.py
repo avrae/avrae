@@ -1,3 +1,5 @@
+import collections
+import functools
 import logging
 import random
 import shlex
@@ -513,122 +515,137 @@ class InitTracker(commands.Cog):
         -hp <hp> - Sets current HP."""
         combat = await Combat.from_ctx(ctx)
 
-        combatant = await combat.select_combatant(name)
-        if combatant is None:
+        comb = await combat.select_combatant(name, select_group=True)
+        if comb is None:
             await ctx.send("Combatant not found.")
             return
 
         args = argparse(args)
-        out = []
         options = {}
 
-        def option(opt_name=None):
+        def option(opt_name=None, **kwargs):
             def wrapper(func):
-                options[opt_name or func.__name__] = func
+                func_name = opt_name or func.__name__
+                if kwargs:
+                    options[func_name] = functools.partial(func, **kwargs)
+                else:
+                    options[func_name] = func
                 return func
 
             return wrapper
 
         @option()
-        async def h():
+        async def h(combatant):
             combatant.isPrivate = not combatant.isPrivate
-            return "\u2705 Combatant {}.".format('hidden' if combatant.isPrivate else 'unhidden')
+            return f"\u2705 {combatant.name} {'hidden' if combatant.isPrivate else 'unhidden'}."
 
         @option()
-        async def controller():
+        async def controller(combatant):
             try:
                 controller_name = args.last('controller')
                 member = await commands.MemberConverter().convert(ctx, controller_name)
                 if member is None:
                     return "\u274c New controller not found."
                 combatant.controller = str(member.id)
-                return "\u2705 Combatant controller set to {}.".format(combatant.controller_mention())
+                return f"\u2705 {combatant.name}'s controller set to {combatant.controller_mention()}."
             except IndexError:
                 return "\u274c You must pass in a controller with the -controller tag."
 
         @option()
-        async def ac():
+        async def ac(combatant):
             try:
                 combatant.ac = args.last('ac', type_=int)
-                return "\u2705 Combatant AC set to {}.".format(combatant.ac)
+                return f"\u2705 {combatant.name}'s AC set to {combatant.ac}."
             except InvalidArgument:
                 return "\u274c You must pass in a valid AC with the -ac tag."
 
         @option()
-        async def p():
+        async def p(combatant):
             if combatant is combat.current_combatant:
                 return "\u274c You cannot change a combatant's initiative on their own turn."
             try:
                 combatant.init = args.last('p', type_=int)
                 combat.sort_combatants()
-                return "\u2705 Combatant initiative set to {}.".format(combatant.init)
+                return f"\u2705 {combatant.name}'s initiative set to {combatant.init}."
             except InvalidArgument:
                 return "\u274c You must pass in a number with the -p tag."
 
         @option()
-        async def group():
+        async def group(combatant):
             if combatant is combat.current_combatant:
                 return "\u274c You cannot change a combatant's group on their own turn."
             group_name = args.last('group')
             if group_name.lower() == 'none':
                 combat.remove_combatant(combatant)
                 combat.add_combatant(combatant)
-                return "\u2705 Combatant removed from all groups."
+                return f"\u2705 {combatant.name} removed from all groups."
             else:
                 combat.remove_combatant(combatant)
                 c_group = combat.get_group(group_name, create=combatant.init)
                 c_group.add_combatant(combatant)
-                return "\u2705 Combatant group_name set to {}.".format(group_name.name)
+                return f"\u2705 {combatant.name} added to group {c_group.name}."
 
         @option()
-        async def name():
+        async def name(combatant):
             new_name = args.last('name')
             if combat.get_combatant(new_name, True) is not None:
-                return "\u274c There is already another combatant with that name."
+                return f"\u274c There is already another combatant with the name {new_name}."
             elif new_name:
                 combatant.name = new_name
-                return "\u2705 Combatant name set to {}.".format(new_name)
+                return f"\u2705 {combatant.name}'s name set to {new_name}."
             else:
                 return "\u274c You must pass in a name with the -name tag."
 
         @option("max")
-        async def max_hp():
+        async def max_hp(combatant):
             maxhp = args.last('max', type_=int)
             if maxhp < 1:
                 return "\u274c Max HP must be at least 1."
             else:
                 combatant.hpMax = maxhp
-                return "\u2705 Combatant HP max set to {}.".format(maxhp)
+                return f"\u2705 {combatant.name}'s HP max set to {maxhp}."
 
         @option()
-        async def hp():
+        async def hp(combatant):
             new_hp = args.last('hp', type_=int)
             combatant.set_hp(new_hp)
-            return "\u2705 Combatant HP set to {}.".format(new_hp)
+            return f"\u2705 {combatant.name}'s HP set to {new_hp}."
 
-        # no clean way to do this with the option wrapper
-        for resisttype in ("resist", "immune", "vuln", "neutral"):
-            if resisttype in args:
-                for resist in args.get(resisttype):
-                    resist = resist.lower()
-                    combatant.set_resist(resist, resisttype)
-                    out.append(f"\u2705 Now {resisttype} to {resist}.")
+        @option("resist", resist_type="resist")
+        @option("immune", resist_type="immune")
+        @option("vuln", resist_type="vuln")
+        @option("neutral", resist_type="neutral")
+        async def resist(combatant, resist_type):
+            result = []
+            for damage_type in args.get(resist_type):
+                damage_type = damage_type.lower()
+                combatant.set_resist(damage_type, resist_type)
+                result.append(damage_type)
+            return f"\u2705 Updated {combatant.name}'s {resist_type}s: {', '.join(result)}"
 
         # run options
+        if isinstance(comb, CombatantGroup):
+            targets = comb.get_combatants().copy()
+        else:
+            targets = [comb]
+        out = collections.defaultdict(lambda: [])
+
         for arg_name, opt_func in options.items():
             if arg_name in args:
-                out.append(await opt_func())
+                for target in targets:
+                    response = await opt_func(target)
+                    if target.isPrivate:
+                        destination = ctx.guild.get_member(int(comb.controller)) or ctx.channel
+                    else:
+                        destination = ctx.channel
+                    out[destination].append(response)
 
-        out = '\n'.join(out)
-
-        if combatant.isPrivate:
-            controller = ctx.guild.get_member(int(combatant.controller))
-            if controller:
-                await controller.send("{}'s options updated.\n".format(combatant.name) + out)
-            await ctx.send("Combatant options updated.", delete_after=10)
+        if out:
+            for destination, messages in out.items():
+                await destination.send('\n'.join(messages))
+            await combat.final()
         else:
-            await ctx.send("{}'s options updated.\n".format(combatant.name) + out, delete_after=10)
-        await combat.final()
+            await ctx.send("No valid options found.")
 
     @init.command()
     async def status(self, ctx, name: str, *, args: str = ''):

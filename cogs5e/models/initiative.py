@@ -812,6 +812,9 @@ class Combatant(Spellcaster):
     def __str__(self):
         return f"{self.name}: {self.get_hp_str()}".strip()
 
+    def __hash__(self):
+        return hash(self.name)
+
 
 class MonsterCombatant(Combatant):
     def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,

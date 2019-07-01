@@ -5,23 +5,16 @@ namely, it creates the Avrae instance and overrides its http and gateway handler
 import asyncio
 import logging
 import re
+from queue import Queue
 
 import pytest
-from discord import Message
 from discord.gateway import DiscordWebSocket
-from discord.http import HTTPClient
+from discord.http import HTTPClient, Route
 
-import credentials
+from tests.utils import DEFAULT_USER, DUMMY_GUILD_CREATE, DUMMY_READY, MESSAGE_ID, RESPONSES, TEST_CHANNEL_ID, \
+    TEST_GUILD_ID
 
-TEST_CHANNEL_ID = 594236068627218447
-TEST_GUILD_ID = 269275778867396608
-MESSAGE_ID = "123456789012345678"
-DEFAULT_USER = {
-    "id": str(credentials.owner_id),
-    "username": "zhu.exe",
-    "discriminator": "4211",
-    "avatar": None
-}
+SENTINEL = object()
 
 log = logging.getLogger(__name__)
 
@@ -50,65 +43,59 @@ class DiscordHTTPProxy(HTTPClient):
     def __init__(self, *args, **kwargs):
         super(DiscordHTTPProxy, self).__init__(*args, **kwargs)
         # set up a way for us to track our requests
-        self._requests = []
-        self._last_request = None
+        self._request_check_queue = Queue()
 
     async def request(self, route, *, files=None, header_bypass_delay=None, **kwargs):
         req = Request(route.method, route.url, kwargs.get('data') or kwargs.get('json'))
         log.info(str(req))
-        self._requests.append(req)
-        self._last_request = req
-        return await super(DiscordHTTPProxy, self).request(route, files=files, header_bypass_delay=header_bypass_delay,
-                                                           **kwargs)
+        self._request_check_queue.put(req)
+
+        endpoint = req.url.split(Route.BASE)[-1]
+        if f"{req.method} {endpoint}" in RESPONSES:
+            return RESPONSES[f"{req.method} {endpoint}"](req.data)
+        raise RuntimeError("Bot requested an endpoint we don't have a test for")
 
     def clear(self):
-        self._last_request = None
-        self._requests = []
+        self._request_check_queue = Queue()
+
+    async def get_request(self):
+        while self._request_check_queue.empty():
+            await asyncio.sleep(0.1)
+        return self._request_check_queue.get()
 
     async def receive_message(self, content=None, *, regex=None):  # todo handle embeds
         """
         Assert that the bot sends a message, and that it is the message we expect.
         """
-        # make sure we get the message we want
-        while not self._last_request:
-            await asyncio.sleep(0.1)
+        request = await self.get_request()
 
-        assert self._last_request.method == "POST"
-        assert self._last_request.url.endswith(f"/channels/{TEST_CHANNEL_ID}/messages")
+        assert request.method == "POST"
+        assert request.url.endswith(f"/channels/{TEST_CHANNEL_ID}/messages")
         if regex:
-            assert re.match(regex, self._last_request.data['content'])
+            assert re.match(regex, request.data['content'])
         else:
-            assert self._last_request.data['content'] == content
-
-        self._last_request = None
+            assert request.data['content'] == content
 
     async def receive_edit(self, content=None, message_id=None, *, regex=None):
         """
         Assert that the bot edits a message, and that it is the message we expect.
         """
-        # make sure we get the message we want
-        while not self._last_request:
-            await asyncio.sleep(0.1)
+        request = await self.get_request()
 
-        assert self._last_request.method == "PATCH"
+        assert request.method == "PATCH"
         if message_id:
-            assert self._last_request.url.endswith(f"/channels/{TEST_CHANNEL_ID}/messages/{message_id}")
+            assert request.url.endswith(f"/channels/{TEST_CHANNEL_ID}/messages/{message_id}")
         if regex:
-            assert re.match(regex, self._last_request.data['content'])
+            assert re.match(regex, request.data['content'])
         else:
-            assert self._last_request.data['content'] == content
-
-        self._last_request = None
+            assert request.data['content'] == content
 
     async def receive_delete(self):
         """
         Assert that the bot deletes a message.
         """
-        # make sure we get the message we want
-        while not self._last_request:
-            await asyncio.sleep(0.1)
-        assert self._last_request.method == "DELETE"
-        self._last_request = None
+        request = await self.get_request()
+        assert request.method == "DELETE"
 
 
 class DiscordWSProxy(DiscordWebSocket):
@@ -146,6 +133,7 @@ def message(self, message_content):
         "mentions": [],
         "type": 0
     })
+    return MESSAGE_ID
 
 
 def event(self, event_type, content):
@@ -163,14 +151,21 @@ async def avrae(dhttp):
 
     # set up http
     bot.http = dhttp
+    # noinspection PyProtectedMember
     bot._connection.http = dhttp
 
     bot.state = "run"
-    await bot.login(bot.credentials.token)
-    coro = DiscordWebSocket.from_client(bot, shard_id=bot.shard_id)
-    bot.ws = await asyncio.wait_for(coro, timeout=180.0, loop=bot.loop)
-    while not (bot.get_channel(TEST_CHANNEL_ID)):
-        await bot.ws.poll_event()
+    await bot.login(bot.credentials.token)  # handled by our http proxy
+
+    # we never do initialize the websocket - we just replay discord's login sequence
+    # to initialize a "channel" to send testing messages to
+
+    # in this case, it's a dummy guild
+    # noinspection PyProtectedMember
+    bot._connection.parse_ready(DUMMY_READY)
+    # noinspection PyProtectedMember
+    bot._connection.parse_guild_create(DUMMY_GUILD_CREATE)
+
     log.info("Ready for testing")
     yield bot
     await bot.logout()

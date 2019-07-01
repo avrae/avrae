@@ -8,6 +8,7 @@ async def test_basic_commands(avrae, dhttp):
     await dhttp.receive_message("Pong.")
     await dhttp.receive_edit(regex=r"Pong.\nPing = \d+ ms.")
 
+    dhttp.clear()
     avrae.message("echo foobar")
     await dhttp.receive_delete()
     await dhttp.receive_message(regex=r".*: foobar")

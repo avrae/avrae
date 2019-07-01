@@ -1,0 +1,142 @@
+"""
+This file contains a bunch of dummy data and constants to emulate the responses of the Discord API
+for automated testing.
+"""
+import credentials
+
+TEST_CHANNEL_ID = 314159265358979323  # pi
+TEST_GUILD_ID = 112358132235579214  # fib
+MESSAGE_ID = "123456789012345678"
+DEFAULT_USER = {
+    "id": str(credentials.owner_id),
+    "username": "zhu.exe",
+    "discriminator": "4211",
+    "avatar": None
+}
+ME_USER = {
+    'username': 'Avrae Test', 'verified': True, 'locale': 'en-US', 'mfa_enabled': True, 'bot': True,
+    'id': '111111111111111111', 'flags': 0, 'avatar': None, 'discriminator': '0000', 'email': None
+}
+
+
+def message_response(data):
+    return {
+        'nonce': None, 'attachments': [], 'tts': False, 'embeds': [],
+        'timestamp': '2019-07-01T17:37:43.068000+00:00', 'mention_everyone': False, 'id': MESSAGE_ID,
+        'pinned': False, 'edited_timestamp': None,
+        'author': DEFAULT_USER, 'mention_roles': [], 'content': data['content'],
+        'channel_id': str(TEST_CHANNEL_ID), 'mentions': [], 'type': 0
+    }
+
+
+def edit_response(data):
+    return {
+        'nonce': None, 'attachments': [], 'tts': False, 'embeds': [],
+        'timestamp': '2019-07-01T17:37:43.068000+00:00', 'mention_everyone': False, 'id': MESSAGE_ID,
+        'pinned': False, 'edited_timestamp': '2019-07-01T17:37:43.152340+00:00',
+        'author': DEFAULT_USER, 'mention_roles': [],
+        'content': data['content'], 'channel_id': '594236068627218447', 'mentions': [], 'type': 0
+    }
+
+
+RESPONSES = {
+    "GET /users/@me": lambda _: ME_USER,
+    "GET /gateway": lambda _: {'url': 'wss://gateway.discord.gg'},
+    f"POST /channels/{TEST_CHANNEL_ID}/messages": message_response,
+    f"PATCH /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": edit_response,
+    f"DELETE /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": lambda _: None
+}
+
+DUMMY_READY = {
+    'v': 6,
+    'user_settings': {},
+    'user': ME_USER,
+    'shard': [
+        0,
+        1
+    ],
+    'session_id': '6f1d1da3e7e480582376e423574335fd',
+    'relationships': [],
+    'private_channels': [],
+    'presences': [],
+    'guilds': [
+        {
+            'unavailable': True,
+            'id': str(TEST_GUILD_ID)
+        }
+    ]
+}
+
+DUMMY_GUILD_CREATE = {
+    'afk_timeout': 300,
+    'description': None,
+    'members': [
+        {
+            'user': ME_USER,
+            'roles': [],
+            'mute': False,
+            'joined_at': '2018-02-13T00:45:01.457000+00:00',
+            'deaf': False
+        },
+        {
+            'user': DEFAULT_USER,
+            'roles': [],
+            'mute': False,
+            'joined_at': '2018-02-13T01:41:56.998000+00:00',
+            'deaf': False
+        }
+    ],
+    'roles': [
+        {
+            'position': 0,
+            'permissions': 104324681,
+            'name': '@everyone',
+            'mentionable': False,
+            'managed': False,
+            'id': str(TEST_GUILD_ID),
+            'hoist': False,
+            'color': 0
+        }
+    ],
+    'afk_channel_id': None,
+    'system_channel_flags': 0,
+    'emojis': [],
+    'voice_states': [],
+    'application_id': None,
+    'system_channel_id': str(TEST_CHANNEL_ID),
+    'name': 'Test Guild',
+    'premium_tier': 0,
+    'joined_at': '2018-02-13T00:45:01.457000+00:00',
+    'banner': None,
+    'id': str(TEST_GUILD_ID),
+    'features': [],
+    'preferred_locale': 'en-US',
+    'region': 'us-west',
+    'member_count': 2,
+    'premium_subscription_count': 0,
+    'default_message_notifications': 0,
+    'channels': [
+        {
+            'type': 0,
+            'topic': None,
+            'rate_limit_per_user': 0,
+            'position': 0,
+            'permission_overwrites': [],
+            'parent_id': None,
+            'name': 'test-channel',
+            'last_message_id': None,
+            'id': str(TEST_CHANNEL_ID)
+        }
+    ],
+    'unavailable': False,
+    'icon': None,
+    'vanity_url_code': None,
+    'owner_id': DEFAULT_USER['id'],
+    'presences': [],
+    'splash': None,
+    'mfa_level': 0,
+    'explicit_content_filter': 0,
+    'lazy': True,
+    'large': False,
+    'verification_level': 0
+}

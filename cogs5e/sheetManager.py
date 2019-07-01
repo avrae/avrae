@@ -28,8 +28,24 @@ from utils.argparser import argparse
 from utils.constants import SKILL_MAP, SKILL_NAMES
 from utils.functions import a_or_an, auth_and_chan, get_positivity, list_get
 from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
+from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
+
+CHARACTER_SETTINGS = {
+    "color": CSetting("color", "hex", default="random", display_func=lambda val: f"#{val:06X}", min_=0,
+                      max_=0xffffff),
+    "criton": CSetting("criton", "number", description="crit range", default=20,
+                       display_func=lambda val: f"{val}-20", min_=1, max_=20),
+    "reroll": CSetting("reroll", "number", min_=1, max_=20),
+    "srslots": CSetting("srslots", "boolean", description="short rest slots", default='disabled',
+                        display_func=lambda val: 'enabled' if val else 'disabled'),
+    "embedimage": CSetting("embedimage", "boolean", description="embed image", default='disabled',
+                           display_func=lambda val: 'enabled' if val else 'disabled'),
+    "critdice": CSetting("critdice", "number", description="extra crit dice", default=0),
+    "talent": CSetting("talent", "boolean", description="reliable talent", default='disabled',
+                       display_func=lambda val: 'enabled' if val else 'disabled')
+}
 
 
 class SheetManager(commands.Cog):
@@ -567,140 +583,19 @@ class SheetManager(commands.Cog):
         `embedimage true/false` - Enables/disables whether a character's image is automatically embedded.
         `critdice <number>` - Adds additional dice for to critical attacks.
         `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with."""
-        char: Character = await Character.from_ctx(ctx)
+        char = await Character.from_ctx(ctx)
 
-        out = 'Operations complete!\n'
-        index = 0
-        for arg in args:
-            if arg == 'color':
-                color = list_get(index + 1, None, args)
-                if color is None:
-                    current_color = hex(char.get_color()) if char.get_setting('color') else "random"
-                    out += f'\u2139 Your character\'s current color is {current_color}. ' \
-                        f'Use "{ctx.prefix}csettings color reset" to reset it to random.\n'
-                elif color.lower() == 'reset':
-                    char.set_setting('color', None)
-                    out += "\u2705 Color reset to random.\n"
-                else:
-                    try:
-                        color = int(color, base=16)
-                    except (ValueError, TypeError):
-                        out += f'\u274c Unknown color. Use "{ctx.prefix}csettings color reset" to reset it to random.\n'
-                    else:
-                        if not 0 <= color <= 0xffffff:
-                            out += '\u274c Invalid color.\n'
-                        else:
-                            char.set_setting('color', color)
-                            out += "\u2705 Color set to {}.\n".format(hex(color))
-            if arg == 'criton':
-                criton = list_get(index + 1, None, args)
-                if criton is None:
-                    current = str(char.get_setting('criton')) + '-20' if char.get_setting('criton') else "20"
-                    out += f'\u2139 Your character\'s current crit range is {current}. ' \
-                        f'Use "{ctx.prefix}csettings criton reset" to reset it to 20.\n'
-                elif criton.lower() == 'reset':
-                    char.set_setting('criton', None)
-                    out += "\u2705 Crit range reset to 20.\n"
-                else:
-                    try:
-                        criton = int(criton)
-                    except (ValueError, TypeError):
-                        out += f'\u274c Invalid number. Use "{ctx.prefix}csettings criton reset" to reset it to 20.\n'
-                    else:
-                        if not 0 < criton <= 20:
-                            out += '\u274c Crit range must be between 1 and 20.\n'
-                        elif criton == 20:
-                            char.set_setting('criton', None)
-                            out += "\u2705 Crit range reset to 20.\n"
-                        else:
-                            char.set_setting('criton', criton)
-                            out += "\u2705 Crit range set to {}-20.\n".format(criton)
-            if arg == 'reroll':
-                reroll = list_get(index + 1, None, args)
-                if reroll is None:
-                    current = char.get_setting('reroll')
-                    out += f'\u2139 Your character\'s current reroll is {current}. ' \
-                        f'Use "{ctx.prefix}csettings reroll reset" to reset it.\n'
-                elif reroll.lower() == 'reset':
-                    char.set_setting('reroll', None)
-                    out += "\u2705 Reroll reset.\n"
-                else:
-                    try:
-                        reroll = int(reroll)
-                    except (ValueError, TypeError):
-                        out += f'\u274c Invalid number. Use "{ctx.prefix}csettings reroll reset" to reset it.\n'
-                    else:
-                        if not 1 <= reroll <= 20:
-                            out += '\u274c Reroll must be between 1 and 20.\n'
-                        else:
-                            char.set_setting('reroll', reroll)
-                            out += "\u2705 Reroll set to {}.\n".format(reroll)
-            if arg == 'critdice':
-                critdice = list_get(index + 1, None, args)
-                if critdice is None:
-                    current = char.get_setting('critdice')
-                    out += f'\u2139 Extra crit dice are currently set to {current}. ' \
-                        f'Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
-                elif critdice.lower() == 'reset':
-                    char.set_setting('critdice', None)
-                    out += "\u2705 Extra crit dice reset.\n"
-                else:
-                    try:
-                        critdice = int(critdice)
-                    except (ValueError, TypeError):
-                        out += f'\u274c Invalid number. Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
-                    else:
-                        if not 0 <= critdice <= 20:
-                            out += f'\u274c Extra crit dice must be between 1 and 20. Use "{ctx.prefix}csettings critdice reset" to reset it.\n'
-                        else:
-                            char.set_setting('critdice', critdice)
-                            out += "\u2705 Extra crit dice set to {}.\n".format(critdice)
-            if arg == 'srslots':
-                srslots = list_get(index + 1, None, args)
-                if srslots is None:
-                    out += '\u2139 Short rest slots are currently {}.\n' \
-                        .format("enabled" if char.get_setting('srslots') else "disabled")
-                else:
-                    try:
-                        srslots = get_positivity(srslots)
-                    except AttributeError:
-                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings srslots false" to reset it.\n'
-                    else:
-                        char.set_setting('srslots', srslots)
-                        out += "\u2705 Short Rest slots {}.\n".format(
-                            "enabled" if char.get_setting('srslots') else "disabled")
-            if arg == 'talent':
-                talent = list_get(index + 1, None, args)
-                if talent is None:
-                    out += '\u2139 Reliable Talent is currently {}.\n' \
-                        .format("enabled" if char.get_setting('talent') else "disabled")
-                else:
-                    try:
-                        talent = get_positivity(talent)
-                    except AttributeError:
-                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings talent false" to reset it.\n'
-                    else:
-                        char.set_setting('talent', talent)
-                        out += "\u2705 Reliable Talent {}.\n".format(
-                            "enabled" if char.get_setting('talent') else "disabled")
-            if arg == 'embedimage':
-                embedimage = list_get(index + 1, None, args)
-                if embedimage is None:
-                    out += '\u2139 Embed Image is currently {}.\n' \
-                        .format("enabled" if char.get_setting('embedimage') else "disabled")
-                else:
-                    try:
-                        embedimage = get_positivity(embedimage)
-                    except AttributeError:
-                        out += f'\u274c Invalid input. Use "{ctx.prefix}csettings embedimage true" to reset it.\n'
-                    else:
-                        char.set_setting('embedimage', embedimage)
-                        out += "\u2705 Embed Image {}.\n".format(
-                            "enabled" if char.get_setting('embedimage') else "disabled")
-            index += 1
+        out = ['Operations complete!']
+        skip = False
+        for i, arg in enumerate(args):
+            if skip:
+                continue
+            if arg in CHARACTER_SETTINGS:
+                skip = True
+                out.append(CHARACTER_SETTINGS[arg].run(ctx, char, list_get(i + 1, None, args)))
 
         await char.commit(ctx)
-        await ctx.send(out)
+        await ctx.send('\n'.join(out))
 
     @commands.group(invoke_without_command=True)
     async def cvar(self, ctx, name: str = None, *, value=None):

@@ -5,7 +5,7 @@ import cachetools
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
-from cogs5e.models.sheet import Saves
+from cogs5e.models.sheet import Saves, Skill
 from cogs5e.models.sheet.spellcasting import Spellbook, Spellcaster
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
@@ -178,7 +178,7 @@ class Combat:
 
     def sort_combatants(self):
         current = self.current_combatant
-        self._combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
+        self._combatants = sorted(self._combatants, key=lambda k: (k.init, int(k.init_skill)), reverse=True)
         for n, c in enumerate(self._combatants):
             c.index = n
         if current is not None:
@@ -229,7 +229,7 @@ class Combat:
         """
         rolls = {}
         for c in self._combatants:
-            init_roll = roll(f"1d20+{c.initMod}", inline=True)
+            init_roll = roll(c.init_skill.d20(), inline=True)
             c.init = init_roll.total
             rolls[c.name] = init_roll
         self.sort_combatants()
@@ -375,7 +375,7 @@ class Combat:
 
     def get_summary(self, private=False):
         """Returns the generated summary message content."""
-        combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
+        combatants = sorted(self._combatants, key=lambda k: (k.init, int(k.init_skill)), reverse=True)
         outStr = "```markdown\n{}: {} (round {})\n".format(
             self.options.get('name') if self.options.get('name') else "Current initiative",
             self.turn_num, self.round_num)
@@ -432,7 +432,8 @@ class Combat:
 
 
 class Combatant(Spellcaster):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
+    def __init__(self, name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, attacks, saves, ctx,
+                 combat,
                  index=None, notes=None, effects=None, group=None, temphp=0, spellbook=None, *args, **kwargs):
         super(Combatant, self).__init__(spellbook)
         if resists is None:
@@ -444,7 +445,7 @@ class Combatant(Spellcaster):
         self._name = name
         self._controller = controllerId
         self._init = init
-        self._mod = initMod  # readonly
+        self._init_skill = init_skill  # readonly
         self._hpMax = hpMax  # optional
         self._hp = hp  # optional
         self._ac = ac  # optional
@@ -463,8 +464,8 @@ class Combatant(Spellcaster):
         self._cache = {}
 
     @classmethod
-    def default(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, ctx, combat):
-        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, [], None, ctx, combat)
+    def default(cls, name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, ctx, combat):
+        return cls(name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, [], None, ctx, combat)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
@@ -472,7 +473,12 @@ class Combatant(Spellcaster):
             saves = Saves.from_dict(raw['saves'])
         else:
             saves = None
-        inst = cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
+        # backcompat
+        if 'mod' in raw:  # todo remove after 30 days (aug 1)
+            init_skill = Skill(raw['mod'])
+        else:
+            init_skill = Skill.from_dict(raw['init_skill'])
+        inst = cls(raw['name'], raw['controller'], raw['init'], init_skill, raw['hpMax'], raw['hp'], raw['ac'],
                    raw['private'], raw['resists'], raw['attacks'], saves, ctx, combat,
                    index=raw['index'], notes=raw['notes'], effects=[], group=raw['group'],
                    # begin backwards compatibility
@@ -481,7 +487,8 @@ class Combatant(Spellcaster):
         return inst
 
     def to_dict(self):
-        return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
+        return {'name': self.name, 'controller': self.controller, 'init': self.init,
+                'init_skill': self.init_skill.to_dict(),
                 'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
                 'resists': self._resists, 'attacks': self._attacks,
                 'saves': self._saves and self._saves.to_dict(), 'index': self.index,
@@ -518,8 +525,8 @@ class Combatant(Spellcaster):
         self._init = new_init
 
     @property
-    def initMod(self):
-        return self._mod
+    def init_skill(self):
+        return self._init_skill
 
     @property
     def hpMax(self):
@@ -832,17 +839,21 @@ class Combatant(Spellcaster):
     def __str__(self):
         return f"{self.name}: {self.get_hp_str()}".strip()
 
+    def __hash__(self):
+        return hash(self.name)
+
 
 class MonsterCombatant(Combatant):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
+    def __init__(self, name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, attacks, saves, ctx,
+                 combat,
                  index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None, spellbook=None):
-        super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
+        super(MonsterCombatant, self).__init__(name, controllerId, init, init_skill, hpMax, hp, ac, private, resists,
                                                attacks, saves, ctx, combat, index, notes, effects, group, temphp,
                                                spellbook)
         self._monster_name = monster_name
 
     @classmethod
-    def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, combat, opts=None, index=None,
+    def from_monster(cls, name, controllerId, init, init_skill, private, monster, ctx, combat, opts=None, index=None,
                      hp=None, ac=None):
         monster_name = monster.name
         hp = int(monster.hp) if not hp else int(hp)
@@ -867,8 +878,8 @@ class MonsterCombatant(Combatant):
         saves = monster.saves
         spellcasting = monster.spellbook
 
-        return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, combat, index,
-                   monster_name, spellbook=spellcasting)
+        return cls(name, controllerId, init, init_skill, hp, hp, ac, private, resists, attacks, saves, ctx, combat,
+                   index, monster_name, spellbook=spellcasting)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
@@ -888,10 +899,11 @@ class MonsterCombatant(Combatant):
 
 
 class PlayerCombatant(Combatant):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
+    def __init__(self, name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, attacks, saves, ctx,
+                 combat,
                  index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None,
                  temphp=None, spellbook=None):
-        super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
+        super(PlayerCombatant, self).__init__(name, controllerId, init, init_skill, hpMax, hp, ac, private, resists,
                                               attacks, saves, ctx, combat, index, notes, effects, group, temphp,
                                               spellbook)
         self.character_id = character_id
@@ -899,9 +911,9 @@ class PlayerCombatant(Combatant):
         self._character = None  # shenanigans
 
     @classmethod
-    async def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, combat, character_id,
+    async def from_character(cls, name, controllerId, init, ac, private, resists, ctx, combat, character_id,
                              character_owner, char):
-        inst = cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx, combat,
+        inst = cls(name, controllerId, init, None, None, None, ac, private, resists, None, None, ctx, combat,
                    character_id=character_id, character_owner=character_owner)
         inst._character = char
         return inst
@@ -909,6 +921,10 @@ class PlayerCombatant(Combatant):
     @property
     def character(self):
         return self._character
+
+    @property
+    def init_skill(self):
+        return self._character.skills.initiative
 
     @property
     def hpMax(self):

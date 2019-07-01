@@ -76,7 +76,7 @@ class SimpleCombatant:
             else:
                 self.hp = None
             self.maxhp = self._combatant.hpMax
-            self.initmod = self._combatant.initMod
+            self.initmod = int(self._combatant.init_skill)
             self.temphp = self._combatant.temphp
             self.resists = self._combatant.resists
             self.attacks = self._combatant.attacks

@@ -125,6 +125,9 @@ class Skill:
         out = f"{base}{self.value:+}"
         return out
 
+    def __int__(self):
+        return self.value
+
 
 class Skills:
     def __init__(self, skills):

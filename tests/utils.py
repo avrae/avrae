@@ -5,12 +5,19 @@ for automated testing.
 import credentials
 
 TEST_CHANNEL_ID = 314159265358979323  # pi
+TEST_DMCHANNEL_ID = 271828182845904523  # e
 TEST_GUILD_ID = 112358132235579214  # fib
 MESSAGE_ID = "123456789012345678"
-DEFAULT_USER = {
+OWNER_USER = {
     "id": str(credentials.owner_id),
     "username": "zhu.exe",
     "discriminator": "4211",
+    "avatar": None
+}
+DEFAULT_USER = {
+    "id": "111111111111111112",
+    "username": "I'm a user",
+    "discriminator": "0001",
     "avatar": None
 }
 ME_USER = {
@@ -19,23 +26,42 @@ ME_USER = {
 }
 
 
+# http responses
 def message_response(data):
+    embeds = []
+    if data.get('embed'):
+        embeds = [data['embed']]
     return {
-        'nonce': None, 'attachments': [], 'tts': False, 'embeds': [],
+        'nonce': None, 'attachments': [], 'tts': False, 'embeds': embeds,
         'timestamp': '2019-07-01T17:37:43.068000+00:00', 'mention_everyone': False, 'id': MESSAGE_ID,
         'pinned': False, 'edited_timestamp': None,
-        'author': DEFAULT_USER, 'mention_roles': [], 'content': data['content'],
+        'author': DEFAULT_USER, 'mention_roles': [], 'content': data.get('content'),
         'channel_id': str(TEST_CHANNEL_ID), 'mentions': [], 'type': 0
     }
 
 
 def edit_response(data):
+    embeds = []
+    if data.get('embed'):
+        embeds = [data['embed']]
     return {
-        'nonce': None, 'attachments': [], 'tts': False, 'embeds': [],
+        'nonce': None, 'attachments': [], 'tts': False, 'embeds': embeds,
         'timestamp': '2019-07-01T17:37:43.068000+00:00', 'mention_everyone': False, 'id': MESSAGE_ID,
         'pinned': False, 'edited_timestamp': '2019-07-01T17:37:43.152340+00:00',
         'author': DEFAULT_USER, 'mention_roles': [],
-        'content': data['content'], 'channel_id': '594236068627218447', 'mentions': [], 'type': 0
+        'content': data.get('content'), 'channel_id': '594236068627218447', 'mentions': [], 'type': 0
+    }
+
+
+def start_dm_response(data):
+    user = next(u for u in (DEFAULT_USER, OWNER_USER) if u['id'] == str(data['recipient_id']))
+    return {
+        "last_message_id": None,
+        "type": 1,
+        "id": str(TEST_DMCHANNEL_ID),
+        "recipients": [
+            user
+        ]
     }
 
 
@@ -43,10 +69,13 @@ RESPONSES = {
     "GET /users/@me": lambda _: ME_USER,
     "GET /gateway": lambda _: {'url': 'wss://gateway.discord.gg'},
     f"POST /channels/{TEST_CHANNEL_ID}/messages": message_response,
+    f"POST /channels/{TEST_DMCHANNEL_ID}/messages": message_response,
     f"PATCH /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": edit_response,
-    f"DELETE /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": lambda _: None
+    f"DELETE /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": lambda _: None,
+    "POST /users/@me/channels": start_dm_response
 }
 
+# initialization
 DUMMY_READY = {
     'v': 6,
     'user_settings': {},
@@ -84,6 +113,13 @@ DUMMY_GUILD_CREATE = {
             'mute': False,
             'joined_at': '2018-02-13T01:41:56.998000+00:00',
             'deaf': False
+        },
+        {
+            'user': OWNER_USER,
+            'roles': [],
+            'mute': False,
+            'joined_at': '2018-02-13T01:41:56.998000+00:00',
+            'deaf': False
         }
     ],
     'roles': [
@@ -112,7 +148,7 @@ DUMMY_GUILD_CREATE = {
     'features': [],
     'preferred_locale': 'en-US',
     'region': 'us-west',
-    'member_count': 2,
+    'member_count': 3,
     'premium_subscription_count': 0,
     'default_message_notifications': 0,
     'channels': [
@@ -131,7 +167,7 @@ DUMMY_GUILD_CREATE = {
     'unavailable': False,
     'icon': None,
     'vanity_url_code': None,
-    'owner_id': DEFAULT_USER['id'],
+    'owner_id': OWNER_USER['id'],
     'presences': [],
     'splash': None,
     'mfa_level': 0,

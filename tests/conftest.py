@@ -1,6 +1,7 @@
 """
 This file sets up the "globals" we need for our tests
 namely, it creates the Avrae instance and overrides its http and gateway handlers
+and defines a bunch of helper methods
 """
 import asyncio
 import logging
@@ -8,11 +9,12 @@ import re
 from queue import Queue
 
 import pytest
-from discord.gateway import DiscordWebSocket
+from discord import DiscordException
+from discord.ext import commands
 from discord.http import HTTPClient, Route
 
-from tests.utils import DEFAULT_USER, DUMMY_GUILD_CREATE, DUMMY_READY, MESSAGE_ID, RESPONSES, TEST_CHANNEL_ID, \
-    TEST_GUILD_ID
+from cogs5e.models.errors import AvraeException
+from tests.utils import *
 
 SENTINEL = object()
 
@@ -45,6 +47,7 @@ class DiscordHTTPProxy(HTTPClient):
         # set up a way for us to track our requests
         self._request_check_queue = Queue()
 
+    # override d.py's request logic to implement our own
     async def request(self, route, *, files=None, header_bypass_delay=None, **kwargs):
         req = Request(route.method, route.url, kwargs.get('data') or kwargs.get('json'))
         log.info(str(req))
@@ -55,6 +58,7 @@ class DiscordHTTPProxy(HTTPClient):
             return RESPONSES[f"{req.method} {endpoint}"](req.data)
         raise RuntimeError("Bot requested an endpoint we don't have a test for")
 
+    # helper functions
     def clear(self):
         self._request_check_queue = Queue()
 
@@ -63,46 +67,48 @@ class DiscordHTTPProxy(HTTPClient):
             await asyncio.sleep(0.1)
         return self._request_check_queue.get()
 
-    async def receive_message(self, content=None, *, regex=None):  # todo handle embeds
+    async def receive_message(self, content=None, *, regex=None, dm=False):  # todo handle embeds
         """
         Assert that the bot sends a message, and that it is the message we expect.
         """
         request = await self.get_request()
+        channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
 
         assert request.method == "POST"
-        assert request.url.endswith(f"/channels/{TEST_CHANNEL_ID}/messages")
+        assert request.url.endswith(f"/channels/{channel}/messages")
+
         if regex:
             assert re.match(regex, request.data['content'])
-        else:
+        elif content:
             assert request.data['content'] == content
 
-    async def receive_edit(self, content=None, message_id=None, *, regex=None):
+    async def receive_edit(self, content=None, *, regex=None, dm=False):
         """
         Assert that the bot edits a message, and that it is the message we expect.
         """
         request = await self.get_request()
+        channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
 
         assert request.method == "PATCH"
-        if message_id:
-            assert request.url.endswith(f"/channels/{TEST_CHANNEL_ID}/messages/{message_id}")
+        assert request.url.endswith(f"/channels/{channel}/messages/{MESSAGE_ID}")
+
         if regex:
             assert re.match(regex, request.data['content'])
-        else:
+        elif content:
             assert request.data['content'] == content
 
-    async def receive_delete(self):
+    async def receive_delete(self, dm=False):
         """
         Assert that the bot deletes a message.
         """
         request = await self.get_request()
+        channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
+
         assert request.method == "DELETE"
+        assert request.url.endswith(f"/channels/{channel}/messages/{MESSAGE_ID}")
 
 
-class DiscordWSProxy(DiscordWebSocket):
-    """I love subclassing classes that say "Library users should never create this manually" in the docs"""
-    pass
-
-
+# the http fixture
 @pytest.fixture(scope="session")
 def dhttp():
     """
@@ -113,8 +119,10 @@ def dhttp():
 
 
 # methods to monkey-patch in to send messages to the bot without sending
-def message(self, message_content):
-    message_content = f"{self.prefixes.get(str(TEST_GUILD_ID), '!')}{message_content}"
+def message(self, message_content, as_owner=False):
+    if message_content.startswith("!"):  # use the right prefix
+        message_content = f"{self.prefixes.get(str(TEST_GUILD_ID), '!')}{message_content[1:]}"
+
     log.info(f"Sending message {message_content}")
     # pretend we just received a message in our testing channel
     self._connection.parse_message_create({
@@ -126,7 +134,7 @@ def message(self, message_content):
         "id": MESSAGE_ID,
         "pinned": False,
         "edited_timestamp": None,
-        "author": DEFAULT_USER,
+        "author": DEFAULT_USER if not as_owner else OWNER_USER,
         "mention_roles": [],
         "content": message_content,
         "channel_id": str(TEST_CHANNEL_ID),
@@ -140,6 +148,16 @@ def event(self, event_type, content):
     pass
 
 
+# another error handler so unhandled errors bubble up correctly
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandInvokeError):
+        error = error.original
+
+    if isinstance(error, (AvraeException, DiscordException)):
+        return
+    raise error
+
+
 @pytest.fixture(scope="session")
 async def avrae(dhttp):
     from dbot import bot  # runs all bot setup
@@ -148,6 +166,9 @@ async def avrae(dhttp):
     # monkey-patch in .message and .event
     bot.message = message.__get__(bot, type(bot))
     bot.event = event.__get__(bot, type(bot))
+
+    # add error event listener
+    bot.add_listener(on_command_error, "on_command_error")
 
     # set up http
     bot.http = dhttp
@@ -159,8 +180,8 @@ async def avrae(dhttp):
 
     # we never do initialize the websocket - we just replay discord's login sequence
     # to initialize a "channel" to send testing messages to
+    # in this case, we initialize a testing guild
 
-    # in this case, it's a dummy guild
     # noinspection PyProtectedMember
     bot._connection.parse_ready(DUMMY_READY)
     # noinspection PyProtectedMember

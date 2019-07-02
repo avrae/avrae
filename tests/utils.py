@@ -1,187 +1,50 @@
-"""
-This file contains a bunch of dummy data and constants to emulate the responses of the Discord API
-for automated testing.
-"""
-import credentials
+import pytest
 
-TEST_CHANNEL_ID = 314159265358979323  # pi
-TEST_DMCHANNEL_ID = 271828182845904523  # e
-TEST_GUILD_ID = 112358132235579214  # fib
-MESSAGE_ID = "123456789012345678"
-OWNER_USER = {
-    "id": str(credentials.owner_id),
-    "username": "zhu.exe",
-    "discriminator": "4211",
-    "avatar": None
-}
-DEFAULT_USER = {
-    "id": "111111111111111112",
-    "username": "I'm a user",
-    "discriminator": "0001",
-    "avatar": None
-}
-ME_USER = {
-    'username': 'Avrae Test', 'verified': True, 'locale': 'en-US', 'mfa_enabled': True, 'bot': True,
-    'id': '111111111111111111', 'flags': 0, 'avatar': None, 'discriminator': '0000', 'email': None
-}
+from cogs5e.funcs.lookupFuncs import c
 
+# commonly used patterns
 
-# http responses
-def message_response(data):
-    embeds = []
-    if data.get('embed'):
-        embeds = [data['embed']]
-    return {
-        'nonce': None, 'attachments': [], 'tts': False, 'embeds': embeds,
-        'timestamp': '2019-07-01T17:37:43.068000+00:00', 'mention_everyone': False, 'id': MESSAGE_ID,
-        'pinned': False, 'edited_timestamp': None,
-        'author': DEFAULT_USER, 'mention_roles': [], 'content': data.get('content'),
-        'channel_id': str(TEST_CHANNEL_ID), 'mentions': [], 'type': 0
-    }
+# rolled dice: the individual results of dice
+# matches:
+# (5)
+# (~~13~~, 16, ~~**1**~~)
+# (1 -> 4, 5, 4)
+# (4, ~~2 -> 4~~, ~~1 -> 4~~)
+# (5 -> **6**, 5 -> **6**, ~~1 -> **6**~~)
+ROLLED_DICE_PATTERN = r"\((~*(\**\d+\**( -> )?)+~*(, )?)+\)"
+
+# d20: 1d20 or advantage variants plus potential modifier and result after
+# matches:
+# 1d20 (5)
+# 1d20 (12) + 3
+# 1d20 (**1**) - 1 = `0`
+# 1d20 (**20**)
+# 2d20kh1 (15, ~~2~~) = `15`
+# 3d20kh1 (~~13~~, 16, ~~**1**~~)
+D20_PATTERN = rf"\d?d20(\w+[lh<>]?\d+)? *{ROLLED_DICE_PATTERN}( *[+-] *\d+)?( *= *`\d+`)?"
+
+# dice: any combination of valid dice, rolled or unrolled
+DICE_PATTERN = rf"( *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+( *= *`\d+`)?"
+
+# to hit: a to-hit section of an attack
+TO_HIT_PATTERN = rf"\*\*To Hit:\*\* ({D20_PATTERN}{DICE_PATTERN} = `\d+`)|(Automatic (hit|miss)!)"
+
+# damage: a damage section of an attack
+DAMAGE_PATTERN = rf"(\*\*Damage (\(CRIT!\))?:\*\* {DICE_PATTERN})|(\*\*Miss!\*\*)"
+
+# attack: to hit and damage on two lines
+ATTACK_PATTERN = rf"{TO_HIT_PATTERN}\n{DAMAGE_PATTERN}"
 
 
-def edit_response(data):
-    embeds = []
-    if data.get('embed'):
-        embeds = [data['embed']]
-    return {
-        'nonce': None, 'attachments': [], 'tts': False, 'embeds': embeds,
-        'timestamp': '2019-07-01T17:37:43.068000+00:00', 'mention_everyone': False, 'id': MESSAGE_ID,
-        'pinned': False, 'edited_timestamp': '2019-07-01T17:37:43.152340+00:00',
-        'author': DEFAULT_USER, 'mention_roles': [],
-        'content': data.get('content'), 'channel_id': '594236068627218447', 'mentions': [], 'type': 0
-    }
+def requires_data(datatypes=None):
+    """A wrapper that skips a test if data is not loaded."""
+    if datatypes is None:
+        datatypes = ["spells"]  # generally, if spells aren't loaded, nothing is
+    if isinstance(datatypes, str):
+        datatypes = [datatypes]
 
+    for datatype in datatypes:
+        if not getattr(c, datatype, None):
+            return pytest.mark.skip(reason=f"Test requires {datatype} data")
 
-def start_dm_response(data):
-    user = next(u for u in (DEFAULT_USER, OWNER_USER) if u['id'] == str(data['recipient_id']))
-    return {
-        "last_message_id": None,
-        "type": 1,
-        "id": str(TEST_DMCHANNEL_ID),
-        "recipients": [
-            user
-        ]
-    }
-
-
-RESPONSES = {
-    "GET /users/@me": lambda _: ME_USER,
-    "GET /gateway": lambda _: {'url': 'wss://gateway.discord.gg'},
-    f"POST /channels/{TEST_CHANNEL_ID}/messages": message_response,
-    f"POST /channels/{TEST_DMCHANNEL_ID}/messages": message_response,
-    f"PATCH /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": edit_response,
-    f"DELETE /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": lambda _: None,
-    "POST /users/@me/channels": start_dm_response
-}
-
-# initialization
-DUMMY_READY = {
-    'v': 6,
-    'user_settings': {},
-    'user': ME_USER,
-    'shard': [
-        0,
-        1
-    ],
-    'session_id': '6f1d1da3e7e480582376e423574335fd',
-    'relationships': [],
-    'private_channels': [],
-    'presences': [],
-    'guilds': [
-        {
-            'unavailable': True,
-            'id': str(TEST_GUILD_ID)
-        }
-    ]
-}
-
-DUMMY_GUILD_CREATE = {
-    'afk_timeout': 300,
-    'description': None,
-    'members': [
-        {
-            'user': ME_USER,
-            'roles': [],
-            'mute': False,
-            'joined_at': '2018-02-13T00:45:01.457000+00:00',
-            'deaf': False
-        },
-        {
-            'user': DEFAULT_USER,
-            'roles': [],
-            'mute': False,
-            'joined_at': '2018-02-13T01:41:56.998000+00:00',
-            'deaf': False
-        },
-        {
-            'user': OWNER_USER,
-            'roles': [],
-            'mute': False,
-            'joined_at': '2018-02-13T01:41:56.998000+00:00',
-            'deaf': False
-        }
-    ],
-    'roles': [
-        {
-            'position': 0,
-            'permissions': 104324681,
-            'name': '@everyone',
-            'mentionable': False,
-            'managed': False,
-            'id': str(TEST_GUILD_ID),
-            'hoist': False,
-            'color': 0
-        }
-    ],
-    'afk_channel_id': None,
-    'system_channel_flags': 0,
-    'emojis': [],
-    'voice_states': [],
-    'application_id': None,
-    'system_channel_id': str(TEST_CHANNEL_ID),
-    'name': 'Test Guild',
-    'premium_tier': 0,
-    'joined_at': '2018-02-13T00:45:01.457000+00:00',
-    'banner': None,
-    'id': str(TEST_GUILD_ID),
-    'features': [],
-    'preferred_locale': 'en-US',
-    'region': 'us-west',
-    'member_count': 3,
-    'premium_subscription_count': 0,
-    'default_message_notifications': 0,
-    'channels': [
-        {
-            'type': 0,
-            'topic': None,
-            'rate_limit_per_user': 0,
-            'position': 0,
-            'permission_overwrites': [],
-            'parent_id': None,
-            'name': 'test-channel',
-            'last_message_id': None,
-            'id': str(TEST_CHANNEL_ID)
-        }
-    ],
-    'unavailable': False,
-    'icon': None,
-    'vanity_url_code': None,
-    'owner_id': OWNER_USER['id'],
-    'presences': [],
-    'splash': None,
-    'mfa_level': 0,
-    'explicit_content_filter': 0,
-    'lazy': True,
-    'large': False,
-    'verification_level': 0
-}
-
-DUMMY_DMCHANNEL_CREATE = {
-    'type': 1,
-    'recipients': [
-        DEFAULT_USER
-    ],
-    'last_message_id': None,
-    'id': str(TEST_DMCHANNEL_ID)
-}
+    return lambda func: func

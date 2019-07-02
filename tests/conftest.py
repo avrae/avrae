@@ -14,7 +14,7 @@ from discord.ext import commands
 from discord.http import HTTPClient, Route
 
 from cogs5e.models.errors import AvraeException
-from tests.utils import *
+from tests.setup import *
 
 SENTINEL = object()
 
@@ -37,7 +37,7 @@ class Request:
 
 
 # assertations
-def compare_embeds(request_embed, embed, *, regex: bool = False):
+def compare_embeds(request_embed, embed, *, regex: bool = True):
     """Recursively checks to ensure that two embeds have the same structure."""
     assert type(request_embed) == type(embed)
 
@@ -57,7 +57,7 @@ def compare_embeds(request_embed, embed, *, regex: bool = False):
         assert request_embed == embed
 
 
-def message_content_check(request: Request, content: str = None, *, regex: bool = False, embed: Embed = None):
+def message_content_check(request: Request, content: str = None, *, regex: bool = True, embed: Embed = None):
     if content:
         if regex:
             assert re.match(content, request.data.get('content'))
@@ -100,7 +100,7 @@ class DiscordHTTPProxy(HTTPClient):
             await asyncio.sleep(0.1)
         raise TimeoutError("Timed out waiting for Avrae response")
 
-    async def receive_message(self, content: str = None, *, regex: bool = False, dm=False, embed: Embed = None):
+    async def receive_message(self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None):
         """
         Assert that the bot sends a message, and that it is the message we expect.
         :param content The text or regex to match the message content against
@@ -116,7 +116,7 @@ class DiscordHTTPProxy(HTTPClient):
 
         message_content_check(request, content, regex=regex, embed=embed)
 
-    async def receive_edit(self, content: str = None, *, regex: bool = False, dm=False, embed: Embed = None):
+    async def receive_edit(self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None):
         """
         Assert that the bot edits a message, and that it is the message we expect.
         :param content The text or regex to match the message content against
@@ -225,8 +225,6 @@ async def avrae(dhttp):
     bot._connection.parse_guild_create(DUMMY_GUILD_CREATE)
     # noinspection PyProtectedMember
     bot._connection.parse_channel_create(DUMMY_DMCHANNEL_CREATE)
-
-    print(bot._connection._private_channels)
 
     log.info("Ready for testing")
     yield bot

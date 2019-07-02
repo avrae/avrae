@@ -20,8 +20,8 @@ async def test_basic_commands(avrae, dhttp):
 
 async def test_nonexistant_commands(avrae, dhttp):
     dhttp.clear()
-    avrae.message("!thiscommanddoesnotexistandisnotanalias")
-    avrae.message("thismessageisnotevenacommand")
+    avrae.message("!this_command_does_not_exist_and_is_not_an_alias")
+    avrae.message("this_message_is_not_even_a_command")
     avrae.message("hello world")
     avrae.message("spam spam spam!roll 1d20")
     assert dhttp.queue_empty()  # avrae has not responded to anything

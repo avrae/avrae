@@ -9,7 +9,7 @@ import re
 from queue import Queue
 
 import pytest
-from discord import DiscordException
+from discord import DiscordException, Embed
 from discord.ext import commands
 from discord.http import HTTPClient, Route
 
@@ -34,6 +34,40 @@ class Request:
 
     def __str__(self):
         return f"{self.method} {self.url}\n{self.data}"
+
+
+# assertations
+def compare_embeds(request_embed, embed, *, regex: bool = False):
+    """Recursively checks to ensure that two embeds have the same structure."""
+    assert type(request_embed) == type(embed)
+
+    if isinstance(embed, dict):
+        for k, v in embed.items():
+            if isinstance(v, (dict, list)):
+                compare_embeds(request_embed[k], embed[k])
+            elif isinstance(v, str):
+                if regex:
+                    assert re.match(embed[k], request_embed[k])
+                else:
+                    assert request_embed[k] == embed[k]
+            else:
+                assert request_embed[k] == embed[k]
+    elif isinstance(embed, list):
+        assert len(embed) == len(request_embed)
+        for e, r in zip(embed, request_embed):
+            compare_embeds(r, e)
+    else:
+        assert request_embed == embed
+
+
+def message_content_check(request: Request, content: str = None, *, regex: bool = False, embed: Embed = None):
+    if content:
+        if regex:
+            assert re.match(content, request.data.get('content'))
+        else:
+            assert request.data.get('content') == content
+    if embed:
+        compare_embeds(request.data.get('embed'), embed.to_dict(), regex=regex)
 
 
 class DiscordHTTPProxy(HTTPClient):
@@ -63,13 +97,19 @@ class DiscordHTTPProxy(HTTPClient):
         self._request_check_queue = Queue()
 
     async def get_request(self):
-        while self._request_check_queue.empty():
+        for _ in range(100):
+            if not self._request_check_queue.empty():
+                return self._request_check_queue.get()
             await asyncio.sleep(0.1)
-        return self._request_check_queue.get()
+        raise TimeoutError("Timed out waiting for Avrae response")
 
-    async def receive_message(self, content=None, *, regex=None, dm=False):  # todo handle embeds
+    async def receive_message(self, content: str = None, *, regex: bool = False, dm=False, embed: Embed = None):
         """
         Assert that the bot sends a message, and that it is the message we expect.
+        :param content The text or regex to match the message content against
+        :param regex Whether to interpret content checking fields as a regex
+        :param dm Whether it was a Direct Message that was received or not
+        :param embed An embed to check against
         """
         request = await self.get_request()
         channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
@@ -77,14 +117,15 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "POST"
         assert request.url.endswith(f"/channels/{channel}/messages")
 
-        if regex:
-            assert re.match(regex, request.data['content'])
-        elif content:
-            assert request.data['content'] == content
+        message_content_check(request, content, regex=regex, embed=embed)
 
-    async def receive_edit(self, content=None, *, regex=None, dm=False):
+    async def receive_edit(self, content: str = None, *, regex: bool = False, dm=False, embed: Embed = None):
         """
         Assert that the bot edits a message, and that it is the message we expect.
+        :param content The text or regex to match the message content against
+        :param regex Whether to interpret content checking fields as a regex
+        :param dm Whether it was a Direct Message that was edited or not
+        :param embed An embed to check against
         """
         request = await self.get_request()
         channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
@@ -92,10 +133,7 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "PATCH"
         assert request.url.endswith(f"/channels/{channel}/messages/{MESSAGE_ID}")
 
-        if regex:
-            assert re.match(regex, request.data['content'])
-        elif content:
-            assert request.data['content'] == content
+        message_content_check(request, content, regex=regex, embed=embed)
 
     async def receive_delete(self, dm=False):
         """
@@ -119,7 +157,7 @@ def dhttp():
 
 
 # methods to monkey-patch in to send messages to the bot without sending
-def message(self, message_content, as_owner=False):
+def message(self, message_content, as_owner=False, dm=False):
     if message_content.startswith("!"):  # use the right prefix
         message_content = f"{self.prefixes.get(str(TEST_GUILD_ID), '!')}{message_content[1:]}"
 
@@ -137,7 +175,7 @@ def message(self, message_content, as_owner=False):
         "author": DEFAULT_USER if not as_owner else OWNER_USER,
         "mention_roles": [],
         "content": message_content,
-        "channel_id": str(TEST_CHANNEL_ID),
+        "channel_id": str(TEST_CHANNEL_ID) if not dm else str(TEST_DMCHANNEL_ID),
         "mentions": [],
         "type": 0
     })

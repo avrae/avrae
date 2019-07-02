@@ -49,7 +49,7 @@ def edit_response(data):
         'timestamp': '2019-07-01T17:37:43.068000+00:00', 'mention_everyone': False, 'id': MESSAGE_ID,
         'pinned': False, 'edited_timestamp': '2019-07-01T17:37:43.152340+00:00',
         'author': DEFAULT_USER, 'mention_roles': [],
-        'content': data.get('content'), 'channel_id': '594236068627218447', 'mentions': [], 'type': 0
+        'content': data.get('content'), 'channel_id': str(TEST_CHANNEL_ID), 'mentions': [], 'type': 0
     }
 
 

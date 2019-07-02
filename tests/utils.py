@@ -176,3 +176,12 @@ DUMMY_GUILD_CREATE = {
     'large': False,
     'verification_level': 0
 }
+
+DUMMY_DMCHANNEL_CREATE = {
+    'type': 1,
+    'recipients': [
+        DEFAULT_USER
+    ],
+    'last_message_id': None,
+    'id': str(TEST_DMCHANNEL_ID)
+}

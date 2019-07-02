@@ -45,11 +45,8 @@ def compare_embeds(request_embed, embed, *, regex: bool = False):
         for k, v in embed.items():
             if isinstance(v, (dict, list)):
                 compare_embeds(request_embed[k], embed[k])
-            elif isinstance(v, str):
-                if regex:
-                    assert re.match(embed[k], request_embed[k])
-                else:
-                    assert request_embed[k] == embed[k]
+            elif isinstance(v, str) and regex:
+                assert re.match(embed[k], request_embed[k])
             else:
                 assert request_embed[k] == embed[k]
     elif isinstance(embed, list):
@@ -145,6 +142,9 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "DELETE"
         assert request.url.endswith(f"/channels/{channel}/messages/{MESSAGE_ID}")
 
+    def queue_empty(self):
+        return self._request_check_queue.empty()
+
 
 # the http fixture
 @pytest.fixture(scope="session")
@@ -159,7 +159,11 @@ def dhttp():
 # methods to monkey-patch in to send messages to the bot without sending
 def message(self, message_content, as_owner=False, dm=False):
     if message_content.startswith("!"):  # use the right prefix
-        message_content = f"{self.prefixes.get(str(TEST_GUILD_ID), '!')}{message_content[1:]}"
+        if not dm:
+            message_content = f"{self.prefixes.get(str(TEST_GUILD_ID), '!')}{message_content[1:]}"
+        else:
+            from dbot import DEFAULT_PREFIX
+            message_content = f"{DEFAULT_PREFIX}{message_content[1:]}"
 
     log.info(f"Sending message {message_content}")
     # pretend we just received a message in our testing channel
@@ -182,10 +186,6 @@ def message(self, message_content, as_owner=False, dm=False):
     return MESSAGE_ID
 
 
-def event(self, event_type, content):
-    pass
-
-
 # another error handler so unhandled errors bubble up correctly
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandInvokeError):
@@ -201,9 +201,8 @@ async def avrae(dhttp):
     from dbot import bot  # runs all bot setup
 
     # set up a way for us to send events to Avrae
-    # monkey-patch in .message and .event
+    # monkey-patch in .message
     bot.message = message.__get__(bot, type(bot))
-    bot.event = event.__get__(bot, type(bot))
 
     # add error event listener
     bot.add_listener(on_command_error, "on_command_error")
@@ -218,12 +217,16 @@ async def avrae(dhttp):
 
     # we never do initialize the websocket - we just replay discord's login sequence
     # to initialize a "channel" to send testing messages to
-    # in this case, we initialize a testing guild
+    # in this case, we initialize a testing guild and dummy DMChannel
 
     # noinspection PyProtectedMember
     bot._connection.parse_ready(DUMMY_READY)
     # noinspection PyProtectedMember
     bot._connection.parse_guild_create(DUMMY_GUILD_CREATE)
+    # noinspection PyProtectedMember
+    bot._connection.parse_channel_create(DUMMY_DMCHANNEL_CREATE)
+
+    print(bot._connection._private_channels)
 
     log.info("Ready for testing")
     yield bot

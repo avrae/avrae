@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from fuzzywuzzy import fuzz, process
 
-from cogs5e.funcs.lookupFuncs import c
+from cogs5e.funcs.lookupFuncs import compendium
 
 MODEL_NAME = "srd-spells"
 ALLOWED_CHARACTERS = "abcdefghijklmnopqrstuvwxyz '"
@@ -53,9 +53,9 @@ def get_spell_model_predictions(query, num_matches=5):
     indexed = list(enumerate(prediction))
     weighted = sorted(indexed, key=lambda e: e[1], reverse=True)
 
-    log.debug('\n'.join([f"{c.spells[r[0]].name}: {r[1]:.2f}" for r in weighted[:num_matches]]))
+    log.debug('\n'.join([f"{compendium.spells[r[0]].name}: {r[1]:.2f}" for r in weighted[:num_matches]]))
 
-    return [c.spells[r[0]] for r in weighted[:num_matches]], [r[1] for r in weighted[:num_matches]]
+    return [compendium.spells[r[0]] for r in weighted[:num_matches]], [r[1] for r in weighted[:num_matches]]
 
 
 def weave(*iterables):

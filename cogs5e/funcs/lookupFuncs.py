@@ -72,7 +72,7 @@ class Compendium:
         return data
 
 
-c = Compendium()
+compendium = Compendium()
 
 
 # ----- Monster stuff
@@ -89,7 +89,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     except NoActiveBrew:
         custom_monsters = []
         bestiary_id = None
-    choices = list(itertools.chain(c.monster_mash, custom_monsters))
+    choices = list(itertools.chain(compendium.monster_mash, custom_monsters))
     if ctx.guild:
         async for servbestiary in Bestiary.server_bestiaries(ctx):
             if servbestiary.id == bestiary_id:
@@ -132,7 +132,7 @@ async def get_spell_choices(ctx):
     except NoActiveBrew:
         custom_spells = []
         tome_id = None
-    choices = list(itertools.chain(c.spells, custom_spells))
+    choices = list(itertools.chain(compendium.spells, custom_spells))
     if ctx.guild:
         async for servtome in ctx.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['spells']):
             choices.extend(Spell.from_dict(s) for s in servtome['spells'] if servtome['_id'] != tome_id)

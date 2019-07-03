@@ -14,7 +14,7 @@ from math import ceil, floor
 import aiohttp
 import html2text
 
-from cogs5e.funcs.lookupFuncs import c
+from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
@@ -441,7 +441,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
         spells = []
         for value in spellnames:
-            result = search(c.spells, value, lambda sp: sp.name, strict=True)
+            result = search(compendium.spells, value, lambda sp: sp.name, strict=True)
             if result and result[0] and result[1]:
                 spells.append(SpellbookSpell(result[0].name, True))
             elif len(value) > 2:

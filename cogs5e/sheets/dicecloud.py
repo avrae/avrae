@@ -24,7 +24,7 @@ from math import ceil, floor
 from simpleeval import FunctionNotDefined, NameNotDefined, SimpleEval
 
 import credentials
-from cogs5e.funcs.lookupFuncs import c
+from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import dicecloud_client
 from cogs5e.models.dicecloud.errors import DicecloudException
@@ -268,7 +268,7 @@ class DicecloudParser(SheetLoaderABC):
 
         spells = []
         for spell in spellnames:
-            result = search(c.spells, spell.strip(), lambda sp: sp.name)
+            result = search(compendium.spells, spell.strip(), lambda sp: sp.name)
             if result and result[0] and result[1]:
                 spells.append(SpellbookSpell.from_spell(result[0]))
             else:

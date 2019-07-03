@@ -2,7 +2,6 @@ import random
 
 import pygsheets
 
-from cogs5e.funcs.lookupFuncs import c
 from cogs5e.funcs.lookupFuncs import *
 
 PARENT_FOLDER_ID = '0B7G4hVfa4Trwak1vUWF2U19KaDA'
@@ -60,7 +59,7 @@ async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None,
     await self.bot.send_message(ctx.message.author, "**Stats for {0}:** `{1}`".format(name, stats))
     # Race Gen
     #    Racial Features
-    race = race or random.choice([r for r in c.races if r['source'] in ('PHB', 'VGM')])
+    race = race or random.choice([r for r in compendium.races if r['source'] in ('PHB', 'VGM')])
 
     _sizes = {'T': "Tiny", 'S': "Small",
               'M': "Medium", 'L': "Large", 'H': "Huge"}
@@ -108,7 +107,7 @@ async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None,
 
     # Class Gen
     #    Class Features
-    _class = _class or random.choice([cl for cl in c.classes if not 'UA' in cl.get('source')])
+    _class = _class or random.choice([cl for cl in compendium.classes if not 'UA' in cl.get('source')])
     subclass = subclass or random.choice([s for s in _class['subclasses'] if not 'UA' in s['source']])
     embed = EmbedWithAuthor(ctx)
     embed.title = f"{_class['name']} ({subclass['name']})"
@@ -209,7 +208,7 @@ async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None,
 
     # Background Gen
     #    Inventory/Trait Gen
-    background = background or random.choice(c.backgrounds)
+    background = background or random.choice(compendium.backgrounds)
     embed = EmbedWithAuthor(ctx)
     embed.title = background['name']
     embed.description = f"*Source: {background.get('source', 'Unknown')}*"

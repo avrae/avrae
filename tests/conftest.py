@@ -142,6 +142,26 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "DELETE"
         assert request.url.endswith(f"/channels/{channel}/messages/{MESSAGE_ID}")
 
+    async def receive_pin(self, dm=False):
+        """
+        Assert that the bot pins a message.
+        """
+        request = await self.get_request()
+        channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
+
+        assert request.method == "PUT"
+        assert request.url.endswith(f"/channels/{channel}/pins/{MESSAGE_ID}")
+
+    async def receive_unpin(self, dm=False):
+        """
+        Assert that the bot unpins a message.
+        """
+        request = await self.get_request()
+        channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
+
+        assert request.method == "DELETE"
+        assert request.url.endswith(f"/channels/{channel}/pins/{MESSAGE_ID}")
+
     def queue_empty(self):
         return self._request_check_queue.empty()
 

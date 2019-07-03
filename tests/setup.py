@@ -72,7 +72,9 @@ RESPONSES = {
     f"POST /channels/{TEST_DMCHANNEL_ID}/messages": message_response,
     f"PATCH /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": edit_response,
     f"DELETE /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": lambda _: None,
-    "POST /users/@me/channels": start_dm_response
+    "POST /users/@me/channels": start_dm_response,
+    f"PUT /channels/{TEST_CHANNEL_ID}/pins/{MESSAGE_ID}": lambda _: None,
+    f"DELETE /channels/{TEST_CHANNEL_ID}/pins/{MESSAGE_ID}": lambda _: None
 }
 
 # initialization

@@ -18,7 +18,7 @@ services:
       ENVIRONMENT: development
       DISCORD_OWNER_USER_ID: 98765432109876543
     volumes:
-      - "./shared:/home/avrae/shared"
+      - "./shared:/app/shared"
 
   mongo:
     image: mongo

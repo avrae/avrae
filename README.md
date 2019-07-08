@@ -84,4 +84,4 @@ docker-compose -f docker-compose.test.yml -p avrae up -d
 docker logs -f avrae_tests_1
 ```
 This should initialize an ephemeral database to run command unit tests in. 
-You should set the `DICECLOUD_USER`, `DICECLOUD_PASS`, and `DICECLOUD_TOKEN` env vars to their correct values.
+You should set the `DICECLOUD_USER`, `DICECLOUD_PASS`, `DICECLOUD_TOKEN`, and `GOOGLE_SERVICE_ACCOUNT` env vars to their correct values.

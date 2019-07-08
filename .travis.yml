@@ -6,8 +6,7 @@ script:
   - docker wait avrae_tests_1
   - docker build -t avrae-bot .
 after_success:
-  - cp shared/.coverage .coverage
-  - pip install --user coverage
+  - cp shared/coverage.xml coverage.xml
   - bash <(curl -s https://codecov.io/bash)
 before_deploy:
   - pip install --user awscli

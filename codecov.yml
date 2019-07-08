@@ -1,2 +1,2 @@
 fixes:
-  - "/app/::/home/travis/build/avrae/avrae/"
+  - "app/::home/travis/build/avrae/avrae/"

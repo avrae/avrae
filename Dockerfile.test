@@ -11,6 +11,7 @@ COPY --chown=avrae:avrae requirements.txt .
 RUN pip install --user --no-warn-script-location -r requirements.txt
 
 RUN mkdir temp
+RUN mkdir shared
 
 COPY --chown=avrae:avrae . .
 

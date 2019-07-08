@@ -76,3 +76,11 @@ First, install the dependencies with `pip install -r requirements.txt`.
 - If running Avrae in unsharded mode (**recommended for testing**), run `python dbot.py test`.
 - If running Avrae in sharded mode, run `python dbot.py`.
 
+#### Testing
+To test Avrae, run these commands:
+```
+docker-compose -f docker-compose.test.yml -p avrae build
+docker-compose -f docker-compose.test.yml -p avrae up -d
+docker logs -f avrae_tests_1
+```
+This should initialize an ephemeral database to run command unit tests in.

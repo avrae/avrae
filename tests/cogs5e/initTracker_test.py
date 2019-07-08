@@ -27,10 +27,10 @@ async def test_init_end(avrae, dhttp):
     await dhttp.receive_delete()
     await dhttp.receive_delete()
     await dhttp.receive_message("OK, ending...")
-    await dhttp.receive_message("End of combat report: \d+ rounds "
-                                "```markdown\nCurrent initiative: \d+ \(round \d+\)\n"
-                                "===============================\n```.*", dm=True)
-    await dhttp.receive_edit("[\s\S]*```-----COMBAT ENDED-----```")
+    await dhttp.receive_message(r"End of combat report: \d+ rounds "
+                                r"```markdown\nCurrent initiative: \d+ \(round \d+\)\n"
+                                r"===============================\n```.*", dm=True)
+    await dhttp.receive_edit(r"[\s\S]*```-----COMBAT ENDED-----```")
     await dhttp.receive_unpin()
     await dhttp.receive_edit("Combat ended.")
 

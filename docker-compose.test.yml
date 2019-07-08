@@ -10,7 +10,7 @@ services:
       - mongo
       - redis
     environment:
-      - DISCORD_OWNER_USER_ID: 98765432109876543
+      - DISCORD_OWNER_USER_ID=98765432109876543
       - DICECLOUD_USER
       - DICECLOUD_PASS
       - DICECLOUD_TOKEN

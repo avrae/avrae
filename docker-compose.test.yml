@@ -6,16 +6,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
-      args:
-        DBOT_ARGS: test
-        ENVIRONMENT: development
     depends_on:
       - mongo
       - redis
     environment:
-      DBOT_ARGS: test
-      ENVIRONMENT: development
-      DISCORD_OWNER_USER_ID: 98765432109876543
+      - DISCORD_OWNER_USER_ID: 98765432109876543
+      - DICECLOUD_USER
+      - DICECLOUD_PASS
+      - DICECLOUD_TOKEN
     volumes:
       - "./shared:/app/shared"
 

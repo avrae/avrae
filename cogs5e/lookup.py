@@ -244,7 +244,8 @@ class Lookup(commands.Cog):
                     level_resources[table['colLabels'][i]] = parse_data_entry([col])
 
             for res_name, res_value in level_resources.items():
-                embed.add_field(name=res_name, value=res_value)
+                if res_value != '0':
+                    embed.add_field(name=res_name, value=res_value)
 
             for f in level_features:
                 text = parse_data_entry(f['entries'])

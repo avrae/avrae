@@ -13,11 +13,10 @@ services:
       - mongo
       - mongo-express
       - redis
-    env_file:
-      - ./docker/env
     environment:
       DBOT_ARGS: test
       ENVIRONMENT: development
+      DISCORD_OWNER_USER_ID: 98765432109876543
 
   mongo:
     image: mongo

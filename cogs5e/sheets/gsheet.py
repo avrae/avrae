@@ -12,6 +12,7 @@ Created on May 8, 2017
 # v15: version fix
 import asyncio
 import logging
+import os
 import re
 
 import pygsheets
@@ -108,6 +109,8 @@ class GoogleSheet(SheetLoaderABC):
         GoogleSheet._client_initializing = True
 
         def _():
+            if "GOOGLE_SERVICE_ACCOUNT" in os.environ:
+                return pygsheets.authorize(service_account_env_var='GOOGLE_SERVICE_ACCOUNT', no_cache=True)
             return pygsheets.authorize(service_account_file='avrae-google.json', no_cache=True)
 
         GoogleSheet.g_client = await asyncio.get_event_loop().run_in_executor(None, _)

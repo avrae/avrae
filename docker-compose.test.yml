@@ -29,15 +29,6 @@ services:
     ports:
       - 58017:27017
 
-  mongo-express:
-    image: mongo-express
-    restart: always
-    ports:
-      - 58081:8081
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: topsecret
-
   redis:
     image: redis:5
     ports:

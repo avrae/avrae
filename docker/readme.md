@@ -5,6 +5,9 @@
 - [Docker Compose](https://docs.docker.com/compose/install/).
 - [Dicecloud](https://www.dicecloud.com) account - do NOT register with Google, create a normal account.
 - [Discord](https://discordapp.com/) account.
+- [Google Drive Service Account](https://gspread.readthedocs.io/en/latest/oauth2.html#using-signed-credentials).
+    - Follow steps 1-3 in the **Signed Credentials** portion. The contents of this JSON file is your `GOOGLE_SERVICE_ACCOUNT` env var.
+
 
 ### Discord setup
 
@@ -34,3 +37,4 @@
     DICECLOUD_USER=b
     DICECLOUD_PASS=c
     DICECLOUD_TOKEN=d
+    GOOGLE_SERVICE_ACCOUNT=e

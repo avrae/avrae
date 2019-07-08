@@ -8,7 +8,12 @@ You can join the Avrae Development Discord [here](https://discord.gg/pQbd4s6)!
 
 ## Contributing
 
-#### How to run Avrae locally
+### How to run Avrae locally
+#### Using Docker
+
+Check out docker/readme.md.
+
+#### Building Manually
 ###### OS Requirements
 Avrae runs best on Ubuntu 16.04.4, but should be fully compatible with any UNIX-based system.
 It is possible to run Avrae on Windows, but is not recommended.
@@ -29,24 +34,6 @@ You'll need to create a few files first.
 
 You'll also need to create a Google Drive Service Account. You can find instructions on how to do this [here](https://gspread.readthedocs.io/en/latest/oauth2.html#using-signed-credentials).
 Follow steps 1-3 in the **Signed Credentials** portion. Rename the JSON `avrae-google.json` and put it in the project root.
-
-###### Resources
-After creating the credential files, you'll have to create a few files so that Lookup doesn't break:
-- `res/backgrounds.json`*
-- `res/bestiary.json`*
-- `res/classes.json`*
-- `res/classfeats.json`*
-- `res/conditions.json`
-- `res/feats.json`
-- `res/itemprops.json` (should be `{}`)
-- `res/items.json`*
-- `res/names.json`*
-- `res/races.json`*
-- `res/rules.json`
-- `res/spells.json`*
-
-These files (except for itemprops) should just contain an empty JSON array (`[]`) for testing.
-Files marked with a * can be obtained by running the [data parsers](https://github.com/avrae/avrae-data).
 
 ###### Temp Folders
 You will need to create a folder named `temp`.

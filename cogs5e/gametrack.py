@@ -462,6 +462,7 @@ class GameTrack(commands.Cog):
         __Valid Arguments:__
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l [level] - Specifies the level to cast the spell at.
+        noconc - Ignores concentration requirements.
         **__Save Spells__**
         -dc [Save DC] - Default: Pulls a cvar called `dc`.
         -save [Save type] - Default: The spell's default save.

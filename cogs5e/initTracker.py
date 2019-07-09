@@ -1057,6 +1057,7 @@ class InitTracker(commands.Cog):
         -t <target> - Specifies one or more combatant's to target, chainable (e.g., "-t or1 -t or2").
         -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
         -l <level> - Specifies the level to cast the spell at.
+        noconc - Ignores concentration requirements.
         **__Save Spells__**
         -dc <save dc> - Changes the DC of the save.
         -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.
@@ -1078,6 +1079,7 @@ class InitTracker(commands.Cog):
         -t <target> - Specifies one or more combatant's to target, chainable (e.g., "-t or1 -t or2").
         -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
         -l <level> - Specifies the level to cast the spell at.
+        noconc - Ignores concentration requirements.
         **__Save Spells__**
         -dc <save dc> - Changes the DC of the save. Default: Pulls a cvar called `dc`.
         -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.

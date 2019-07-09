@@ -915,9 +915,11 @@ class Spell:
         if phrase:
             embed.description = f"*{phrase}*"
 
+        # concentration
+        noconc = args.last("noconc", type_=bool)
         conc_conflict = None
         conc_effect = None
-        if self.concentration and isinstance(caster, Combatant) and combat:
+        if all((self.concentration, isinstance(caster, Combatant), combat, not noconc)):
             duration = args.last('dur', self.get_combat_duration(), int)
             conc_effect = initiative.Effect.new(combat, caster, self.name, duration, "", True)
             effect_result = caster.add_effect(conc_effect)

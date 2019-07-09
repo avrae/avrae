@@ -1020,7 +1020,7 @@ class CombatantGroup:
         self._combatants = combatants
         self.ctx = ctx
         self._index = index
-        self.initMod = 0  # for sorting
+        self.init_skill = Skill(0)  # readonly
         self.group = None  # groups cannot be in groups
         self.isPrivate = False  # eh
 

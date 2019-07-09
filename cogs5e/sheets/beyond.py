@@ -380,11 +380,12 @@ class BeyondSheetParser(SheetLoaderABC):
             castingAbility = _class['definition']['spellCastingAbilityId'] or \
                              (_class['subclassDefinition'] or {}).get('spellCastingAbilityId')
             if castingAbility:
-                castingClasses += 1
                 casterMult = CASTER_TYPES.get(_class['definition']['name'], 1)
                 spellcasterLevel += _class['level'] * casterMult
+                castingClasses += 1 if casterMult else 0  # warlock multiclass fix
                 spellMod = max(spellMod, self.stat_from_id(castingAbility))
                 hasSpells = 'Spellcasting' in [cf['name'] for cf in _class['definition']['classFeatures']] or hasSpells
+
             if _class['definition']['name'] == 'Warlock':
                 pactSlots = pact_slots_by_level(_class['level'])
                 pactLevel = pact_level_by_level(_class['level'])

@@ -313,7 +313,6 @@ class BeyondSheetParser(SheetLoaderABC):
         min_base_armor = self.get_stat('minimum-base-armor')
         base = min_base_armor or 10
         armortype = None
-        add_dex = True if not min_base_armor else False
         shield = 0
         for item in self.character_data['inventory']:
             if item['equipped'] and item['definition']['filterType'] == 'Armor':
@@ -323,18 +322,15 @@ class BeyondSheetParser(SheetLoaderABC):
                 else:
                     base = item['definition']['armorClass']
                     armortype = _type
-        base = self.get_stat('armor-class', base=base)
+
+        baseArmor = self.get_stat('armor-class', base=base)
         dexBonus = self.get_stats().get_mod('dex')
+        maxDexBonus = self.get_stat('ac-max-dex-modifier', default=100)
         unarmoredBonus = self.get_stat('unarmored-armor-class')
         armoredBonus = self.get_stat('armored-armor-class')
-        bonus_ac_max_dex_armored_modifier = self.get_stat('ac-max-dex-armored-modifier', default=2)
         miscBonus = 0
 
-        if armortype not in (None, 'Light Armor'):
-            add_dex = False
-
-        if add_dex:
-            base = base + self.get_stat('unarmored-dex-ac-bonus', base=dexBonus)
+        armored = armortype is not None
 
         for val in self.character_data['characterValues']:
             if val['typeId'] == 1:  # AC override
@@ -344,16 +340,27 @@ class BeyondSheetParser(SheetLoaderABC):
             elif val['typeId'] == 3:  # AC misc bonus
                 miscBonus += val['value']
             elif val['typeId'] == 4:  # AC+DEX override
-                base = val['value']
+                baseArmor = val['value']
 
-        if armortype is None:
-            return base + unarmoredBonus + shield + miscBonus
-        elif armortype == 'Light Armor':
-            return base + shield + armoredBonus + miscBonus
-        elif armortype == 'Medium Armor':
-            return base + min(dexBonus, bonus_ac_max_dex_armored_modifier) + shield + armoredBonus + miscBonus
+        miscBonus += self.get_stat('dual-wield-armor-class')
+        # todo hack for integrated protection
+
+        if armortype == 'Medium Armor':
+            maxDexBonus = 2
+        elif armortype == 'Heavy Armor':
+            maxDexBonus = 0
+
+        # unarmored vs armored
+        if not armored:
+            armoredBonus = 0
+            maxDexBonus = self.get_stat('ac-max-dex-unarmored-modifier', default=maxDexBonus)
+            if not min_base_armor:
+                dexBonus = self.get_stat('unarmored-dex-ac-bonus', base=dexBonus)
         else:
-            return base + shield + armoredBonus + miscBonus
+            unarmoredBonus = 0
+            maxDexBonus = self.get_stat('ac-max-dex-armored-modifier', default=maxDexBonus)
+
+        return baseArmor + min(dexBonus, maxDexBonus) + shield + armoredBonus + unarmoredBonus + miscBonus
 
     def get_hp(self):
         return self.character_data['overrideHitPoints'] or \
@@ -417,7 +424,7 @@ class BeyondSheetParser(SheetLoaderABC):
         return spellbook
 
     def get_background(self):
-        if not self.character_data['background']:
+        if not self.character_data['background']['definition']:
             return None
         if not self.character_data['background']['hasCustomBackground']:
             return self.character_data['background']['definition']['name']

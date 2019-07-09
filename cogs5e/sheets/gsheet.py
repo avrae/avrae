@@ -122,7 +122,7 @@ class GoogleSheet(SheetLoaderABC):
         doc = GoogleSheet.g_client.open_by_key(self.url)
         self.character_data = TempCharacter(doc.sheet1, "A1:AR180")
         vcell = doc.sheet1.cell("AQ4").value
-        if "1.3" not in vcell:
+        if ("1.3" not in vcell) and vcell:
             self.additional = TempCharacter(doc.worksheet('index', 1), "A1:AP81")
             self.version = 2 if "2" in vcell else 1
 

@@ -756,7 +756,7 @@ class InitTracker(commands.Cog):
     @init.command()
     async def effect(self, ctx, target_name: str, effect_name: str, *args):
         """Attaches a status effect to a combatant.
-        ]args] is a set of args that affects a combatant in combat.
+        [args] is a set of args that affects a combatant in combat.
         See `!help init re` to remove effects.
         __**Valid Arguments**__
         -dur <duration> - Sets the duration of the effect, in rounds.

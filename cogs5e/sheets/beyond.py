@@ -53,6 +53,18 @@ HOUSERULE_SKILL_MAP = {
     12: 'insight', 17: 'intimidation', 8: 'investigation', 13: 'medicine', 9: 'nature', 14: 'perception',
     18: 'performance', 19: 'persuasion', 10: 'religion', 4: 'sleightOfHand', 5: 'stealth', 15: 'survival'
 }
+RESIST_OVERRIDE_MAP = {
+    1: ('Bludgeoning', 1), 2: ('Piercing', 1), 3: ('Slashing', 1), 4: ('Lightning', 1), 5: ('Thunder', 1),
+    6: ('Poison', 1), 7: ('Cold', 1), 8: ('Radiant', 1), 9: ('Fire', 1), 10: ('Necrotic', 1), 11: ('Acid', 1),
+    12: ('Psychic', 1), 17: ('Bludgeoning', 2), 18: ('Piercing', 2), 19: ('Slashing', 2), 20: ('Lightning', 2),
+    21: ('Thunder', 2), 22: ('Poison', 2), 23: ('Cold', 2), 24: ('Radiant', 2), 25: ('Fire', 2), 26: ('Necrotic', 2),
+    27: ('Acid', 2), 28: ('Psychic', 2), 33: ('Bludgeoning', 3), 34: ('Piercing', 3), 35: ('Slashing', 3),
+    36: ('Lightning', 3), 37: ('Thunder', 3), 38: ('Poison', 3), 39: ('Cold', 3), 40: ('Radiant', 3), 41: ('Fire', 3),
+    42: ('Necrotic', 3), 43: ('Acid', 3), 44: ('Psychic', 3), 47: ('Force', 1), 48: ('Force', 2), 49: ('Force', 3)
+}
+RESIST_TYPE_MAP = {
+    1: "resist", 2: "immune", 3: "vuln"
+}
 
 
 class BeyondSheetParser(SheetLoaderABC):
@@ -295,18 +307,29 @@ class BeyondSheetParser(SheetLoaderABC):
 
     def get_resistances(self):
         resist = {
-            'resist': [],
-            'immune': [],
-            'vuln': []
+            'resist': set(),
+            'immune': set(),
+            'vuln': set()
         }
         for modtype in self.character_data['modifiers'].values():
             for mod in modtype:
                 if mod['type'] == 'resistance':
-                    resist['resist'].append(mod['subType'])
+                    resist['resist'].add(mod['subType'].lower())
                 elif mod['type'] == 'immunity':
-                    resist['immune'].append(mod['subType'])
+                    resist['immune'].add(mod['subType'].lower())
                 elif mod['type'] == 'vulnerability':
-                    resist['vuln'].append(mod['subType'])
+                    resist['vuln'].add(mod['subType'].lower())
+
+        for override in self.character_data['customDefenseAdjustments']:
+            if not override['type'] == 2:
+                continue
+            if override['id'] not in RESIST_OVERRIDE_MAP:
+                continue
+
+            dtype, rtype = RESIST_OVERRIDE_MAP[override['id']]
+            resist[RESIST_TYPE_MAP[rtype]].add(dtype.lower())
+
+        resist = {k: list(v) for k, v in resist.items()}
         return Resistances.from_dict(resist)
 
     def get_ac(self):

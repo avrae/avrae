@@ -29,7 +29,7 @@ API_BASE = "https://www.dndbeyond.com/character/"
 DAMAGE_TYPES = {1: "bludgeoning", 2: "piercing", 3: "slashing", 4: "necrotic", 5: "acid", 6: "cold", 7: "fire",
                 8: "lightning", 9: "thunder", 10: "poison", 11: "psychic", 12: "radiant", 13: "force"}
 CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.334, "Monk": 0, "Paladin": 0.5,
-                "Ranger": 0.5, "Rogue": 0.334, "Sorcerer": 1, "Warlock": 0, "Wizard": 1}
+                "Ranger": 0.5, "Rogue": 0.334, "Sorcerer": 1, "Warlock": 0, "Wizard": 1, "Artificer": 0.5}
 SLOTS_PER_LEVEL = {
     1: lambda l: min(l + 1, 4) if l else 0,
     2: lambda l: 0 if l < 3 else min(l - 1, 3),
@@ -375,6 +375,7 @@ class BeyondSheetParser(SheetLoaderABC):
         spellMod = 0
         pactSlots = 0
         pactLevel = 1
+        hasSpells = False
         for _class in self.character_data['classes']:
             castingAbility = _class['definition']['spellCastingAbilityId'] or \
                              (_class['subclassDefinition'] or {}).get('spellCastingAbilityId')
@@ -383,6 +384,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 casterMult = CASTER_TYPES.get(_class['definition']['name'], 1)
                 spellcasterLevel += _class['level'] * casterMult
                 spellMod = max(spellMod, self.stat_from_id(castingAbility))
+                hasSpells = 'Spellcasting' in [cf['name'] for cf in _class['definition']['classFeatures']] or hasSpells
             if _class['definition']['name'] == 'Warlock':
                 pactSlots = pact_slots_by_level(_class['level'])
                 pactLevel = pact_level_by_level(_class['level'])
@@ -390,7 +392,7 @@ class BeyondSheetParser(SheetLoaderABC):
         if castingClasses > 1:
             spellcasterLevel = floor(spellcasterLevel)
         else:
-            if spellcasterLevel >= 1:
+            if hasSpells:
                 spellcasterLevel = ceil(spellcasterLevel)
             else:
                 spellcasterLevel = 0

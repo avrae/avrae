@@ -428,8 +428,9 @@ class BeyondSheetParser(SheetLoaderABC):
         slots[str(pactLevel)] += pactSlots
 
         prof = self.get_stats().prof_bonus
-        attack_bonus_bonus = self.get_stat("spell-attacks")
-        dc = 8 + spellMod + prof
+        save_dc_bonus = max(self.get_stat("spell-save-dc"), self.get_stat("warlock-spell-save-dc"))
+        attack_bonus_bonus = max(self.get_stat("spell-attacks"), self.get_stat("warlock-spell-attacks"))
+        dc = 8 + spellMod + prof + save_dc_bonus
         sab = spellMod + prof + attack_bonus_bonus
 
         spellnames = []

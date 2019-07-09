@@ -19,9 +19,9 @@ from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
 from cogs5e.models.sheet.base import Resistances, Saves, Skill, Skills
+from cogs5e.sheets.abc import SheetLoaderABC
 from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES
 from utils.functions import search
-from .abc import SheetLoaderABC
 
 log = logging.getLogger(__name__)
 
@@ -327,6 +327,7 @@ class BeyondSheetParser(SheetLoaderABC):
         dexBonus = self.get_stats().get_mod('dex')
         unarmoredBonus = self.get_stat('unarmored-armor-class')
         armoredBonus = self.get_stat('armored-armor-class')
+        bonus_ac_max_dex_armored_modifier = self.get_stat('ac-max-dex-armored-modifier', default=2)
         miscBonus = 0
 
         if armortype not in (None, 'Light Armor'):
@@ -350,7 +351,7 @@ class BeyondSheetParser(SheetLoaderABC):
         elif armortype == 'Light Armor':
             return base + shield + armoredBonus + miscBonus
         elif armortype == 'Medium Armor':
-            return base + min(dexBonus, 2) + shield + armoredBonus + miscBonus
+            return base + min(dexBonus, bonus_ac_max_dex_armored_modifier) + shield + armoredBonus + miscBonus
         else:
             return base + shield + armoredBonus + miscBonus
 
@@ -423,11 +424,11 @@ class BeyondSheetParser(SheetLoaderABC):
         return "Custom"
 
     # helper funcs
-    def get_stat(self, stat, base=0):
+    def get_stat(self, stat, base=0, default=0):
         """Calculates the final value of a stat, based on modifiers and feats."""
         if stat in self.set_calculated_stats:
             return self.calculated_stats[stat]
-        bonus = self.calculated_stats[stat]
+        bonus = self.calculated_stats.get(stat, default)
         return base + bonus
 
     def stat_from_id(self, _id):
@@ -651,4 +652,5 @@ if __name__ == '__main__':
         parser = BeyondSheetParser(url)
         char = asyncio.get_event_loop().run_until_complete(parser.load_character("", argparse("")))
         print(json.dumps(parser.calculated_stats, indent=2))
-        print(json.dumps(char, indent=2))
+        input("press enter to view character data")
+        print(json.dumps(char.to_dict(), indent=2))

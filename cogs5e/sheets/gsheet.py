@@ -12,6 +12,7 @@ Created on May 8, 2017
 # v15: version fix
 import asyncio
 import logging
+import os
 import re
 
 import pygsheets
@@ -108,6 +109,8 @@ class GoogleSheet(SheetLoaderABC):
         GoogleSheet._client_initializing = True
 
         def _():
+            if "GOOGLE_SERVICE_ACCOUNT" in os.environ:
+                return pygsheets.authorize(service_account_env_var='GOOGLE_SERVICE_ACCOUNT', no_cache=True)
             return pygsheets.authorize(service_account_file='avrae-google.json', no_cache=True)
 
         GoogleSheet.g_client = await asyncio.get_event_loop().run_in_executor(None, _)
@@ -118,9 +121,10 @@ class GoogleSheet(SheetLoaderABC):
         # self.client.login()
         doc = GoogleSheet.g_client.open_by_key(self.url)
         self.character_data = TempCharacter(doc.sheet1, "A1:AR180")
-        if doc.sheet1.cell("AQ4").value == "2.0":
+        vcell = doc.sheet1.cell("AQ4").value
+        if "1.3" not in vcell:
             self.additional = TempCharacter(doc.worksheet('index', 1), "A1:AP81")
-            self.version = 2
+            self.version = 2 if "2" in vcell else 1
 
     # main loading methods
     async def load_character(self, owner_id: str, args):

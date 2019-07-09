@@ -82,6 +82,7 @@ class ParsedArguments:
         :param arg: The name of the arg to get.
         :param default: The default value to return if the arg is not found. Not cast to type.
         :param type_: The type that the arg should be returned as.
+        :raises InvalidArgument if the arg cannot be cast to the type
         :return: The relevant argument.
         """
         if arg not in self.parsed:

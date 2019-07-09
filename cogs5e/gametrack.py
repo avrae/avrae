@@ -45,7 +45,7 @@ class GameTrack(commands.Cog):
         """Prints the status of the current active character."""
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
-        embed.add_field(name="Hit Points", value=f"{character.hp}/{character.max_hp}")
+        embed.add_field(name="Hit Points", value=character.get_hp_str())
         embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str())
         for counter in character.consumables:
             embed.add_field(name=counter.name, value=counter.full_str())

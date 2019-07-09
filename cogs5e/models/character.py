@@ -175,6 +175,10 @@ class Character(Spellcaster):
         """Sets the value of a csetting."""
         self.options.set(setting, value)
 
+    def delete_setting(self, setting):
+        """Deletes a setting if it exists."""
+        self.options.set(setting, None)
+
     # ---------- SCRIPTING ----------
     async def parse_cvars(self, cstr, ctx):
         """Parses cvars.

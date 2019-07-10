@@ -2,6 +2,8 @@
 This file contains a bunch of dummy data and constants to emulate the responses of the Discord API
 for automated testing.
 """
+import datetime
+
 import credentials
 
 TEST_CHANNEL_ID = 314159265358979323  # pi
@@ -24,6 +26,7 @@ ME_USER = {
     'username': 'Avrae Test', 'verified': True, 'locale': 'en-US', 'mfa_enabled': True, 'bot': True,
     'id': '111111111111111111', 'flags': 0, 'avatar': None, 'discriminator': '0000', 'email': None
 }
+NOW = datetime.datetime.now().isoformat()
 
 
 # http responses
@@ -33,7 +36,7 @@ def message_response(data):
         embeds = [data['embed']]
     return {
         'nonce': None, 'attachments': [], 'tts': False, 'embeds': embeds,
-        'timestamp': '2019-07-01T17:37:43.068000+00:00', 'mention_everyone': False, 'id': MESSAGE_ID,
+        'timestamp': NOW, 'mention_everyone': False, 'id': MESSAGE_ID,
         'pinned': False, 'edited_timestamp': None,
         'author': DEFAULT_USER, 'mention_roles': [], 'content': data.get('content'),
         'channel_id': str(TEST_CHANNEL_ID), 'mentions': [], 'type': 0
@@ -46,8 +49,8 @@ def edit_response(data):
         embeds = [data['embed']]
     return {
         'nonce': None, 'attachments': [], 'tts': False, 'embeds': embeds,
-        'timestamp': '2019-07-01T17:37:43.068000+00:00', 'mention_everyone': False, 'id': MESSAGE_ID,
-        'pinned': False, 'edited_timestamp': '2019-07-01T17:37:43.152340+00:00',
+        'timestamp': NOW, 'mention_everyone': False, 'id': MESSAGE_ID,
+        'pinned': False, 'edited_timestamp': NOW,
         'author': DEFAULT_USER, 'mention_roles': [],
         'content': data.get('content'), 'channel_id': str(TEST_CHANNEL_ID), 'mentions': [], 'type': 0
     }
@@ -107,21 +110,21 @@ DUMMY_GUILD_CREATE = {
             'user': ME_USER,
             'roles': [],
             'mute': False,
-            'joined_at': '2018-02-13T00:45:01.457000+00:00',
+            'joined_at': NOW,
             'deaf': False
         },
         {
             'user': DEFAULT_USER,
             'roles': [],
             'mute': False,
-            'joined_at': '2018-02-13T01:41:56.998000+00:00',
+            'joined_at': NOW,
             'deaf': False
         },
         {
             'user': OWNER_USER,
             'roles': [],
             'mute': False,
-            'joined_at': '2018-02-13T01:41:56.998000+00:00',
+            'joined_at': NOW,
             'deaf': False
         }
     ],
@@ -145,7 +148,7 @@ DUMMY_GUILD_CREATE = {
     'system_channel_id': str(TEST_CHANNEL_ID),
     'name': 'Test Guild',
     'premium_tier': 0,
-    'joined_at': '2018-02-13T00:45:01.457000+00:00',
+    'joined_at': NOW,
     'banner': None,
     'id': str(TEST_GUILD_ID),
     'features': [],

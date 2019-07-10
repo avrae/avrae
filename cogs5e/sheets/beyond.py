@@ -477,6 +477,20 @@ class BeyondSheetParser(SheetLoaderABC):
         prof = self.get_stats().prof_bonus
         out = []
 
+        def monk_scale():
+            monk_level = self.get_levels().get('Monk')
+            if not monk_level:
+                dice_size = 0
+            elif monk_level < 5:
+                dice_size = 4
+            elif monk_level < 11:
+                dice_size = 6
+            elif monk_level < 17:
+                dice_size = 8
+            else:
+                dice_size = 10
+            return dice_size
+
         if atkType == 'action':
             if atkIn['dice'] is None:
                 return []  # thanks DDB
@@ -529,11 +543,22 @@ class BeyondSheetParser(SheetLoaderABC):
             if not is_melee and is_weapon:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
 
-            damage = None
-            if itemdef['fixedDamage'] or itemdef['damage']:
-                damage = f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}" \
+            base_dice = None
+            if itemdef['fixedDamage']:
+                base_dice = itemdef['fixedDamage']
+            elif itemdef['damage']:
+                if not itemdef['isMonkWeapon']:
+                    base_dice = f"{itemdef['damage']['diceCount']}d{itemdef['damage']['diceValue']}"
+                else:
+                    dice_size = max(monk_scale(), itemdef['damage']['diceValue'])
+                    base_dice = f"{itemdef['damage']['diceCount']}d{dice_size}"
+
+            if base_dice:
+                damage = f"{base_dice}+{dmgBonus}" \
                     f"[{itemdef['damageType'].lower()}" \
                     f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+            else:
+                damage = None
 
             atkBonus = weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus
             details = html2text.html2text(itemdef['description'], bodywidth=0).strip()
@@ -551,19 +576,14 @@ class BeyondSheetParser(SheetLoaderABC):
                 )
                 out.append(attack)
         elif atkType == 'unarmed':
-            monk_level = self.get_levels().get('Monk')
-            ability_mod = self.stat_from_id(1) if not monk_level else max(self.stat_from_id(1), self.stat_from_id(2))
-            if not monk_level:
-                dmg = 1 + ability_mod
-            elif monk_level < 5:
-                dmg = f"1d4+{ability_mod}"
-            elif monk_level < 11:
-                dmg = f"1d6+{ability_mod}"
-            elif monk_level < 17:
-                dmg = f"1d8+{ability_mod}"
+            dice_size = monk_scale()
+            ability_mod = self.stat_from_id(1) if not self.get_levels().get('Monk') else max(self.stat_from_id(1),
+                                                                                             self.stat_from_id(2))
+            atkBonus = prof
+            if dice_size:
+                dmg = f"1d{dice_size}+{ability_mod}"
             else:
-                dmg = f"1d10+{ability_mod}"
-            atkBonus = self.get_stats().prof_bonus
+                dmg = 1 + ability_mod
 
             atkBonus += self.get_stat('natural-attacks')
             natural_bonus = self.get_stat('natural-attacks-damage')
@@ -632,7 +652,7 @@ class BeyondSheetParser(SheetLoaderABC):
             return self.stat_from_id(2)
         elif itemdef['attackType'] == 1:  # melee
             if 'Finesse' in [p['name'] for p in itemdef['properties']] or \
-                    (itemdef['isMonkWeapon'] and self.get_levels().get('MonkLevel')):  # finesse, monk weapon
+                    (itemdef['isMonkWeapon'] and self.get_levels().get('Monk')):  # finesse, monk weapon
                 return max(self.stat_from_id(1), self.stat_from_id(2))
         return self.stat_from_id(1)  # strength
 

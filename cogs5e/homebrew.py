@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew, NoSelectionElements
-from cogs5e.models.homebrew.bestiary import Bestiary, bestiary_from_critterdb, select_bestiary
+from cogs5e.models.homebrew.bestiary import Bestiary, select_bestiary
 from cogs5e.models.homebrew.pack import Pack, select_pack
 from cogs5e.models.homebrew.tome import Tome, select_tome
 from utils import checks
@@ -126,7 +126,7 @@ class Homebrew(commands.Cog):
                 f"You don't have a bestiary active. Add one with `{ctx.prefix}bestiary import` first!")
         loading = await ctx.send("Updating bestiary (this may take a while for large bestiaries)...")
 
-        await active_bestiary.unsubscribe(ctx)
+        await active_bestiary.unsubscribe(ctx)  # TODO - when updating, copy old server subs to new version - will require servers to know who shared
         bestiary = await Bestiary.from_critterdb(ctx, active_bestiary.upstream)
 
         await bestiary.set_active(ctx)

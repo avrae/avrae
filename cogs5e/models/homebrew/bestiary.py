@@ -66,13 +66,16 @@ class Bestiary:
         # try and find a bestiary by looking up upstream|hash
         # if it exists, return it
         # otherwise commit a new one to the db and return that
-        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one({"upstream": url, "sha256": sha256_hash.hexdigest()})
+        sha256 = sha256_hash.hexdigest()
+        log.debug(f"Bestiary hash: {sha256}")
+        existing_bestiary = await ctx.bot.mdb.bestiaries.find_one({"upstream": url, "sha256": sha256})
         if existing_bestiary:
+            log.info("This bestiary already exists, subscribing")
             await existing_bestiary.subscribe(ctx)
             return existing_bestiary
 
         parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
-        b = cls(None, sha256_hash.hexdigest(), url, [], [], [], name, parsed_creatures, desc)
+        b = cls(None, sha256, url, [], [], [], name, parsed_creatures, desc)
         await b.write_to_db(ctx)
         return b
 
@@ -86,8 +89,8 @@ class Bestiary:
 
     async def load_monsters(self, ctx):
         if not self._monsters:
-            monsters = await ctx.bot.mdb.bestiaries.find_one({"_id": self.id}, projection=['monsters'])
-            self._monsters = [Monster.from_bestiary(m) for m in monsters]
+            bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": self.id}, projection=['monsters'])
+            self._monsters = [Monster.from_bestiary(m) for m in bestiary['monsters']]
         return self._monsters
 
     @property

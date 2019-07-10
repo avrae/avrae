@@ -13,6 +13,7 @@ from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.models.errors import AvraeException, EvaluationError
+from cogs5e.funcs.lookupFuncs import compendium
 from utils.functions import discord_trim, gen_error_message, get_positivity
 from utils.help import help_command
 from utils.redisIO import RedisIO
@@ -261,4 +262,5 @@ if __name__ == '__main__':
     bot.state = "run"
     if not bot.rdb.exists('build_num'): bot.rdb.set('build_num', 0)
     bot.rdb.incr('build_num')
+    bot.loop.create_task(compendium.reload_task(bot.mdb))
     bot.run(bot.credentials.token)

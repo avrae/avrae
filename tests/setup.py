@@ -68,13 +68,14 @@ def start_dm_response(data):
 RESPONSES = {
     "GET /users/@me": lambda _: ME_USER,
     "GET /gateway": lambda _: {'url': 'wss://gateway.discord.gg'},
-    f"POST /channels/{TEST_CHANNEL_ID}/messages": message_response,
-    f"POST /channels/{TEST_DMCHANNEL_ID}/messages": message_response,
-    f"PATCH /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": edit_response,
-    f"DELETE /channels/{TEST_CHANNEL_ID}/messages/{MESSAGE_ID}": lambda _: None,
+    f"POST /channels/*/messages": message_response,
+    f"PATCH /channels/*/messages/{MESSAGE_ID}": edit_response,
+    f"DELETE /channels/*/messages/{MESSAGE_ID}": lambda _: None,
     "POST /users/@me/channels": start_dm_response,
-    f"PUT /channels/{TEST_CHANNEL_ID}/pins/{MESSAGE_ID}": lambda _: None,
-    f"DELETE /channels/{TEST_CHANNEL_ID}/pins/{MESSAGE_ID}": lambda _: None
+    f"PUT /channels/*/pins/{MESSAGE_ID}": lambda _: None,
+    f"DELETE /channels/*/pins/{MESSAGE_ID}": lambda _: None,
+    f"PUT /channels/*/messages/{MESSAGE_ID}/reactions/*/@me": lambda _: None,
+    f"GET /channels/*/messages/{MESSAGE_ID}": message_response
 }
 
 # initialization

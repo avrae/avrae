@@ -6,6 +6,7 @@ and defines a bunch of helper methods
 import asyncio
 import logging
 import re
+from fnmatch import fnmatchcase
 from queue import Queue
 
 import pytest
@@ -84,10 +85,13 @@ class DiscordHTTPProxy(HTTPClient):
         log.info(str(req))
         self._request_check_queue.put(req)
 
-        endpoint = req.url.split(Route.BASE)[-1]
-        if f"{req.method} {endpoint}" in RESPONSES:
-            return RESPONSES[f"{req.method} {endpoint}"](req.data)
-        raise RuntimeError("Bot requested an endpoint we don't have a test for")
+        request_route = f"{req.method} {req.url.split(Route.BASE)[-1]}"
+        try:
+            endpoint = next(k for k in RESPONSES if fnmatchcase(request_route, k))
+        except StopIteration:
+            raise RuntimeError("Bot requested an endpoint we don't have a test for")
+
+        return RESPONSES[endpoint](req.data)
 
     # helper functions
     def clear(self):

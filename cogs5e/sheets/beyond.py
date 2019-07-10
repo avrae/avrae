@@ -480,16 +480,16 @@ class BeyondSheetParser(SheetLoaderABC):
         def monk_scale():
             monk_level = self.get_levels().get('Monk')
             if not monk_level:
-                dice_size = 0
+                monk_dice_size = 0
             elif monk_level < 5:
-                dice_size = 4
+                monk_dice_size = 4
             elif monk_level < 11:
-                dice_size = 6
+                monk_dice_size = 6
             elif monk_level < 17:
-                dice_size = 8
+                monk_dice_size = 8
             else:
-                dice_size = 10
-            return dice_size
+                monk_dice_size = 10
+            return monk_dice_size
 
         if atkType == 'action':
             if atkIn['dice'] is None:

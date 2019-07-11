@@ -114,11 +114,11 @@ async def bestiary_from_critterdb(url):
             async with session.get(
                     f"http://critterdb.com/api/publishedbestiaries/{url}/creatures/{index}") as resp:
                 if not 199 < resp.status < 300:
-                    raise ExternalImportError("Error importing bestiary. Are you sure the link is right?")
+                    raise ExternalImportError("Error importing bestiary: HTTP error. Are you sure the link is right?")
                 try:
                     raw = await resp.json()
-                except ValueError:
-                    raise ExternalImportError("Error importing bestiary. Are you sure the link is right?")
+                except (ValueError, aiohttp.ContentTypeError):
+                    raise ExternalImportError("Error importing bestiary: bad response. Are you sure the link is right?")
                 if not raw:
                     break
                 creatures.extend(raw)
@@ -126,7 +126,7 @@ async def bestiary_from_critterdb(url):
         async with session.get(f"http://critterdb.com/api/publishedbestiaries/{url}") as resp:
             try:
                 raw = await resp.json()
-            except ValueError:
+            except (ValueError, aiohttp.ContentTypeError):
                 raise ExternalImportError("Error importing bestiary metadata. Are you sure the link is right?")
             name = raw['name']
             desc = raw['description']

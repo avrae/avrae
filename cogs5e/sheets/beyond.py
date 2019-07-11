@@ -19,9 +19,9 @@ from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
 from cogs5e.models.sheet.base import Resistances, Saves, Skill, Skills
+from cogs5e.sheets.abc import SheetLoaderABC
 from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES
 from utils.functions import search
-from .abc import SheetLoaderABC
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ API_BASE = "https://www.dndbeyond.com/character/"
 DAMAGE_TYPES = {1: "bludgeoning", 2: "piercing", 3: "slashing", 4: "necrotic", 5: "acid", 6: "cold", 7: "fire",
                 8: "lightning", 9: "thunder", 10: "poison", 11: "psychic", 12: "radiant", 13: "force"}
 CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.334, "Monk": 0, "Paladin": 0.5,
-                "Ranger": 0.5, "Rogue": 0.334, "Sorcerer": 1, "Warlock": 0, "Wizard": 1}
+                "Ranger": 0.5, "Rogue": 0.334, "Sorcerer": 1, "Warlock": 0, "Wizard": 1, "Artificer": 0.5}
 SLOTS_PER_LEVEL = {
     1: lambda l: min(l + 1, 4) if l else 0,
     2: lambda l: 0 if l < 3 else min(l - 1, 3),
@@ -52,6 +52,18 @@ HOUSERULE_SKILL_MAP = {
     3: 'acrobatics', 11: 'animalHandling', 6: 'arcana', 2: 'athletics', 16: 'deception', 7: 'history',
     12: 'insight', 17: 'intimidation', 8: 'investigation', 13: 'medicine', 9: 'nature', 14: 'perception',
     18: 'performance', 19: 'persuasion', 10: 'religion', 4: 'sleightOfHand', 5: 'stealth', 15: 'survival'
+}
+RESIST_OVERRIDE_MAP = {
+    1: ('Bludgeoning', 1), 2: ('Piercing', 1), 3: ('Slashing', 1), 4: ('Lightning', 1), 5: ('Thunder', 1),
+    6: ('Poison', 1), 7: ('Cold', 1), 8: ('Radiant', 1), 9: ('Fire', 1), 10: ('Necrotic', 1), 11: ('Acid', 1),
+    12: ('Psychic', 1), 17: ('Bludgeoning', 2), 18: ('Piercing', 2), 19: ('Slashing', 2), 20: ('Lightning', 2),
+    21: ('Thunder', 2), 22: ('Poison', 2), 23: ('Cold', 2), 24: ('Radiant', 2), 25: ('Fire', 2), 26: ('Necrotic', 2),
+    27: ('Acid', 2), 28: ('Psychic', 2), 33: ('Bludgeoning', 3), 34: ('Piercing', 3), 35: ('Slashing', 3),
+    36: ('Lightning', 3), 37: ('Thunder', 3), 38: ('Poison', 3), 39: ('Cold', 3), 40: ('Radiant', 3), 41: ('Fire', 3),
+    42: ('Necrotic', 3), 43: ('Acid', 3), 44: ('Psychic', 3), 47: ('Force', 1), 48: ('Force', 2), 49: ('Force', 3)
+}
+RESIST_TYPE_MAP = {
+    1: "resist", 2: "immune", 3: "vuln"
 }
 
 
@@ -295,25 +307,35 @@ class BeyondSheetParser(SheetLoaderABC):
 
     def get_resistances(self):
         resist = {
-            'resist': [],
-            'immune': [],
-            'vuln': []
+            'resist': set(),
+            'immune': set(),
+            'vuln': set()
         }
         for modtype in self.character_data['modifiers'].values():
             for mod in modtype:
                 if mod['type'] == 'resistance':
-                    resist['resist'].append(mod['subType'])
+                    resist['resist'].add(mod['subType'].lower())
                 elif mod['type'] == 'immunity':
-                    resist['immune'].append(mod['subType'])
+                    resist['immune'].add(mod['subType'].lower())
                 elif mod['type'] == 'vulnerability':
-                    resist['vuln'].append(mod['subType'])
+                    resist['vuln'].add(mod['subType'].lower())
+
+        for override in self.character_data['customDefenseAdjustments']:
+            if not override['type'] == 2:
+                continue
+            if override['id'] not in RESIST_OVERRIDE_MAP:
+                continue
+
+            dtype, rtype = RESIST_OVERRIDE_MAP[override['id']]
+            resist[RESIST_TYPE_MAP[rtype]].add(dtype.lower())
+
+        resist = {k: list(v) for k, v in resist.items()}
         return Resistances.from_dict(resist)
 
     def get_ac(self):
         min_base_armor = self.get_stat('minimum-base-armor')
         base = min_base_armor or 10
         armortype = None
-        add_dex = True if not min_base_armor else False
         shield = 0
         for item in self.character_data['inventory']:
             if item['equipped'] and item['definition']['filterType'] == 'Armor':
@@ -323,17 +345,15 @@ class BeyondSheetParser(SheetLoaderABC):
                 else:
                     base = item['definition']['armorClass']
                     armortype = _type
-        base = self.get_stat('armor-class', base=base)
+
+        baseArmor = self.get_stat('armor-class', base=base)
         dexBonus = self.get_stats().get_mod('dex')
+        maxDexBonus = self.get_stat('ac-max-dex-modifier', default=100)
         unarmoredBonus = self.get_stat('unarmored-armor-class')
         armoredBonus = self.get_stat('armored-armor-class')
         miscBonus = 0
 
-        if armortype not in (None, 'Light Armor'):
-            add_dex = False
-
-        if add_dex:
-            base = base + self.get_stat('unarmored-dex-ac-bonus', base=dexBonus)
+        armored = armortype is not None
 
         for val in self.character_data['characterValues']:
             if val['typeId'] == 1:  # AC override
@@ -343,16 +363,27 @@ class BeyondSheetParser(SheetLoaderABC):
             elif val['typeId'] == 3:  # AC misc bonus
                 miscBonus += val['value']
             elif val['typeId'] == 4:  # AC+DEX override
-                base = val['value']
+                baseArmor = val['value']
 
-        if armortype is None:
-            return base + unarmoredBonus + shield + miscBonus
-        elif armortype == 'Light Armor':
-            return base + shield + armoredBonus + miscBonus
-        elif armortype == 'Medium Armor':
-            return base + min(dexBonus, 2) + shield + armoredBonus + miscBonus
+        miscBonus += self.get_stat('dual-wield-armor-class')
+        # todo hack for integrated protection
+
+        if armortype == 'Medium Armor':
+            maxDexBonus = 2
+        elif armortype == 'Heavy Armor':
+            maxDexBonus = 0
+
+        # unarmored vs armored
+        if not armored:
+            armoredBonus = 0
+            maxDexBonus = self.get_stat('ac-max-dex-unarmored-modifier', default=maxDexBonus)
+            if not min_base_armor:
+                dexBonus = self.get_stat('unarmored-dex-ac-bonus', base=dexBonus)
         else:
-            return base + shield + armoredBonus + miscBonus
+            unarmoredBonus = 0
+            maxDexBonus = self.get_stat('ac-max-dex-armored-modifier', default=maxDexBonus)
+
+        return baseArmor + min(dexBonus, maxDexBonus) + shield + armoredBonus + unarmoredBonus + miscBonus
 
     def get_hp(self):
         return self.character_data['overrideHitPoints'] or \
@@ -367,14 +398,17 @@ class BeyondSheetParser(SheetLoaderABC):
         spellMod = 0
         pactSlots = 0
         pactLevel = 1
+        hasSpells = False
         for _class in self.character_data['classes']:
             castingAbility = _class['definition']['spellCastingAbilityId'] or \
                              (_class['subclassDefinition'] or {}).get('spellCastingAbilityId')
             if castingAbility:
-                castingClasses += 1
                 casterMult = CASTER_TYPES.get(_class['definition']['name'], 1)
                 spellcasterLevel += _class['level'] * casterMult
+                castingClasses += 1 if casterMult else 0  # warlock multiclass fix
                 spellMod = max(spellMod, self.stat_from_id(castingAbility))
+                hasSpells = 'Spellcasting' in [cf['name'] for cf in _class['definition']['classFeatures']] or hasSpells
+
             if _class['definition']['name'] == 'Warlock':
                 pactSlots = pact_slots_by_level(_class['level'])
                 pactLevel = pact_level_by_level(_class['level'])
@@ -382,7 +416,7 @@ class BeyondSheetParser(SheetLoaderABC):
         if castingClasses > 1:
             spellcasterLevel = floor(spellcasterLevel)
         else:
-            if spellcasterLevel >= 1:
+            if hasSpells:
                 spellcasterLevel = ceil(spellcasterLevel)
             else:
                 spellcasterLevel = 0
@@ -394,8 +428,9 @@ class BeyondSheetParser(SheetLoaderABC):
         slots[str(pactLevel)] += pactSlots
 
         prof = self.get_stats().prof_bonus
-        attack_bonus_bonus = self.get_stat("spell-attacks")
-        dc = 8 + spellMod + prof
+        save_dc_bonus = max(self.get_stat("spell-save-dc"), self.get_stat("warlock-spell-save-dc"))
+        attack_bonus_bonus = max(self.get_stat("spell-attacks"), self.get_stat("warlock-spell-attacks"))
+        dc = 8 + spellMod + prof + save_dc_bonus
         sab = spellMod + prof + attack_bonus_bonus
 
         spellnames = []
@@ -416,18 +451,18 @@ class BeyondSheetParser(SheetLoaderABC):
         return spellbook
 
     def get_background(self):
-        if not self.character_data['background']:
+        if not self.character_data['background']['definition']:
             return None
         if not self.character_data['background']['hasCustomBackground']:
             return self.character_data['background']['definition']['name']
         return "Custom"
 
     # helper funcs
-    def get_stat(self, stat, base=0):
+    def get_stat(self, stat, base=0, default=0):
         """Calculates the final value of a stat, based on modifiers and feats."""
         if stat in self.set_calculated_stats:
             return self.calculated_stats[stat]
-        bonus = self.calculated_stats[stat]
+        bonus = self.calculated_stats.get(stat, default)
         return base + bonus
 
     def stat_from_id(self, _id):
@@ -441,6 +476,20 @@ class BeyondSheetParser(SheetLoaderABC):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         prof = self.get_stats().prof_bonus
         out = []
+
+        def monk_scale():
+            monk_level = self.get_levels().get('Monk')
+            if not monk_level:
+                monk_dice_size = 0
+            elif monk_level < 5:
+                monk_dice_size = 4
+            elif monk_level < 11:
+                monk_dice_size = 6
+            elif monk_level < 17:
+                monk_dice_size = 8
+            else:
+                monk_dice_size = 10
+            return monk_dice_size
 
         if atkType == 'action':
             if atkIn['dice'] is None:
@@ -494,11 +543,22 @@ class BeyondSheetParser(SheetLoaderABC):
             if not is_melee and is_weapon:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
 
-            damage = None
-            if itemdef['fixedDamage'] or itemdef['damage']:
-                damage = f"{itemdef['fixedDamage'] or itemdef['damage']['diceString']}+{dmgBonus}" \
+            base_dice = None
+            if itemdef['fixedDamage']:
+                base_dice = itemdef['fixedDamage']
+            elif itemdef['damage']:
+                if not itemdef['isMonkWeapon']:
+                    base_dice = f"{itemdef['damage']['diceCount']}d{itemdef['damage']['diceValue']}"
+                else:
+                    dice_size = max(monk_scale(), itemdef['damage']['diceValue'])
+                    base_dice = f"{itemdef['damage']['diceCount']}d{dice_size}"
+
+            if base_dice:
+                damage = f"{base_dice}+{dmgBonus}" \
                     f"[{itemdef['damageType'].lower()}" \
                     f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+            else:
+                damage = None
 
             atkBonus = weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus
             details = html2text.html2text(itemdef['description'], bodywidth=0).strip()
@@ -516,19 +576,14 @@ class BeyondSheetParser(SheetLoaderABC):
                 )
                 out.append(attack)
         elif atkType == 'unarmed':
-            monk_level = self.get_levels().get('Monk')
-            ability_mod = self.stat_from_id(1) if not monk_level else max(self.stat_from_id(1), self.stat_from_id(2))
-            if not monk_level:
-                dmg = 1 + ability_mod
-            elif monk_level < 5:
-                dmg = f"1d4+{ability_mod}"
-            elif monk_level < 11:
-                dmg = f"1d6+{ability_mod}"
-            elif monk_level < 17:
-                dmg = f"1d8+{ability_mod}"
+            dice_size = monk_scale()
+            ability_mod = self.stat_from_id(1) if not self.get_levels().get('Monk') else max(self.stat_from_id(1),
+                                                                                             self.stat_from_id(2))
+            atkBonus = prof
+            if dice_size:
+                dmg = f"1d{dice_size}+{ability_mod}"
             else:
-                dmg = f"1d10+{ability_mod}"
-            atkBonus = self.get_stats().prof_bonus
+                dmg = 1 + ability_mod
 
             atkBonus += self.get_stat('natural-attacks')
             natural_bonus = self.get_stat('natural-attacks-damage')
@@ -544,28 +599,41 @@ class BeyondSheetParser(SheetLoaderABC):
     def calculate_stats(self):
         ignored = set()
         has_stat_bonuses = []  # [{type, stat, subtype}]
-        for modtype in self.character_data['modifiers'].values():  # {race: [], class: [], ...}
-            for mod in modtype:  # [{}, ...]
-                mod_type = mod['subType']  # e.g. 'strength-score'
-                if mod_type in ignored:
-                    continue
-                if mod['statId']:
-                    has_stat_bonuses.append({'subtype': mod_type, 'type': mod['type'], 'stat': mod['statId']})
 
-                if mod['type'] == 'bonus':
-                    if mod_type in self.set_calculated_stats:
-                        continue
-                    self.calculated_stats[mod_type] += (mod['value'] or 0)
-                elif mod['type'] == 'damage':
-                    self.calculated_stats[f"{mod_type}-damage"] += (mod['value'] or 0)
-                elif mod['type'] == 'set':
-                    if mod_type in self.set_calculated_stats and self.calculated_stats[mod_type] > (mod['value'] or 0):
-                        continue
-                    self.calculated_stats[mod_type] = (mod['value'] or 0)
-                    self.set_calculated_stats.add(mod_type)
-                elif mod['type'] == 'ignore':
-                    self.calculated_stats[mod_type] = 0
-                    ignored.add(mod_type)
+        def handle_mod(mod):
+            mod_type = mod['subType']  # e.g. 'strength-score'
+            if mod_type in ignored:
+                return
+            if mod['statId']:
+                has_stat_bonuses.append({'subtype': mod_type, 'type': mod['type'], 'stat': mod['statId']})
+
+            if mod['type'] == 'bonus':
+                if mod_type in self.set_calculated_stats:
+                    return
+                self.calculated_stats[mod_type] += (mod['value'] or 0)
+            elif mod['type'] == 'damage':
+                self.calculated_stats[f"{mod_type}-damage"] += (mod['value'] or 0)
+            elif mod['type'] == 'set':
+                if mod_type in self.set_calculated_stats and self.calculated_stats[mod_type] > (mod['value'] or 0):
+                    return
+                self.calculated_stats[mod_type] = (mod['value'] or 0)
+                self.set_calculated_stats.add(mod_type)
+            elif mod['type'] == 'ignore':
+                self.calculated_stats[mod_type] = 0
+                ignored.add(mod_type)
+
+        for provider, modtype in self.character_data['modifiers'].items():  # {race: [], class: [], ...}
+            if provider == 'item':  # we handle this by iterating over inventory to handle unequipped items
+                continue
+            for modifier in modtype:  # [{}, ...]
+                handle_mod(modifier)
+
+        for item in self.character_data['inventory']:
+            if not item['equipped']:
+                continue
+            for modifier in item['definition']['grantedModifiers']:
+                handle_mod(modifier)
+
         for mod in has_stat_bonuses:
             mod_type = mod['subtype']
             if mod_type in ignored:
@@ -597,7 +665,7 @@ class BeyondSheetParser(SheetLoaderABC):
             return self.stat_from_id(2)
         elif itemdef['attackType'] == 1:  # melee
             if 'Finesse' in [p['name'] for p in itemdef['properties']] or \
-                    (itemdef['isMonkWeapon'] and self.get_levels().get('MonkLevel')):  # finesse, monk weapon
+                    (itemdef['isMonkWeapon'] and self.get_levels().get('Monk')):  # finesse, monk weapon
                 return max(self.stat_from_id(1), self.stat_from_id(2))
         return self.stat_from_id(1)  # strength
 
@@ -651,4 +719,5 @@ if __name__ == '__main__':
         parser = BeyondSheetParser(url)
         char = asyncio.get_event_loop().run_until_complete(parser.load_character("", argparse("")))
         print(json.dumps(parser.calculated_stats, indent=2))
-        print(json.dumps(char, indent=2))
+        input("press enter to view character data")
+        print(json.dumps(char.to_dict(), indent=2))

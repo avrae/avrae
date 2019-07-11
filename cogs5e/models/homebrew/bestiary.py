@@ -3,7 +3,7 @@ import logging
 
 import aiohttp
 
-from cogs5e.models.errors import ExternalImportError, NoActiveBrew
+from cogs5e.models.errors import ExternalImportError, NoActiveBrew, NotAllowed
 from cogs5e.models.monster import Monster
 from utils.functions import search_and_select
 
@@ -21,7 +21,7 @@ class Bestiary:
         # subscription data - only atomic writes
         self.subscribers = subscribers
         self.active = active
-        self.server_active = server_active
+        self.server_active = server_active  # [{"subscriber_id": string, "guild_id": string}, ...]
 
         # content
         self.name = name
@@ -30,6 +30,8 @@ class Bestiary:
 
     @classmethod
     def from_dict(cls, d):
+        if 'monsters' in d:
+            d['monsters'] = [Monster.from_bestiary(m) for m in d['monsters']]
         return cls(**d)
 
     @classmethod
@@ -71,6 +73,7 @@ class Bestiary:
         existing_bestiary = await ctx.bot.mdb.bestiaries.find_one({"upstream": url, "sha256": sha256})
         if existing_bestiary:
             log.info("This bestiary already exists, subscribing")
+            existing_bestiary = Bestiary.from_dict(existing_bestiary)
             await existing_bestiary.subscribe(ctx)
             return existing_bestiary
 
@@ -130,20 +133,25 @@ class Bestiary:
         :return: Whether the bestiary is now active on the server.
         """
         guild_id = str(ctx.guild.id)
-        if guild_id in self.server_active:
-            await ctx.bot.mdb.bestiaries.update_one(
-                {"_id": self.id},
-                {"$pull": {"active": guild_id}}
-            )
-            self.server_active.remove(guild_id)
-        else:
-            await ctx.bot.mdb.bestiaries.update_one(
-                {"_id": self.id},
-                {"$push": {"active": guild_id}}
-            )
-            self.server_active.append(guild_id)
+        sub_doc = {"guild_id": guild_id, "subscriber_id": str(ctx.author.id)}
 
-        return guild_id in self.server_active
+        if sub_doc in self.server_active:  # I subscribed and want to unsubscribe
+            await ctx.bot.mdb.bestiaries.update_one(
+                {"_id": self.id},
+                {"$pull": {"server_active": sub_doc}}
+            )
+            self.server_active.remove(sub_doc)
+        elif guild_id in map(lambda s: s['guild_id'],
+                             self.server_active):  # someone else has already served this bestiary
+            raise NotAllowed("Another user is already sharing this bestiary with the server!")
+        else:  # no one has served this bestiary and I want to
+            await ctx.bot.mdb.bestiaries.update_one(
+                {"_id": self.id},
+                {"$push": {"server_active": sub_doc}}
+            )
+            self.server_active.append(sub_doc)
+
+        return sub_doc in self.server_active
 
     async def subscribe(self, ctx):
         await ctx.bot.mdb.bestiaries.update_one(
@@ -153,16 +161,41 @@ class Bestiary:
         self.subscribers.append(str(ctx.author.id))
 
     async def unsubscribe(self, ctx):
+        author_id = str(ctx.author.id)
         await ctx.bot.mdb.bestiaries.update_one(
             {"_id": self.id},
-            {"$pull": {"subscribers": str(ctx.author.id)}}
+            {"$pull": {"subscribers": author_id,
+                       "server_active": {"subscriber_id": author_id}}
+             }
         )
-        if str(ctx.author.id) in self.subscribers:
-            self.subscribers.remove(str(ctx.author.id))
+
+        if author_id in self.subscribers:
+            self.subscribers.remove(author_id)
+        for serv_sub in self.server_subscriptions(ctx):
+            if serv_sub in self.server_active:
+                self.server_active.remove(serv_sub)
 
         # if no one is subscribed to this bestiary anymore, delete it.
         if not self.subscribers:
             await self.delete(ctx)
+
+    def server_subscriptions(self, ctx):
+        """Returns a list of server_active objects supplied by the contextual author.
+        Mainly used to determine what subscriptions should be carried over to a new bestiary when updated."""
+        return [s for s in self.server_active if s['subscriber_id'] == str(ctx.author.id)]
+
+    async def add_server_subscriptions(self, ctx, subscriptions):
+        """Adds a list of server_active objects to the existing list."""
+        existing_serv_sub_set = set(s['guild_id'] for s in self.server_active)
+        for sub in reversed(subscriptions):
+            if sub['guild_id'] in existing_serv_sub_set:
+                subscriptions.remove(sub)
+
+        await ctx.bot.mdb.bestiaries.update_one(
+            {"_id": self.id},
+            {"$push": {"server_active": {"$each": subscriptions}}}
+        )
+        self.server_active.extend(subscriptions)
 
     async def delete(self, ctx):
         await ctx.bot.mdb.bestiaries.delete_one({"_id": self.id})
@@ -182,7 +215,7 @@ class Bestiary:
     @staticmethod
     async def server_bestiaries(ctx):
         """Returns an async iterator of partial Bestiary objects that are active on the server."""
-        async for b in ctx.bot.mdb.bestiaries.find({"server_active": str(ctx.guild.id)},
+        async for b in ctx.bot.mdb.bestiaries.find({"server_active.guild_id": str(ctx.guild.id)},
                                                    projection={"monsters": False}):
             yield Bestiary.from_dict(b)
 
@@ -194,6 +227,6 @@ async def select_bestiary(ctx, name):
     if not user_bestiaries:
         raise NoActiveBrew()
 
-    bestiary = await search_and_select(ctx, user_bestiaries, name, key=lambda b: b['name'],
-                                       selectkey=lambda b: f"{b['name']} (`{b['upstream']})`")
-    return Bestiary.from_dict(bestiary)
+    bestiary = await search_and_select(ctx, user_bestiaries, name, key=lambda b: b.name,
+                                       selectkey=lambda b: f"{b.name} (`{b.upstream})`")
+    return bestiary

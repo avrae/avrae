@@ -15,9 +15,12 @@ def migrate(bestiary):
     sha256.update(hash_str)
 
     active = [bestiary['owner']] if bestiary.get('active') else []
+    server_active = []
+    for serv_sub in bestiary.get('server_active', []):
+        server_active.append({"subscriber_id": bestiary['owner'], "guild_id": serv_sub})
     monsters = [Monster.from_bestiary(m) for m in bestiary['monsters']]
     new_bestiary = Bestiary(None, sha256.hexdigest(), bestiary['critterdb_id'], [bestiary['owner']], active,
-                            bestiary.get('server_active', []), bestiary['name'], monsters, bestiary.get('desc'))
+                            server_active, bestiary['name'], monsters, bestiary.get('desc'))
     return new_bestiary
 
 
@@ -30,15 +33,18 @@ def to_dict(bestiary):
 
 
 def local_test(fp):
-    with open(fp) as f:
-        bestiaries = json.load(f)
-    num_monsters = sum(len(b['monsters']) for b in bestiaries)
-    print(f"Migrating {len(bestiaries)} bestiaries ({num_monsters} monsters)...")
+    f = open(fp)
+    print(f"Migrating bestiaries from {fp}...")
 
     new_bestiaries = {}
-    for b in bestiaries:
-        print(f"\nmigrating {b['name']}")
-        new_bestiary = migrate(b)
+    num_monsters = 0
+    num_bestiaries = 0
+    for line in f:
+        bestiary = json.loads(line)
+        num_monsters += len(bestiary['monsters'])
+        num_bestiaries += 1
+        print(f"\nmigrating {bestiary['name']}")
+        new_bestiary = migrate(bestiary)
         key = f"{new_bestiary.upstream} {new_bestiary.sha256}"
         if key in new_bestiaries:
             print("exists - merging...")
@@ -49,12 +55,13 @@ def local_test(fp):
             existing.server_active.extend(new_bestiary.server_active)
         else:
             new_bestiaries[key] = new_bestiary
+    f.close()
 
     new_bestiaries = [to_dict(b) for b in new_bestiaries.values()]
     out = fp.split('/')[-1]
     with open(f"temp/new-{out}", 'w') as f:
         json.dump(new_bestiaries, f, indent=2)
-    print(f"Done migrating {len(new_bestiaries)} bestiaries (down from {len(bestiaries)}).")
+    print(f"Done migrating {len(new_bestiaries)} bestiaries (down from {num_bestiaries}).")
 
 
 async def from_db(mdb):
@@ -86,9 +93,9 @@ async def from_db(mdb):
     print("Creating index on active...")
     await mdb.bestiaries.create_index("active")
 
-    # db.bestiaries.createIndex({"server_active": 1});
-    print("Creating index on server_active...")
-    await mdb.bestiaries.create_index("server_active")
+    # db.bestiaries.createIndex({"server_active.guild_id": 1});
+    print("Creating index on server_active.guild_id...")
+    await mdb.bestiaries.create_index("server_active.guild_id")
 
     new_bestiaries = {}
     async for old_bestiary in mdb.old_bestiaries.find({}):

@@ -92,7 +92,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     choices = list(itertools.chain(c.monster_mash, custom_monsters))
     if ctx.guild:
         async for servbestiary in Bestiary.server_bestiaries(ctx):
-            if servbestiary['_id'] == bestiary_id:
+            if servbestiary.id == bestiary_id:
                 continue
             await servbestiary.load_monsters(ctx)
             choices.extend(servbestiary.monsters)

@@ -25,10 +25,11 @@ def migrate(bestiary):
 
 
 def to_dict(bestiary):
+    monsters = [m.to_dict() for m in bestiary._monsters]
     return {
         "sha256": bestiary.sha256, "upstream": bestiary.upstream, "subscribers": bestiary.subscribers,
         "active": bestiary.active, "server_active": bestiary.server_active, "name": bestiary.name,
-        "desc": bestiary.desc, "monsters": [m.to_dict() for m in bestiary._monsters]
+        "desc": bestiary.desc, "monsters": monsters
     }
 
 

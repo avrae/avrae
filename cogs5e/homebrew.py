@@ -64,9 +64,7 @@ class Homebrew(commands.Cog):
     @bestiary.command(name='list')
     async def bestiary_list(self, ctx):
         """Lists your available bestiaries."""
-        out = []
-        async for best in Bestiary.user_bestiaries(ctx):
-            out.append(best.name)
+        out = [b.name async for b in Bestiary.user_bestiaries(ctx)]
         await ctx.send(f"Your bestiaries: {', '.join(out)}")
 
     @bestiary.command(name='delete')

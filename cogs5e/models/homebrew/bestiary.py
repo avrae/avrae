@@ -104,16 +104,18 @@ class Bestiary:
         return self._monsters
 
     async def write_to_db(self, ctx):
-        """Writes a bestiary object to the database. Returns self."""
+        """Writes a new bestiary object to the database."""
         assert self._monsters is not None
+        subscribers = [str(ctx.author.id)]
+        monsters = [m.to_dict() for m in self._monsters]
+
         data = {
-            "sha256": self.sha256, "upstream": self.upstream, "subscribers": [str(ctx.author.id)], "active": [],
-            "server_active": [], "name": self.name, "desc": self.desc, "monsters": [m.to_dict() for m in self._monsters]
+            "sha256": self.sha256, "upstream": self.upstream, "subscribers": subscribers, "active": [],
+            "server_active": [], "name": self.name, "desc": self.desc, "monsters": monsters
         }
 
         result = await ctx.bot.mdb.bestiaries.insert_one(data)
         self.id = result.inserted_id
-        return self
 
     async def set_active(self, ctx):
         """Sets the bestiary as active for the contextual author."""

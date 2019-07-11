@@ -46,12 +46,13 @@ class Bestiary:
                 async with session.get(
                         f"http://critterdb.com/api/publishedbestiaries/{url}/creatures/{index}") as resp:
                     if not 199 < resp.status < 300:
-                        raise ExternalImportError("Error importing bestiary. Are you sure the link is right?")
+                        raise ExternalImportError(
+                            "Error importing bestiary: HTTP error. Are you sure the link is right?")
                     try:
                         raw_creatures = await resp.json()
                         sha256_hash.update(await resp.read())
-                    except ValueError:
-                        raise ExternalImportError("Error importing bestiary. Are you sure the link is right?")
+                    except (ValueError, aiohttp.ContentTypeError):
+                        raise ExternalImportError("Error importing bestiary: bad data. Are you sure the link is right?")
                     if not raw_creatures:
                         break
                     creatures.extend(raw_creatures)
@@ -59,7 +60,7 @@ class Bestiary:
             async with session.get(f"http://critterdb.com/api/publishedbestiaries/{url}") as resp:
                 try:
                     raw = await resp.json()
-                except ValueError:
+                except (ValueError, aiohttp.ContentTypeError):
                     raise ExternalImportError("Error importing bestiary metadata. Are you sure the link is right?")
                 name = raw['name']
                 desc = raw['description']

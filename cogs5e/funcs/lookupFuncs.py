@@ -47,15 +47,20 @@ class Compendium:
         self.subclasses = []
 
     async def reload_task(self, mdb=None):
-        load_func = self.load_all_json if mdb is None else self.load_all_mongodb
-        wait_for = int(os.getenv('RELOAD_INTERVAL', '300'))
+        wait_for = int(os.getenv('RELOAD_INTERVAL', '300'))  # TODO: decide if 5 minutes is a reasonable default
         if wait_for > 0:
             log.info("Reloading data every {} seconds", wait_for)
             while True:
-                await load_func(mdb)
+                await self.reload(mdb)
                 await asyncio.sleep(wait_for)
 
-    async def load_all_json(self, *args):
+    async def reload(self, mdb=None):
+        if mdb is None:
+            await self.load_all_json()
+        else:
+            await self.load_all_mongodb(mdb)
+
+    async def load_all_json(self):
         self.cfeats = self.read_json('srd-classfeats.json', [])
         self.classes = self.read_json('srd-classes.json', [])
         self.conditions = self.read_json('conditions.json', [])
@@ -86,9 +91,8 @@ class Compendium:
         self.srd_races = await self.read_mongodb(mdb.data_srd_races)
         self.srd_spells = await self.read_mongodb(mdb.data_srd_spells)
 
-        # FIXME: what does itemprops.json look like?
         temp = await self.read_mongodb(mdb.data_itemprops)
-        self.itemprops = {}
+        self.itemprops = {ip.key: ip.value for ip in temp}
 
         self.load_common()
 

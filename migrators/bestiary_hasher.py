@@ -18,6 +18,13 @@ def migrate(bestiary):
     server_active = []
     for serv_sub in bestiary.get('server_active', []):
         server_active.append({"subscriber_id": bestiary['owner'], "guild_id": serv_sub})
+
+    for monster in bestiary['monsters']:
+        for key in ('traits', 'actions', 'reactions', 'legactions'):
+            for trait in monster[key]:
+                if 'attacks' in trait:
+                    del trait['attacks']  # why did we store this in the first place?
+
     monsters = [Monster.from_bestiary(m) for m in bestiary['monsters']]
     new_bestiary = Bestiary(None, sha256.hexdigest(), bestiary['critterdb_id'], [bestiary['owner']], active,
                             server_active, bestiary['name'], monsters, bestiary.get('desc'))
@@ -61,7 +68,7 @@ def local_test(fp):
     new_bestiaries = [to_dict(b) for b in new_bestiaries.values()]
     out = fp.split('/')[-1]
     with open(f"temp/new-{out}", 'w') as f:
-        json.dump(new_bestiaries, f, indent=2)
+        json.dump(new_bestiaries, f)
     print(f"Done migrating {len(new_bestiaries)} bestiaries (down from {num_bestiaries}).")
 
 

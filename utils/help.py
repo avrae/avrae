@@ -107,15 +107,20 @@ class EmbedPaginator:
 
 class AvraeHelp(HelpCommand):
     def __init__(self, **options):
-        super().__init__(**options)
+        command_attrs = dict(help="Shows the help for the bot or a specific command.\n"
+                                  "__Valid Arguments__\n-here - Sends help to the channel instead of PMs.",
+                             brief="Shows this message.")
+        super().__init__(command_attrs=command_attrs, **options)
         self.embed_paginator = EmbedPaginator()
+        self.in_dms = True
 
     def get_ending_note(self):
         """Returns help command's ending note. This is mainly useful to override for i18n purposes."""
         command_name = self.invoked_with
         return "An underlined command signifies that the command has subcommands.\n" \
-               "Type {0}{1} command for more info on a command.\n" \
-               "You can also type {0}{1} category for more info on a category.".format(self.clean_prefix, command_name)
+               "Type {0}{1} <command> for more info on a command.\n" \
+               "You can also type {0}{1} <category> for more info on a category.".format(self.clean_prefix,
+                                                                                         command_name)
 
     def add_commands(self, commands, *, heading):
         """Adds a list of formatted commands under a field title."""
@@ -138,7 +143,7 @@ class AvraeHelp(HelpCommand):
         for embed in self.embed_paginator.embeds:
             await destination.send(embed=embed)
 
-        if not isinstance(self.context.channel, discord.DMChannel):
+        if not isinstance(self.context.channel, discord.DMChannel) and self.in_dms:
             await self.context.channel.send("I have sent help to your PMs.")
 
     def add_command_formatting(self, command):
@@ -164,8 +169,16 @@ class AvraeHelp(HelpCommand):
                     self.embed_paginator.extend_field(line)
 
     # ===== HelpCommand overrides =====
+    async def command_callback(self, ctx, *, command=None):
+        if command and command.endswith("-here"):
+            command = command[:-5].strip() or None
+            self.in_dms = False
+        return await super(AvraeHelp, self).command_callback(ctx, command=command)
+
     def get_destination(self):
-        return self.context.author
+        if self.in_dms:
+            return self.context.author
+        return self.context.channel
 
     async def send_bot_help(self, mapping):
         ctx = self.context

@@ -347,31 +347,34 @@ class DicecloudParser(SheetLoaderABC):
         maxV = None
         minV = None
         for effect in effects:
-            if effect.get('stat') == stat and effect.get('enabled', True) and not effect.get('removed', False):
-                operation = effect.get('operation', 'base')
-                if operation not in ('base', 'add', 'mul', 'min', 'max'):
+            if effect.get('stat') != stat or not effect.get('enabled', True) or effect.get('removed', False):
+                continue
+            operation = effect.get('operation', 'base')
+            if operation not in ('base', 'add', 'mul', 'min', 'max'):
+                continue
+            if effect.get('value') is not None:
+                value = effect.get('value')
+            else:
+                calculation = effect.get('calculation', '').replace('{', '').replace('}', '').strip()
+                if not calculation: continue
+                try:
+                    value = self.evaluator.eval(calculation)
+                except SyntaxError:
                     continue
-                if effect.get('value') is not None:
-                    value = effect.get('value')
-                else:
-                    calculation = effect.get('calculation', '').replace('{', '').replace('}', '').strip()
-                    if not calculation: continue
-                    try:
-                        value = self.evaluator.eval(calculation)
-                    except SyntaxError:
-                        continue
-                    except KeyError:
-                        raise
-                if operation == 'base' and value > base:
-                    base = value
-                elif operation == 'add':
-                    add += value
-                elif operation == 'mul':
-                    mult *= value
-                elif operation == 'min':
-                    minV = value if minV is None else value if value < minV else minV
-                elif operation == 'max':
-                    maxV = value if maxV is None else value if value > maxV else maxV
+                except KeyError:
+                    raise
+            if not isinstance(value, (int, float)):
+                continue
+            if operation == 'base' and value > base:
+                base = value
+            elif operation == 'add':
+                add += value
+            elif operation == 'mul':
+                mult *= value
+            elif operation == 'min':
+                minV = value if minV is None else value if value < minV else minV
+            elif operation == 'max':
+                maxV = value if maxV is None else value if value > maxV else maxV
         out = (base + add) * mult
         if minV is not None:
             out = max(out, minV)

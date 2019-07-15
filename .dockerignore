@@ -1,0 +1,9 @@
+*.pyc
+
+
+/venv/
+/testenv/
+/venv-rewrite/
+/.idea/
+/.pytest_cache/
+/__pycache__/

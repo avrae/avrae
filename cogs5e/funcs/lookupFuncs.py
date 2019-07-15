@@ -79,7 +79,7 @@ class Compendium:
         self.load_common()
 
     async def load_all_mongodb(self, mdb):
-        lookup = {d.key: d.object for d in await mdb.static_data.find({}).to_list(length=None)}
+        lookup = {d['key']: d['object'] for d in await mdb.static_data.find({}).to_list(length=None)}
 
         self.cfeats = lookup.get('srd-classfeats', [])
         self.classes = lookup.get('srd-classes', [])

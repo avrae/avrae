@@ -79,20 +79,22 @@ class Compendium:
         self.load_common()
 
     async def load_all_mongodb(self, mdb):
-        self.cfeats = await self.read_mongodb(mdb.data_cfeats)
-        self.classes = await self.read_mongodb(mdb.data_classes)
-        self.conditions = await self.read_mongodb(mdb.data_conditions)
-        self.feats = await self.read_mongodb(mdb.data_feats)
-        self.monsters = await self.read_mongodb(mdb.data_monsters)
-        self.names = await self.read_mongodb(mdb.data_names)
-        self.rules = await self.read_mongodb(mdb.data_rules)
-        self.srd_backgrounds = await self.read_mongodb(mdb.data_srd_backgrounds)
-        self.srd_items = await self.read_mongodb(mdb.data_srd_items)
-        self.srd_races = await self.read_mongodb(mdb.data_srd_races)
-        self.srd_spells = await self.read_mongodb(mdb.data_srd_spells)
+        lookup = {d.key: d.object for d in await mdb.static_data.find({}).to_list(length=None)}
 
-        temp = await self.read_mongodb(mdb.data_itemprops)
-        self.itemprops = {ip.key: ip.value for ip in temp}
+        self.cfeats = lookup.get('srd-classfeats', [])
+        self.classes = lookup.get('srd-classes', [])
+        self.conditions = lookup.get('conditions', [])
+        self.feats = lookup.get('srd-feats', [])
+        self.monsters = lookup.get('srd-bestiary', [])
+        self.names = lookup.get('names', [])
+        self.rules = lookup.get('rules', [])
+        self.srd_backgrounds = lookup.get('srd-backgrounds', [])
+        self.srd_items = lookup.get('srd-items', [])
+        self.srd_races = lookup.get('srd-races', [])
+        self.srd_spells = lookup.get('srd-spells', [])
+
+        # Dictionary!
+        self.itemprops = lookup.get('itemprops', {})
 
         self.load_common()
 
@@ -136,11 +138,6 @@ class Compendium:
             log.error("File not found: {}".format(filepath))
             pass
         log.debug("Loaded {} things from file {}".format(len(data), filename))
-        return data
-
-    async def read_mongodb(self, db):
-        data = await db.find({}).to_list(length=None)
-        log.debug("Loaded {} things from MongoDB collection {}".format(len(data), db.name))
         return data
 
 

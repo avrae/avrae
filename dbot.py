@@ -6,6 +6,7 @@ import traceback
 
 import discord
 import motor.motor_asyncio
+import sentry_sdk
 from aiohttp import ClientOSError, ClientResponseError
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
@@ -22,6 +23,7 @@ if 'test' in sys.argv:
 SHARD_COUNT = None if not TESTING else 1
 DEFAULT_PREFIX = '!' if not TESTING else '#'
 ERROR_CHANNEL_ID = 593104417646182401
+SENTRY_DSN = os.getenv('SENTRY_DSN') or None
 
 # -----COGS-----
 DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
@@ -55,6 +57,9 @@ class Avrae(commands.AutoShardedBot):
         self.prefixes = self.rdb.not_json_get("prefixes", {})
         self.muted = set()
 
+        if SENTRY_DSN is not None:
+            sentry_sdk.init(dsn=SENTRY_DSN, environment="Development" if TESTING else "Production")
+
     def get_server_prefix(self, msg):
         return get_prefix(self, msg)[-1]
 
@@ -68,6 +73,10 @@ class Avrae(commands.AutoShardedBot):
                 self.shard_count = recommended_shards // 2
         log.info(f"Launching {self.shard_count} shards!")
         await super(Avrae, self).launch_shards()
+
+    def log_exception(self, exception=None):
+        if SENTRY_DSN is not None:
+            sentry_sdk.capture_exception(exception)
 
 
 class Credentials:
@@ -124,17 +133,21 @@ async def on_resumed():
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         return
-    if isinstance(error, AvraeException):
+
+    elif isinstance(error, AvraeException):
         return await ctx.send(str(error))
-    tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
-    if isinstance(error, (commands.UserInputError, commands.NoPrivateMessage, ValueError)):
+
+    elif isinstance(error, (commands.UserInputError, commands.NoPrivateMessage, ValueError)):
         return await ctx.send(
             f"Error: {str(error)}\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help.")
+
     elif isinstance(error, commands.CheckFailure):
         msg = str(error) or "You are not allowed to run this command."
         return await ctx.send(f"Error: {msg}")
+
     elif isinstance(error, commands.CommandOnCooldown):
         return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
+
     elif isinstance(error, CommandInvokeError):
         original = error.original
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
@@ -146,9 +159,11 @@ async def on_command_error(ctx, error):
                     await ctx.author.send(tb)
                 except Exception as e:
                     log.info(f"Error sending traceback: {e}")
-        if isinstance(original, AvraeException):
+
+        elif isinstance(original, AvraeException):
             return await ctx.send(str(original))
-        if isinstance(original, Forbidden):
+
+        elif isinstance(original, Forbidden):
             try:
                 return await ctx.author.send(
                     f"Error: I am missing permissions to run this command. "
@@ -159,19 +174,27 @@ async def on_command_error(ctx, error):
                     return await ctx.send(f"Error: I cannot send messages to this user.")
                 except:
                     return
-        if isinstance(original, NotFound):
+
+        elif isinstance(original, NotFound):
             return await ctx.send("Error: I tried to edit or delete a message that no longer exists.")
-        if isinstance(original, ValueError) and str(original) in ("No closing quotation", "No escaped character"):
+
+        elif isinstance(original, ValueError) and str(original) in ("No closing quotation", "No escaped character"):
             return await ctx.send("Error: No closing quotation.")
-        if isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError)):
+
+        elif isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError)):
             return await ctx.send("Error in Discord API. Please try again.")
-        if isinstance(original, HTTPException):
+
+        elif isinstance(original, HTTPException):
             if original.response.status == 400:
                 return await ctx.send("Error: Message is too long, malformed, or empty.")
-            if original.response.status == 500:
+            elif original.response.status == 500:
                 return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
-        if isinstance(original, OverflowError):
+
+        elif isinstance(original, OverflowError):
             return await ctx.send(f"Error: A number is too large for me to store.")
+
+    # send error to sentry.io
+    bot.log_exception(error)
 
     error_msg = gen_error_message()
 
@@ -194,8 +217,11 @@ async def on_command_error(ctx, error):
             await error_channel.send(f"**{error_msg}**\n" \
                                      + "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
                 ctx.author.mention, str(ctx.author), repr(error), ctx.message.content))
+
+        tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
         for o in discord_trim(tb):
             await error_channel.send(o)
+
     log.error("Error caused by message: `{}`".format(ctx.message.content))
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 

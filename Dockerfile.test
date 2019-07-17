@@ -1,0 +1,17 @@
+FROM python:3.6-stretch
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+RUN mkdir temp shared
+
+COPY . .
+
+COPY docker/credentials-development.py credentials.py
+
+# This is to disable Machine Learning spell search as per README.md
+RUN sed -i '/from cogs5e.funcs.lookup_ml import ml_spell_search/d; s/, search_func=ml_spell_search//' cogs5e/lookup.py
+
+ENTRYPOINT pytest --cov=cogs5e --cov=cogsmisc --cov=utils --cov-report=xml:shared/coverage.xml tests/ test

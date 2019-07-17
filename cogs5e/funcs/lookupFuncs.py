@@ -83,6 +83,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     """
     try:
         bestiary = await Bestiary.from_ctx(ctx)
+        await bestiary.load_monsters(ctx)
         custom_monsters = bestiary.monsters
         bestiary_id = bestiary.id
     except NoActiveBrew:
@@ -90,9 +91,11 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
         bestiary_id = None
     choices = list(itertools.chain(c.monster_mash, custom_monsters))
     if ctx.guild:
-        async for servbestiary in ctx.bot.mdb.bestiaries.find({"server_active": str(ctx.guild.id)}, ['monsters']):
-            choices.extend(
-                Monster.from_bestiary(m) for m in servbestiary['monsters'] if servbestiary['_id'] != bestiary_id)
+        async for servbestiary in Bestiary.server_bestiaries(ctx):
+            if servbestiary.id == bestiary_id:
+                continue
+            await servbestiary.load_monsters(ctx)
+            choices.extend(servbestiary.monsters)
 
     def get_homebrew_formatted_name(monster):
         if monster.source == 'homebrew':

@@ -31,6 +31,11 @@ class InvalidArgument(AvraeException):
     pass
 
 
+class NotAllowed(AvraeException):
+    """Raised when a user tries to do something they are not allowed to do by role or dependency."""
+    pass
+
+
 class EvaluationError(AvraeException):
     """Raised when a cvar evaluation causes an error."""
 

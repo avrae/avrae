@@ -21,15 +21,12 @@ log = logging.getLogger(__name__)
 
 
 class Trait:
-    def __init__(self, name, desc, attacks=None):
-        if attacks is None:
-            attacks = []
+    def __init__(self, name, desc):
         self.name = name
         self.desc = desc
-        self.attacks = attacks
 
     def to_dict(self):
-        return {'name': self.name, 'desc': self.desc, 'attacks': self.attacks}
+        return {'name': self.name, 'desc': self.desc}
 
 
 SKILL_MAP = {'acrobatics': 'dex', 'animal handling': 'wis', 'arcana': 'int', 'athletics': 'str', 'deception': 'cha',
@@ -219,15 +216,15 @@ class Monster:
                 save_updates[name] = mod
         saves.update(save_updates)
 
-        traits = parse_critterdb_traits(data, 'additionalAbilities')
-        actions = parse_critterdb_traits(data, 'actions')
-        reactions = parse_critterdb_traits(data, 'reactions')
-        legactions = parse_critterdb_traits(data, 'legendaryActions')
-
         attacks = []
-        for atk_src in (traits, actions, reactions, legactions):
-            for trait in atk_src:
-                attacks.extend(trait.attacks)
+        traits, atks = parse_critterdb_traits(data, 'additionalAbilities')
+        attacks.extend(atks)
+        actions, atks = parse_critterdb_traits(data, 'actions')
+        attacks.extend(atks)
+        reactions, atks = parse_critterdb_traits(data, 'reactions')
+        attacks.extend(atks)
+        legactions, atks = parse_critterdb_traits(data, 'legendaryActions')
+        attacks.extend(atks)
 
         resists = {
             "resist": data['stats']['damageResistances'],
@@ -401,11 +398,11 @@ def parse_speed(speed):
 
 def parse_critterdb_traits(data, key):
     traits = []
+    attacks = []
     for trait in data['stats'][key]:
         name = trait['name']
         raw = trait['description']
 
-        attacks = []
         overrides = list(AVRAE_ATTACK_OVERRIDES_RE.finditer(raw))
         raw_atks = list(ATTACK_RE.finditer(raw))
         raw_damage = list(JUST_DAMAGE_RE.finditer(raw))
@@ -443,8 +440,8 @@ def parse_critterdb_traits(data, key):
                 damage = f"{dmg.group(1)}[{dmg.group(2)}]"
                 attacks.append({'name': name, 'attackBonus': None, 'damage': damage, 'details': desc})
 
-        traits.append(Trait(name, desc, attacks))
-    return traits
+        traits.append(Trait(name, desc))
+    return traits, attacks
 
 
 def parse_critterdb_spellcasting(traits):

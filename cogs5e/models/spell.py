@@ -858,7 +858,7 @@ class Spell:
         if not i:
             # if I'm a warlock, and I didn't have any slots of this level anyway (#655)
             # automatically scale up to the next level s.t. our slots are not 0
-            if l == self.level and not caster.spellbook.get_max_slots(l):
+            if l > 0 and l == self.level and not caster.spellbook.get_max_slots(l):
                 l = next((sl for sl in range(l, 6) if caster.spellbook.get_max_slots(sl)), l)  # only scale up to l5
                 args['l'] = l
 

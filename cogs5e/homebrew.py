@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew, NoSelectionElements
-from cogs5e.models.homebrew.bestiary import Bestiary, bestiary_from_critterdb, select_bestiary
+from cogs5e.models.homebrew.bestiary import Bestiary, select_bestiary
 from cogs5e.models.homebrew.pack import Pack, select_pack
 from cogs5e.models.homebrew.tome import Tome, select_tome
 from utils import checks
@@ -34,7 +34,7 @@ class Homebrew(commands.Cog):
         """Commands to manage homebrew monsters.
         When called without an argument, lists the current bestiary and the monsters in it.
         When called with a name, switches to a different bestiary."""
-        user_bestiaries = await self.bot.mdb.bestiaries.count_documents({"owner": str(ctx.author.id)})
+        user_bestiaries = await Bestiary.num_user(ctx)
 
         if not user_bestiaries:
             return await ctx.send(f"You have no bestiaries. Use `{ctx.prefix}bestiary import` to import one!")
@@ -53,6 +53,7 @@ class Homebrew(commands.Cog):
         embed.title = bestiary.name
         if bestiary.desc:
             embed.description = bestiary.desc
+        await bestiary.load_monsters(ctx)
         monnames = '\n'.join(m.name for m in bestiary.monsters)
         if len(monnames) < 1020:
             embed.add_field(name="Creatures", value=monnames)
@@ -63,8 +64,8 @@ class Homebrew(commands.Cog):
     @bestiary.command(name='list')
     async def bestiary_list(self, ctx):
         """Lists your available bestiaries."""
-        user_bestiaries = await self.bot.mdb.bestiaries.find({"owner": str(ctx.author.id)}, ['name']).to_list(None)
-        await ctx.send(f"Your bestiaries: {', '.join(b['name'] for b in user_bestiaries)}")
+        out = [b.name async for b in Bestiary.user_bestiaries(ctx)]
+        await ctx.send(f"Your bestiaries: {', '.join(out)}")
 
     @bestiary.command(name='delete')
     async def bestiary_delete(self, ctx, *, name):
@@ -79,7 +80,7 @@ class Homebrew(commands.Cog):
         resp = await confirm(ctx, 'Are you sure you want to delete {}? (Reply with yes/no)'.format(bestiary.name))
 
         if resp:
-            await self.bot.mdb.bestiaries.delete_one({"critterdb_id": bestiary.id})
+            await bestiary.unsubscribe(ctx)
             return await ctx.send('{} has been deleted.'.format(bestiary.name))
         else:
             return await ctx.send("OK, cancelling.")
@@ -99,10 +100,10 @@ class Homebrew(commands.Cog):
         loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")
         bestiary_id = url.split('/view')[1].strip('/ \n')
 
-        bestiary = await bestiary_from_critterdb(bestiary_id)
+        bestiary = await Bestiary.from_critterdb(ctx, bestiary_id)
 
-        await bestiary.commit(ctx)
         await bestiary.set_active(ctx)
+        await bestiary.load_monsters(ctx)
         await loading.edit(content=f"Imported {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
@@ -116,16 +117,20 @@ class Homebrew(commands.Cog):
     @bestiary.command(name='update')
     async def bestiary_update(self, ctx):
         """Updates the active bestiary from CritterDB."""
-        active_bestiary = await self.bot.mdb.bestiaries.find_one({"owner": str(ctx.author.id), "active": True})
-
-        if active_bestiary is None:
+        try:
+            active_bestiary = await Bestiary.from_ctx(ctx)
+        except NoActiveBrew:
             return await ctx.send(
                 f"You don't have a bestiary active. Add one with `{ctx.prefix}bestiary import` first!")
-        loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")
+        loading = await ctx.send("Updating bestiary (this may take a while for large bestiaries)...")
 
-        bestiary = await bestiary_from_critterdb(active_bestiary["critterdb_id"])
+        old_server_subs = active_bestiary.server_subscriptions(ctx)
+        await active_bestiary.unsubscribe(ctx)
+        bestiary = await Bestiary.from_critterdb(ctx, active_bestiary.upstream)
 
-        await bestiary.commit(ctx)
+        await bestiary.add_server_subscriptions(ctx, old_server_subs)
+        await bestiary.set_active(ctx)
+        await bestiary.load_monsters(ctx)
         await loading.edit(content=f"Imported and updated {bestiary.name}!")
         embed = HomebrewEmbedWithAuthor(ctx)
         embed.title = bestiary.name
@@ -151,10 +156,11 @@ class Homebrew(commands.Cog):
     @bestiary_server.command(name='list')
     async def bestiary_server_list(self, ctx):
         """Shows what bestiaries are currently active on the server."""
-        desc = ""
-        async for doc in self.bot.mdb.bestiaries.find({"server_active": str(ctx.guild.id)}, ['name', 'owner']):
-            desc += f"{doc['name']} (<@{doc['owner']}>)\n"
-        await ctx.send(embed=discord.Embed(title="Active Server Bestiaries", description=desc))
+        desc = []
+        async for best in Bestiary.server_bestiaries(ctx):
+            sharer = next(sh for sh in best.server_active if sh['guild_id'] == str(ctx.guild.id))
+            desc.append(f"{best.name} (<@{sharer['subscriber_id']}>)")
+        await ctx.send(embed=discord.Embed(title="Active Server Bestiaries", description="\n".join(desc)))
 
     @commands.group(invoke_without_command=True)
     async def pack(self, ctx, *, name=None):

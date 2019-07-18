@@ -25,3 +25,9 @@ db.compendiums.createIndex({"subscribers.id": 1});
 db.compendiums.createIndex({"stargazers.id": 1});
 db.compendiums.createIndex({"active": 1});
 db.compendiums.createIndex({"server_active": 1});
+
+analytics_user_activity:
+db.analytics_user_activity.createIndex({"user_id": 1}, {"unique": true});
+
+analytics_command_activity:
+db.analytics_command_activity.createIndex({"name": 1}, {"unique": true});

@@ -10,7 +10,7 @@ from discord.ext import commands
 
 
 class Stats(commands.Cog):
-    """Statistics about bot usage."""
+    """Statistics and analytics about bot usage."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -19,16 +19,41 @@ class Stats(commands.Cog):
         self.socket_bandwidth = Counter()
         self.start_time = time.monotonic()
 
+    # ===== listeners =====
     @commands.Cog.listener()
     async def on_command(self, ctx):
         command = ctx.command.qualified_name
         self.command_stats[command] += 1
+        await self.user_activity(ctx)
+        await self.command_activity(ctx)
 
     @commands.Cog.listener()
     async def on_socket_response(self, msg):
         self.socket_stats[msg.get('t')] += 1
         self.socket_bandwidth[msg.get('t')] += len(str(msg).encode())
 
+    # ===== analytic loggers =====
+    async def user_activity(self, ctx):
+        await self.bot.mdb.analytics_user_activity.update_one(
+            {"user_id": ctx.author.id},
+            {
+                "$inc": {"commands_called": 1},
+                "$currentDate": {"last_command_time": True}
+            },
+            upsert=True
+        )
+
+    async def command_activity(self, ctx):
+        await self.bot.mdb.analytics_command_activity.update_one(
+            {"name": ctx.command.qualified_name},
+            {
+                "$inc": {"num_invocations": 1},  # yay, atomic operations
+                "$currentDate": {"last_invoked_time": True}
+            },
+            upsert=True
+        )
+
+    # ===== bot commands =====
     @commands.command(hidden=True)
     async def commandstats(self, ctx, limit=20):
         """Shows command stats.

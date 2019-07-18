@@ -3,6 +3,8 @@ Created on Jul 17, 2017
 
 @author: andrew
 """
+import asyncio
+import datetime
 import time
 from collections import Counter
 
@@ -14,10 +16,13 @@ class Stats(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.start_time = time.monotonic()
+
         self.command_stats = Counter()
         self.socket_stats = Counter()
         self.socket_bandwidth = Counter()
-        self.start_time = time.monotonic()
+
+        self.bot.loop.create_task(self.scheduled_update())
 
     # ===== listeners =====
     @commands.Cog.listener()
@@ -32,6 +37,13 @@ class Stats(commands.Cog):
         self.socket_stats[msg.get('t')] += 1
         self.socket_bandwidth[msg.get('t')] += len(str(msg).encode())
 
+    # ===== tasks =====
+    async def scheduled_update(self):
+        await self.bot.wait_until_ready()
+        while not self.bot.is_closed():
+            await self.update_hourly()
+            await asyncio.sleep(60 * 60)  # every hour
+
     # ===== analytic loggers =====
     async def user_activity(self, ctx):
         await self.bot.mdb.analytics_user_activity.update_one(
@@ -44,6 +56,7 @@ class Stats(commands.Cog):
         )
 
     async def command_activity(self, ctx):
+        self.bot.rdb.incr('commands_used_life')
         await self.bot.mdb.analytics_command_activity.update_one(
             {"name": ctx.command.qualified_name},
             {
@@ -52,6 +65,15 @@ class Stats(commands.Cog):
             },
             upsert=True
         )
+
+    async def update_hourly(self):
+        data = {
+            "timestamp": datetime.datetime.now(),
+            "num_unique_members": len(self.bot.users),
+            "num_commands_called": int(self.bot.rdb.get("commands_used_life", 0)),
+            "num_servers": len(self.bot.guilds)
+        }
+        await self.bot.mdb.analytics_over_time.insert_one(data)
 
     # ===== bot commands =====
     @commands.command(hidden=True)

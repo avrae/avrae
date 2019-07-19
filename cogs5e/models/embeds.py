@@ -23,11 +23,12 @@ class HomebrewEmbedWithAuthor(EmbedWithAuthor):
 class EmbedWithCharacter(discord.Embed):
     """An embed with character image and name set."""
 
-    def __init__(self, character, name=True, **kwargs):
-        """:param name: bool - If True, sets author name to character name."""
+    def __init__(self, character, name=True, image=True, **kwargs):
+        """:param name: bool - If True, sets author name to character name.
+        :param image: bool - If True, shows character image as thumb if embedimage setting is true."""
         super(EmbedWithCharacter, self).__init__(**kwargs)
         if name: self.set_author(name=character.name)
-        if character.get_setting('embedimage', True):
+        if character.get_setting('embedimage', True) and image:
             self.set_thumbnail(url=character.image)
         self.colour = character.get_color()
 

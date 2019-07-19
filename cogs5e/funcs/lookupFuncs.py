@@ -49,18 +49,22 @@ class Compendium:
     async def reload_task(self, mdb=None):
         wait_for = int(os.getenv('RELOAD_INTERVAL', '300'))  # TODO: decide if 5 minutes is a reasonable default
         if wait_for > 0:
-            log.info("Reloading data every {} seconds", wait_for)
+            log.info("Reloading data every %d seconds", wait_for)
             while True:
                 await self.reload(mdb)
                 await asyncio.sleep(wait_for)
 
     async def reload(self, mdb=None):
+        loop = asyncio.get_event_loop()
+
         if mdb is None:
-            await self.load_all_json()
+            await loop.run_in_executor(None, self.load_all_json)
         else:
             await self.load_all_mongodb(mdb)
 
-    async def load_all_json(self):
+        await loop.run_in_executor(None, self.load_common)
+
+    def load_all_json(self):
         self.cfeats = self.read_json('srd-classfeats.json', [])
         self.classes = self.read_json('srd-classes.json', [])
         self.conditions = self.read_json('conditions.json', [])
@@ -75,8 +79,6 @@ class Compendium:
 
         # Dictionary!
         self.itemprops = self.read_json('itemprops.json', {})
-
-        self.load_common()
 
     async def load_all_mongodb(self, mdb):
         lookup = {d['key']: d['object'] for d in await mdb.static_data.find({}).to_list(length=None)}
@@ -95,8 +97,6 @@ class Compendium:
 
         # Dictionary!
         self.itemprops = lookup.get('itemprops', {})
-
-        self.load_common()
 
     def load_common(self):
         self.backgrounds = [Background.from_data(b) for b in self.srd_backgrounds]

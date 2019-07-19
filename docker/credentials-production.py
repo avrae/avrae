@@ -26,6 +26,9 @@ dicecloud_pass = os.environ['DICECLOUD_PASS']
 # A Dicecloud API token.
 dicecloud_token = os.environ['DICECLOUD_TOKEN']
 
+# Discord Bot List token (only needed in prod)
+dbl_token = os.environ['DBL_TOKEN']
+
 
 # - Should probably fix the code to not demand these
 test_mongo_url = ''

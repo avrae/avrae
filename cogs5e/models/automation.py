@@ -23,8 +23,30 @@ class Automation:
             return cls(effects)
         return None
 
+    @classmethod
+    def from_attack(cls, attack):
+        """Returns an Automation instance representing an attack."""
+        if attack.damage:
+            damage = Damage(attack.damage)
+        else:
+            damage = None
+
+        if attack.bonus:
+            hit = [damage] if damage else []
+            attack_eff = [Attack(hit=hit, miss=[], attackBonus=str(attack.bonus))]
+        else:
+            attack_eff = [damage] if damage else []
+
+        effects = [Target('each', attack_eff)] if attack_eff else []
+        if attack.details:
+            effects.append(Text(attack.details))
+
+        return Automation(effects)
+
     async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None, ab_override=None,
-                  dc_override=None, spell_override=None):
+                  dc_override=None, spell_override=None, title=None):
+        if not targets:
+            targets = [None]  # outputs a single iteration of effects in a generic meta field
         autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect, ab_override,
                                     dc_override, spell_override)
         for effect in self.effects:
@@ -34,7 +56,10 @@ class Automation:
         for user, msgs in autoctx.pm_queue.items():
             try:
                 user = ctx.guild.get_member(int(user))
-                await user.send(f"{autoctx.caster.name} cast {autoctx.spell.name}!\n" + '\n'.join(msgs))
+                if title:
+                    await user.send(f"{title}\n" + '\n'.join(msgs))
+                else:
+                    await user.send('\n'.join(msgs))
             except:
                 pass
 

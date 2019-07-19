@@ -15,8 +15,8 @@ from pygsheets.exceptions import NoValidUrlKeyFound
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
+from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
@@ -109,15 +109,26 @@ class SheetManager(commands.Cog):
         args['criton'] = args.last('criton') or char.get_setting('criton', 20)
         args['reroll'] = char.get_setting('reroll', 0)
         args['critdice'] = char.get_setting('critdice', 0)
-        args['crittype'] = char.get_setting('crittype', 'default')
 
-        result = sheet_attack(attack.to_old(), args, EmbedWithCharacter(char, name=False))
-        embed = result['embed']
-        if args.last('h', type_=bool):
-            try:
-                await ctx.author.send(embed=result['full_embed'])
-            except:
-                pass
+        embed = EmbedWithCharacter(char, name=False)
+        if args.last('title') is not None:
+            embed.title = args.last('title') \
+                .replace('[charname]', char.name) \
+                .replace('[aname]', attack.name) \
+                .replace('[target]', args.last('t', ''))
+        elif args.last('t') is not None:  # parse target
+            embed.title = '{} attacks with {} at {}!'.format(char.name, a_or_an(attack.name),
+                                                             args.last('t'))
+        else:
+            embed.title = '{} attacks with {}!'.format(char.name, a_or_an(attack.name))
+
+        await Automation.from_attack(attack).run(ctx, embed, char, args.get('t'), args)
+
+        # if args.last('h', type_=bool): todo
+        #     try:
+        #         await ctx.author.send(embed=result['full_embed'])
+        #     except:
+        #         pass
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)

@@ -237,8 +237,10 @@ class Spell:
             conc_conflict = effect_result['conc_conflict']
 
         if self.automation and self.automation.effects:
+            title = f"{caster.name} cast {self.name}!"
             await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect,
-                                      ab_override=ab_override, dc_override=dc_override, spell_override=spell_override)
+                                      ab_override=ab_override, dc_override=dc_override, spell_override=spell_override,
+                                      title=title)
         else:
             text = self.description
             if len(text) > 1020:

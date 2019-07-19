@@ -159,7 +159,7 @@ class AdminUtils(commands.Cog):
     @commands.command(hidden=True)
     @checks.is_owner()
     async def reload_static(self, ctx):
-        await compendium.reload(ctx.mdb)
+        await compendium.reload(self.bot.mdb)
         await ctx.send("Reloaded static data.")
 
     @commands.Cog.listener()

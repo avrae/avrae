@@ -95,7 +95,6 @@ class SheetManager(commands.Cog):
         -phrase [flavor text]
         -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
         -f "Field Title|Field Text" (see !embed)
-        -h (hides attack details)
         [user snippet]"""
         if atk_name is None:
             return await ctx.invoke(self.attack_list)
@@ -105,7 +104,6 @@ class SheetManager(commands.Cog):
         attack = await search_and_select(ctx, char.attacks, atk_name, lambda a: a.name)
 
         args = await self.new_arg_stuff(args, ctx, char)
-        args['name'] = char.name
         args['criton'] = args.last('criton') or char.get_setting('criton', 20)
         args['reroll'] = char.get_setting('reroll', 0)
         args['critdice'] = char.get_setting('critdice', 0)
@@ -114,21 +112,11 @@ class SheetManager(commands.Cog):
         if args.last('title') is not None:
             embed.title = args.last('title') \
                 .replace('[charname]', char.name) \
-                .replace('[aname]', attack.name) \
-                .replace('[target]', args.last('t', ''))
-        elif args.last('t') is not None:  # parse target
-            embed.title = '{} attacks with {} at {}!'.format(char.name, a_or_an(attack.name),
-                                                             args.last('t'))
+                .replace('[aname]', attack.name)
         else:
             embed.title = '{} attacks with {}!'.format(char.name, a_or_an(attack.name))
 
         await Automation.from_attack(attack).run(ctx, embed, char, args.get('t'), args)
-
-        # if args.last('h', type_=bool): todo
-        #     try:
-        #         await ctx.author.send(embed=result['full_embed'])
-        #     except:
-        #         pass
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)

@@ -340,6 +340,7 @@ class Attack(Effect):
         b = args.join('b', '+')
         reroll = args.last('reroll', 0, int)
         criton = args.last('criton', 20, int)
+        ac = args.last('ac', None, int)
 
         # check for combatant IEffect bonus (#224)
         if autoctx.combatant:
@@ -399,8 +400,12 @@ class Attack(Effect):
                 else:
                     itercrit = toHit.crit
 
-                if autoctx.target.target and autoctx.target.ac is not None:
-                    if toHit.total < autoctx.target.ac and itercrit == 0:
+                # -ac #
+                if itercrit == 0 and ac:
+                    if toHit.total < ac:
+                        itercrit = 2
+                elif itercrit == 0 and autoctx.target.target and autoctx.target.ac is not None:
+                    if toHit.total < autoctx.target.ac:
                         itercrit = 2  # miss!
 
                 if itercrit == 2:
@@ -515,6 +520,7 @@ class Damage(Effect):
         crit = args.last('crit', None, bool)
         maxdmg = args.last('max', None, bool)
         mi = args.last('mi', None, int)
+        critdice = args.last('critdice', 0, int)
 
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
@@ -550,23 +556,34 @@ class Damage(Effect):
                 if higher:
                     damage = f"{damage}+{higher}"
 
+        # crit
+        in_crit = autoctx.in_crit or crit
+        roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
+        def parsecrit(damage_dice, wep=False):
+            if in_crit:
+                def critSub(matchobj):
+                    extracritdice = critdice if (critdice and wep) else 0
+                    return f"{int(matchobj.group(1)) * 2 + extracritdice}d{matchobj.group(2)}"
+
+                damage_dice = re.sub(r'(\d+)d(\d+)', critSub, damage_dice)
+            return damage_dice
+
+
         # -mi # (#527)
         if mi:
             damage = re.sub(r'(\d+d\d+)', rf'\1mi{mi}', damage)
 
+        # -d #
         if d:
-            damage = f"{damage}+{d}"
+            damage = parsecrit(damage, wep=not autoctx.is_spell) + '+' + parsecrit(d)
+        else:
+            damage = parsecrit(damage, wep=not autoctx.is_spell)
 
-        roll_for = "Damage"
-        if autoctx.in_crit or crit:
-            def critSub(matchobj):
-                return f"{int(matchobj.group(1)) * 2}d{matchobj.group(2)}"
+        # -c #
+        if c and in_crit:
+            damage = f"{damage}+{c}"
 
-            damage = re.sub(r'(\d+)d(\d+)', critSub, damage)
-            roll_for = "Damage (CRIT!)"
-            if c:
-                damage = f"{damage}+{c}"
-
+        # max
         if maxdmg:
             def maxSub(matchobj):
                 return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"

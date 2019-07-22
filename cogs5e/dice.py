@@ -136,10 +136,9 @@ class Dice(commands.Cog):
             pass
         await ctx.send(ctx.author.mention + '\n' + outStr)
 
-    @commands.command(aliases=['ma', 'monster_attack'])
-    async def monster_atk(self, ctx, monster_name, atk_name='list', *, args=''):
+    @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)
+    async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
         """Rolls a monster's attack.
-        Attack name can be "list" for a list of all of the monster's attacks.
         __Valid Arguments__
         adv/dis
         -ac [target ac]
@@ -151,6 +150,8 @@ class Dice(commands.Cog):
         -phrase [flavor text]
         crit (automatically crit)
         -h (hides monster name, image, and attack details)"""
+        if atk_name is None or atk_name == 'list':
+            return await ctx.invoke(self.monster_atk_list, monster_name)
 
         try:
             await ctx.message.delete()
@@ -160,11 +161,7 @@ class Dice(commands.Cog):
         monster = await select_monster_full(ctx, monster_name)
         attacks = monster.attacks
         monster_name = monster.get_title_name()
-        if atk_name == 'list':
-            attacks_string = '\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
-                                                                                  a['attackBonus'],
-                                                                                  a['damage'] or 'no') for a in attacks)
-            return await ctx.send("{}'s attacks:\n{}".format(monster_name, attacks_string))
+
         attack = await search_and_select(ctx, attacks, atk_name, lambda a: a['name'])
         args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
@@ -190,6 +187,16 @@ class Dice(commands.Cog):
                 pass
 
         await ctx.send(embed=embed)
+
+    @monster_atk.command(name="list")
+    async def monster_atk_list(self, ctx, monster_name):
+        monster = await select_monster_full(ctx, monster_name)
+        monster_name = monster.get_title_name()
+        attacks = monster.attacks
+        attacks_string = '\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
+                                                                              a['attackBonus'],
+                                                                              a['damage'] or 'no') for a in attacks)
+        return await ctx.send("{}'s attacks:\n{}".format(monster_name, attacks_string))
 
     @commands.command(aliases=['mc'])
     async def monster_check(self, ctx, monster_name, check, *args):

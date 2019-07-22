@@ -62,9 +62,9 @@ class Core(commands.Cog):
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808"
         embed.colour = 0x7289da
-        total_members = sum(len(s.members) for s in self.bot.guilds)
-        unique_members = set(self.bot.get_all_members())
-        members = '%s total\n%s unique' % (total_members, len(unique_members))
+        total_members = sum(1 for _ in self.bot.get_all_members())
+        unique_members = len(self.bot.users)
+        members = '%s total\n%s unique' % (total_members, unique_members)
         embed.add_field(name='Members', value=members)
         embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
         motd = random.choice(["May the RNG be with you", "May your rolls be high",

@@ -40,12 +40,13 @@ class InitTracker(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group(aliases=['i'])
+    @commands.group(aliases=['i'], invoke_without_command=True)
     @commands.guild_only()
     async def init(self, ctx):
         """Commands to help track initiative."""
-        if ctx.invoked_subcommand is None:
-            await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
+        await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
+
+    async def cog_before_invoke(self, ctx):
         try:
             await ctx.message.delete()
         except:

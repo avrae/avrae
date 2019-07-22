@@ -440,8 +440,9 @@ class SheetManager(commands.Cog):
             return await ctx.send(f"Error generating token: {e}")
 
         file = discord.File(processed, filename="image.png")
-        await ctx.send("I generated this token for you! If it seems  wrong, you can make your own at "
-                       "<http://rolladvantage.com/tokenstamp/>!", file=file)
+        embed = EmbedWithCharacter(char, image=False)
+        embed.set_image(url="attachment://image.png")
+        await ctx.send(file=file, embed=embed)
 
     @commands.command()
     async def sheet(self, ctx):

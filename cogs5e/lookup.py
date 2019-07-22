@@ -371,11 +371,11 @@ class Lookup(commands.Cog):
         await self.add_training_data("monster", name, monster.name, metadata=metadata)
 
         url = monster.get_image_url()
+        embed = EmbedWithAuthor(ctx)
+        embed.title = monster.name
+        embed.description = f"{monster.size} monster."
 
         if not monster.source == 'homebrew':
-            embed = EmbedWithAuthor(ctx)
-            embed.title = monster.name
-            embed.description = f"{monster.size} monster."
             embed.set_image(url=url)
             embed.set_footer(text="This command may not support all monsters.")
 
@@ -390,8 +390,8 @@ class Lookup(commands.Cog):
                 return await ctx.channel.send(f"Error generating token: {e}")
 
             file = discord.File(processed, filename="image.png")
-            await ctx.channel.send("I generated this token for you! If it seems  wrong, you can make your own at "
-                                   "<http://rolladvantage.com/tokenstamp/>!", file=file)
+            embed.set_image(url="attachment://image.png")
+            await ctx.send(file=file, embed=embed)
 
     @commands.command()
     async def monster(self, ctx, *, name: str):

@@ -64,8 +64,8 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
     :param strict: Kinda does nothing. I'm not sure why this is here.
     :returns: A two-tuple (result, strict) or None"""
     # full match, return result
-    result = next((a for a in list_to_search if value.lower() == key(a).lower()), None)
-    if result is None:
+    exact_matches = [a for a in list_to_search if value.lower() == key(a).lower()]
+    if not exact_matches:
         partial_matches = [a for a in list_to_search if value.lower() in key(a).lower()]
         if len(partial_matches) > 1 or not partial_matches:
             names = [key(d).lower() for d in list_to_search]
@@ -87,14 +87,21 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
                     results.append(r[0])
         else:
             results = partial_matches
+    else:
+        results = exact_matches
+
+    if len(results) > 1:
         if return_key:
             return [key(r) for r in results], False
         else:
             return results, False
-    if return_key:
-        return key(result), True
+    elif not results:
+        return [], False
     else:
-        return result, True
+        if return_key:
+            return key(exact_matches[0]), True
+        else:
+            return exact_matches[0], True
 
 
 async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, return_key=False, pm=False, message=None,

@@ -3,6 +3,8 @@ Created on Jul 17, 2017
 
 @author: andrew
 """
+import asyncio
+import datetime
 import time
 from collections import Counter
 
@@ -10,25 +12,70 @@ from discord.ext import commands
 
 
 class Stats(commands.Cog):
-    """Statistics about bot usage."""
+    """Statistics and analytics about bot usage."""
 
     def __init__(self, bot):
         self.bot = bot
+        self.start_time = time.monotonic()
+
         self.command_stats = Counter()
         self.socket_stats = Counter()
         self.socket_bandwidth = Counter()
-        self.start_time = time.monotonic()
 
+        self.bot.loop.create_task(self.scheduled_update())
+
+    # ===== listeners =====
     @commands.Cog.listener()
     async def on_command(self, ctx):
         command = ctx.command.qualified_name
         self.command_stats[command] += 1
+        await self.user_activity(ctx)
+        await self.command_activity(ctx)
 
     @commands.Cog.listener()
     async def on_socket_response(self, msg):
         self.socket_stats[msg.get('t')] += 1
         self.socket_bandwidth[msg.get('t')] += len(str(msg).encode())
 
+    # ===== tasks =====
+    async def scheduled_update(self):
+        await self.bot.wait_until_ready()
+        while not self.bot.is_closed():
+            await self.update_hourly()
+            await asyncio.sleep(60 * 60)  # every hour
+
+    # ===== analytic loggers =====
+    async def user_activity(self, ctx):
+        await self.bot.mdb.analytics_user_activity.update_one(
+            {"user_id": ctx.author.id},
+            {
+                "$inc": {"commands_called": 1},
+                "$currentDate": {"last_command_time": True}
+            },
+            upsert=True
+        )
+
+    async def command_activity(self, ctx):
+        self.bot.rdb.incr('commands_used_life')
+        await self.bot.mdb.analytics_command_activity.update_one(
+            {"name": ctx.command.qualified_name},
+            {
+                "$inc": {"num_invocations": 1},  # yay, atomic operations
+                "$currentDate": {"last_invoked_time": True}
+            },
+            upsert=True
+        )
+
+    async def update_hourly(self):
+        data = {
+            "timestamp": datetime.datetime.now(),
+            "num_unique_members": len(self.bot.users),
+            "num_commands_called": int(self.bot.rdb.get("commands_used_life", 0)),
+            "num_servers": len(self.bot.guilds)
+        }
+        await self.bot.mdb.analytics_over_time.insert_one(data)
+
+    # ===== bot commands =====
     @commands.command(hidden=True)
     async def commandstats(self, ctx, limit=20):
         """Shows command stats.

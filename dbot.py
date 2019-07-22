@@ -242,7 +242,6 @@ async def on_message(message):
 
 @bot.event
 async def on_command(ctx):
-    bot.rdb.incr('commands_used_life')
     try:
         log.debug(
             "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "

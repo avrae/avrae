@@ -5,20 +5,21 @@ import random
 import shlex
 import traceback
 
+import discord
 from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
-from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
+from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
-from cogs5e.models.sheet import Skill
+from cogs5e.models.sheet import Attack, Skill
 from utils.argparser import argparse
-from utils.functions import confirm, search_and_select
+from utils.functions import a_or_an, confirm, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -937,7 +938,7 @@ class InitTracker(commands.Cog):
         max - Maximizes damage rolls.
 
         -phrase <phrase> - Adds flavor text.
-        -title <title> - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
+        -title <title> - Changes the title of the attack. Replaces [name] with attacker's name, [aname] with the attack's name, and [target] with the target's name.
         -f "Field Title|Field Text" - Creates a field with the given title and text.
         -h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
         [user snippet] - Allows the user to use snippets on the attack.
@@ -945,17 +946,12 @@ class InitTracker(commands.Cog):
         -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage."""
         return await self._attack(ctx, combatant_name, target_name, atk_name, args)
 
-    async def _attack(self, ctx, combatant_name, target_name, atk_name, args):
+    @staticmethod
+    async def _attack(ctx, combatant_name, target_name, atk_name, args):
         args = await scripting.parse_snippets(args, ctx)
         combat = await Combat.from_ctx(ctx)
 
-        try:
-            target = await combat.select_combatant(target_name, "Select the target.")
-            if target is None:
-                return await ctx.send("Target not found.")
-        except SelectionException:
-            return await ctx.send("Target not found.")
-
+        # attacker handling
         if combatant_name is None:
             combatant = combat.current_combatant
             if combatant is None:
@@ -963,89 +959,70 @@ class InitTracker(commands.Cog):
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the attacker.")
-                if combatant is None:
-                    return await ctx.send("Combatant not found.")
             except SelectionException:
                 return await ctx.send("Combatant not found.")
 
+        # attack selection
         attacks = combatant.attacks
         if '-custom' in args:
-            attack = {'attackBonus': None, 'damage': None, 'name': atk_name}
+            attack = {'attackBonus': '0', 'damage': '0', 'name': atk_name}
         else:
             try:
                 attack = await search_and_select(ctx, attacks, atk_name, lambda a: a['name'],
                                                  message="Select your attack.")
             except SelectionException:
                 return await ctx.send("Attack not found.")
+        attack = Attack.from_old(attack)
 
+        # argument parsing
         is_player = isinstance(combatant, PlayerCombatant)
-
         if is_player and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
+        args = argparse(args)
 
-        args = argparse(shlex.split(args))  # set up all the arguments
-        args['name'] = combatant.name
-        if target.ac is not None: args['ac'] = target.ac
-        args['t'] = target.name
-        args['resist'] = args.get('resist') or target.resists['resist']
-        args['immune'] = args.get('immune') or target.resists['immune']
-        args['vuln'] = args.get('vuln') or target.resists['vuln']
-        args['neutral'] = args.get('neutral') or target.resists['neutral']
         if is_player:
-            args['c'] = combatant.character.get_setting('critdmg') or args.get('c')
             args['reroll'] = combatant.character.get_setting('reroll') or 0
-            args['crittype'] = combatant.character.get_setting('crittype') or 'default'
-            args['critdice'] = (combatant.character.get_setting('critdice') or 0) + int(
-                combatant.character.get_setting('hocrit', False))
+            args['critdice'] = combatant.character.get_setting('critdice') or 0
             args['criton'] = combatant.character.get_setting('criton') or args.get('criton')
 
-        result = sheet_attack(attack, args)
-        embed = result['embed']
+        # target handling
+        targets = []
 
-        if args.last('h', type_=bool):
-            try:
-                controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send(embed=result['full_embed'])
-            except:
-                pass
+        # old single-target
+        try:
+            target = await combat.select_combatant(target_name, "Select the target.")
+            targets.append(target)
+        except SelectionException:
+            return await ctx.send("Target not found.")
+
+        # multi-targeting
+        for i, t in enumerate(args.get('t')):
+            target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=True)
+            if isinstance(target, CombatantGroup):
+                targets.extend(target.get_combatants())
+            else:
+                targets.append(target)
+
+        # embed setup
+        embed = discord.Embed()
+        if args.last('title') is not None:
+            embed.title = args.last('title') \
+                .replace('[name]', combatant.name) \
+                .replace('[aname]', attack.name)
+        else:
+            embed.title = '{} attacks with {}!'.format(combatant.name, a_or_an(attack.name))
 
         if is_player:
             embed.colour = combatant.character.get_color()
         else:
             embed.colour = random.randint(0, 0xffffff)
-        if target.ac is not None and target.hp is not None:
-            target.mod_hp(-result['total_damage'], overheal=False)
 
-        if target.ac is not None:
-            if target.hp is not None:
-                embed.set_footer(text="{}: {}".format(target.name, target.get_hp_str()))
-                if target.isPrivate:
-                    try:
-                        controller = ctx.guild.get_member(int(target.controller))
-                        await controller.send(
-                            f"{combatant.name} attacked with a {attack['name']}!"
-                            f"\n{target.name}'s HP: {target.get_hp_str(True)}")
-                    except:
-                        pass
-            else:
-                embed.set_footer(text="Dealt {} damage to {}!".format(result['total_damage'], target.name))
-            if target.is_concentrating() and result['total_damage'] > 0:
-                dcs = []
-                for atk in result['raw_attacks']:
-                    if atk['crit'] == 2:
-                        continue
-                    dcs.append(int(max(atk['damage'] / 2, 10)))
-                if len(dcs) > 1:
-                    dcs = ', '.join(map(str, dcs))
-                    embed.add_field(name="Concentration",
-                                    value=f"Check your concentration (DCs {dcs})!")
-                else:
-                    embed.add_field(name="Concentration",
-                                    value=f"Check your concentration (DC {dcs[0]})!")
-        else:
-            embed.set_footer(text="Target AC not set.")
+        # run
+        await Automation.from_attack(attack).run(ctx, embed, combatant, targets, args)
 
-        embeds.add_fields_from_args(embed, args.get('f', []))
+        # post-run
+        _fields = args.get('f')
+        embeds.add_fields_from_args(embed, _fields)
 
         await ctx.send(embed=embed)
         await combat.final()
@@ -1094,7 +1071,8 @@ class InitTracker(commands.Cog):
         int/wis/cha - Uses a different ability score for spell DC and attack bonus."""
         return await self._cast(ctx, combatant_name, spell_name, args)
 
-    async def _cast(self, ctx, combatant_name, spell_name, args):
+    @staticmethod
+    async def _cast(ctx, combatant_name, spell_name, args):
         args = await scripting.parse_snippets(args, ctx)
         combat = await Combat.from_ctx(ctx)
 
@@ -1105,8 +1083,6 @@ class InitTracker(commands.Cog):
         else:
             try:
                 combatant = await combat.select_combatant(combatant_name, "Select the caster.")
-                if combatant is None:
-                    return await ctx.send("Combatant not found.")
             except SelectionException:
                 return await ctx.send("Combatant not found.")
 

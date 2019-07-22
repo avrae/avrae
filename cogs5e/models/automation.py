@@ -5,7 +5,7 @@ from cogs5e.funcs.dice import SingleDiceGroup, roll
 from cogs5e.funcs.scripting import SpellEvaluator
 from cogs5e.models import initiative
 from cogs5e.models.character import Character
-from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType, NoSpellAB, NoSpellDC
+from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
 from utils.functions import parse_resistances
 
@@ -26,12 +26,12 @@ class Automation:
     @classmethod
     def from_attack(cls, attack):
         """Returns an Automation instance representing an attack."""
-        if attack.damage:
+        if attack.damage is not None:
             damage = Damage(attack.damage)
         else:
             damage = None
 
-        if attack.bonus:
+        if attack.bonus is not None:
             hit = [damage] if damage else []
             attack_eff = [Attack(hit=hit, miss=[], attackBonus=str(attack.bonus))]
         else:
@@ -351,18 +351,18 @@ class Attack(Effect):
                 else:
                     b = effect_b
 
-        explicit_bonus = None
+        attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
+
+        # explicit bonus
         if self.bonus:
             explicit_bonus = autoctx.parse_annostr(self.bonus)
             try:
-                explicit_bonus = int(explicit_bonus)
+                attack_bonus = int(explicit_bonus)
             except (TypeError, ValueError):
                 raise AutomationException(f"{explicit_bonus} cannot be interpreted as an attack bonus.")
 
-        sab = explicit_bonus or autoctx.ab_override or autoctx.caster.spellbook.sab
-
-        if sab is None and b is None:
-            raise NoSpellAB()
+        if attack_bonus is None and b is None:
+            raise NoAttackBonus()
 
         # roll attack(s) against autoctx.target
         for iteration in range(rr):
@@ -382,9 +382,10 @@ class Attack(Effect):
                     formatted_d20 = f"{formatted_d20}ro{reroll}"
 
                 if b:
-                    toHit = roll(f"{formatted_d20}+{sab}+{b}", rollFor='To Hit', inline=True, show_blurbs=False)
+                    toHit = roll(f"{formatted_d20}+{attack_bonus}+{b}", rollFor='To Hit', inline=True,
+                                 show_blurbs=False)
                 else:
-                    toHit = roll(f"{formatted_d20}+{sab}", rollFor='To Hit', inline=True, show_blurbs=False)
+                    toHit = roll(f"{formatted_d20}+{attack_bonus}", rollFor='To Hit', inline=True, show_blurbs=False)
 
                 autoctx.queue(toHit.result)
 
@@ -559,6 +560,7 @@ class Damage(Effect):
         # crit
         in_crit = autoctx.in_crit or crit
         roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
+
         def parsecrit(damage_dice, wep=False):
             if in_crit:
                 def critSub(matchobj):
@@ -567,7 +569,6 @@ class Damage(Effect):
 
                 damage_dice = re.sub(r'(\d+)d(\d+)', critSub, damage_dice)
             return damage_dice
-
 
         # -mi # (#527)
         if mi:
@@ -778,3 +779,13 @@ class AutomationException(AvraeException):
 
 class TargetException(AutomationException):
     pass
+
+
+class NoSpellDC(AutomationException):
+    def __init__(self):
+        super().__init__("No spell save DC found.")
+
+
+class NoAttackBonus(AutomationException):
+    def __init__(self):
+        super().__init__("No attack bonus found.")

@@ -178,7 +178,7 @@ class Dice(commands.Cog):
         embed = discord.Embed()
         if args.last('title') is not None:
             embed.title = args.last('title') \
-                .replace('[monname]', name) \
+                .replace('[name]', name) \
                 .replace('[aname]', attack.name)
         else:
             embed.title = '{} attacks with {}!'.format(name, a_or_an(attack.name))
@@ -193,7 +193,7 @@ class Dice(commands.Cog):
         embed.colour = random.randint(0, 0xffffff)
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
+            embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
 
@@ -288,7 +288,7 @@ class Dice(commands.Cog):
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
+            embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
         try:
@@ -370,7 +370,7 @@ class Dice(commands.Cog):
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
+            embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
         try:

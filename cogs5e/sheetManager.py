@@ -93,7 +93,7 @@ class SheetManager(commands.Cog):
         max (deals max damage)
         
         -phrase [flavor text]
-        -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
+        -title [title] *note: [name] and [aname] will be replaced automatically*
         -f "Field Title|Field Text" (see !embed)
         [user snippet]"""
         if atk_name is None:
@@ -111,7 +111,7 @@ class SheetManager(commands.Cog):
         embed = EmbedWithCharacter(char, name=False)
         if args.last('title') is not None:
             embed.title = args.last('title') \
-                .replace('[charname]', char.name) \
+                .replace('[name]', char.name) \
                 .replace('[aname]', attack.name)
         else:
             embed.title = '{} attacks with {}!'.format(char.name, a_or_an(attack.name))

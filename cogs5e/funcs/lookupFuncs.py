@@ -102,6 +102,8 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
             return f"{monster.name} ({HOMEBREW_EMOJI})"
         return monster.name
 
+    ctx.bot.rdb.incr('monsters_looked_up_life')
+
     return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
                                    selectkey=get_homebrew_formatted_name, return_metadata=return_metadata)
 

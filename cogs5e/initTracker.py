@@ -180,7 +180,6 @@ class InitTracker(commands.Cog):
         -ac <ac> - Sets the combatant's starting AC."""
 
         monster = await select_monster_full(ctx, monster_name, pm=True)
-        self.bot.rdb.incr("monsters_looked_up_life")
 
         args = argparse(args)
         private = not args.last('h', type_=bool)

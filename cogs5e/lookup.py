@@ -410,7 +410,6 @@ class Lookup(commands.Cog):
         else:
             visible = True
 
-        self.bot.rdb.incr('monsters_looked_up_life')
         monster, metadata = await select_monster_full(ctx, name, return_metadata=True)
 
         metadata['homebrew'] = monster.source == 'homebrew'

@@ -158,7 +158,6 @@ class Dice(commands.Cog):
             pass
 
         monster = await select_monster_full(ctx, monster_name)
-        self.bot.rdb.incr('monsters_looked_up_life')
         attacks = monster.attacks
         monster_name = monster.get_title_name()
         if atk_name == 'list':
@@ -206,7 +205,6 @@ class Dice(commands.Cog):
         -h (hides name and image of monster)"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
-        self.bot.rdb.incr('monsters_looked_up_life')
 
         monster_name = monster.get_title_name()
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
@@ -295,7 +293,6 @@ class Dice(commands.Cog):
         -h (hides name and image of monster)"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
-        self.bot.rdb.incr('monsters_looked_up_life')
         monster_name = monster.get_title_name()
 
         try:

@@ -6,7 +6,7 @@ from urllib import parse
 import html2text
 
 from cogs5e.models import errors
-from cogs5e.models.sheet import BaseStats, Saves, Skills, Spellbook, SpellbookSpell
+from cogs5e.models.sheet import BaseStats, Saves, Skills, Spellbook, SpellbookSpell, Spellcaster
 from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
@@ -39,7 +39,7 @@ SAVE_MAP = {'strengthSave': 'str', 'dexteritySave': 'dex', 'constitutionSave': '
             'wisdomSave': 'wis', 'charismaSave': 'cha'}
 
 
-class Monster:
+class Monster(Spellcaster):
     def __init__(self, name: str, size: str, race: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
                  speed: str, ability_scores: BaseStats, cr: str, xp: int, passiveperc: int = None,
                  senses: str = '', vuln: list = None, resist: list = None, immune: list = None,
@@ -77,6 +77,7 @@ class Monster:
             passiveperc = 10 + skills.perception.value
         if raw_resists is None:
             raw_resists = {}
+        super(Monster, self).__init__(spellbook=spellcasting)
         self.name = name
         self.size = size
         self.race = race
@@ -108,7 +109,6 @@ class Monster:
         self.attacks = attacks
         self.proper = proper
         self.image_url = image_url
-        self.spellbook = spellcasting
         self.page = page  # this should really be by source, but oh well
         self.raw_resists = raw_resists
 
@@ -338,6 +338,9 @@ class Monster:
     def get_title_name(self):
         """Returns a monster's name for use in embed titles."""
         return a_or_an(self.name, upper=True) if not self.proper else self.name
+
+    def get_name(self):
+        return self.get_title_name()
 
     def get_image_url(self):
         """Returns a monster's image URL."""

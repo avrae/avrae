@@ -7,9 +7,10 @@ from discord.ext import commands
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
-from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
+from cogs5e.models.automation import Automation
 from cogs5e.models.monster import Monster, SKILL_MAP
+from cogs5e.models.sheet import Attack
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.functions import a_or_an, camel_to_title, search_and_select, verbose_stat
@@ -166,25 +167,33 @@ class Dice(commands.Cog):
         args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
         if not args.last('h', type_=bool):
-            args['name'] = monster_name
-            args['image'] = args.get('image') or monster.get_image_url()
+            name = monster_name
+            image = args.get('image') or monster.get_image_url()
         else:
-            args['name'] = "An unknown creature"
-        attack['details'] = attack.get('desc') or attack.get('details')
+            name = "An unknown creature"
+            image = None
 
-        result = sheet_attack(attack, args)
-        embed = result['embed']
+        attack = Attack.from_old(attack)
+
+        embed = discord.Embed()
+        if args.last('title') is not None:
+            embed.title = args.last('title') \
+                .replace('[monname]', name) \
+                .replace('[aname]', attack.name)
+        else:
+            embed.title = '{} attacks with {}!'.format(name, a_or_an(attack.name))
+
+        if image:
+            embed.set_thumbnail(url=image)
+
+        await Automation.from_attack(attack).run(ctx, embed, monster, args.get('t'), args)
+
+        _fields = args.get('f')
+        embeds.add_fields_from_args(embed, _fields)
         embed.colour = random.randint(0, 0xffffff)
-        embeds.add_fields_from_args(embed, args.get('f'))
 
         if monster.source == 'homebrew':
             embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
-
-        if args.last('h', type_=bool):
-            try:
-                await ctx.author.send(embed=result['full_embed'])
-            except:
-                pass
 
         await ctx.send(embed=embed)
 

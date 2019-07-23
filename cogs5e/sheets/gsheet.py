@@ -300,7 +300,7 @@ class GoogleSheet(SheetLoaderABC):
 
             adv = None
             if self.version == 2 and advcell:
-                advtype = character.cell(advcell).value
+                advtype = character.cell(advcell).value_unformatted
                 if advtype in {'a', 'adv', 'advantage'}:
                     adv = True
                 elif advtype in {'d', 'dis', 'disadvantage'}:

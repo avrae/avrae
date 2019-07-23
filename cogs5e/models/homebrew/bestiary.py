@@ -99,7 +99,7 @@ class Bestiary:
 
     @property
     def monsters(self):
-        if not self._monsters:
+        if self._monsters is None:
             raise AttributeError("load_monsters() must be called before accessing bestiary monsters.")
         return self._monsters
 

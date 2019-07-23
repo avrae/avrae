@@ -15,6 +15,7 @@ from cogs5e.funcs.lookup_ml import ml_spell_search
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
+from cogsmisc.stats import Stats
 from utils import checks
 from utils.functions import ABILITY_MAP, generate_token, get_positivity, parse_data_entry, search_and_select
 
@@ -410,7 +411,6 @@ class Lookup(commands.Cog):
         else:
             visible = True
 
-        self.bot.rdb.incr('monsters_looked_up_life')
         monster, metadata = await select_monster_full(ctx, name, return_metadata=True)
 
         metadata['homebrew'] = monster.source == 'homebrew'
@@ -536,8 +536,6 @@ class Lookup(commands.Cog):
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        self.bot.rdb.incr('spells_looked_up_life')
-
         spell, metadata = await select_spell_full(ctx, name, search_func=ml_spell_search, return_metadata=True)
 
         metadata['homebrew'] = spell.source == 'homebrew'
@@ -598,8 +596,6 @@ class Lookup(commands.Cog):
         """Looks up an item."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-
-        self.bot.rdb.incr('items_looked_up_life')
 
         try:
             pack = await Pack.from_ctx(ctx)
@@ -722,6 +718,8 @@ class Lookup(commands.Cog):
             await ctx.author.send(embed=embed)
         else:
             await ctx.send(embed=embed)
+
+        await Stats.increase_stat(ctx, "items_looked_up_life")
 
     async def get_settings(self, guild):
         settings = {}  # default PM settings

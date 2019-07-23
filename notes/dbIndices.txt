@@ -31,3 +31,6 @@ db.analytics_user_activity.createIndex({"user_id": 1}, {"unique": true});
 
 analytics_command_activity:
 db.analytics_command_activity.createIndex({"name": 1}, {"unique": true});
+
+random_stats:
+db.random_stats.createIndex({"key": 1}, {"unique": true});

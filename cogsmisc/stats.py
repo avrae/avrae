@@ -56,7 +56,7 @@ class Stats(commands.Cog):
         )
 
     async def command_activity(self, ctx):
-        self.bot.rdb.incr('commands_used_life')
+        await self.increase_stat(ctx, "commands_used_life")
         await self.bot.mdb.analytics_command_activity.update_one(
             {"name": ctx.command.qualified_name},
             {
@@ -67,10 +67,17 @@ class Stats(commands.Cog):
         )
 
     async def update_hourly(self):
+        try:
+            commands_used_life = int(
+                (await self.bot.mdb.random_stats.find_one({"key": "commands_used_life"}))
+                    .get("value", 0)
+            )
+        except AttributeError:
+            commands_used_life = 0
         data = {
             "timestamp": datetime.datetime.now(),
             "num_unique_members": len(self.bot.users),
-            "num_commands_called": int(self.bot.rdb.get("commands_used_life", 0)),
+            "num_commands_called": commands_used_life,
             "num_servers": len(self.bot.guilds)
         }
         await self.bot.mdb.analytics_over_time.insert_one(data)
@@ -110,6 +117,25 @@ class Stats(commands.Cog):
         cpm = total / minutes
         await ctx.send('{0} bytes of socket events observed ({1:.2f}/minute):\n{2}'
                        .format(total, cpm, self.socket_bandwidth))
+
+    @staticmethod
+    async def increase_stat(ctx, stat):
+        await ctx.bot.mdb.random_stats.update_one(
+            {"key": stat},
+            {"$inc": {"value": 1}},
+            upsert=True
+        )
+
+    @staticmethod
+    async def get_statistic(ctx, stat):
+        try:
+            value = int(
+                (await ctx.bot.mdb.random_stats.find_one({"key": stat}))
+                    .get("value", 0)
+            )
+        except AttributeError:
+            value = 0
+        return value
 
 
 def setup(bot):

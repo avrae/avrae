@@ -56,11 +56,8 @@ async def run(mdb):
 if __name__ == '__main__':
     mdb = None
     if 'test' in sys.argv:
-        mdb = motor.motor_asyncio.AsyncIOMotorClient(credentials.test_mongo_url)
+        mdb = motor.motor_asyncio.AsyncIOMotorClient(credentials.test_mongo_url).avrae
     else:
-        mdb = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
-
-    mdb = motor.motor_asyncio.AsyncIOMotorClient(
-        credentials.test_mongo_url if 'test' in sys.argv else "mongodb://localhost:27017").avrae
+        mdb = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017")).avrae
 
     asyncio.get_event_loop().run_until_complete(run(mdb))

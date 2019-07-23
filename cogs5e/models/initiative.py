@@ -1,5 +1,3 @@
-import copy
-
 import cachetools
 
 from cogs5e.funcs.dice import roll

@@ -132,6 +132,15 @@ class SimpleCombatant:
         return None
 
     def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0, overheal=False):
+        from cogs5e.models.automation import AutomationContext, AutomationTarget, \
+            Damage  # this has to be here to avoid circular imports
+
+        class _SimpleAutomationContext(AutomationContext):
+            def __init__(self, combatant, target, args, combat, crit=False):
+                super(_SimpleAutomationContext, self).__init__(None, None, combatant, [target], args, combat)
+                self.in_crit = crit
+                self.target = AutomationTarget(target)
+
         args = ParsedArguments(None, {
             'critdice': [critdice],
             'resist': self._combatant.resists['resist'],
@@ -142,10 +151,10 @@ class SimpleCombatant:
             args['d'] = d
         if c:
             args['c'] = c
-        result = sheet_damage(dice_str, args, 1 if crit else 0)
-        result['damage'] = result['damage'].strip()
-        self.mod_hp(-result['total'], overheal=overheal)
-        return result
+        damage = Damage(dice_str)
+        autoctx = _SimpleAutomationContext(self._combatant, self._combatant, args, self._combatant.combat, crit)
+
+        return damage.run(autoctx)
 
     def set_ac(self, ac: int):
         if not isinstance(ac, int) and ac is not None:

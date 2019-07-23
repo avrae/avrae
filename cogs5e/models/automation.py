@@ -132,7 +132,7 @@ class AutomationContext:
     def insert_meta_field(self):
         if not self._meta_queue:
             return
-        self._field_queue.insert(0, {"name": "Meta", "value": '\n'.join(self._meta_queue)})
+        self._field_queue.insert(0, {"name": "Meta", "value": '\n'.join(self._meta_queue), "inline": False})
         self._meta_queue = []
 
     def build_embed(self):
@@ -597,6 +597,9 @@ class Damage(Effect):
         autoctx.queue(dmgroll.result)
 
         autoctx.target.damage(autoctx, dmgroll.total)
+
+        # return metadata for scripting
+        return {'damage': dmgroll.result, 'total': dmgroll.total, 'roll': dmgroll}
 
     def is_meta(self, autoctx, strict=False):
         if not strict:

@@ -1,6 +1,5 @@
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting.functions import SimpleRollResult
-from cogs5e.funcs.sheetFuncs import sheet_damage
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
 from utils.argparser import ParsedArguments

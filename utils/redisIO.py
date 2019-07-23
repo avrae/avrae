@@ -20,7 +20,7 @@ class RedisIO:
     def __init__(self, testing=False, database_url=''):
         if not testing:
             if database_url != '':
-                self._db = redis.from_url(redis_url, socket_connect_timeout=2, socket_timeout=2)
+                self._db = redis.from_url(database_url, socket_connect_timeout=2, socket_timeout=2)
             else:
                 self._db = Redis(host="127.0.0.1", db=0, socket_connect_timeout=2, socket_timeout=2,
                                  password=credentials.redis_pass)

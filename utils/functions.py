@@ -99,9 +99,9 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
         return [], False
     else:
         if return_key:
-            return key(exact_matches[0]), True
+            return key(results[0]), True
         else:
-            return exact_matches[0], True
+            return results[0], True
 
 
 async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, return_key=False, pm=False, message=None,

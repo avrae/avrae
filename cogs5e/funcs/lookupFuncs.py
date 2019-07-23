@@ -16,6 +16,7 @@ from cogs5e.models.homebrew.tome import Tome
 from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
 from cogs5e.models.spell import Spell
+from cogsmisc.stats import Stats
 from utils.functions import parse_data_entry, search_and_select, search
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
@@ -166,6 +167,8 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
             await servbestiary.load_monsters(ctx)
             choices.extend(servbestiary.monsters)
 
+    await Stats.increase_stat(ctx, "monsters_looked_up_life")
+
     def get_homebrew_formatted_name(monster):
         if monster.source == 'homebrew':
             return f"{monster.name} ({HOMEBREW_EMOJI})"
@@ -182,6 +185,8 @@ async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, mes
     Gets a Spell from the compendium and active tome(s).
     """
     choices = await get_spell_choices(ctx)
+
+    await Stats.increase_stat(ctx, "spells_looked_up_life")
 
     def get_homebrew_formatted_name(spell):
         if spell.source == 'homebrew':

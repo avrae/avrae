@@ -5,7 +5,7 @@ import random
 from discord.ext import commands
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import c
+from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import ABILITY_MAP, get_selection, parse_data_entry, search_and_select
@@ -61,7 +61,7 @@ class CharGenerator(commands.Cog):
             return await ctx.send(f"Your random name: {self.old_name_gen()}")
 
         embed = EmbedWithAuthor(ctx)
-        race_names = await search_and_select(ctx, c.names, race, lambda e: e['race'])
+        race_names = await search_and_select(ctx, compendium.names, race, lambda e: e['race'])
         if option is None:
             table = await get_selection(ctx, [(t['name'], t) for t in race_names['tables']])
         else:
@@ -98,14 +98,14 @@ class CharGenerator(commands.Cog):
             race_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for race.")
-        race = await search_and_select(ctx, c.fancyraces, race_response.content, lambda e: e.name)
+        race = await search_and_select(ctx, compendium.fancyraces, race_response.content, lambda e: e.name)
 
         await ctx.send(author.mention + " What class?")
         try:
             class_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for class.")
-        _class = await search_and_select(ctx, c.classes, class_response.content, lambda e: e['name'])
+        _class = await search_and_select(ctx, compendium.classes, class_response.content, lambda e: e['name'])
 
         if 'subclasses' in _class:
             await ctx.send(author.mention + " What subclass?")
@@ -123,7 +123,7 @@ class CharGenerator(commands.Cog):
             bg_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for background.")
-        background = await search_and_select(ctx, c.backgrounds, bg_response.content, lambda e: e.name)
+        background = await search_and_select(ctx, compendium.backgrounds, bg_response.content, lambda e: e.name)
         return race, _class, subclass, background
 
     async def genChar(self, ctx, final_level, race=None, _class=None, subclass=None, background=None):
@@ -140,7 +140,7 @@ class CharGenerator(commands.Cog):
         await ctx.author.send("**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
-        race = race or random.choice(c.fancyraces)
+        race = race or random.choice(compendium.fancyraces)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = race.name
@@ -160,7 +160,7 @@ class CharGenerator(commands.Cog):
 
         # Class Gen
         #    Class Features
-        _class = _class or random.choice(c.classes)
+        _class = _class or random.choice(compendium.classes)
         subclass = subclass or (random.choice(_class['subclasses']) if _class['subclasses'] else None)
         embed = EmbedWithAuthor(ctx)
         embed.title = f"{_class['name']} ({subclass['name']})"
@@ -262,7 +262,7 @@ class CharGenerator(commands.Cog):
 
         # Background Gen
         #    Inventory/Trait Gen
-        background = background or random.choice(c.backgrounds)
+        background = background or random.choice(compendium.backgrounds)
         embed = EmbedWithAuthor(ctx)
         embed.title = background.name
         embed.description = f"*Source: {background.source}*"

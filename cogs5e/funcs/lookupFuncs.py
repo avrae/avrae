@@ -3,6 +3,7 @@ Created on Jan 13, 2017
 
 @author: andrew
 """
+import asyncio
 import itertools
 import json
 import logging
@@ -25,31 +26,98 @@ log = logging.getLogger(__name__)
 
 class Compendium:
     def __init__(self):
-        self.cfeats = self.load_json('srd-classfeats.json', [])
-        self.classes = self.load_json('srd-classes.json', [])
-        self.conditions = self.load_json('conditions.json', [])
-        self.feats = self.load_json('srd-feats.json', [])
-        self.itemprops = self.load_json('itemprops.json', {})
-        self.monsters = self.load_json('srd-bestiary.json', [])
-        self.names = self.load_json('names.json', [])
-        self.rules = self.load_json('rules.json', [])
+        self.backgrounds = []
+        self.cfeats = []
+        self.classes = []
+        self.conditions = []
+        self.fancyraces = []
+        self.feats = []
+        self.itemprops = {}
+        self.items = []
+        self.monster_mash = []
+        self.monsters = []
+        self.names = []
+        self.rfeats = []
+        self.rules = []
+        self.spells = []
+        self.srd_backgrounds = []
+        self.srd_items = []
+        self.srd_races = []
+        self.srd_spells = []
+        self.subclasses = []
 
-        self.spells = [Spell.from_data(r) for r in self.load_json('srd-spells.json', [])]
-        self.backgrounds = [Background.from_data(b) for b in self.load_json('srd-backgrounds.json', [])]
-        self.items = [i for i in self.load_json('srd-items.json', []) if i.get('type') is not '$']
+    async def reload_task(self, mdb=None):
+        wait_for = int(os.getenv('RELOAD_INTERVAL', '300'))  # TODO: decide if 5 minutes is a reasonable default
+        if wait_for > 0:
+            log.info("Reloading data every %d seconds", wait_for)
+            while True:
+                await self.reload(mdb)
+                await asyncio.sleep(wait_for)
+
+    async def reload(self, mdb=None):
+        loop = asyncio.get_event_loop()
+
+        if mdb is None:
+            await loop.run_in_executor(None, self.load_all_json)
+        else:
+            await self.load_all_mongodb(mdb)
+
+        await loop.run_in_executor(None, self.load_common)
+
+    def load_all_json(self):
+        self.cfeats = self.read_json('srd-classfeats.json', [])
+        self.classes = self.read_json('srd-classes.json', [])
+        self.conditions = self.read_json('conditions.json', [])
+        self.feats = self.read_json('srd-feats.json', [])
+        self.monsters = self.read_json('srd-bestiary.json', [])
+        self.names = self.read_json('names.json', [])
+        self.rules = self.read_json('rules.json', [])
+        self.srd_backgrounds = self.read_json('srd-backgrounds.json', [])
+        self.srd_items = self.read_json('srd-items.json', [])
+        self.srd_races = self.read_json('srd-races.json', [])
+        self.srd_spells = self.read_json('srd-spells.json', [])
+
+        # Dictionary!
+        self.itemprops = self.read_json('itemprops.json', {})
+
+    async def load_all_mongodb(self, mdb):
+        lookup = {d['key']: d['object'] for d in await mdb.static_data.find({}).to_list(length=None)}
+
+        self.cfeats = lookup.get('srd-classfeats', [])
+        self.classes = lookup.get('srd-classes', [])
+        self.conditions = lookup.get('conditions', [])
+        self.feats = lookup.get('srd-feats', [])
+        self.monsters = lookup.get('srd-bestiary', [])
+        self.names = lookup.get('names', [])
+        self.rules = lookup.get('rules', [])
+        self.srd_backgrounds = lookup.get('srd-backgrounds', [])
+        self.srd_items = lookup.get('srd-items', [])
+        self.srd_races = lookup.get('srd-races', [])
+        self.srd_spells = lookup.get('srd-spells', [])
+
+        # Dictionary!
+        self.itemprops = lookup.get('itemprops', {})
+
+    def load_common(self):
+        self.backgrounds = [Background.from_data(b) for b in self.srd_backgrounds]
+        self.fancyraces = [Race.from_data(r) for r in self.srd_races]
         self.monster_mash = [Monster.from_data(m) for m in self.monsters]
+        self.spells = [Spell.from_data(s) for s in self.srd_spells]
 
+        self.items = [i for i in self.srd_items if i.get('type') is not '$']
+
+        self.rfeats = self.load_rfeats()
         self.subclasses = self.load_subclasses()
 
-        srd_races = self.load_json('srd-races.json', [])
-        self.fancyraces = [Race.from_data(r) for r in srd_races]
-        self.rfeats = []
-        for race in srd_races:
+    def load_rfeats(self):
+        ret = []
+        for race in self.srd_races:
             for entry in race['entries']:
                 if isinstance(entry, dict) and 'name' in entry:
                     temp = {'name': "{}: {}".format(race['name'], entry['name']),
                             'text': parse_data_entry(entry['entries']), 'srd': race['srd']}
-                    self.rfeats.append(temp)
+                    ret.append(temp)
+        return ret
 
     def load_subclasses(self):
         s = []
@@ -60,7 +128,7 @@ class Compendium:
             s.extend(subclasses)
         return s
 
-    def load_json(self, filename, default):
+    def read_json(self, filename, default):
         data = default
         filepath = os.path.join('res', filename)
         try:
@@ -69,10 +137,11 @@ class Compendium:
         except FileNotFoundError:
             log.error("File not found: {}".format(filepath))
             pass
+        log.debug("Loaded {} things from file {}".format(len(data), filename))
         return data
 
 
-c = Compendium()
+compendium = Compendium()
 
 
 # ----- Monster stuff
@@ -89,7 +158,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     except NoActiveBrew:
         custom_monsters = []
         bestiary_id = None
-    choices = list(itertools.chain(c.monster_mash, custom_monsters))
+    choices = list(itertools.chain(compendium.monster_mash, custom_monsters))
     if ctx.guild:
         async for servbestiary in Bestiary.server_bestiaries(ctx):
             if servbestiary.id == bestiary_id:
@@ -132,7 +201,7 @@ async def get_spell_choices(ctx):
     except NoActiveBrew:
         custom_spells = []
         tome_id = None
-    choices = list(itertools.chain(c.spells, custom_spells))
+    choices = list(itertools.chain(compendium.spells, custom_spells))
     if ctx.guild:
         async for servtome in ctx.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['spells']):
             choices.extend(Spell.from_dict(s) for s in servtome['spells'] if servtome['_id'] != tome_id)

@@ -43,6 +43,32 @@ class Customization(commands.Cog):
         await self.handle_aliases(message)
 
     @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def prefix(self, ctx, prefix: str = None):
+        """Sets the bot's prefix for this server.
+
+        You must have Manage Server permissions or a role called "Bot Admin" to use this command.
+
+        Forgot the prefix? Reset it with "@Avrae#6944 prefix !".
+        """
+        guild_id = str(ctx.guild.id)
+        if prefix is None:
+            current_prefix = await self.bot.get_server_prefix(ctx.message)
+            return await ctx.send(f"My current prefix is: `{current_prefix}`")
+        # insert into cache
+        self.bot.prefixes[guild_id] = prefix
+
+        # update db
+        await self.bot.mdb.prefixes.update_one(
+            {"guild_id": guild_id},
+            {"$set": {"prefix": prefix}},
+            upsert=True
+        )
+
+        await ctx.send("Prefix set to `{}` for this server.".format(prefix))
+
+    @commands.command()
     @commands.cooldown(1, 20, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.

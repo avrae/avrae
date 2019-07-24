@@ -34,3 +34,6 @@ db.analytics_command_activity.createIndex({"name": 1}, {"unique": true});
 
 random_stats:
 db.random_stats.createIndex({"key": 1}, {"unique": true});
+
+prefixes:
+db.prefixes.createIndex({"guild_id": 1}, {"unique": true});

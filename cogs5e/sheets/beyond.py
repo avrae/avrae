@@ -276,6 +276,7 @@ class BeyondSheetParser(SheetLoaderABC):
         for charval in self.character_data['characterValues']:
             if charval['valueId'] in HOUSERULE_SKILL_MAP and charval['valueId'] not in ignored_ids:
                 skill_name = HOUSERULE_SKILL_MAP[charval['valueId']]
+                if charval['value'] is None: continue
                 if charval['typeId'] == 23:  # override
                     skills[skill_name] = Skill(charval['value'])
                     ignored_ids.add(charval['valueId'])  # this must be the final value so we stop looking
@@ -356,6 +357,7 @@ class BeyondSheetParser(SheetLoaderABC):
         armored = armortype is not None
 
         for val in self.character_data['characterValues']:
+            if val['value'] is None: continue
             if val['typeId'] == 1:  # AC override
                 return val['value']
             elif val['typeId'] == 2:  # AC magic bonus

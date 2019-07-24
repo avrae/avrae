@@ -280,8 +280,11 @@ class BeyondSheetParser(SheetLoaderABC):
                     skills[skill_name] = Skill(charval['value'])
                     ignored_ids.add(charval['valueId'])  # this must be the final value so we stop looking
                 elif charval['typeId'] in {24, 25}:  # PROBABLY skill magic/misc bonus
-                    skills[skill_name].value += charval['value']
-                    skills[skill_name].bonus += charval['value']
+                    try:
+                        skills[skill_name].value += charval['value']
+                        skills[skill_name].bonus += charval['value']
+                    except TypeError:
+                        pass  # listed due to note but probably doesn't have a value, ignore it
                 elif charval['typeId'] == 26:  # proficiency stuff
                     relevantprof = profs.get(skill_name, 0)
                     skills[skill_name].value -= relevantprof * profBonus
@@ -359,9 +362,15 @@ class BeyondSheetParser(SheetLoaderABC):
             if val['typeId'] == 1:  # AC override
                 return val['value']
             elif val['typeId'] == 2:  # AC magic bonus
-                miscBonus += val['value']
+                try:
+                    miscBonus += val['value']
+                except TypeError:
+                    pass  # listed due to note but probably doesn't have a value, ignore it
             elif val['typeId'] == 3:  # AC misc bonus
-                miscBonus += val['value']
+                try:
+                    miscBonus += val['value']
+                except TypeError:
+                    pass  # listed due to note but probably doesn't have a value, ignore it
             elif val['typeId'] == 4:  # AC+DEX override
                 baseArmor = val['value']
 

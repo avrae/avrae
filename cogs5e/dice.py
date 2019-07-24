@@ -11,6 +11,7 @@ from cogs5e.models import embeds
 from cogs5e.models.automation import Automation
 from cogs5e.models.monster import Monster, SKILL_MAP
 from cogs5e.models.sheet import Attack
+from cogsmisc.stats import Stats
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.functions import a_or_an, camel_to_title, search_and_select, verbose_stat
@@ -25,9 +26,8 @@ class Dice(commands.Cog):
     @commands.command(name='2', hidden=True)
     async def quick_roll(self, ctx, *, mod: str = '0'):
         """Quickly rolls a d20."""
-        self.bot.rdb.incr('dice_rolled_life')
         rollStr = '1d20+' + mod
-        await ctx.invoke(self.bot.get_command("roll"), rollStr=rollStr)
+        await ctx.invoke(self.rollCmd, rollStr=rollStr)
 
     @commands.command(name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
@@ -59,7 +59,6 @@ class Dice(commands.Cog):
             return await ctx.send("What do you expect me to do, destroy the universe?")
 
         adv = 0
-        self.bot.rdb.incr('dice_rolled_life')
         if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
             adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
             rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
@@ -76,6 +75,7 @@ class Dice(commands.Cog):
                     res.plain))
         else:
             await ctx.send(outStr)
+        await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.command(name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations: int, rollStr, *, args=''):
@@ -83,7 +83,6 @@ class Dice(commands.Cog):
         Usage: !rr <iterations> <xdy> [args]"""
         if iterations < 1 or iterations > 100:
             return await ctx.send("Too many or too few iterations.")
-        self.bot.rdb.incr('dice_rolled_life')
         adv = 0
         out = []
         if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
@@ -104,6 +103,7 @@ class Dice(commands.Cog):
         except:
             pass
         await ctx.send(ctx.author.mention + '\n' + outStr)
+        await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.command(name='iterroll', aliases=['rrr'])
     async def rrr(self, ctx, iterations: int, rollStr, dc: int = 0, *, args=''):
@@ -111,7 +111,6 @@ class Dice(commands.Cog):
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
         if iterations < 1 or iterations > 100:
             return await ctx.send("Too many or too few iterations.")
-        self.bot.rdb.incr('dice_rolled_life')
         adv = 0
         out = []
         successes = 0
@@ -136,6 +135,7 @@ class Dice(commands.Cog):
         except:
             pass
         await ctx.send(ctx.author.mention + '\n' + outStr)
+        await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)
     async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):

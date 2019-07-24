@@ -1,6 +1,6 @@
 import pytest
 
-from cogs5e.funcs.lookupFuncs import c
+from cogs5e.funcs.lookupFuncs import compendium
 
 # commonly used patterns
 
@@ -44,7 +44,7 @@ def requires_data(datatypes=None):
         datatypes = [datatypes]
 
     for datatype in datatypes:
-        if not getattr(c, datatype, None):
+        if not getattr(compendium, datatype, None):
             return pytest.mark.skip(reason=f"Test requires {datatype} data")
 
     return lambda func: func

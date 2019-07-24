@@ -13,6 +13,7 @@ from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.models.errors import AvraeException, EvaluationError
+from cogs5e.funcs.lookupFuncs import compendium
 from utils.functions import discord_trim, gen_error_message, get_positivity
 from utils.help import help_command
 from utils.redisIO import RedisIO
@@ -70,7 +71,7 @@ class Avrae(commands.AutoShardedBot):
                 # half, round up to nearest 16
                 self.shard_count = recommended_shards // 2 + (16 - (recommended_shards // 2) % 16)
             else:
-                self.shard_count = recommended_shards // 2
+                self.shard_count = max(recommended_shards // 2, 1)
         log.info(f"Launching {self.shard_count} shards!")
         await super(Avrae, self).launch_shards()
 
@@ -261,4 +262,5 @@ if __name__ == '__main__':
     bot.state = "run"
     if not bot.rdb.exists('build_num'): bot.rdb.set('build_num', 0)
     bot.rdb.incr('build_num')
+    bot.loop.create_task(compendium.reload_task(bot.mdb))
     bot.run(bot.credentials.token)

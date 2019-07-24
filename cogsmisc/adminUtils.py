@@ -10,6 +10,7 @@ import discord
 from discord.errors import NotFound
 from discord.ext import commands
 
+from cogs5e.funcs.lookupFuncs import compendium
 from utils import checks
 from utils.functions import discord_trim
 
@@ -154,6 +155,12 @@ class AdminUtils(commands.Cog):
         status = statuslevel.get(status)
         await self.bot.change_presence(status=status, activity=discord.Game(msg or "D&D 5e | !help"))
         await ctx.send("Changed presence.")
+
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def reload_static(self, ctx):
+        await compendium.reload(self.bot.mdb)
+        await ctx.send("Reloaded static data.")
 
     @commands.Cog.listener()
     async def on_guild_join(self, server):

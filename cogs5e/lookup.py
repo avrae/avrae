@@ -10,11 +10,12 @@ import textwrap
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs.lookupFuncs import HOMEBREW_EMOJI, HOMEBREW_ICON, c, select_monster_full, select_spell_full
+from cogs5e.funcs.lookupFuncs import HOMEBREW_EMOJI, HOMEBREW_ICON, compendium, select_monster_full, select_spell_full
 from cogs5e.funcs.lookup_ml import ml_spell_search
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
+from cogsmisc.stats import Stats
 from utils import checks
 from utils.functions import ABILITY_MAP, generate_token, get_positivity, parse_data_entry, search_and_select
 
@@ -60,7 +61,7 @@ class Lookup(commands.Cog):
 
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.conditions, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.conditions, name, lambda e: e['name'], return_metadata=True)
 
         await self.add_training_data("condition", name, result['name'], metadata=metadata)
 
@@ -78,7 +79,7 @@ class Lookup(commands.Cog):
 
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.rules, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.rules, name, lambda e: e['name'], return_metadata=True)
 
         await self.add_training_data("rule", name, result['name'], metadata=metadata)
 
@@ -99,7 +100,7 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.feats, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.feats, name, lambda e: e['name'], return_metadata=True)
         await self.add_training_data("feat", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -123,7 +124,7 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.rfeats, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.rfeats, name, lambda e: e['name'], return_metadata=True)
         await self.add_training_data("racefeat", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -143,7 +144,7 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.fancyraces, name, lambda e: e.name, return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.fancyraces, name, lambda e: e.name, return_metadata=True)
         await self.add_training_data("race", name, result.name, metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -169,7 +170,7 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.cfeats, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.cfeats, name, lambda e: e['name'], return_metadata=True)
         await self.add_training_data("classfeat", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -192,7 +193,7 @@ class Lookup(commands.Cog):
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        result, metadata = await search_and_select(ctx, c.classes, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.classes, name, lambda e: e['name'], return_metadata=True)
         await self.add_training_data("class", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -262,7 +263,7 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, c.subclasses, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.subclasses, name, lambda e: e['name'], return_metadata=True)
         await self.add_training_data("subclass", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -287,7 +288,7 @@ class Lookup(commands.Cog):
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        result, metadata = await search_and_select(ctx, c.backgrounds, name, lambda e: e.name, return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.backgrounds, name, lambda e: e.name, return_metadata=True)
         await self.add_training_data("background", name, result.name, metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -535,8 +536,6 @@ class Lookup(commands.Cog):
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        self.bot.rdb.incr('spells_looked_up_life')
-
         spell, metadata = await select_spell_full(ctx, name, search_func=ml_spell_search, return_metadata=True)
 
         metadata['homebrew'] = spell.source == 'homebrew'
@@ -598,14 +597,12 @@ class Lookup(commands.Cog):
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        self.bot.rdb.incr('items_looked_up_life')
-
         try:
             pack = await Pack.from_ctx(ctx)
             custom_items = pack.get_search_formatted_items()
         except NoActiveBrew:
             custom_items = []
-        choices = list(itertools.chain(c.items, custom_items))
+        choices = list(itertools.chain(compendium.items, custom_items))
         if ctx.guild:
             async for servpack in ctx.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}):
                 choices.extend(Pack.from_dict(servpack).get_search_formatted_items())
@@ -649,7 +646,7 @@ class Lookup(commands.Cog):
                     if iType == 'SHP':  # ships
                         for p in ("CREW", "PASS", "CARGO", "DMGT", "SHPREP"):
                             a = PROPS.get(p, 'n/a')
-                            proptext += f"**{a.title()}**: {c.itemprops[p]}\n"
+                            proptext += f"**{a.title()}**: {compendium.itemprops[p]}\n"
                         extras = f"Speed: {item.get('speed')}\nCarrying Capacity: {item.get('carryingcapacity')}\n" \
                                  f"Crew {item.get('crew')}, AC {item.get('vehAc')}, HP {item.get('vehHp')}"
                         if 'vehDmgThresh' in item:
@@ -676,8 +673,8 @@ class Lookup(commands.Cog):
                 if not prop: continue
                 a = b = prop
                 a = PROPS.get(a, 'n/a')
-                if b in c.itemprops:
-                    proptext += f"**{a.title()}**: {c.itemprops[b]}\n"
+                if b in compendium.itemprops:
+                    proptext += f"**{a.title()}**: {compendium.itemprops[b]}\n"
                 if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
                 if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
                 if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
@@ -721,6 +718,8 @@ class Lookup(commands.Cog):
             await ctx.author.send(embed=embed)
         else:
             await ctx.send(embed=embed)
+
+        await Stats.increase_stat(ctx, "items_looked_up_life")
 
     async def get_settings(self, guild):
         settings = {}  # default PM settings

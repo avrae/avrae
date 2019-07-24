@@ -18,6 +18,7 @@ from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, add_fields
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet import Attack, Skill
+from cogsmisc.stats import Stats
 from utils.argparser import argparse
 from utils.functions import a_or_an, confirm, search_and_select
 
@@ -356,9 +357,9 @@ class InitTracker(commands.Cog):
         advanced_round, messages = combat.advance_turn()
         out = messages
 
-        self.bot.rdb.incr('turns_init_tracked_life')
+        await Stats.increase_stat(ctx, "turns_init_tracked_life")
         if advanced_round:
-            self.bot.rdb.incr('rounds_init_tracked_life')
+            await Stats.increase_stat(ctx, "rounds_init_tracked_life")
 
         out.append(combat.get_turn_str())
 

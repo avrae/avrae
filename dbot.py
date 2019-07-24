@@ -127,10 +127,10 @@ msglog = logging.getLogger('messages')
 
 @bot.event
 async def on_ready():
-    print('Logged in as')
-    print(bot.user.name)
-    print(bot.user.id)
-    print('------')
+    log.info('Logged in as')
+    log.info(bot.user.name)
+    log.info(bot.user.id)
+    log.info('------')
 
 
 @bot.event
@@ -233,7 +233,8 @@ async def on_command_error(ctx, error):
             await error_channel.send(o)
 
     log.error("Error caused by message: `{}`".format(ctx.message.content))
-    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+    for line in traceback.format_exception(type(error), error, error.__traceback__):
+        log.error(line)
 
 
 @bot.event

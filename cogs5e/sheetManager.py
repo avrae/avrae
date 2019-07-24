@@ -537,7 +537,7 @@ class SheetManager(commands.Cog):
             return await loading.edit(content=f"Error loading character: {eep}")
         except Exception as eep:
             log.warning(f"Error importing character {old_character.upstream}")
-            traceback.print_exc()
+            log.warning(traceback.format_exc())
             return await loading.edit(content=f"Error loading character: {eep}")
 
         character.update(old_character)
@@ -736,7 +736,7 @@ class SheetManager(commands.Cog):
             return await loading.edit(content=f"Error loading character: {eep}")
         except Exception as eep:
             log.warning(f"Error importing character {parser.url}")
-            traceback.print_exc()
+            log.warning(traceback.format_exc())
             return await loading.edit(content=f"Error loading character: {eep}")
 
         await loading.edit(content=f'Loaded and saved data for {character.name}!')

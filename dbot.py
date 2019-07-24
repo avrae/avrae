@@ -33,11 +33,11 @@ STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmis
                "cogsmisc.permissions"]
 
 
-def get_prefix(b, message):
+async def get_prefix(the_bot, message):
     if not message.guild:
-        return commands.when_mentioned_or(DEFAULT_PREFIX)(b, message)
-    gp = b.prefixes.get(str(message.guild.id), '!')
-    return commands.when_mentioned_or(gp)(b, message)
+        return commands.when_mentioned_or(DEFAULT_PREFIX)(the_bot, message)
+    gp = the_bot.prefixes.get(str(message.guild.id), '!')
+    return commands.when_mentioned_or(gp)(the_bot, message)
 
 
 class Avrae(commands.AutoShardedBot):
@@ -61,8 +61,8 @@ class Avrae(commands.AutoShardedBot):
         if SENTRY_DSN is not None:
             sentry_sdk.init(dsn=SENTRY_DSN, environment="Development" if TESTING else "Production")
 
-    def get_server_prefix(self, msg):
-        return get_prefix(self, msg)[-1]
+    async def get_server_prefix(self, msg):
+        return (await get_prefix(self, msg))[-1]
 
     async def launch_shards(self):
         if self.shard_count is None:

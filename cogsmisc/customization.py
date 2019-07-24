@@ -60,7 +60,7 @@ class Customization(commands.Cog):
             await asyncio.sleep(1)
 
     async def handle_aliases(self, message):
-        prefix = self.bot.get_server_prefix(message)
+        prefix = await self.bot.get_server_prefix(message)
         if message.content.startswith(prefix):
             alias = prefix.join(message.content.split(prefix)[1:]).split(' ')[0]
             if message.guild:
@@ -74,7 +74,7 @@ class Customization(commands.Cog):
             if command:
                 command = command['commands']
                 try:
-                    message.content = self.handle_alias_arguments(command, message)
+                    message.content = await self.handle_alias_arguments(command, message)
                 except UserInputError as e:
                     return await message.channel.send(f"Invalid input: {e}")
                 ctx = Context(self.bot, message)
@@ -103,10 +103,10 @@ class Customization(commands.Cog):
                     return await message.channel.send(e)
                 await self.bot.process_commands(message)
 
-    def handle_alias_arguments(self, command, message):
+    async def handle_alias_arguments(self, command, message):
         """Takes an alias name, alias value, and message and handles percent-encoded args.
         Returns: string"""
-        prefix = self.bot.get_server_prefix(message)
+        prefix = await self.bot.get_server_prefix(message)
         rawargs = " ".join(prefix.join(message.content.split(prefix)[1:]).split(' ')[1:])
         args = argsplit(rawargs)
         tempargs = args[:]

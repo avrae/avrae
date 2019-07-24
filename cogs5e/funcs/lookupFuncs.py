@@ -48,7 +48,7 @@ class Compendium:
         self.subclasses = []
 
     async def reload_task(self, mdb=None):
-        wait_for = int(os.getenv('RELOAD_INTERVAL', '300'))  # TODO: decide if 5 minutes is a reasonable default
+        wait_for = int(os.getenv('RELOAD_INTERVAL', '3600'))
         if wait_for > 0:
             log.info("Reloading data every %d seconds", wait_for)
             while True:

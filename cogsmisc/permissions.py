@@ -45,7 +45,8 @@ class Permissions(commands.Cog):
         """
         guild_id = str(ctx.guild.id)
         if prefix is None:
-            return await ctx.send(f"My current prefix is: `{await self.bot.get_server_prefix(ctx.message)}`")
+            current_prefix = await self.bot.get_server_prefix(ctx.message)
+            return await ctx.send(f"My current prefix is: `{current_prefix}`")
         # insert into cache
         self.bot.prefixes[guild_id] = prefix
 

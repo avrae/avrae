@@ -8,7 +8,7 @@ cachetools==2.0.1
 certifi==2019.3.9
 chardet==3.0.4
 coverage==4.5.3
-discord.py==1.2.2
+discord.py==1.2.3
 dnspython==1.15.0
 fuzzywuzzy==0.15.1
 gast==0.2.0

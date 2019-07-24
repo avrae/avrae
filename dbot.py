@@ -12,8 +12,8 @@ from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
-from cogs5e.models.errors import AvraeException, EvaluationError
 from cogs5e.funcs.lookupFuncs import compendium
+from cogs5e.models.errors import AvraeException, EvaluationError
 from utils.functions import discord_trim, gen_error_message, get_positivity
 from utils.help import help_command
 from utils.redisIO import RedisIO
@@ -36,7 +36,16 @@ STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmis
 async def get_prefix(the_bot, message):
     if not message.guild:
         return commands.when_mentioned_or(DEFAULT_PREFIX)(the_bot, message)
-    gp = the_bot.prefixes.get(str(message.guild.id), '!')
+    guild_id = str(message.guild.id)
+    if guild_id in the_bot.prefixes:
+        gp = the_bot.prefixes.get(guild_id, DEFAULT_PREFIX)
+    else:  # load from db and cache
+        gp_obj = await the_bot.mdb.prefixes.find_one({"guild_id": guild_id})
+        if gp_obj is None:
+            gp = DEFAULT_PREFIX
+        else:
+            gp = gp_obj.get("prefix", DEFAULT_PREFIX)
+        the_bot.prefixes[guild_id] = gp
     return commands.when_mentioned_or(gp)(the_bot, message)
 
 
@@ -55,7 +64,7 @@ class Avrae(commands.AutoShardedBot):
 
         self.mdb = self.mclient.avrae  # let's just use the avrae db
         self.dynamic_cog_list = DYNAMIC_COGS
-        self.prefixes = self.rdb.not_json_get("prefixes", {})
+        self.prefixes = dict()
         self.muted = set()
 
         if SENTRY_DSN is not None:

@@ -46,8 +46,16 @@ class Permissions(commands.Cog):
         guild_id = str(ctx.guild.id)
         if prefix is None:
             return await ctx.send(f"My current prefix is: `{await self.bot.get_server_prefix(ctx.message)}`")
+        # insert into cache
         self.bot.prefixes[guild_id] = prefix
-        self.bot.rdb.not_json_set("prefixes", self.bot.prefixes)
+
+        # update db
+        await self.bot.mdb.prefixes.update_one(
+            {"guild_id": guild_id},
+            {"$set": {"prefix": prefix}},
+            upsert=True
+        )
+
         await ctx.send("Prefix set to `{}` for this server.".format(prefix))
 
     @commands.command()

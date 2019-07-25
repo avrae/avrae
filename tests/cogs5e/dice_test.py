@@ -22,7 +22,7 @@ async def test_iterroll(avrae, dhttp):
     await dhttp.receive_message(rf"<@!?\d+>\nRolling 10 iterations, DC 10...\n({D20_PATTERN}\n){{10}}\d+ successes.")
 
 
-@requires_data("monster_mash")
+@requires_data()
 async def test_ma(avrae, dhttp):
     dhttp.clear()
 
@@ -45,7 +45,7 @@ async def test_ma(avrae, dhttp):
     await dhttp.receive_message(embed=atk_embed)
 
 
-@requires_data("monster_mash")
+@requires_data()
 async def test_mc(avrae, dhttp):
     dhttp.clear()
 
@@ -60,7 +60,7 @@ async def test_mc(avrae, dhttp):
     await dhttp.receive_delete()
 
 
-@requires_data("monster_mash")
+@requires_data()
 async def test_ms(avrae, dhttp):
     dhttp.clear()
 

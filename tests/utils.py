@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from cogs5e.funcs.lookupFuncs import compendium
@@ -36,15 +38,28 @@ DAMAGE_PATTERN = rf"(\*\*Damage (\(CRIT!\))?:\*\* {DICE_PATTERN})|(\*\*Miss!\*\*
 ATTACK_PATTERN = rf"{TO_HIT_PATTERN}\n{DAMAGE_PATTERN}"
 
 
-def requires_data(datatypes=None):
-    """A wrapper that skips a test if data is not loaded."""
-    if datatypes is None:
-        datatypes = ["spells"]  # generally, if spells aren't loaded, nothing is
-    if isinstance(datatypes, str):
-        datatypes = [datatypes]
+def requires_data():
+    """
+    A wrapper that skips a test if data is not loaded.
+    Only a severely limited subset of data is available in tests.
+    Conditions: FakeCondition
+    Names: Elf, Family
+    Rules: Fake Rule
+    Backgrounds: Acolyte
+    Monsters: Acolyte, Kobold
+    Classes: Fighter (Champion)
+    Classfeats: None
+    Feats: Grappler
+    Items: Longsword
+    Itemprops: Versatile
+    Races: Human
+    Spells: Fire Bolt, Fireball
+    """
+    if not compendium.spells:  # if spells have not loaded, no data has
+        compendium.load_all_json(base_path=os.path.relpath("tests/static/compendium"))
+        compendium.load_common()
 
-    for datatype in datatypes:
-        if not getattr(compendium, datatype, None):
-            return pytest.mark.skip(reason=f"Test requires {datatype} data")
+    if not compendium.spells:  # we have no data, then
+        return pytest.mark.skip(reason=f"Test requires data")
 
     return lambda func: func

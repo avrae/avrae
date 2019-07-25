@@ -10,6 +10,7 @@ TEST_CHANNEL_ID = 314159265358979323  # pi
 TEST_DMCHANNEL_ID = 271828182845904523  # e
 TEST_GUILD_ID = 112358132235579214  # fib
 MESSAGE_ID = "123456789012345678"
+DEFAULT_USER_ID = "111111111111111112"
 OWNER_USER = {
     "id": str(credentials.owner_id),
     "username": "zhu.exe",
@@ -17,7 +18,7 @@ OWNER_USER = {
     "avatar": None
 }
 DEFAULT_USER = {
-    "id": "111111111111111112",
+    "id": DEFAULT_USER_ID,
     "username": "I'm a user",
     "discriminator": "0001",
     "avatar": None

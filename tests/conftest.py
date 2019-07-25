@@ -4,7 +4,9 @@ namely, it creates the Avrae instance and overrides its http and gateway handler
 and defines a bunch of helper methods
 """
 import asyncio
+import json
 import logging
+import os
 import re
 from fnmatch import fnmatchcase
 from queue import Queue
@@ -14,6 +16,7 @@ from discord import DiscordException, Embed
 from discord.ext import commands
 from discord.http import HTTPClient, Route
 
+from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException
 from tests.setup import *
 
@@ -253,3 +256,24 @@ async def avrae(dhttp):
     log.info("Ready for testing")
     yield bot
     await bot.logout()
+
+
+# ===== Character Fixture =====
+@pytest.fixture(scope="class",
+                params=["ara", "drakro"])
+def character(request, avrae):
+    """Sets up an active character in the user's context, to be used in tests. Cleans up after itself."""
+    filename = os.path.join("tests", "static", f"char-{request.param}.json")
+    with open(filename) as f:
+        char = Character.from_dict(json.load(f))
+    char.owner = DEFAULT_USER_ID
+    char._active = True
+    avrae.mdb.characters.delegate.update_one(
+        {"owner": char.owner, "upstream": char.upstream},
+        {"$set": char.to_dict()},
+        upsert=True
+    )
+    yield char
+    avrae.mdb.characters.delegate.delete_one(
+        {"owner": char.owner, "upstream": char.upstream}
+    )

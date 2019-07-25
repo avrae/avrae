@@ -47,6 +47,8 @@ class Compendium:
         self.srd_spells = []
         self.subclasses = []
 
+        self._base_path = os.path.relpath('res')
+
     async def reload_task(self, mdb=None):
         wait_for = int(os.getenv('RELOAD_INTERVAL', '3600'))
         if wait_for > 0:
@@ -56,6 +58,8 @@ class Compendium:
                 await asyncio.sleep(wait_for)
 
     async def reload(self, mdb=None):
+        log.info("Reloading data")
+
         loop = asyncio.get_event_loop()
 
         if mdb is None:
@@ -65,7 +69,10 @@ class Compendium:
 
         await loop.run_in_executor(None, self.load_common)
 
-    def load_all_json(self):
+    def load_all_json(self, base_path=None):
+        if base_path is not None:
+            self._base_path = base_path
+
         self.cfeats = self.read_json('srd-classfeats.json', [])
         self.classes = self.read_json('srd-classes.json', [])
         self.conditions = self.read_json('conditions.json', [])
@@ -131,13 +138,12 @@ class Compendium:
 
     def read_json(self, filename, default):
         data = default
-        filepath = os.path.join('res', filename)
+        filepath = os.path.join(self._base_path, filename)
         try:
             with open(filepath, 'r') as f:
                 data = json.load(f)
         except FileNotFoundError:
             log.error("File not found: {}".format(filepath))
-            pass
         log.debug("Loaded {} things from file {}".format(len(data), filename))
         return data
 

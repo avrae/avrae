@@ -112,7 +112,7 @@ Join the official development server [here](https://support.avrae.io)!
 bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
             shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name='D&D 5e | !help'))
 
-log_formatter = logging.Formatter('%(asctime)s %(levelname)s:%(name)s: %(message)s')
+log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(log_formatter)
 filehandler = logging.FileHandler(f"temp/log_build_{bot.rdb.get('build_num')}.log", mode='w')

@@ -103,10 +103,11 @@ class Credentials:
             self.token = os.environ.get("ALPHA_TOKEN")
 
 
-desc = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.
+desc = '''
+Avrae, a D&D 5e utility bot designed to help you and your friends play D&D online.
 A full command list can be found [here](https://avrae.io/commands)!
-Invite Avrae to your server [here](https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808)!
-Join the official development server [here](https://discord.gg/pQbd4s6)!
+Invite Avrae to your server [here](https://invite.avrae.io)!
+Join the official development server [here](https://support.avrae.io)!
 '''
 bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
             shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name='D&D 5e | !help'))

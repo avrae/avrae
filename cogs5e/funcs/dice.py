@@ -162,9 +162,6 @@ class Roll(object):
             return DiceResult(result=int(floor(total)), verbose_result=reply, crit=crit, rolled=rolled,
                               skeleton=skeletonReply, raw_dice=self)
         except Exception as ex:
-            if not isinstance(ex, (SyntaxError, KeyError, errors.AvraeException)):
-                log.error('Error in roll() caused by roll {}:'.format(rollStr))
-                traceback.print_exc()
             return DiceResult(verbose_result="Invalid input: {}".format(ex))
 
     def roll_one(self, dice, adv: int = 0):

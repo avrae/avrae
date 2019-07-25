@@ -12,8 +12,8 @@ from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
-from cogs5e.models.errors import AvraeException, EvaluationError
 from cogs5e.funcs.lookupFuncs import compendium
+from cogs5e.models.errors import AvraeException, EvaluationError
 from utils.functions import discord_trim, gen_error_message, get_positivity
 from utils.help import help_command
 from utils.redisIO import RedisIO
@@ -29,15 +29,23 @@ SENTRY_DSN = os.getenv('SENTRY_DSN') or None
 # -----COGS-----
 DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
                 "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization"]
-STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils",
-               "cogsmisc.permissions"]
+STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"]
 
 
-def get_prefix(b, message):
+async def get_prefix(the_bot, message):
     if not message.guild:
-        return commands.when_mentioned_or(DEFAULT_PREFIX)(b, message)
-    gp = b.prefixes.get(str(message.guild.id), '!')
-    return commands.when_mentioned_or(gp)(b, message)
+        return commands.when_mentioned_or(DEFAULT_PREFIX)(the_bot, message)
+    guild_id = str(message.guild.id)
+    if guild_id in the_bot.prefixes:
+        gp = the_bot.prefixes.get(guild_id, DEFAULT_PREFIX)
+    else:  # load from db and cache
+        gp_obj = await the_bot.mdb.prefixes.find_one({"guild_id": guild_id})
+        if gp_obj is None:
+            gp = DEFAULT_PREFIX
+        else:
+            gp = gp_obj.get("prefix", DEFAULT_PREFIX)
+        the_bot.prefixes[guild_id] = gp
+    return commands.when_mentioned_or(gp)(the_bot, message)
 
 
 class Avrae(commands.AutoShardedBot):
@@ -55,14 +63,14 @@ class Avrae(commands.AutoShardedBot):
 
         self.mdb = self.mclient.avrae  # let's just use the avrae db
         self.dynamic_cog_list = DYNAMIC_COGS
-        self.prefixes = self.rdb.not_json_get("prefixes", {})
+        self.prefixes = dict()
         self.muted = set()
 
         if SENTRY_DSN is not None:
             sentry_sdk.init(dsn=SENTRY_DSN, environment="Development" if TESTING else "Production")
 
-    def get_server_prefix(self, msg):
-        return get_prefix(self, msg)[-1]
+    async def get_server_prefix(self, msg):
+        return (await get_prefix(self, msg))[-1]
 
     async def launch_shards(self):
         if self.shard_count is None:
@@ -95,15 +103,16 @@ class Credentials:
             self.token = os.environ.get("ALPHA_TOKEN")
 
 
-desc = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.
+desc = '''
+Avrae, a D&D 5e utility bot designed to help you and your friends play D&D online.
 A full command list can be found [here](https://avrae.io/commands)!
-Invite Avrae to your server [here](https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808)!
-Join the official development server [here](https://discord.gg/pQbd4s6)!
+Invite Avrae to your server [here](https://invite.avrae.io)!
+Join the official development server [here](https://support.avrae.io)!
 '''
 bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
             shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name='D&D 5e | !help'))
 
-log_formatter = logging.Formatter('%(asctime)s %(levelname)s:%(name)s: %(message)s')
+log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(log_formatter)
 filehandler = logging.FileHandler(f"temp/log_build_{bot.rdb.get('build_num')}.log", mode='w')
@@ -114,15 +123,14 @@ logger.addHandler(handler)
 logger.addHandler(filehandler)
 
 log = logging.getLogger('bot')
-msglog = logging.getLogger('messages')
 
 
 @bot.event
 async def on_ready():
-    print('Logged in as')
-    print(bot.user.name)
-    print(bot.user.id)
-    print('------')
+    log.info('Logged in as')
+    log.info(bot.user.name)
+    log.info(bot.user.id)
+    log.info('------')
 
 
 @bot.event
@@ -171,24 +179,21 @@ async def on_command_error(ctx, error):
                     f"Error: I am missing permissions to run this command. "
                     f"Please make sure I have permission to send messages to <#{ctx.channel.id}>."
                 )
-            except:
+            except HTTPException:
                 try:
                     return await ctx.send(f"Error: I cannot send messages to this user.")
-                except:
+                except HTTPException:
                     return
 
         elif isinstance(original, NotFound):
             return await ctx.send("Error: I tried to edit or delete a message that no longer exists.")
-
-        elif isinstance(original, ValueError) and str(original) in ("No closing quotation", "No escaped character"):
-            return await ctx.send("Error: No closing quotation.")
 
         elif isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError)):
             return await ctx.send("Error in Discord API. Please try again.")
 
         elif isinstance(original, HTTPException):
             if original.response.status == 400:
-                return await ctx.send("Error: Message is too long, malformed, or empty.")
+                return await ctx.send(f"Error: Message is too long, malformed, or empty.\n{original.text}")
             elif original.response.status == 500:
                 return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
 
@@ -225,18 +230,13 @@ async def on_command_error(ctx, error):
             await error_channel.send(o)
 
     log.error("Error caused by message: `{}`".format(ctx.message.content))
-    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+    for line in traceback.format_exception(type(error), error, error.__traceback__):
+        log.error(line)
 
 
 @bot.event
 async def on_message(message):
-    try:
-        msglog.debug(
-            "chan {0.channel} ({0.channel.id}), serv {0.guild} ({0.guild.id}), author {0.author} ({0.author.id}): "
-            "{0.content}".format(message))
-    except AttributeError:
-        msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
-    if str(message.author.id) in bot.muted:
+    if message.author.id in bot.muted:
         return
     await bot.process_commands(message)
 

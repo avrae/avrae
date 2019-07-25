@@ -68,3 +68,8 @@ def requires_data():
 async def active_character(avrae):
     """Gets the character active in this test."""
     return Character.from_dict(await avrae.mdb.characters.find_one({"owner": DEFAULT_USER_ID, "active": True}))
+
+
+class ContextBotProxy:
+    def __init__(self, bot):
+        self.bot = bot

@@ -73,6 +73,7 @@ def message_content_check(request: Request, content: str = None, *, regex: bool 
         compare_embeds(request.data.get('embed'), embed.to_dict(), regex=regex)
     return match
 
+
 class DiscordHTTPProxy(HTTPClient):
     """
     This class handles receiving responses from the bot and keeping it happy.
@@ -101,6 +102,10 @@ class DiscordHTTPProxy(HTTPClient):
     # helper functions
     def clear(self):
         self._request_check_queue = Queue()
+
+    async def drain(self):
+        """Waits until all requests have been sent."""
+        await asyncio.sleep(0.2)
 
     async def get_request(self):
         for _ in range(100):
@@ -285,8 +290,9 @@ def character(request, avrae):
 
 
 # ===== Global Fixture =====
-@pytest.fixture(autouse=True)
-def global_fixture(avrae, dhttp):
+@pytest.fixture(autouse=True, scope="function")
+async def global_fixture(avrae, dhttp):
     """Things to do before and after every test."""
     dhttp.clear()
     yield
+    await dhttp.drain()

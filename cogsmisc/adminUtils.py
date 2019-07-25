@@ -23,9 +23,9 @@ class AdminUtils(commands.Cog):
     """
 
     def __init__(self, bot):
-        self.bot: commands.AutoShardedBot = bot
-        self.bot.muted = set(self.bot.rdb.not_json_get('muted', []))
-        self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
+        self.bot = bot
+        self.bot.muted = set(self.bot.rdb.jget('muted', []))
+        self.blacklisted_serv_ids = self.bot.rdb.jget('blacklist', [])
 
         loglevels = self.bot.rdb.jget('loglevels', {})
         for logger, level in loglevels.items():
@@ -36,18 +36,18 @@ class AdminUtils(commands.Cog):
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def blacklist(self, ctx, _id):
-        self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
+    async def blacklist(self, ctx, _id: int):
+        self.blacklisted_serv_ids = self.bot.rdb.jget('blacklist', [])
         self.blacklisted_serv_ids.append(_id)
-        self.bot.rdb.not_json_set('blacklist', self.blacklisted_serv_ids)
+        self.bot.rdb.jset('blacklist', self.blacklisted_serv_ids)
         await ctx.send(':ok_hand:')
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def whitelist(self, ctx, _id):
-        whitelist = self.bot.rdb.not_json_get('server-whitelist', [])
+    async def whitelist(self, ctx, _id: int):
+        whitelist = self.bot.rdb.jget('server-whitelist', [])
         whitelist.append(_id)
-        self.bot.rdb.not_json_set('server-whitelist', whitelist)
+        self.bot.rdb.jset('server-whitelist', whitelist)
         await ctx.send(':ok_hand:')
 
     @commands.command(hidden=True)
@@ -122,9 +122,9 @@ class AdminUtils(commands.Cog):
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def mute(self, ctx, target):
+    async def mute(self, ctx, target: int):
         """Mutes a person by ID."""
-        self.bot.muted = set(self.bot.rdb.not_json_get('muted', []))
+        self.bot.muted = set(self.bot.rdb.jget('muted', []))
         try:
             target_user = await self.bot.fetch_user(target)
         except NotFound:
@@ -135,7 +135,7 @@ class AdminUtils(commands.Cog):
         else:
             self.bot.muted.add(target)
             await ctx.send("{} ({}) muted.".format(target, target_user))
-        self.bot.rdb.not_json_set('muted', list(self.bot.muted))
+        self.bot.rdb.jset('muted', list(self.bot.muted))
 
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -164,8 +164,10 @@ class AdminUtils(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, server):
-        if str(server.id) in self.blacklisted_serv_ids: await server.leave()
-        if str(server.id) in self.bot.rdb.jget('server-whitelist', []): return
+        if server.id in self.blacklisted_serv_ids:
+            return await server.leave()
+        elif server.id in self.bot.rdb.jget('server-whitelist', []):
+            return
         bots = sum(1 for m in server.members if m.bot)
         members = len(server.members)
         ratio = bots / members

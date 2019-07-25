@@ -179,24 +179,21 @@ async def on_command_error(ctx, error):
                     f"Error: I am missing permissions to run this command. "
                     f"Please make sure I have permission to send messages to <#{ctx.channel.id}>."
                 )
-            except:
+            except HTTPException:
                 try:
                     return await ctx.send(f"Error: I cannot send messages to this user.")
-                except:
+                except HTTPException:
                     return
 
         elif isinstance(original, NotFound):
             return await ctx.send("Error: I tried to edit or delete a message that no longer exists.")
-
-        elif isinstance(original, ValueError) and str(original) in ("No closing quotation", "No escaped character"):
-            return await ctx.send("Error: No closing quotation.")
 
         elif isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError)):
             return await ctx.send("Error in Discord API. Please try again.")
 
         elif isinstance(original, HTTPException):
             if original.response.status == 400:
-                return await ctx.send("Error: Message is too long, malformed, or empty.")
+                return await ctx.send(f"Error: Message is too long, malformed, or empty.\n{original.text}")
             elif original.response.status == 500:
                 return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
 

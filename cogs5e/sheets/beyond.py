@@ -76,6 +76,7 @@ class BeyondSheetParser(SheetLoaderABC):
         self.prof = None
         self.calculated_stats = collections.defaultdict(lambda: 0)
         self.set_calculated_stats = set()
+        self.calculations_complete = False
 
     async def load_character(self, owner_id: str, args):
         """
@@ -164,7 +165,8 @@ class BeyondSheetParser(SheetLoaderABC):
 
         stats = BaseStats(prof_bonus, **stat_dict)
 
-        self.stats = stats
+        if self.calculations_complete:
+            self.stats = stats
         return stats
 
     def get_levels(self) -> Levels:
@@ -226,22 +228,21 @@ class BeyondSheetParser(SheetLoaderABC):
         profs = dict()
         bonuses = dict()
 
-        for modtype in character['modifiers'].values():  # calculate proficiencies in all skills
-            for mod in modtype:
-                mod['subType'] = mod['subType'].replace("-saving-throws", "Save")
-                if mod['type'] == 'half-proficiency':
-                    profs[mod['subType']] = max(profs.get(mod['subType'], 0), 0.5)
-                elif mod['type'] == 'proficiency':
-                    profs[mod['subType']] = max(profs.get(mod['subType'], 0), 1)
-                elif mod['type'] == 'expertise':
-                    profs[mod['subType']] = 2
-                elif mod['type'] == 'bonus':
-                    if not mod['isGranted']:
-                        continue
-                    if mod['statId'] is not None:
-                        bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + self.stat_from_id(mod['statId'])
-                    else:
-                        bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + (mod['value'] or 0)
+        for mod in self.modifiers():
+            mod['subType'] = mod['subType'].replace("-saving-throws", "Save")
+            if mod['type'] == 'half-proficiency':
+                profs[mod['subType']] = max(profs.get(mod['subType'], 0), 0.5)
+            elif mod['type'] == 'proficiency':
+                profs[mod['subType']] = max(profs.get(mod['subType'], 0), 1)
+            elif mod['type'] == 'expertise':
+                profs[mod['subType']] = 2
+            elif mod['type'] == 'bonus':
+                if not mod['isGranted']:
+                    continue
+                if mod['statId'] is not None:
+                    bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + self.stat_from_id(mod['statId'])
+                else:
+                    bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + (mod['value'] or 0)
 
         profs['animalHandling'] = profs.get('animal-handling', 0)
         profs['sleightOfHand'] = profs.get('sleight-of-hand', 0)
@@ -276,6 +277,7 @@ class BeyondSheetParser(SheetLoaderABC):
         for charval in self.character_data['characterValues']:
             if charval['valueId'] in HOUSERULE_SKILL_MAP and charval['valueId'] not in ignored_ids:
                 skill_name = HOUSERULE_SKILL_MAP[charval['valueId']]
+                if charval['value'] is None: continue
                 if charval['typeId'] == 23:  # override
                     skills[skill_name] = Skill(charval['value'])
                     ignored_ids.add(charval['valueId'])  # this must be the final value so we stop looking
@@ -311,14 +313,13 @@ class BeyondSheetParser(SheetLoaderABC):
             'immune': set(),
             'vuln': set()
         }
-        for modtype in self.character_data['modifiers'].values():
-            for mod in modtype:
-                if mod['type'] == 'resistance':
-                    resist['resist'].add(mod['subType'].lower())
-                elif mod['type'] == 'immunity':
-                    resist['immune'].add(mod['subType'].lower())
-                elif mod['type'] == 'vulnerability':
-                    resist['vuln'].add(mod['subType'].lower())
+        for mod in self.modifiers():
+            if mod['type'] == 'resistance':
+                resist['resist'].add(mod['subType'].lower())
+            elif mod['type'] == 'immunity':
+                resist['immune'].add(mod['subType'].lower())
+            elif mod['type'] == 'vulnerability':
+                resist['vuln'].add(mod['subType'].lower())
 
         for override in self.character_data['customDefenseAdjustments']:
             if not override['type'] == 2:
@@ -356,6 +357,7 @@ class BeyondSheetParser(SheetLoaderABC):
         armored = armortype is not None
 
         for val in self.character_data['characterValues']:
+            if val['value'] is None: continue
             if val['typeId'] == 1:  # AC override
                 return val['value']
             elif val['typeId'] == 2:  # AC magic bonus
@@ -366,7 +368,6 @@ class BeyondSheetParser(SheetLoaderABC):
                 baseArmor = val['value']
 
         miscBonus += self.get_stat('dual-wield-armor-class')
-        # todo hack for integrated protection
 
         if armortype == 'Medium Armor':
             maxDexBonus = 2
@@ -622,29 +623,21 @@ class BeyondSheetParser(SheetLoaderABC):
                 self.calculated_stats[mod_type] = 0
                 ignored.add(mod_type)
 
-        for provider, modtype in self.character_data['modifiers'].items():  # {race: [], class: [], ...}
-            if provider == 'item':  # we handle this by iterating over inventory to handle unequipped items
-                continue
-            for modifier in modtype:  # [{}, ...]
-                handle_mod(modifier)
+        for modifier in self.modifiers():
+            handle_mod(modifier)
 
-        for item in self.character_data['inventory']:
-            if not item['equipped']:
-                continue
-            for modifier in item['definition']['grantedModifiers']:
-                handle_mod(modifier)
+        self.calculations_complete = True
 
     def get_prof(self, proftype):
         if not self.prof:
             p = []
-            for modtype in self.character_data['modifiers'].values():
-                for mod in modtype:
-                    if mod['type'] == 'proficiency':
-                        if mod['subType'] == 'simple-weapons':
-                            p.extend(SIMPLE_WEAPONS)
-                        elif mod['subType'] == 'martial-weapons':
-                            p.extend(MARTIAL_WEAPONS)
-                        p.append(mod['friendlySubtypeName'])
+            for mod in self.modifiers():
+                if mod['type'] == 'proficiency':
+                    if mod['subType'] == 'simple-weapons':
+                        p.extend(SIMPLE_WEAPONS)
+                    elif mod['subType'] == 'martial-weapons':
+                        p.extend(MARTIAL_WEAPONS)
+                    p.append(mod['friendlySubtypeName'])
             self.prof = p
         return proftype in self.prof
 
@@ -679,6 +672,20 @@ class BeyondSheetParser(SheetLoaderABC):
                 out['isHex'] = True
         return out
 
+    def modifiers(self):
+        """Returns an iterator over granted character modifiers. Also sets a few things useful in later calculations."""
+        for provider, modtype in self.character_data['modifiers'].items():  # {race: [], class: [], ...}
+            if provider == 'item':  # we handle this by iterating over inventory to handle unequipped items
+                continue
+            for modifier in modtype:  # [{}, ...]
+                yield modifier
+
+        for item in self.character_data['inventory']:
+            if not item['equipped']:
+                continue
+            for modifier in item['definition']['grantedModifiers']:
+                yield modifier
+
 
 def parse_dmg_type(attack):
     return DAMAGE_TYPES.get(attack['damageTypeId'], "damage")
@@ -707,5 +714,6 @@ if __name__ == '__main__':
         parser = BeyondSheetParser(url)
         char = asyncio.get_event_loop().run_until_complete(parser.load_character("", argparse("")))
         print(json.dumps(parser.calculated_stats, indent=2))
+        print(f"set: {parser.set_calculated_stats}")
         input("press enter to view character data")
         print(json.dumps(char.to_dict(), indent=2))

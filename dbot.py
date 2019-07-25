@@ -168,7 +168,7 @@ async def on_command_error(ctx, error):
                     await ctx.author.send(tb)
                 except Exception as e:
                     log.info(f"Error sending traceback: {e}")
-            return
+            return await ctx.send(str(original))
 
         elif isinstance(original, AvraeException):
             return await ctx.send(str(original))

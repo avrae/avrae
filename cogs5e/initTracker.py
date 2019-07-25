@@ -2,7 +2,6 @@ import collections
 import functools
 import logging
 import random
-import shlex
 import traceback
 
 from discord.ext import commands
@@ -277,7 +276,6 @@ class InitTracker(commands.Cog):
         embed = EmbedWithCharacter(char, False)
         embed.colour = char.get_color()
 
-        args = shlex.split(args)
         args = argparse(args)
         adv = args.adv(boolwise=True)
         b = args.join('b', '+') or None
@@ -984,7 +982,7 @@ class InitTracker(commands.Cog):
         if is_player and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
 
-        args = argparse(shlex.split(args))  # set up all the arguments
+        args = argparse(args)  # set up all the arguments
         args['name'] = combatant.name
         if target.ac is not None: args['ac'] = target.ac
         args['t'] = target.name
@@ -1118,7 +1116,6 @@ class InitTracker(commands.Cog):
 
         if is_character and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
-        args = shlex.split(args)
         args = argparse(args)
 
         if not args.last('i', type_=bool):

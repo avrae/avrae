@@ -43,6 +43,32 @@ class Customization(commands.Cog):
         await self.handle_aliases(message)
 
     @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def prefix(self, ctx, prefix: str = None):
+        """Sets the bot's prefix for this server.
+
+        You must have Manage Server permissions or a role called "Bot Admin" to use this command.
+
+        Forgot the prefix? Reset it with "@Avrae#6944 prefix !".
+        """
+        guild_id = str(ctx.guild.id)
+        if prefix is None:
+            current_prefix = await self.bot.get_server_prefix(ctx.message)
+            return await ctx.send(f"My current prefix is: `{current_prefix}`")
+        # insert into cache
+        self.bot.prefixes[guild_id] = prefix
+
+        # update db
+        await self.bot.mdb.prefixes.update_one(
+            {"guild_id": guild_id},
+            {"$set": {"prefix": prefix}},
+            upsert=True
+        )
+
+        await ctx.send("Prefix set to `{}` for this server.".format(prefix))
+
+    @commands.command()
     @commands.cooldown(1, 20, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.
@@ -60,7 +86,7 @@ class Customization(commands.Cog):
             await asyncio.sleep(1)
 
     async def handle_aliases(self, message):
-        prefix = self.bot.get_server_prefix(message)
+        prefix = await self.bot.get_server_prefix(message)
         if message.content.startswith(prefix):
             alias = prefix.join(message.content.split(prefix)[1:]).split(' ')[0]
             if message.guild:
@@ -74,7 +100,7 @@ class Customization(commands.Cog):
             if command:
                 command = command['commands']
                 try:
-                    message.content = self.handle_alias_arguments(command, message)
+                    message.content = await self.handle_alias_arguments(command, message)
                 except UserInputError as e:
                     return await message.channel.send(f"Invalid input: {e}")
                 ctx = await self.bot.get_context(message)
@@ -103,10 +129,10 @@ class Customization(commands.Cog):
                     return await message.channel.send(e)
                 await self.bot.process_commands(message)
 
-    def handle_alias_arguments(self, command, message):
+    async def handle_alias_arguments(self, command, message):
         """Takes an alias name, alias value, and message and handles percent-encoded args.
         Returns: string"""
-        prefix = self.bot.get_server_prefix(message)
+        prefix = await self.bot.get_server_prefix(message)
         rawargs = " ".join(prefix.join(message.content.split(prefix)[1:]).split(' ')[1:])
         args = argsplit(rawargs)
         tempargs = args[:]

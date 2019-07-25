@@ -5,7 +5,6 @@ Created on Dec 29, 2016
 """
 import asyncio
 import logging
-import time
 
 import aiohttp
 from discord.ext import commands
@@ -26,11 +25,6 @@ class Publicity(commands.Cog):
         self.bot = bot
         self.bot.loop.create_task(self.background_update())
 
-    async def backup(self):
-        backup_chan = self.bot.get_channel(298542945479557120)
-        if backup_chan is None or self.bot.testing: return
-        await backup_chan.send('{0} - {1}'.format(time.time(), len(self.bot.guilds)))
-
     async def update_server_count(self):
         if self.bot.testing:
             return
@@ -47,7 +41,6 @@ class Publicity(commands.Cog):
             await self.bot.wait_until_ready()
             while not self.bot.is_closed():
                 await self.update_server_count()
-                await self.backup()
                 await asyncio.sleep(3600)  # every hour
         except asyncio.CancelledError:
             pass

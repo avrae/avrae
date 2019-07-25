@@ -122,7 +122,6 @@ logger.addHandler(handler)
 logger.addHandler(filehandler)
 
 log = logging.getLogger('bot')
-msglog = logging.getLogger('messages')
 
 
 @bot.event
@@ -239,12 +238,6 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_message(message):
-    try:
-        msglog.debug(
-            "chan {0.channel} ({0.channel.id}), serv {0.guild} ({0.guild.id}), author {0.author} ({0.author.id}): "
-            "{0.content}".format(message))
-    except AttributeError:
-        msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
     if message.author.id in bot.muted:
         return
     await bot.process_commands(message)

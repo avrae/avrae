@@ -62,14 +62,16 @@ def compare_embeds(request_embed, embed, *, regex: bool = True):
 
 
 def message_content_check(request: Request, content: str = None, *, regex: bool = True, embed: Embed = None):
+    match = None
     if content:
         if regex:
-            assert re.match(content, request.data.get('content'))
+            match = re.match(content, request.data.get('content'))
+            assert match
         else:
             assert request.data.get('content') == content
     if embed:
         compare_embeds(request.data.get('embed'), embed.to_dict(), regex=regex)
-
+    return match
 
 class DiscordHTTPProxy(HTTPClient):
     """
@@ -110,6 +112,7 @@ class DiscordHTTPProxy(HTTPClient):
     async def receive_message(self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None):
         """
         Assert that the bot sends a message, and that it is the message we expect.
+        If a regex is passed, this method returns the match object against the content.
         :param content The text or regex to match the message content against
         :param regex Whether to interpret content checking fields as a regex
         :param dm Whether it was a Direct Message that was received or not
@@ -121,11 +124,12 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "POST"
         assert request.url.endswith(f"/channels/{channel}/messages")
 
-        message_content_check(request, content, regex=regex, embed=embed)
+        return message_content_check(request, content, regex=regex, embed=embed)
 
     async def receive_edit(self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None):
         """
         Assert that the bot edits a message, and that it is the message we expect.
+        If a regex is passed, this method returns the match object against the content.
         :param content The text or regex to match the message content against
         :param regex Whether to interpret content checking fields as a regex
         :param dm Whether it was a Direct Message that was edited or not
@@ -137,7 +141,7 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "PATCH"
         assert request.url.endswith(f"/channels/{channel}/messages/{MESSAGE_ID}")
 
-        message_content_check(request, content, regex=regex, embed=embed)
+        return message_content_check(request, content, regex=regex, embed=embed)
 
     async def receive_delete(self, dm=False):
         """
@@ -273,7 +277,16 @@ def character(request, avrae):
         {"$set": char.to_dict()},
         upsert=True
     )
+    request.cls.character = char
     yield char
     avrae.mdb.characters.delegate.delete_one(
         {"owner": char.owner, "upstream": char.upstream}
     )
+
+
+# ===== Global Fixture =====
+@pytest.fixture(autouse=True)
+def global_fixture(avrae, dhttp):
+    """Things to do before and after every test."""
+    dhttp.clear()
+    yield

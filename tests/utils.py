@@ -3,8 +3,8 @@ import os
 import pytest
 
 from cogs5e.funcs.lookupFuncs import compendium
-
-# commonly used patterns
+from cogs5e.models.character import Character
+from tests.setup import DEFAULT_USER_ID
 
 # rolled dice: the individual results of dice
 # matches:
@@ -63,3 +63,8 @@ def requires_data():
         return pytest.mark.skip(reason=f"Test requires data")
 
     return lambda func: func
+
+
+async def active_character(avrae):
+    """Gets the character active in this test."""
+    return Character.from_dict(await avrae.mdb.characters.find_one({"owner": DEFAULT_USER_ID, "active": True}))

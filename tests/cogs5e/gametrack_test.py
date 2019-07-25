@@ -47,15 +47,34 @@ class TestGame:
 
     async def test_g_sr(self, avrae, dhttp):
         avrae.message("!g sr")
+        await dhttp.receive_delete()
+        sr_embed = Embed(title=r".+ took a Short Rest!")
+        sr_embed.add_field(name="Reset Values", value=r".*")
+        await dhttp.receive_message(embed=sr_embed)
+        await dhttp.receive_message(embed=Embed())
+
+        avrae.message("!g sr -h")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(embed=sr_embed)
 
     async def test_g_ss(self, avrae, dhttp):
+        char = await active_character(avrae)
+
         avrae.message("!g ss")
+        await dhttp.receive_delete()
+        ss_embed = Embed(title=char.name, description=r"__Remaining Spell Slots__\n")
+        await dhttp.receive_message(embed=ss_embed)
+
+        if not char.spellbook.get_max_slots(1):  # we don't need to care about this character anymore
+            return
 
     async def test_g_status(self, avrae, dhttp):
         avrae.message("!g status")
 
     async def test_g_thp(self, avrae, dhttp):
         avrae.message("!g thp")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(r".+: (\d+)/\1")
 
     async def test_g_ds(self, avrae, dhttp):
         avrae.message("!g ds")

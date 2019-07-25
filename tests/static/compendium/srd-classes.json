@@ -1,0 +1,389 @@
+[
+  {
+    "name": "Fighter",
+    "source": "PHB",
+    "hd": {
+      "number": 1,
+      "faces": 10
+    },
+    "proficiency": [
+      "str",
+      "con"
+    ],
+    "startingProficiencies": {
+      "armor": [
+        "light",
+        "medium",
+        "heavy",
+        "shields"
+      ],
+      "weapons": [
+        "simple",
+        "martial"
+      ],
+      "skills": {
+        "choose": 2,
+        "from": [
+          "Acrobatics",
+          "Animal Handling",
+          "Athletics",
+          "History",
+          "Insight",
+          "Intimidation",
+          "Perception",
+          "Survival"
+        ]
+      }
+    },
+    "startingEquipment": {
+      "additionalFromBackground": true,
+      "default": [
+        "(a) chain mail or (b) leather, longbow, and 20 arrows",
+        "(a) a martial weapon and a shield or (b) two martial weapons",
+        "(a) a light crossbow and 20 bolts or (b) two handaxes",
+        "(a) a dungeoneer's pack or (b) an explorer's pack"
+      ],
+      "goldAlternative": "Starting Gold"
+    },
+    "classFeatures": [
+      [
+        {
+          "name": "Fighting Style",
+          "entries": [
+            "You adopt a particular style of fighting as your specialty. Choose one of the following options. You can't take the same Fighting Style option more than once, even if you get to choose again.",
+            {
+              "type": "options",
+              "entries": [
+                {
+                  "type": "entries",
+                  "name": "Archery",
+                  "entries": [
+                    "You gain a +2 bonus to attack rolls you make with ranged weapons."
+                  ]
+                },
+                {
+                  "type": "entries",
+                  "name": "Close Quarters Shooter",
+                  "entries": [
+                    "When making a ranged attack while you are within 5 feet of a hostile creature, you do not have disadvantage on the attack roll. Your ranged attacks ignore half cover and three-quarters cover against targets within 30 feet of you. You have a +1 bonus to attack rolls on ranged attacks."
+                  ],
+                  "source": "UALightDarkUnderdark"
+                },
+                {
+                  "type": "entries",
+                  "name": "Defense",
+                  "entries": [
+                    "While you are wearing armor, you gain a +1 bonus to AC."
+                  ]
+                },
+                {
+                  "type": "entries",
+                  "name": "Dueling",
+                  "entries": [
+                    "When you are wielding a melee weapon in one hand and no other weapons, you gain a +2 bonus to damage rolls with that weapon."
+                  ]
+                },
+                {
+                  "type": "entries",
+                  "name": "Great Weapon Fighting",
+                  "entries": [
+                    "When you roll a 1 or 2 on a damage die for an attack you make with a melee weapon that you are wielding with two hands, you can reroll the die and must use the new roll, even if the new roll is a 1 or a 2. The weapon must have the two-handed or versatile property for you to gain this benefit."
+                  ]
+                },
+                {
+                  "type": "entries",
+                  "name": "Mariner",
+                  "entries": [
+                    "As long as you are not wearing heavy armor or using a shield, you have a swimming speed and a climbing speed equal to your normal speed, and you gain a +1 bonus to AC."
+                  ],
+                  "source": "UAWaterborneAdventures"
+                },
+                {
+                  "type": "entries",
+                  "name": "Protection",
+                  "entries": [
+                    "When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield."
+                  ]
+                },
+                {
+                  "type": "entries",
+                  "name": "Tunnel Fighter",
+                  "entries": [
+                    "As a bonus action, you can enter a defensive stance that lasts until the start of your next turn. While in your defensive stance, you can make opportunity attacks without using your reaction, and you can use your reaction to make a melee attack against a creature that moves more than 5 feet while within your reach."
+                  ],
+                  "source": "UALightDarkUnderdark"
+                },
+                {
+                  "type": "entries",
+                  "name": "Two-Weapon Fighting",
+                  "entries": [
+                    "When you engage in two-weapon fighting, you can add your ability modifier to the damage of the second attack."
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Second Wind",
+          "entries": [
+            "You have a limited well of stamina that you can draw on to protect yourself from harm. On your turn, you can use a bonus action to regain hit points equal to 1d10 + your fighter level.",
+            "Once you use this feature, you must finish a short or long rest before you can use it again."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Action Surge",
+          "entries": [
+            "Starting at 2nd level, you can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action on top of your regular action and a possible bonus action.",
+            "Once you use this feature, you must finish a short or long rest before you can use it again. Starting at 17th level, you can use it twice before a rest, but only once on the same turn."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Martial Archetype",
+          "entries": [
+            "At 3rd level, you choose an archetype from the list available that you strive to emulate in your combat styles and techniques. The archetype you choose grants you features at 3rd level and again at 7th, 10th, 15th, and 18th level."
+          ],
+          "gainSubclassFeature": true
+        }
+      ],
+      [
+        {
+          "name": "Ability Score Improvement",
+          "entries": [
+            "When you reach 4th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+            "If your DM allows the use of feats, you may instead take a feat."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Extra Attack",
+          "entries": [
+            "Beginning at 5th level, you can attack twice, instead of once, whenever you take the Attack action on your turn.",
+            "The number of attacks increases to three when you reach 11th level in this class and to four when you reach 20th level in this class."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Ability Score Improvement",
+          "entries": [
+            "When you reach 6th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+            "If your DM allows the use of feats, you may instead take a feat."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Martial Archetype feature",
+          "entries": [
+            "At 7th level, you gain a feature granted by your Martial Archetype."
+          ],
+          "gainSubclassFeature": true
+        }
+      ],
+      [
+        {
+          "name": "Ability Score Improvement",
+          "entries": [
+            "When you reach 8th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+            "If your DM allows the use of feats, you may instead take a feat."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Indomitable",
+          "entries": [
+            "Beginning at 9th level, you can reroll a saving throw that you fail. If you do so, you must use the new roll, and you can't use this feature again until you finish a long rest.",
+            "You can use this feature twice between long rests starting at 13th level and three times between long rests starting at 17th level."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Martial Archetype feature",
+          "entries": [
+            "At 10th level, you gain a feature granted by your Martial Archetype."
+          ],
+          "gainSubclassFeature": true
+        }
+      ],
+      [
+        {
+          "name": "Extra Attack (2)",
+          "entries": [
+            "At 11th level, you can attack three times whenever you take the Attack action on your turn."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Ability Score Improvement",
+          "entries": [
+            "When you reach 12th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+            "If your DM allows the use of feats, you may instead take a feat."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Indomitable (two uses)",
+          "entries": [
+            "At 13th level, you can use Indomitable twice between long rests."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Ability Score Improvement",
+          "entries": [
+            "When you reach 14th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+            "If your DM allows the use of feats, you may instead take a feat."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Martial Archetype feature",
+          "entries": [
+            "At 15th level, you gain a feature granted by your Martial Archetype."
+          ],
+          "gainSubclassFeature": true
+        }
+      ],
+      [
+        {
+          "name": "Ability Score Improvement",
+          "entries": [
+            "When you reach 16th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+            "If your DM allows the use of feats, you may instead take a feat."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Action Surge (two uses)",
+          "entries": [
+            "At 17th level, you can use Action Surge twice before a rest, but only once on the same turn."
+          ]
+        },
+        {
+          "name": "Indomitable (three uses)",
+          "entries": [
+            "At 17th level, you can use Indomitable three times between long rests."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Martial Archetype feature",
+          "entries": [
+            "At 18th level, you gain a feature granted by your Martial Archetype."
+          ],
+          "gainSubclassFeature": true
+        }
+      ],
+      [
+        {
+          "name": "Ability Score Improvement",
+          "entries": [
+            "When you reach 19th level, you can increase one ability score of your choice by 2, or you can increase two ability scores of your choice by 1. As normal, you can't increase an ability score above 20 using this feature.",
+            "If your DM allows the use of feats, you may instead take a feat."
+          ]
+        }
+      ],
+      [
+        {
+          "name": "Extra Attack (3)",
+          "entries": [
+            "At 20th level, you can attack four times whenever you take the Attack action on your turn."
+          ]
+        }
+      ]
+    ],
+    "subclasses": [
+      {
+        "name": "Champion",
+        "subclassFeatures": [
+          [
+            {
+              "name": "Champion",
+              "entries": [
+                "The archetypal Champion focuses on the development of raw physical power honed to deadly perfection. Those who model themselves on this archetype combine rigorous training with physical excellence to deal devastating blows.",
+                {
+                  "type": "entries",
+                  "name": "Improved Critical",
+                  "entries": [
+                    "Beginning when you choose this archetype at 3rd level, your weapon attacks score a critical hit on a roll of 19 or 20."
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "entries": [
+                {
+                  "type": "entries",
+                  "name": "Remarkable Athlete",
+                  "entries": [
+                    "Starting at 7th level, you can add half your proficiency bonus (round up) to any Strength, Dexterity, or Constitution check you make that doesn't already use your proficiency bonus.",
+                    "In addition, when you make a running long jump, the distance you can cover increases by a number of feet equal to your Strength modifier."
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "entries": [
+                {
+                  "type": "entries",
+                  "name": "Additional Fighting Style",
+                  "entries": [
+                    "At 10th level, you can choose a second option from the Fighting Style class feature."
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "entries": [
+                {
+                  "type": "entries",
+                  "name": "Superior Critical",
+                  "entries": [
+                    "Starting at 15th level, your weapon attacks score a critical hit on a roll of 18-20."
+                  ]
+                }
+              ]
+            }
+          ],
+          [
+            {
+              "entries": [
+                {
+                  "type": "entries",
+                  "name": "Survivor",
+                  "entries": [
+                    "At 18th level, you attain the pinnacle of resilience in battle. At the start of each of your turns, you regain hit points equal to 5 + your Constitution modifier if you have no more than half of your hit points left. You don't gain this benefit if you have 0 hit points."
+                  ]
+                }
+              ]
+            }
+          ]
+        ],
+        "source": "PHB",
+        "shortName": "Champion",
+        "srd": true
+      }
+    ],
+    "srd": true
+  }
+]

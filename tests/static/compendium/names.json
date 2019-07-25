@@ -1,0 +1,13 @@
+[
+  {
+    "race": "Elf",
+    "tables": [
+      {
+        "name": "Family",
+        "choices": [
+          "Name"
+        ]
+      }
+    ]
+  }
+]

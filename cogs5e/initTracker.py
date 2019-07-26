@@ -253,7 +253,7 @@ class InitTracker(commands.Cog):
                     out += f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.\n"
 
             except Exception as e:
-                log.error('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
+                log.warning('\n'.join(traceback.format_exception(type(e), e, e.__traceback__)))
                 out += "Error adding combatant: {}\n".format(e)
 
         await combat.final()

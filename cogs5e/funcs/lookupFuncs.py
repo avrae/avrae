@@ -136,8 +136,7 @@ class Compendium:
             with open(filepath, 'r') as f:
                 data = json.load(f)
         except FileNotFoundError:
-            log.error("File not found: {}".format(filepath))
-            pass
+            log.warning("File not found: {}".format(filepath))
         log.debug("Loaded {} things from file {}".format(len(data), filename))
         return data
 

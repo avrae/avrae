@@ -3,7 +3,6 @@ Created on Jan 13, 2017
 
 @author: andrew
 """
-import shlex
 from math import sqrt
 
 import discord
@@ -59,7 +58,6 @@ class PBPUtils(commands.Cog):
 
         embed = discord.Embed()
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
-        args = shlex.split(args)
         args = argparse(args)
         embed.title = args.last('title')
         embed.description = args.last('desc')

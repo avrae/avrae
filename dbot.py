@@ -11,6 +11,7 @@ from aiohttp import ClientOSError, ClientResponseError
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.errors import AvraeException, EvaluationError
@@ -229,9 +230,9 @@ async def on_command_error(ctx, error):
         for o in discord_trim(tb):
             await error_channel.send(o)
 
-    log.error("Error caused by message: `{}`".format(ctx.message.content))
+    log.warning("Error caused by message: `{}`".format(ctx.message.content))
     for line in traceback.format_exception(type(error), error, error.__traceback__):
-        log.error(line)
+        log.warning(line)
 
 
 @bot.event

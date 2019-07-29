@@ -4,7 +4,6 @@ Created on Nov 29, 2016
 @author: andrew
 """
 import itertools
-import shlex
 import textwrap
 
 import discord
@@ -312,14 +311,13 @@ class Lookup(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def lookup_settings(self, ctx, *, args: str):
+    async def lookup_settings(self, ctx, *args):
         """Changes settings for the lookup module.
         __Valid Settings__
         -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
             -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
         -pm_result [True/False] - PMs the result of the lookup to reduce spam.
         """
-        args = shlex.split(args.lower())
         guild_id = str(ctx.guild.id)
         guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
         if guild_settings is None:

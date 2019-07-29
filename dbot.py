@@ -215,14 +215,15 @@ async def on_command_error(ctx, error):
             return await ctx.send(f"Error: A number is too large for me to store.")
 
     # send error to sentry.io
-    bot.log_exception(error, ctx)
+    if isinstance(error, CommandInvokeError):
+        bot.log_exception(error.original, ctx)
+    else:
+        bot.log_exception(error, ctx)
 
-    error_msg = gen_error_message()
 
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-        f"Please join <http://support.avrae.io> and let us know about the error!\n"
-        f"Error code: {error_msg}")
+        f"Please join <http://support.avrae.io> and let us know about the error!")
 
     log.warning("Error caused by message: `{}`".format(ctx.message.content))
     for line in traceback.format_exception(type(error), error, error.__traceback__):

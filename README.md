@@ -9,7 +9,7 @@ You can join the Avrae Development Discord [here](https://discord.gg/pQbd4s6)!
 ## Contributing
 
 ### How to run Avrae locally
-#### Using Docker
+#### Using Docker (Recommended)
 
 Check out docker/readme.md.
 

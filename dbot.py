@@ -11,11 +11,10 @@ from aiohttp import ClientOSError, ClientResponseError
 from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
-from sentry_sdk.integrations.logging import LoggingIntegration
 
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.errors import AvraeException, EvaluationError
-from utils.functions import discord_trim, gen_error_message, get_positivity
+from utils.functions import gen_error_message, get_positivity
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
@@ -23,8 +22,7 @@ TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
 SHARD_COUNT = None if not TESTING else 1
-DEFAULT_PREFIX = '!' if not TESTING else '#'
-ERROR_CHANNEL_ID = 593104417646182401
+DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
 
 # -----COGS-----
@@ -84,8 +82,23 @@ class Avrae(commands.AutoShardedBot):
         log.info(f"Launching {self.shard_count} shards!")
         await super(Avrae, self).launch_shards()
 
-    def log_exception(self, exception=None):
-        if SENTRY_DSN is not None:
+    @staticmethod
+    def log_exception(exception=None, context: commands.Context = None):
+        if SENTRY_DSN is None:
+            return
+
+        with sentry_sdk.push_scope() as scope:
+            if context:
+                # noinspection PyDunderSlots,PyUnresolvedReferences
+                # for some reason pycharm doesn't pick up the attribute setter here
+                scope.user = {"id": context.author.id, "username": str(context.author)}
+                scope.set_tag("message.content", context.message.content)
+                scope.set_tag("is_private_message", context.guild is None)
+                scope.set_tag("channel.id", context.channel.id)
+                scope.set_tag("channel.name", str(context.channel))
+                if context.guild is not None:
+                    scope.set_tag("guild.id", context.guild.id)
+                    scope.set_tag("guild.name", str(context.guild))
             sentry_sdk.capture_exception(exception)
 
 
@@ -202,7 +215,7 @@ async def on_command_error(ctx, error):
             return await ctx.send(f"Error: A number is too large for me to store.")
 
     # send error to sentry.io
-    bot.log_exception(error)
+    bot.log_exception(error, ctx)
 
     error_msg = gen_error_message()
 
@@ -210,25 +223,6 @@ async def on_command_error(ctx, error):
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
         f"Please join <http://support.avrae.io> and let us know about the error!\n"
         f"Error code: {error_msg}")
-
-    # send error to error channel
-    error_channel = bot.get_channel(ERROR_CHANNEL_ID)
-    if error_channel is not None:
-        try:
-            await error_channel.send(
-                f"**{error_msg}**\n" \
-                + "Error in channel {} ({}), server {} ({}): {}\nCaused by message: `{}`".format(
-                    ctx.channel, ctx.channel.id, ctx.guild,
-                    ctx.guild.id, repr(error),
-                    ctx.message.content))
-        except AttributeError:
-            await error_channel.send(f"**{error_msg}**\n" \
-                                     + "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
-                ctx.author.mention, str(ctx.author), repr(error), ctx.message.content))
-
-        tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
-        for o in discord_trim(tb):
-            await error_channel.send(o)
 
     log.warning("Error caused by message: `{}`".format(ctx.message.content))
     for line in traceback.format_exception(type(error), error, error.__traceback__):

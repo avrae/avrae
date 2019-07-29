@@ -14,7 +14,7 @@ from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.errors import AvraeException, EvaluationError
-from utils.functions import gen_error_message, get_positivity
+from utils.functions import get_positivity
 from utils.help import help_command
 from utils.redisIO import RedisIO
 

@@ -1,9 +1,7 @@
 language: minimal
 script:
   - docker-compose -f docker-compose.test.yml -p avrae build
-  - docker-compose -f docker-compose.test.yml -p avrae up -d
-  - docker logs -f avrae_tests_1
-  - docker wait avrae_tests_1
+  - docker-compose -f docker-compose.test.yml -p avrae up --exit-code-from tests
   - docker build -t avrae-bot .
 after_success:
   - bash <(curl -s https://codecov.io/bash)

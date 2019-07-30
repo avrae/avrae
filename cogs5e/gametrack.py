@@ -7,7 +7,6 @@ Most of this module was coded 5 miles in the air. (Aug 8, 2017)
 """
 import collections
 import logging
-import shlex
 
 import discord
 from discord.ext import commands
@@ -490,7 +489,6 @@ class GameTrack(commands.Cog):
 
         args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
-        args = shlex.split(args)
         args = argparse(args)
 
         result = await spell.cast(ctx, char, None, args)

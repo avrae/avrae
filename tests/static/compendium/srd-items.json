@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Longsword",
+    "type": "M",
+    "weapon": true,
+    "sword": true,
+    "weaponCategory": "Martial",
+    "rarity": "None",
+    "value": "15 gp",
+    "weight": "3",
+    "dmg1": "1d8",
+    "dmg2": "1d10",
+    "dmgType": "S",
+    "property": [
+      "V"
+    ],
+    "source": "PHB",
+    "page": 149,
+    "srd": true,
+    "desc": ""
+  }
+]

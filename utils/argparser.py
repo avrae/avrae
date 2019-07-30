@@ -14,16 +14,17 @@ def argsplit(args: str):
     return args
 
 
-def argparse(args, character=None):
+def argparse(args, character=None, splitter=argsplit):
     """
     Parses arguments.
     :param args: A list of arguments to parse.
     :param character: A Character object, if args should have cvars parsed.
+    :param splitter: A function to use to split a string into a list of arguments.
     :return: The parsed arguments (ParsedArguments).
     :rtype ParsedArguments
     """
     if isinstance(args, str):
-        args = argsplit(args)
+        args = splitter(args)
     if character:
         from cogs5e.funcs.scripting import MathEvaluator
         evaluator = MathEvaluator.with_character(character)
@@ -146,12 +147,13 @@ class ParsedArguments:
 
 
 def quoted_word(view):
+    QUOTES = '"\''
     current = view.current
 
     if current is None:
         return None
 
-    quote = current if current in '"\'' else None
+    quote = current if current in QUOTES else None
     result = [] if quote else [current]
 
     while not view.eof:
@@ -161,6 +163,11 @@ def quoted_word(view):
                 # unexpected EOF
                 raise BadArgument('Expected closing quote')
             return ''.join(result)
+
+        # start of a quoted block
+        if current in QUOTES and not quote:
+            quote = current
+            continue
 
         # currently we accept strings in the format of "hello world"
         # to embed a quote inside the string you must escape it: "a \"world\""
@@ -174,7 +181,7 @@ def quoted_word(view):
                 # if we aren't then we just let it through
                 return ''.join(result)
 
-            if next_char in '"\'':
+            if next_char in QUOTES:
                 # escaped quote
                 result.append(next_char)
             else:
@@ -187,8 +194,10 @@ def quoted_word(view):
         if current == quote:
             next_char = view.get()
             valid_eof = not next_char or next_char.isspace()
-            if not valid_eof:
-                raise BadArgument('Expected space after closing quotation')
+            if not valid_eof:  # there's still more in this argument
+                view.undo()
+                quote = None
+                continue
 
             # we're quoted so it's okay
             return ''.join(result)
@@ -198,3 +207,11 @@ def quoted_word(view):
             return ''.join(result)
 
         result.append(current)
+
+
+if __name__ == '__main__':
+    while True:
+        try:
+            print(argsplit(input('>>> ')))
+        except BadArgument as e:
+            print(e)

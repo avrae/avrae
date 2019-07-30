@@ -6,7 +6,7 @@ from tests.utils import requires_data
 pytestmark = pytest.mark.asyncio
 
 
-@requires_data(["fancyraces", "classes", "backgrounds"])
+@requires_data()
 async def test_charref(avrae, dhttp):
     dhttp.clear()
 
@@ -27,7 +27,7 @@ async def test_charref(avrae, dhttp):
     await dhttp.receive_edit()
 
 
-@requires_data(["fancyraces", "classes", "backgrounds"])
+@requires_data()
 async def test_randchar(avrae, dhttp):
     dhttp.clear()
 
@@ -42,7 +42,7 @@ async def test_randchar(avrae, dhttp):
     await dhttp.receive_edit()
 
 
-@requires_data("names")
+@requires_data()
 async def test_randname(avrae, dhttp):
     dhttp.clear()
 

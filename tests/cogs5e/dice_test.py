@@ -33,15 +33,14 @@ async def test_ma(avrae, dhttp):
     avrae.message("!ma kobold dagger")
     await dhttp.receive_delete()
     atk_embed = discord.Embed(title=r"(\w+ ?){2,3} attacks with a Dagger!")
-    atk_embed.add_field(name="Attack", inline=False, value=ATTACK_PATTERN)
+    atk_embed.add_field(name="Meta", inline=False, value=ATTACK_PATTERN)
     atk_embed.add_field(name="Effect", value=r"Melee Weapon Attack:.+")
     await dhttp.receive_message(embed=atk_embed)
 
     avrae.message("!ma kobold dagger -h")
     await dhttp.receive_delete()
-    await dhttp.receive_message(embed=atk_embed, dm=True)
     atk_embed = discord.Embed(title="An unknown creature attacks with a Dagger!")
-    atk_embed.add_field(name="Attack", inline=False, value=r".*1d20... = `\d+`\n.+")
+    atk_embed.add_field(name="Meta", inline=False, value=r".*1d20... = `\d+`\n.+")
     await dhttp.receive_message(embed=atk_embed)
 
 

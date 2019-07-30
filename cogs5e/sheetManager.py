@@ -25,7 +25,7 @@ from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from utils.argparser import argparse
-from utils.constants import SKILL_MAP, SKILL_NAMES
+from utils.constants import SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS
 from utils.functions import a_or_an, auth_and_chan, get_positivity, list_get
 from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
 from utils.user_settings import CSetting
@@ -104,9 +104,6 @@ class SheetManager(commands.Cog):
         attack = await search_and_select(ctx, char.attacks, atk_name, lambda a: a.name)
 
         args = await self.new_arg_stuff(args, ctx, char)
-        args['criton'] = args.last('criton') or char.get_setting('criton', 20)
-        args['reroll'] = char.get_setting('reroll', 0)
-        args['critdice'] = char.get_setting('critdice', 0)
 
         embed = EmbedWithCharacter(char, name=False)
         if args.last('title') is not None:
@@ -295,8 +292,8 @@ class SheetManager(commands.Cog):
         mod = skill.value
         formatted_d20 = skill.d20(base_adv=adv, reroll=ro, min_val=mc, base_only=True)
 
-        if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
-            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
+        if any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
+            base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
             mod = mod - char.get_mod(SKILL_MAP[skill_key]) + char.get_mod(base)
             skill_name = f"{verbose_stat(base)} ({skill_name})"
 

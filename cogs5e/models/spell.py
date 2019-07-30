@@ -9,6 +9,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import AvraeException
 from cogs5e.models.initiative import Combatant, PlayerCombatant
+from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import verbose_stat
 
 log = logging.getLogger(__name__)
@@ -201,8 +202,8 @@ class Spell:
             dc_override = 8 + mod + prof_bonus
             ab_override = mod + prof_bonus
             spell_override = mod
-        elif character and any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
-            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
+        elif character and any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
+            base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
             mod = character.get_mod(base)
             dc_override = 8 + mod + character.stats.prof_bonus
             ab_override = mod + character.stats.prof_bonus

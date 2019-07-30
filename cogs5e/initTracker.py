@@ -979,11 +979,6 @@ class InitTracker(commands.Cog):
             args = await combatant.character.parse_cvars(args, ctx)
         args = argparse(args)
 
-        if is_player:
-            args['reroll'] = combatant.character.get_setting('reroll') or 0
-            args['critdice'] = combatant.character.get_setting('critdice') or 0
-            args['criton'] = combatant.character.get_setting('criton') or args.get('criton')
-
         # target handling
         targets = []
 

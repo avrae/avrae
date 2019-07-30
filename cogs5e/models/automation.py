@@ -39,9 +39,11 @@ class Automation:
 
         effects = [Target('each', attack_eff)] if attack_eff else []
         if attack.details:
+            # noinspection PyTypeChecker
+            # PyCharm thinks this should be a list of Target instead of a list of Effect
             effects.append(Text(attack.details))
 
-        return Automation(effects)
+        return cls(effects)
 
     async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None, ab_override=None,
                   dc_override=None, spell_override=None, title=None):
@@ -331,6 +333,7 @@ class Attack(Effect):
 
     def run(self, autoctx: AutomationContext):
         super(Attack, self).run(autoctx)
+        # applicable arguments
         args = autoctx.args
         adv = args.adv(True)
         crit = args.last('crit', None, bool) and 1
@@ -341,6 +344,11 @@ class Attack(Effect):
         reroll = args.last('reroll', 0, int)
         criton = args.last('criton', 20, int)
         ac = args.last('ac', None, int)
+
+        # character-specific arguments
+        if autoctx.character:
+            reroll = autoctx.character.get_setting('reroll') or reroll
+            criton = autoctx.character.get_setting('criton') or criton
 
         # check for combatant IEffect bonus (#224)
         if autoctx.combatant:
@@ -510,6 +518,7 @@ class Damage(Effect):
 
     def run(self, autoctx):
         super(Damage, self).run(autoctx)
+        # general arguments
         args = autoctx.args
         damage = self.damage
         d = args.join('d', '+')
@@ -523,6 +532,11 @@ class Damage(Effect):
         mi = args.last('mi', None, int)
         critdice = args.last('critdice', 0, int)
 
+        # character-specific arguments
+        if autoctx.character:
+            critdice = autoctx.character.get_setting('critdice') or critdice
+
+        # combat-specific arguments
         if autoctx.target.target:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()

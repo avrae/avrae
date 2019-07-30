@@ -13,7 +13,7 @@ from cogs5e.models.monster import Monster, SKILL_MAP
 from cogs5e.models.sheet import Attack
 from cogsmisc.stats import Stats
 from utils.argparser import argparse
-from utils.constants import SKILL_NAMES
+from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS
 from utils.functions import a_or_an, camel_to_title, search_and_select, verbose_stat
 
 
@@ -214,7 +214,7 @@ class Dice(commands.Cog):
         adv/dis
         -b [conditional bonus]
         -phrase [flavor text]
-        -title [title] *note: [mname] and [cname] will be replaced automatically*
+        -title [title] *note: [name] and [cname] will be replaced automatically*
         -dc [dc]
         -rr [iterations]
         str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
@@ -243,8 +243,8 @@ class Dice(commands.Cog):
         mod = skill.value
         formatted_d20 = skill.d20(base_adv=adv, base_only=True)
 
-        if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
-            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
+        if any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
+            base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
             mod = mod - monster.get_mod(SKILL_MAP[skill_key]) + monster.get_mod(base)
             skill_name = f"{verbose_stat(base)} ({skill_name})"
 
@@ -260,7 +260,7 @@ class Dice(commands.Cog):
             roll_str = formatted_d20 + '{:+}'.format(mod)
 
         embed.title = args.last('title', '') \
-                          .replace('[mname]', monster_name) \
+                          .replace('[name]', monster_name) \
                           .replace('[cname]', skill_name) \
                       or default_title
 
@@ -303,7 +303,7 @@ class Dice(commands.Cog):
         adv/dis
         -b [conditional bonus]
         -phrase [flavor text]
-        -title [title] *note: [mname] and [cname] will be replaced automatically*
+        -title [title] *note: [name] and [cname] will be replaced automatically*
         -dc [dc]
         -rr [iterations]
         -h (hides name and image of monster)"""
@@ -342,7 +342,7 @@ class Dice(commands.Cog):
             default_title = f"An unknown creature makes {a_or_an(save_name)}!"
 
         embed.title = args.last('title', '') \
-                          .replace('[mname]', monster_name) \
+                          .replace('[name]', monster_name) \
                           .replace('[sname]', save_name) \
                       or default_title
 

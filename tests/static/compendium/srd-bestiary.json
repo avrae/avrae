@@ -1,0 +1,148 @@
+[
+  {
+    "name": "Acolyte",
+    "size": "M",
+    "type": {
+      "type": "humanoid",
+      "tags": [
+        "any race"
+      ]
+    },
+    "source": "MM",
+    "alignment": [
+      "A"
+    ],
+    "ac": {
+      "ac": 10
+    },
+    "hp": {
+      "average": 9,
+      "formula": "2d8"
+    },
+    "speed": {
+      "walk": 30
+    },
+    "str": 10,
+    "dex": 10,
+    "con": 10,
+    "int": 10,
+    "wis": 14,
+    "cha": 11,
+    "skill": {
+      "medicine": 4,
+      "religion": 2
+    },
+    "passive": 12,
+    "languages": "any one language (usually Common)",
+    "cr": "1/4",
+    "action": [
+      {
+        "name": "Club",
+        "text": "Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 2 (1d4) bludgeoning damage."
+      }
+    ],
+    "page": 342,
+    "spellcasting": {
+      "spells": [
+        "light",
+        "sacred flame",
+        "thaumaturgy",
+        "bless",
+        "cure wounds",
+        "sanctuary"
+      ],
+      "dc": 12,
+      "attackBonus": 4,
+      "casterLevel": 1
+    },
+    "srd": true,
+    "save": {},
+    "trait": [
+      {
+        "name": "Spellcasting",
+        "text": "The acolyte is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save DC 12, +4 to hit with spell attacks). The acolyte has following cleric spells prepared:\nCantrips (at will): light, sacred flame, thaumaturgy\n1st level (3 slots): bless, cure wounds, sanctuary"
+      }
+    ],
+    "attacks": [
+      {
+        "name": "Club",
+        "attackBonus": "2",
+        "damage": "1d4[bludgeoning]",
+        "details": "Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 2 (1d4) bludgeoning damage."
+      }
+    ]
+  },
+  {
+    "name": "Kobold",
+    "size": "S",
+    "type": {
+      "type": "humanoid",
+      "tags": [
+        "kobold"
+      ]
+    },
+    "source": "MM",
+    "alignment": [
+      "L",
+      "E"
+    ],
+    "ac": {
+      "ac": 12
+    },
+    "hp": {
+      "average": 5,
+      "formula": "2d6 - 2"
+    },
+    "speed": {
+      "walk": 30
+    },
+    "str": 7,
+    "dex": 15,
+    "con": 9,
+    "int": 8,
+    "wis": 7,
+    "cha": 8,
+    "senses": "darkvision 60 ft.",
+    "passive": 8,
+    "languages": "Common, Draconic",
+    "cr": "1/8",
+    "trait": [
+      {
+        "name": "Sunlight Sensitivity",
+        "text": "While in sunlight, the kobold has disadvantage on attack rolls, as well as on Wisdom (Perception) checks that rely on sight."
+      },
+      {
+        "name": "Pack Tactics",
+        "text": "The kobold has advantage on an attack roll against a creature if at least one of the kobold's allies is within 5 feet of the creature and the ally isn't incapacitated."
+      }
+    ],
+    "action": [
+      {
+        "name": "Dagger",
+        "text": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 4 (1d4 + 2) piercing damage."
+      },
+      {
+        "name": "Sling",
+        "text": "Ranged Weapon Attack: +4 to hit, range 30/120 ft., one target. Hit: 4 (1d4 + 2) bludgeoning damage."
+      }
+    ],
+    "page": 195,
+    "srd": true,
+    "save": {},
+    "skill": {},
+    "attacks": [
+      {
+        "name": "Dagger",
+        "attackBonus": "4",
+        "damage": "1d4 + 2[piercing]",
+        "details": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 4 (1d4 + 2) piercing damage."
+      },
+      {
+        "name": "Sling",
+        "attackBonus": "4",
+        "damage": "1d4 + 2[bludgeoning]",
+        "details": "Ranged Weapon Attack: +4 to hit, range 30/120 ft., one target. Hit: 4 (1d4 + 2) bludgeoning damage."
+      }
+    ]
+  }
+]

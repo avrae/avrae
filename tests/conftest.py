@@ -4,7 +4,9 @@ namely, it creates the Avrae instance and overrides its http and gateway handler
 and defines a bunch of helper methods
 """
 import asyncio
+import json
 import logging
+import os
 import re
 from fnmatch import fnmatchcase
 from queue import Queue
@@ -14,6 +16,7 @@ from discord import DiscordException, Embed
 from discord.ext import commands
 from discord.http import HTTPClient, Route
 
+from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException
 from tests.setup import *
 
@@ -59,13 +62,16 @@ def compare_embeds(request_embed, embed, *, regex: bool = True):
 
 
 def message_content_check(request: Request, content: str = None, *, regex: bool = True, embed: Embed = None):
+    match = None
     if content:
         if regex:
-            assert re.match(content, request.data.get('content'))
+            match = re.match(content, request.data.get('content'))
+            assert match
         else:
             assert request.data.get('content') == content
     if embed:
         compare_embeds(request.data.get('embed'), embed.to_dict(), regex=regex)
+    return match
 
 
 class DiscordHTTPProxy(HTTPClient):
@@ -97,6 +103,10 @@ class DiscordHTTPProxy(HTTPClient):
     def clear(self):
         self._request_check_queue = Queue()
 
+    async def drain(self):
+        """Waits until all requests have been sent."""
+        await asyncio.sleep(0.2)
+
     async def get_request(self):
         for _ in range(100):
             if not self._request_check_queue.empty():
@@ -107,6 +117,7 @@ class DiscordHTTPProxy(HTTPClient):
     async def receive_message(self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None):
         """
         Assert that the bot sends a message, and that it is the message we expect.
+        If a regex is passed, this method returns the match object against the content.
         :param content The text or regex to match the message content against
         :param regex Whether to interpret content checking fields as a regex
         :param dm Whether it was a Direct Message that was received or not
@@ -118,11 +129,12 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "POST"
         assert request.url.endswith(f"/channels/{channel}/messages")
 
-        message_content_check(request, content, regex=regex, embed=embed)
+        return message_content_check(request, content, regex=regex, embed=embed)
 
     async def receive_edit(self, content: str = None, *, regex: bool = True, dm=False, embed: Embed = None):
         """
         Assert that the bot edits a message, and that it is the message we expect.
+        If a regex is passed, this method returns the match object against the content.
         :param content The text or regex to match the message content against
         :param regex Whether to interpret content checking fields as a regex
         :param dm Whether it was a Direct Message that was edited or not
@@ -134,7 +146,7 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "PATCH"
         assert request.url.endswith(f"/channels/{channel}/messages/{MESSAGE_ID}")
 
-        message_content_check(request, content, regex=regex, embed=embed)
+        return message_content_check(request, content, regex=regex, embed=embed)
 
     async def receive_delete(self, dm=False):
         """
@@ -253,3 +265,34 @@ async def avrae(dhttp):
     log.info("Ready for testing")
     yield bot
     await bot.logout()
+
+
+# ===== Character Fixture =====
+@pytest.fixture(scope="class",
+                params=["ara", "drakro"])
+def character(request, avrae):
+    """Sets up an active character in the user's context, to be used in tests. Cleans up after itself."""
+    filename = os.path.join("tests", "static", f"char-{request.param}.json")
+    with open(filename) as f:
+        char = Character.from_dict(json.load(f))
+    char.owner = DEFAULT_USER_ID
+    char._active = True
+    avrae.mdb.characters.delegate.update_one(
+        {"owner": char.owner, "upstream": char.upstream},
+        {"$set": char.to_dict()},
+        upsert=True
+    )
+    request.cls.character = char
+    yield char
+    avrae.mdb.characters.delegate.delete_one(
+        {"owner": char.owner, "upstream": char.upstream}
+    )
+
+
+# ===== Global Fixture =====
+@pytest.fixture(autouse=True, scope="function")
+async def global_fixture(avrae, dhttp):
+    """Things to do before and after every test."""
+    dhttp.clear()
+    yield
+    await dhttp.drain()

@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Human",
+    "source": "PHB",
+    "page": 29,
+    "size": "M",
+    "speed": 30,
+    "entries": [
+      {
+        "name": "Age",
+        "type": "entries",
+        "entries": [
+          "Humans reach adulthood in their late teens and live less than a century."
+        ]
+      },
+      {
+        "name": "Alignment",
+        "type": "entries",
+        "entries": [
+          "Humans tend toward no particular alignment. The best and the worst are found among them."
+        ]
+      },
+      {
+        "type": "entries",
+        "name": "Size",
+        "entries": [
+          "Humans vary widely in height and build, from barely 5 feet to well over 6 feet tall. Regardless of your position in that range, your size is Medium."
+        ]
+      },
+      {
+        "name": "Languages",
+        "entries": [
+          "You can speak, read, and write Common and one extra language of your choice. Humans typically learn the languages of other peoples they deal with, including obscure dialects. They are fond of sprinkling their speech with words borrowed from other tongues: Orc curses, Elvish musical expressions, Dwarvish military phrases, and so on."
+        ],
+        "type": "entries"
+      }
+    ],
+    "languageTags": [
+      "Common",
+      "Choose"
+    ],
+    "ability": {
+      "str": 1,
+      "dex": 1,
+      "con": 1,
+      "int": 1,
+      "wis": 1,
+      "cha": 1
+    },
+    "srd": true
+  }
+]

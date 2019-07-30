@@ -103,7 +103,7 @@ class Customization(commands.Cog):
                     message.content = await self.handle_alias_arguments(command, message)
                 except UserInputError as e:
                     return await message.channel.send(f"Invalid input: {e}")
-                ctx = Context(self.bot, message)
+                ctx = await self.bot.get_context(message)
                 char = None
                 try:
                     char = await Character.from_ctx(ctx)
@@ -581,23 +581,3 @@ STAT_VAR_NAMES = ("armor",
                   "level", "name", "proficiencyBonus",
                   "strength", "strengthMod", "strengthSave",
                   "wisdom", "wisdomMod", "wisdomSave")
-
-
-class Context:
-    """A class to pretend to be ctx."""
-
-    def __init__(self, bot, message):
-        self.bot = bot
-        self.message = message
-
-    @property
-    def author(self):
-        return self.message.author
-
-    @property
-    def guild(self):
-        return self.message.guild
-
-    @property
-    def channel(self):
-        return self.message.channel

@@ -45,5 +45,13 @@ def test_argparse_ephem():
 
     # one ephem:adv
     # yes, this looks weird
+    assert not args.adv(ephem=False)
     assert args.adv(ephem=True)
     assert not args.adv(ephem=True)
+
+    # multiple different durations
+    args = argparse("""-d2 1d6 -d1 1d4 -d 1 -d3 1d8""")
+    assert args.last('d', ephem=True) == '1d8'
+    assert args.join('d', '+', ephem=True) == '1+1d6+1d4+1d8'
+    assert args.join('d', '+', ephem=True) == '1+1d6+1d8'
+    assert args.join('d', '+', ephem=True) == '1'

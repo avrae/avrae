@@ -220,7 +220,6 @@ async def on_command_error(ctx, error):
     else:
         bot.log_exception(error, ctx)
 
-
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
         f"Please join <http://support.avrae.io> and let us know about the error!")

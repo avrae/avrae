@@ -279,6 +279,15 @@ class Effect:
             for metaeffect in self.meta:
                 metaeffect.run(autoctx)
 
+    @staticmethod
+    def run_children_with_damage(child, autoctx):
+        damage = 0
+        for effect in child:
+            result = effect.run(autoctx)
+            if result and 'total' in result:
+                damage += result['total']
+        return damage
+
 
 class Target(Effect):
     def __init__(self, target, effects: list, **kwargs):
@@ -310,8 +319,22 @@ class Target(Effect):
         autoctx.target = None
 
     def run_effects(self, autoctx):
-        for e in self.effects:
-            e.run(autoctx)
+        args = autoctx.args
+        rr = min(args.last('rr', 1, int), 25)
+
+        total_damage = 0
+
+        for iteration in range(rr):
+            if rr > 1:
+                if len(self.effects) == 1:
+                    autoctx.queue(f"**__{type(self.effects[0]).__name__} {iteration + 1}__**")
+                else:
+                    autoctx.queue(f"**__Iteration {iteration + 1}__**")
+            total_damage += self.run_children_with_damage(self.effects, autoctx)
+
+        if rr > 1 and total_damage:
+            autoctx.queue(f"**__Total Damage__**: {total_damage}")
+
         if autoctx.target.target:
             autoctx.push_embed_field(autoctx.target.name)
         else:
@@ -333,14 +356,14 @@ class Attack(Effect):
 
     def run(self, autoctx: AutomationContext):
         super(Attack, self).run(autoctx)
-        # applicable arguments
+        # arguments
         args = autoctx.args
-        adv = args.adv(True)
-        crit = args.last('crit', None, bool) and 1
-        hit = args.last('hit', None, bool) and 1
-        miss = (args.last('miss', None, bool) and not hit) and 1
-        rr = min(args.last('rr', 1, int), 25)
-        b = args.join('b', '+')
+        adv = args.adv(ea=True, ephem=True)
+        crit = args.last('crit', None, bool, ephem=True) and 1
+        hit = args.last('hit', None, bool, ephem=True) and 1
+        miss = (args.last('miss', None, bool, ephem=True) and not hit) and 1
+        b = args.join('b', '+', ephem=True)
+
         reroll = args.last('reroll', 0, int)
         criton = args.last('criton', 20, int)
         ac = args.last('ac', None, int)
@@ -353,11 +376,10 @@ class Attack(Effect):
         # check for combatant IEffect bonus (#224)
         if autoctx.combatant:
             effect_b = '+'.join(autoctx.combatant.active_effects('b'))
-            if effect_b:
-                if b:
-                    b = f"{b}+{effect_b}"
-                else:
-                    b = effect_b
+            if effect_b and b:
+                b = f"{b}+{effect_b}"
+            elif effect_b:
+                b = effect_b
 
         attack_bonus = autoctx.ab_override or autoctx.caster.spellbook.sab
 
@@ -372,81 +394,81 @@ class Attack(Effect):
         if attack_bonus is None and b is None:
             raise NoAttackBonus()
 
-        # roll attack(s) against autoctx.target
-        for iteration in range(rr):
-            if rr > 1:
-                autoctx.queue(f"**Attack {iteration + 1}**")
+        # tracking
+        damage = 0
 
-            if not (hit or miss):
-                formatted_d20 = '1d20'
-                if adv == 1:
-                    formatted_d20 = '2d20kh1'
-                elif adv == 2:
-                    formatted_d20 = '3d20kh1'
-                elif adv == -1:
-                    formatted_d20 = '2d20kl1'
+        # roll attack against autoctx.target
+        if not (hit or miss):
+            formatted_d20 = '1d20'
+            if adv == 1:
+                formatted_d20 = '2d20kh1'
+            elif adv == 2:
+                formatted_d20 = '3d20kh1'
+            elif adv == -1:
+                formatted_d20 = '2d20kl1'
 
-                if reroll:
-                    formatted_d20 = f"{formatted_d20}ro{reroll}"
+            if reroll:
+                formatted_d20 = f"{formatted_d20}ro{reroll}"
 
-                if b:
-                    toHit = roll(f"{formatted_d20}+{attack_bonus}+{b}", rollFor='To Hit', inline=True,
-                                 show_blurbs=False)
-                else:
-                    toHit = roll(f"{formatted_d20}+{attack_bonus}", rollFor='To Hit', inline=True, show_blurbs=False)
-
-                autoctx.queue(toHit.result)
-
-                # crit processing
-                try:
-                    d20_value = next(p for p in toHit.raw_dice.parts if
-                                     isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
-                except StopIteration:
-                    d20_value = 0
-
-                if d20_value >= criton:
-                    itercrit = 1
-                else:
-                    itercrit = toHit.crit
-
-                # -ac #
-                if itercrit == 0 and ac:
-                    if toHit.total < ac:
-                        itercrit = 2
-                elif itercrit == 0 and autoctx.target.target and autoctx.target.ac is not None:
-                    if toHit.total < autoctx.target.ac:
-                        itercrit = 2  # miss!
-
-                if itercrit == 2:
-                    self.on_miss(autoctx)
-                elif itercrit == 1:
-                    self.on_crit(autoctx)
-                else:
-                    self.on_hit(autoctx)
-            elif hit:
-                autoctx.queue(f"**To Hit**: Automatic hit!")
-                if crit:
-                    self.on_crit(autoctx)
-                else:
-                    self.on_hit(autoctx)
+            if b:
+                toHit = roll(f"{formatted_d20}+{attack_bonus}+{b}", rollFor='To Hit', inline=True,
+                             show_blurbs=False)
             else:
-                autoctx.queue(f"**To Hit**: Automatic miss!")
-                self.on_miss(autoctx)
+                toHit = roll(f"{formatted_d20}+{attack_bonus}", rollFor='To Hit', inline=True, show_blurbs=False)
+
+            autoctx.queue(toHit.result)
+
+            # crit processing
+            try:
+                d20_value = next(p for p in toHit.raw_dice.parts if
+                                 isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
+            except StopIteration:
+                d20_value = 0
+
+            if d20_value >= criton:
+                itercrit = 1
+            else:
+                itercrit = toHit.crit
+
+            # -ac #
+            if itercrit == 0 and ac:
+                if toHit.total < ac:
+                    itercrit = 2
+            elif itercrit == 0 and autoctx.target.target and autoctx.target.ac is not None:
+                if toHit.total < autoctx.target.ac:
+                    itercrit = 2  # miss!
+
+            if itercrit == 2:
+                damage += self.on_miss(autoctx)
+            elif itercrit == 1:
+                damage += self.on_crit(autoctx)
+            else:
+                damage += self.on_hit(autoctx)
+        elif hit:
+            autoctx.queue(f"**To Hit**: Automatic hit!")
+            if crit:
+                damage += self.on_crit(autoctx)
+            else:
+                damage += self.on_hit(autoctx)
+        else:
+            autoctx.queue(f"**To Hit**: Automatic miss!")
+            damage += self.on_miss(autoctx)
+
+        return {"total": damage}
 
     def on_hit(self, autoctx):
-        for effect in self.hit:
-            effect.run(autoctx)
+        return self.run_children_with_damage(self.hit, autoctx)
 
     def on_crit(self, autoctx):
         original = autoctx.in_crit
         autoctx.in_crit = True
-        self.on_hit(autoctx)
+        result = self.on_hit(autoctx)
         autoctx.in_crit = original
+        return result
 
     def on_miss(self, autoctx):
         autoctx.queue("**Miss!**")
-        for effect in self.miss:
-            effect.run(autoctx)
+        return self.run_children_with_damage(self.miss, autoctx)
 
 
 class Save(Effect):
@@ -496,17 +518,16 @@ class Save(Effect):
             is_success = False
 
         if is_success:
-            self.on_success(autoctx)
+            damage = self.on_success(autoctx)
         else:
-            self.on_fail(autoctx)
+            damage = self.on_fail(autoctx)
+        return {"total": damage}
 
     def on_success(self, autoctx):
-        for effect in self.success:
-            effect.run(autoctx)
+        return self.run_children_with_damage(self.success, autoctx)
 
     def on_fail(self, autoctx):
-        for effect in self.fail:
-            effect.run(autoctx)
+        return self.run_children_with_damage(self.fail, autoctx)
 
 
 class Damage(Effect):
@@ -521,14 +542,14 @@ class Damage(Effect):
         # general arguments
         args = autoctx.args
         damage = self.damage
-        d = args.join('d', '+')
-        c = args.join('c', '+')
-        resist = args.get('resist', [])
-        immune = args.get('immune', [])
-        vuln = args.get('vuln', [])
-        neutral = args.get('neutral', [])
-        crit = args.last('crit', None, bool)
-        maxdmg = args.last('max', None, bool)
+        d = args.join('d', '+', ephem=True)
+        c = args.join('c', '+', ephem=True)
+        resist = args.get('resist', [], ephem=True)
+        immune = args.get('immune', [], ephem=True)
+        vuln = args.get('vuln', [], ephem=True)
+        neutral = args.get('neutral', [], ephem=True)
+        crit = args.last('crit', None, bool, ephem=True)
+        maxdmg = args.last('max', None, bool, ephem=True)
         mi = args.last('mi', None, int)
         critdice = args.last('critdice', 0, int)
 
@@ -632,7 +653,7 @@ class TempHP(Effect):
         super(TempHP, self).run(autoctx)
         args = autoctx.args
         amount = self.amount
-        maxdmg = args.last('max', None, bool)
+        maxdmg = args.last('max', None, bool, ephem=True)
 
         # check if we actually need to run this damage roll (not in combat and roll is redundant)
         if not autoctx.target.target and self.is_meta(autoctx, True):
@@ -716,8 +737,8 @@ class Roll(Effect):
 
     def run(self, autoctx):
         super(Roll, self).run(autoctx)
-        d = autoctx.args.join('d', '+')
-        maxdmg = autoctx.args.last('max', None, bool)
+        d = autoctx.args.join('d', '+', ephem=True)
+        maxdmg = autoctx.args.last('max', None, bool, ephem=True)
         mi = autoctx.args.last('mi', None, int)
 
         # add on combatant damage effects (#224)

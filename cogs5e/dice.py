@@ -203,7 +203,7 @@ class Dice(commands.Cog):
             await ctx.message.delete()
         except:
             pass
-        
+
         monster = await select_monster_full(ctx, monster_name)
         monster_name = monster.get_title_name()
         attacks = monster.attacks

@@ -22,4 +22,4 @@ RUN if [ "$ENVIRONMENT" = "production" ]; then wget https://s3.amazonaws.com/rds
 # This is to disable Machine Learning spell search as per README.md
 RUN if [ "$ENVIRONMENT" = "development" ] ; then sed -i '/from cogs5e.funcs.lookup_ml import ml_spell_search/d; s/, search_func=ml_spell_search//' cogs5e/lookup.py ; fi
 
-ENTRYPOINT python dbot.py $DBOT_ARGS
+ENTRYPOINT .local/bin/newrelic-admin run-program python dbot.py $DBOT_ARGS

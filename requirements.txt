@@ -32,6 +32,7 @@ meteor-ejson==1.1.0
 more-itertools==7.1.0
 motor==2.0.0
 multidict==4.5.2
+newrelic==4.20.1.121
 numexpr==2.6.4
 numpy==1.15.4
 oauth2client==4.1.2

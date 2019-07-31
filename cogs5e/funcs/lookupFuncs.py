@@ -9,6 +9,8 @@ import json
 import logging
 import os
 
+import newrelic.agent
+
 from cogs5e.models.background import Background
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.bestiary import Bestiary
@@ -57,6 +59,7 @@ class Compendium:
                 await self.reload(mdb)
                 await asyncio.sleep(wait_for)
 
+    @newrelic.agent.function_trace()
     async def reload(self, mdb=None):
         log.info("Reloading data")
 

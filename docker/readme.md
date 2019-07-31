@@ -18,7 +18,7 @@
 ### Discord bot creation
 
 - Go to the [Discord Developer Portal](https://discordapp.com/developers/).
-- `New Application`, give it a cool name, click `Create`.
+- `New Application`, give it a cool name, `Create`.
 - Copy the `Client ID` from `General Information`, you'll need this shortly.
 - `Bot` > `Add Bot`.
 - `Click to reveal token`, this is your `DISCORD_BOT_TOKEN` below.
@@ -27,8 +27,7 @@
 ## Docker Compose magic
 
 1. Create a `docker\env` file with real credentials.
-2. Run `docker-compose build`.
-3. Run `docker-compose up`.
+2. Run `docker-compose up --build`.
 
 ### docker\env file
 
@@ -38,5 +37,12 @@
     DICECLOUD_PASS=c
     DICECLOUD_TOKEN=d
     GOOGLE_SERVICE_ACCOUNT=e
-    SENTRY_DSN=f
-    DBL_TOKEN=g
+    DBL_TOKEN=f
+    
+    # Only required if using New Relic integration
+    NEW_RELIC_CONFIG_FILE=newrelic.ini
+    NEW_RELIC_ENVIRONMENT=development
+    NEW_RELIC_LICENSE_KEY=abcd
+    
+    # Only required if using sentry.io integration
+    SENTRY_DSN=abcd

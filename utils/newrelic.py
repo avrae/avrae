@@ -46,7 +46,6 @@ def hook_motor():
         if thing is not None:
             for method in methods:
                 if hasattr(thing, method):
-                    print('** Hooking', class_name, '=>', method)
                     newrelic.api.function_trace.wrap_function_trace(
                         motor.motor_asyncio,
                         '%s.%s' % (class_name, method),

@@ -491,7 +491,7 @@ class GameTrack(commands.Cog):
         args = await char.parse_cvars(args, ctx)
         args = argparse(args)
 
-        result = await spell.cast(ctx, char, None, args)
+        result = await spell.cast(ctx, char, args.get('t'), args)
         embed = result['embed']
 
         embed.colour = char.get_color()

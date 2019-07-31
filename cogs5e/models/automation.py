@@ -181,6 +181,7 @@ class AutomationContext:
 class AutomationTarget:
     def __init__(self, target):
         self.target = target
+        self.is_simple = isinstance(target, str) or target is None
 
     @property
     def name(self):
@@ -434,7 +435,7 @@ class Attack(Effect):
             if itercrit == 0 and ac:
                 if toHit.total < ac:
                     itercrit = 2
-            elif itercrit == 0 and autoctx.target.target and autoctx.target.ac is not None:
+            elif itercrit == 0 and not autoctx.target.is_simple and autoctx.target.ac is not None:
                 if toHit.total < autoctx.target.ac:
                     itercrit = 2  # miss!
 
@@ -508,7 +509,7 @@ class Save(Effect):
             raise InvalidSaveType()
 
         autoctx.meta_queue(f"**DC**: {dc}")
-        if autoctx.target.target:
+        if not autoctx.target.is_simple:
             saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
             save_roll = roll(saveroll, rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
             is_success = save_roll.total >= dc
@@ -558,14 +559,14 @@ class Damage(Effect):
             critdice = autoctx.character.get_setting('critdice') or critdice
 
         # combat-specific arguments
-        if autoctx.target.target:
+        if not autoctx.target.is_simple:
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
             vuln = vuln or autoctx.target.get_vuln()
             neutral = neutral or autoctx.target.get_neutral()
 
         # check if we actually need to run this damage roll (not in combat and roll is redundant)
-        if not autoctx.target.target and self.is_meta(autoctx, True):
+        if autoctx.target.is_simple and self.is_meta(autoctx, True):
             return
 
         # add on combatant damage effects (#224)
@@ -656,7 +657,7 @@ class TempHP(Effect):
         maxdmg = args.last('max', None, bool, ephem=True)
 
         # check if we actually need to run this damage roll (not in combat and roll is redundant)
-        if not autoctx.target.target and self.is_meta(autoctx, True):
+        if autoctx.target.is_simple and self.is_meta(autoctx, True):
             return
 
         amount = autoctx.parse_annostr(amount)

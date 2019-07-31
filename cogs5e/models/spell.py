@@ -217,8 +217,6 @@ class Spell:
         embed = discord.Embed()
         if title:
             embed.title = title.replace('[sname]', self.name)
-        elif targets:
-            embed.title = f"{caster.get_name()} casts {self.name}{stat_override} at..."
         else:
             embed.title = f"{caster.get_name()} casts {self.name}{stat_override}!"
         if targets is None:

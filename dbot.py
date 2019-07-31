@@ -257,7 +257,8 @@ for cog in STATIC_COGS:
 
 if __name__ == '__main__':
     bot.state = "run"
-    if not bot.rdb.exists('build_num'): bot.rdb.set('build_num', 0)
+    if not bot.rdb.exists('build_num'):
+        bot.rdb.set('build_num', 0)
     bot.rdb.incr('build_num')
     bot.loop.create_task(compendium.reload_task(bot.mdb))
     bot.run(bot.credentials.token)

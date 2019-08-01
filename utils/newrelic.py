@@ -25,6 +25,9 @@ _motor_classes = {
 
 
 def hook_all():
+    if os.getenv('NEW_RELIC_LICENSE_KEY') is None:
+        return
+
     hook_discord()
     hook_motor()
 
@@ -50,7 +53,3 @@ def hook_motor():
                         motor.motor_asyncio,
                         '%s.%s' % (class_name, method),
                         name='motor:%s.%s' % (class_name, method))
-
-
-if os.getenv('NEW_RELIC_LICENSE_KEY') is not None:
-    hook_all()

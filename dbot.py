@@ -5,7 +5,9 @@ import os
 import sys
 import traceback
 
-# import utils.newrelic  # this hooks a lot of weird things and needs to be imported early
+# this hooks a lot of weird things and needs to be imported early
+import utils.newrelic
+utils.newrelic.hook_all()
 
 import discord
 import motor.motor_asyncio

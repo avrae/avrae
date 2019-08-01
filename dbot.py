@@ -33,8 +33,6 @@ DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.look
                 "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization"]
 STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"]
 
-# todo remove segfault debug code
-faulthandler.enable()
 
 async def get_prefix(the_bot, message):
     if not message.guild:
@@ -225,7 +223,6 @@ async def on_command_error(ctx, error):
     else:
         bot.log_exception(error, ctx)
 
-
     await ctx.send(
         f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
         f"Please join <http://support.avrae.io> and let us know about the error!")
@@ -260,6 +257,7 @@ for cog in STATIC_COGS:
     bot.load_extension(cog)
 
 if __name__ == '__main__':
+    faulthandler.enable()  # assumes we log errors to stderr, traces segfaults
     bot.state = "run"
     if not bot.rdb.exists('build_num'): bot.rdb.set('build_num', 0)
     bot.rdb.incr('build_num')

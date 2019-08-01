@@ -222,11 +222,11 @@ async def get_spell_choices(ctx):
     return choices
 
 
-async def get_castable_spell(ctx, name, choices=None):
+async def get_castable_spell(ctx, name, choices=None, strict=False):
     if choices is None:
         choices = await get_spell_choices(ctx)
 
-    result = search(choices, name, lambda sp: sp.name)
+    result = search(choices, name, lambda sp: sp.name, strict=strict)
     if result and result[1]:
         return result[0]
     return None

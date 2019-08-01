@@ -19,14 +19,11 @@ google-auth-oauthlib==0.3.0
 google-pasta==0.1.7
 graphviz==0.8.4
 grpcio==1.17.1
-h5py==2.8.0
 html2text==2018.1.9
 httplib2==0.10.3
 idna==2.8
 idna-ssl==1.1.0
 importlib-metadata==0.18
-Keras-Applications==1.0.6
-Keras-Preprocessing==1.0.5
 Markdown==3.0.1
 meteor-ejson==1.1.0
 more-itertools==7.1.0
@@ -64,9 +61,6 @@ rsa==3.4.2
 sentry-sdk==0.10.2
 simpleeval==0.9.6
 six==1.11.0
-tensorboard==1.14.0
-tensorflow==1.14.0
-tensorflow-estimator==1.14.0
 termcolor==1.1.0
 uritemplate==3.0.0
 urllib3==1.25.3

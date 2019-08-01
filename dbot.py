@@ -1,10 +1,11 @@
 import asyncio
+import faulthandler
 import logging
 import os
 import sys
 import traceback
 
-import utils.newrelic  # this hooks a lot of weird things and needs to be imported early
+# import utils.newrelic  # this hooks a lot of weird things and needs to be imported early
 
 import discord
 import motor.motor_asyncio
@@ -32,6 +33,8 @@ DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.look
                 "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization"]
 STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"]
 
+# todo remove segfault debug code
+faulthandler.enable()
 
 async def get_prefix(the_bot, message):
     if not message.guild:

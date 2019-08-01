@@ -24,6 +24,7 @@ from cogs5e.models.sheet import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
+from utils import targetutils
 from utils.argparser import argparse
 from utils.constants import SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS
 from utils.functions import a_or_an, auth_and_chan, get_positivity, list_get
@@ -113,7 +114,10 @@ class SheetManager(commands.Cog):
         else:
             embed.title = '{} attacks with {}!'.format(char.name, a_or_an(attack.name))
 
-        await Automation.from_attack(attack).run(ctx, embed, char, args.get('t'), args)
+        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
+        await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat)
+        if combat:
+            await combat.final()
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)

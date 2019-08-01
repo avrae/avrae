@@ -12,6 +12,7 @@ from cogs5e.models.automation import Automation
 from cogs5e.models.monster import Monster, SKILL_MAP
 from cogs5e.models.sheet import Attack
 from cogsmisc.stats import Stats
+from utils import targetutils
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS
 from utils.functions import a_or_an, camel_to_title, search_and_select, verbose_stat
@@ -186,7 +187,10 @@ class Dice(commands.Cog):
         if image:
             embed.set_thumbnail(url=image)
 
-        await Automation.from_attack(attack).run(ctx, embed, monster, args.get('t'), args)
+        caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args.get('t'))
+        await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat)
+        if combat:
+            await combat.final()
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)

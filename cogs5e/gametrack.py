@@ -17,6 +17,7 @@ from cogs5e.funcs.lookupFuncs import get_castable_spell, get_spell_choices, sele
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
+from utils import targetutils
 from utils.argparser import argparse
 from utils.functions import confirm, search_and_select
 
@@ -491,9 +492,12 @@ class GameTrack(commands.Cog):
         args = await char.parse_cvars(args, ctx)
         args = argparse(args)
 
-        result = await spell.cast(ctx, char, args.get('t'), args)
-        embed = result['embed']
+        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
+        result = await spell.cast(ctx, caster, targets, args, combat=combat)
+        if combat:
+            await combat.final()
 
+        embed = result['embed']
         embed.colour = char.get_color()
         embed.set_thumbnail(url=char.image)
 

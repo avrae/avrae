@@ -112,8 +112,8 @@ class TempCharacter:
         (last_row, last_column) = a1_to_rowcol(end)
 
         out = []
-        for col in self.values[row_offset:last_row + 1]:
-            out.extend(col[column_offset:last_column + 1])
+        for col in self.values[row_offset - 1:last_row]:
+            out.extend(col[column_offset - 1:last_column])
         return out
 
 
@@ -419,10 +419,11 @@ class GoogleSheet(SheetLoaderABC):
         for value in potential_spells:
             value = value.strip()
             if len(value) > 2 and value not in IGNORED_SPELL_VALUES:
-                result = search(compendium.spells, value, lambda sp: sp.name, strict=True)
-                if result and result[0] and result[1]:
-                    spells.append(SpellbookSpell(result[0].name, True))
-                elif len(value) > 2:
+                log.debug(f"Searching for spell {value}")
+                result, strict = search(compendium.spells, value, lambda sp: sp.name, strict=True)
+                if result and strict:
+                    spells.append(SpellbookSpell(result.name, True))
+                else:
                     spells.append(SpellbookSpell(value.strip()))
 
         try:

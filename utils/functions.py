@@ -15,9 +15,8 @@ import discord
 import numpy
 from PIL import Image
 from fuzzywuzzy import fuzz, process
-from pygsheets import NoValidUrlKeyFound
 
-from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
+from cogs5e.models.errors import ExternalImportError, NoSelectionElements, SelectionCancelled
 
 log = logging.getLogger(__name__)
 
@@ -469,7 +468,7 @@ def extract_gsheet_id_from_url(url):
     if m1:
         return m1.group(1)
 
-    raise NoValidUrlKeyFound
+    raise ExternalImportError("This is not a valid Google Sheets link.")
 
 
 async def confirm(ctx, message, delete_msgs=False):

@@ -10,7 +10,6 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.lookupFuncs import HOMEBREW_EMOJI, HOMEBREW_ICON, compendium, select_monster_full, select_spell_full
-from cogs5e.funcs.lookup_ml import ml_spell_search
 from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
@@ -534,7 +533,7 @@ class Lookup(commands.Cog):
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        spell, metadata = await select_spell_full(ctx, name, search_func=ml_spell_search, return_metadata=True)
+        spell, metadata = await select_spell_full(ctx, name, return_metadata=True)
 
         metadata['homebrew'] = spell.source == 'homebrew'
         await self.add_training_data("spell", name, spell.name, metadata=metadata)

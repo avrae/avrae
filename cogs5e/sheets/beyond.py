@@ -502,12 +502,28 @@ class BeyondSheetParser(SheetLoaderABC):
                 return []  # thanks DDB
             isProf = atkIn['isProficient']
             atkBonus = None
-            dmgBonus = ""
+            dmgBonus = None
+
+            dice_size = max(monk_scale(), atkIn['dice']['diceValue'])
+            base_dice = f"{atkIn['dice']['diceCount']}d{dice_size}"
+
             if atkIn["abilityModifierStatId"]:
-                atkBonus = self.stat_from_id(atkIn['abilityModifierStatId']) + (prof if isProf else 0)
-                dmgBonus = f"+{self.stat_from_id(atkIn['abilityModifierStatId'])}"
+                atkBonus = self.stat_from_id(atkIn['abilityModifierStatId'])
+                dmgBonus = self.stat_from_id(atkIn['abilityModifierStatId'])
+
+            if atkIn["isMartialArts"] and self.get_levels().get("Monk"):
+                atkBonus = max(atkBonus, self.stat_from_id(2))  # allow using dex
+                dmgBonus = max(dmgBonus, self.stat_from_id(2))
+
+            if isProf:
+                atkBonus += prof
+
+            if dmgBonus:
+                damage = f"{base_dice}+{dmgBonus}[{parse_dmg_type(atkIn)}]"
+            else:
+                damage = f"{base_dice}[{parse_dmg_type(atkIn)}]"
             attack = Attack(
-                atkIn['name'], atkBonus, f"{atkIn['dice']['diceString']}{dmgBonus}[{parse_dmg_type(atkIn)}]",
+                atkIn['name'], atkBonus, damage,
                 atkIn['snippet']
             )
             out.append(attack)

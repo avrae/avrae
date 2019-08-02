@@ -28,8 +28,8 @@ log = logging.getLogger(__name__)
 API_BASE = "https://www.dndbeyond.com/character/"
 DAMAGE_TYPES = {1: "bludgeoning", 2: "piercing", 3: "slashing", 4: "necrotic", 5: "acid", 6: "cold", 7: "fire",
                 8: "lightning", 9: "thunder", 10: "poison", 11: "psychic", 12: "radiant", 13: "force"}
-CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.334, "Monk": 0, "Paladin": 0.5,
-                "Ranger": 0.5, "Rogue": 0.334, "Sorcerer": 1, "Warlock": 0, "Wizard": 1, "Artificer": 0.5}
+CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.333, "Monk": 0, "Paladin": 0.5,
+                "Ranger": 0.5, "Rogue": 0.333, "Sorcerer": 1, "Warlock": 0, "Wizard": 1, "Artificer": 0.5}
 SLOTS_PER_LEVEL = {
     1: lambda l: min(l + 1, 4) if l else 0,
     2: lambda l: 0 if l < 3 else min(l - 1, 3),
@@ -408,7 +408,12 @@ class BeyondSheetParser(SheetLoaderABC):
                 spellcasterLevel += _class['level'] * casterMult
                 castingClasses += 1 if casterMult else 0  # warlock multiclass fix
                 spellMod = max(spellMod, self.stat_from_id(castingAbility))
-                hasSpells = 'Spellcasting' in [cf['name'] for cf in _class['definition']['classFeatures']] or hasSpells
+
+                class_features = {cf['name'] for cf in _class['definition']['classFeatures']}
+                if _class['subclassDefinition']:
+                    class_features.update({cf['name'] for cf in _class['subclassDefinition']['classFeatures']})
+
+                hasSpells = 'Spellcasting' in class_features or hasSpells
 
             if _class['definition']['name'] == 'Warlock':
                 pactSlots = pact_slots_by_level(_class['level'])

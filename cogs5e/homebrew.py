@@ -154,6 +154,7 @@ class Homebrew(commands.Cog):
             await ctx.send(f"Ok, {bestiary.name} is no longer active on {ctx.guild.name}.")
 
     @bestiary_server.command(name='list')
+    @commands.guild_only()
     async def bestiary_server_list(self, ctx):
         """Shows what bestiaries are currently active on the server."""
         desc = []
@@ -264,6 +265,7 @@ class Homebrew(commands.Cog):
             await ctx.send(f"Ok, {pack.name} is no longer active on {ctx.guild.name}.")
 
     @pack_server.command(name='list')
+    @commands.guild_only()
     async def pack_server_list(self, ctx):
         """Shows what packs are currently active on the server."""
         desc = ""
@@ -373,6 +375,7 @@ class Homebrew(commands.Cog):
             await ctx.send(f"Ok, {tome.name} is no longer active on {ctx.guild.name}.")
 
     @tome_server.command(name='list')
+    @commands.guild_only()
     async def tome_server_list(self, ctx):
         """Shows what tomes are currently active on the server."""
         desc = ""

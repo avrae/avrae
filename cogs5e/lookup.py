@@ -597,12 +597,15 @@ class Lookup(commands.Cog):
         try:
             pack = await Pack.from_ctx(ctx)
             custom_items = pack.get_search_formatted_items()
+            pack_id = pack.id
         except NoActiveBrew:
             custom_items = []
+            pack_id = None
         choices = list(itertools.chain(compendium.items, custom_items))
         if ctx.guild:
             async for servpack in ctx.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}):
-                choices.extend(Pack.from_dict(servpack).get_search_formatted_items())
+                if servpack['_id'] != pack_id:
+                    choices.extend(Pack.from_dict(servpack).get_search_formatted_items())
 
         def get_homebrew_formatted_name(_item):
             if _item.get('source') == 'homebrew':

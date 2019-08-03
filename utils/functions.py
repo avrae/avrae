@@ -15,9 +15,8 @@ import discord
 import numpy
 from PIL import Image
 from fuzzywuzzy import fuzz, process
-from pygsheets import NoValidUrlKeyFound
 
-from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
+from cogs5e.models.errors import ExternalImportError, NoSelectionElements, SelectionCancelled
 
 log = logging.getLogger(__name__)
 
@@ -61,11 +60,11 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
     :param key: A function defining what to search for.
     :param cutoff: The scorer cutoff value for fuzzy searching.
     :param return_key: Whether to return the key of the object that matched or the object itself.
-    :param strict: Kinda does nothing. I'm not sure why this is here.
-    :returns: A two-tuple (result, strict) or None"""
+    :param strict: If True, will only search for exact matches.
+    :returns: A two-tuple (result, strict)"""
     # full match, return result
     exact_matches = [a for a in list_to_search if value.lower() == key(a).lower()]
-    if not exact_matches:
+    if not (exact_matches or strict):
         partial_matches = [a for a in list_to_search if value.lower() in key(a).lower()]
         if len(partial_matches) > 1 or not partial_matches:
             names = [key(d).lower() for d in list_to_search]
@@ -469,7 +468,7 @@ def extract_gsheet_id_from_url(url):
     if m1:
         return m1.group(1)
 
-    raise NoValidUrlKeyFound
+    raise ExternalImportError("This is not a valid Google Sheets link.")
 
 
 async def confirm(ctx, message, delete_msgs=False):

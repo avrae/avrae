@@ -11,13 +11,16 @@ Created on May 8, 2017
 # v8: skill/save effects
 # v15: version fix
 import asyncio
+import json
 import logging
 import os
 import re
 
-import pygsheets
+import gspread
 from googleapiclient.errors import HttpError
-from pygsheets.exceptions import SpreadsheetNotFound
+from gspread import SpreadsheetNotFound
+from gspread.utils import a1_to_rowcol, fill_gaps
+from oauth2client.service_account import ServiceAccountCredentials
 
 from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import compendium
@@ -25,10 +28,10 @@ from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
 from cogs5e.models.sheet.base import Resistances, Saves, Skill, Skills
+from cogs5e.sheets.abc import SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute
 from utils.constants import DAMAGE_TYPES
 from utils.functions import search
-from .abc import SheetLoaderABC
 
 log = logging.getLogger(__name__)
 
@@ -69,25 +72,49 @@ def letter2num(letters, zbase=True):
 
 
 class TempCharacter:
-    def __init__(self, worksheet, cells):
+    def __init__(self, worksheet):
         self.worksheet = worksheet
-        self.cells = worksheet.range(cells)
-        # print('\n'.join(str(r) for r in self.cells))
+        self.values = worksheet.get_all_values()
+        self.unformatted_values = self._get_all_unformatted_values()
 
-    def cell(self, pos):
+    def _get_all_unformatted_values(self):
+        data = self.worksheet.spreadsheet.values_get(
+            self.worksheet.title,
+            params={'valueRenderOption': "UNFORMATTED_VALUE"})
+        try:
+            return fill_gaps(data['values'])
+        except KeyError:
+            return []
+
+    @staticmethod
+    def _get_value(source, pos):
         _pos = POS_RE.match(pos)
         if _pos is None:
-            raise Exception("No A1-style position found.")
+            raise ValueError("No A1-style position found.")
         col = letter2num(_pos.group(1))
         row = int(_pos.group(2)) - 1
-        if row > len(self.cells) or col > len(self.cells[row]):
-            raise Exception("Cell out of bounds.")
-        cell = self.cells[row][col]
-        log.debug(f"Cell {pos}: {cell}")
-        return cell
+        if row > len(source) or col > len(source[row]):
+            raise IndexError("Cell out of bounds.")
+        value = source[row][col]
+        log.debug(f"Cell {pos}: {value}")
+        return value
 
-    def range(self, rng):
-        return self.worksheet.range(rng)
+    def value(self, pos):
+        return self._get_value(self.values, pos)
+
+    def unformatted_value(self, pos):
+        return self._get_value(self.unformatted_values, pos)
+
+    def value_range(self, rng):
+        """Returns a list of values in a range."""
+        start, end = rng.split(':')
+        (row_offset, column_offset) = a1_to_rowcol(start)
+        (last_row, last_column) = a1_to_rowcol(end)
+
+        out = []
+        for col in self.values[row_offset - 1:last_row]:
+            out.extend(col[column_offset - 1:last_column])
+        return out
 
 
 class GoogleSheet(SheetLoaderABC):
@@ -110,20 +137,25 @@ class GoogleSheet(SheetLoaderABC):
 
         def _():
             if "GOOGLE_SERVICE_ACCOUNT" in os.environ:
-                return pygsheets.authorize(service_account_env_var='GOOGLE_SERVICE_ACCOUNT', no_cache=True)
-            return pygsheets.authorize(service_account_file='avrae-google.json', no_cache=True)
+                credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+                    json.loads(os.environ['GOOGLE_SERVICE_ACCOUNT']),
+                    scopes="https://www.googleapis.com/auth/spreadsheets")
+            else:
+                credentials = ServiceAccountCredentials.from_json_keyfile_name(
+                    "avrae-google.json",
+                    scopes="https://www.googleapis.com/auth/spreadsheets")
+            return gspread.authorize(credentials)
 
         GoogleSheet.g_client = await asyncio.get_event_loop().run_in_executor(None, _)
         GoogleSheet._client_initializing = False
         log.info("Logged in to google")
 
     def _gchar(self):
-        # self.client.login()
         doc = GoogleSheet.g_client.open_by_key(self.url)
-        self.character_data = TempCharacter(doc.sheet1, "A1:AR180")
-        vcell = doc.sheet1.cell("AQ4").value
+        self.character_data = TempCharacter(doc.sheet1)
+        vcell = self.character_data.value("AQ4")
         if ("1.3" not in vcell) and vcell:
-            self.additional = TempCharacter(doc.worksheet('index', 1), "A1:AP81")
+            self.additional = TempCharacter(doc.get_worksheet(1))
             self.version = 2 if "2" in vcell else 1
 
     # main loading methods
@@ -150,9 +182,9 @@ class GoogleSheet(SheetLoaderABC):
         active = False
         sheet_type = "google"
         import_version = 15
-        name = self.character_data.cell("C6").value.strip() or "Unnamed"
+        name = self.character_data.value("C6").strip() or "Unnamed"
         description = self.get_description()
-        image = self.character_data.cell("C176").value.strip()
+        image = self.character_data.value("C176").strip()
 
         stats = self.get_stats().to_dict()
         levels = self.get_levels().to_dict()
@@ -196,24 +228,24 @@ class GoogleSheet(SheetLoaderABC):
     def get_description(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         character = self.character_data
-        g = character.cell("C150").value.lower()
-        n = character.cell("C6").value
+        g = character.value("C150").lower()
+        n = character.value("C6")
         pronoun = "She" if g == "female" else "He" if g == "male" else "They"
         verb1 = "is" if pronoun != "They" else "are"
         verb2 = "has" if pronoun != "They" else "have"
         desc = "{0} is a level {1} {2} {3}. {4} {11} {5} years old, {6} tall, and appears to weigh about {7}." \
                "{4} {12} {8} eyes, {9} hair, and {10} skin."
         desc = desc.format(n,
-                           character.cell("AL6").value,
-                           character.cell("T7").value,
-                           character.cell("T5").value,
+                           character.value("AL6"),
+                           character.value("T7"),
+                           character.value("T5"),
                            pronoun,
-                           character.cell("C148").value or "unknown",
-                           character.cell("F148").value or "unknown",
-                           character.cell("I148").value or "unknown",
-                           character.cell("F150").value.lower() or "unknown",
-                           character.cell("I150").value.lower() or "unknown",
-                           character.cell("L150").value.lower() or "unknown",
+                           character.value("C148") or "unknown",
+                           character.value("F148") or "unknown",
+                           character.value("I148") or "unknown",
+                           character.value("F150").lower() or "unknown",
+                           character.value("I150").lower() or "unknown",
+                           character.value("L150").lower() or "unknown",
                            verb1, verb2)
         return desc
 
@@ -222,7 +254,7 @@ class GoogleSheet(SheetLoaderABC):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         character = self.character_data
         try:
-            prof_bonus = int(character.cell("H14").value)
+            prof_bonus = int(character.value("H14"))
         except (TypeError, ValueError):
             raise MissingAttribute("Proficiency Bonus")
 
@@ -230,7 +262,7 @@ class GoogleSheet(SheetLoaderABC):
         stat_dict = {}
         for stat in ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'):
             try:
-                stat_dict[stat] = int(character.cell("C" + str(index)).value)
+                stat_dict[stat] = int(character.value("C" + str(index)))
                 index += 5
             except (TypeError, ValueError):
                 raise MissingAttribute(stat)
@@ -241,7 +273,7 @@ class GoogleSheet(SheetLoaderABC):
     def get_levels(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         try:
-            total_level = int(self.character_data.cell("AL6").value)
+            total_level = int(self.character_data.value("AL6"))
             self.total_level = total_level
         except ValueError:
             raise MissingAttribute("Character level")
@@ -251,9 +283,9 @@ class GoogleSheet(SheetLoaderABC):
             for rownum in range(69, 79):  # sheet2, C69:C78
                 namecell = f"C{rownum}"
                 levelcell = f"N{rownum}"
-                classname = self.additional.cell(namecell).value
+                classname = self.additional.value(namecell)
                 if classname:
-                    classlevel = int(self.additional.cell(levelcell).value)
+                    classlevel = int(self.additional.value(levelcell))
                     level_dict[classname] = classlevel
                 else:  # classes should be top-aligned
                     break
@@ -285,7 +317,7 @@ class GoogleSheet(SheetLoaderABC):
 
         skills = {}
         saves = {}
-        is_joat = self.version == 2 and bool(character.cell("AR45").value)
+        is_joat = self.version == 2 and bool(character.value("AR45"))
         for cell, skill, advcell in SKILL_CELL_MAP:
             if isinstance(cell, int):
                 advcell = f"F{cell}"
@@ -294,13 +326,13 @@ class GoogleSheet(SheetLoaderABC):
             else:
                 profcell = None
             try:
-                value = int(character.cell(cell).value)
+                value = int(character.value(cell))
             except (TypeError, ValueError):
                 raise MissingAttribute(skill)
 
             adv = None
             if self.version == 2 and advcell:
-                advtype = character.cell(advcell).value_unformatted
+                advtype = character.unformatted_value(advcell)
                 if advtype in {'a', 'adv', 'advantage'}:
                     adv = True
                 elif advtype in {'d', 'dis', 'disadvantage'}:
@@ -310,7 +342,7 @@ class GoogleSheet(SheetLoaderABC):
             if "Save" not in skill and is_joat:
                 prof = 0.5
             if profcell:
-                proftype = character.cell(profcell).value_unformatted
+                proftype = character.unformatted_value(profcell)
                 if proftype == 'e':
                     prof = 2
                 elif proftype and proftype != '0':
@@ -332,12 +364,12 @@ class GoogleSheet(SheetLoaderABC):
             return Resistances.from_dict(out)
 
         for resist_row in range(69, 80):  # T69:T79
-            resist = self.additional.cell(f"T{resist_row}").value
+            resist = self.additional.value(f"T{resist_row}")
             if resist:
                 out['resist'].append(resist.lower())
 
         for immune_row in range(69, 80):  # AE69:AE79
-            immune = self.additional.cell(f"AE{immune_row}").value
+            immune = self.additional.value(f"AE{immune_row}")
             if immune:
                 out['immune'].append(immune.lower())
 
@@ -345,62 +377,62 @@ class GoogleSheet(SheetLoaderABC):
 
     def get_ac(self):
         try:
-            return int(self.character_data.cell("R12").value)
+            return int(self.character_data.value("R12"))
         except (TypeError, ValueError):
             raise MissingAttribute("AC")
 
     def get_hp(self):
         try:
-            return int(self.character_data.cell("U16").value)
+            return int(self.character_data.value("U16"))
         except (TypeError, ValueError):
             raise MissingAttribute("Max HP")
 
     def get_race(self):
-        return self.character_data.cell('T7').value.strip()
+        return self.character_data.value('T7').strip()
 
     def get_background(self):
         if self.version == 2:
-            return self.character_data.cell('AJ11').value.strip()
-        return self.character_data.cell('Z5').value.strip()
+            return self.character_data.value('AJ11').strip()
+        return self.character_data.value('Z5').strip()
 
     def get_spellbook(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         # max slots
         slots = {
-            '1': int(self.character_data.cell('AK101').value or 0),
-            '2': int(self.character_data.cell('E107').value or 0),
-            '3': int(self.character_data.cell('AK113').value or 0),
-            '4': int(self.character_data.cell('E119').value or 0),
-            '5': int(self.character_data.cell('AK124').value or 0),
-            '6': int(self.character_data.cell('E129').value or 0),
-            '7': int(self.character_data.cell('AK134').value or 0),
-            '8': int(self.character_data.cell('E138').value or 0),
-            '9': int(self.character_data.cell('AK142').value or 0)
+            '1': int(self.character_data.value("AK101") or 0),
+            '2': int(self.character_data.value("E107") or 0),
+            '3': int(self.character_data.value("AK113") or 0),
+            '4': int(self.character_data.value("E119") or 0),
+            '5': int(self.character_data.value("AK124") or 0),
+            '6': int(self.character_data.value("E129") or 0),
+            '7': int(self.character_data.value("AK134") or 0),
+            '8': int(self.character_data.value("E138") or 0),
+            '9': int(self.character_data.value("AK142") or 0)
         }
 
         # spells C96:AH143
-        potential_spells = self.character_data.range("D96:AH143")  # returns a matrix, the docs lie
+        potential_spells = self.character_data.value_range("D96:AH143")
         if self.additional:
-            potential_spells.extend(self.additional.range("D17:AH64"))
+            potential_spells.extend(self.additional.value_range("D17:AH64"))
 
         spells = []
-        for row in potential_spells:
-            for cell in row:
-                if cell.value and not cell.value in IGNORED_SPELL_VALUES:
-                    value = cell.value.strip()
-                    result = search(compendium.spells, value, lambda sp: sp.name, strict=True)
-                    if result and result[0] and result[1]:
-                        spells.append(SpellbookSpell(result[0].name, True))
-                    elif len(value) > 2:
-                        spells.append(SpellbookSpell(value.strip()))
+        for value in potential_spells:
+            value = value.strip()
+            if len(value) > 2 and value not in IGNORED_SPELL_VALUES:
+                log.debug(f"Searching for spell {value}")
+                result, strict = search(compendium.spells, value, lambda sp: sp.name, strict=True)
+                if result and strict:
+                    spells.append(SpellbookSpell(result.name, True))
+                else:
+                    spells.append(SpellbookSpell(value.strip()))
 
         try:
-            dc = int(self.character_data.cell('AB91').value or 0)
+            dc = int(self.character_data.value("AB91") or 0)
         except ValueError:
             dc = None
 
         try:
-            sab = int(self.character_data.cell('AI91').value or 0)
+            sab = int(self.character_data.value("AI91") or 0)
         except ValueError:
             sab = None
 
@@ -414,9 +446,9 @@ class GoogleSheet(SheetLoaderABC):
 
         wksht = sheet or self.character_data
 
-        name = wksht.cell(name_index).value
-        damage = wksht.cell(damage_index).value
-        bonus = wksht.cell(bonus_index).value
+        name = wksht.value(name_index)
+        damage = wksht.value(damage_index)
+        bonus = wksht.value(bonus_index)
         details = None
 
         if not name:

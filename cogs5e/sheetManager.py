@@ -11,7 +11,6 @@ import traceback
 import discord
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
-from pygsheets.exceptions import NoValidUrlKeyFound
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
@@ -703,7 +702,7 @@ class SheetManager(commands.Cog):
         loading = await ctx.send('Loading character data from Google... (This usually takes ~30 sec)')
         try:
             url = extract_gsheet_id_from_url(url)
-        except NoValidUrlKeyFound:
+        except ExternalImportError:
             return await loading.edit(content="This is not a Google Sheets link.")
 
         override = await self._confirm_overwrite(ctx, f"google-{url}")

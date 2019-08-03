@@ -11,10 +11,12 @@ Created on May 8, 2017
 # v8: skill/save effects
 # v15: version fix
 import asyncio
+import datetime
 import json
 import logging
 import os
 import re
+from contextlib import contextmanager
 
 import gspread
 from googleapiclient.errors import HttpError
@@ -54,6 +56,7 @@ SKILL_CELL_MAP = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
     (41, 'stealth', None), (17, 'strengthSave', None), (42, 'survival', None),
     (21, 'wisdomSave', None)
 )
+SCOPES = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 
 
 def letter2num(letters, zbase=True):
@@ -120,6 +123,7 @@ class TempCharacter:
 class GoogleSheet(SheetLoaderABC):
     g_client = None
     _client_initializing = False
+    _token_expiry = None
 
     def __init__(self, url):
         super(GoogleSheet, self).__init__(url)
@@ -130,26 +134,53 @@ class GoogleSheet(SheetLoaderABC):
 
     # google api stuff
     @staticmethod
-    async def init_gsheet_client():
+    @contextmanager
+    def _client_lock():
         if GoogleSheet._client_initializing:
             raise ExternalImportError("I am still connecting to google. Try again in a few seconds.")
         GoogleSheet._client_initializing = True
-
-        def _():
-            if "GOOGLE_SERVICE_ACCOUNT" in os.environ:
-                credentials = ServiceAccountCredentials.from_json_keyfile_dict(
-                    json.loads(os.environ['GOOGLE_SERVICE_ACCOUNT']),
-                    scopes="https://www.googleapis.com/auth/spreadsheets")
-            else:
-                credentials = ServiceAccountCredentials.from_json_keyfile_name(
-                    "avrae-google.json",
-                    scopes="https://www.googleapis.com/auth/spreadsheets")
-            return gspread.authorize(credentials)
-
-        GoogleSheet.g_client = await asyncio.get_event_loop().run_in_executor(None, _)
+        yield
         GoogleSheet._client_initializing = False
+
+    @staticmethod
+    async def _init_gsheet_client():
+        with GoogleSheet._client_lock():
+            def _():
+                if "GOOGLE_SERVICE_ACCOUNT" in os.environ:
+                    credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+                        json.loads(os.environ['GOOGLE_SERVICE_ACCOUNT']),
+                        scopes=SCOPES)
+                else:
+                    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+                        "avrae-google.json",
+                        scopes=SCOPES)
+                return gspread.authorize(credentials)
+
+            GoogleSheet.g_client = await asyncio.get_event_loop().run_in_executor(None, _)
+        GoogleSheet._token_expiry = datetime.datetime.now() + datetime.timedelta(
+            seconds=ServiceAccountCredentials.MAX_TOKEN_LIFETIME_SECS)
         log.info("Logged in to google")
 
+    @staticmethod
+    async def _refresh_google_token():
+        with GoogleSheet._client_lock():
+            def _():
+                import httplib2
+
+                http = httplib2.Http()
+                GoogleSheet.g_client.auth.refresh(http)
+                GoogleSheet.g_client.session.headers.update({
+                    'Authorization': 'Bearer %s' % GoogleSheet.g_client.auth.access_token
+                })
+
+            await asyncio.get_event_loop().run_in_executor(None, _)
+        log.info("Refreshed google token")
+
+    @staticmethod
+    def _is_expired():
+        return datetime.datetime.now() > GoogleSheet._token_expiry
+
+    # load character data
     def _gchar(self):
         doc = GoogleSheet.g_client.open_by_key(self.url)
         self.character_data = TempCharacter(doc.sheet1)
@@ -220,7 +251,9 @@ class GoogleSheet(SheetLoaderABC):
 
     async def get_character(self):
         if GoogleSheet.g_client is None:
-            await self.init_gsheet_client()
+            await self._init_gsheet_client()
+        elif GoogleSheet._is_expired():
+            await self._refresh_google_token()
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self._gchar)
 

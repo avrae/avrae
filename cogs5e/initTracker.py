@@ -5,6 +5,7 @@ import random
 import traceback
 
 from discord.ext import commands
+from discord.ext.commands import NoPrivateMessage
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
@@ -41,10 +42,14 @@ class InitTracker(commands.Cog):
         self.bot = bot
 
     @commands.group(aliases=['i'], invoke_without_command=True)
-    @commands.guild_only()
     async def init(self, ctx):
         """Commands to help track initiative."""
         await ctx.send(f"Incorrect usage. Use {ctx.prefix}help init for help.")
+
+    async def cog_check(self, ctx):
+        if ctx.guild is None:
+            raise NoPrivateMessage()
+        return True
 
     async def cog_before_invoke(self, ctx):
         try:

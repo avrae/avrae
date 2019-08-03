@@ -48,6 +48,10 @@ class Pack:
                 'desc': self.desc,  # end v1
                 'subscribers': self.subscribers}
 
+    @property
+    def id(self):
+        return self._id
+
     def get_search_formatted_items(self):
         _items = copy.deepcopy(self.items)
         for i in _items:

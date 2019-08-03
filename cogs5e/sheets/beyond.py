@@ -28,8 +28,8 @@ log = logging.getLogger(__name__)
 API_BASE = "https://www.dndbeyond.com/character/"
 DAMAGE_TYPES = {1: "bludgeoning", 2: "piercing", 3: "slashing", 4: "necrotic", 5: "acid", 6: "cold", 7: "fire",
                 8: "lightning", 9: "thunder", 10: "poison", 11: "psychic", 12: "radiant", 13: "force"}
-CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.334, "Monk": 0, "Paladin": 0.5,
-                "Ranger": 0.5, "Rogue": 0.334, "Sorcerer": 1, "Warlock": 0, "Wizard": 1, "Artificer": 0.5}
+CASTER_TYPES = {"Barbarian": 0, "Bard": 1, "Cleric": 1, "Druid": 1, "Fighter": 0.333, "Monk": 0, "Paladin": 0.5,
+                "Ranger": 0.5, "Rogue": 0.333, "Sorcerer": 1, "Warlock": 0, "Wizard": 1, "Artificer": 0.5}
 SLOTS_PER_LEVEL = {
     1: lambda l: min(l + 1, 4) if l else 0,
     2: lambda l: 0 if l < 3 else min(l - 1, 3),
@@ -408,7 +408,12 @@ class BeyondSheetParser(SheetLoaderABC):
                 spellcasterLevel += _class['level'] * casterMult
                 castingClasses += 1 if casterMult else 0  # warlock multiclass fix
                 spellMod = max(spellMod, self.stat_from_id(castingAbility))
-                hasSpells = 'Spellcasting' in [cf['name'] for cf in _class['definition']['classFeatures']] or hasSpells
+
+                class_features = {cf['name'] for cf in _class['definition']['classFeatures']}
+                if _class['subclassDefinition']:
+                    class_features.update({cf['name'] for cf in _class['subclassDefinition']['classFeatures']})
+
+                hasSpells = 'Spellcasting' in class_features or hasSpells
 
             if _class['definition']['name'] == 'Warlock':
                 pactSlots = pact_slots_by_level(_class['level'])
@@ -497,12 +502,28 @@ class BeyondSheetParser(SheetLoaderABC):
                 return []  # thanks DDB
             isProf = atkIn['isProficient']
             atkBonus = None
-            dmgBonus = ""
+            dmgBonus = None
+
+            dice_size = max(monk_scale(), atkIn['dice']['diceValue'])
+            base_dice = f"{atkIn['dice']['diceCount']}d{dice_size}"
+
             if atkIn["abilityModifierStatId"]:
-                atkBonus = self.stat_from_id(atkIn['abilityModifierStatId']) + (prof if isProf else 0)
-                dmgBonus = f"+{self.stat_from_id(atkIn['abilityModifierStatId'])}"
+                atkBonus = self.stat_from_id(atkIn['abilityModifierStatId'])
+                dmgBonus = self.stat_from_id(atkIn['abilityModifierStatId'])
+
+            if atkIn["isMartialArts"] and self.get_levels().get("Monk"):
+                atkBonus = max(atkBonus, self.stat_from_id(2))  # allow using dex
+                dmgBonus = max(dmgBonus, self.stat_from_id(2))
+
+            if isProf:
+                atkBonus += prof
+
+            if dmgBonus:
+                damage = f"{base_dice}+{dmgBonus}[{parse_dmg_type(atkIn)}]"
+            else:
+                damage = f"{base_dice}[{parse_dmg_type(atkIn)}]"
             attack = Attack(
-                atkIn['name'], atkBonus, f"{atkIn['dice']['diceString']}{dmgBonus}[{parse_dmg_type(atkIn)}]",
+                atkIn['name'], atkBonus, damage,
                 atkIn['snippet']
             )
             out.append(attack)

@@ -43,7 +43,7 @@ def hook_discord():
         if transaction:
             return await self._invoke(*args, **kwargs)
 
-        with newrelic.agent.BackgroundTask(application, name='command:%s' % self.name):
+        with newrelic.agent.BackgroundTask(application, name='command:%s' % self.qualified_name):
             await self._invoke(*args, **kwargs)
 
     commands.Command._invoke = commands.Command.invoke

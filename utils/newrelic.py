@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 import motor.motor_asyncio
@@ -48,6 +49,9 @@ def hook_discord():
 
     commands.Command._invoke = commands.Command.invoke
     commands.Command.invoke = _command_invoke
+
+    # We can just hook these the simple way
+    wrap_function_trace(asyncio, 'wait_for', name='asyncio: wait_for')
 
 
 def hook_motor():

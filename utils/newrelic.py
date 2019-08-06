@@ -2,8 +2,8 @@ import os
 
 import motor.motor_asyncio
 import newrelic.agent
-import newrelic.api.function_trace
 from discord.ext import commands
+from newrelic.api.function_trace import wrap_function_trace
 from newrelic.api.transaction import current_transaction
 
 application = newrelic.agent.application()
@@ -43,7 +43,7 @@ def hook_discord():
         if transaction:
             return await self._invoke(*args, **kwargs)
 
-        with newrelic.agent.BackgroundTask(application, name='command:%s' % self.qualified_name):
+        with newrelic.agent.BackgroundTask(application, name='command: %s' % self.qualified_name):
             await self._invoke(*args, **kwargs)
 
     commands.Command._invoke = commands.Command.invoke
@@ -56,7 +56,7 @@ def hook_motor():
         if thing is not None:
             for method in methods:
                 if hasattr(thing, method):
-                    newrelic.api.function_trace.wrap_function_trace(
+                    wrap_function_trace(
                         motor.motor_asyncio,
                         '%s.%s' % (class_name, method),
-                        name='motor:%s.%s' % (class_name, method))
+                        name='motor: %s.%s' % (class_name, method))

@@ -70,7 +70,7 @@ class CharGenerator(commands.Cog):
         embed.description = random.choice(table['choices'])
         await ctx.send(embed=embed)
 
-    @commands.command(name='charref', aliases=['makechar'])
+    @commands.command(name='charref')
     async def char(self, ctx, level):
         """Gives you reference stats for a 5e character."""
         try:

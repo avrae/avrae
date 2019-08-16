@@ -285,9 +285,7 @@ class GameTrack(commands.Cog):
         choices = await get_spell_choices(ctx)
         for spell_ in character.spellbook.spells:
             spell = await get_castable_spell(ctx, spell_.name, choices, strict=True)
-            if spell is None and spell_.strict:
-                continue
-            elif spell is None:
+            if spell is None:
                 spells_known['unknown'].append(f"*{spell_.name}*")
             else:
                 if spell.source == 'homebrew':

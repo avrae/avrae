@@ -7,12 +7,14 @@ from discord.ext import commands
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
-from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
+from cogs5e.models.automation import Automation
 from cogs5e.models.monster import Monster, SKILL_MAP
+from cogs5e.models.sheet import Attack
 from cogsmisc.stats import Stats
+from utils import targetutils
 from utils.argparser import argparse
-from utils.constants import SKILL_NAMES
+from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS
 from utils.functions import a_or_an, camel_to_title, search_and_select, verbose_stat
 
 
@@ -136,10 +138,9 @@ class Dice(commands.Cog):
         await ctx.send(ctx.author.mention + '\n' + outStr)
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
-    @commands.command(aliases=['ma', 'monster_attack'])
-    async def monster_atk(self, ctx, monster_name, atk_name='list', *, args=''):
+    @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)
+    async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
         """Rolls a monster's attack.
-        Attack name can be "list" for a list of all of the monster's attacks.
         __Valid Arguments__
         adv/dis
         -ac [target ac]
@@ -151,6 +152,8 @@ class Dice(commands.Cog):
         -phrase [flavor text]
         crit (automatically crit)
         -h (hides monster name, image, and attack details)"""
+        if atk_name is None or atk_name == 'list':
+            return await ctx.invoke(self.monster_atk_list, monster_name)
 
         try:
             await ctx.message.delete()
@@ -160,36 +163,58 @@ class Dice(commands.Cog):
         monster = await select_monster_full(ctx, monster_name)
         attacks = monster.attacks
         monster_name = monster.get_title_name()
-        if atk_name == 'list':
-            attacks_string = '\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
-                                                                                  a['attackBonus'],
-                                                                                  a['damage'] or 'no') for a in attacks)
-            return await ctx.send("{}'s attacks:\n{}".format(monster_name, attacks_string))
+
         attack = await search_and_select(ctx, attacks, atk_name, lambda a: a['name'])
         args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
         if not args.last('h', type_=bool):
-            args['name'] = monster_name
-            args['image'] = args.get('image') or monster.get_image_url()
+            name = monster_name
+            image = args.get('image') or monster.get_image_url()
         else:
-            args['name'] = "An unknown creature"
-        attack['details'] = attack.get('desc') or attack.get('details')
+            name = "An unknown creature"
+            image = None
 
-        result = sheet_attack(attack, args)
-        embed = result['embed']
+        attack = Attack.from_old(attack)
+
+        embed = discord.Embed()
+        if args.last('title') is not None:
+            embed.title = args.last('title') \
+                .replace('[name]', name) \
+                .replace('[aname]', attack.name)
+        else:
+            embed.title = '{} attacks with {}!'.format(name, a_or_an(attack.name))
+
+        if image:
+            embed.set_thumbnail(url=image)
+
+        caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args.get('t'))
+        await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat)
+        if combat:
+            await combat.final()
+
+        _fields = args.get('f')
+        embeds.add_fields_from_args(embed, _fields)
         embed.colour = random.randint(0, 0xffffff)
-        embeds.add_fields_from_args(embed, args.get('f'))
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
-
-        if args.last('h', type_=bool):
-            try:
-                await ctx.author.send(embed=result['full_embed'])
-            except:
-                pass
+            embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
+
+    @monster_atk.command(name="list")
+    async def monster_atk_list(self, ctx, monster_name):
+        try:
+            await ctx.message.delete()
+        except:
+            pass
+
+        monster = await select_monster_full(ctx, monster_name)
+        monster_name = monster.get_title_name()
+        attacks = monster.attacks
+        attacks_string = '\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
+                                                                              a['attackBonus'],
+                                                                              a['damage'] or 'no') for a in attacks)
+        return await ctx.send("{}'s attacks:\n{}".format(monster_name, attacks_string))
 
     @commands.command(aliases=['mc'])
     async def monster_check(self, ctx, monster_name, check, *args):
@@ -198,7 +223,7 @@ class Dice(commands.Cog):
         adv/dis
         -b [conditional bonus]
         -phrase [flavor text]
-        -title [title] *note: [mname] and [cname] will be replaced automatically*
+        -title [title] *note: [name] and [cname] will be replaced automatically*
         -dc [dc]
         -rr [iterations]
         str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
@@ -227,8 +252,8 @@ class Dice(commands.Cog):
         mod = skill.value
         formatted_d20 = skill.d20(base_adv=adv, base_only=True)
 
-        if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
-            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
+        if any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
+            base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
             mod = mod - monster.get_mod(SKILL_MAP[skill_key]) + monster.get_mod(base)
             skill_name = f"{verbose_stat(base)} ({skill_name})"
 
@@ -244,7 +269,7 @@ class Dice(commands.Cog):
             roll_str = formatted_d20 + '{:+}'.format(mod)
 
         embed.title = args.last('title', '') \
-                          .replace('[mname]', monster_name) \
+                          .replace('[name]', monster_name) \
                           .replace('[cname]', skill_name) \
                       or default_title
 
@@ -272,7 +297,7 @@ class Dice(commands.Cog):
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
+            embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
         try:
@@ -287,7 +312,7 @@ class Dice(commands.Cog):
         adv/dis
         -b [conditional bonus]
         -phrase [flavor text]
-        -title [title] *note: [mname] and [cname] will be replaced automatically*
+        -title [title] *note: [name] and [cname] will be replaced automatically*
         -dc [dc]
         -rr [iterations]
         -h (hides name and image of monster)"""
@@ -326,7 +351,7 @@ class Dice(commands.Cog):
             default_title = f"An unknown creature makes {a_or_an(save_name)}!"
 
         embed.title = args.last('title', '') \
-                          .replace('[mname]', monster_name) \
+                          .replace('[name]', monster_name) \
                           .replace('[sname]', save_name) \
                       or default_title
 
@@ -354,7 +379,7 @@ class Dice(commands.Cog):
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':
-            embed.set_footer(text="Homebrew content.", icon_url="https://avrae.io/assets/img/homebrew.png")
+            embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
         try:

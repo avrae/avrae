@@ -1,5 +1,3 @@
-import copy
-
 import cachetools
 
 from cogs5e.funcs.dice import roll
@@ -646,7 +644,7 @@ class Combatant(Spellcaster):
 
     @property
     def attacks(self):
-        attacks = self.attack_effects(self._attacks) + self.attack_effects(self.active_effects('attack'))
+        attacks = self._attacks + self.active_effects('attack')
         return attacks
 
     @property
@@ -721,19 +719,6 @@ class Combatant(Spellcaster):
         for e in to_remove:
             e.remove()
         return to_remove
-
-    def attack_effects(self, attacks):
-        b = self.active_effects('b')
-        d = self.active_effects('d')
-        if b or d:
-            at = copy.deepcopy(attacks)
-            for a in at:
-                if a['attackBonus'] is not None and b:
-                    a['attackBonus'] += f" + {'+'.join(b)}"
-                if a['damage'] is not None and d:
-                    a['damage'] += f" + {'+'.join(d)}"
-            return at
-        return attacks
 
     def active_effects(self, key=None):
         if 'parsed_effects' not in self._cache:
@@ -956,7 +941,7 @@ class PlayerCombatant(Combatant):
     @property
     def attacks(self):
         attacks = super(PlayerCombatant, self).attacks
-        attacks.extend(self.attack_effects([a.to_old() for a in self.character.attacks]))
+        attacks.extend([a.to_old() for a in self.character.attacks])
         return attacks
 
     @property

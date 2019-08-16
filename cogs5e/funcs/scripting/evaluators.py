@@ -446,7 +446,10 @@ class SpellEvaluator(MathEvaluator):
         if spell_override is not None:
             spell = spell_override
         else:
-            spell = caster.spellbook.sab - caster.pb_from_level()
+            try:
+                spell = caster.spellbook.sab - caster.pb_from_level()
+            except TypeError:
+                spell = 0
         names = {'spell': spell, 'proficiencyBonus': caster.pb_from_level()}
         return cls(names=names)
 

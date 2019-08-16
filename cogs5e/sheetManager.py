@@ -14,8 +14,8 @@ from discord.ext.commands.cooldowns import BucketType
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.sheetFuncs import sheet_attack
 from cogs5e.models import embeds
+from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
@@ -23,8 +23,9 @@ from cogs5e.models.sheet import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
+from utils import targetutils
 from utils.argparser import argparse
-from utils.constants import SKILL_MAP, SKILL_NAMES
+from utils.constants import SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS
 from utils.functions import a_or_an, auth_and_chan, get_positivity, list_get
 from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
 from utils.user_settings import CSetting
@@ -92,9 +93,8 @@ class SheetManager(commands.Cog):
         max (deals max damage)
         
         -phrase [flavor text]
-        -title [title] *note: [charname], [aname], and [target] will be replaced automatically*
+        -title [title] *note: [name] and [aname] will be replaced automatically*
         -f "Field Title|Field Text" (see !embed)
-        -h (hides attack details)
         [user snippet]"""
         if atk_name is None:
             return await ctx.invoke(self.attack_list)
@@ -104,19 +104,19 @@ class SheetManager(commands.Cog):
         attack = await search_and_select(ctx, char.attacks, atk_name, lambda a: a.name)
 
         args = await self.new_arg_stuff(args, ctx, char)
-        args['name'] = char.name
-        args['criton'] = args.last('criton') or char.get_setting('criton', 20)
-        args['reroll'] = char.get_setting('reroll', 0)
-        args['critdice'] = char.get_setting('critdice', 0)
-        args['crittype'] = char.get_setting('crittype', 'default')
 
-        result = sheet_attack(attack.to_old(), args, EmbedWithCharacter(char, name=False))
-        embed = result['embed']
-        if args.last('h', type_=bool):
-            try:
-                await ctx.author.send(embed=result['full_embed'])
-            except:
-                pass
+        embed = EmbedWithCharacter(char, name=False)
+        if args.last('title') is not None:
+            embed.title = args.last('title') \
+                .replace('[name]', char.name) \
+                .replace('[aname]', attack.name)
+        else:
+            embed.title = '{} attacks with {}!'.format(char.name, a_or_an(attack.name))
+
+        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
+        await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat)
+        if combat:
+            await combat.final()
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)
@@ -295,8 +295,8 @@ class SheetManager(commands.Cog):
         mod = skill.value
         formatted_d20 = skill.d20(base_adv=adv, reroll=ro, min_val=mc, base_only=True)
 
-        if any(args.last(s, type_=bool) for s in ("str", "dex", "con", "int", "wis", "cha")):
-            base = next(s for s in ("str", "dex", "con", "int", "wis", "cha") if args.last(s, type_=bool))
+        if any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
+            base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
             mod = mod - char.get_mod(SKILL_MAP[skill_key]) + char.get_mod(base)
             skill_name = f"{verbose_stat(base)} ({skill_name})"
 

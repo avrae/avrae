@@ -1,4 +1,8 @@
 class Attack:
+    """
+    A simple attack model. Does not support full automation (TODO).
+    """
+
     def __init__(self, name, bonus: int = None, damage: str = None, details: str = None, bonus_calc: str = None):
         self.name = name
         self.bonus = bonus
@@ -10,6 +14,16 @@ class Attack:
     def from_dict(cls, d):
         return cls(**d)
 
+    @classmethod
+    def from_old(cls, d):
+        if 'attackBonus' in d and d['attackBonus']:
+            bonus = int(d['attackBonus'])
+        else:
+            bonus = None
+        damage = d.get('damage')
+        details = d.get('details')
+        return cls(d['name'], bonus, damage, details)
+
     def to_dict(self):
         return {"name": self.name, "bonus": self.bonus, "damage": self.damage, "details": self.details,
                 "bonus_calc": self.bonus_calc}
@@ -17,6 +31,7 @@ class Attack:
     # ---------- main funcs ----------
     @classmethod
     def new(cls, character, name, bonus_calc: str = None, damage: str = None, details: str = None):
+        """Creates a new attack for a character."""
         if bonus_calc:
             bonus = character.evaluate_cvar(bonus_calc)
         else:

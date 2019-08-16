@@ -34,8 +34,9 @@ class Stats(commands.Cog):
 
     @commands.Cog.listener()
     async def on_socket_response(self, msg):
-        self.socket_stats[msg.get('t')] += 1
-        self.socket_bandwidth[msg.get('t')] += len(str(msg).encode())
+        t = msg.get('t')
+        self.socket_stats[t] += 1
+        self.socket_bandwidth[t] += len(msg)
 
     # ===== tasks =====
     async def scheduled_update(self):

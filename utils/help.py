@@ -107,10 +107,7 @@ class EmbedPaginator:
 
 class AvraeHelp(HelpCommand):
     def __init__(self, **options):
-        command_attrs = dict(help="Shows the help for the bot or a specific command.\n"
-                                  "__Valid Arguments__\n-here - Sends help to the channel instead of PMs.",
-                             brief="Shows this message.")
-        super().__init__(command_attrs=command_attrs, **options)
+        super().__init__(**options)
         self.embed_paginator = EmbedPaginator()
         self.in_dms = True
 
@@ -239,4 +236,8 @@ class AvraeHelp(HelpCommand):
         await self.send()
 
 
-help_command = AvraeHelp()
+help_command = AvraeHelp(verify_checks=False,  # allows guild-only commands to be shown in PMs
+                         command_attrs=dict(help="Shows the help for the bot or a specific command.\n"
+                                                 "__Valid Arguments__\n"
+                                                 "-here - Sends help to the channel instead of PMs.",
+                                            brief="Shows this message."))

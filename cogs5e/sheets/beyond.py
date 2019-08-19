@@ -352,6 +352,7 @@ class BeyondSheetParser(SheetLoaderABC):
         baseArmor = self.get_stat('armor-class', base=base)
         dexBonus = self.get_stats().get_mod('dex')
         maxDexBonus = self.get_stat('ac-max-dex-modifier', default=100)
+        minDexBonus = -100
         unarmoredBonus = self.get_stat('unarmored-armor-class')
         armoredBonus = self.get_stat('armored-armor-class')
         miscBonus = 0
@@ -375,6 +376,7 @@ class BeyondSheetParser(SheetLoaderABC):
             maxDexBonus = 2
         elif armortype == 'Heavy Armor':
             maxDexBonus = 0
+            minDexBonus = 0
 
         # unarmored vs armored
         if not armored:
@@ -386,7 +388,9 @@ class BeyondSheetParser(SheetLoaderABC):
             unarmoredBonus = 0
             maxDexBonus = self.get_stat('ac-max-dex-armored-modifier', default=maxDexBonus)
 
-        return baseArmor + min(dexBonus, maxDexBonus) + shield + armoredBonus + unarmoredBonus + miscBonus
+        dexBonus = max(minDexBonus, min(dexBonus, maxDexBonus))
+
+        return baseArmor + dexBonus + shield + armoredBonus + unarmoredBonus + miscBonus
 
     def get_hp(self):
         return self.character_data['overrideHitPoints'] or \

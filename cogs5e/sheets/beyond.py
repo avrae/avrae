@@ -117,7 +117,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
         spellbook = self.get_spellbook().to_dict()
         live = None
-        race = self.character_data['race']['fullName']
+        race = self.get_race()
         background = self.get_background()
 
         character = Character(
@@ -374,7 +374,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
         if armortype == 'Medium Armor':
             maxDexBonus = 2
-        elif armortype == 'Heavy Armor':
+        elif armortype == 'Heavy Armor' or self.get_race() == 'Tortle':  # HACK - tortle natural armor
             maxDexBonus = 0
             minDexBonus = 0
 
@@ -461,6 +461,9 @@ class BeyondSheetParser(SheetLoaderABC):
 
         spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level)
         return spellbook
+
+    def get_race(self):
+        return self.character_data['race']['fullName']
 
     def get_background(self):
         if not self.character_data['background']['definition']:

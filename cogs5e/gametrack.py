@@ -71,7 +71,7 @@ class GameTrack(commands.Cog):
             embed.description = f"__**Remaining Spell Slots**__\n{character.get_remaining_slots_str()}"
         elif value is None:
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
-                f"{character.get_remaining_slots_str(level)}"
+                                f"{character.get_remaining_slots_str(level)}"
         else:
             try:
                 if value.startswith(('+', '-')):
@@ -87,7 +87,7 @@ class GameTrack(commands.Cog):
             character.set_remaining_slots(level, value)
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
-                f"{character.get_remaining_slots_str(level)}"
+                                f"{character.get_remaining_slots_str(level)}"
         await ctx.send(embed=embed)
 
     @game.command(name='longrest', aliases=['lr'])
@@ -481,14 +481,14 @@ class GameTrack(commands.Cog):
 
         char: Character = await Character.from_ctx(ctx)
 
-        if '-i' not in args:
-            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.spellbook)
-        else:
-            spell = await select_spell_full(ctx, spell_name)
-
         args = await scripting.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = argparse(args)
+
+        if not args.last('i', type_=bool):
+            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.spellbook)
+        else:
+            spell = await select_spell_full(ctx, spell_name)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
         result = await spell.cast(ctx, caster, targets, args, combat=combat)

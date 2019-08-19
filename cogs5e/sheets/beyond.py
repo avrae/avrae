@@ -77,6 +77,7 @@ class BeyondSheetParser(SheetLoaderABC):
         self.calculated_stats = collections.defaultdict(lambda: 0)
         self.set_calculated_stats = set()
         self.calculations_complete = False
+        self._all_features = set()
 
     async def load_character(self, owner_id: str, args):
         """
@@ -144,7 +145,8 @@ class BeyondSheetParser(SheetLoaderABC):
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = charId
         self.character_data = character
-        self.calculate_stats()
+        self._calculate_stats()
+        self._load_features()
         return character
 
     def get_stats(self) -> BaseStats:
@@ -549,8 +551,7 @@ class BeyondSheetParser(SheetLoaderABC):
             itemdef = atkIn['definition']
             weirdBonuses = self.get_specific_item_bonuses(atkIn['id'])
             isProf = self.get_prof(itemdef['type']) or weirdBonuses['isPact']
-            magicBonus = sum(
-                m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
+            magicBonus = self._item_magic_bonus(itemdef)
             modBonus = self.get_relevant_atkmod(itemdef) if not weirdBonuses['isHex'] else self.stat_from_id(6)
             item_dmg_bonus = self.get_stat(f"{itemdef['type'].lower()}-damage")
 
@@ -566,6 +567,10 @@ class BeyondSheetParser(SheetLoaderABC):
 
             if not is_melee and is_weapon:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
+
+            if weirdBonuses['isPact'] and self._improved_pact_weapon_applies(itemdef):
+                dmgBonus += 1
+                toHitBonus += 1
 
             base_dice = None
             if itemdef['fixedDamage']:
@@ -620,7 +625,7 @@ class BeyondSheetParser(SheetLoaderABC):
             out.append(attack)
         return [a.to_dict() for a in out]
 
-    def calculate_stats(self):
+    def _calculate_stats(self):
         ignored = set()
 
         def handle_mod(mod):
@@ -650,6 +655,35 @@ class BeyondSheetParser(SheetLoaderABC):
             handle_mod(modifier)
 
         self.calculations_complete = True
+
+    def _load_features(self):
+        """Loads all class/race/feat features a character has into a set."""
+
+        def name_from_entity(entity):
+            return entity['definition']['name']
+
+        # race
+        for racial_trait in self.character_data['race']['racialTraits']:
+            self._all_features.add(name_from_entity(racial_trait))
+
+        # class
+        for klass in self.character_data['classes']:
+            for class_feature in klass['classFeatures']:
+                self._all_features.add(name_from_entity(class_feature))
+
+            # subclass
+            if klass['subclassDefinition']:
+                for subclass_feature in klass['subclassDefinition']['classFeatures']:
+                    self._all_features.add(subclass_feature['name'])
+
+        # feats
+        for feat in self.character_data['feats']:
+            self._all_features.add(name_from_entity(feat))
+
+        # options
+        for option_list in self.character_data['options'].values():
+            for option in option_list:
+                self._all_features.add(name_from_entity(option))
 
     def get_prof(self, proftype):
         if not self.prof:
@@ -708,6 +742,23 @@ class BeyondSheetParser(SheetLoaderABC):
                 continue
             for modifier in item['definition']['grantedModifiers']:
                 yield modifier
+
+    # ===== Specific helpers =====
+    @staticmethod
+    def _item_magic_bonus(itemdef):
+        return sum(m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
+
+    def _improved_pact_weapon_applies(self, itemdef):
+        # precondition: item is a pact weapon
+        # we must have IPW
+        if 'Improved Pact Weapon' not in self._all_features:
+            return False
+
+        # item must not have a magical bonus
+        if self._item_magic_bonus(itemdef):
+            return False
+
+        return True
 
 
 def parse_dmg_type(attack):

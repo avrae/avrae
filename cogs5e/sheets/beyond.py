@@ -275,6 +275,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 relevantprof, relevantbonus, adv=relevantadv
             )
 
+        # saves
         saves = {}
         for save in SAVE_NAMES:  # add proficiency and bonuses to skills
             relevantprof = profs.get(save, 0)
@@ -288,11 +289,19 @@ class BeyondSheetParser(SheetLoaderABC):
                 relevantprof, relevantbonus
             )
 
+        # values
         ignored_ids = set()
         for charval in self.character_data['characterValues']:
-            if charval['valueId'] in HOUSERULE_SKILL_MAP and charval['valueId'] not in ignored_ids:
+            if charval['value'] is None:
+                continue
+
+            if charval['typeId'] == 39:  # misc saving throw bonus
+                save_id = SAVE_NAMES[charval['valueId'] - 1]
+                save_bonus = charval['value']
+                saves[save_id].value += save_bonus
+                saves[save_id].bonus += save_bonus
+            elif charval['valueId'] in HOUSERULE_SKILL_MAP and charval['valueId'] not in ignored_ids:
                 skill_name = HOUSERULE_SKILL_MAP[charval['valueId']]
-                if charval['value'] is None: continue
                 if charval['typeId'] == 23:  # override
                     skills[skill_name] = Skill(charval['value'])
                     ignored_ids.add(charval['valueId'])  # this must be the final value so we stop looking

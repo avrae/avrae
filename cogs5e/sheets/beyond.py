@@ -552,8 +552,9 @@ class BeyondSheetParser(SheetLoaderABC):
             magicBonus = sum(
                 m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
             modBonus = self.get_relevant_atkmod(itemdef) if not weirdBonuses['isHex'] else self.stat_from_id(6)
+            item_dmg_bonus = self.get_stat(f"{itemdef['type'].lower()}-damage")
 
-            dmgBonus = modBonus + magicBonus + weirdBonuses['damage']
+            dmgBonus = modBonus + magicBonus + weirdBonuses['damage'] + item_dmg_bonus
             toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
 
             is_melee = not 'Range' in [p['name'] for p in itemdef['properties']]
@@ -562,6 +563,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
             if is_melee and is_one_handed:
                 dmgBonus += self.get_stat('one-handed-melee-attacks-damage')
+
             if not is_melee and is_weapon:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
 
@@ -577,8 +579,8 @@ class BeyondSheetParser(SheetLoaderABC):
 
             if base_dice:
                 damage = f"{base_dice}+{dmgBonus}" \
-                    f"[{itemdef['damageType'].lower()}" \
-                    f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+                         f"[{itemdef['damageType'].lower()}" \
+                         f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
             else:
                 damage = None
 
@@ -592,7 +594,7 @@ class BeyondSheetParser(SheetLoaderABC):
             if 'Versatile' in [p['name'] for p in itemdef['properties']]:
                 versDmg = next(p['notes'] for p in itemdef['properties'] if p['name'] == 'Versatile')
                 damage = f"{versDmg}+{dmgBonus}[{itemdef['damageType'].lower()}" \
-                    f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+                         f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
                 attack = Attack(
                     f"2-Handed {itemdef['name']}", atkBonus, damage, details
                 )

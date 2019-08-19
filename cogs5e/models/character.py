@@ -1,10 +1,9 @@
 import asyncio
 import logging
 import random
-import re
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.scripting import ScriptingEvaluator
+from cogs5e.funcs.scripting import MathEvaluator, ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset
@@ -192,19 +191,17 @@ class Character(Spellcaster):
 
         return out
 
-    def evaluate_cvar(self, varstr):
-        """Evaluates a cvar expression.
+    def evaluate_math(self, varstr):
+        """Evaluates a cvar expression in a MathEvaluator.
         :param varstr - the expression to evaluate.
-        :returns int - the value of the expression, or 0 if evaluation failed."""
-        ops = r"([-+*/().<>=])"
+        :returns int - the value of the expression."""
         varstr = str(varstr).strip('<>{}')
+        evaluator = MathEvaluator.with_character(self)
 
-        scope_locals = self.get_scope_locals()
-        out = ""
-        for substr in re.split(ops, varstr):
-            temp = substr.strip()
-            out += str(scope_locals.get(temp, temp)) + " "
-        return roll(out).total
+        try:
+            return int(evaluator.eval(varstr))
+        except Exception as e:
+            raise InvalidArgument(f"Cannot evaluate {varstr}: {e}")
 
     def set_cvar(self, name: str, val: str):
         """Sets a cvar to a string value."""
@@ -526,6 +523,6 @@ class Character(Spellcaster):
         # sheet url?
         if self._import_version < 15:
             embed.set_footer(text=f"You are using an old sheet version ({self.sheet_type} v{self._import_version}). "
-            f"Please run !update.")
+                                  f"Please run !update.")
 
         return embed

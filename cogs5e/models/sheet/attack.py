@@ -33,7 +33,7 @@ class Attack:
     def new(cls, character, name, bonus_calc: str = None, damage: str = None, details: str = None):
         """Creates a new attack for a character."""
         if bonus_calc:
-            bonus = character.evaluate_cvar(bonus_calc)
+            bonus = character.evaluate_math(bonus_calc)
         else:
             bonus = None
         return cls(name, bonus, damage, details, bonus_calc)

@@ -223,12 +223,12 @@ class BeyondSheetParser(SheetLoaderABC):
     def get_skills_and_saves(self):
         """Returns a dict of all the character's skills."""
         if self.character_data is None: raise Exception('You must call get_character() first.')
-        character = self.character_data
         stats = self.get_stats()
         profBonus = stats.prof_bonus
 
         profs = dict()
         bonuses = dict()
+        advantages = collections.defaultdict(lambda: [])
 
         for mod in self.modifiers():
             mod['subType'] = mod['subType'].replace("-saving-throws", "Save")
@@ -245,21 +245,34 @@ class BeyondSheetParser(SheetLoaderABC):
                     bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + self.stat_from_id(mod['statId'])
                 else:
                     bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + (mod['value'] or 0)
+            elif mod['type'] == 'advantage':
+                advantages[mod['subType']].append(True)
+            elif mod['type'] == 'disadvantage':
+                advantages[mod['subType']].append(False)
 
         profs['animalHandling'] = profs.get('animal-handling', 0)
         profs['sleightOfHand'] = profs.get('sleight-of-hand', 0)
+        advantages['animalHandling'] = advantages['animal-handling']
+        advantages['sleightOfHand'] = advantages['sleight-of-hand']
+
+        def _simplify_adv(adv_list):
+            adv_set = set(adv_list)
+            if len(adv_set) == 1:
+                return adv_set.pop()
+            return None
 
         skills = {}
         for skill in SKILL_NAMES:  # add proficiency and bonuses to skills
             relevantprof = profs.get(skill, 0)
             relevantbonus = bonuses.get(skill, 0)
+            relevantadv = _simplify_adv(advantages[skill])
             if 'ability-checks' in profs:
                 relevantprof = max(relevantprof, profs['ability-checks'])
             if 'ability-checks' in bonuses:
                 relevantbonus += bonuses['ability-checks']
             skills[skill] = Skill(
                 floor(stats.get_mod(SKILL_MAP[skill]) + (profBonus * relevantprof) + relevantbonus),
-                relevantprof, relevantbonus
+                relevantprof, relevantbonus, adv=relevantadv
             )
 
         saves = {}

@@ -229,6 +229,7 @@ async def on_command_error(ctx, error):
 
     if isinstance(error, (AvraeException, DiscordException)):
         return
+    pytest.fail(f"Command raised an error: {error}")
     raise error
 
 

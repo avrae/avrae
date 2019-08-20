@@ -168,7 +168,10 @@ class Character(Spellcaster):
     def get_setting(self, setting, default=None):
         """Gets the value of a csetting.
         :returns the csetting's value, or default."""
-        return self.options.get(setting, default)
+        setting = self.options.get(setting)
+        if setting is None:
+            return default
+        return setting
 
     def set_setting(self, setting, value):
         """Sets the value of a csetting."""

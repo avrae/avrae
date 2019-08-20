@@ -1017,7 +1017,7 @@ class InitTracker(commands.Cog):
             embed.colour = random.randint(0, 0xffffff)
 
         # run
-        await Automation.from_attack(attack).run(ctx, embed, combatant, targets, args)
+        await Automation.from_attack(attack).run(ctx, embed, combatant, targets, args, title=embed.title)
 
         # post-run
         _fields = args.get('f')

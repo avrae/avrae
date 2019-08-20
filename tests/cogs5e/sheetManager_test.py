@@ -1,11 +1,13 @@
 # TODO complete tests/add assertations
 import pytest
 
+from tests.utils import active_character
+
 pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.usefixtures("character")
-class TestSheetStuff:
+class TestBasicSheetCommands:
     async def test_attack(self, avrae, dhttp):
         avrae.message("!a dag")
 
@@ -73,3 +75,41 @@ class TestSheetStuff:
 
     async def test_list_cvar(self, avrae, dhttp):
         avrae.message("!cvar list")
+
+
+@pytest.mark.usefixtures("character")
+class TestComplexAttacks:
+    async def test_creation_and_attack(self, avrae, dhttp):
+        avrae.message("!a add TESTATTACKFOOBAR -b 5 -d 1d6")
+        await dhttp.receive_message("Created attack TESTATTACKFOOBAR!")
+
+        async def _receive_attack(embed=None):
+            await dhttp.receive_message(embed=embed)
+            await dhttp.receive_delete()
+
+        avrae.message("!a TESTATTACKFOOBAR")
+        await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR adv")
+        await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR -ac 15")
+        await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR -b 5")
+        await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR -d 5 hit")
+        await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR -criton 20 -c 15 hit crit")
+        await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR -rr 2")
+        await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR -t foo")
+        await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR -rr 2 -t foo")
+        await _receive_attack()

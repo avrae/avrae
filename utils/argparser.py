@@ -80,6 +80,13 @@ class ParsedArguments:
         self.ephemeral = collections.defaultdict(lambda: [])
         self._parse_ephemeral(parsed)
 
+    @classmethod
+    def from_dict(cls, d):
+        inst = cls(None, collections.defaultdict(lambda: []))
+        for key, value in d.items():
+            inst[key] = value
+        return inst
+
     def get(self, arg, default=None, type_=str, ephem=False):
         """
         Gets a list of all values of an argument.

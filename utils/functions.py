@@ -62,6 +62,10 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
     :param return_key: Whether to return the key of the object that matched or the object itself.
     :param strict: If True, will only search for exact matches.
     :returns: A two-tuple (result, strict)"""
+    # there is nothing to search
+    if len(list_to_search) == 0:
+        return [], False
+
     # full match, return result
     exact_matches = [a for a in list_to_search if value.lower() == key(a).lower()]
     if not (exact_matches or strict):

@@ -10,6 +10,7 @@ from utils.functions import list_get
 EPHEMERAL_ARG_RE = re.compile(r'([^\s]+)(\d+)')
 QUOTE_PAIRS = {
     '"': '"',
+    "'": "'",
     "‘": "’",
     "‚": "‛",
     "“": "”",
@@ -78,6 +79,13 @@ class ParsedArguments:
         self.parsed = parsed
         self.ephemeral = collections.defaultdict(lambda: [])
         self._parse_ephemeral(parsed)
+
+    @classmethod
+    def from_dict(cls, d):
+        inst = cls(None, collections.defaultdict(lambda: []))
+        for key, value in d.items():
+            inst[key] = value
+        return inst
 
     def get(self, arg, default=None, type_=str, ephem=False):
         """
@@ -253,7 +261,7 @@ class CustomStringView(StringView):
                 continue
 
             # opening quote
-            if not is_quoted and current in ALL_QUOTES:
+            if not is_quoted and current in ALL_QUOTES and current != "'":  # special case: apostrophes in mid-string
                 close_quote = QUOTE_PAIRS.get(current)
                 is_quoted = True
                 _escaped_quotes = (current, close_quote)

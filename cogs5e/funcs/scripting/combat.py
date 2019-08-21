@@ -140,7 +140,7 @@ class SimpleCombatant:
                 self.in_crit = crit
                 self.target = AutomationTarget(target)
 
-        args = ParsedArguments(None, {
+        args = ParsedArguments.from_dict({
             'critdice': [critdice],
             'resist': self._combatant.resists['resist'],
             'immune': self._combatant.resists['immune'],

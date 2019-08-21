@@ -1,12 +1,28 @@
+import pytest
+from discord.ext.commands import ExpectedClosingQuoteError, InvalidEndOfQuotedStringError
+
 from utils.argparser import argparse, argquote, argsplit
 
 
 def test_argsplit():
     assert argsplit("""foo bar "two words" yay!""") == ["foo", "bar", "two words", "yay!"]
-    assert argsplit("""'some string here' in quotes""") == ["'some", "string", "here'", "in", "quotes"]
+    assert argsplit("""'some string here' in quotes""") == ["some string here", "in", "quotes"]
     assert argsplit(""""partial quoted"blocks""") == ["partial quotedblocks"]
     assert argsplit('''"'nested quotes'"''') == ["'nested quotes'"]
     assert argsplit("""-phrase "She said, \\"Hello world\\"" """) == ["-phrase", 'She said, "Hello world"']
+
+
+def test_apostrophes():
+    assert argsplit("foo bar") == ["foo", "bar"]
+    assert argsplit("'foo bar'") == ["foo bar"]
+    assert argsplit("foo's bar") == ["foo's", "bar"]
+    assert argsplit('''"foo's bar"''') == ["foo's bar"]
+    assert argsplit("el'ven'ame") == ["el'ven'ame"]
+    assert argsplit("darius'") == ["darius'"]
+    assert argsplit("Samus' Armor") == ["Samus'", "Armor"]
+    with pytest.raises(ExpectedClosingQuoteError):
+        argsplit("'tis")
+    assert argsplit("'tis Jack's") == ["tis Jacks"]  # weird
 
 
 def test_argquote():

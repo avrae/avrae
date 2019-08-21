@@ -10,7 +10,6 @@ from utils.functions import list_get
 EPHEMERAL_ARG_RE = re.compile(r'([^\s]+)(\d+)')
 QUOTE_PAIRS = {
     '"': '"',
-    "'": "'",
     "‘": "’",
     "‚": "‛",
     "“": "”",
@@ -244,14 +243,6 @@ class CustomStringView(StringView):
             # to embed a quote inside the string you must escape it: "a \"world\""
             if current == '\\':
                 next_char = self.get()
-                if not next_char:
-                    # string ends with \ and no character after it
-                    if is_quoted:
-                        # if we're quoted then we're expecting a closing quote
-                        raise ExpectedClosingQuoteError(close_quote)
-                    # if we aren't then we just let it through
-                    return ''.join(result)
-
                 if next_char in _escaped_quotes:
                     # escaped quote
                     result.append(next_char)

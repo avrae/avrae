@@ -77,6 +77,7 @@ class BeyondSheetParser(SheetLoaderABC):
         self.calculated_stats = collections.defaultdict(lambda: 0)
         self.set_calculated_stats = set()
         self.calculations_complete = False
+        self._all_features = set()
 
     async def load_character(self, owner_id: str, args):
         """
@@ -116,7 +117,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
         spellbook = self.get_spellbook().to_dict()
         live = None
-        race = self.character_data['race']['fullName']
+        race = self.get_race()
         background = self.get_background()
 
         character = Character(
@@ -144,7 +145,8 @@ class BeyondSheetParser(SheetLoaderABC):
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = charId
         self.character_data = character
-        self.calculate_stats()
+        self._calculate_stats()
+        self._load_features()
         return character
 
     def get_stats(self) -> BaseStats:
@@ -221,12 +223,12 @@ class BeyondSheetParser(SheetLoaderABC):
     def get_skills_and_saves(self):
         """Returns a dict of all the character's skills."""
         if self.character_data is None: raise Exception('You must call get_character() first.')
-        character = self.character_data
         stats = self.get_stats()
         profBonus = stats.prof_bonus
 
         profs = dict()
         bonuses = dict()
+        advantages = collections.defaultdict(lambda: [])
 
         for mod in self.modifiers():
             mod['subType'] = mod['subType'].replace("-saving-throws", "Save")
@@ -243,23 +245,37 @@ class BeyondSheetParser(SheetLoaderABC):
                     bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + self.stat_from_id(mod['statId'])
                 else:
                     bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + (mod['value'] or 0)
+            elif mod['type'] == 'advantage':
+                advantages[mod['subType']].append(True)
+            elif mod['type'] == 'disadvantage':
+                advantages[mod['subType']].append(False)
 
         profs['animalHandling'] = profs.get('animal-handling', 0)
         profs['sleightOfHand'] = profs.get('sleight-of-hand', 0)
+        advantages['animalHandling'] = advantages['animal-handling']
+        advantages['sleightOfHand'] = advantages['sleight-of-hand']
+
+        def _simplify_adv(adv_list):
+            adv_set = set(adv_list)
+            if len(adv_set) == 1:
+                return adv_set.pop()
+            return None
 
         skills = {}
         for skill in SKILL_NAMES:  # add proficiency and bonuses to skills
             relevantprof = profs.get(skill, 0)
             relevantbonus = bonuses.get(skill, 0)
+            relevantadv = _simplify_adv(advantages[skill])
             if 'ability-checks' in profs:
                 relevantprof = max(relevantprof, profs['ability-checks'])
             if 'ability-checks' in bonuses:
                 relevantbonus += bonuses['ability-checks']
             skills[skill] = Skill(
                 floor(stats.get_mod(SKILL_MAP[skill]) + (profBonus * relevantprof) + relevantbonus),
-                relevantprof, relevantbonus
+                relevantprof, relevantbonus, adv=relevantadv
             )
 
+        # saves
         saves = {}
         for save in SAVE_NAMES:  # add proficiency and bonuses to skills
             relevantprof = profs.get(save, 0)
@@ -273,11 +289,19 @@ class BeyondSheetParser(SheetLoaderABC):
                 relevantprof, relevantbonus
             )
 
+        # values
         ignored_ids = set()
         for charval in self.character_data['characterValues']:
-            if charval['valueId'] in HOUSERULE_SKILL_MAP and charval['valueId'] not in ignored_ids:
+            if charval['value'] is None:
+                continue
+
+            if charval['typeId'] == 39:  # misc saving throw bonus
+                save_id = SAVE_NAMES[charval['valueId'] - 1]
+                save_bonus = charval['value']
+                saves[save_id].value += save_bonus
+                saves[save_id].bonus += save_bonus
+            elif charval['valueId'] in HOUSERULE_SKILL_MAP and charval['valueId'] not in ignored_ids:
                 skill_name = HOUSERULE_SKILL_MAP[charval['valueId']]
-                if charval['value'] is None: continue
                 if charval['typeId'] == 23:  # override
                     skills[skill_name] = Skill(charval['value'])
                     ignored_ids.add(charval['valueId'])  # this must be the final value so we stop looking
@@ -350,6 +374,7 @@ class BeyondSheetParser(SheetLoaderABC):
         baseArmor = self.get_stat('armor-class', base=base)
         dexBonus = self.get_stats().get_mod('dex')
         maxDexBonus = self.get_stat('ac-max-dex-modifier', default=100)
+        minDexBonus = -100
         unarmoredBonus = self.get_stat('unarmored-armor-class')
         armoredBonus = self.get_stat('armored-armor-class')
         miscBonus = 0
@@ -367,12 +392,18 @@ class BeyondSheetParser(SheetLoaderABC):
             elif val['typeId'] == 4:  # AC+DEX override
                 baseArmor = val['value']
 
+        # Dual Wielder feat
         miscBonus += self.get_stat('dual-wield-armor-class')
+
+        # Warforged: Integrated Protection
+        if "Integrated Protection" in self._all_features:
+            miscBonus += self.get_stats().prof_bonus
 
         if armortype == 'Medium Armor':
             maxDexBonus = 2
-        elif armortype == 'Heavy Armor':
+        elif armortype == 'Heavy Armor' or self.get_race() == 'Tortle':  # HACK - tortle natural armor
             maxDexBonus = 0
+            minDexBonus = 0
 
         # unarmored vs armored
         if not armored:
@@ -384,7 +415,9 @@ class BeyondSheetParser(SheetLoaderABC):
             unarmoredBonus = 0
             maxDexBonus = self.get_stat('ac-max-dex-armored-modifier', default=maxDexBonus)
 
-        return baseArmor + min(dexBonus, maxDexBonus) + shield + armoredBonus + unarmoredBonus + miscBonus
+        dexBonus = max(minDexBonus, min(dexBonus, maxDexBonus))
+
+        return baseArmor + dexBonus + shield + armoredBonus + unarmoredBonus + miscBonus
 
     def get_hp(self):
         return self.character_data['overrideHitPoints'] or \
@@ -455,6 +488,9 @@ class BeyondSheetParser(SheetLoaderABC):
 
         spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level)
         return spellbook
+
+    def get_race(self):
+        return self.character_data['race']['fullName']
 
     def get_background(self):
         if not self.character_data['background']['definition']:
@@ -549,11 +585,11 @@ class BeyondSheetParser(SheetLoaderABC):
             itemdef = atkIn['definition']
             weirdBonuses = self.get_specific_item_bonuses(atkIn['id'])
             isProf = self.get_prof(itemdef['type']) or weirdBonuses['isPact']
-            magicBonus = sum(
-                m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
+            magicBonus = self._item_magic_bonus(itemdef)
             modBonus = self.get_relevant_atkmod(itemdef) if not weirdBonuses['isHex'] else self.stat_from_id(6)
+            item_dmg_bonus = self.get_stat(f"{itemdef['type'].lower()}-damage")
 
-            dmgBonus = modBonus + magicBonus + weirdBonuses['damage']
+            dmgBonus = modBonus + magicBonus + weirdBonuses['damage'] + item_dmg_bonus
             toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
 
             is_melee = not 'Range' in [p['name'] for p in itemdef['properties']]
@@ -562,8 +598,13 @@ class BeyondSheetParser(SheetLoaderABC):
 
             if is_melee and is_one_handed:
                 dmgBonus += self.get_stat('one-handed-melee-attacks-damage')
+
             if not is_melee and is_weapon:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
+
+            if weirdBonuses['isPact'] and self._improved_pact_weapon_applies(itemdef):
+                dmgBonus += 1
+                toHitBonus += 1
 
             base_dice = None
             if itemdef['fixedDamage']:
@@ -577,8 +618,8 @@ class BeyondSheetParser(SheetLoaderABC):
 
             if base_dice:
                 damage = f"{base_dice}+{dmgBonus}" \
-                    f"[{itemdef['damageType'].lower()}" \
-                    f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+                         f"[{itemdef['damageType'].lower()}" \
+                         f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
             else:
                 damage = None
 
@@ -592,7 +633,7 @@ class BeyondSheetParser(SheetLoaderABC):
             if 'Versatile' in [p['name'] for p in itemdef['properties']]:
                 versDmg = next(p['notes'] for p in itemdef['properties'] if p['name'] == 'Versatile')
                 damage = f"{versDmg}+{dmgBonus}[{itemdef['damageType'].lower()}" \
-                    f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+                         f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
                 attack = Attack(
                     f"2-Handed {itemdef['name']}", atkBonus, damage, details
                 )
@@ -618,7 +659,7 @@ class BeyondSheetParser(SheetLoaderABC):
             out.append(attack)
         return [a.to_dict() for a in out]
 
-    def calculate_stats(self):
+    def _calculate_stats(self):
         ignored = set()
 
         def handle_mod(mod):
@@ -648,6 +689,35 @@ class BeyondSheetParser(SheetLoaderABC):
             handle_mod(modifier)
 
         self.calculations_complete = True
+
+    def _load_features(self):
+        """Loads all class/race/feat features a character has into a set."""
+
+        def name_from_entity(entity):
+            return entity['definition']['name']
+
+        # race
+        for racial_trait in self.character_data['race']['racialTraits']:
+            self._all_features.add(name_from_entity(racial_trait))
+
+        # class
+        for klass in self.character_data['classes']:
+            for class_feature in klass['classFeatures']:
+                self._all_features.add(name_from_entity(class_feature))
+
+            # subclass
+            if klass['subclassDefinition']:
+                for subclass_feature in klass['subclassDefinition']['classFeatures']:
+                    self._all_features.add(subclass_feature['name'])
+
+        # feats
+        for feat in self.character_data['feats']:
+            self._all_features.add(name_from_entity(feat))
+
+        # options
+        for option_list in self.character_data['options'].values():
+            for option in option_list:
+                self._all_features.add(name_from_entity(option))
 
     def get_prof(self, proftype):
         if not self.prof:
@@ -706,6 +776,23 @@ class BeyondSheetParser(SheetLoaderABC):
                 continue
             for modifier in item['definition']['grantedModifiers']:
                 yield modifier
+
+    # ===== Specific helpers =====
+    @staticmethod
+    def _item_magic_bonus(itemdef):
+        return sum(m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
+
+    def _improved_pact_weapon_applies(self, itemdef):
+        # precondition: item is a pact weapon
+        # we must have IPW
+        if 'Improved Pact Weapon' not in self._all_features:
+            return False
+
+        # item must not have a magical bonus
+        if self._item_magic_bonus(itemdef):
+            return False
+
+        return True
 
 
 def parse_dmg_type(attack):

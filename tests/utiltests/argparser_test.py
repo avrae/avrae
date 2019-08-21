@@ -3,7 +3,7 @@ from utils.argparser import argparse, argquote, argsplit
 
 def test_argsplit():
     assert argsplit("""foo bar "two words" yay!""") == ["foo", "bar", "two words", "yay!"]
-    assert argsplit("""'some string here' in quotes""") == ["some string here", "in", "quotes"]
+    assert argsplit("""'some string here' in quotes""") == ["'some", "string", "here'", "in", "quotes"]
     assert argsplit(""""partial quoted"blocks""") == ["partial quotedblocks"]
     assert argsplit('''"'nested quotes'"''') == ["'nested quotes'"]
     assert argsplit("""-phrase "She said, \\"Hello world\\"" """) == ["-phrase", 'She said, "Hello world"']

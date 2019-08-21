@@ -105,7 +105,11 @@ class DiscordHTTPProxy(HTTPClient):
 
     async def drain(self):
         """Waits until all requests have been sent."""
-        await asyncio.sleep(0.2)
+        to_wait = set()
+        for task in asyncio.all_tasks():
+            if "ClientEventTask" in repr(task):  # tasks started by d.py in reply to an event
+                to_wait.add(task)
+        await asyncio.gather(*to_wait)
 
     async def get_request(self):
         for _ in range(100):

@@ -38,7 +38,7 @@ class Customization(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if str(message.author.id) in self.bot.muted:
+        if message.author.id in self.bot.muted:
             return
         await self.handle_aliases(message)
 
@@ -88,7 +88,7 @@ class Customization(commands.Cog):
     async def handle_aliases(self, message):
         prefix = await self.bot.get_server_prefix(message)
         if message.content.startswith(prefix):
-            alias = prefix.join(message.content.split(prefix)[1:]).split(' ')[0]
+            alias = message.content[len(prefix):].split(' ')[0]
             if message.guild:
                 command = (await self.bot.mdb.aliases.find_one({"owner": str(message.author.id), "name": alias},
                                                                ['commands'])) or \
@@ -133,28 +133,28 @@ class Customization(commands.Cog):
         """Takes an alias name, alias value, and message and handles percent-encoded args.
         Returns: string"""
         prefix = await self.bot.get_server_prefix(message)
-        rawargs = " ".join(prefix.join(message.content.split(prefix)[1:]).split(' ')[1:])
+        rawargs = " ".join(message.content[len(prefix):].split(' ')[1:])
         args = argsplit(rawargs)
         tempargs = args[:]
         new_command = command
         if '%*%' in command:
-            new_command = new_command.replace('%*%', argquote(rawargs) if ' ' in rawargs else rawargs)
+            new_command = new_command.replace('%*%', argquote(rawargs))
             tempargs = []
         if '&*&' in command:
-            new_command = new_command.replace('&*&', rawargs.replace("\"", "\\\"").replace("'", "\\'"))
+            new_command = new_command.replace('&*&', rawargs.replace("\"", "\\\""))
             tempargs = []
         if '&ARGS&' in command:
-            new_command = new_command.replace('&ARGS&', str(tempargs))
+            new_command = new_command.replace('&ARGS&', str(args))
             tempargs = []
         for index, value in enumerate(args):
             key = '%{}%'.format(index + 1)
             to_remove = False
             if key in command:
-                new_command = new_command.replace(key, argquote(value) if ' ' in value else value)
+                new_command = new_command.replace(key, argquote(value))
                 to_remove = True
             key = '&{}&'.format(index + 1)
             if key in command:
-                new_command = new_command.replace(key, value.replace("\"", "\\\"").replace("'", "\\'"))
+                new_command = new_command.replace(key, value.replace("\"", "\\\""))
                 to_remove = True
             if to_remove:
                 try:

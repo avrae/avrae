@@ -116,8 +116,8 @@ class CustomCounter:
         if any(c in name for c in ".$"):
             raise InvalidArgument("Invalid character in CC name.")
         if minv is not None and maxv is not None:
-            max_value = character.evaluate_cvar(maxv)
-            if max_value < character.evaluate_cvar(minv):
+            max_value = character.evaluate_math(maxv)
+            if max_value < character.evaluate_math(minv):
                 raise InvalidArgument("Max value is less than min value.")
             if max_value == 0:
                 raise InvalidArgument("Max value cannot be 0.")
@@ -126,7 +126,7 @@ class CustomCounter:
         if display_type == 'bubble' and (maxv is None or minv is None):
             raise InvalidArgument("Bubble display requires a max and min value.")
 
-        value = character.evaluate_cvar(maxv) or 0
+        value = character.evaluate_math(maxv) or 0
         return cls(character, name.strip(), value, minv, maxv, reset, display_type, live_id)
 
     # ---------- main funcs ----------
@@ -135,7 +135,7 @@ class CustomCounter:
             if self.min is None:
                 self._min = -(2 ** 31)
             else:
-                self._min = self._character.evaluate_cvar(self.min)
+                self._min = self._character.evaluate_math(self.min)
         return self._min
 
     def get_max(self):
@@ -143,7 +143,7 @@ class CustomCounter:
             if self.max is None:
                 self._max = 2 ** 31 - 1
             else:
-                self._max = self._character.evaluate_cvar(self.max)
+                self._max = self._character.evaluate_math(self.max)
         return self._max
 
     @property

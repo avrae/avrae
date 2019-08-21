@@ -392,7 +392,12 @@ class BeyondSheetParser(SheetLoaderABC):
             elif val['typeId'] == 4:  # AC+DEX override
                 baseArmor = val['value']
 
+        # Dual Wielder feat
         miscBonus += self.get_stat('dual-wield-armor-class')
+
+        # Warforged: Integrated Protection
+        if "Integrated Protection" in self._all_features:
+            miscBonus += self.get_stats().prof_bonus
 
         if armortype == 'Medium Armor':
             maxDexBonus = 2

@@ -324,22 +324,42 @@ class Target(Effect):
         rr = min(args.last('rr', 1, int), 25)
 
         total_damage = 0
+        in_target = autoctx.target.target is not None
 
-        for iteration in range(rr):
-            if rr > 1:
+        # 2 binary attributes: (rr?, target?)
+        # each case must end with a push_embed_field()
+        if rr > 1:
+            for iteration in range(rr):
                 if len(self.effects) == 1:
-                    autoctx.queue(f"**__{type(self.effects[0]).__name__} {iteration + 1}__**")
+                    iter_title = f"{type(self.effects[0]).__name__} {iteration + 1}"
                 else:
-                    autoctx.queue(f"**__Iteration {iteration + 1}__**")
-            total_damage += self.run_children_with_damage(self.effects, autoctx)
+                    iter_title = f"Iteration {iteration + 1}"
 
-        if rr > 1 and total_damage:
-            autoctx.queue(f"**__Total Damage__**: {total_damage}")
+                # target, rr
+                if in_target:
+                    autoctx.queue(f"\n**__{iter_title}__**")
 
-        if autoctx.target.target:
-            autoctx.push_embed_field(autoctx.target.name)
+                total_damage += self.run_children_with_damage(self.effects, autoctx)
+
+                # no target, rr
+                if not in_target:
+                    autoctx.push_embed_field(iter_title)
+
+            if in_target:  # target, rr
+                if total_damage:
+                    autoctx.queue(f"\n**__Total Damage__**: {total_damage}")
+
+                autoctx.push_embed_field(autoctx.target.name)
+            else:  # no target, rr
+                if total_damage:
+                    autoctx.queue(f"{total_damage}")
+                    autoctx.push_embed_field("Total Damage", inline=True)
         else:
-            autoctx.push_embed_field(None, to_meta=True)
+            total_damage += self.run_children_with_damage(self.effects, autoctx)
+            if in_target:  # target, no rr
+                autoctx.push_embed_field(autoctx.target.name)
+            else:  # no target, no rr
+                autoctx.push_embed_field(None, to_meta=True)
 
 
 class Attack(Effect):

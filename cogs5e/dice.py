@@ -188,7 +188,7 @@ class Dice(commands.Cog):
             embed.set_thumbnail(url=image)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args.get('t'))
-        await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat)
+        await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
         if combat:
             await combat.final()
 

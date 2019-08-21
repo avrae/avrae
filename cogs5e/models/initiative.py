@@ -994,8 +994,9 @@ class PlayerCombatant(Combatant):
         return raw
 
 
-class CombatantGroup:
+class CombatantGroup(Spellcaster):
     def __init__(self, name, init, combatants, ctx, index=None):
+        super(CombatantGroup, self).__init__()
         self._name = name
         self._init = init
         self._combatants = combatants
@@ -1012,6 +1013,9 @@ class CombatantGroup:
     @property
     def name(self):
         return self._name
+
+    def get_name(self):
+        return self.name
 
     @property
     def init(self):

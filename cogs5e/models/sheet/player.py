@@ -126,7 +126,10 @@ class CustomCounter:
         if display_type == 'bubble' and (maxv is None or minv is None):
             raise InvalidArgument("Bubble display requires a max and min value.")
 
-        value = character.evaluate_math(maxv) or 0
+        if maxv:
+            value = character.evaluate_math(maxv)
+        else:
+            value = 0
         return cls(character, name.strip(), value, minv, maxv, reset, display_type, live_id)
 
     # ---------- main funcs ----------

@@ -141,7 +141,6 @@ class Spell:
         # generic args
         l = args.last('l', self.level, int)
         i = args.last('i', type_=bool)
-        phrase = args.join('phrase', '\n')
         title = args.last('title')
 
         # meta checks
@@ -221,9 +220,6 @@ class Spell:
             embed.title = f"{caster.get_name()} casts {self.name}{stat_override}!"
         if targets is None:
             targets = [None]
-
-        if phrase:
-            embed.description = f"*{phrase}*"
 
         # concentration
         noconc = args.last("noconc", type_=bool)

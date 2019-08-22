@@ -138,6 +138,12 @@ class AutomationContext:
         self._meta_queue = []
 
     def build_embed(self):
+        # description
+        phrase = self.args.join('phrase', '\n')
+        if phrase:
+            self.embed.description = f"*{phrase}*"
+
+        # add fields
         self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)
         self.insert_meta_field()
         for field in self._field_queue:
@@ -443,7 +449,7 @@ class Attack(Effect):
             try:
                 d20_value = next(p for p in toHit.raw_dice.parts if
                                  isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
-            except StopIteration:
+            except (StopIteration, AttributeError):
                 d20_value = 0
 
             if d20_value >= criton:

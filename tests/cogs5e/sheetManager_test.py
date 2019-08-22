@@ -1,4 +1,5 @@
 # TODO complete tests/add assertations
+import discord
 import pytest
 
 from tests.utils import active_character
@@ -71,6 +72,7 @@ class TestBasicSheetCommands:
 
     async def test_cvar_deleteall(self, avrae, dhttp):
         avrae.message("!cvar deleteall")
+        await dhttp.receive_message()
         avrae.message("Yes, I am sure")
 
     async def test_list_cvar(self, avrae, dhttp):
@@ -89,6 +91,9 @@ class TestComplexAttacks:
 
         avrae.message("!a TESTATTACKFOOBAR")
         await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR -phrase foobar -title barfoo")
+        await _receive_attack(discord.Embed(description=r"\*foobar\*", title="barfoo"))
 
         avrae.message("!a TESTATTACKFOOBAR adv")
         await _receive_attack()

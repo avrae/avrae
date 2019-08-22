@@ -2,7 +2,6 @@ import asyncio
 import logging
 import random
 
-from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting import MathEvaluator, ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter

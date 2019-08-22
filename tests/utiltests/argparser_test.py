@@ -1,5 +1,5 @@
 import pytest
-from discord.ext.commands import ExpectedClosingQuoteError, InvalidEndOfQuotedStringError
+from discord.ext.commands import ExpectedClosingQuoteError
 
 from utils.argparser import argparse, argquote, argsplit
 

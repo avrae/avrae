@@ -7,7 +7,6 @@ Created on Dec 25, 2016
 import logging
 import random
 import re
-import traceback
 from heapq import nlargest, nsmallest
 from math import floor
 from re import IGNORECASE

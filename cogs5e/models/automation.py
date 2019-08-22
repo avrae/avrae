@@ -449,7 +449,7 @@ class Attack(Effect):
             try:
                 d20_value = next(p for p in toHit.raw_dice.parts if
                                  isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
-            except StopIteration:
+            except (StopIteration, AttributeError):
                 d20_value = 0
 
             if d20_value >= criton:

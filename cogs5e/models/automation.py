@@ -138,6 +138,12 @@ class AutomationContext:
         self._meta_queue = []
 
     def build_embed(self):
+        # description
+        phrase = self.args.join('phrase', '\n')
+        if phrase:
+            self.embed.description = f"*{phrase}*"
+
+        # add fields
         self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)
         self.insert_meta_field()
         for field in self._field_queue:

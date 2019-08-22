@@ -1,4 +1,5 @@
 # TODO complete tests/add assertations
+import discord
 import pytest
 
 from tests.utils import active_character
@@ -90,6 +91,9 @@ class TestComplexAttacks:
 
         avrae.message("!a TESTATTACKFOOBAR")
         await _receive_attack()
+
+        avrae.message("!a TESTATTACKFOOBAR -phrase foobar -title barfoo")
+        await _receive_attack(discord.Embed(description=r"\*foobar\*", title="barfoo"))
 
         avrae.message("!a TESTATTACKFOOBAR adv")
         await _receive_attack()

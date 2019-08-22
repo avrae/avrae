@@ -492,8 +492,6 @@ class GameTrack(commands.Cog):
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
         result = await spell.cast(ctx, caster, targets, args, combat=combat)
-        if combat:
-            await combat.final()
 
         embed = result['embed']
         embed.colour = char.get_color()
@@ -501,7 +499,11 @@ class GameTrack(commands.Cog):
 
         add_fields_from_args(embed, args.get('f'))
 
-        await char.commit(ctx)  # make sure we save changes
+        # save changes: spell slot usage
+        if combat:
+            await combat.final()
+        else:
+            await char.commit(ctx)
         await ctx.send(embed=embed)
 
 

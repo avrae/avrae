@@ -146,9 +146,44 @@ class TestGame:
         assert char.temp_hp == 0
         assert char.hp == char.max_hp
 
-
     async def test_g_ds(self, avrae, dhttp):
         avrae.message("!g ds")
 
     async def test_s_death(self, avrae, dhttp):
         avrae.message("!s death")
+
+
+@pytest.mark.usefixtures("character")
+class TestSpellbook:
+    async def test_sb(self, avrae, dhttp):
+        avrae.message("!sb")
+
+    async def test_sb_add(self, avrae, dhttp):
+        avrae.message("!sb add fireball")
+
+    async def test_sb_remove(self, avrae, dhttp):
+        avrae.message("!sb remove fireball")
+
+
+@pytest.mark.usefixtures("character")
+class TestCustomCounters:
+    async def test_cc_create(self, avrae, dhttp):
+        avrae.message("!cc create TESTCC")
+        await dhttp.receive_message()
+        avrae.message("!cc create TESTLIMITS -min 0 -max 100")
+        await dhttp.receive_message()
+
+    async def test_cc_summary(self, avrae, dhttp):
+        avrae.message("!cc")
+
+    async def test_cc_misc(self, avrae, dhttp):
+        avrae.message("!cc TESTCC +5")
+        avrae.message("!cc TESTLIMITS -99")
+        avrae.message("!cc TESTLIMITS -2")
+
+    async def test_cc_reset(self, avrae, dhttp):
+        avrae.message("!cc reset TESTLIMITS")
+
+    async def test_cc_delete(self, avrae, dhttp):
+        avrae.message("!cc delete TESTCC")
+        avrae.message("!cc delete TESTLIMITS")

@@ -109,7 +109,7 @@ class DiscordHTTPProxy(HTTPClient):
         for task in asyncio.all_tasks():
             if "ClientEventTask" in repr(task):  # tasks started by d.py in reply to an event
                 to_wait.add(task)
-        await asyncio.gather(*to_wait)
+        await asyncio.wait_for(asyncio.gather(*to_wait), timeout=10)
 
     async def get_request(self):
         for _ in range(100):

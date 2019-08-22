@@ -71,6 +71,7 @@ class TestBasicSheetCommands:
 
     async def test_cvar_deleteall(self, avrae, dhttp):
         avrae.message("!cvar deleteall")
+        await dhttp.receive_message()
         avrae.message("Yes, I am sure")
 
     async def test_list_cvar(self, avrae, dhttp):

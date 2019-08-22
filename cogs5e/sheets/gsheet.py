@@ -19,8 +19,8 @@ import re
 from contextlib import contextmanager
 
 import gspread
-from googleapiclient.errors import HttpError
 from gspread import SpreadsheetNotFound
+from gspread.exceptions import APIError
 from gspread.utils import a1_to_rowcol, fill_gaps
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -198,12 +198,9 @@ class GoogleSheet(SheetLoaderABC):
         """
         try:
             await self.get_character()
-        except (KeyError, SpreadsheetNotFound):
+        except (KeyError, SpreadsheetNotFound, APIError):
             raise ExternalImportError("Invalid character sheet. Make sure you've shared it with me at "
                                       "`avrae-320@avrae-bot.iam.gserviceaccount.com`!")
-        except HttpError:
-            raise ExternalImportError("Google returned an error. Please ensure your sheet is shared with "
-                                      "`avrae-320@avrae-bot.iam.gserviceaccount.com` and try again in a few minutes.")
         except Exception:
             raise
         return await asyncio.get_event_loop().run_in_executor(None, self._load_character, owner_id, args)

@@ -13,6 +13,12 @@ COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
 
 class Combat:
+    # cache combats for 10 seconds to avoid race conditions
+    # this makes sure that multiple calls to Combat.from_ctx() in the same invocation or two simultaneous ones
+    # retrieve/modify the same Combat state
+    # caches based on channel id
+    # probably won't encounter any scaling issues, since a combat will be shard-specific
+    _cache = cachetools.TTLCache(maxsize=50, ttl=10)
     message_cache = cachetools.LRUCache(500)
 
     def __init__(self, channelId, summaryMsgId, dmId, options, ctx, combatants=None, roundNum=0, turnNum=0,
@@ -34,11 +40,18 @@ class Combat:
         return cls(channelId, summaryMsgId, dmId, options, ctx)
 
     @classmethod
-    async def from_ctx(cls, ctx):
-        raw = await ctx.bot.mdb.combats.find_one({"channel": str(ctx.channel.id)})
-        if raw is None:
-            raise CombatNotFound
-        return await cls.from_dict(raw, ctx)
+    async def from_ctx(cls, ctx):  # cached
+        channel_id = str(ctx.channel.id)
+        if channel_id in cls._cache:
+            return cls._cache[channel_id]
+        else:
+            raw = await ctx.bot.mdb.combats.find_one({"channel": channel_id})
+            if raw is None:
+                raise CombatNotFound
+            # write to cache
+            inst = await cls.from_dict(raw, ctx)
+            cls._cache[channel_id] = inst
+            return inst
 
     @classmethod
     async def from_dict(cls, raw, ctx):
@@ -58,11 +71,18 @@ class Combat:
         return inst
 
     @classmethod
-    def from_ctx_sync(cls, ctx):
-        raw = ctx.bot.mdb.combats.delegate.find_one({"channel": str(ctx.channel.id)})
-        if raw is None:
-            raise CombatNotFound
-        return cls.from_dict_sync(raw, ctx)
+    def from_ctx_sync(cls, ctx):  # cached
+        channel_id = str(ctx.channel.id)
+        if channel_id in cls._cache:
+            return cls._cache[channel_id]
+        else:
+            raw = ctx.bot.mdb.combats.delegate.find_one({"channel": channel_id})
+            if raw is None:
+                raise CombatNotFound
+            # write to cache
+            inst = cls.from_dict_sync(raw, ctx)
+            cls._cache[channel_id] = inst
+            return inst
 
     @classmethod
     def from_dict_sync(cls, raw, ctx):
@@ -82,11 +102,17 @@ class Combat:
         return inst
 
     @classmethod
-    async def from_id(cls, _id, ctx):
-        raw = await ctx.bot.mdb.combats.find_one({"channel": _id})
-        if raw is None:
-            raise CombatNotFound
-        return await cls.from_dict(raw, ctx)
+    async def from_id(cls, channel_id, ctx):  # cached
+        if channel_id in cls._cache:
+            return cls._cache[channel_id]
+        else:
+            raw = await ctx.bot.mdb.combats.find_one({"channel": channel_id})
+            if raw is None:
+                raise CombatNotFound
+            # write to cache
+            inst = await cls.from_dict(raw, ctx)
+            cls._cache[channel_id] = inst
+            return inst
 
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,

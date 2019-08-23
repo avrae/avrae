@@ -2,6 +2,8 @@ import asyncio
 import logging
 import random
 
+import cachetools
+
 from cogs5e.funcs.scripting import MathEvaluator, ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
@@ -17,6 +19,13 @@ INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
 
 
 class Character(Spellcaster):
+    # cache characters for 10 seconds to avoid race conditions
+    # this makes sure that multiple calls to Character.from_ctx() in the same invocation or two simultaneous ones
+    # retrieve/modify the same Character state
+    # caches based on (owner, upstream)
+    # FIXME: May lead to weird conditions if scaling to multiple clusters
+    _cache = cachetools.TTLCache(maxsize=50, ttl=10)
+
     def __init__(self, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
                  name: str, description: str, image: str, stats: dict, levels: dict, attacks: list, skills: dict,
                  resistances: dict, saves: dict, ac: int, max_hp: int, hp: int, temp_hp: int, cvars: dict,
@@ -73,13 +82,43 @@ class Character(Spellcaster):
         self.race = race
         self.background = background
 
-    # ---------- Serialization ----------
+    # ---------- Deserialization ----------
     @classmethod
     def from_dict(cls, d):
         if '_id' in d:
             del d['_id']
         return cls(**d)
 
+    @classmethod
+    async def from_ctx(cls, ctx):
+        owner_id = str(ctx.author.id)
+        active_character = await ctx.bot.mdb.characters.find_one({"owner": owner_id, "active": True})
+        if active_character is None:
+            raise NoCharacter()
+
+        if (owner_id, active_character['upstream']) in cls._cache:
+            # return from cache
+            return cls._cache[owner_id, active_character['upstream']]
+        else:
+            # write to cache
+            inst = cls.from_dict(active_character)
+            cls._cache[owner_id, active_character['upstream']] = inst
+            return inst
+
+    @classmethod
+    async def from_bot_and_ids(cls, bot, owner_id, character_id):
+        if (owner_id, character_id) in cls._cache:
+            # read from cache
+            return cls._cache[owner_id, character_id]
+        character = await bot.mdb.characters.find_one({"owner": owner_id, "upstream": character_id})
+        if character is None:
+            raise NoCharacter()
+        # write to cache
+        inst = cls.from_dict(character)
+        cls._cache[owner_id, character_id] = inst
+        return inst
+
+    # ---------- Serialization ----------
     def to_dict(self):
         return {
             "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
@@ -92,20 +131,6 @@ class Character(Spellcaster):
             "consumables": [co.to_dict() for co in self.consumables], "death_saves": self.death_saves.to_dict(),
             "spellbook": self._spellbook.to_dict(), "live": self._live, "race": self.race, "background": self.background
         }
-
-    @classmethod
-    async def from_ctx(cls, ctx):
-        active_character = await ctx.bot.mdb.characters.find_one({"owner": str(ctx.author.id), "active": True})
-        if active_character is None:
-            raise NoCharacter()
-        return cls.from_dict(active_character)
-
-    @classmethod
-    async def from_bot_and_ids(cls, bot, owner_id, character_id):
-        character = await bot.mdb.characters.find_one({"owner": owner_id, "upstream": character_id})
-        if character is None:
-            raise NoCharacter()
-        return cls.from_dict(character)
 
     # ---------- Basic CRUD ----------
     def get_name(self):

@@ -470,7 +470,9 @@ class SheetManager(commands.Cog):
     @character.command(name='list')
     async def character_list(self, ctx):
         """Lists your characters."""
-        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
+        user_characters = await self.bot.mdb.characters.find(
+            {"owner": str(ctx.author.id)}, ['name']
+        ).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
         await ctx.send('Your characters:\n{}'.format(', '.join(c['name'] for c in user_characters)))
@@ -478,7 +480,9 @@ class SheetManager(commands.Cog):
     @character.command(name='delete')
     async def character_delete(self, ctx, *, name):
         """Deletes a character."""
-        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
+        user_characters = await self.bot.mdb.characters.find(
+            {"owner": str(ctx.author.id)}, ['name', 'upstream']
+        ).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
 
@@ -494,8 +498,7 @@ class SheetManager(commands.Cog):
         if reply is None:
             return await ctx.send('Timed out waiting for a response or invalid response.')
         elif reply:
-            await self.bot.mdb.characters.delete_one(
-                {"owner": str(ctx.author.id), "upstream": selected_char['upstream']})
+            await Character.delete(ctx, str(ctx.author.id), selected_char['upstream'])
             return await ctx.send(f"{selected_char['name']} has been deleted.")
         else:
             return await ctx.send("OK, cancelling.")

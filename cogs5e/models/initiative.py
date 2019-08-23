@@ -42,6 +42,24 @@ class Combat:
     @classmethod
     async def from_ctx(cls, ctx):  # cached
         channel_id = str(ctx.channel.id)
+        return await cls.from_id(channel_id, ctx)
+
+    @classmethod
+    def from_ctx_sync(cls, ctx):  # cached
+        channel_id = str(ctx.channel.id)
+        if channel_id in cls._cache:
+            return cls._cache[channel_id]
+        else:
+            raw = ctx.bot.mdb.combats.delegate.find_one({"channel": channel_id})
+            if raw is None:
+                raise CombatNotFound
+            # write to cache
+            inst = cls.from_dict_sync(raw, ctx)
+            cls._cache[channel_id] = inst
+            return inst
+
+    @classmethod
+    async def from_id(cls, channel_id, ctx):  # cached
         if channel_id in cls._cache:
             return cls._cache[channel_id]
         else:
@@ -71,20 +89,6 @@ class Combat:
         return inst
 
     @classmethod
-    def from_ctx_sync(cls, ctx):  # cached
-        channel_id = str(ctx.channel.id)
-        if channel_id in cls._cache:
-            return cls._cache[channel_id]
-        else:
-            raw = ctx.bot.mdb.combats.delegate.find_one({"channel": channel_id})
-            if raw is None:
-                raise CombatNotFound
-            # write to cache
-            inst = cls.from_dict_sync(raw, ctx)
-            cls._cache[channel_id] = inst
-            return inst
-
-    @classmethod
     def from_dict_sync(cls, raw, ctx):
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
                    raw['turn'], raw['current'])
@@ -100,19 +104,6 @@ class Combat:
             else:
                 raise CombatException("Unknown combatant type")
         return inst
-
-    @classmethod
-    async def from_id(cls, channel_id, ctx):  # cached
-        if channel_id in cls._cache:
-            return cls._cache[channel_id]
-        else:
-            raw = await ctx.bot.mdb.combats.find_one({"channel": channel_id})
-            if raw is None:
-                raise CombatNotFound
-            # write to cache
-            inst = await cls.from_dict(raw, ctx)
-            cls._cache[channel_id] = inst
-            return inst
 
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
@@ -450,6 +441,8 @@ class Combat:
         for c in self._combatants:
             c.on_remove()
         await self.ctx.bot.mdb.combats.delete_one({"channel": self.channel})
+        if self.channel in Combat._cache:
+            del Combat._cache[self.channel]
 
     def __str__(self):
         return f"Initiative in <#{self.channel}>"

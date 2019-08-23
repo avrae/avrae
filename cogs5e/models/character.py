@@ -132,6 +132,12 @@ class Character(Spellcaster):
             "spellbook": self._spellbook.to_dict(), "live": self._live, "race": self.race, "background": self.background
         }
 
+    @staticmethod
+    async def delete(ctx, owner_id, upstream):
+        await ctx.bot.mdb.characters.delete_one({"owner": owner_id, "upstream": upstream})
+        if (owner_id, upstream) in Character._cache:
+            del Character._cache[owner_id, upstream]
+
     # ---------- Basic CRUD ----------
     def get_name(self):
         return self.name
@@ -553,3 +559,4 @@ class Character(Spellcaster):
                                   f"Please run !update.")
 
         return embed
+

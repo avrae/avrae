@@ -103,7 +103,11 @@ class SheetManager(commands.Cog):
         args = await self.new_arg_stuff(args, ctx, char)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
-        attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
+        if isinstance(caster, Character):
+            attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
+        else:  # caster is combatant
+            attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a['name'])
+            attack = Attack.from_old(attack)
 
         embed = EmbedWithCharacter(char, name=False)
         if args.last('title') is not None:

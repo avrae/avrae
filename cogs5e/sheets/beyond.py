@@ -245,9 +245,9 @@ class BeyondSheetParser(SheetLoaderABC):
                     bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + self.stat_from_id(mod['statId'])
                 else:
                     bonuses[mod['subType']] = bonuses.get(mod['subType'], 0) + (mod['value'] or 0)
-            elif mod['type'] == 'advantage':
+            elif mod['type'] == 'advantage' and not mod['restriction']:  # unconditional adv
                 advantages[mod['subType']].append(True)
-            elif mod['type'] == 'disadvantage':
+            elif mod['type'] == 'disadvantage' and not mod['restriction']:  # unconditional dis
                 advantages[mod['subType']].append(False)
 
         profs['animalHandling'] = profs.get('animal-handling', 0)
@@ -280,13 +280,14 @@ class BeyondSheetParser(SheetLoaderABC):
         for save in SAVE_NAMES:  # add proficiency and bonuses to skills
             relevantprof = profs.get(save, 0)
             relevantbonus = bonuses.get(save, 0)
+            relevantadv = _simplify_adv(advantages[save])
             if 'saving-throws' in profs:
                 relevantprof = max(relevantprof, profs['saving-throws'])
             if 'saving-throws' in bonuses:
                 relevantbonus += bonuses['saving-throws']
             saves[save] = Skill(
                 floor(stats.get_mod(SKILL_MAP[save]) + (profBonus * relevantprof) + relevantbonus),
-                relevantprof, relevantbonus
+                relevantprof, relevantbonus, adv=relevantadv
             )
 
         # values

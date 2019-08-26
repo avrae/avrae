@@ -151,7 +151,7 @@ class Dice(commands.Cog):
         -t [target]
         -phrase [flavor text]
         crit (automatically crit)
-        -h (hides monster name, image, and attack details)"""
+        -h (hides monster name and image)"""
         if atk_name is None or atk_name == 'list':
             return await ctx.invoke(self.monster_atk_list, monster_name)
 

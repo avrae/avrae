@@ -30,6 +30,7 @@ QUOTE_PAIRS = {
 }
 ALL_QUOTES = set(QUOTE_PAIRS.keys()) | set(QUOTE_PAIRS.values())
 
+
 def argsplit(args: str):
     view = CustomStringView(args.strip())
     args = []
@@ -208,8 +209,8 @@ class ParsedArguments:
     def __iter__(self):
         return iter(self.parsed.keys())
 
-    def __str__(self):
-        return str(self.parsed)
+    def __repr__(self):
+        return f"<ParsedArguments parsed={self.parsed.items()} ephemeral={self.ephemeral.items()}>"
 
 
 class EphemeralValue:

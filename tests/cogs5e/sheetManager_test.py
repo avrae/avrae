@@ -2,8 +2,6 @@
 import discord
 import pytest
 
-from tests.utils import active_character
-
 pytestmark = pytest.mark.asyncio
 
 

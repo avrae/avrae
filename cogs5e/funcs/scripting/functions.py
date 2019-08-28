@@ -2,7 +2,7 @@ import ast
 import json
 import re
 import time
-from math import floor, ceil, sqrt
+from math import ceil, floor, sqrt
 
 import simpleeval
 from simpleeval import IterableTooLong
@@ -10,12 +10,15 @@ from simpleeval import IterableTooLong
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting.helpers import MAX_ITER_LENGTH
 from cogs5e.models.errors import AvraeException
+from utils.argparser import argparse
 
 
+# roll()
 def simple_roll(rollStr):
     return roll(rollStr).total
 
 
+# vroll()
 class SimpleRollResult:
     def __init__(self, dice, total, full, raw, roll_obj):
         self.dice = dice.strip()
@@ -45,6 +48,7 @@ def verbose_roll(rollStr, multiply=1, add=0):
         return None
 
 
+# range()
 def safe_range(start, stop=None, step=None):
     if stop is None and step is None:
         if start > MAX_ITER_LENGTH:
@@ -62,6 +66,7 @@ def safe_range(start, stop=None, step=None):
         raise ValueError("Invalid arguments passed to range()")
 
 
+# json
 def load_json(jsonstr):
     return json.loads(jsonstr)
 
@@ -70,6 +75,7 @@ def dump_json(obj):
     return json.dumps(obj)
 
 
+# err()
 class AliasException(AvraeException):
     pass
 
@@ -78,6 +84,7 @@ def raise_alias_exception(reason):
     raise AliasException(reason)
 
 
+# typeof()
 def typeof(inst):
     return type(inst).__name__
 
@@ -86,7 +93,11 @@ DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
 DEFAULT_OPERATORS.pop(ast.Pow)
 
 DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
-DEFAULT_FUNCTIONS.update({'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
-                          'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all,
-                          'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
-                          'time': time.time, 'err': raise_alias_exception, 'typeof': typeof})
+DEFAULT_FUNCTIONS.update({
+    # builtins
+    'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
+    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
+    # ours
+    'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
+    'err': raise_alias_exception, 'typeof': typeof, 'argparse': argparse
+})

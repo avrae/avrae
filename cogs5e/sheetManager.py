@@ -67,43 +67,47 @@ class SheetManager(commands.Cog):
     async def attack(self, ctx, atk_name=None, *, args: str = ''):
         """Rolls an attack for the current active character.
         __Valid Arguments__
-        adv/dis
-        adv#/dis# (applies adv to the first # attacks)
-        ea (Elven Accuracy double advantage)
+        *adv/dis*
+        *ea* (Elven Accuracy double advantage)
         
         -ac [target ac]
         -t [target]
         
-        -b [to hit bonus]
+        *-b* [to hit bonus]
         -criton [a number to crit on if rolled on or above]
-        -d [damage bonus]
-        -d# [applies damage to the first # hits]
-        -c [damage bonus on crit]
+        *-d* [damage bonus]
+        *-c* [damage bonus on crit]
         -rr [times to reroll]
-        -mi [minimum weapon dice roll]
+        *-mi* [minimum weapon dice roll]
         
-        -resist [damage resistance]
-        -immune [damage immunity]
-        -vuln [damage vulnerability]
-        -neutral [damage non-resistance]
+        *-resist* [damage resistance]
+        *-immune* [damage immunity]
+        *-vuln* [damage vulnerability]
+        *-neutral* [damage non-resistance]
         
-        hit (automatically hits)
-        miss (automatically misses)
-        crit (automatically crit)
-        max (deals max damage)
+        *hit* (automatically hits)
+        *miss* (automatically misses)
+        *crit* (automatically crit)
+        *max* (deals max damage)
         
         -phrase [flavor text]
         -title [title] *note: [name] and [aname] will be replaced automatically*
         -f "Field Title|Field Text" (see !embed)
-        [user snippet]"""
+        [user snippet]
+
+        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on."""
         if atk_name is None:
             return await ctx.invoke(self.attack_list)
 
         char: Character = await Character.from_ctx(ctx)
-
-        attack = await search_and_select(ctx, char.attacks, atk_name, lambda a: a.name)
-
         args = await self.new_arg_stuff(args, ctx, char)
+
+        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
+        if isinstance(caster, Character):
+            attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
+        else:  # caster is combatant
+            attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a['name'])
+            attack = Attack.from_old(attack)
 
         embed = EmbedWithCharacter(char, name=False)
         if args.last('title') is not None:
@@ -113,7 +117,6 @@ class SheetManager(commands.Cog):
         else:
             embed.title = '{} attacks with {}!'.format(char.name, a_or_an(attack.name))
 
-        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
         await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
         if combat:
             await combat.final()
@@ -470,7 +473,9 @@ class SheetManager(commands.Cog):
     @character.command(name='list')
     async def character_list(self, ctx):
         """Lists your characters."""
-        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
+        user_characters = await self.bot.mdb.characters.find(
+            {"owner": str(ctx.author.id)}, ['name']
+        ).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
         await ctx.send('Your characters:\n{}'.format(', '.join(c['name'] for c in user_characters)))
@@ -478,7 +483,9 @@ class SheetManager(commands.Cog):
     @character.command(name='delete')
     async def character_delete(self, ctx, *, name):
         """Deletes a character."""
-        user_characters = await self.bot.mdb.characters.find({"owner": str(ctx.author.id)}).to_list(None)
+        user_characters = await self.bot.mdb.characters.find(
+            {"owner": str(ctx.author.id)}, ['name', 'upstream']
+        ).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
 
@@ -494,8 +501,7 @@ class SheetManager(commands.Cog):
         if reply is None:
             return await ctx.send('Timed out waiting for a response or invalid response.')
         elif reply:
-            await self.bot.mdb.characters.delete_one(
-                {"owner": str(ctx.author.id), "upstream": selected_char['upstream']})
+            await Character.delete(ctx, str(ctx.author.id), selected_char['upstream'])
             return await ctx.send(f"{selected_char['name']} has been deleted.")
         else:
             return await ctx.send("OK, cancelling.")

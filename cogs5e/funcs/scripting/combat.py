@@ -2,6 +2,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting.functions import SimpleRollResult
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
+from cogs5e.models.sheet import Spellcaster
 from utils.argparser import ParsedArguments
 
 
@@ -135,8 +136,8 @@ class SimpleCombatant:
             Damage  # this has to be here to avoid circular imports
 
         class _SimpleAutomationContext(AutomationContext):
-            def __init__(self, combatant, target, args, combat, crit=False):
-                super(_SimpleAutomationContext, self).__init__(None, None, combatant, [target], args, combat)
+            def __init__(self, caster, target, args, combat, crit=False):
+                super(_SimpleAutomationContext, self).__init__(None, None, caster, [target], args, combat)
                 self.in_crit = crit
                 self.target = AutomationTarget(target)
 
@@ -151,7 +152,7 @@ class SimpleCombatant:
         if c:
             args['c'] = c
         damage = Damage(dice_str)
-        autoctx = _SimpleAutomationContext(self._combatant, self._combatant, args, self._combatant.combat, crit)
+        autoctx = _SimpleAutomationContext(Spellcaster(), self._combatant, args, self._combatant.combat, crit)
 
         return damage.run(autoctx)
 

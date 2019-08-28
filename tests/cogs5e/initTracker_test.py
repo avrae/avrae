@@ -1,7 +1,7 @@
 import discord
 import pytest
 
-from tests.setup import TEST_CHANNEL_ID
+from tests.conftest import end_init, start_init
 from tests.utils import D20_PATTERN
 
 pytestmark = pytest.mark.asyncio
@@ -57,37 +57,3 @@ class TestInitiativeWithCharacters:
 
     async def test_init_end(self, avrae, dhttp):
         await end_init(avrae, dhttp)
-
-
-# ===== Utilities =====
-@pytest.fixture(scope="class")
-async def init_fixture(avrae):
-    """Ensures we clean up before and after ourselves. Init tests should be grouped in a class."""
-    await avrae.mdb.combats.delete_one({"channel": str(TEST_CHANNEL_ID)})
-    yield
-    await avrae.mdb.combats.delete_one({"channel": str(TEST_CHANNEL_ID)})
-
-
-async def start_init(avrae, dhttp):
-    dhttp.clear()
-    avrae.message("!init begin")
-    await dhttp.receive_delete()
-    await dhttp.receive_message()
-    await dhttp.receive_edit()
-    await dhttp.receive_pin()
-    await dhttp.receive_message()
-
-
-async def end_init(avrae, dhttp):
-    dhttp.clear()
-    avrae.message("!init end")
-    await dhttp.receive_delete()
-    await dhttp.receive_message()
-    avrae.message("y")
-    await dhttp.receive_delete()
-    await dhttp.receive_delete()
-    await dhttp.receive_message()
-    await dhttp.receive_message(dm=True)
-    await dhttp.receive_edit()
-    await dhttp.receive_unpin()
-    await dhttp.receive_edit()

@@ -53,8 +53,8 @@ def compare_embeds(request_embed, embed, *, regex: bool = True):
                 assert re.match(embed[k], request_embed[k])
             else:
                 assert request_embed[k] == embed[k]
-    elif isinstance(embed, list):
-        assert len(embed) == len(request_embed)
+    elif isinstance(embed, list):  # list of fields, usually
+        assert len(embed) <= len(request_embed)
         for e, r in zip(embed, request_embed):
             compare_embeds(r, e)
     else:
@@ -104,12 +104,13 @@ class DiscordHTTPProxy(HTTPClient):
         self._request_check_queue = Queue()
 
     async def drain(self):
-        """Waits until all requests have been sent."""
+        """Waits until all requests have been sent and clears the queue."""
         to_wait = set()
         for task in asyncio.all_tasks():
             if "ClientEventTask" in repr(task):  # tasks started by d.py in reply to an event
                 to_wait.add(task)
         await asyncio.wait_for(asyncio.gather(*to_wait), timeout=10)
+        self.clear()
 
     async def get_request(self):
         for _ in range(100):
@@ -292,6 +293,40 @@ def character(request, avrae):
     avrae.mdb.characters.delegate.delete_one(
         {"owner": char.owner, "upstream": char.upstream}
     )
+
+
+# ===== Init Fixture/Utils =====
+@pytest.fixture(scope="class")
+async def init_fixture(avrae):
+    """Ensures we clean up before and after ourselves. Init tests should be grouped in a class."""
+    await avrae.mdb.combats.delete_one({"channel": str(TEST_CHANNEL_ID)})
+    yield
+    await avrae.mdb.combats.delete_one({"channel": str(TEST_CHANNEL_ID)})
+
+
+async def start_init(avrae, dhttp):
+    dhttp.clear()
+    avrae.message("!init begin")
+    await dhttp.receive_delete()
+    await dhttp.receive_message()
+    await dhttp.receive_edit()
+    await dhttp.receive_pin()
+    await dhttp.receive_message()
+
+
+async def end_init(avrae, dhttp):
+    dhttp.clear()
+    avrae.message("!init end")
+    await dhttp.receive_delete()
+    await dhttp.receive_message()
+    avrae.message("y")
+    await dhttp.receive_delete()
+    await dhttp.receive_delete()
+    await dhttp.receive_message()
+    await dhttp.receive_message(dm=True)
+    await dhttp.receive_edit()
+    await dhttp.receive_unpin()
+    await dhttp.receive_edit()
 
 
 # ===== Global Fixture =====

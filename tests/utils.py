@@ -4,7 +4,8 @@ import pytest
 
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.character import Character
-from tests.setup import DEFAULT_USER_ID
+from cogs5e.models.initiative import Combat
+from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID
 
 # rolled dice: the individual results of dice
 # matches:
@@ -29,13 +30,19 @@ D20_PATTERN = rf"\d?d20(\w+[lh<>]?\d+)? *{ROLLED_DICE_PATTERN}( *[+-] *\d+)?( *=
 DICE_PATTERN = rf"( *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+( *= *`\d+`)?"
 
 # to hit: a to-hit section of an attack
-TO_HIT_PATTERN = rf"\*\*To Hit:\*\* ({D20_PATTERN}{DICE_PATTERN} = `\d+`)|(Automatic (hit|miss)!)"
+TO_HIT_PATTERN = rf"\*\*To Hit:?\*\*:? (({D20_PATTERN}{DICE_PATTERN} = `\d+`)|(Automatic (hit|miss)!))"
 
 # damage: a damage section of an attack
-DAMAGE_PATTERN = rf"(\*\*Damage (\(CRIT!\))?:\*\* {DICE_PATTERN})|(\*\*Miss!\*\*)"
+DAMAGE_PATTERN = rf"((\*\*Damage( \(CRIT!\))?:\*\* {DICE_PATTERN})|(\*\*Miss!\*\*))"
 
 # attack: to hit and damage on two lines
 ATTACK_PATTERN = rf"{TO_HIT_PATTERN}\n{DAMAGE_PATTERN}"
+
+# save: d20, success or failure
+SAVE_PATTERN = rf"\*\*\w+ Save:\*\* {D20_PATTERN}; (Failure|Success)!"
+
+# save spell: saving throw and damage on two lines
+SAVE_SPELL_PATTERN = rf"{SAVE_PATTERN}\n{DAMAGE_PATTERN}"
 
 
 def requires_data():
@@ -68,6 +75,12 @@ def requires_data():
 async def active_character(avrae):
     """Gets the character active in this test."""
     return Character.from_dict(await avrae.mdb.characters.find_one({"owner": DEFAULT_USER_ID, "active": True}))
+
+
+async def active_combat(avrae):
+    """Gets the combat active in this test."""
+    return await Combat.from_dict(await avrae.mdb.combats.find_one({"channel": str(TEST_CHANNEL_ID)}),
+                                  ContextBotProxy(avrae))
 
 
 class ContextBotProxy:

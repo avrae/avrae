@@ -40,7 +40,7 @@ class TestMixedInitiative:
     async def test_cast_XI(self, avrae, dhttp):
         await cast_I(avrae, dhttp)
 
-    async def test_init_join(self, avrae, dhttp):  # join init, XI -> II
+    async def test_init_XI_to_II(self, avrae, dhttp):  # join init, XI -> II
         avrae.message("!init join")
         await dhttp.receive_delete()
         await dhttp.receive_edit()
@@ -116,9 +116,10 @@ async def cast_I(avrae, dhttp, targets=('2', '3'), names=('KO2', 'KO3')):
 @pytest.mark.usefixtures("init_fixture", "character", "_requires")
 class TestSpellSlotConsumption:
     """
-    2 cases:
-    caster not in init
-    caster in init
+    3 cases:
+    caster not in init, channel not in init [XX]
+    caster not in init, channel in init     [XI]
+    caster in init, channel in init         [II]
     """
 
     async def cast_fireball(self, avrae, dhttp):
@@ -138,11 +139,14 @@ class TestSpellSlotConsumption:
         char = await active_character(avrae)
         assert char.spellbook.get_slots(3) == slots_before - 1
 
-    async def test_cast_consumption_out_of_init(self, avrae, dhttp):
+    async def test_cast_consumption_XX(self, avrae, dhttp):
         await self.cast_fireball(avrae, dhttp)
 
-    async def test_cast_consumption_in_init(self, avrae, dhttp):
+    async def test_cast_consumption_XI(self, avrae, dhttp):
         await start_init(avrae, dhttp)
+        await self.cast_fireball(avrae, dhttp)
+
+    async def test_cast_consumption_II(self, avrae, dhttp):
         avrae.message("!init join")
         await dhttp.drain()
         await self.cast_fireball(avrae, dhttp)

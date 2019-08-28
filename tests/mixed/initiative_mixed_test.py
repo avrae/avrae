@@ -55,6 +55,7 @@ class TestMixedInitiative:
     async def test_attack_II_self(self, avrae, dhttp):
         char = await active_character(avrae)
         await attack_I(avrae, dhttp, target=char.name, name=char.name)
+        await dhttp.drain()
 
         # make sure damage was saved to character
         combat = await active_combat(avrae)
@@ -65,6 +66,7 @@ class TestMixedInitiative:
     async def test_cast_II_self(self, avrae, dhttp):
         char = await active_character(avrae)
         await cast_I(avrae, dhttp, targets=[char.name], names=[char.name])
+        await dhttp.drain()
 
         # make sure damage was saved to character
         combat = await active_combat(avrae)

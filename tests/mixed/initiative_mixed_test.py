@@ -88,8 +88,8 @@ async def attack_I(avrae, dhttp, target='1', name='KO1'):
 
     # ensure kobold is not at full health
     combat = await active_combat(avrae)
-    kobold_1 = combat.get_combatant(name, strict=True)
-    assert kobold_1.hp < kobold_1.hpMax
+    combatant = combat.get_combatant(name, strict=True)
+    assert combatant.hp < combatant.hpMax
 
 
 async def cast_I(avrae, dhttp, targets=('2', '3'), names=('KO2', 'KO3')):

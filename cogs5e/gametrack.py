@@ -500,9 +500,9 @@ class GameTrack(commands.Cog):
         add_fields_from_args(embed, args.get('f'))
 
         # save changes: combat state, spell slot usage
+        await char.commit(ctx)
         if combat:
             await combat.final()
-        await char.commit(ctx)
         await ctx.send(embed=embed)
 
 

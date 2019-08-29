@@ -134,13 +134,9 @@ bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(log_formatter)
-filehandler = logging.FileHandler(f"temp/log_build_{bot.rdb.get('build_num')}.log", mode='w')
-filehandler.setFormatter(log_formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
-logger.addHandler(filehandler)
-
 log = logging.getLogger('bot')
 
 
@@ -182,7 +178,7 @@ async def on_command_error(ctx, error):
             e = original.original
             if not isinstance(e, AvraeException):
                 tb = f"```py\nError when parsing expression {original.expression}:\n" \
-                    f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
+                     f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
                 try:
                     await ctx.author.send(tb)
                 except Exception as e:

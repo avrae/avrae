@@ -5,7 +5,7 @@ services:
     image: avrae-tests
     build:
       context: .
-      dockerfile: Dockerfile.test
+      dockerfile: Dockerfile.ci
     depends_on:
       - mongo
       - redis

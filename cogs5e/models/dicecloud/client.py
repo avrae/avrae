@@ -12,6 +12,7 @@ from .errors import InsertFailure, LoginFailure
 from .http import DicecloudHTTP
 
 TESTING = (os.environ.get("TESTING", False) or 'test' in sys.argv)
+NO_DICECLOUD = os.environ.get("NO_DICECLOUD", False)
 UNAME = os.getenv('DICECLOUD_USER', 'avrae') if not TESTING else credentials.test_dicecloud_user
 PWD = credentials.dicecloud_pass.encode() if not TESTING else credentials.test_dicecloud_pass.encode()
 API_KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
@@ -32,7 +33,7 @@ class DicecloudClient:
 
     @classmethod
     def getInstance(cls):
-        if cls.instance is None:
+        if cls.instance is None and not NO_DICECLOUD:
             try:
                 cls.instance = cls(debug=TESTING)
                 cls.instance.initialize()

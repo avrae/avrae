@@ -7,6 +7,7 @@ import traceback
 
 # this hooks a lot of weird things and needs to be imported early
 import utils.newrelic
+
 utils.newrelic.hook_all()
 
 import discord
@@ -31,9 +32,11 @@ DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
 
 # -----COGS-----
-DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
-                "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization"]
-STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"]
+COGS = (
+    "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
+    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization", "cogsmisc.core",
+    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"
+)
 
 
 async def get_prefix(the_bot, message):
@@ -66,7 +69,6 @@ class Avrae(commands.AutoShardedBot):
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
 
         self.mdb = self.mclient.avrae  # let's just use the avrae db
-        self.dynamic_cog_list = DYNAMIC_COGS
         self.prefixes = dict()
         self.muted = set()
 
@@ -248,10 +250,7 @@ async def on_command(ctx):
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 
 
-for cog in DYNAMIC_COGS:
-    bot.load_extension(cog)
-
-for cog in STATIC_COGS:
+for cog in COGS:
     bot.load_extension(cog)
 
 if __name__ == '__main__':

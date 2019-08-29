@@ -27,15 +27,23 @@
   ]
 }
 """
+import argparse
 import itertools
 import json
 import sys
 
-from discord.ext.commands import Group
+from discord.ext.commands import Bot, Group
+
+COGS = (
+    "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
+    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization", "cogsmisc.core",
+    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl"
+)
 
 sys.path.append('..')
 
-from dbot import bot
+parser = argparse.ArgumentParser()
+parser.add_argument('-o', help="The file to output to.")
 
 
 def get_command_signature(command):
@@ -130,7 +138,13 @@ def parse_module(module, commands):
     return module_meta
 
 
-def main():
+def main(out='commands.json'):
+    bot = Bot('!')
+    for cog in COGS:
+        try:
+            bot.load_extension(cog)
+        except Exception as e:
+            print(e)
     modules = []
 
     # helpers
@@ -149,11 +163,12 @@ def main():
     for module, commands in to_iterate:
         modules.append(parse_module(module, commands))
 
-    with open('commands.json', 'w') as f:
+    with open(out, 'w') as f:
         json.dump({
             "modules": modules
         }, f)
 
 
 if __name__ == '__main__':
-    main()
+    args, unknown = parser.parse_known_args()
+    main(args.o or 'commands.json')

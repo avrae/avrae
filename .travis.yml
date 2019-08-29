@@ -3,6 +3,7 @@ script:
   - docker-compose -f docker-compose.test.yml -p avrae build
   - docker-compose -f docker-compose.test.yml -p avrae up --exit-code-from tests
   - docker build -t avrae-bot .
+  - bash scripts/gen_help.sh
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 before_deploy:

@@ -10,6 +10,6 @@ before_deploy:
   - export PATH=$PATH:$HOME/.local/bin
 deploy:
   provider: script
-  script: bash scripts/ecr_push.sh
+  script: bash scripts/deploy.sh production
   on:
     tags: true

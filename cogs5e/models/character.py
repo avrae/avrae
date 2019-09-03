@@ -493,6 +493,7 @@ class Character(Spellcaster):
         Updates certain attributes to match an old character's.
         Currently updates settings, overrides, cvars, consumables, overriden spellbook spells,
         hp, temp hp, death saves, used spell slots
+        and caches the new character.
         :type old_character Character
         """
         self.options = old_character.options
@@ -506,6 +507,9 @@ class Character(Spellcaster):
         self._hp = old_character._hp
         self._temp_hp = old_character._temp_hp
         self.spellbook.slots = old_character.spellbook.slots
+
+        if (self.owner, self.upstream) in Character._cache:
+            Character._cache[self.owner, self.upstream] = self
 
     def get_sheet_embed(self):
         embed = EmbedWithCharacter(self)

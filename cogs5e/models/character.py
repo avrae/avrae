@@ -118,6 +118,19 @@ class Character(Spellcaster):
         cls._cache[owner_id, character_id] = inst
         return inst
 
+    @classmethod
+    def from_bot_and_ids_sync(cls, bot, owner_id, character_id):
+        if (owner_id, character_id) in cls._cache:
+            # read from cache
+            return cls._cache[owner_id, character_id]
+        character = bot.mdb.characters.delegate.find_one({"owner": owner_id, "upstream": character_id})
+        if character is None:
+            raise NoCharacter()
+        # write to cache
+        inst = cls.from_dict(character)
+        cls._cache[owner_id, character_id] = inst
+        return inst
+
     # ---------- Serialization ----------
     def to_dict(self):
         return {
@@ -563,4 +576,3 @@ class Character(Spellcaster):
                                   f"Please run !update.")
 
         return embed
-

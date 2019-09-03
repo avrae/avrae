@@ -987,8 +987,11 @@ class InitTracker(commands.Cog):
 
         # old single-target
         try:
-            target = await combat.select_combatant(target_name, "Select the target.")
-            targets.append(target)
+            target = await combat.select_combatant(target_name, "Select the target.", select_group=True)
+            if isinstance(target, CombatantGroup):
+                targets.extend(target.get_combatants())
+            else:
+                targets.append(target)
         except SelectionException:
             return await ctx.send("Target not found.")
 

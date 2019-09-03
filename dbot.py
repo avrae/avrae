@@ -129,7 +129,7 @@ Invite Avrae to your server [here](https://invite.avrae.io)!
 Join the official development server [here](https://support.avrae.io)!
 '''
 bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
-            shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name='D&D 5e | !help'))
+            shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name=f'D&D 5e | {DEFAULT_PREFIX}help'))
 
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)

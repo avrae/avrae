@@ -158,7 +158,7 @@ class SheetManager(commands.Cog):
         parsed = argparse(args)
 
         attack = Attack.new(character, name, bonus_calc=parsed.join('b', '+'),
-                            damage=parsed.join('d', '+'), details=parsed.join('desc', '\n'))
+                            damage_calc=parsed.join('d', '+'), details=parsed.join('desc', '\n'))
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:

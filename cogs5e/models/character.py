@@ -237,6 +237,13 @@ class Character(Spellcaster):
 
         return out
 
+    def parse_math(self, varstr):
+        """Parsed a cvar expression in a MathEvaluator, similar to Dicecloud parsing.
+        :param varstr - the expression to evaluate.
+        :returns str - the resulting expression."""
+        evaluator = MathEvaluator.with_character(self)
+        return evaluator.parse(varstr)
+
     def evaluate_math(self, varstr):
         """Evaluates a cvar expression in a MathEvaluator.
         :param varstr - the expression to evaluate.
@@ -509,14 +516,23 @@ class Character(Spellcaster):
         and caches the new character.
         :type old_character Character
         """
+        # top level things
         self.options = old_character.options
         self.overrides = old_character.overrides
         self.cvars = old_character.cvars
 
+        # consumables
         existing_cons_names = set(con.name.lower() for con in self.consumables)
         self.consumables.extend(con for con in old_character.consumables if con.name.lower() not in existing_cons_names)
 
+        # overridden spells
         self.spellbook.spells.extend(self.overrides.spells)
+
+        # recalculate overridden attacks
+        for atk in self.overrides.attacks:
+            atk.update(self)
+
+        # tracking
         self._hp = old_character._hp
         self._temp_hp = old_character._temp_hp
         self.spellbook.slots = old_character.spellbook.slots

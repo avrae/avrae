@@ -243,6 +243,19 @@ class Homebrew(commands.Cog):
             out = f"Subscribed to {pack.name} by {pack.owner['username']}. " \
                 f"Use `{ctx.prefix}pack {pack.name}` to select it."
         else:
+            return await ctx.send(f"You are already subscribed to {pack.name}.")
+        await pack.commit(ctx)
+        await ctx.send(out)
+
+    @pack.command(name='unsubscribe', aliases=['unsub'])
+    async def pack_unsub(self, ctx, name):
+        """Unsubscribes from another user's pack."""
+        pack = await select_pack(ctx, name)
+
+        user = ctx.author
+        if str(user.id) not in [s['id'] for s in pack.subscribers]:
+            return await ctx.send("You aren't subscribed to this pack! Maybe you own it, or are an editor?")
+        else:
             pack.subscribers.remove(next(s for s in pack.subscribers if s['id'] == str(user.id)))
             out = f"Unsubscribed from {pack.name}."
         await pack.commit(ctx)
@@ -352,6 +365,19 @@ class Homebrew(commands.Cog):
             tome.subscribers.append({"username": str(user), "id": str(user.id)})
             out = f"Subscribed to {tome.name} by {tome.owner['username']}. " \
                 f"Use `{ctx.prefix}tome {tome.name}` to select it."
+        else:
+            return await ctx.send(f"You are already subscribed to {tome.name}.")
+        await tome.commit(ctx)
+        await ctx.send(out)
+
+    @tome.command(name='unsubscribe', aliases=['unsub'])
+    async def tome_unsub(self, ctx, name):
+        """Unsubscribes from another user's tome."""
+        tome = await select_tome(ctx, name)
+
+        user = ctx.author
+        if str(user.id) not in [s['id'] for s in tome.subscribers]:
+            return await ctx.send("You aren't subscribed to this tome! Maybe you own it, or are an editor?")
         else:
             tome.subscribers.remove(next(s for s in tome.subscribers if s['id'] == str(user.id)))
             out = f"Unsubscribed from {tome.name}."

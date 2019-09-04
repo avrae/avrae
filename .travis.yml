@@ -1,7 +1,7 @@
 language: minimal
 script:
-  - docker-compose -f docker-compose.test.yml -p avrae build
-  - docker-compose -f docker-compose.test.yml -p avrae up --exit-code-from tests
+  - docker-compose -f docker-compose.ci.yml -p avrae build
+  - docker-compose -f docker-compose.ci.yml -p avrae up --exit-code-from tests
   - docker build -t avrae-bot .
 after_success:
   - bash <(curl -s https://codecov.io/bash)
@@ -10,6 +10,6 @@ before_deploy:
   - export PATH=$PATH:$HOME/.local/bin
 deploy:
   provider: script
-  script: bash scripts/ecr_push.sh
+  script: bash scripts/deploy.sh production
   on:
     tags: true

@@ -26,6 +26,8 @@ from utils.redisIO import RedisIO
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
+MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
 SHARD_COUNT = None if not TESTING else 1
 DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
@@ -65,13 +67,13 @@ class Avrae(commands.AutoShardedBot):
             self.rdb = RedisIO(database_url=os.getenv('REDIS_URL', ''))
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
 
-        self.mdb = self.mclient.avrae  # let's just use the avrae db
+        self.mdb = self.mclient[MONGODB_DB_NAME]
         self.dynamic_cog_list = DYNAMIC_COGS
         self.prefixes = dict()
         self.muted = set()
 
         if SENTRY_DSN is not None:
-            sentry_sdk.init(dsn=SENTRY_DSN, environment="Development" if TESTING else "Production")
+            sentry_sdk.init(dsn=SENTRY_DSN, environment=ENVIRONMENT.title())
 
     async def get_server_prefix(self, msg):
         return (await get_prefix(self, msg))[-1]

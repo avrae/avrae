@@ -10,8 +10,6 @@ WORKDIR /home/avrae
 COPY --chown=avrae:avrae requirements.txt .
 RUN pip install --user --no-warn-script-location -r requirements.txt
 
-RUN mkdir temp
-
 COPY --chown=avrae:avrae . .
 
 COPY --chown=avrae:avrae docker/credentials-${ENVIRONMENT}.py credentials.py

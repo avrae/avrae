@@ -7,6 +7,7 @@ import traceback
 
 # this hooks a lot of weird things and needs to be imported early
 import utils.newrelic
+
 utils.newrelic.hook_all()
 
 import discord
@@ -33,9 +34,11 @@ DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
 
 # -----COGS-----
-DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
-                "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization"]
-STATIC_COGS = ["cogsmisc.core", "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"]
+COGS = (
+    "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
+    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization", "cogsmisc.core",
+    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"
+)
 
 
 async def get_prefix(the_bot, message):
@@ -68,7 +71,6 @@ class Avrae(commands.AutoShardedBot):
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
 
         self.mdb = self.mclient[MONGODB_DB_NAME]
-        self.dynamic_cog_list = DYNAMIC_COGS
         self.prefixes = dict()
         self.muted = set()
 
@@ -136,13 +138,9 @@ bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(log_formatter)
-filehandler = logging.FileHandler(f"temp/log_build_{bot.rdb.get('build_num')}.log", mode='w')
-filehandler.setFormatter(log_formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
-logger.addHandler(filehandler)
-
 log = logging.getLogger('bot')
 
 
@@ -184,7 +182,7 @@ async def on_command_error(ctx, error):
             e = original.original
             if not isinstance(e, AvraeException):
                 tb = f"```py\nError when parsing expression {original.expression}:\n" \
-                    f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
+                     f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
                 try:
                     await ctx.author.send(tb)
                 except Exception as e:
@@ -254,10 +252,7 @@ async def on_command(ctx):
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 
 
-for cog in DYNAMIC_COGS:
-    bot.load_extension(cog)
-
-for cog in STATIC_COGS:
+for cog in COGS:
     bot.load_extension(cog)
 
 if __name__ == '__main__':

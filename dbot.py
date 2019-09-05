@@ -29,6 +29,7 @@ if 'test' in sys.argv:
     TESTING = True
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
 MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
+REDIS_DB_NUM = int(os.getenv('REDIS_DB_NUM', 0))
 SHARD_COUNT = None if not TESTING else 1
 DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
@@ -64,10 +65,10 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
         self.credentials = Credentials()
         if TESTING:
-            self.rdb = RedisIO(testing=True, database_url=self.credentials.test_redis_url)
+            self.rdb = RedisIO(testing=True, database_url=self.credentials.test_redis_url, db=REDIS_DB_NUM)
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
         else:
-            self.rdb = RedisIO(database_url=os.getenv('REDIS_URL', ''))
+            self.rdb = RedisIO(database_url=os.getenv('REDIS_URL', ''), db=REDIS_DB_NUM)
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
 
         self.mdb = self.mclient[MONGODB_DB_NAME]

@@ -613,7 +613,7 @@ class SheetManager(commands.Cog):
         character: Character = await Character.from_ctx(ctx)
 
         if value is None:  # display value
-            cvar = character.cvars.get(name)
+            cvar = character.get_scope_locals().get(name)
             if cvar is None:
                 return await ctx.send("This cvar is not defined.")
             return await ctx.send(f'**{name}**: ```\n{cvar}\n```')

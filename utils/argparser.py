@@ -177,21 +177,17 @@ class ParsedArguments:
 
     def _get_last(self, arg, ephem=False):
         """Returns the last argument."""
-        if not ephem:
-            if arg not in self.parsed:
-                return None
-            return self.parsed[arg][-1]
-
-        if arg in self.ephemeral:
-            for ev in reversed(self.ephemeral[arg]):
-                if ev.remaining:
-                    return ev.value
-        if arg in self.parsed:  # intentionally not elif - handles case where all ephem args are exhausted
+        if ephem:
+            if arg in self.ephemeral:
+                for ev in reversed(self.ephemeral[arg]):
+                    if ev.remaining:
+                        return ev.value
+        if arg in self.parsed and self.parsed[arg]:  # intentionally not elif - handles when ephem exhausted
             return self.parsed[arg][-1]
         return None
 
     def __contains__(self, item):
-        return item in self.parsed or item in self.ephemeral
+        return (item in self.parsed and self.parsed[item]) or item in self.ephemeral
 
     def __len__(self):
         return len(self.parsed)

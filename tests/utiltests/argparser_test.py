@@ -71,3 +71,17 @@ def test_argparse_ephem():
     assert args.join('d', '+', ephem=True) == '1+1d6+1d4+1d8'
     assert args.join('d', '+', ephem=True) == '1+1d6+1d8'
     assert args.join('d', '+', ephem=True) == '1'
+
+
+def test_argparse_idempotency():
+    args = argparse("")
+    assert 'foo' not in args
+    assert args.get('foo') == []
+    assert args.get('foo') == args.get('foo')
+    assert 'foo' not in args
+    assert args.last('foo') is None
+    assert args.last('foo') == args.last('foo')
+    assert 'foo' not in args
+    assert args.join('foo', ',') == ''
+    assert args.join('foo', ',') == args.join('foo', ',')
+    assert 'foo' not in args

@@ -421,7 +421,8 @@ class Customization(commands.Cog):
 
     @commands.group(invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name=None, *, value=None):
-        """Commands to manage user variables for use in snippets and aliases.
+        """
+        Commands to manage user variables for use in snippets and aliases.
         User variables can be called in the `-phrase` tag by surrounding the variable name with `{}` (calculates) or `<>` (prints).
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
         See http://avrae.io/cheatsheets/aliasing for more help."""
@@ -432,10 +433,11 @@ class Customization(commands.Cog):
 
         if value is None:  # display value
             uvar = user_vars.get(name)
-            if uvar is None: uvar = 'Not defined.'
-            return await ctx.send(f'**{name}**:\n`{uvar}`')
+            if uvar is None:
+                return await ctx.send("This uvar is not defined.")
+            return await ctx.send(f'**{name}**: ```\n{uvar}\n```')
 
-        if name in STAT_VAR_NAMES or any(c in name for c in '-/()[]\\.^$*+?|{}'):
+        if name in STAT_VAR_NAMES or not name.isidentifier():
             return await ctx.send("Could not create uvar: already builtin, or contains invalid character!")
 
         await scripting.set_uvar(ctx, name, value)
@@ -479,8 +481,13 @@ class Customization(commands.Cog):
             return await ctx.invoke(self.bot.get_command("globalvar list"))
 
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
-        if gvar is None: gvar = {'owner_name': 'None', 'value': 'Not defined.'}
-        return await ctx.send(f"**{name}**:\n*Owner: {gvar['owner_name']}* ```\n{gvar['value']}\n```")
+        if gvar is None:
+            return await ctx.send("This gvar does not exist.")
+        out = f"**{name}**:\n*Owner: {gvar['owner_name']}* ```\n{gvar['value']}\n```"
+        if len(out) <= 2000:
+            await ctx.send(out)
+        else:
+            await ctx.send(f"**{name}**:\n*Owner: {gvar['owner_name']}*\nThis gvar is too long to display.")
 
     @globalvar.command(name='create')
     async def gvar_create(self, ctx, *, value):

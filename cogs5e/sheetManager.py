@@ -615,8 +615,8 @@ class SheetManager(commands.Cog):
         if value is None:  # display value
             cvar = character.cvars.get(name)
             if cvar is None:
-                cvar = 'Not defined.'
-            return await ctx.send(f'**{name}**:\n{cvar}')
+                return await ctx.send("This cvar is not defined.")
+            return await ctx.send(f'**{name}**: ```\n{cvar}\n```')
 
         if not name.isidentifier():
             return await ctx.send("Cvar names must be identifiers "

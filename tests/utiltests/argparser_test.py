@@ -82,6 +82,6 @@ def test_argparse_idempotency():
     assert args.last('foo') is None
     assert args.last('foo') == args.last('foo')
     assert 'foo' not in args
-    assert args.join('foo', ',') == ''
+    assert args.join('foo', ',') is None
     assert args.join('foo', ',') == args.join('foo', ',')
     assert 'foo' not in args

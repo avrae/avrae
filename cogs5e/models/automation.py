@@ -437,11 +437,15 @@ class Attack(Effect):
             if reroll:
                 formatted_d20 = f"{formatted_d20}ro{reroll}"
 
+            to_hit_message = 'To Hit'
+            if ac:
+                to_hit_message = f'To Hit (AC {ac})'
+
             if b:
-                toHit = roll(f"{formatted_d20}+{attack_bonus}+{b}", rollFor='To Hit', inline=True,
+                toHit = roll(f"{formatted_d20}+{attack_bonus}+{b}", rollFor=to_hit_message, inline=True,
                              show_blurbs=False)
             else:
-                toHit = roll(f"{formatted_d20}+{attack_bonus}", rollFor='To Hit', inline=True, show_blurbs=False)
+                toHit = roll(f"{formatted_d20}+{attack_bonus}", rollFor=to_hit_message, inline=True, show_blurbs=False)
 
             autoctx.queue(toHit.result)
 

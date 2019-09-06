@@ -14,7 +14,7 @@ from cogs5e.models.sheet import Attack
 from cogsmisc.stats import Stats
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS
-from utils.functions import a_or_an, camel_to_title, search_and_select, verbose_stat
+from utils.functions import a_or_an, camel_to_title, search_and_select, try_delete, verbose_stat
 
 
 class Dice(commands.Cog):
@@ -64,10 +64,7 @@ class Dice(commands.Cog):
             rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
         res = roll(rollStr, adv=adv)
         out = res.result
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
         outStr = ctx.author.mention + '  :game_die:\n' + out
         if len(outStr) > 1999:
             await ctx.send(
@@ -98,10 +95,7 @@ class Dice(commands.Cog):
         else:
             outStr = "Rolling {} iterations...\n[Output truncated due to length]\n".format(iterations) + \
                      '{} total.'.format(sum(o.total for o in out))
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
         await ctx.send(ctx.author.mention + '\n' + outStr)
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
@@ -130,10 +124,7 @@ class Dice(commands.Cog):
             outStr = "Rolling {} iterations, DC {}...\n[Output truncated due to length]\n".format(iterations,
                                                                                                   dc) + '{} successes.'.format(
                 str(successes))
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
         await ctx.send(ctx.author.mention + '\n' + outStr)
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
@@ -154,10 +145,7 @@ class Dice(commands.Cog):
         if atk_name is None or atk_name == 'list':
             return await ctx.invoke(self.monster_atk_list, monster_name)
 
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
         monster = await select_monster_full(ctx, monster_name)
         attacks = monster.attacks
@@ -202,10 +190,7 @@ class Dice(commands.Cog):
 
     @monster_atk.command(name="list")
     async def monster_atk_list(self, ctx, monster_name):
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
         monster = await select_monster_full(ctx, monster_name)
         monster_name = monster.get_title_name()
@@ -299,10 +284,7 @@ class Dice(commands.Cog):
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @commands.command(aliases=['ms'])
     async def monster_save(self, ctx, monster_name, save_stat, *args):
@@ -381,10 +363,7 @@ class Dice(commands.Cog):
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
 
 def setup(bot):

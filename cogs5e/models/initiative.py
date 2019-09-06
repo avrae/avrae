@@ -691,11 +691,18 @@ class Combatant(Spellcaster):
         self._group = value
 
     def add_effect(self, effect):
+        # handle name conflict
         if self.get_effect(effect.name, True):
             self.get_effect(effect.name).remove()
+
+        # handle concentration conflict
         conc_conflict = []
         if effect.concentration:
             conc_conflict = self.remove_all_effects(lambda e: e.concentration)
+
+        # invalidate cache
+        if 'parsed_effects' in self._cache:
+            del self._cache['parsed_effects']
 
         self._effects.append(effect)
         return {"conc_conflict": conc_conflict}
@@ -722,6 +729,9 @@ class Combatant(Spellcaster):
     def remove_effect(self, effect):
         try:
             self._effects.remove(effect)
+            # invalidate cache
+            if 'parsed_effects' in self._cache:
+                del self._cache['parsed_effects']
         except ValueError:
             # this should be safe
             # the only case where this occurs is if a parent removes an effect while it's trying to remove itself
@@ -997,12 +1007,12 @@ class PlayerCombatant(Combatant):
         inst.character_id = raw['character_id']
         inst.character_owner = raw['character_owner']
 
-        from cogs5e.models.character import Character
-        char = ctx.bot.mdb.characters.delegate.find_one({"owner": inst.character_owner, "upstream": inst.character_id})
-        if char is None:
+        try:
+            from cogs5e.models.character import Character
+            inst._character = Character.from_bot_and_ids_sync(ctx.bot, inst.character_owner, inst.character_id)
+        except NoCharacter:
             raise CombatException(f"A character in combat was deleted. "
                                   f"Please run `{ctx.prefix}init end -force` to end combat.")
-        inst._character = Character.from_dict(char)
         return inst
 
     def to_dict(self):

@@ -438,7 +438,8 @@ class DicecloudParser(SheetLoaderABC):
                 log.debug(f"exception in damage_sub: {ex}")
                 return match.group(0)
 
-        damage = re.sub(r'{(.*?)}', damage_sub, atk_dict.get('damage', ''))
+        damage_calc = atk_dict.get('damage', '')
+        damage = re.sub(r'{(.*?)}', damage_sub, damage_calc)
         damage = damage.replace('{', '').replace('}', '')
         if not damage:
             damage = None
@@ -452,7 +453,7 @@ class DicecloudParser(SheetLoaderABC):
 
         # build attack
         name = atk_dict['name']
-        attack = Attack(name, bonus, damage, details, bonus_calc)
+        attack = Attack(name, bonus, damage, details, bonus_calc, damage_calc)
 
         self.evaluator.names = old_names
 

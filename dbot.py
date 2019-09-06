@@ -27,6 +27,9 @@ from utils.redisIO import RedisIO
 TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
+MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
+REDIS_DB_NUM = int(os.getenv('REDIS_DB_NUM', 0))
 SHARD_COUNT = None if not TESTING else 1
 DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
@@ -62,18 +65,18 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
         self.credentials = Credentials()
         if TESTING:
-            self.rdb = RedisIO(testing=True, database_url=self.credentials.test_redis_url)
+            self.rdb = RedisIO(testing=True, database_url=self.credentials.test_redis_url, db=REDIS_DB_NUM)
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
         else:
-            self.rdb = RedisIO(database_url=os.getenv('REDIS_URL', ''))
+            self.rdb = RedisIO(database_url=os.getenv('REDIS_URL', ''), db=REDIS_DB_NUM)
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
 
-        self.mdb = self.mclient.avrae  # let's just use the avrae db
+        self.mdb = self.mclient[MONGODB_DB_NAME]
         self.prefixes = dict()
         self.muted = set()
 
         if SENTRY_DSN is not None:
-            sentry_sdk.init(dsn=SENTRY_DSN, environment="Development" if TESTING else "Production")
+            sentry_sdk.init(dsn=SENTRY_DSN, environment=ENVIRONMENT.title())
 
     async def get_server_prefix(self, msg):
         return (await get_prefix(self, msg))[-1]
@@ -131,7 +134,7 @@ Invite Avrae to your server [here](https://invite.avrae.io)!
 Join the official development server [here](https://support.avrae.io)!
 '''
 bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
-            shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name='D&D 5e | !help'))
+            shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name=f'D&D 5e | {DEFAULT_PREFIX}help'))
 
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)

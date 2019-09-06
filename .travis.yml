@@ -9,7 +9,11 @@ before_deploy:
   - pip install --user awscli
   - export PATH=$PATH:$HOME/.local/bin
 deploy:
-  provider: script
-  script: bash scripts/deploy.sh production
-  on:
-    tags: true
+  - provider: script
+    script: bash scripts/deploy.sh production
+    on:
+      tags: true
+  - provider: script
+    script: bash scripts/deploy.sh nightly
+    on:
+      branch: master

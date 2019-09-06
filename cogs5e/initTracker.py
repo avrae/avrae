@@ -867,7 +867,6 @@ class InitTracker(commands.Cog):
         -phrase <phrase> - Adds flavor text.
         -title <title> - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
         -f "Field Title|Field Text" - Creates a field with the given title and text.
-        -h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
         [user snippet] - Allows the user to use snippets on the attack.
         
         -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage."""
@@ -942,7 +941,6 @@ class InitTracker(commands.Cog):
         -phrase <phrase> - Adds flavor text.
         -title <title> - Changes the title of the attack. Replaces [name] with attacker's name, [aname] with the attack's name, and [target] with the target's name.
         -f "Field Title|Field Text" - Creates a field with the given title and text.
-        -h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
         [user snippet] - Allows the user to use snippets on the attack.
         
         -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage."""

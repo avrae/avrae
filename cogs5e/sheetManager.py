@@ -12,7 +12,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
-from cogs5e.funcs import scripting
+from cogs5e.funcs import scripting, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.models import embeds
 from cogs5e.models.automation import Automation
@@ -23,7 +23,6 @@ from cogs5e.models.sheet import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
-from utils import targetutils
 from utils.argparser import argparse
 from utils.constants import SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS
 from utils.functions import a_or_an, auth_and_chan, get_positivity, list_get

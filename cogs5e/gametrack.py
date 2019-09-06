@@ -11,13 +11,12 @@ import logging
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs import scripting
+from cogs5e.funcs import scripting, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
-from utils import targetutils
 from utils.argparser import argparse
 from utils.functions import confirm, search, search_and_select
 

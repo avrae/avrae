@@ -4,7 +4,7 @@ import re
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs import scripting
+from cogs5e.funcs import scripting, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.models import embeds
@@ -12,7 +12,6 @@ from cogs5e.models.automation import Automation
 from cogs5e.models.monster import Monster, SKILL_MAP
 from cogs5e.models.sheet import Attack
 from cogsmisc.stats import Stats
-from utils import targetutils
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS
 from utils.functions import a_or_an, camel_to_title, search_and_select, verbose_stat

@@ -119,7 +119,7 @@ class Skill:
         if min_val:
             base = f"{base}mi{min_val}"
 
-        if mod_override is not None:
+        if mod_override is None:
             out = f"{base}{self.value:+}"
         else:
             out = f"{base}{mod_override:+}"

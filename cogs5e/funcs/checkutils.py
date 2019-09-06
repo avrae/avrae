@@ -58,9 +58,9 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
     # dc
     dc = args.last('dc', type_=int)
     # ro
-    ro = args.last('ro')
+    ro = args.last('ro', type_=int)
     # mc
-    mc = args.last('mc')
+    mc = args.last('mc', type_=int)
 
     desc_out = []
     num_successes = 0

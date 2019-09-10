@@ -297,6 +297,7 @@ class Character(Spellcaster):
 
     async def set_active(self, ctx):
         """Sets the character as active."""
+        self._active = True
         await ctx.bot.mdb.characters.update_many(
             {"owner": str(ctx.author.id), "active": True},
             {"$set": {"active": False}}

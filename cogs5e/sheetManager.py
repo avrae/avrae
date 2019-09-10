@@ -431,7 +431,7 @@ class SheetManager(commands.Cog):
         url = old_character.upstream
         args = argparse(args)
 
-        prefixes = 'dicecloud-', 'pdf-', 'google-', 'beyond-'
+        prefixes = 'dicecloud-', 'google-', 'beyond-'
         _id = url[:]
         for p in prefixes:
             if url.startswith(p):

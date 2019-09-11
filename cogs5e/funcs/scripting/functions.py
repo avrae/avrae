@@ -8,9 +8,9 @@ import simpleeval
 from simpleeval import IterableTooLong
 
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.scripting.helpers import MAX_ITER_LENGTH
 from cogs5e.models.errors import AvraeException
 from utils.argparser import argparse
+from . import MAX_ITER_LENGTH
 
 
 # roll()

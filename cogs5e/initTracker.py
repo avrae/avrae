@@ -972,6 +972,8 @@ class InitTracker(commands.Cog):
         is_player = isinstance(combatant, PlayerCombatant)
         if is_player and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
+        else:
+            args = await scripting.parse_no_char(args, ctx)
         args = argparse(args)
 
         # handle old targeting method
@@ -1105,6 +1107,8 @@ class InitTracker(commands.Cog):
 
         if is_character and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
+        else:
+            args = await scripting.parse_no_char(args, ctx)
         args = argparse(args)
 
         if not args.last('i', type_=bool):

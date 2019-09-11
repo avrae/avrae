@@ -1,10 +1,7 @@
-import re
+import asyncio
 
 from cogs5e.models.errors import InvalidArgument
 from utils.argparser import argquote, argsplit
-
-SCRIPTING_RE = re.compile(r'(?<!\\)(?:(?:{{(.+?)}})|(?:<([^\s]+)>)|(?:(?<!{){(.+?)}))')
-MAX_ITER_LENGTH = 10000
 
 
 async def get_uvars(ctx):
@@ -92,3 +89,18 @@ async def parse_snippets(args, ctx) -> str:
         elif ' ' in arg:
             args[index] = argquote(arg)
     return " ".join(args)
+
+
+async def parse_no_char(cstr, ctx):
+    """
+    Parses cvars and whatnot without an active character.
+    :param cstr: The string to parse.
+    :param ctx: The Context to parse the string in.
+    :return: The parsed string.
+    :rtype: str
+    """
+    from .evaluators import ScriptingEvaluator
+    evaluator = await ScriptingEvaluator.new(ctx)
+    out = await asyncio.get_event_loop().run_in_executor(None, evaluator.parse, cstr)
+    await evaluator.run_commits()
+    return out

@@ -24,6 +24,21 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
         return caster, targets, None
 
     # get targets as Combatants
+    targets = await definitely_combat(combat, args, allow_groups)
+
+    # get caster as Combatant if caster in combat
+    if isinstance(caster, Character):
+        caster = next(
+            (c for c in combat.get_combatants() if getattr(c, 'character_id', None) == caster.upstream),
+            caster
+        )
+    return caster, targets, combat
+
+
+async def definitely_combat(combat, args, allow_groups=True):
+    target_args = args.get('t')
+    targets = []
+
     for i, t in enumerate(target_args):
         contextargs = None
         if '|' in t:
@@ -42,10 +57,4 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
                 args.add_context(target, contextargs)
             targets.append(target)
 
-    # get caster as Combatant if caster in combat
-    if isinstance(caster, Character):
-        caster = next(
-            (c for c in combat.get_combatants() if getattr(c, 'character_id', None) == caster.upstream),
-            caster
-        )
-    return caster, targets, combat
+    return targets

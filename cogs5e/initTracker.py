@@ -841,7 +841,8 @@ class InitTracker(commands.Cog):
     async def attack(self, ctx, atk_name, *, args=''):
         """Rolls an attack against another combatant.
         __Valid Arguments__
-        -t <target> - Specifies targets (chainable).
+        -t "<target>" - Sets targets for the attack. You can pass as many as needed.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
 
         *adv/dis* - Give advantage or disadvantage to the attack roll(s).
         *ea* - Elven Accuracy, double advantage on the attack roll.
@@ -916,7 +917,8 @@ class InitTracker(commands.Cog):
     async def aoo(self, ctx, combatant_name, atk_name, *, args=''):
         """Rolls an attack of opportunity against another combatant.
         __Valid Arguments__
-        -t <target> - Specifies targets (chainable).
+        -t "<target>" - Sets targets for the attack. You can pass as many as needed.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
 
         *adv/dis* - Give advantage or disadvantage to the attack roll(s).
         *ea* - Elven Accuracy, double advantage on the attack roll.
@@ -1037,7 +1039,9 @@ class InitTracker(commands.Cog):
     async def cast(self, ctx, spell_name, *, args=''):
         """Casts a spell against another combatant.
         __Valid Arguments__
-        -t <target> - Specifies one or more combatant's to target, chainable (e.g., "-t or1 -t or2").
+        -t "<target>" - Sets targets for the spell. You can pass as many as needed.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
+
         -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
         -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.
@@ -1059,7 +1063,9 @@ class InitTracker(commands.Cog):
     async def reactcast(self, ctx, combatant_name, spell_name, *, args=''):
         """Casts a spell against another combatant, as a reaction.
         __Valid Arguments__
-        -t <target> - Specifies one or more combatant's to target, chainable (e.g., "-t or1 -t or2").
+        -t "[target]" - Sets targets for the spell. You can pass as many as needed.
+        -t "[target]|[args]" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
+
         -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
         -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.

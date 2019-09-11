@@ -132,6 +132,9 @@ class Dice(commands.Cog):
     async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
         """Rolls a monster's attack.
         __Valid Arguments__
+        -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
+
         adv/dis
         -ac [target ac]
         -b [to hit bonus]

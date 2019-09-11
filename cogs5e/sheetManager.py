@@ -65,6 +65,9 @@ class SheetManager(commands.Cog):
     async def attack(self, ctx, atk_name=None, *, args: str = ''):
         """Rolls an attack for the current active character.
         __Valid Arguments__
+        -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
+
         *adv/dis*
         *ea* (Elven Accuracy double advantage)
         

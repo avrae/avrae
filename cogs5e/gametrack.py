@@ -512,7 +512,7 @@ class GameTrack(commands.Cog):
         else:
             spell = await select_spell_full(ctx, spell_name)
 
-        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
+        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         result = await spell.cast(ctx, caster, targets, args, combat=combat)
 
         embed = result['embed']

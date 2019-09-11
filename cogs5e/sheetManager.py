@@ -100,7 +100,7 @@ class SheetManager(commands.Cog):
         char: Character = await Character.from_ctx(ctx)
         args = await self.new_arg_stuff(args, ctx, char)
 
-        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
+        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         if isinstance(caster, Character):
             attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
         else:  # caster is combatant

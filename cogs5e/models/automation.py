@@ -327,6 +327,7 @@ class Target(Effect):
 
     def run_effects(self, autoctx):
         args = autoctx.args
+        args.set_context(autoctx.target.target)
         rr = min(args.last('rr', 1, int), 25)
 
         total_damage = 0

@@ -146,25 +146,23 @@ class InitTracker(commands.Cog):
             return
 
         if not place:
-            init = random.randint(1, 20) + modifier
+            init_roll = roll(f"1d20+{modifier}", inline=True)
+            init = init_roll.total
+            init_roll_skeleton = init_roll.skeleton
         else:
             init = modifier
             modifier = 0
+            init_roll_skeleton = str(init)
 
         me = Combatant.default(name, controller, init, Skill(modifier), hp, hp, ac, private, resists, ctx, combat)
 
         if group is None:
             combat.add_combatant(me)
-            await ctx.send(
-                "{}\n{} was added to combat with initiative {}.".format(f'<@{controller}>', name, init),
-                delete_after=10)
+            await ctx.send(f"{name} was added to combat with initiative {init_roll_skeleton}.", delete_after=10)
         else:
             grp = combat.get_group(group, create=init)
             grp.add_combatant(me)
-            await ctx.send(
-                "{}\n{} was added to combat with initiative {} as part of group {}.".format(me.controller_mention(),
-                                                                                            name, grp.init,
-                                                                                            grp.name),
+            await ctx.send(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.",
                 delete_after=10)
 
         await combat.final()
@@ -989,8 +987,11 @@ class InitTracker(commands.Cog):
 
         # old single-target
         try:
-            target = await combat.select_combatant(target_name, "Select the target.")
-            targets.append(target)
+            target = await combat.select_combatant(target_name, "Select the target.", select_group=True)
+            if isinstance(target, CombatantGroup):
+                targets.extend(target.get_combatants())
+            else:
+                targets.append(target)
         except SelectionException:
             return await ctx.send("Target not found.")
 

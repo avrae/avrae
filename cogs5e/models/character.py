@@ -118,6 +118,19 @@ class Character(Spellcaster):
         cls._cache[owner_id, character_id] = inst
         return inst
 
+    @classmethod
+    def from_bot_and_ids_sync(cls, bot, owner_id, character_id):
+        if (owner_id, character_id) in cls._cache:
+            # read from cache
+            return cls._cache[owner_id, character_id]
+        character = bot.mdb.characters.delegate.find_one({"owner": owner_id, "upstream": character_id})
+        if character is None:
+            raise NoCharacter()
+        # write to cache
+        inst = cls.from_dict(character)
+        cls._cache[owner_id, character_id] = inst
+        return inst
+
     # ---------- Serialization ----------
     def to_dict(self):
         return {
@@ -223,6 +236,13 @@ class Character(Spellcaster):
         await evaluator.run_commits()
 
         return out
+
+    def parse_math(self, varstr):
+        """Parsed a cvar expression in a MathEvaluator, similar to Dicecloud parsing.
+        :param varstr - the expression to evaluate.
+        :returns str - the resulting expression."""
+        evaluator = MathEvaluator.with_character(self)
+        return evaluator.parse(varstr)
 
     def evaluate_math(self, varstr):
         """Evaluates a cvar expression in a MathEvaluator.
@@ -493,19 +513,32 @@ class Character(Spellcaster):
         Updates certain attributes to match an old character's.
         Currently updates settings, overrides, cvars, consumables, overriden spellbook spells,
         hp, temp hp, death saves, used spell slots
+        and caches the new character.
         :type old_character Character
         """
+        # top level things
         self.options = old_character.options
         self.overrides = old_character.overrides
         self.cvars = old_character.cvars
 
+        # consumables
         existing_cons_names = set(con.name.lower() for con in self.consumables)
         self.consumables.extend(con for con in old_character.consumables if con.name.lower() not in existing_cons_names)
 
+        # overridden spells
         self.spellbook.spells.extend(self.overrides.spells)
+
+        # recalculate overridden attacks
+        for atk in self.overrides.attacks:
+            atk.update(self)
+
+        # tracking
         self._hp = old_character._hp
         self._temp_hp = old_character._temp_hp
         self.spellbook.slots = old_character.spellbook.slots
+
+        if (self.owner, self.upstream) in Character._cache:
+            Character._cache[self.owner, self.upstream] = self
 
     def get_sheet_embed(self):
         embed = EmbedWithCharacter(self)
@@ -559,4 +592,3 @@ class Character(Spellcaster):
                                   f"Please run !update.")
 
         return embed
-

@@ -158,7 +158,7 @@ class SheetManager(commands.Cog):
         parsed = argparse(args)
 
         attack = Attack.new(character, name, bonus_calc=parsed.join('b', '+'),
-                            damage=parsed.join('d', '+'), details=parsed.join('desc', '\n'))
+                            damage_calc=parsed.join('d', '+'), details=parsed.join('desc', '\n'))
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:
@@ -613,10 +613,10 @@ class SheetManager(commands.Cog):
         character: Character = await Character.from_ctx(ctx)
 
         if value is None:  # display value
-            cvar = character.cvars.get(name)
+            cvar = character.get_scope_locals().get(name)
             if cvar is None:
-                cvar = 'Not defined.'
-            return await ctx.send(f'**{name}**:\n{cvar}')
+                return await ctx.send("This cvar is not defined.")
+            return await ctx.send(f'**{name}**: ```\n{cvar}\n```')
 
         if not name.isidentifier():
             return await ctx.send("Cvar names must be identifiers "

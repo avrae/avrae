@@ -3,12 +3,14 @@ class Attack:
     A simple attack model. Does not support full automation (TODO).
     """
 
-    def __init__(self, name, bonus: int = None, damage: str = None, details: str = None, bonus_calc: str = None):
+    def __init__(self, name, bonus: int = None, damage: str = None, details: str = None, bonus_calc: str = None,
+                 damage_calc: str = None):
         self.name = name
         self.bonus = bonus
         self.damage = damage
         self.details = details
         self.bonus_calc = bonus_calc
+        self.damage_calc = damage_calc
 
     @classmethod
     def from_dict(cls, d):
@@ -26,17 +28,29 @@ class Attack:
 
     def to_dict(self):
         return {"name": self.name, "bonus": self.bonus, "damage": self.damage, "details": self.details,
-                "bonus_calc": self.bonus_calc}
+                "bonus_calc": self.bonus_calc, "damage_calc": self.damage_calc}
 
     # ---------- main funcs ----------
     @classmethod
-    def new(cls, character, name, bonus_calc: str = None, damage: str = None, details: str = None):
+    def new(cls, character, name, bonus_calc: str = None, damage_calc: str = None, details: str = None):
         """Creates a new attack for a character."""
         if bonus_calc:
             bonus = character.evaluate_math(bonus_calc)
         else:
             bonus = None
-        return cls(name, bonus, damage, details, bonus_calc)
+
+        if damage_calc:
+            damage = character.parse_math(damage_calc)
+        else:
+            damage = None
+        return cls(name, bonus, damage, details, bonus_calc, damage_calc)
+
+    def update(self, character):
+        """Updates calculations to match a character's stats."""
+        if self.bonus_calc is not None:
+            self.bonus = character.evaluate_math(self.bonus_calc)
+        if self.damage_calc is not None:
+            self.damage = character.parse_math(self.damage_calc)
 
     def to_old(self):
         bonus = None

@@ -25,7 +25,7 @@ class Core(commands.Cog):
         self.start_time = time.monotonic()
 
     @commands.command(hidden=True)
-    async def avatar(self, ctx, user: discord.User = None):
+    async def avatar(self, ctx, user: discord.Member = None):
         """Gets a user's avatar.
         Usage: !avatar <USER>"""
         if user is None:

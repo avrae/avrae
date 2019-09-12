@@ -27,7 +27,7 @@ dicecloud_pass = os.environ['DICECLOUD_PASS']
 dicecloud_token = os.environ['DICECLOUD_TOKEN']
 
 # Discord Bot List token (only needed in prod)
-dbl_token = os.environ['DBL_TOKEN']
+dbl_token = os.getenv('DBL_TOKEN')
 
 
 # - Should probably fix the code to not demand these

@@ -13,13 +13,13 @@ from discord.ext import commands
 
 from cogs5e.funcs import scripting
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import get_castable_spell, get_spell_choices, select_spell_full
+from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
 from utils import targetutils
 from utils.argparser import argparse
-from utils.functions import confirm, search_and_select
+from utils.functions import confirm, search, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -281,15 +281,27 @@ class GameTrack(commands.Cog):
         embed.add_field(name="DC", value=str(character.spellbook.dc))
         embed.add_field(name="Spell Attack Bonus", value=str(character.spellbook.sab))
         embed.add_field(name="Spell Slots", value=character.get_remaining_slots_str() or "None")
+
+        # dynamic help flags
+        flag_show_multiple_source_help = False
+        flag_show_homebrew_help = False
+
         spells_known = collections.defaultdict(lambda: [])
         choices = await get_spell_choices(ctx)
         for spell_ in character.spellbook.spells:
-            spell = await get_castable_spell(ctx, spell_.name, choices, strict=True)
-            if spell is None:
-                spells_known['unknown'].append(f"*{spell_.name}*")
+            results, strict = search(choices, spell_.name, lambda sp: sp.name, strict=True)
+            if not strict:
+                if len(results) > 1:
+                    spells_known['unknown'].append(f"*{spell_.name} ({'*' * len(results)})*")
+                    flag_show_multiple_source_help = True
+                else:
+                    spells_known['unknown'].append(f"*{spell_.name}*")
+                flag_show_homebrew_help = True
             else:
+                spell = results
                 if spell.source == 'homebrew':
                     formatted = f"*{spell.name}*"
+                    flag_show_homebrew_help = True
                 else:
                     formatted = spell.name
                 spells_known[str(spell.level)].append(formatted)
@@ -301,6 +313,17 @@ class GameTrack(commands.Cog):
             if spells:
                 spells.sort()
                 embed.add_field(name=level_name.get(level, "Unknown"), value=', '.join(spells))
+
+        # dynamic help
+        footer_out = []
+        if flag_show_homebrew_help:
+            footer_out.append("An italicized spell indicates that the spell is homebrew.")
+        if flag_show_multiple_source_help:
+            footer_out.append("Asterisks after a spell indicates that the spell is being provided by multiple sources.")
+
+        if footer_out:
+            embed.set_footer(text=' '.join(footer_out))
+
         await ctx.send(embed=embed)
 
     @spellbook.command(name='add')

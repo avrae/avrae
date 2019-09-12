@@ -35,9 +35,6 @@ You'll need to create a few files first.
 You'll also need to create a Google Drive Service Account. You can find instructions on how to do this [here](https://gspread.readthedocs.io/en/latest/oauth2.html#using-signed-credentials).
 Follow steps 1-3 in the **Signed Credentials** portion. Rename the JSON `avrae-google.json` and put it in the project root.
 
-###### Temp Folders
-You will need to create a folder named `temp`.
-
 ##### Actually Running Avrae
 ###### Redis
 You will need to run a Redis instance to serve as a high-performance cache. Download [Redis 4.0](https://redis.io/download) and run a redis server locally **before** launching Avrae.

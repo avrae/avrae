@@ -479,21 +479,24 @@ class GameTrack(commands.Cog):
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *, args=''):
         """Casts a spell.
-        __Valid Arguments:__
+        __Valid Arguments__
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
-        -l [level] - Specifies the level to cast the spell at.
+        -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.
         **__Save Spells__**
-        -dc [Save DC] - Default: Pulls a cvar called `dc`.
-        -save [Save type] - Default: The spell's default save.
-        -d [damage] - adds additional damage.
+        -dc <Save DC> - Overrides the spell save DC.
+        -save <Save type> - Overrides the spell save type.
+        -d <damage> - Adds additional damage.
+        pass - Target automatically succeeds save.
+        fail - Target automatically fails save.
+        adv/dis - Target makes save at advantage/disadvantage.
         **__Attack Spells__**
         See `!a`.
         **__All Spells__**
-        -phrase [phrase] - adds flavor text.
-        -title [title] - changes the title of the cast. Replaces [sname] with spell name.
-        -dur [duration] - changes the duration of any effect applied by the spell.
-        -mod [spellcasting mod] - sets the value of the spellcasting ability modifier.
+        -phrase <phrase> - adds flavor text.
+        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
+        -dur <duration> - changes the duration of any effect applied by the spell.
+        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
         int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
         """
         try:

@@ -1044,21 +1044,24 @@ class InitTracker(commands.Cog):
         -t "<target>" - Sets targets for the spell. You can pass as many as needed.
         -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
 
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.
         **__Save Spells__**
-        -dc <save dc> - Changes the DC of the save.
-        -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.
+        -dc <Save DC> - Overrides the spell save DC.
+        -save <Save type> - Overrides the spell save type.
         -d <damage> - Adds additional damage.
-        adv/dis - Forces all targets to make saves at advantage or disadvantage.
+        pass - Target automatically succeeds save.
+        fail - Target automatically fails save.
+        adv/dis - Target makes save at advantage/disadvantage.
         **__Attack Spells__**
-        See `!init attack`.
+        See `!a`.
         **__All Spells__**
-        -phrase <phrase> - Adds flavor text.
-        -title <title> - Changes the title of the cast. Replaces [sname] with spell name.
-        -dur <duration> - Changes the duration of the spell effects, in rounds.
-        int/wis/cha - Uses a different ability score for spell DC and attack bonus."""
+        -phrase <phrase> - adds flavor text.
+        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
+        -dur <duration> - changes the duration of any effect applied by the spell.
+        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
+        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)"""
         return await self._cast(ctx, None, spell_name, args)
 
     @init.command(aliases=['rc'])
@@ -1068,21 +1071,24 @@ class InitTracker(commands.Cog):
         -t "[target]" - Sets targets for the spell. You can pass as many as needed.
         -t "[target]|[args]" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
 
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.
         **__Save Spells__**
-        -dc <save dc> - Changes the DC of the save. Default: Pulls a cvar called `dc`.
-        -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.
+        -dc <Save DC> - Overrides the spell save DC.
+        -save <Save type> - Overrides the spell save type.
         -d <damage> - Adds additional damage.
-        adv/dis - Forces all targets to make saves at advantage or disadvantage.
+        pass - Target automatically succeeds save.
+        fail - Target automatically fails save.
+        adv/dis - Target makes save at advantage/disadvantage.
         **__Attack Spells__**
-        See `!init attack`.
+        See `!a`.
         **__All Spells__**
-        -phrase <phrase> - Adds flavor text.
-        -title <title> - Changes the title of the cast. Replaces [sname] with spell name.
-        -dur <duration> - Changes the duration of the spell effects, in rounds.
-        int/wis/cha - Uses a different ability score for spell DC and attack bonus."""
+        -phrase <phrase> - adds flavor text.
+        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
+        -dur <duration> - changes the duration of any effect applied by the spell.
+        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
+        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)"""
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     @staticmethod

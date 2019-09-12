@@ -520,6 +520,9 @@ class Save(Effect):
     def run(self, autoctx):
         super(Save, self).run(autoctx)
         save = autoctx.args.last('save') or self.stat
+        auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
+        auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
+
         dc_override = None
         if self.dc:
             try:
@@ -541,10 +544,18 @@ class Save(Effect):
 
         autoctx.meta_queue(f"**DC**: {dc}")
         if not autoctx.target.is_simple:
-            saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
-            save_roll = roll(saveroll, rollFor='{} Save'.format(save_skill[:3].upper()), inline=True, show_blurbs=False)
-            is_success = save_roll.total >= dc
-            autoctx.queue(save_roll.result + ("; Success!" if is_success else "; Failure!"))
+            save_blurb = f'{save_skill[:3].upper()} Save'
+            if auto_pass:
+                is_success = True
+                autoctx.queue(f"**{save_blurb}:** Automatic success!")
+            elif auto_fail:
+                is_success = False
+                autoctx.queue(f"**{save_blurb}:** Automatic failure!")
+            else:
+                saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
+                save_roll = roll(saveroll, rollFor=save_blurb, inline=True, show_blurbs=False)
+                is_success = save_roll.total >= dc
+                autoctx.queue(save_roll.result + ("; Success!" if is_success else "; Failure!"))
         else:
             autoctx.meta_queue('{} Save'.format(save_skill[:3].upper()))
             is_success = False

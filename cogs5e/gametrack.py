@@ -495,6 +495,7 @@ class GameTrack(commands.Cog):
         **__All Spells__**
         -phrase <phrase> - adds flavor text.
         -title <title> - changes the title of the cast. Replaces [sname] with spell name.
+        -thumb <url> - adds an image to the cast.
         -dur <duration> - changes the duration of any effect applied by the spell.
         -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
         int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
@@ -523,6 +524,8 @@ class GameTrack(commands.Cog):
         embed.set_thumbnail(url=char.image)
 
         add_fields_from_args(embed, args.get('f'))
+        if 'thumb' in args:
+            embed.set_thumbnail(url=args.last('thumb'))
 
         # save changes: combat state, spell slot usage
         await char.commit(ctx)

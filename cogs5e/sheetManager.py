@@ -93,6 +93,7 @@ class SheetManager(commands.Cog):
         
         -phrase [flavor text]
         -title [title] *note: [name] and [aname] will be replaced automatically*
+        -thumb [url]
         -f "Field Title|Field Text" (see !embed)
         [user snippet]
 
@@ -124,6 +125,8 @@ class SheetManager(commands.Cog):
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)
+        if 'thumb' in args:
+            embed.set_thumbnail(url=args.last('thumb'))
 
         await ctx.send(embed=embed)
         try:

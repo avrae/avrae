@@ -159,7 +159,7 @@ class Dice(commands.Cog):
         args = argparse(args)
         if not args.last('h', type_=bool):
             name = monster_name
-            image = args.get('image') or monster.get_image_url()
+            image = args.get('thumb') or monster.get_image_url()
         else:
             name = "An unknown creature"
             image = None

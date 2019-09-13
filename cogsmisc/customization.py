@@ -114,7 +114,7 @@ class Customization(commands.Cog):
                     if char:
                         message.content = await char.parse_cvars(message.content, ctx)
                     else:
-                        message.content = await self.parse_no_char(message.content, ctx)
+                        message.content = await scripting.parse_no_char(message.content, ctx)
                 except EvaluationError as err:
                     e = err.original
                     if not isinstance(e, AvraeException):
@@ -164,19 +164,6 @@ class Customization(commands.Cog):
 
         quoted_args = ' '.join(map(argquote, tempargs))
         return f"{prefix}{new_command} {quoted_args}".strip()
-
-    async def parse_no_char(self, cstr, ctx):
-        """
-        Parses cvars and whatnot without an active character.
-        :param cstr: The string to parse.
-        :param ctx: The Context to parse the string in.
-        :return: The parsed string.
-        :rtype: str
-        """
-        evaluator = await ScriptingEvaluator.new(ctx)
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.parse, cstr)
-        await evaluator.run_commits()
-        return out
 
     @commands.group(invoke_without_command=True)
     async def alias(self, ctx, alias_name=None, *, cmds=None):

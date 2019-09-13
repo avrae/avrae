@@ -8,9 +8,10 @@ from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, Si
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
 from cogs5e.models.sheet import CustomCounter
+from . import MAX_ITER_LENGTH, SCRIPTING_RE
 from .combat import SimpleCombat
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
-from .helpers import MAX_ITER_LENGTH, SCRIPTING_RE, get_uvars, update_uvars
+from .helpers import get_uvars, update_uvars
 from .legacy import LegacyRawCharacter
 
 if 'format_map' not in simpleeval.DISALLOW_METHODS:

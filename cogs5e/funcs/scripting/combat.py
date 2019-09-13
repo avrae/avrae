@@ -69,29 +69,21 @@ class SimpleCombatant:
         self._hidden = hidestats and self._combatant.isPrivate
         self.type = "combatant"
 
-        if not self._hidden:
-            self.ac = self._combatant.ac
-            if self._combatant.hp is not None:
-                self.hp = self._combatant.hp
-            else:
-                self.hp = None
-            self.maxhp = self._combatant.hpMax
-            self.initmod = int(self._combatant.init_skill)
-            self.temphp = self._combatant.temphp
-            self.resists = self._combatant.resists
-            self.attacks = self._combatant.attacks
+        self.ac = self._combatant.ac
+        if self._combatant.hp is not None:
+            self.hp = self._combatant.hp
         else:
-            self.ac = None
             self.hp = None
-            self.maxhp = None
-            self.initmod = None
-            self.temphp = None
-            self.resists = None
-            self.attacks = None
+        self.maxhp = self._combatant.hpMax
+        self.initmod = int(self._combatant.init_skill)
+        self.temphp = self._combatant.temphp
+        self.resists = self._combatant.resists
+        self.attacks = self._combatant.attacks
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
+        # deprecated
         if self._combatant.hp is not None and self._combatant.hpMax:
             self.ratio = self._combatant.hp / self._combatant.hpMax
         else:
@@ -126,7 +118,7 @@ class SimpleCombatant:
         return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,
                                 [part.to_dict() for part in save_roll.raw_dice.parts], save_roll)
 
-    def wouldhit(self, to_hit: int):
+    def wouldhit(self, to_hit: int):  # deprecated
         if self._combatant.ac:
             return to_hit >= self._combatant.ac
         return None

@@ -4,18 +4,17 @@ import re
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs import scripting
+from cogs5e.funcs import checkutils, scripting, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.models import embeds
 from cogs5e.models.automation import Automation
-from cogs5e.models.monster import Monster, SKILL_MAP
+from cogs5e.models.monster import Monster
 from cogs5e.models.sheet import Attack
 from cogsmisc.stats import Stats
-from utils import targetutils
 from utils.argparser import argparse
-from utils.constants import SKILL_NAMES, STAT_ABBREVIATIONS
-from utils.functions import a_or_an, camel_to_title, search_and_select, verbose_stat
+from utils.constants import SKILL_NAMES
+from utils.functions import a_or_an, search_and_select, try_delete
 
 
 class Dice(commands.Cog):
@@ -65,10 +64,7 @@ class Dice(commands.Cog):
             rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
         res = roll(rollStr, adv=adv)
         out = res.result
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
         outStr = ctx.author.mention + '  :game_die:\n' + out
         if len(outStr) > 1999:
             await ctx.send(
@@ -99,10 +95,7 @@ class Dice(commands.Cog):
         else:
             outStr = "Rolling {} iterations...\n[Output truncated due to length]\n".format(iterations) + \
                      '{} total.'.format(sum(o.total for o in out))
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
         await ctx.send(ctx.author.mention + '\n' + outStr)
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
@@ -131,10 +124,7 @@ class Dice(commands.Cog):
             outStr = "Rolling {} iterations, DC {}...\n[Output truncated due to length]\n".format(iterations,
                                                                                                   dc) + '{} successes.'.format(
                 str(successes))
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
         await ctx.send(ctx.author.mention + '\n' + outStr)
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
@@ -142,6 +132,9 @@ class Dice(commands.Cog):
     async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
         """Rolls a monster's attack.
         __Valid Arguments__
+        -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
+
         adv/dis
         -ac [target ac]
         -b [to hit bonus]
@@ -155,10 +148,7 @@ class Dice(commands.Cog):
         if atk_name is None or atk_name == 'list':
             return await ctx.invoke(self.monster_atk_list, monster_name)
 
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
         monster = await select_monster_full(ctx, monster_name)
         attacks = monster.attacks
@@ -169,7 +159,7 @@ class Dice(commands.Cog):
         args = argparse(args)
         if not args.last('h', type_=bool):
             name = monster_name
-            image = args.get('image') or monster.get_image_url()
+            image = args.get('thumb') or monster.get_image_url()
         else:
             name = "An unknown creature"
             image = None
@@ -187,7 +177,7 @@ class Dice(commands.Cog):
         if image:
             embed.set_thumbnail(url=image)
 
-        caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args.get('t'))
+        caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args)
         await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
         if combat:
             await combat.final()
@@ -203,10 +193,7 @@ class Dice(commands.Cog):
 
     @monster_atk.command(name="list")
     async def monster_atk_list(self, ctx, monster_name):
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
         monster = await select_monster_full(ctx, monster_name)
         monster_name = monster.get_title_name()
@@ -220,20 +207,21 @@ class Dice(commands.Cog):
     async def monster_check(self, ctx, monster_name, check, *args):
         """Rolls a check for a monster.
         __Valid Arguments__
-        adv/dis
-        -b [conditional bonus]
+        *adv/dis*
+        *-b [conditional bonus]*
         -phrase [flavor text]
         -title [title] *note: [name] and [cname] will be replaced automatically*
         -dc [dc]
         -rr [iterations]
         str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
-        -h (hides name and image of monster)"""
+        -h (hides name and image of monster)
+
+        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one check.
+        """
 
         monster: Monster = await select_monster_full(ctx, monster_name)
 
-        monster_name = monster.get_title_name()
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
-        skill_name = camel_to_title(skill_key)
 
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
@@ -241,55 +229,7 @@ class Dice(commands.Cog):
         args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
 
-        adv = args.adv(boolwise=True)
-        b = args.join('b', '+')
-        phrase = args.join('phrase', '\n')
-        iterations = min(args.last('rr', 1, int), 25)
-        dc = args.last('dc', type_=int)
-        num_successes = 0
-
-        skill = monster.skills[skill_key]
-        mod = skill.value
-        formatted_d20 = skill.d20(base_adv=adv, base_only=True)
-
-        if any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
-            base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
-            mod = mod - monster.get_mod(SKILL_MAP[skill_key]) + monster.get_mod(base)
-            skill_name = f"{verbose_stat(base)} ({skill_name})"
-
-        skill_name = skill_name.title()
-        if not args.last('h', type_=bool):
-            default_title = '{} makes {} check!'.format(monster_name, a_or_an(skill_name))
-        else:
-            default_title = f"An unknown creature makes {a_or_an(skill_name)} check!"
-
-        if b is not None:
-            roll_str = formatted_d20 + '{:+}'.format(mod) + '+' + b
-        else:
-            roll_str = formatted_d20 + '{:+}'.format(mod)
-
-        embed.title = args.last('title', '') \
-                          .replace('[name]', monster_name) \
-                          .replace('[cname]', skill_name) \
-                      or default_title
-
-        if iterations > 1:
-            embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
-            for i in range(iterations):
-                result = roll(roll_str, inline=True)
-                if dc and result.total >= dc:
-                    num_successes += 1
-                embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
-            if dc:
-                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
-        else:
-            result = roll(roll_str, inline=True)
-            if dc:
-                embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
-            embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
-                '\n*' + phrase + '*' if phrase is not None else '')
-
-        embeds.add_fields_from_args(embed, args.get('f'))
+        checkutils.run_check(skill_key, monster, args, embed)
 
         if args.last('image') is not None:
             embed.set_thumbnail(url=args.last('image'))
@@ -300,10 +240,7 @@ class Dice(commands.Cog):
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @commands.command(aliases=['ms'])
     async def monster_save(self, ctx, monster_name, save_stat, *args):
@@ -318,60 +255,14 @@ class Dice(commands.Cog):
         -h (hides name and image of monster)"""
 
         monster: Monster = await select_monster_full(ctx, monster_name)
-        monster_name = monster.get_title_name()
-
-        try:
-            save = monster.saves.get(save_stat)
-            save_name = f"{verbose_stat(save_stat[:3]).title()} Save"
-        except ValueError:
-            return await ctx.send('That\'s not a valid save.')
 
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
 
         args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
-        adv = args.adv(boolwise=True)
-        b = args.join('b', '+')
-        phrase = args.join('phrase', '\n')
-        iterations = min(args.last('rr', 1, int), 25)
-        dc = args.last('dc', type_=int)
-        num_successes = 0
 
-        formatted_d20 = save.d20(base_adv=adv)
-
-        if b:
-            roll_str = f"{formatted_d20}+{b}"
-        else:
-            roll_str = formatted_d20
-
-        if not args.last('h', type_=bool):
-            default_title = f'{monster_name} makes {a_or_an(save_name)}!'
-        else:
-            default_title = f"An unknown creature makes {a_or_an(save_name)}!"
-
-        embed.title = args.last('title', '') \
-                          .replace('[name]', monster_name) \
-                          .replace('[sname]', save_name) \
-                      or default_title
-
-        if iterations > 1:
-            embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
-            for i in range(iterations):
-                result = roll(roll_str, inline=True)
-                if dc and result.total >= dc:
-                    num_successes += 1
-                embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
-            if dc:
-                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failues")
-        else:
-            result = roll(roll_str, inline=True)
-            if dc:
-                embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
-            embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
-                '\n*' + phrase + '*' if phrase is not None else '')
-
-        embeds.add_fields_from_args(embed, args.get('f'))
+        checkutils.run_save(save_stat, monster, args, embed)
 
         if args.last('image') is not None:
             embed.set_thumbnail(url=args.last('image'))
@@ -382,10 +273,7 @@ class Dice(commands.Cog):
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
 
 def setup(bot):

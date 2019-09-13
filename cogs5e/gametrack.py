@@ -11,13 +11,12 @@ import logging
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs import scripting
+from cogs5e.funcs import scripting, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
-from utils import targetutils
 from utils.argparser import argparse
 from utils.functions import confirm, search, search_and_select
 
@@ -480,21 +479,25 @@ class GameTrack(commands.Cog):
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *, args=''):
         """Casts a spell.
-        __Valid Arguments:__
+        __Valid Arguments__
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
-        -l [level] - Specifies the level to cast the spell at.
+        -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.
         **__Save Spells__**
-        -dc [Save DC] - Default: Pulls a cvar called `dc`.
-        -save [Save type] - Default: The spell's default save.
-        -d [damage] - adds additional damage.
+        -dc <Save DC> - Overrides the spell save DC.
+        -save <Save type> - Overrides the spell save type.
+        -d <damage> - Adds additional damage.
+        pass - Target automatically succeeds save.
+        fail - Target automatically fails save.
+        adv/dis - Target makes save at advantage/disadvantage.
         **__Attack Spells__**
         See `!a`.
         **__All Spells__**
-        -phrase [phrase] - adds flavor text.
-        -title [title] - changes the title of the cast. Replaces [sname] with spell name.
-        -dur [duration] - changes the duration of any effect applied by the spell.
-        -mod [spellcasting mod] - sets the value of the spellcasting ability modifier.
+        -phrase <phrase> - adds flavor text.
+        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
+        -thumb <url> - adds an image to the cast.
+        -dur <duration> - changes the duration of any effect applied by the spell.
+        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
         int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
         """
         try:
@@ -513,7 +516,7 @@ class GameTrack(commands.Cog):
         else:
             spell = await select_spell_full(ctx, spell_name)
 
-        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
+        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         result = await spell.cast(ctx, caster, targets, args, combat=combat)
 
         embed = result['embed']
@@ -521,6 +524,8 @@ class GameTrack(commands.Cog):
         embed.set_thumbnail(url=char.image)
 
         add_fields_from_args(embed, args.get('f'))
+        if 'thumb' in args:
+            embed.set_thumbnail(url=args.last('thumb'))
 
         # save changes: combat state, spell slot usage
         await char.commit(ctx)

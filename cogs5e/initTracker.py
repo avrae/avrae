@@ -8,18 +8,18 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
-from cogs5e.funcs import scripting
+from cogs5e.funcs import scripting, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.models import embeds
 from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter, add_fields_from_args
+from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet import Attack, Skill
 from cogsmisc.stats import Stats
-from utils.argparser import argparse
+from utils.argparser import argparse, argsplit
 from utils.functions import a_or_an, confirm, search_and_select
 
 log = logging.getLogger(__name__)
@@ -163,7 +163,7 @@ class InitTracker(commands.Cog):
             grp = combat.get_group(group, create=init)
             grp.add_combatant(me)
             await ctx.send(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.",
-                delete_after=10)
+                           delete_after=10)
 
         await combat.final()
 
@@ -838,40 +838,43 @@ class InitTracker(commands.Cog):
         await combat.final()
 
     @init.group(aliases=['a'], invoke_without_command=True)
-    async def attack(self, ctx, target_name, atk_name, *, args=''):
+    async def attack(self, ctx, atk_name, *, args=''):
         """Rolls an attack against another combatant.
         __Valid Arguments__
-        adv/dis - Give advantage or disadvantage to the attack roll(s).
-        adv#/dis# - Give advantage or disadvantage to the first # attack roll(s).
-        ea - Elven Accuracy, double advantage on the attack roll.
+        -t "<target>" - Sets targets for the attack. You can pass as many as needed.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
 
-        -b <bonus> - Adds a bonus to hit.
+        *adv/dis* - Give advantage or disadvantage to the attack roll(s).
+        *ea* - Elven Accuracy, double advantage on the attack roll.
+
+        *-b <bonus>* - Adds a bonus to hit.
 
         -criton <value> - The number the attack crits on if rolled on or above.
-        -d <damage> - Adds additional damage.
-        -d# <damage> - Adds additional damage to the first # attacks that hit.
-        -c <damage> - Adds additional damage for when the attack crits, not doubled.
+        *-d <damage>* - Adds additional damage.
+        *-c <damage>* - Adds additional damage for when the attack crits, not doubled.
         -rr <value> - How many attacks to make at the target.
-        -mi <value> - Minimum value on the attack roll.
+        *-mi <value>* - Minimum value on the attack roll.
 
-        -resist <damage type> - Gives the target resistance to the given damage type.
-        -immune <damage type> - Gives the target immunity to the given damage type.
-        -vuln <damage type> - Gives the target vulnerability to the given damage type.
-        -neutral <damage type> - Removes the targets immunity, resistance, or vulnerability to the given damage type.
+        *-resist <damage type>* - Gives the target resistance to the given damage type.
+        *-immune <damage type>* - Gives the target immunity to the given damage type.
+        *-vuln <damage type>* - Gives the target vulnerability to the given damage type.
+        *-neutral <damage type>* - Removes the targets immunity, resistance, or vulnerability to the given damage type.
 
-        hit - The attack automatically hits.
-        miss - The attack automatically misses.
-        crit - The attack automatically crits.
-        max - Maximizes damage rolls.
+        *hit* - The attack automatically hits.
+        *miss* - The attack automatically misses.
+        *crit* - The attack automatically crits.
+        *max* - Maximizes damage rolls.
 
         -phrase <phrase> - Adds flavor text.
-        -title <title> - Changes the title of the attack. Replaces [charname] with attackers name, [aname] with the attacks name, and [target] with the targets name.
+        -title <title> - Changes the title of the attack. Replaces [name] with attackers name and [aname] with the attacks name.
         -f "Field Title|Field Text" - Creates a field with the given title and text.
-        -h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
+        -thumb <url> - Adds a thumbnail to the attack.
         [user snippet] - Allows the user to use snippets on the attack.
         
-        -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage."""
-        return await self._attack(ctx, None, target_name, atk_name, args)
+        -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+
+        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on."""
+        return await self._attack(ctx, None, atk_name, args)
 
     @attack.command(name="list")
     async def attack_list(self, ctx):
@@ -912,45 +915,48 @@ class InitTracker(commands.Cog):
         return await destination.send("{}'s attacks:\n{}".format(combatant.name, a))
 
     @init.command()
-    async def aoo(self, ctx, combatant_name, target_name, atk_name, *, args=''):
+    async def aoo(self, ctx, combatant_name, atk_name, *, args=''):
         """Rolls an attack of opportunity against another combatant.
         __Valid Arguments__
-        adv/dis - Give advantage or disadvantage to the attack roll(s).
-        adv#/dis# - Give advantage or disadvantage to the first # attack roll(s).
-        ea - Elven Accuracy, double advantage on the attack roll.
+        -t "<target>" - Sets targets for the attack. You can pass as many as needed.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
 
-        -b <bonus> - Adds a bonus to hit.
-        -criton <a number to crit on if rolled on or above>
+        *adv/dis* - Give advantage or disadvantage to the attack roll(s).
+        *ea* - Elven Accuracy, double advantage on the attack roll.
+
+        *-b <bonus>* - Adds a bonus to hit.
 
         -criton <value> - The number the attack crits on if rolled on or above.
-        -d <damage> - Adds additional damage.
-        -d# <damage> - Adds additional damage to the first # attacks that hit.
-        -c <damage> - Adds additional damage for when the attack crits, not doubled.
+        *-d <damage>* - Adds additional damage.
+        *-c <damage>* - Adds additional damage for when the attack crits, not doubled.
         -rr <value> - How many attacks to make at the target.
-        -mi <value> - Minimum value on the attack roll.
+        *-mi <value>* - Minimum value on the attack roll.
 
-        -resist <damage type> - Gives the target resistance to the given damage type.
-        -immune <damage type> - Gives the target immunity to the given damage type.
-        -vuln <damage type> - Gives the target vulnerability to the given damage type.
-        -neutral <damage type> - Removes the targets immunity, resistance, or vulnerability to the given damage type.
+        *-resist <damage type>* - Gives the target resistance to the given damage type.
+        *-immune <damage type>* - Gives the target immunity to the given damage type.
+        *-vuln <damage type>* - Gives the target vulnerability to the given damage type.
+        *-neutral <damage type>* - Removes the targets immunity, resistance, or vulnerability to the given damage type.
 
-        hit - The attack automatically hits.
-        miss - The attack automatically misses.
-        crit - The attack automatically crits.
-        max - Maximizes damage rolls.
+        *hit* - The attack automatically hits.
+        *miss* - The attack automatically misses.
+        *crit* - The attack automatically crits.
+        *max* - Maximizes damage rolls.
 
         -phrase <phrase> - Adds flavor text.
-        -title <title> - Changes the title of the attack. Replaces [name] with attacker's name, [aname] with the attack's name, and [target] with the target's name.
+        -title <title> - Changes the title of the attack. Replaces [name] with attackers name and [aname] with the attacks name.
         -f "Field Title|Field Text" - Creates a field with the given title and text.
-        -h - Hides the attack and damage roll, showing only if the attack hits or not, and the finalized damage.
+        -thumb <url> - Adds a thumbnail to the attack.
         [user snippet] - Allows the user to use snippets on the attack.
-        
-        -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage."""
-        return await self._attack(ctx, combatant_name, target_name, atk_name, args)
+
+        -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
+
+        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on."""
+        return await self._attack(ctx, combatant_name, atk_name, args)
 
     @staticmethod
-    async def _attack(ctx, combatant_name, target_name, atk_name, args):
-        args = await scripting.parse_snippets(args, ctx)
+    async def _attack(ctx, combatant_name, atk_name, unparsed_args):
+        args = await scripting.parse_snippets(unparsed_args, ctx)
+        raw_args = argsplit(unparsed_args)
         combat = await Combat.from_ctx(ctx)
 
         # attacker handling
@@ -964,9 +970,23 @@ class InitTracker(commands.Cog):
             except SelectionException:
                 return await ctx.send("Combatant not found.")
 
+        # argument parsing
+        is_player = isinstance(combatant, PlayerCombatant)
+        if is_player and combatant.character_owner == str(ctx.author.id):
+            args = await combatant.character.parse_cvars(args, ctx)
+        else:
+            args = await scripting.parse_no_char(args, ctx)
+        args = argparse(args)
+
+        # handle old targeting method
+        target_name = None
+        if 't' not in args and len(raw_args) > 0:
+            target_name = atk_name
+            atk_name = raw_args[0]
+
         # attack selection
         attacks = combatant.attacks
-        if '-custom' in args:
+        if 'custom' in args:
             attack = {'attackBonus': '0', 'damage': '0', 'name': atk_name}
         else:
             try:
@@ -976,32 +996,24 @@ class InitTracker(commands.Cog):
                 return await ctx.send("Attack not found.")
         attack = Attack.from_old(attack)
 
-        # argument parsing
-        is_player = isinstance(combatant, PlayerCombatant)
-        if is_player and combatant.character_owner == str(ctx.author.id):
-            args = await combatant.character.parse_cvars(args, ctx)
-        args = argparse(args)
-
         # target handling
-        targets = []
-
-        # old single-target
-        try:
-            target = await combat.select_combatant(target_name, "Select the target.", select_group=True)
-            if isinstance(target, CombatantGroup):
-                targets.extend(target.get_combatants())
-            else:
-                targets.append(target)
-        except SelectionException:
-            return await ctx.send("Target not found.")
-
-        # multi-targeting
-        for i, t in enumerate(args.get('t')):
-            target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=True)
-            if isinstance(target, CombatantGroup):
-                targets.extend(target.get_combatants())
-            else:
-                targets.append(target)
+        if 't' not in args and target_name is not None:
+            # old single-target
+            targets = []
+            try:
+                target = await combat.select_combatant(target_name, "Select the target.", select_group=True)
+                if isinstance(target, CombatantGroup):
+                    targets.extend(target.get_combatants())
+                else:
+                    targets.append(target)
+            except SelectionException:
+                return await ctx.send("Target not found.")
+            await ctx.author.send(f"You are using the old targeting syntax, which is deprecated. "
+                                  f"In the future, you should use "
+                                  f"`{ctx.prefix}init attack {atk_name} -t {target_name}`!")
+        else:
+            # multi-targeting
+            targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
 
         # embed setup
         embed = discord.Embed()
@@ -1023,6 +1035,8 @@ class InitTracker(commands.Cog):
         # post-run
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)
+        if 'thumb' in args:
+            embed.set_thumbnail(url=args.last('thumb'))
 
         await ctx.send(embed=embed)
         await combat.final()
@@ -1031,44 +1045,56 @@ class InitTracker(commands.Cog):
     async def cast(self, ctx, spell_name, *, args=''):
         """Casts a spell against another combatant.
         __Valid Arguments__
-        -t <target> - Specifies one or more combatant's to target, chainable (e.g., "-t or1 -t or2").
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
+        -t "<target>" - Sets targets for the spell. You can pass as many as needed.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
+
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.
         **__Save Spells__**
-        -dc <save dc> - Changes the DC of the save.
-        -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.
+        -dc <Save DC> - Overrides the spell save DC.
+        -save <Save type> - Overrides the spell save type.
         -d <damage> - Adds additional damage.
-        adv/dis - Forces all targets to make saves at advantage or disadvantage.
+        pass - Target automatically succeeds save.
+        fail - Target automatically fails save.
+        adv/dis - Target makes save at advantage/disadvantage.
         **__Attack Spells__**
-        See `!init attack`.
+        See `!a`.
         **__All Spells__**
-        -phrase <phrase> - Adds flavor text.
-        -title <title> - Changes the title of the cast. Replaces [sname] with spell name.
-        -dur <duration> - Changes the duration of the spell effects, in rounds.
-        int/wis/cha - Uses a different ability score for spell DC and attack bonus."""
+        -phrase <phrase> - adds flavor text.
+        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
+        -thumb <url> - adds an image to the cast.
+        -dur <duration> - changes the duration of any effect applied by the spell.
+        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
+        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)"""
         return await self._cast(ctx, None, spell_name, args)
 
     @init.command(aliases=['rc'])
     async def reactcast(self, ctx, combatant_name, spell_name, *, args=''):
         """Casts a spell against another combatant, as a reaction.
         __Valid Arguments__
-        -t <target> - Specifies one or more combatant's to target, chainable (e.g., "-t or1 -t or2").
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals. Doesn't use a spell slot.
+        -t "[target]" - Sets targets for the spell. You can pass as many as needed.
+        -t "[target]|[args]" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
+
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.
         **__Save Spells__**
-        -dc <save dc> - Changes the DC of the save. Default: Pulls a cvar called `dc`.
-        -save [str|dex|con|int|wis|cha] - Changes the save that the spell rolls. Default: The spell's default save type.
+        -dc <Save DC> - Overrides the spell save DC.
+        -save <Save type> - Overrides the spell save type.
         -d <damage> - Adds additional damage.
-        adv/dis - Forces all targets to make saves at advantage or disadvantage.
+        pass - Target automatically succeeds save.
+        fail - Target automatically fails save.
+        adv/dis - Target makes save at advantage/disadvantage.
         **__Attack Spells__**
-        See `!init attack`.
+        See `!a`.
         **__All Spells__**
-        -phrase <phrase> - Adds flavor text.
-        -title <title> - Changes the title of the cast. Replaces [sname] with spell name.
-        -dur <duration> - Changes the duration of the spell effects, in rounds.
-        int/wis/cha - Uses a different ability score for spell DC and attack bonus."""
+        -phrase <phrase> - adds flavor text.
+        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
+        -thumb <url> - adds an image to the cast.
+        -dur <duration> - changes the duration of any effect applied by the spell.
+        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
+        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)"""
         return await self._cast(ctx, combatant_name, spell_name, args)
 
     @staticmethod
@@ -1093,6 +1119,8 @@ class InitTracker(commands.Cog):
 
         if is_character and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
+        else:
+            args = await scripting.parse_no_char(args, ctx)
         args = argparse(args)
 
         if not args.last('i', type_=bool):
@@ -1101,19 +1129,15 @@ class InitTracker(commands.Cog):
         else:
             spell = await select_spell_full(ctx, spell_name)
 
-        targets = []
-        for i, t in enumerate(args.get('t')):
-            target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=True)
-            if isinstance(target, CombatantGroup):
-                targets.extend(target.get_combatants())
-            else:
-                targets.append(target)
+        targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
 
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
 
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
-        add_fields_from_args(embed, args.get('f'))
+        embeds.add_fields_from_args(embed, args.get('f'))
+        if 'thumb' in args:
+            embed.set_thumbnail(url=args.last('thumb'))
         await ctx.send(embed=embed)
         await combat.final()
 

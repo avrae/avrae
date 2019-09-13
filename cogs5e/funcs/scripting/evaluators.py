@@ -80,7 +80,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         )
 
         self.functions.update(
-            set=self.set_value, exists=self.exists, combat=self.combat,
+            set=self.set, exists=self.exists, combat=self.combat,
             get_gvar=self.get_gvar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
@@ -254,54 +254,118 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
     def needs_char(self, *args, **kwargs):
         raise FunctionRequiresCharacter()  # no. bad.
 
-    def set_value(self, name, value):
+    def set(self, name, value):
+        """
+        Sets the value of a name in the current scripting context.
+
+        .. deprecated:: 0.1.0
+            Use ``name = value`` instead.
+
+        :param name: The name to set.
+        :param value: The value to set it to.
+        """
         self.names[name] = value
 
     def exists(self, name):
+        """
+        Returns whether or not a name is set in the current evaluation context.
+
+        :rtype: bool
+        """
         return name in self.names
 
     def combat(self):
+        """
+        Returns the combat active in the channel if one is. Otherwise, returns ``None``.
+
+        :rtype: :class:`cogs5e.funcs.scripting.combat.SimpleCombat`
+        """
         if 'combat' not in self._cache:
             self._cache['combat'] = SimpleCombat.from_ctx(self.ctx)
         self.combat_changed = True
         return self._cache['combat']
 
     def uvar_exists(self, name):
+        """
+        Returns whether a uvar exists.
+
+        :rtype: bool
+        """
         return self.exists(name) and name in self._cache['uvars']
 
-    def get_gvar(self, name):
-        if name not in self._cache['gvars']:
-            result = self.ctx.bot.mdb.gvars.delegate.find_one({"key": name})
+    def get_gvar(self, address):
+        """
+        Retrieves and returns the value of a gvar (global variable).
+
+        :param str address: The gvar address.
+        :return: The value of the gvar.
+        :rtype: str
+        """
+        if address not in self._cache['gvars']:
+            result = self.ctx.bot.mdb.gvars.delegate.find_one({"key": address})
             if result is None:
                 return None
-            self._cache['gvars'][name] = result['value']
-        return self._cache['gvars'][name]
+            self._cache['gvars'][address] = result['value']
+        return self._cache['gvars'][address]
 
-    def set_uvar(self, name, val: str):
-        if any(c in name for c in '/()[]\\.^$*+?|{}'):
+    def set_uvar(self, name: str, value: str):
+        """
+        Sets a user variable.
+
+        :param str name: The name of the variable to set.
+        :param str value: The value to set it to.
+        """
+        if not name.isidentifier():
             raise InvalidArgument("Cvar contains invalid character.")
-        self._cache['uvars'][name] = str(val)
-        self.names[name] = str(val)
+        self._cache['uvars'][name] = str(value)
+        self.names[name] = str(value)
         self.uvars_changed.add(name)
 
-    def set_uvar_nx(self, name, val: str):
+    def set_uvar_nx(self, name, value: str):
+        """
+        Sets a user variable if there is not already an existing name.
+
+        :param str name: The name of the variable to set.
+        :param str value: The value to set it to.
+        """
         if not name in self.names:
-            self.set_uvar(name, val)
+            self.set_uvar(name, value)
 
     def delete_uvar(self, name):
+        """
+        Deletes a user variable. Does nothing if the variable does not exist.
+
+        :param str name: The name of the variable to delete.
+        """
         if name in self._cache['uvars']:
             del self._cache['uvars'][name]
             self.uvars_changed.add(name)
 
     def chanid(self):
+        """
+        Returns the ID of the active Discord channel.
+
+        :rtype: str
+        """
         return str(self.ctx.channel.id)
 
     def servid(self):
+        """
+        Returns the ID of the active Discord guild, or None if in DMs.
+
+        :rtype: str
+        """
         if self.ctx.guild:
             return str(self.ctx.guild.id)
         return None
 
     def get(self, name, default=None):
+        """
+        Gets the value of a name, or returns *default* if the name is not set.
+
+        :param str name: The name to retrieve.
+        :param default: What to return if the name is not set.
+        """
         if name in self.names:
             return self.names[name]
         return default

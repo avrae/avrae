@@ -1,5 +1,3 @@
-.. currentmodule:: cogs5e.funcs.scripting.functions
-
 Aliasing API
 ============
 
@@ -131,14 +129,13 @@ These functions are available in any scripting context, regardless if you have a
 Python Builtins
 """""""""""""""
 
-.. function:: floor(x)
+.. function:: all(iterable)
 
-    Rounds a number down to the nearest integer. See :func:`math.floor`.
+    Return ``True`` if all elements of the *iterable* are true, or if the iterable is empty.
 
-    :param x: The number to round.
-    :type x: float or int
-    :return: The largest integer <= x.
-    :rtype: int
+.. function:: any(iterable)
+
+    Return ``True`` if any element of the *iterable* is true. If the iterable is empty, return ``False``.
 
 .. function:: ceil(x)
 
@@ -149,16 +146,32 @@ Python Builtins
     :return: The smallest integer >= x.
     :rtype: int
 
-.. function:: round(number[, ndigits])
+.. function:: float(x)
 
-    Return number rounded to ndigits precision after the decimal point.
-    If ndigits is omitted or is None, it returns the nearest integer to its input.
+    Converts *x* to a floating point number.
 
-    :param number: The number to round.
-    :type number: float or int
-    :param int ndigits: The number of digits after the decimal point to keep.
-    :return: The rounded number.
+    :param x: The value to convert.
+    :type x: str, int, or float
+    :return: The float.
     :rtype: float
+
+.. function:: floor(x)
+
+    Rounds a number down to the nearest integer. See :func:`math.floor`.
+
+    :param x: The number to round.
+    :type x: float or int
+    :return: The largest integer <= x.
+    :rtype: int
+
+.. function:: int(x)
+
+    Converts *x* to an integer.
+
+    :param x: The value to convert.
+    :type x: str, int, or float
+    :return: The integer.
+    :rtype: int
 
 .. function:: len(s)
 
@@ -222,6 +235,17 @@ Python Builtins
     :return: The range of numbers.
     :rtype: list
 
+.. function:: round(number[, ndigits])
+
+    Return number rounded to ndigits precision after the decimal point.
+    If ndigits is omitted or is None, it returns the nearest integer to its input.
+
+    :param number: The number to round.
+    :type number: float or int
+    :param int ndigits: The number of digits after the decimal point to keep.
+    :return: The rounded number.
+    :rtype: float
+
 .. function:: sqrt(x)
 
     See :func:`math.sqrt`.
@@ -229,19 +253,19 @@ Python Builtins
     :return: The square root of *x*.
     :rtype: float
 
+.. function:: str(x)
+
+    Converts *x* to a string.
+
+    :param x: The value to convert.
+    :type x: Any
+    :return: The string.
+    :rtype: str
+
 .. function:: sum(iterable[, start])
 
     Sums *start* and the items of an *iterable* from left to right and returns the total. *start* defaults to ``0``.
     The *iterable*’s items are normally numbers, and the start value is not allowed to be a string.
-
-.. function:: all(iterable)
-
-    Return ``True`` if all elements of the *iterable* are true, or if the iterable is empty.
-
-.. function:: any(iterable)
-
-    Return ``True`` if any element of the *iterable* is true. If the iterable is empty, return ``False``.
-
 
 .. function:: time()
 
@@ -254,19 +278,7 @@ Python Builtins
 Draconic Functions
 """"""""""""""""""
 
-.. autofunction:: simple_roll
-
-.. autofunction:: vroll(rollStr, [multiply=1, add=0])
-
-.. autofunction:: load_json
-
-.. autofunction:: dump_json
-
-.. autofunction:: err
-
-.. autofunction:: typeof
-
-.. autofunction:: argparse(args)
+.. autofunction:: utils.argparser.argparse(args)
 
     >>> args = argparse("adv -rr 2 -b 1d4[bless]")
     >>> args.adv()
@@ -276,14 +288,47 @@ Draconic Functions
     >>> args.get('b')
     ['1d4[bless]']
 
-.. autoclass:: utils.argparser.ParsedArguments
-    :members:
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.chanid()
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.combat()
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.delete_uvar(name)
+
+.. autofunction:: cogs5e.funcs.scripting.functions.dump_json
+
+.. autofunction:: cogs5e.funcs.scripting.functions.err
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.exists(name)
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.get(name, default=None)
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.get_gvar(address)
+
+.. autofunction:: cogs5e.funcs.scripting.functions.load_json
+
+.. function:: randint(x)
+
+    Returns a random integer in the range ``[0..x)``.
+
+    :param int x: The upper limit (non-inclusive).
+    :return: A random integer.
+    :rtype: int
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.servid()
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.set(name, value)
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.set_uvar(name, value)
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.set_uvar_nx(name, value)
+
+.. autofunction:: cogs5e.funcs.scripting.functions.simple_roll
+
+.. autofunction:: cogs5e.funcs.scripting.functions.typeof
+
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.uvar_exists(name)
+
+.. autofunction:: cogs5e.funcs.scripting.functions.vroll(rollStr, multiply=1, add=0)
 
 Character Context
 ^^^^^^^^^^^^^^^^^
-
-'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
-    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
-    # ours
-    'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
-    'err': raise_alias_exception, 'typeof': typeof, 'argparse': argparse

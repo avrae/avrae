@@ -64,7 +64,7 @@ def argparse(args, character=None, splitter=argsplit):
         else:
             parsed[a].append(True)
         index += 1
-    return ParsedArguments(args, parsed)
+    return ParsedArguments(parsed)
 
 
 def argquote(arg: str):
@@ -75,19 +75,29 @@ def argquote(arg: str):
 
 
 class ParsedArguments:
-    def __init__(self, raw, parsed):
-        self._raw = raw
-        self.parsed = parsed
-        self.ephemeral = collections.defaultdict(lambda: [])
+    def __init__(self, parsed):
+        self._parsed = parsed
+        self._ephemeral = collections.defaultdict(lambda: [])
         self._parse_ephemeral(parsed)
+
+        # contextual support
+        self._original_parsed = collections.defaultdict(lambda: [])
+        self._original_ephemeral = collections.defaultdict(lambda: [])
+        self._setup_originals()
+        self._contexts = collections.defaultdict(lambda: ParsedArguments.empty_args())
 
     @classmethod
     def from_dict(cls, d):
-        inst = cls(None, collections.defaultdict(lambda: []))
+        inst = cls(collections.defaultdict(lambda: []))
         for key, value in d.items():
             inst[key] = value
         return inst
 
+    @classmethod
+    def empty_args(cls):
+        return cls(collections.defaultdict(lambda: []))
+
+    # basic argument getting
     def get(self, arg, default=None, type_=str, ephem=False):
         """
         Gets a list of all values of an argument.
@@ -156,20 +166,22 @@ class ParsedArguments:
         """
         return connector.join(self.get(arg, ephem=ephem)) or default
 
+    # ephemeral setup
     def _parse_ephemeral(self, argdict):
         for key in argdict:
             match = EPHEMERAL_ARG_RE.match(key)
             if match:
                 arg, num = match.group(1), match.group(2)
-                self.ephemeral[arg].extend([EphemeralValue(int(num), val) for val in argdict[key]])
+                self._ephemeral[arg].extend([EphemeralValue(int(num), val) for val in argdict[key]])
 
+    # get helpers
     def _get_values(self, arg, ephem=False):
         """Returns a list of arguments."""
         if not ephem:
-            return self.parsed[arg]
+            return self._parsed[arg]
 
-        out = self.parsed[arg].copy()
-        for ephem_val in self.ephemeral[arg]:
+        out = self._parsed[arg].copy()
+        for ephem_val in self._ephemeral[arg]:
             if ephem_val.remaining:
                 out.append(ephem_val.value)
 
@@ -178,35 +190,76 @@ class ParsedArguments:
     def _get_last(self, arg, ephem=False):
         """Returns the last argument."""
         if ephem:
-            if arg in self.ephemeral:
-                for ev in reversed(self.ephemeral[arg]):
+            if arg in self._ephemeral:
+                for ev in reversed(self._ephemeral[arg]):
                     if ev.remaining:
                         return ev.value
-        if arg in self.parsed and self.parsed[arg]:  # intentionally not elif - handles when ephem exhausted
-            return self.parsed[arg][-1]
+        if arg in self._parsed and self._parsed[arg]:  # intentionally not elif - handles when ephem exhausted
+            return self._parsed[arg][-1]
         return None
 
+    # context helpers
+    def _setup_originals(self):
+        for arg, values in self._parsed.items():
+            self._original_parsed[arg] = values.copy()
+
+        for arg, values in self._ephemeral.items():
+            self._original_ephemeral[arg] = values.copy()
+
+    def set_context(self, context):
+        if context is None:
+            self._parsed = self._original_parsed
+            self._ephemeral = self._original_ephemeral
+        else:
+            # build a new parsed and ephemeral list
+            new_parsed = collections.defaultdict(lambda: [])
+            for arg, values in self._original_parsed.items():
+                new_parsed[arg].extend(values)
+
+            for arg, values in self._contexts[context]._parsed.items():
+                new_parsed[arg].extend(values)
+
+            new_ephem = collections.defaultdict(lambda: [])
+            for arg, values in self._original_ephemeral.items():
+                # new_ephem[arg] and original_ephemeral[arg] don't point to the same list
+                # but new_ephem[arg][i] and original_ephemeral[arg][i] point to the same value
+                # so that changes to the ephemeral state in a context bubble up to the global context
+                new_ephem[arg] = values.copy()
+
+            for arg, values in self._contexts[context]._ephemeral.items():
+                new_ephem[arg].extend(values.copy())
+
+            self._parsed = new_parsed
+            self._ephemeral = new_ephem
+
+    def add_context(self, context, args):
+        self._contexts[context] = args
+
+    # builtins
     def __contains__(self, item):
-        return (item in self.parsed and self.parsed[item]) or item in self.ephemeral
+        return (item in self._parsed and self._parsed[item]) or item in self._ephemeral
 
     def __len__(self):
-        return len(self.parsed)
+        return len(self._parsed)
 
     def __setitem__(self, key, value):
         if not isinstance(value, list):
             value = [value]
-        self.parsed[key] = value
+        self._parsed[key] = value
+        self._original_parsed[key] = value.copy()
         # add it to ephem dict if it matches
         match = EPHEMERAL_ARG_RE.match(key)
         if match:
             arg, num = match.group(1), match.group(2)
-            self.ephemeral[arg].extend([EphemeralValue(int(num), val) for val in value])
+            evals = [EphemeralValue(int(num), val) for val in value]
+            self._ephemeral[arg].extend(evals)
+            self._original_ephemeral[arg].extend(evals.copy())
 
     def __iter__(self):
-        return iter(self.parsed.keys())
+        return iter(self._parsed.keys())
 
     def __repr__(self):
-        return f"<ParsedArguments parsed={self.parsed.items()} ephemeral={self.ephemeral.items()}>"
+        return f"<ParsedArguments parsed={self._parsed.items()} ephemeral={self._ephemeral.items()}>"
 
 
 class EphemeralValue:

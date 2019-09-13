@@ -12,8 +12,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
-from cogs5e.funcs import scripting
-from cogs5e.funcs.dice import roll
+from cogs5e.funcs import checkutils, scripting, targetutils
 from cogs5e.models import embeds
 from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
@@ -23,11 +22,10 @@ from cogs5e.models.sheet import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
-from utils import targetutils
 from utils.argparser import argparse
-from utils.constants import SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS
-from utils.functions import a_or_an, auth_and_chan, get_positivity, list_get
-from utils.functions import camel_to_title, extract_gsheet_id_from_url, generate_token, search_and_select, verbose_stat
+from utils.constants import SKILL_NAMES
+from utils.functions import a_or_an, auth_and_chan, get_positivity, list_get, try_delete
+from utils.functions import extract_gsheet_id_from_url, generate_token, search_and_select
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -67,6 +65,9 @@ class SheetManager(commands.Cog):
     async def attack(self, ctx, atk_name=None, *, args: str = ''):
         """Rolls an attack for the current active character.
         __Valid Arguments__
+        -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
+        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
+
         *adv/dis*
         *ea* (Elven Accuracy double advantage)
         
@@ -92,6 +93,7 @@ class SheetManager(commands.Cog):
         
         -phrase [flavor text]
         -title [title] *note: [name] and [aname] will be replaced automatically*
+        -thumb [url]
         -f "Field Title|Field Text" (see !embed)
         [user snippet]
 
@@ -102,7 +104,7 @@ class SheetManager(commands.Cog):
         char: Character = await Character.from_ctx(ctx)
         args = await self.new_arg_stuff(args, ctx, char)
 
-        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args.get('t'))
+        caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         if isinstance(caster, Character):
             attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
         else:  # caster is combatant
@@ -123,6 +125,8 @@ class SheetManager(commands.Cog):
 
         _fields = args.get('f')
         embeds.add_fields_from_args(embed, _fields)
+        if 'thumb' in args:
+            embed.set_thumbnail(url=args.last('thumb'))
 
         await ctx.send(embed=embed)
         try:
@@ -186,13 +190,16 @@ class SheetManager(commands.Cog):
     async def save(self, ctx, skill, *args):
         """Rolls a save for your current active character.
         __Valid Arguments__
-        adv/dis
-        -b [conditional bonus]
+        *adv/dis*
+        *-b [conditional bonus]*
         -phrase [flavor text]
-        -title [title] *note: [charname] and [sname] will be replaced automatically*
+        -title [title] *note: [name] and [sname] will be replaced automatically*
         -image [image URL]
         -dc [dc] (does not apply to Death Saves)
-        -rr [iterations] (does not apply to Death Saves)"""
+        -rr [iterations] (does not apply to Death Saves)
+
+        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one save.
+        """
         if skill == 'death':
             ds_cmd = self.bot.get_command('game deathsave')
             if ds_cmd is None:
@@ -200,146 +207,59 @@ class SheetManager(commands.Cog):
             return await ctx.invoke(ds_cmd, *args)
 
         char: Character = await Character.from_ctx(ctx)
-        try:
-            save = char.saves.get(skill)
-        except ValueError:
-            return await ctx.send('That\'s not a valid save.')
 
         embed = EmbedWithCharacter(char, name=False)
 
         args = await self.new_arg_stuff(args, ctx, char)
-        adv = args.adv(boolwise=True)
-        b = args.join('b', '+')
-        phrase = args.join('phrase', '\n')
-        iterations = min(args.last('rr', 1, int), 25)
-        dc = args.last('dc', type_=int)
-        num_successes = 0
 
-        formatted_d20 = save.d20(base_adv=adv, reroll=char.get_setting('reroll'))
+        # halfling luck
+        args['ro'] = char.get_setting('reroll')
 
-        if b:
-            roll_str = f"{formatted_d20}+{b}"
-        else:
-            roll_str = formatted_d20
-
-        save_name = f"{verbose_stat(skill[:3]).title()} Save"
-        if args.last('title'):
-            embed.title = args.last('title', '') \
-                .replace('[charname]', char.name) \
-                .replace('[sname]', save_name)
-        else:
-            embed.title = f'{char.name} makes {a_or_an(save_name)}!'
-
-        if iterations > 1:
-            embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
-            for i in range(iterations):
-                result = roll(roll_str, inline=True)
-                if dc and result.total >= dc:
-                    num_successes += 1
-                embed.add_field(name=f"Save {i + 1}", value=result.skeleton)
-            if dc:
-                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failures")
-        else:
-            result = roll(roll_str, inline=True)
-            if dc:
-                embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
-            embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
-                '\n*' + phrase + '*' if phrase is not None else '')
-
-        embeds.add_fields_from_args(embed, args.get('f'))
+        checkutils.run_save(skill, char, args, embed)
 
         if args.last('image') is not None:
             embed.set_thumbnail(url=args.last('image'))
 
+        # send
         await ctx.send(embed=embed)
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @commands.command(aliases=['c'])
     async def check(self, ctx, check, *args):
         """Rolls a check for your current active character.
         __Valid Arguments__
-        adv/dis
-        -b [conditional bonus]
-        -mc [minimum roll]
+        *adv/dis*
+        *-b [conditional bonus]*
         -phrase [flavor text]
-        -title [title] *note: [charname] and [cname] will be replaced automatically*
+        -title [title] *note: [name] and [cname] will be replaced automatically*
         -dc [dc]
         -rr [iterations]
         str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
+
+        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one check.
         """
         char: Character = await Character.from_ctx(ctx)
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
-        skill_name = camel_to_title(skill_key)
 
         embed = EmbedWithCharacter(char, False)
         skill = char.skills[skill_key]
 
         args = await self.new_arg_stuff(args, ctx, char)
-        # advantage
-        adv = args.adv(boolwise=True)
-        # roll bonus
-        b = args.join('b', '+')
-        # phrase
-        phrase = args.join('phrase', '\n')
-        # num rolls
-        iterations = min(args.last('rr', 1, int), 25)
-        # dc
-        dc = args.last('dc', type_=int)
+
         # reliable talent (#654)
         rt = char.get_setting('talent', 0) and skill.prof >= 1
-        mc = args.last('mc') or 10 * rt
+        args['mc'] = 10 * rt
+
         # halfling luck
-        ro = char.get_setting('reroll')
+        args['ro'] = char.get_setting('reroll')
 
-        num_successes = 0
-        mod = skill.value
-        formatted_d20 = skill.d20(base_adv=adv, reroll=ro, min_val=mc, base_only=True)
-
-        if any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
-            base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
-            mod = mod - char.get_mod(SKILL_MAP[skill_key]) + char.get_mod(base)
-            skill_name = f"{verbose_stat(base)} ({skill_name})"
-
-        if b is not None:
-            roll_str = f"{formatted_d20}{mod:+}+{b}"
-        else:
-            roll_str = f"{formatted_d20}{mod:+}"
-
-        if args.last('title'):
-            embed.title = args.last('title', '') \
-                .replace('[charname]', char.name) \
-                .replace('[cname]', skill_name)
-        else:
-            embed.title = f'{char.name} makes {a_or_an(skill_name)} check!'
-
-        if iterations > 1:
-            embed.description = (f"**DC {dc}**\n" if dc else '') + ('*' + phrase + '*' if phrase is not None else '')
-            for i in range(iterations):
-                result = roll(roll_str, inline=True)
-                if dc and result.total >= dc:
-                    num_successes += 1
-                embed.add_field(name=f"Check {i + 1}", value=result.skeleton)
-            if dc:
-                embed.set_footer(text=f"{num_successes} Successes | {iterations - num_successes} Failures")
-        else:
-            result = roll(roll_str, inline=True)
-            if dc:
-                embed.set_footer(text="Success!" if result.total >= dc else "Failure!")
-            embed.description = (f"**DC {dc}**\n" if dc else '') + result.skeleton + (
-                '\n*' + phrase + '*' if phrase is not None else '')
-
-        embeds.add_fields_from_args(embed, args.get('f'))
+        checkutils.run_check(skill_key, char, args, embed)
 
         if args.last('image') is not None:
             embed.set_thumbnail(url=args.last('image'))
+
         await ctx.send(embed=embed)
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @commands.group(invoke_without_command=True)
     async def desc(self, ctx):
@@ -517,7 +437,7 @@ class SheetManager(commands.Cog):
         url = old_character.upstream
         args = argparse(args)
 
-        prefixes = 'dicecloud-', 'pdf-', 'google-', 'beyond-'
+        prefixes = 'dicecloud-', 'google-', 'beyond-'
         _id = url[:]
         for p in prefixes:
             if url.startswith(p):

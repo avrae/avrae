@@ -96,7 +96,7 @@ class Skill:
         return {"value": self.value, "prof": self.prof, "bonus": self.bonus, "adv": self.adv}
 
     # ---------- main funcs ----------
-    def d20(self, base_adv=None, reroll: int = None, min_val: int = None, base_only=False):
+    def d20(self, base_adv=None, reroll: int = None, min_val: int = None, mod_override=None):
         if base_adv is None:
             adv = self.adv
         elif self.adv is None:
@@ -119,10 +119,10 @@ class Skill:
         if min_val:
             base = f"{base}mi{min_val}"
 
-        if base_only:
-            return base
-
-        out = f"{base}{self.value:+}"
+        if mod_override is None:
+            out = f"{base}{self.value:+}"
+        else:
+            out = f"{base}{mod_override:+}"
         return out
 
     def __int__(self):

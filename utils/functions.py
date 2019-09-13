@@ -600,22 +600,6 @@ def clean_content(content, ctx):
     return pattern.sub(repl2, result)
 
 
-def format_d20(adv, reroll=None):
-    base_d20 = '1d20'
-    if adv in (1, -1):
-        base_d20 = '2d20'
-    elif adv == 2:
-        base_d20 = '3d20'
-    if reroll:
-        base_d20 = f"{base_d20}ro{reroll}"
-
-    if adv in (1, 2):
-        return f"{base_d20}kh1"
-    elif adv == -1:
-        return f"{base_d20}kl1"
-    return base_d20
-
-
 def auth_and_chan(ctx):
     """Message check: same author and channel"""
 
@@ -623,3 +607,10 @@ def auth_and_chan(ctx):
         return msg.author == ctx.author and msg.channel == ctx.channel
 
     return chk
+
+
+async def try_delete(message):
+    try:
+        await message.delete()
+    except discord.HTTPException:
+        pass

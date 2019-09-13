@@ -850,7 +850,7 @@ class Combatant(Spellcaster):
         return f"{self.name}: {self.get_hp_str()}".strip()
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(f"{self.combat.channel}.{self.name}")
 
 
 class MonsterCombatant(Combatant):

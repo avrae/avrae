@@ -52,7 +52,7 @@ def vroll(dice, multiply=1, add=0):
     :param int multiply: How many times to multiply each set of dice by.
     :param int add: How many dice to add to each set of dice.
     :return: The result of the roll.
-    :rtype: :class:`SimpleRollResult`
+    :rtype: :class:`cogs5e.funcs.scripting.functions.SimpleRollResult`
     """
     if multiply != 1 or add != 0:
         def subDice(matchobj):

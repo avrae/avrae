@@ -43,11 +43,11 @@ def argsplit(args: str):
 def argparse(args, character=None, splitter=argsplit):
     """
     Parses arguments.
+
     :param args: A list of arguments to parse.
-    :param character: A Character object, if args should have cvars parsed.
-    :param splitter: A function to use to split a string into a list of arguments.
-    :return: The parsed arguments (ParsedArguments).
-    :rtype ParsedArguments
+    :type args: str or list
+    :return: The parsed arguments.
+    :rtype: :class:`utils.argparser.ParsedArguments`
     """
     if isinstance(args, str):
         args = splitter(args)

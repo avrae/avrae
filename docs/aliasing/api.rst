@@ -1,4 +1,4 @@
-.. currentmodule:: cogs5e.funcs.scripting
+.. currentmodule:: cogs5e.funcs.scripting.functions
 
 Aliasing API
 ============
@@ -120,4 +120,170 @@ XLevel           How many levels a character has in class X. int
 Function Reference
 ------------------
 
-.. autofunction:: cogs5e.funcs.scripting.functions.verbose_roll
+.. warning::
+    It may be possible to corrupt your character data by incorrectly calling functions. Script at your own risk.
+
+All Contexts
+^^^^^^^^^^^^
+
+These functions are available in any scripting context, regardless if you have a character active or not.
+
+Python Builtins
+"""""""""""""""
+
+.. function:: floor(x)
+
+    Rounds a number down to the nearest integer. See :func:`math.floor`.
+
+    :param x: The number to round.
+    :type x: float or int
+    :return: The largest integer <= x.
+    :rtype: int
+
+.. function:: ceil(x)
+
+    Rounds a number up to the nearest integer. See :func:`math.ceil`.
+
+    :param x: The number to round.
+    :type x: float or int
+    :return: The smallest integer >= x.
+    :rtype: int
+
+.. function:: round(number[, ndigits])
+
+    Return number rounded to ndigits precision after the decimal point.
+    If ndigits is omitted or is None, it returns the nearest integer to its input.
+
+    :param number: The number to round.
+    :type number: float or int
+    :param int ndigits: The number of digits after the decimal point to keep.
+    :return: The rounded number.
+    :rtype: float
+
+.. function:: len(s)
+
+    Return the length (the number of items) of an object. The argument may be a sequence
+    (such as a string, bytes, tuple, list, or range) or a collection (such as a dictionary, set, or frozen set).
+
+    :return: The length of the argument.
+    :rtype: int
+
+.. function:: max(iterable, *[, key, default])
+              max(arg1, arg2, *args[, key])
+
+    Return the largest item in an iterable or the largest of two or more arguments.
+
+    If one positional argument is provided, it should be an iterable. The largest item in the iterable is returned.
+    If two or more positional arguments are provided, the largest of the positional arguments is returned.
+
+    There are two optional keyword-only arguments.
+    The key argument specifies a one-argument ordering function like that used for :func:`list.sort()`.
+    The default argument specifies an object to return if the provided iterable is empty.
+    If the iterable is empty and default is not provided, a :exc:`ValueError` is raised.
+
+    If multiple items are maximal, the function returns the first one encountered.
+
+.. function:: min(iterable, *[, key, default])
+              min(arg1, arg2, *args[, key])
+
+    Return the smallest item in an iterable or the smallest of two or more arguments.
+
+    If one positional argument is provided, it should be an iterable. The smallest item in the iterable is returned.
+    If two or more positional arguments are provided, the smallest of the positional arguments is returned.
+
+    There are two optional keyword-only arguments.
+    The key argument specifies a one-argument ordering function like that used for :func:`list.sort()`.
+    The default argument specifies an object to return if the provided iterable is empty.
+    If the iterable is empty and default is not provided, a :exc:`ValueError` is raised.
+
+    If multiple items are minimal, the function returns the first one encountered.
+
+.. function:: range(stop)
+              range(start, stop[, step])
+
+    Returns a list of numbers in the specified range.
+
+    If the step argument is omitted, it defaults to ``1``. If the start argument is omitted, it defaults to ``0``.
+    If step is zero, :exc:`ValueError` is raised.
+
+    For a positive step, the contents of a range ``r`` are determined by the formula
+    ``r[i] = start + step*i`` where ``i >= 0`` and ``r[i] < stop``.
+
+    For a negative step, the contents of the range are still determined by the formula
+    ``r[i] = start + step*i``, but the constraints are ``i >= 0`` and ``r[i] > stop``.
+
+    A range object will be empty if r[0] does not meet the value constraint.
+    Ranges do support negative indices, but these are interpreted as indexing from the end of the sequence determined
+    by the positive indices.
+
+    :param int start: The start of the range (inclusive).
+    :param int stop: The end of the range (exclusive).
+    :param int step: The step value.
+    :return: The range of numbers.
+    :rtype: list
+
+.. function:: sqrt(x)
+
+    See :func:`math.sqrt`.
+
+    :return: The square root of *x*.
+    :rtype: float
+
+.. function:: sum(iterable[, start])
+
+    Sums *start* and the items of an *iterable* from left to right and returns the total. *start* defaults to ``0``.
+    The *iterable*’s items are normally numbers, and the start value is not allowed to be a string.
+
+.. function:: all(iterable)
+
+    Return ``True`` if all elements of the *iterable* are true, or if the iterable is empty.
+
+.. function:: any(iterable)
+
+    Return ``True`` if any element of the *iterable* is true. If the iterable is empty, return ``False``.
+
+
+.. function:: time()
+
+    Return the time in seconds since the UNIX epoch (Jan 1, 1970, midnight UTC) as a floating point number.
+    See :func:`time.time`.
+
+    :return: The epoch time.
+    :rtype: float
+
+Draconic Functions
+""""""""""""""""""
+
+.. autofunction:: simple_roll
+
+.. autofunction:: vroll(rollStr, [multiply=1, add=0])
+
+.. autofunction:: load_json
+
+.. autofunction:: dump_json
+
+.. autofunction:: err
+
+.. autofunction:: typeof
+
+.. autofunction:: argparse(args)
+
+    >>> args = argparse("adv -rr 2 -b 1d4[bless]")
+    >>> args.adv()
+    1
+    >>> args.last('rr')
+    '2'
+    >>> args.get('b')
+    ['1d4[bless]']
+
+.. autoclass:: utils.argparser.ParsedArguments
+    :members:
+
+Character Context
+^^^^^^^^^^^^^^^^^
+
+'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
+    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
+    # ours
+    'roll': simple_roll, 'vroll': verbose_roll, 'load_json': load_json, 'dump_json': dump_json,
+    'err': raise_alias_exception, 'typeof': typeof, 'argparse': argparse

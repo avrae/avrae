@@ -12,8 +12,8 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
 
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
@@ -21,14 +21,14 @@ project = 'avrae'
 copyright = '2019, Andrew Zhu, D&D Beyond'
 author = 'Andrew Zhu, D&D Beyond'
 
-
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc'
+    'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -39,6 +39,9 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+# If true, the current module name will be prepended to all description
+# unit titles (such as .. function::).
+add_module_names = False
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -51,3 +54,7 @@ html_theme = 'alabaster'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+# -- Intersphinx --------
+
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}

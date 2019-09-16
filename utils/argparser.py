@@ -101,11 +101,13 @@ class ParsedArguments:
     def get(self, arg, default=None, type_=str, ephem=False):
         """
         Gets a list of all values of an argument.
-        :param arg: The name of the arg to get.
+
+        :param str arg: The name of the arg to get.
         :param default: The default value to return if the arg is not found. Not cast to type.
         :param type_: The type that each value in the list should be returned as.
-        :param ephem: Whether to add applicable ephemeral arguments to the returned list.
-        :return: The relevant argument.
+        :param bool ephem: Whether to add applicable ephemeral arguments to the returned list.
+        :return: The relevant argument list.
+        :rtype: list
         """
         if default is None:
             default = []
@@ -120,11 +122,12 @@ class ParsedArguments:
     def last(self, arg, default=None, type_: type = str, ephem=False):
         """
         Gets the last value of an arg.
-        :param arg: The name of the arg to get.
+
+        :param str arg: The name of the arg to get.
         :param default: The default value to return if the arg is not found. Not cast to type.
         :param type_: The type that the arg should be returned as.
         :param ephem: Whether to return an ephemeral argument if such exists.
-        :raises InvalidArgument if the arg cannot be cast to the type
+        :raises: InvalidArgument if the arg cannot be cast to the type
         :return: The relevant argument.
         """
         last_arg = self._get_last(arg, ephem=ephem)
@@ -138,6 +141,7 @@ class ParsedArguments:
     def adv(self, ea=False, boolwise=False, ephem=False):
         """
         Determines whether to roll with advantage, disadvantage, Elven Accuracy, or no special effect.
+
         :param ea: Whether to parse for elven accuracy.
         :param boolwise: Whether to return an integer or tribool representation.
         :param ephem: Whether to return an ephemeral argument if such exists.
@@ -158,6 +162,7 @@ class ParsedArguments:
     def join(self, arg, connector: str, default=None, ephem=False):
         """
         Returns a str formed from all of one arg, joined by a connector.
+
         :param arg: The arg to join.
         :param connector: What to join the arg by.
         :param default: What to return if the arg does not exist.
@@ -207,6 +212,11 @@ class ParsedArguments:
             self._original_ephemeral[arg] = values.copy()
 
     def set_context(self, context):
+        """
+        Sets the current argument parsing context.
+
+        :param context: Any hashable context.
+        """
         if context is None:
             self._parsed = self._original_parsed
             self._ephemeral = self._original_ephemeral
@@ -233,6 +243,13 @@ class ParsedArguments:
             self._ephemeral = new_ephem
 
     def add_context(self, context, args):
+        """
+        Adds contextual parsed arguments (arguments that only apply in a given context)
+
+        :param context: The context to add arguments to.
+        :param args: The arguments to add.
+        :type args: :class:`~utils.argparser.ParsedArguments`
+        """
         self._contexts[context] = args
 
     # builtins

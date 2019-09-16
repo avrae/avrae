@@ -540,3 +540,215 @@ Other
 .. function:: get_raw()
 
     Returns a raw representation of character data.
+
+See Also
+--------
+
+Draconic's syntax is very similar to Python. Other Python features supported in Draconic include:
+
+* `Ternary Operators <https://stackoverflow.com/a/394814>`_ (``x if a else y``)
+* `Slicing <https://stackoverflow.com/a/663175>`_ (``"Hello world!"[2:4]``)
+* `Operators <https://docs.python.org/3/reference/expressions.html#unary-arithmetic-and-bitwise-operations>`_ (``2 + 2``, ``"foo" in "foobar"``, etc)
+* `Assignments <https://docs.python.org/3/reference/simple_stmts.html#assignment-statements>`_ (``a = 15``)
+* `List Comprehensions <https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions>`_
+
+SimpleRollResult
+----------------
+
+.. autoclass:: cogs5e.funcs.scripting.functions.SimpleRollResult()
+
+    .. attribute:: dice
+
+        The rolled dice (e.g. ``1d20 (5)``).
+
+        :type: str
+
+    .. attribute:: total
+
+        The total of the roll.
+
+        :type: int
+
+    .. attribute:: full
+
+        The string representing the roll.
+
+        :type: str
+
+    .. attribute:: raw
+
+        A dictionary representing a low level roll object.
+
+        :type: dict
+
+    .. automethod:: consolidated
+
+    .. automethod:: __str__
+
+SimpleCombat
+------------
+
+.. autoclass:: cogs5e.funcs.scripting.combat.SimpleCombat()
+    :members:
+
+    .. attribute:: combatants
+
+        A list of all :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant` in combat.
+
+    .. attribute:: current
+
+        The :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant` or :class:`~cogs5e.funcs.scripting.combat.SimpleGroup`
+        representing the combatant whose turn it is.
+
+    .. attribute:: me
+
+        The :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant` representing the active character in combat, or ``None``
+        if the character is not in the combat.
+
+    .. attribute:: round_num
+
+        An :class:`int` representing the round number of the combat.
+
+    .. attribute:: turn_num
+
+        An :class:`int` representing the initiative score of the current turn.
+
+SimpleCombatant
+---------------
+
+.. autoclass:: cogs5e.funcs.scripting.combat.SimpleCombatant()
+    :members:
+
+    .. attribute:: ac
+
+        The combatant's armor class. ``None`` if not set.
+
+        :type: Optional[int]
+
+    .. attribute:: attacks
+
+        A list of the combatant's attacks.
+
+        :type: list of dict
+
+    .. attribute:: effects
+
+        A list of :class:`~cogs5e.funcs.scripting.combat.SimpleEffect` active on the combatant.
+
+        :type: list of :class:`~cogs5e.funcs.scripting.combat.SimpleEffect`
+
+    .. attribute:: hp
+
+        The combatant's current hit points. ``None`` if not set.
+
+        :type: Optional[int]
+
+    .. attribute:: init
+
+        What the combatant rolled for initiative.
+
+        :type: int
+
+    .. attribute:: initmod
+
+        An int representing the combatant's initiative modifier.
+
+        :type: int
+
+    .. attribute:: level
+
+        The combatant's spellcaster level. ``0`` if the combatant is not a player or spellcaster.
+
+        :type: int
+
+    .. attribute:: maxhp
+
+        The combatant's maximum hit points. ``None`` if not set.
+
+        :type: Optional[int]
+
+    .. attribute:: name
+
+        The combatant's name.
+
+        :type: str
+
+    .. attribute:: ratio
+
+        .. deprecated:: 1.1.5
+            Use ``combatant.hp / combatant.maxhp`` instead.
+
+        The percentage of health the combatant has remaining (0.0 = 0%, 1.0 = 100%).
+
+        :type: float
+
+    .. attribute:: temphp
+
+        How many temporary hit points the combatant has.
+
+        :type: int
+
+    .. attribute:: type
+
+        The type of the object (``"combatant"``), to determine whether this is a group or not.
+
+        :type: str
+
+
+SimpleGroup
+-----------
+
+.. autoclass:: cogs5e.funcs.scripting.combat.SimpleGroup()
+    :members:
+
+    .. attribute:: combatants
+
+        A list of all :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant` in this group.
+
+    .. attribute:: type
+
+        The type of the object (``"group"``), to determine whether this is a group or not.
+
+        :type: str
+
+SimpleEffect
+------------
+
+.. autoclass:: cogs5e.funcs.scripting.combat.SimpleEffect()
+    :members:
+
+    .. attribute:: conc
+
+        Whether the effect requires concentration.
+
+        :type: bool
+
+    .. attribute:: duration
+
+        The initial duration of the effect, in rounds (``-1`` = infinite).
+
+        :type: int
+
+    .. attribute:: effect
+
+        The applied effect of the object.
+
+        :type: dict
+
+    .. attribute:: name
+
+        The name of the effect.
+
+        :type: str
+
+    .. attribute:: remaining
+
+        The remaining duration of the effect, in rounds.
+
+        :type: int
+
+ParsedArguments
+---------------
+
+.. autoclass:: utils.argparser.ParsedArguments()
+    :members:

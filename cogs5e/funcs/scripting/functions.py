@@ -38,9 +38,23 @@ class SimpleRollResult:
         self._roll = roll_obj
 
     def __str__(self):
+        """
+        Equivalent to ``result.full``.
+        """
         return self.full
 
     def consolidated(self):
+        """
+        Gets the most simplified version of the roll string. Consolidates totals and damage types together.
+
+        >>> result = vroll("3d6[fire]+1d4[cold]")
+        >>> str(result)
+        '3d6 (3, 3, 2) [fire] + 1d4 (2) [cold] = `10`'
+        >>> result.consolidated()
+        '8 [fire] + 2 [cold]'
+
+        :rtype: str
+        """
         return self._roll.consolidated()
 
 

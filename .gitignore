@@ -24,3 +24,5 @@
 credentials.py
 
 docker/env
+
+docs/_build/

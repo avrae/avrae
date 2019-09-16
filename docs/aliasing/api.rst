@@ -292,6 +292,9 @@ Draconic Functions
 
 .. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.combat()
 
+    .. note::
+        If called outside of a character context, ``combat().me`` will be ``None``.
+
 .. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.delete_uvar(name)
 
 .. autofunction:: cogs5e.funcs.scripting.functions.dump_json
@@ -332,3 +335,208 @@ Draconic Functions
 
 Character Context
 ^^^^^^^^^^^^^^^^^
+
+These functions are only available when a character is active in a scripting context. Otherwise, attempts to call
+these functions will raise a :exc:`FunctionRequiresCharacter` exception.
+
+Custom Counters
+"""""""""""""""
+
+.. function:: cc_exists(name)
+
+    Returns whether a custom counter exists.
+
+    :param str name: The name of the custom counter to check.
+    :returns: Whether the counter exists.
+    :rtype: bool
+
+.. function:: cc_str(name)
+
+    Returns a string representing a custom counter.
+
+    :param str name: The name of the custom counter to get.
+    :returns: A string representing the current value, maximum, and minimum of the counter.
+    :rtype: str
+    :raises: :exc:`ConsumableException` if the counter does not exist.
+
+    Example:
+
+    >>> cc_str("Ki")
+    '11/17'
+    >>> cc_str("Bardic Inspiration")
+    '◉◉◉〇〇'
+
+.. function:: create_cc(name, minVal=None, maxVal=None, reset=None, dispType=None)
+
+    Creates a custom counter. If a counter with the same name already exists, it will replace it.
+
+    :param str name: The name of the counter to create.
+    :param str minVal: The minimum value of the counter. Supports :ref:`cvar-table` parsing.
+    :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
+    :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
+    :param str dispType: Either ``None`` or ``'bubble'``.
+
+.. function:: create_cc_nx(name, minVal=None, maxVal=None, reset=None, dispType=None)
+
+    Creates a custom counter if one with the given name does not already exist.
+    Equivalent to:
+
+    >>> if not cc_exists(name):
+    >>>     create_cc(name, minVal, maxVal, reset, dispType)
+
+.. function:: delete_cc(name)
+
+    Deletes a custom counter.
+
+    :param str name: The name of the custom counter to delete.
+    :raises: :exc:`ConsumableException` if the counter does not exist.
+
+.. function:: get_cc(name)
+
+    Gets the value of a custom counter.
+
+    :param str name: The name of the custom counter to get.
+    :returns: The current value of the counter.
+    :rtype: int
+    :raises: :exc:`ConsumableException` if the counter does not exist.
+
+
+.. function:: get_cc_max(name)
+
+    Gets the maximum value of a custom counter.
+
+    :param str name: The name of the custom counter maximum to get.
+    :returns: The maximum value of the counter. If a counter has no maximum, it will return an obscenely large number (2^31-1).
+    :rtype: int
+    :raises: :exc:`ConsumableException` if the counter does not exist.
+
+.. function:: get_cc_min(name)
+
+    Gets the minimum value of a custom counter.
+
+    :param str name: The name of the custom counter minimum to get.
+    :returns: The minimum value of the counter. If a counter has no minimum, it will return an obscenely small number (-2^31).
+    :rtype: int
+    :raises: :exc:`ConsumableException` if the counter does not exist.
+
+.. function:: mod_cc(name, value, strict=False)
+
+    Modifies the value of a custom counter. Equivalent to ``set_cc(name, get_cc(name) + value, strict)``.
+
+.. function:: set_cc(name, value, strict=False)
+
+    Sets the value of a custom counter.
+
+    :param str name: The name of the custom counter to set.
+    :param int value: The value to set the counter to.
+    :param bool strict: If ``True``, will raise a :exc:`CounterOutOfBounds` if the new value is out of bounds, otherwise silently clips to bounds.
+    :raises: :exc:`ConsumableException` if the counter does not exist.
+
+Spell Slots
+"""""""""""
+
+.. function:: get_slots(level)
+
+    Gets the number of remaining spell slots of a given level that a character has.
+
+    :param int level: The level to get the remaining slots of.
+    :returns: The number of remaining slots of that level.
+    :rtype: int
+
+.. function:: get_slots_max(level)
+
+    Gets the maximum number of spell slots of a given level that a character has.
+
+    :param int level: The level to get the maximum slots of.
+    :returns: The maximum number of slots of that level.
+    :rtype: int
+
+.. function:: set_slots(level, value)
+
+    Sets how many spell slots of a given level a character has.
+
+    :param int level: The level of spell slots to set.
+    :param int value: The value to set the remaining slots to.
+    :raises: :exc:`CounterOutOfBounds` if the number of slots is invalid.
+
+.. function:: slots_str(level)
+
+    Returns a string representing how many spell slots a character has of a given level.
+
+    :param int level: The level to get the slots of.
+    :returns: A string representing the current remaining and maximum number of slots of that level.
+    :rtype: str
+
+.. function:: use_slot(level)
+
+    Uses one spell slot of a given level. Equivalent to ``set_slots(level, get_slots(level) - 1)``.
+
+Hit Points
+""""""""""
+
+.. function:: get_hp()
+
+    :returns: The character's current hit points.
+    :rtype: int
+
+.. function:: get_temphp()
+
+    :returns: The character's current temporary hit points.
+    :rtype: int
+
+.. function:: hp_str()
+
+    Returns a string representing a character's current HP, max HP, and temp HP.
+
+.. function:: mod_hp(value, overflow=True)
+
+    Modifies the character's remaining hit points by *value*. If *value* is negative, will deal damage to temp HP first.
+
+    :param int value: How much to modify remaining HP by.
+    :param bool overflow: If ``False``, clips the new HP value to ``[0..hp]``.
+
+.. function:: set_hp(value)
+
+    Sets the character's remaining hit points. Ignores temp HP.
+
+    :param int value: The new value for hit points.
+
+.. function:: set_temphp(value)
+
+    Sets the character's remaining temp HP.
+
+    :param int value: The new value for temporary hit points.
+
+Cvars
+"""""
+
+.. note::
+    All custom character variables are locally bound to a Draconic scope. To access their values, use them like a normal
+    name.
+
+.. function:: delete_cvar(name)
+
+    Deletes a custom character variable. Does nothing if the cvar does not exist.
+
+    :param str name: The name of the variable to delete.
+
+.. function:: set_cvar(name, value)
+
+    Sets a custom character variable, which will be available in all scripting contexts using this character.
+
+    :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
+    :param str value: The value to set it to.
+
+.. function:: set_cvar_nx(name, value)
+
+    Sets a custom character variable if it is not already set.
+
+    :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
+    :param str value: The value to set it to.
+
+Other
+"""""
+
+.. function:: get_raw()
+
+    Returns a raw representation of character data.

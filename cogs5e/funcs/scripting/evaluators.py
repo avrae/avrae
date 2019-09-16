@@ -278,7 +278,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         """
         Returns the combat active in the channel if one is. Otherwise, returns ``None``.
 
-        :rtype: :class:`cogs5e.funcs.scripting.combat.SimpleCombat`
+        :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleCombat`
         """
         if 'combat' not in self._cache:
             self._cache['combat'] = SimpleCombat.from_ctx(self.ctx)

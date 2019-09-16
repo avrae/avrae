@@ -47,7 +47,7 @@ def argparse(args, character=None, splitter=argsplit):
     :param args: A list of arguments to parse.
     :type args: str or list
     :return: The parsed arguments.
-    :rtype: :class:`utils.argparser.ParsedArguments`
+    :rtype: :class:`~utils.argparser.ParsedArguments`
     """
     if isinstance(args, str):
         args = splitter(args)

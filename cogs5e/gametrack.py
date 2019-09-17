@@ -89,20 +89,78 @@ class GameTrack(commands.Cog):
                                 f"{character.get_remaining_slots_str(level)}"
         await ctx.send(embed=embed)
 
+    async def _rest(self, ctx, character, rest_type, *args):
+        """
+        Runs a rest.
+
+        :param ctx: The Context.
+        :param character: The Character.
+        :param rest_type: "long", "short", "all"
+        :param args: a list of args.
+        """
+        old_hp = character.hp
+        old_slots = {lvl: character.spellbook.get_slots(lvl) for lvl in range(1, 10)}
+
+        embed = EmbedWithCharacter(character, name=False)
+        if rest_type == 'long':
+            reset = character.long_rest()
+            embed.title = f"{character.name} took a Long Rest!"
+        elif rest_type == 'short':
+            reset = character.short_rest()
+            embed.title = f"{character.name} took a Short Rest!"
+        elif rest_type == 'all':
+            reset = character.reset_all_consumables()
+            embed.title = f"{character.name} reset all counters!"
+        else:
+            raise ValueError(f"Invalid rest type: {rest_type}")
+
+        if '-h' in args:
+            values = ', '.join(set(ctr.name for ctr, _ in reset) | {"Hit Points", "Death Saves", "Spell Slots"})
+            embed.add_field(name="Reset Values", value=values)
+        else:
+            # hp
+            hp_delta = character.hp - old_hp
+            hp_delta_str = ""
+            if hp_delta:
+                hp_delta_str = f" ({hp_delta:+})"
+            embed.add_field(name="Hit Points", value=f"{character.get_hp_str()}{hp_delta_str}")
+
+            # slots
+            slots_out = []
+            slots_delta = {lvl: character.spellbook.get_slots(lvl) - old_slots[lvl] for lvl in range(1, 10)}
+            for lvl in range(1, 10):
+                if character.spellbook.get_max_slots(lvl):
+                    if slots_delta[lvl]:
+                        slots_out.append(f"{character.get_remaining_slots_str(lvl)} ({slots_delta[lvl]:+})")
+                    else:
+                        slots_out.append(character.get_remaining_slots_str(lvl))
+            if slots_out:
+                embed.add_field(name="Spell Slots", value='\n'.join(slots_out))
+
+            # ccs
+            displayed_counters = set()
+            counters_out = []
+            for counter, delta in reset:
+                if counter.name in displayed_counters:
+                    continue
+                displayed_counters.add(counter.name)
+                if delta:
+                    counters_out.append(f"{counter.name}: {str(counter)} ({delta:+})")
+                else:
+                    counters_out.append(f"{counter.name}: {str(counter)}")
+            if counters_out:
+                embed.add_field(name="Reset Counters", value='\n'.join(counters_out))
+
+        await character.commit(ctx)
+        await ctx.send(embed=embed)
+
     @game.command(name='longrest', aliases=['lr'])
     async def game_longrest(self, ctx, *args):
         """Performs a long rest, resetting applicable counters.
         __Valid Arguments__
         -h - Hides the character summary output."""
         character: Character = await Character.from_ctx(ctx)
-        reset = character.long_rest()
-        embed = EmbedWithCharacter(character, name=False)
-        embed.title = f"{character.name} took a Long Rest!"
-        embed.add_field(name="Reset Values", value=', '.join(set(reset)))
-        await character.commit(ctx)
-        await ctx.send(embed=embed)
-        if not '-h' in args:
-            await ctx.invoke(self.game_status)
+        await self._rest(ctx, character, 'long', *args)
 
     @game.command(name='shortrest', aliases=['sr'])
     async def game_shortrest(self, ctx, *args):
@@ -110,17 +168,7 @@ class GameTrack(commands.Cog):
         __Valid Arguments__
         -h - Hides the character summary output."""
         character: Character = await Character.from_ctx(ctx)
-        reset = character.short_rest()
-        reset_vals = "None"
-        embed = EmbedWithCharacter(character, name=False)
-        embed.title = f"{character.name} took a Short Rest!"
-        if reset:
-            reset_vals = ', '.join(set(reset))
-        embed.add_field(name="Reset Values", value=reset_vals)
-        await character.commit(ctx)
-        await ctx.send(embed=embed)
-        if not '-h' in args:
-            await ctx.invoke(self.game_status)
+        await self._rest(ctx, character, 'short', *args)
 
     @game.command(name='hp')
     async def game_hp(self, ctx, operator='', *, hp=''):
@@ -462,19 +510,17 @@ class GameTrack(commands.Cog):
 
         if name:
             counter = await character.select_consumable(ctx, name)
+            before = counter.value
             try:
                 counter.reset()
                 await character.commit(ctx)
             except ConsumableException as e:
-                return await ctx.send(f"Counter could not be reset: {e}")
+                await ctx.send(f"Counter could not be reset: {e}")
             else:
-                return await ctx.send(f"Counter reset to {counter.value}.")
+                delta = counter.value - before
+                await ctx.send(f"{counter.name}: {str(counter)} ({delta:+}).")
         else:
-            reset_consumables = character.reset_all_consumables()
-            await character.commit(ctx)
-            await ctx.send(f"Reset counters: {', '.join(set(reset_consumables)) or 'none'}")
-        if not '-h' in args:
-            await ctx.invoke(self.game_status)
+            await self._rest(ctx, character, 'all', *args)
 
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *, args=''):

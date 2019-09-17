@@ -89,7 +89,7 @@ class GameTrack(commands.Cog):
                                 f"{character.get_remaining_slots_str(level)}"
         await ctx.send(embed=embed)
 
-    async def _rest(self, ctx, character, rest_type, *args):
+    async def _rest(self, ctx, rest_type, *args):
         """
         Runs a rest.
 
@@ -98,6 +98,7 @@ class GameTrack(commands.Cog):
         :param rest_type: "long", "short", "all"
         :param args: a list of args.
         """
+        character: Character = await Character.from_ctx(ctx)
         old_hp = character.hp
         old_slots = {lvl: character.spellbook.get_slots(lvl) for lvl in range(1, 10)}
 
@@ -159,16 +160,14 @@ class GameTrack(commands.Cog):
         """Performs a long rest, resetting applicable counters.
         __Valid Arguments__
         -h - Hides the character summary output."""
-        character: Character = await Character.from_ctx(ctx)
-        await self._rest(ctx, character, 'long', *args)
+        await self._rest(ctx, 'long', *args)
 
     @game.command(name='shortrest', aliases=['sr'])
     async def game_shortrest(self, ctx, *args):
         """Performs a short rest, resetting applicable counters.
         __Valid Arguments__
         -h - Hides the character summary output."""
-        character: Character = await Character.from_ctx(ctx)
-        await self._rest(ctx, character, 'short', *args)
+        await self._rest(ctx, 'short', *args)
 
     @game.command(name='hp')
     async def game_hp(self, ctx, operator='', *, hp=''):
@@ -499,7 +498,6 @@ class GameTrack(commands.Cog):
         Reset hierarchy: short < long < default < none
         __Valid Arguments__
         -h - Hides the character summary output."""
-        character: Character = await Character.from_ctx(ctx)
         try:
             name = args[0]
         except IndexError:
@@ -509,6 +507,7 @@ class GameTrack(commands.Cog):
                 name = None
 
         if name:
+            character: Character = await Character.from_ctx(ctx)
             counter = await character.select_consumable(ctx, name)
             before = counter.value
             try:
@@ -520,7 +519,7 @@ class GameTrack(commands.Cog):
                 delta = counter.value - before
                 await ctx.send(f"{counter.name}: {str(counter)} ({delta:+}).")
         else:
-            await self._rest(ctx, character, 'all', *args)
+            await self._rest(ctx, 'all', *args)
 
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *, args=''):

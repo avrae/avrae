@@ -45,24 +45,27 @@ class TestGame:
         avrae.message("!g lr")
         await dhttp.receive_delete()
         lr_embed = Embed(title=r".+ took a Long Rest!")
-        lr_embed.add_field(name="Reset Values", value=r".*")
+        lr_embed.add_field(name="Hit Points", value=r".*")
         await dhttp.receive_message(embed=lr_embed)
-        await dhttp.receive_message(embed=Embed())
 
         avrae.message("!g lr -h")
         await dhttp.receive_delete()
+        lr_embed = Embed(title=r".+ took a Long Rest!")
+        lr_embed.add_field(name="Reset Values", value=r".*")
         await dhttp.receive_message(embed=lr_embed)
 
     async def test_g_sr(self, avrae, dhttp):
         avrae.message("!g sr")
         await dhttp.receive_delete()
         sr_embed = Embed(title=r".+ took a Short Rest!")
-        sr_embed.add_field(name="Reset Values", value=r".*")
+        sr_embed.add_field(name="Hit Points", value=r".*")
         await dhttp.receive_message(embed=sr_embed)
         await dhttp.receive_message(embed=Embed())
 
         avrae.message("!g sr -h")
         await dhttp.receive_delete()
+        sr_embed = Embed(title=r".+ took a Short Rest!")
+        sr_embed.add_field(name="Reset Values", value=r".*")
         await dhttp.receive_message(embed=sr_embed)
 
     async def test_g_ss(self, avrae, dhttp):

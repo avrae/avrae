@@ -90,7 +90,8 @@ class SheetManager(commands.Cog):
         *miss* (automatically misses)
         *crit* (automatically crit)
         *max* (deals max damage)
-        
+
+        -h (hides rolled values)
         -phrase [flavor text]
         -title [title] *note: [name] and [aname] will be replaced automatically*
         -thumb [url]

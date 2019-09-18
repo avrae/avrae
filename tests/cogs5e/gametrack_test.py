@@ -60,7 +60,6 @@ class TestGame:
         sr_embed = Embed(title=r".+ took a Short Rest!")
         sr_embed.add_field(name="Hit Points", value=r".*")
         await dhttp.receive_message(embed=sr_embed)
-        await dhttp.receive_message(embed=Embed())
 
         avrae.message("!g sr -h")
         await dhttp.receive_delete()

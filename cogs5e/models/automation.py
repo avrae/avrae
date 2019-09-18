@@ -391,6 +391,7 @@ class Attack(Effect):
         hit = args.last('hit', None, bool, ephem=True) and 1
         miss = (args.last('miss', None, bool, ephem=True) and not hit) and 1
         b = args.join('b', '+', ephem=True)
+        hide = args.last('h', type_=bool)
 
         reroll = args.last('reroll', 0, int)
         criton = args.last('criton', 20, int)
@@ -448,8 +449,6 @@ class Attack(Effect):
             else:
                 toHit = roll(f"{formatted_d20}+{attack_bonus}", rollFor=to_hit_message, inline=True, show_blurbs=False)
 
-            autoctx.queue(toHit.result)
-
             # crit processing
             try:
                 d20_value = next(p for p in toHit.raw_dice.parts if
@@ -463,12 +462,29 @@ class Attack(Effect):
                 itercrit = toHit.crit
 
             # -ac #
+            target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
+            if target_has_ac:
+                ac = ac or autoctx.target.ac
+
             if itercrit == 0 and ac:
                 if toHit.total < ac:
-                    itercrit = 2
-            elif itercrit == 0 and not autoctx.target.is_simple and autoctx.target.ac is not None:
-                if toHit.total < autoctx.target.ac:
                     itercrit = 2  # miss!
+
+            # output
+            if not hide:  # not hidden
+                autoctx.queue(toHit.result)
+            elif target_has_ac:  # hidden
+                if itercrit == 2:
+                    hit_type = 'MISS'
+                elif itercrit == 1:
+                    hit_type = 'CRIT'
+                else:
+                    hit_type = 'HIT'
+                autoctx.queue(f"**To Hit**: {formatted_d20}... = `{hit_type}`")
+                autoctx.add_pm(str(autoctx.ctx.author.id), toHit.result)
+            else:  # hidden, no ac
+                autoctx.queue(f"**To Hit**: {formatted_d20}... = `{toHit.total}`")
+                autoctx.add_pm(str(autoctx.ctx.author.id), toHit.result)
 
             if itercrit == 2:
                 damage += self.on_miss(autoctx)
@@ -522,6 +538,7 @@ class Save(Effect):
         save = autoctx.args.last('save') or self.stat
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
+        hide = autoctx.args.last('h', type_=bool)
 
         dc_override = None
         if self.dc:
@@ -555,7 +572,12 @@ class Save(Effect):
                 saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
                 save_roll = roll(saveroll, rollFor=save_blurb, inline=True, show_blurbs=False)
                 is_success = save_roll.total >= dc
-                autoctx.queue(save_roll.result + ("; Success!" if is_success else "; Failure!"))
+                success_str = ("; Success!" if is_success else "; Failure!")
+                if not hide:
+                    autoctx.queue(f"{save_roll.result}{success_str}")
+                else:
+                    autoctx.add_pm(str(autoctx.ctx.author.id), f"{save_roll.result}{success_str}")
+                    autoctx.queue(f"**{save_blurb}**: 1d20...{success_str}")
         else:
             autoctx.meta_queue('{} Save'.format(save_skill[:3].upper()))
             is_success = False
@@ -595,6 +617,7 @@ class Damage(Effect):
         maxdmg = args.last('max', None, bool, ephem=True)
         mi = args.last('mi', None, int)
         critdice = args.last('critdice', 0, int)
+        hide = args.last('h', type_=bool)
 
         # character-specific arguments
         if autoctx.character:
@@ -672,7 +695,13 @@ class Damage(Effect):
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
         dmgroll = roll(damage, rollFor=roll_for, inline=True, show_blurbs=False)
-        autoctx.queue(dmgroll.result)
+
+        # output
+        if not hide:
+            autoctx.queue(dmgroll.result)
+        else:
+            autoctx.queue(f"**{roll_for}**: {dmgroll.consolidated()} = `{dmgroll.total}`")
+            autoctx.add_pm(str(autoctx.ctx.author.id), dmgroll.result)
 
         autoctx.target.damage(autoctx, dmgroll.total)
 
@@ -835,11 +864,17 @@ class Text(Effect):
         self.added = False
 
     def run(self, autoctx):
+        hide = autoctx.args.last('h', type_=bool)
+
         if self.text:
             text = self.text
             if len(text) > 1020:
                 text = f"{text[:1020]}..."
-            autoctx.effect_queue(text)
+            if not hide:
+                autoctx.effect_queue(text)
+            else:
+                autoctx.add_pm(str(autoctx.ctx.author.id), text)
+
 
 
 EFFECT_MAP = {

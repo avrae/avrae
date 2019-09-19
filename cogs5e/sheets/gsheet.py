@@ -3,13 +3,7 @@ Created on May 8, 2017
 
 @author: andrew
 """
-# v3: added stat cvars
-# v4: consumables
-# v5: spellbook
-# v6: v2.0 support (level vars, resistances, extra spells/attacks)
-# v7: race/background (experimental)
-# v8: skill/save effects
-# v15: version fix
+
 import asyncio
 import datetime
 import json
@@ -30,7 +24,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
 from cogs5e.models.sheet.base import Resistances, Saves, Skill, Skills
-from cogs5e.sheets.abc import SheetLoaderABC
+from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute
 from utils.constants import DAMAGE_TYPES
 from utils.functions import search
@@ -132,6 +126,9 @@ class GoogleSheet(SheetLoaderABC):
 
         self.total_level = 0
 
+        # cache
+        self._stats = None
+
     # google api stuff
     @staticmethod
     @contextmanager
@@ -156,7 +153,11 @@ class GoogleSheet(SheetLoaderABC):
                         scopes=SCOPES)
                 return gspread.authorize(credentials)
 
-            GoogleSheet.g_client = await asyncio.get_event_loop().run_in_executor(None, _)
+            try:
+                GoogleSheet.g_client = await asyncio.get_event_loop().run_in_executor(None, _)
+            except:
+                GoogleSheet._client_initializing = False
+                raise
         GoogleSheet._token_expiry = datetime.datetime.now() + datetime.timedelta(
             seconds=ServiceAccountCredentials.MAX_TOKEN_LIFETIME_SECS)
         log.info("Logged in to google")
@@ -173,7 +174,11 @@ class GoogleSheet(SheetLoaderABC):
                     'Authorization': 'Bearer %s' % GoogleSheet.g_client.auth.access_token
                 })
 
-            await asyncio.get_event_loop().run_in_executor(None, _)
+            try:
+                await asyncio.get_event_loop().run_in_executor(None, _)
+            except:
+                GoogleSheet._client_initializing = False
+                raise
         log.info("Refreshed google token")
 
     @staticmethod
@@ -209,7 +214,7 @@ class GoogleSheet(SheetLoaderABC):
         upstream = f"google-{self.url}"
         active = False
         sheet_type = "google"
-        import_version = 15
+        import_version = SHEET_VERSION
         name = self.character_data.value("C6").strip() or "Unnamed"
         description = self.get_description()
         image = self.character_data.value("C176").strip()
@@ -283,6 +288,9 @@ class GoogleSheet(SheetLoaderABC):
         """Returns a dict of stats."""
         if self.character_data is None: raise Exception('You must call get_character() first.')
         character = self.character_data
+        if self._stats is not None:
+            return self._stats
+
         try:
             prof_bonus = int(character.value("H14"))
         except (TypeError, ValueError):
@@ -298,6 +306,7 @@ class GoogleSheet(SheetLoaderABC):
                 raise MissingAttribute(stat)
 
         stats = BaseStats(prof_bonus, **stat_dict)
+        self._stats = stats
         return stats
 
     def get_levels(self):
@@ -456,17 +465,31 @@ class GoogleSheet(SheetLoaderABC):
                 else:
                     spells.append(SpellbookSpell(value.strip()))
 
+        # dc
         try:
             dc = int(self.character_data.value("AB91") or 0)
         except ValueError:
             dc = None
 
+        # sab
         try:
             sab = int(self.character_data.value("AI91") or 0)
         except ValueError:
             sab = None
 
-        spellbook = Spellbook(slots, slots, spells, dc, sab, self.total_level)
+        # spellcasting mod
+        spell_mod_value = self.character_data.value("U91")
+        spell_mod = None
+        if spell_mod_value:  # it might be in the form of a ability name, or an int, wjdk
+            try:
+                spell_mod = self.get_stats().get_mod(spell_mod_value)
+            except ValueError:
+                try:
+                    spell_mod = int(spell_mod_value)
+                except (TypeError, ValueError):
+                    spell_mod = None
+
+        spellbook = Spellbook(slots, slots, spells, dc, sab, self.total_level, spell_mod)
         return spellbook
 
     # helper methods

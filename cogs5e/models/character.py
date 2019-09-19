@@ -10,6 +10,7 @@ from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset
 from cogs5e.models.sheet import Attack, BaseStats, CharOptions, CustomCounter, DeathSaves, Levels, ManualOverrides, \
     Resistances, Saves, Skills, Spellbook, SpellbookSpell, Spellcaster
+from cogs5e.sheets.abc import SHEET_VERSION
 from utils.constants import STAT_NAMES
 from utils.functions import search_and_select
 
@@ -268,7 +269,9 @@ class Character(Spellcaster):
             out = {}
         else:
             out = self.cvars.copy()
-        if self.spellbook.sab is not None:
+        if self.spellbook.spell_mod is not None:
+            spell_mod = self.spellbook.spell_mod
+        elif self.spellbook.sab is not None:
             spell_mod = self.spellbook.sab - self.stats.prof_bonus
         else:
             spell_mod = None
@@ -597,7 +600,7 @@ class Character(Spellcaster):
             embed.add_field(name="Attacks", value=atk_str)
 
         # sheet url?
-        if self._import_version < 15:
+        if self._import_version < SHEET_VERSION:
             embed.set_footer(text=f"You are using an old sheet version ({self.sheet_type} v{self._import_version}). "
                                   f"Please run !update.")
 

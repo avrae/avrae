@@ -3,9 +3,7 @@ Created on Feb 14, 2017
 
 @author: andrew
 """
-# v1: initial implementation
-# v2: added race/background for research purposes
-# v15: standardize sheet import versions
+
 import collections
 import logging
 import re
@@ -19,7 +17,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
 from cogs5e.models.sheet.base import Resistances, Saves, Skill, Skills
-from cogs5e.sheets.abc import SheetLoaderABC
+from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES
 from utils.functions import search
 
@@ -90,7 +88,7 @@ class BeyondSheetParser(SheetLoaderABC):
         upstream = f"beyond-{self.url}"
         active = False
         sheet_type = "beyond"
-        import_version = 15
+        import_version = SHEET_VERSION
         name = self.character_data['name'].strip()
         description = self.character_data['traits']['appearance']
         image = self.character_data.get('avatarUrl') or ''
@@ -430,7 +428,7 @@ class BeyondSheetParser(SheetLoaderABC):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         spellcasterLevel = 0
         castingClasses = 0
-        spellMod = 0
+        spell_mod = 0
         pactSlots = 0
         pactLevel = 1
         hasSpells = False
@@ -441,7 +439,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 casterMult = CASTER_TYPES.get(_class['definition']['name'], 1)
                 spellcasterLevel += _class['level'] * casterMult
                 castingClasses += 1 if casterMult else 0  # warlock multiclass fix
-                spellMod = max(spellMod, self.stat_from_id(castingAbility))
+                spell_mod = max(spell_mod, self.stat_from_id(castingAbility))
 
                 class_features = {cf['name'] for cf in _class['definition']['classFeatures']}
                 if _class['subclassDefinition']:
@@ -470,8 +468,8 @@ class BeyondSheetParser(SheetLoaderABC):
         prof = self.get_stats().prof_bonus
         save_dc_bonus = max(self.get_stat("spell-save-dc"), self.get_stat("warlock-spell-save-dc"))
         attack_bonus_bonus = max(self.get_stat("spell-attacks"), self.get_stat("warlock-spell-attacks"))
-        dc = 8 + spellMod + prof + save_dc_bonus
-        sab = spellMod + prof + attack_bonus_bonus
+        dc = 8 + spell_mod + prof + save_dc_bonus
+        sab = spell_mod + prof + attack_bonus_bonus
 
         spellnames = []
         for src in self.character_data['classSpells']:
@@ -487,7 +485,7 @@ class BeyondSheetParser(SheetLoaderABC):
             elif len(value) > 2:
                 spells.append(SpellbookSpell(value))
 
-        spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level)
+        spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level, spell_mod or None)
         return spellbook
 
     def get_race(self):

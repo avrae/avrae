@@ -4,7 +4,7 @@ class Attack:
     """
 
     def __init__(self, name, bonus: int = None, damage: str = None, details: str = None, bonus_calc: str = None,
-                 damage_calc: str = None):
+                 damage_calc: str = None, **_):
         self.name = name
         self.bonus = bonus
         self.damage = damage
@@ -14,6 +14,8 @@ class Attack:
 
     @classmethod
     def from_dict(cls, d):
+        if 'attackBonus' in d:
+            return cls.from_old(d)
         return cls(**d)
 
     @classmethod
@@ -28,7 +30,7 @@ class Attack:
 
     def to_dict(self):
         return {"name": self.name, "bonus": self.bonus, "damage": self.damage, "details": self.details,
-                "bonus_calc": self.bonus_calc, "damage_calc": self.damage_calc}
+                "bonus_calc": self.bonus_calc, "damage_calc": self.damage_calc, "_v": 1}
 
     # ---------- main funcs ----------
     @classmethod
@@ -66,3 +68,24 @@ class Attack:
         elif self.bonus_calc:
             return f"**{self.name}**: {self.bonus_calc} to hit, {self.damage or 'no'} damage."
         return f"**{self.name}**: {self.damage or 'no'} damage."
+
+
+class AttackList:
+    def __init__(self, attacks=None):
+        if attacks is None:
+            attacks = []
+        self.attacks = attacks
+
+    @classmethod
+    def from_dict(cls, l):  # technicaly from_list, but consistency
+        return [Attack.from_dict(atk) for atk in l]
+
+    def to_dict(self):  # technically to_list
+        return [a.to_dict() for a in self.attacks]
+
+    # list compat
+    def __iter__(self):
+        return iter(self.attacks)
+
+    def __getitem__(self, item):
+        return self.attacks[item]

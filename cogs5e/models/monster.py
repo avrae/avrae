@@ -6,7 +6,7 @@ from urllib import parse
 import html2text
 
 from cogs5e.models import errors
-from cogs5e.models.sheet import BaseStats, Saves, Skills, Spellbook, SpellbookSpell, Spellcaster
+from cogs5e.models.sheet import AttackList, BaseStats, Resistances, Saves, Skills, Spellbook, SpellbookSpell, StatBlock
 from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
@@ -39,13 +39,13 @@ SAVE_MAP = {'strengthSave': 'str', 'dexteritySave': 'dex', 'constitutionSave': '
             'wisdomSave': 'wis', 'charismaSave': 'cha'}
 
 
-class Monster(Spellcaster):
+class Monster(StatBlock):
     def __init__(self, name: str, size: str, race: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
                  speed: str, ability_scores: BaseStats, cr: str, xp: int, passiveperc: int = None,
                  senses: str = '', vuln: list = None, resist: list = None, immune: list = None,
                  condition_immune: list = None, saves: Saves = None, skills: Skills = None, languages: list = None,
                  traits: list = None, actions: list = None, reactions: list = None, legactions: list = None,
-                 la_per_round=3, srd=True, source='homebrew', attacks: list = None, proper: bool = False,
+                 la_per_round=3, srd=True, source='homebrew', attacks: AttackList = None, proper: bool = False,
                  image_url: str = None, spellcasting=None, page=None, raw_resists: dict = None):
         if vuln is None:
             vuln = []
@@ -53,6 +53,7 @@ class Monster(Spellcaster):
             resist = []
         if immune is None:
             immune = []
+        resistances = Resistances(vuln=vuln, resist=resist, immune=immune)
         if condition_immune is None:
             condition_immune = []
         if saves is None:
@@ -70,21 +71,20 @@ class Monster(Spellcaster):
         if legactions is None:
             legactions = []
         if attacks is None:
-            attacks = []
+            attacks = AttackList()
         if spellcasting is None:
             spellcasting = Spellbook({}, {}, [])
         if passiveperc is None:
             passiveperc = 10 + skills.perception.value
         if raw_resists is None:
             raw_resists = {}
-        super(Monster, self).__init__(spellbook=spellcasting)
-        self.name = name
+        super(Monster, self).__init__(
+            name=name, stats=ability_scores, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
+            spellbook=spellcasting, ac=ac, max_hp=hp)
         self.size = size
         self.race = race
         self.alignment = alignment
-        self.ac = ac
         self.armortype = armortype
-        self.hp = hp
         self.hitdice = hitdice
         self.speed = speed
         self.ability_scores = ability_scores
@@ -92,12 +92,7 @@ class Monster(Spellcaster):
         self.xp = xp
         self.passive = passiveperc
         self.senses = senses
-        self.vuln = vuln
-        self.resist = resist
-        self.immume = immune
         self.condition_immune = condition_immune
-        self.saves = saves
-        self.skills = skills
         self.languages = languages
         self.traits = traits
         self.actions = actions
@@ -106,7 +101,6 @@ class Monster(Spellcaster):
         self.la_per_round = la_per_round
         self.srd = srd
         self.source = source
-        self.attacks = attacks
         self.proper = proper
         self.image_url = image_url
         self.page = page  # this should really be by source, but oh well
@@ -160,7 +154,7 @@ class Monster(Spellcaster):
         source = data['source']
         proper = bool(data.get('isNamedCreature') or data.get('isNPC'))
 
-        attacks = data.get('attacks', [])
+        attacks = AttackList.from_dict(data.get('attacks', []))
         spellcasting = data.get('spellcasting', {})
         spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
         spellbook = Spellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
@@ -226,6 +220,8 @@ class Monster(Spellcaster):
         legactions, atks = parse_critterdb_traits(data, 'legendaryActions')
         attacks.extend(atks)
 
+        attacks = AttackList.from_dict(attacks)
+
         resists = {
             "resist": data['stats']['damageResistances'],
             "immune": data['stats']['damageImmunities'],
@@ -259,8 +255,9 @@ class Monster(Spellcaster):
         return {'name': self.name, 'size': self.size, 'race': self.race, 'alignment': self.alignment, 'ac': self.ac,
                 'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
                 'ability_scores': self.ability_scores.to_dict(),
-                'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses, 'vuln': self.vuln,
-                'resist': self.resist, 'immune': self.immume, 'condition_immune': self.condition_immune,
+                'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
+                'vuln': self.resistances.vuln, 'resist': self.resistances.resist, 'immune': self.resistances.immume,
+                'condition_immune': self.condition_immune,
                 'saves': self.saves.to_dict(), 'skills': self.skills.to_dict(), 'languages': self.languages,
                 'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
                 'reactions': [t.to_dict() for t in self.reactions],
@@ -292,7 +289,7 @@ class Monster(Spellcaster):
             elif 25 < stat:
                 stats[i] = "Ludicrous"
         return f"**STR**: {stats[0]} **DEX**: {stats[1]} **CON**: {stats[2]}\n" \
-            f"**INT**: {stats[3]} **WIS**: {stats[4]} **CHA**: {stats[5]}"
+               f"**INT**: {stats[3]} **WIS**: {stats[4]} **CHA**: {stats[5]}"
 
     def get_senses_str(self):
         if self.senses:
@@ -320,12 +317,12 @@ class Monster(Spellcaster):
         if str(self.skills):
             desc += f"**Skills:** {self.skills}\n"
         desc += f"**Senses:** {self.get_senses_str()}.\n"
-        if self.vuln:
-            desc += f"**Vulnerabilities:** {', '.join(self.vuln)}\n"
-        if self.resist:
-            desc += f"**Resistances:** {', '.join(self.resist)}\n"
-        if self.immume:
-            desc += f"**Damage Immunities:** {', '.join(self.immume)}\n"
+        if self.resistances.vuln:
+            desc += f"**Vulnerabilities:** {', '.join(self.resistances.vuln)}\n"
+        if self.resistances.resist:
+            desc += f"**Resistances:** {', '.join(self.resistances.resist)}\n"
+        if self.resistances.immume:
+            desc += f"**Damage Immunities:** {', '.join(self.resistances.immume)}\n"
         if self.condition_immune:
             desc += f"**Condition Immunities:** {', '.join(map(str, self.condition_immune))}\n"
         if self.languages:

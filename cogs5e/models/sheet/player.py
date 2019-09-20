@@ -1,5 +1,6 @@
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, NoReset
-from . import Attack, SpellbookSpell
+from .attack import Attack
+from .spellcasting import SpellbookSpell
 
 
 class CharOptions:

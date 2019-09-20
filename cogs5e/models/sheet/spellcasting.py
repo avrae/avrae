@@ -1,5 +1,12 @@
 class Spellbook:
-    def __init__(self, slots: dict, max_slots: dict, spells: list, dc=None, sab=None, caster_level=0, spell_mod=None):
+    def __init__(self, slots: dict = None, max_slots: dict = None, spells: list = None, dc=None, sab=None,
+                 caster_level=0, spell_mod=None):
+        if slots is None:
+            slots = {}
+        if max_slots is None:
+            max_slots = {}
+        if spells is None:
+            spells = []
         self.slots = slots
         self.max_slots = max_slots
         self.spells = spells

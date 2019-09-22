@@ -30,10 +30,11 @@ D20_PATTERN = rf"\d?d20(\w+[lh<>]?\d+)? *{ROLLED_DICE_PATTERN}( *[+-] *\d+)?( *=
 DICE_PATTERN = rf"( *((\d*d\d+(\w+[lh<>]?\d+)?( *{ROLLED_DICE_PATTERN})?)|\d+|( *[-+*/]))( *\[.*\])?)+( *= *`\d+`)?"
 
 # to hit: a to-hit section of an attack
-TO_HIT_PATTERN = rf"\*\*To Hit:?\*\*:? (({D20_PATTERN}{DICE_PATTERN} = `\d+`)|(Automatic (hit|miss)!))"
+TO_HIT_PATTERN = rf"\*\*To Hit:?\*\*:? (({D20_PATTERN}{DICE_PATTERN} = `\d+`)|" \
+                 rf"(Automatic (hit|miss)!)|(\d?d20\.\.\. = `\d+`))"
 
 # damage: a damage section of an attack
-DAMAGE_PATTERN = rf"((\*\*Damage( \(CRIT!\))?:\*\* {DICE_PATTERN})|(\*\*Miss!\*\*))"
+DAMAGE_PATTERN = rf"((\*\*Damage( \(CRIT!\))?:?\*\*:? {DICE_PATTERN})|(\*\*Miss!\*\*))"
 
 # attack: to hit and damage on two lines
 ATTACK_PATTERN = rf"{TO_HIT_PATTERN}\n{DAMAGE_PATTERN}"

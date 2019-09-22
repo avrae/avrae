@@ -32,6 +32,7 @@ class Spellbook {
     dc: number; // spellcasting DC (static)
     sab: number; // spell attack bonus (static)
     caster_level: number; // actually total class level (used for cantrip scaling; static)
+    spell_mod: number; // the spellcasting ability modifier
 }
 
 class SpellbookSpell {

@@ -865,6 +865,7 @@ class InitTracker(commands.Cog):
         *crit* - The attack automatically crits.
         *max* - Maximizes damage rolls.
 
+        -h - Hides rolled values.
         -phrase <phrase> - Adds flavor text.
         -title <title> - Changes the title of the attack. Replaces [name] with attackers name and [aname] with the attacks name.
         -f "Field Title|Field Text" - Creates a field with the given title and text.
@@ -942,6 +943,7 @@ class InitTracker(commands.Cog):
         *crit* - The attack automatically crits.
         *max* - Maximizes damage rolls.
 
+        -h - Hides rolled values.
         -phrase <phrase> - Adds flavor text.
         -title <title> - Changes the title of the attack. Replaces [name] with attackers name and [aname] with the attacks name.
         -f "Field Title|Field Text" - Creates a field with the given title and text.
@@ -1051,6 +1053,7 @@ class InitTracker(commands.Cog):
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.
+        -h - Hides rolled values.
         **__Save Spells__**
         -dc <Save DC> - Overrides the spell save DC.
         -save <Save type> - Overrides the spell save type.
@@ -1079,6 +1082,7 @@ class InitTracker(commands.Cog):
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l <level> - Specifies the level to cast the spell at.
         noconc - Ignores concentration requirements.
+        -h - Hides rolled values.
         **__Save Spells__**
         -dc <Save DC> - Overrides the spell save DC.
         -save <Save type> - Overrides the spell save type.

@@ -10,6 +10,7 @@ from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset
 from cogs5e.models.sheet import Attack, BaseStats, CharOptions, CustomCounter, DeathSaves, Levels, ManualOverrides, \
     Resistances, Saves, Skills, Spellbook, SpellbookSpell, Spellcaster
+from cogs5e.sheets.abc import SHEET_VERSION
 from utils.constants import STAT_NAMES
 from utils.functions import search_and_select
 
@@ -268,7 +269,9 @@ class Character(Spellcaster):
             out = {}
         else:
             out = self.cvars.copy()
-        if self.spellbook.sab is not None:
+        if self.spellbook.spell_mod is not None:
+            spell_mod = self.spellbook.spell_mod
+        elif self.spellbook.sab is not None:
             spell_mod = self.spellbook.sab - self.stats.prof_bonus
         else:
             spell_mod = None
@@ -451,56 +454,65 @@ class Character(Spellcaster):
             self._live_integration.sync_consumable(ctr)
 
     def _reset_custom(self, scope):
-        """Resets custom counters with given scope."""
+        """
+        Resets custom counters with given scope.
+        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        """
         reset = []
         for ctr in self.consumables:
             if ctr.reset_on == scope:
+                before = ctr.value
                 try:
                     ctr.reset()
                 except NoReset:
                     continue
-                reset.append(ctr.name)
+                reset.append((ctr, ctr.value - before))
         return reset
 
     # ---------- RESTING ----------
     def on_hp(self):
-        """Resets all applicable consumables.
-        Returns a list of the names of all reset counters."""
+        """
+        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Resets but does not return Death Saves.
+        """
         reset = []
         reset.extend(self._reset_custom('hp'))
         if self.hp > 0:
             self.death_saves.reset()
-            reset.append("Death Saves")
         return reset
 
     def short_rest(self):
-        """Resets all applicable consumables.
-        Returns a list of the names of all reset counters."""
+        """
+        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Resets but does not return Spell Slots or Death Saves.
+        """
         reset = []
         reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
         if self.get_setting('srslots', False):
             self.reset_spellslots()
-            reset.append("Spell Slots")
         return reset
 
     def long_rest(self):
-        """Resets all applicable consumables.
-        Returns a list of the names of all reset counters."""
+        """
+        Resets all applicable consumables.
+        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Resets but does not return HP, Spell Slots, or Death Saves.
+        """
         reset = []
         reset.extend(self.on_hp())
         reset.extend(self.short_rest())
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
-        reset.append("HP")
         if not self.get_setting('srslots', False):
             self.reset_spellslots()
-            reset.append("Spell Slots")
         return reset
 
     def reset_all_consumables(self):
-        """Resets all applicable consumables.
-        Returns a list of the names of all reset counters."""
+        """
+        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Resets but does not return HP, Spell Slots, or Death Saves.
+        """
         reset = []
         reset.extend(self.on_hp())
         reset.extend(self.short_rest())
@@ -588,7 +600,7 @@ class Character(Spellcaster):
             embed.add_field(name="Attacks", value=atk_str)
 
         # sheet url?
-        if self._import_version < 15:
+        if self._import_version < SHEET_VERSION:
             embed.set_footer(text=f"You are using an old sheet version ({self.sheet_type} v{self._import_version}). "
                                   f"Please run !update.")
 

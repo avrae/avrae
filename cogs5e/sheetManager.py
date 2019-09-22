@@ -90,7 +90,8 @@ class SheetManager(commands.Cog):
         *miss* (automatically misses)
         *crit* (automatically crit)
         *max* (deals max damage)
-        
+
+        -h (hides rolled values)
         -phrase [flavor text]
         -title [title] *note: [name] and [aname] will be replaced automatically*
         -thumb [url]
@@ -233,6 +234,7 @@ class SheetManager(commands.Cog):
         -phrase [flavor text]
         -title [title] *note: [name] and [cname] will be replaced automatically*
         -dc [dc]
+        -mc [minimum roll]
         -rr [iterations]
         str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
 
@@ -248,7 +250,7 @@ class SheetManager(commands.Cog):
 
         # reliable talent (#654)
         rt = char.get_setting('talent', 0) and skill.prof >= 1
-        args['mc'] = 10 * rt
+        args['mc'] = args.get('mc') or 10 * rt
 
         # halfling luck
         args['ro'] = char.get_setting('reroll')

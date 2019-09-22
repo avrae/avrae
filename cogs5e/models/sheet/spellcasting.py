@@ -1,11 +1,12 @@
 class Spellbook:
-    def __init__(self, slots: dict, max_slots: dict, spells: list, dc=None, sab=None, caster_level=0):
+    def __init__(self, slots: dict, max_slots: dict, spells: list, dc=None, sab=None, caster_level=0, spell_mod=None):
         self.slots = slots
         self.max_slots = max_slots
         self.spells = spells
         self.dc = dc
         self.sab = sab
         self.caster_level = caster_level
+        self.spell_mod = spell_mod
 
     @classmethod
     def from_dict(cls, d):
@@ -14,7 +15,7 @@ class Spellbook:
 
     def to_dict(self):
         return {"slots": self.slots, "max_slots": self.max_slots, "spells": [s.to_dict() for s in self.spells],
-                "dc": self.dc, "sab": self.sab, "caster_level": self.caster_level}
+                "dc": self.dc, "sab": self.sab, "caster_level": self.caster_level, "spell_mod": self.spell_mod}
 
     def __contains__(self, spell_name: str):
         return spell_name.lower() in {s.name.lower() for s in self.spells}

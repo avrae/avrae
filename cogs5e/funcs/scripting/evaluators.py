@@ -511,6 +511,8 @@ class SpellEvaluator(MathEvaluator):
     def with_caster(cls, caster, spell_override=None):
         if spell_override is not None:
             spell = spell_override
+        elif caster.spellbook.spell_mod is not None:
+            spell = caster.spellbook.spell_mod
         else:
             try:
                 spell = caster.spellbook.sab - caster.pb_from_level()

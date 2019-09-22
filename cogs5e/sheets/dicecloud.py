@@ -3,16 +3,7 @@ Created on Jan 19, 2017
 
 @author: andrew
 """
-# v6: added stat cvars
-# v7: added check effects (adv/dis)
-# v8: consumables
-# v9: spellbook
-# v10: live tracking
-# v11: save effects (adv/dis)
-# v12: add cached dicecloud spell list id
-# v13: added nonstrict spells
-# v14: added race, background (for experimental purposes only)
-# v15: migrated to new sheet system
+
 import ast
 import collections
 import logging
@@ -33,7 +24,7 @@ from cogs5e.models.sheet import Attack, BaseStats, Levels, Resistances, Skills, 
 from cogs5e.models.sheet.base import Saves, Skill
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
-from .abc import SheetLoaderABC
+from .abc import SHEET_VERSION, SheetLoaderABC
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +60,7 @@ class DicecloudParser(SheetLoaderABC):
         upstream = f"dicecloud-{self.url}"
         active = False
         sheet_type = "dicecloud"
-        import_version = 15
+        import_version = SHEET_VERSION
         name = self.character_data['characters'][0]['name'].strip()
         description = self.character_data['characters'][0]['description']
         image = self.character_data['characters'][0]['picture']
@@ -274,19 +265,19 @@ class DicecloudParser(SheetLoaderABC):
             else:
                 spells.append(SpellbookSpell(spell.strip()))
 
-        spell_lists = [(0, 0)]  # ab, dc
+        spell_lists = [(0, 0, 0)]  # ab, dc, scam
         for sl in self.character_data.get('spellLists', []):
             try:
-                ab = int(self.evaluator.eval(sl.get('attackBonus')))
+                ab_calc = sl.get('attackBonus')
+                ab = int(self.evaluator.eval(ab_calc))
                 dc = int(self.evaluator.eval(sl.get('saveDC')))
-                spell_lists.append((ab, dc))
+                scam = self.get_stats().get_mod(next(m for m in STAT_NAMES if m in ab_calc))
+                spell_lists.append((ab, dc, scam))
             except:
                 pass
-        sl = sorted(spell_lists, key=lambda k: k[0], reverse=True)[0]
-        sab = sl[0]
-        dc = sl[1]
+        sab, dc, scam = sorted(spell_lists, key=lambda k: k[0], reverse=True)[0]
 
-        spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level)
+        spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level, scam)
 
         log.debug(f"Completed parsing spellbook: {spellbook.to_dict()}")
 

@@ -50,7 +50,7 @@ class Dice(commands.Cog):
         mi/ma (min/max result)
         e (explode dice of value)
         ra (reroll and add)
-        __Supported Selectors_
+        __Supported Selectors__
         lX (lowest X)
         hX (highest X)
         >X/<X (greater than or less than X)"""

@@ -23,6 +23,7 @@ VALID_OPERATORS_2 = re.compile('|'.join(["({})".format(i) for i in VALID_OPERATO
 DICE_PATTERN = re.compile(
     r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:[lh<>]?\d+))*|(\d+)|([-+*/().=])?)\s*(\[.*\])?)(.*?)\s*$',
     IGNORECASE)
+MAX_REROLLS = 1000
 
 
 def list_get(index, default, l):
@@ -66,6 +67,7 @@ class Roll(object):
         if parts is None:
             parts = []
         self.parts = parts
+        self._rerolls = 0
 
     def get_crit(self):
         """Returns: 0 for no crit, 1 for 20, 2 for 1."""
@@ -228,16 +230,18 @@ class Roll(object):
             valid_operators = VALID_OPERATORS_ARRAY
             last_operator = None
             for index, op in enumerate(ops):
+                if self._rerolls > MAX_REROLLS:
+                    raise OverflowError("Tried to reroll too many dice.")
                 if last_operator is not None and op in valid_operators and not op == last_operator:
-                    result.reroll(reroll_once, 1)
+                    self._rerolls += result.reroll(reroll_once, 1)
                     reroll_once = []
-                    result.reroll(rerollList, greedy=True)
+                    self._rerolls += result.reroll(rerollList, greedy=True)
                     rerollList = []
                     result.keep(keep)
                     keep = None
-                    result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
+                    self._rerolls += result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
                     to_reroll_add = []
-                    result.reroll(to_explode, greedy=True, keep_rerolled=True)
+                    self._rerolls += result.reroll(to_explode, greedy=True, keep_rerolled=True)
                     to_explode = []
                 if op == 'rr':
                     rerollList += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
@@ -265,11 +269,13 @@ class Roll(object):
                     to_explode += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
                 if op in valid_operators:
                     last_operator = op
-            result.reroll(reroll_once, 1)
-            result.reroll(rerollList, greedy=True)
+            if self._rerolls > MAX_REROLLS:
+                raise OverflowError("Tried to reroll too many dice.")
+            self._rerolls += result.reroll(reroll_once, 1)
+            self._rerolls += result.reroll(rerollList, greedy=True)
             result.keep(keep)
-            result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
-            result.reroll(to_explode, greedy=True, keep_rerolled=True)
+            self._rerolls += result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
+            self._rerolls += result.reroll(to_explode, greedy=True, keep_rerolled=True)
 
         return result
 
@@ -302,7 +308,7 @@ class SingleDiceGroup(Part):
                 rolls_to_keep.remove(_roll.value)
 
     def reroll(self, rerollList, max_iterations=1000, greedy=False, keep_rerolled=False, unique=False):
-        if not rerollList: return  # don't reroll nothing - minor optimization
+        if not rerollList: return 0  # don't reroll nothing - minor optimization
         if unique:
             rerollList = list(set(rerollList))  # remove duplicates
         if len(rerollList) > 100:
@@ -319,6 +325,7 @@ class SingleDiceGroup(Part):
                 count += 1
                 if count > max_iterations:
                     should_continue = False
+                    break
                 if r.value in rerollList and r.kept and not r.exploded:
                     try:
                         tempdice = SingleDice()
@@ -341,6 +348,8 @@ class SingleDiceGroup(Part):
                         rerollList.remove(r.value)
             last_index = len(self.rolled)
             self.rolled.extend(to_extend)
+
+        return count
 
     def get_total(self):
         """Returns:

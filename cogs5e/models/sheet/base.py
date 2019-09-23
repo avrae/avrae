@@ -265,7 +265,9 @@ class Saves:
 
 
 class Resistances:
-    def __init__(self, resist=None, immune=None, vuln=None):
+    def __init__(self, resist=None, immune=None, vuln=None, neutral=None):
+        if neutral is None:
+            neutral = []
         if vuln is None:
             vuln = []
         if immune is None:
@@ -275,13 +277,14 @@ class Resistances:
         self.resist = resist
         self.immune = immune
         self.vuln = vuln
+        self.neutral = neutral
 
     @classmethod
     def from_dict(cls, d):
         return cls(**d)
 
     def to_dict(self):
-        return {"resist": self.resist, "immune": self.immune, "vuln": self.vuln}
+        return {"resist": self.resist, "immune": self.immune, "vuln": self.vuln, "neutral": self.neutral}
 
     # ---------- main funcs ----------
     def __str__(self):

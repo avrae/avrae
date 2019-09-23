@@ -78,7 +78,7 @@ class AttackList:
 
     @classmethod
     def from_dict(cls, l):  # technicaly from_list, but consistency
-        return [Attack.from_dict(atk) for atk in l]
+        return cls([Attack.from_dict(atk) for atk in l])
 
     def to_dict(self):  # technically to_list
         return [a.to_dict() for a in self.attacks]

@@ -80,7 +80,7 @@ class SimpleCombat:
 class SimpleCombatant:
     def __init__(self, combatant: Combatant, hidestats=True):
         self._combatant = combatant
-        self._hidden = hidestats and self._combatant.isPrivate
+        self._hidden = hidestats and self._combatant.is_private
         self.type = "combatant"
 
         self.ac = self._combatant.ac
@@ -88,9 +88,9 @@ class SimpleCombatant:
             self.hp = self._combatant.hp
         else:
             self.hp = None
-        self.maxhp = self._combatant.hpMax
+        self.maxhp = self._combatant.max_hp
         self.initmod = int(self._combatant.init_skill)
-        self.temphp = self._combatant.temphp
+        self.temphp = self._combatant.temp_hp
         self.resists = self._combatant.resists
         self.attacks = self._combatant.attacks
         self.init = self._combatant.init
@@ -98,8 +98,8 @@ class SimpleCombatant:
         self.note = self._combatant.notes
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
         # deprecated
-        if self._combatant.hp is not None and self._combatant.hpMax:
-            self.ratio = self._combatant.hp / self._combatant.hpMax
+        if self._combatant.hp is not None and self._combatant.max_hp:
+            self.ratio = self._combatant.hp / self._combatant.max_hp
         else:
             self.ratio = 0
         self.level = self._combatant.spellbook.caster_level
@@ -224,7 +224,7 @@ class SimpleCombatant:
         """
         if not isinstance(maxhp, int) and maxhp is not None:
             raise ValueError("Max HP must be an integer or None.")
-        self._combatant.hpMax = maxhp
+        self._combatant.max_hp = maxhp
 
     def set_thp(self, thp: int):
         """
@@ -234,7 +234,7 @@ class SimpleCombatant:
         """
         if not isinstance(thp, int):
             raise ValueError("Temp HP must be an integer.")
-        self._combatant.temphp = thp
+        self._combatant.temp_hp = thp
 
     def set_init(self, init: int):
         """

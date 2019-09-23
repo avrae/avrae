@@ -186,6 +186,7 @@ class AutomationContext:
 
 class AutomationTarget:
     def __init__(self, target):
+        #: :type: :class:`~cogs5e.models.sheet.statblock.StatBlock`
         self.target = target
         self.is_simple = isinstance(target, str) or target is None
 
@@ -193,21 +194,18 @@ class AutomationTarget:
     def name(self):
         if isinstance(self.target, str):
             return self.target
-        return self.target.get_name()
+        return self.target.name
 
     @property
     def ac(self):
-        if hasattr(self.target, "ac"):
-            return self.target.ac
-        return None
+        return self.target.ac
 
     def get_save_dice(self, save, adv=None):
-        if not hasattr(self.target, "saves"):
-            raise TargetException("Target does not have defined saves.")
-
         sb = None
         save_obj = self.target.saves.get(save)
-        if hasattr(self.target, "active_effects"):
+
+        # combatant
+        if isinstance(self.target, Combatant):
             sb = self.target.active_effects('sb')
 
         saveroll = save_obj.d20(base_adv=adv)
@@ -218,28 +216,26 @@ class AutomationTarget:
         return saveroll
 
     def get_resists(self):
-        if hasattr(self.target, "resists"):
-            return self.target.resists
-        return {}
+        return self.target.resistances
 
     def get_resist(self):
-        return self.get_resists().get("resist", [])
+        return self.get_resists().resist
 
     def get_immune(self):
-        return self.get_resists().get("immune", [])
+        return self.get_resists().immune
 
     def get_vuln(self):
-        return self.get_resists().get("vuln", [])
+        return self.get_resists().vuln
 
     def get_neutral(self):
-        return self.get_resists().get("neutral", [])
+        return self.get_resists().neutral
 
     def damage(self, autoctx, amount):
         if isinstance(self.target, Combatant):
             if self.target.hp is not None:
                 self.target.mod_hp(-amount, overheal=False)
                 autoctx.footer_queue("{}: {}".format(self.target.name, self.target.get_hp_str()))
-                if self.target.isPrivate:
+                if self.target.is_private:
                     autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.get_hp_str(True)}")
             else:
                 autoctx.footer_queue("Dealt {} damage to {}!".format(amount, self.target.name))
@@ -754,7 +750,7 @@ class TempHP(Effect):
         autoctx.queue(dmgroll.result)
 
         if autoctx.target.combatant:
-            autoctx.target.combatant.temphp = max(dmgroll.total, 0)
+            autoctx.target.combatant.temp_hp = max(dmgroll.total, 0)
             autoctx.footer_queue(
                 "{}: {}".format(autoctx.target.combatant.get_name(), autoctx.target.combatant.get_hp_str()))
         elif autoctx.target.character:

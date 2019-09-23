@@ -3,7 +3,7 @@ import cachetools
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
-from cogs5e.models.sheet import Saves, Skill
+from cogs5e.models.sheet import AttackList, Saves, Skill, StatBlock
 from cogs5e.models.sheet.spellcasting import Spellbook, Spellcaster
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
@@ -448,35 +448,25 @@ class Combat:
         return f"Initiative in <#{self.channel}>"
 
 
-class Combatant(Spellcaster):
+class Combatant(StatBlock):
     def __init__(self, name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, attacks, saves, ctx,
                  combat,
                  index=None, notes=None, effects=None, group=None, temphp=0, spellbook=None, *args, **kwargs):
-        super(Combatant, self).__init__(spellbook)
-        if resists is None:
-            resists = {}
-        if attacks is None:
-            attacks = []
+        super(Combatant, self).__init__(
+            name=name, attacks=attacks, saves=saves, resistances=resists, spellbook=spellbook,
+            ac=ac, max_hp=hpMax, hp=hp, temp_hp=temphp
+        )
         if effects is None:
             effects = []
-        self._name = name
         self._controller = controllerId
         self._init = init
-        self._init_skill = init_skill  # readonly
-        self._hpMax = hpMax  # optional
-        self._hp = hp  # optional
-        self._ac = ac  # optional
         self._private = private
-        self._resists = resists
-        self._attacks = attacks
-        self._saves = saves
         self._index = index  # combat write only; position in combat
         self.ctx = ctx
         self.combat = combat
         self._notes = notes
         self._effects = effects
         self._group = group
-        self._temphp = temphp
 
         self._cache = {}
 
@@ -502,11 +492,11 @@ class Combatant(Spellcaster):
     def to_dict(self):
         return {'name': self.name, 'controller': self.controller, 'init': self.init,
                 'init_skill': self.init_skill.to_dict(),
-                'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
+                'hpMax': self._max_hp, 'hp': self._hp, 'ac': self._ac, 'private': self.is_private,
                 'resists': self._resists, 'attacks': self._attacks,
                 'saves': self._saves and self._saves.to_dict(), 'index': self.index,
                 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
-                'temphp': self.temphp, 'spellbook': self.spellbook.to_dict(), 'type': 'common'}
+                'temphp': self.temp_hp, 'spellbook': self.spellbook.to_dict(), 'type': 'common'}
 
     @property
     def name(self):
@@ -539,15 +529,15 @@ class Combatant(Spellcaster):
 
     @property
     def init_skill(self):
-        return self._init_skill
+        return self.skills.initiative
 
     @property
-    def hpMax(self):
-        return self._hpMax
+    def max_hp(self):
+        return self._max_hp
 
-    @hpMax.setter
-    def hpMax(self, new_hpMax):
-        self._hpMax = new_hpMax
+    @max_hp.setter
+    def max_hp(self, new_hpMax):
+        self._max_hp = new_hpMax
         if self._hp is None:
             self._hp = new_hpMax
 
@@ -564,13 +554,13 @@ class Combatant(Spellcaster):
 
     def mod_hp(self, delta, overheal=True, ignore_temp=False):
         if delta < 0 and not ignore_temp:
-            thp = self._temphp or 0
-            self.temphp += delta
+            thp = self._temp_hp or 0
+            self.temp_hp += delta
             delta += min(thp, -delta)  # how much did the THP absorb?
-        if overheal or self.hpMax is None:
+        if overheal or self.max_hp is None:
             self.hp += delta
         else:
-            self.hp = min(self.hp + delta, self.hpMax)
+            self.hp = min(self.hp + delta, self.max_hp)
 
     def set_hp(self, new_hp):  # set hp before temp hp
         self._hp = new_hp
@@ -578,13 +568,13 @@ class Combatant(Spellcaster):
     def get_hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''
-        if not self.isPrivate or private:
-            hpStr = '<{}/{} HP>'.format(self.hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
+        if not self.is_private or private:
+            hpStr = '<{}/{} HP>'.format(self.hp, self.max_hp) if self.max_hp is not None else '<{} HP>'.format(
                 self.hp) if self.hp is not None else ''
-            if self.temphp and self.temphp > 0:
-                hpStr += f' <{self.temphp} THP>'
-        elif self.hpMax is not None and self.hpMax > 0:
-            ratio = self.hp / self.hpMax
+            if self.temp_hp and self.temp_hp > 0:
+                hpStr += f' <{self.temp_hp} THP>'
+        elif self.max_hp is not None and self.max_hp > 0:
+            ratio = self.hp / self.max_hp
             if ratio >= 1:
                 hpStr = "<Healthy>"
             elif 0.5 < ratio < 1:
@@ -598,12 +588,12 @@ class Combatant(Spellcaster):
         return hpStr
 
     @property
-    def temphp(self):
-        return self._temphp or 0
+    def temp_hp(self):
+        return self._temp_hp or 0
 
-    @temphp.setter
-    def temphp(self, new_hp):
-        self._temphp = max(new_hp, 0)
+    @temp_hp.setter
+    def temp_hp(self, new_hp):
+        self._temp_hp = max(new_hp, 0)
 
     @property
     def ac(self):
@@ -623,11 +613,11 @@ class Combatant(Spellcaster):
         self._ac = new_ac
 
     @property
-    def isPrivate(self):
+    def is_private(self):
         return self._private
 
-    @isPrivate.setter
-    def isPrivate(self, new_privacy):
+    @is_private.setter
+    def is_private(self, new_privacy):
         self._private = new_privacy
 
     @property
@@ -659,12 +649,8 @@ class Combatant(Spellcaster):
 
     @property
     def attacks(self):
-        attacks = self._attacks + self.active_effects('attack')
+        attacks = self._attacks + AttackList.from_dict(self.active_effects('attack'))
         return attacks
-
-    @property
-    def saves(self):
-        return self._saves or Saves.default()
 
     @property
     def index(self):
@@ -810,7 +796,7 @@ class Combatant(Spellcaster):
 
     def get_effects_and_notes(self):
         out = []
-        if self.ac is not None and not self.isPrivate:
+        if self.ac is not None and not self.is_private:
             out.append('AC {}'.format(self.ac))
         for e in self.get_effects():
             out.append('{} [{} rds]'.format(e.name, e.remaining if not e.remaining < 0 else '∞'))
@@ -822,7 +808,7 @@ class Combatant(Spellcaster):
 
     def get_hp_and_ac(self, private: bool = False):
         out = [self.get_hp_str(private)]
-        if self.ac is not None and (not self.isPrivate or private):
+        if self.ac is not None and (not self.is_private or private):
             out.append("(AC {})".format(self.ac))
         return ' '.join(out)
 
@@ -831,7 +817,7 @@ class Combatant(Spellcaster):
         self._resists['resist'] = [r for r in self._resists['resist'] if r]  # clean empty resists
         self._resists['immune'] = [r for r in self._resists['immune'] if r]  # clean empty resists
         self._resists['vuln'] = [r for r in self._resists['vuln'] if r]  # clean empty resists
-        if not self.isPrivate or private:
+        if not self.is_private or private:
             if len(self.resists['resist']) > 0:
                 resistStr += "\n> Resistances: " + ', '.join(self.resists['resist']).title()
             if len(self.resists['immune']) > 0:
@@ -937,12 +923,12 @@ class PlayerCombatant(Combatant):
         return self._character.skills.initiative
 
     @property
-    def hpMax(self):
-        return self._hpMax or self.character.max_hp
+    def max_hp(self):
+        return self._max_hp or self.character.max_hp
 
-    @hpMax.setter
-    def hpMax(self, new_hpMax):
-        self._hpMax = new_hpMax
+    @max_hp.setter
+    def max_hp(self, new_hpMax):
+        self._max_hp = new_hpMax
 
     @property
     def hp(self):
@@ -956,18 +942,16 @@ class PlayerCombatant(Combatant):
         self.character.hp = new_hp
 
     @property
-    def temphp(self):
+    def temp_hp(self):
         return self.character.temp_hp
 
-    @temphp.setter
-    def temphp(self, new_hp):
+    @temp_hp.setter
+    def temp_hp(self, new_hp):
         self.character.temp_hp = new_hp
 
     @property
     def attacks(self):
-        attacks = super(PlayerCombatant, self).attacks
-        attacks.extend([a.to_old() for a in self.character.attacks])
-        return attacks
+        return super(PlayerCombatant, self).attacks + self.character.attacks
 
     @property
     def saves(self):
@@ -1023,7 +1007,7 @@ class PlayerCombatant(Combatant):
         return raw
 
 
-class CombatantGroup(Spellcaster):
+class CombatantGroup:
     def __init__(self, name, init, combatants, ctx, index=None):
         super(CombatantGroup, self).__init__()
         self._name = name
@@ -1033,7 +1017,7 @@ class CombatantGroup(Spellcaster):
         self._index = index
         self.init_skill = Skill(0)  # readonly
         self.group = None  # groups cannot be in groups
-        self.isPrivate = False  # eh
+        self.is_private = False  # eh
 
     @classmethod
     def new(cls, name, init, ctx=None):

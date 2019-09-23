@@ -1,5 +1,5 @@
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, NoReset
-from .attack import Attack
+from .attack import AttackList
 from .spellcasting import SpellbookSpell
 
 
@@ -35,7 +35,7 @@ class ManualOverrides:
             spells = []
         self.desc = desc
         self.image = image
-        self.attacks = [Attack.from_dict(a) for a in attacks]
+        self.attacks = AttackList.from_dict(attacks)
         self.spells = [SpellbookSpell.from_dict(s) for s in spells]
 
     @classmethod
@@ -43,7 +43,7 @@ class ManualOverrides:
         return cls(**d)
 
     def to_dict(self):
-        return {"desc": self.desc, "image": self.image, "attacks": [a.to_dict() for a in self.attacks],
+        return {"desc": self.desc, "image": self.image, "attacks": self.attacks.to_dict(),
                 "spells": [s.to_dict() for s in self.spells]}
 
 

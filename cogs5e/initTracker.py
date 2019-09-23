@@ -544,8 +544,8 @@ class InitTracker(commands.Cog):
 
         @option()
         async def h(combatant):
-            combatant.isPrivate = not combatant.isPrivate
-            return f"\u2705 {combatant.name} {'hidden' if combatant.isPrivate else 'unhidden'}."
+            combatant.is_private = not combatant.is_private
+            return f"\u2705 {combatant.name} {'hidden' if combatant.is_private else 'unhidden'}."
 
         @option()
         async def controller(combatant):
@@ -607,7 +607,7 @@ class InitTracker(commands.Cog):
             if maxhp < 1:
                 return "\u274c Max HP must be at least 1."
             else:
-                combatant.hpMax = maxhp
+                combatant.max_hp = maxhp
                 return f"\u2705 {combatant.name}'s HP max set to {maxhp}."
 
         @option()
@@ -639,7 +639,7 @@ class InitTracker(commands.Cog):
             if arg_name in args:
                 for target in targets:
                     response = await opt_func(target)
-                    if target.isPrivate:
+                    if target.is_private:
                         destination = ctx.guild.get_member(int(comb.controller)) or ctx.channel
                     else:
                         destination = ctx.channel
@@ -701,11 +701,11 @@ class InitTracker(commands.Cog):
             combatant.set_hp(hp_roll.total)
         elif 'max' in operator.lower():
             if hp == '':
-                combatant.set_hp(combatant.hpMax)
+                combatant.set_hp(combatant.max_hp)
             elif hp_roll.total < 1:
                 return await ctx.send("You can't have a negative max HP!")
             else:
-                combatant.hpMax = hp_roll.total
+                combatant.max_hp = hp_roll.total
         elif hp == '':
             hp_roll = roll(operator, inline=True, show_blurbs=False)
             if combatant.hp is None:
@@ -719,7 +719,7 @@ class InitTracker(commands.Cog):
         if 'd' in hp: out += '\n' + hp_roll.skeleton
 
         await ctx.send(out, delete_after=10)
-        if combatant.isPrivate:
+        if combatant.is_private:
             try:
                 controller = ctx.guild.get_member(int(combatant.controller))
                 await controller.send("{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
@@ -739,16 +739,16 @@ class InitTracker(commands.Cog):
             return
 
         if thp >= 0:
-            combatant.temphp = thp
+            combatant.temp_hp = thp
         else:
-            if combatant.temphp:
-                combatant.temphp += thp
+            if combatant.temp_hp:
+                combatant.temp_hp += thp
             else:
                 return await ctx.send("Combatant has no temp hp.")
 
         out = "{}: {}".format(combatant.name, combatant.get_hp_str())
         await ctx.send(out, delete_after=10)
-        if combatant.isPrivate:
+        if combatant.is_private:
             try:
                 controller = ctx.guild.get_member(int(combatant.controller))
                 await controller.send("{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
@@ -885,7 +885,7 @@ class InitTracker(commands.Cog):
         if combatant is None:
             return await ctx.send(f"You must start combat with `{ctx.prefix}init next` first.")
 
-        if combatant.isPrivate and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
+        if combatant.is_private and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
             return await ctx.send("You do not have permission to view this combatant's attacks.")
 
         attacks = combatant.attacks
@@ -909,7 +909,7 @@ class InitTracker(commands.Cog):
         if len(a) > 2000:
             a = "Too many attacks, values hidden!"
 
-        if not combatant.isPrivate:
+        if not combatant.is_private:
             destination = ctx.message.channel
         else:
             destination = ctx.message.author

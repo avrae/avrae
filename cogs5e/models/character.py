@@ -8,8 +8,8 @@ from cogs5e.funcs.scripting import MathEvaluator, ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset
-from cogs5e.models.sheet import Attack, BaseStats, CharOptions, CustomCounter, DeathSaves, Levels, ManualOverrides, \
-    Resistances, Saves, Skills, Spellbook, SpellbookSpell, Spellcaster
+from cogs5e.models.sheet import AttackList, BaseStats, CharOptions, CustomCounter, DeathSaves, Levels, ManualOverrides, \
+    Resistances, Saves, Skills, Spellbook, SpellbookSpell, StatBlock
 from cogs5e.sheets.abc import SHEET_VERSION
 from utils.constants import STAT_NAMES
 from utils.functions import search_and_select
@@ -17,9 +17,13 @@ from utils.functions import search_and_select
 log = logging.getLogger(__name__)
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
+DESERIALIZE_MAP = {
+    "stats": BaseStats, "levels": Levels, "attacks": AttackList, "skills": Skills, "saves": Saves,
+    "resistances": Resistances, "spellbook": Spellbook
+}
 
 
-class Character(Spellcaster):
+class Character(StatBlock):
     # cache characters for 10 seconds to avoid race conditions
     # this makes sure that multiple calls to Character.from_ctx() in the same invocation or two simultaneous ones
     # retrieve/modify the same Character state
@@ -28,10 +32,11 @@ class Character(Spellcaster):
     _cache = cachetools.TTLCache(maxsize=50, ttl=10)
 
     def __init__(self, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
-                 name: str, description: str, image: str, stats: dict, levels: dict, attacks: list, skills: dict,
-                 resistances: dict, saves: dict, ac: int, max_hp: int, hp: int, temp_hp: int, cvars: dict,
-                 options: dict, overrides: dict, consumables: list, death_saves: dict, spellbook: dict, live,
-                 race: str, background: str, **kwargs):
+                 name: str, description: str, image: str, stats: BaseStats, levels: Levels, attacks: AttackList,
+                 skills: Skills, resistances: Resistances, saves: Saves, ac: int, max_hp: int, hp: int, temp_hp: int,
+                 cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
+                 spellbook: Spellbook,
+                 live, race: str, background: str, **kwargs):
         if kwargs:
             log.warning(f"Unused kwargs: {kwargs}")
         # sheet metadata
@@ -41,22 +46,16 @@ class Character(Spellcaster):
         self._sheet_type = sheet_type
         self._import_version = import_version
 
+        # StatBlock super call
+        super(Character, self).__init__(
+            name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
+            spellbook=spellbook,
+            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp
+        )
+
         # main character info
-        self.name = name
         self._description = description
         self._image = image
-        self.stats = BaseStats.from_dict(stats)
-        self.levels = Levels.from_dict(levels)
-        self._attacks = [Attack.from_dict(atk) for atk in attacks]
-        self.skills = Skills.from_dict(skills)
-        self.resistances = Resistances.from_dict(resistances)
-        self.saves = Saves.from_dict(saves)
-
-        # hp/ac
-        self.ac = ac
-        self.max_hp = max_hp
-        self._hp = hp
-        self._temp_hp = temp_hp
 
         # customization
         self.cvars = cvars
@@ -66,10 +65,6 @@ class Character(Spellcaster):
         # ccs
         self.consumables = [CustomCounter.from_dict(self, cons) for cons in consumables]
         self.death_saves = DeathSaves.from_dict(death_saves)
-
-        # spellbook
-        spellbook = Spellbook.from_dict(spellbook)
-        super(Character, self).__init__(spellbook)
 
         # live sheet integrations
         self._live = live
@@ -88,6 +83,9 @@ class Character(Spellcaster):
     def from_dict(cls, d):
         if '_id' in d:
             del d['_id']
+        for key, klass in DESERIALIZE_MAP.items():
+            if key in d:
+                d[key] = klass.from_dict(d[key])
         return cls(**d)
 
     @classmethod
@@ -136,11 +134,11 @@ class Character(Spellcaster):
     def to_dict(self):
         return {
             "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
-            "import_version": self._import_version, "name": self.name, "description": self._description,
-            "image": self._image, "stats": self.stats.to_dict(), "levels": self.levels.to_dict(),
-            "attacks": [a.to_dict() for a in self._attacks], "skills": self.skills.to_dict(),
-            "resistances": self.resistances.to_dict(), "saves": self.saves.to_dict(), "ac": self.ac,
-            "max_hp": self.max_hp, "hp": self._hp, "temp_hp": self._temp_hp, "cvars": self.cvars,
+            "import_version": self._import_version, "name": self._name, "description": self._description,
+            "image": self._image, "stats": self._stats.to_dict(), "levels": self._levels.to_dict(),
+            "attacks": self._attacks.to_dict(), "skills": self._skills.to_dict(),
+            "resistances": self._resistances.to_dict(), "saves": self._saves.to_dict(), "ac": self._ac,
+            "max_hp": self._max_hp, "hp": self._hp, "temp_hp": self._temp_hp, "cvars": self.cvars,
             "options": self.options.to_dict(), "overrides": self.overrides.to_dict(),
             "consumables": [co.to_dict() for co in self.consumables], "death_saves": self.death_saves.to_dict(),
             "spellbook": self._spellbook.to_dict(), "live": self._live, "race": self.race, "background": self.background

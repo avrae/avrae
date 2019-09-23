@@ -131,7 +131,7 @@ class Spell:
         Casts this spell.
         :param ctx: The context of the casting.
         :param caster: The caster of this spell.
-        :type caster: cogs5e.models.caster.Spellcaster
+        :type caster: cogs5e.models.sheet.StatBlock
         :param targets: A list of targets (Combatants)
         :param args: Args
         :param combat: The combat the spell was cast in, if applicable.
@@ -217,7 +217,7 @@ class Spell:
         if title:
             embed.title = title.replace('[sname]', self.name)
         else:
-            embed.title = f"{caster.name} casts {self.name}{stat_override}!"
+            embed.title = f"{caster.get_title_name()} casts {self.name}{stat_override}!"
         if targets is None:
             targets = [None]
 

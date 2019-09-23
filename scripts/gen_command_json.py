@@ -76,13 +76,13 @@ def parse_command_args(command):
             "desc": ""
         }
 
-        if param.new is not param.empty:
+        if param.default is not param.empty:
             arg_meta['required'] = False
             # We don't want None or '' to trigger the [name=value] case and instead it should
             # do [name] since [name=None] or [name=] are not exactly useful for the user.
-            should_print = param.new if isinstance(param.new, str) else param.new is not None
+            should_print = param.default if isinstance(param.default, str) else param.default is not None
             if should_print:
-                arg_meta['default'] = param.new
+                arg_meta['default'] = param.default
         elif param.kind == param.VAR_POSITIONAL:
             arg_meta['required'] = False
             arg_meta['multiple'] = True

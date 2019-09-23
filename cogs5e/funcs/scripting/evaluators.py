@@ -198,7 +198,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.character_changed = True
 
         def mod_hp(val: int, overflow: bool = True):
-            character.modify_hp(val)
+            character.modify_hp(val, overflow=overflow)
             self.character_changed = True
 
         def hp_str():

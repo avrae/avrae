@@ -45,7 +45,7 @@ def argparse(args, character=None, splitter=argsplit):
     Parses arguments.
 
     :param args: A list of arguments to parse.
-    :type args: str or list
+    :type args: str or Iterable
     :return: The parsed arguments.
     :rtype: :class:`~utils.argparser.ParsedArguments`
     """

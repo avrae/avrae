@@ -203,7 +203,7 @@ class Spell:
             spell_override = mod
         elif character and any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
             base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
-            mod = character.get_mod(base)
+            mod = character.stats.get_mod(base)
             dc_override = 8 + mod + character.stats.prof_bonus
             ab_override = mod + character.stats.prof_bonus
             spell_override = mod
@@ -217,7 +217,7 @@ class Spell:
         if title:
             embed.title = title.replace('[sname]', self.name)
         else:
-            embed.title = f"{caster.get_name()} casts {self.name}{stat_override}!"
+            embed.title = f"{caster.name} casts {self.name}{stat_override}!"
         if targets is None:
             targets = [None]
 

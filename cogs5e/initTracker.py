@@ -17,7 +17,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
-from cogs5e.models.sheet import Attack, Skill
+from cogs5e.models.sheet import Attack, Skill, Resistances
 from cogsmisc.stats import Stats
 from utils.argparser import argparse, argsplit
 from utils.functions import a_or_an, confirm, search_and_select
@@ -96,8 +96,9 @@ class InitTracker(commands.Cog):
 
     @init.command()
     async def add(self, ctx, modifier: int, name: str, *args):
-        """Adds a combatant to the initiative order.
-        If a character is set up with the SheetManager module, you can use !init dcadd instead.
+        """Adds a generic combatant to the initiative order.
+        Generic combatants have a 10 in every stat and +0 to every modifier.
+        If a character is set up with the SheetManager module, you can use !init join instead.
         If you are adding monsters to combat, you can use !init madd instead.
         
         __Valid Arguments__
@@ -154,7 +155,8 @@ class InitTracker(commands.Cog):
             modifier = 0
             init_roll_skeleton = str(init)
 
-        me = Combatant.default(name, controller, init, Skill(modifier), hp, hp, ac, private, resists, ctx, combat)
+        me = Combatant.new(name, controller, init, Skill(modifier), hp, ac, private, Resistances.from_dict(resists),
+                           ctx, combat)
 
         if group is None:
             combat.add_combatant(me)
@@ -696,7 +698,7 @@ class InitTracker(commands.Cog):
         if 'mod' in operator.lower():
             if combatant.hp is None:
                 combatant.set_hp(0)
-            combatant.mod_hp(hp_roll.total)
+            combatant.modify_hp(hp_roll.total)
         elif 'set' in operator.lower():
             combatant.set_hp(hp_roll.total)
         elif 'max' in operator.lower():
@@ -710,19 +712,19 @@ class InitTracker(commands.Cog):
             hp_roll = roll(operator, inline=True, show_blurbs=False)
             if combatant.hp is None:
                 combatant.set_hp(0)
-            combatant.mod_hp(hp_roll.total)
+            combatant.modify_hp(hp_roll.total)
         else:
             await ctx.send("Incorrect operator. Use mod, set, or max.")
             return
 
-        out = "{}: {}".format(combatant.name, combatant.get_hp_str())
+        out = "{}: {}".format(combatant.name, combatant.hp_str())
         if 'd' in hp: out += '\n' + hp_roll.skeleton
 
         await ctx.send(out, delete_after=10)
         if combatant.is_private:
             try:
                 controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send("{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
+                await controller.send("{}'s HP: {}".format(combatant.name, combatant.hp_str(True)))
             except:
                 pass
         await combat.final()
@@ -746,12 +748,12 @@ class InitTracker(commands.Cog):
             else:
                 return await ctx.send("Combatant has no temp hp.")
 
-        out = "{}: {}".format(combatant.name, combatant.get_hp_str())
+        out = "{}: {}".format(combatant.name, combatant.hp_str())
         await ctx.send(out, delete_after=10)
         if combatant.is_private:
             try:
                 controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send("{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
+                await controller.send("{}'s HP: {}".format(combatant.name, combatant.hp_str(True)))
             except:
                 pass
         await combat.final()

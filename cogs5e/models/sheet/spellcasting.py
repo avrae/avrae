@@ -27,6 +27,7 @@ class Spellbook:
     def __contains__(self, spell_name: str):
         return spell_name.lower() in {s.name.lower() for s in self.spells}
 
+    # ===== utils =====
     def get_slots(self, level):
         if level == 0:
             return 1
@@ -64,7 +65,7 @@ class SpellbookSpell:
         return {"name": self.name, "strict": self.strict, "level": self.level, "dc": self.dc, "sab": self.sab}
 
 
-class Spellcaster:
+class Spellcaster:  # todo
     def __init__(self, spellbook=None):
         if spellbook is None:
             spellbook = Spellbook({}, {}, [])

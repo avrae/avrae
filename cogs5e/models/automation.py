@@ -233,17 +233,17 @@ class AutomationTarget:
     def damage(self, autoctx, amount):
         if isinstance(self.target, Combatant):
             if self.target.hp is not None:
-                self.target.mod_hp(-amount, overheal=False)
-                autoctx.footer_queue("{}: {}".format(self.target.name, self.target.get_hp_str()))
+                self.target.modify_hp(-amount, overheal=False)
+                autoctx.footer_queue("{}: {}".format(self.target.name, self.target.hp_str()))
                 if self.target.is_private:
-                    autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.get_hp_str(True)}")
+                    autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
             else:
                 autoctx.footer_queue("Dealt {} damage to {}!".format(amount, self.target.name))
             if self.target.is_concentrating() and amount > 0:
                 autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
         elif isinstance(self.target, Character):
             self.target.modify_hp(-amount)
-            autoctx.footer_queue("{}: {}".format(self.target.get_name(), self.target.get_hp_str()))
+            autoctx.footer_queue("{}: {}".format(self.target.name, self.target.hp_str()))
 
     @property
     def combatant(self):
@@ -752,11 +752,11 @@ class TempHP(Effect):
         if autoctx.target.combatant:
             autoctx.target.combatant.temp_hp = max(dmgroll.total, 0)
             autoctx.footer_queue(
-                "{}: {}".format(autoctx.target.combatant.get_name(), autoctx.target.combatant.get_hp_str()))
+                "{}: {}".format(autoctx.target.combatant.name, autoctx.target.combatant.hp_str()))
         elif autoctx.target.character:
             autoctx.target.character.temp_hp = max(dmgroll.total, 0)
             autoctx.footer_queue(
-                "{}: {}".format(autoctx.target.character.name, autoctx.target.character.get_hp_str()))
+                "{}: {}".format(autoctx.target.character.name, autoctx.target.character.hp_str()))
 
     def is_meta(self, autoctx, strict=False):
         if not strict:

@@ -80,14 +80,14 @@ class Monster(StatBlock):
             raw_resists = {}
         super(Monster, self).__init__(
             name=name, stats=ability_scores, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellcasting, ac=ac, max_hp=hp)
+            spellbook=spellcasting, ac=ac, max_hp=hp
+        )
         self.size = size
         self.race = race
         self.alignment = alignment
         self.armortype = armortype
         self.hitdice = hitdice
         self.speed = speed
-        self.ability_scores = ability_scores
         self.cr = cr
         self.xp = xp
         self.passive = passiveperc
@@ -252,30 +252,32 @@ class Monster(StatBlock):
         return cls(**data)
 
     def to_dict(self):
-        return {'name': self.name, 'size': self.size, 'race': self.race, 'alignment': self.alignment, 'ac': self.ac,
-                'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
-                'ability_scores': self.ability_scores.to_dict(),
-                'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
-                'vuln': self.resistances.vuln, 'resist': self.resistances.resist, 'immune': self.resistances.immume,
-                'condition_immune': self.condition_immune,
-                'saves': self.saves.to_dict(), 'skills': self.skills.to_dict(), 'languages': self.languages,
-                'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
-                'reactions': [t.to_dict() for t in self.reactions],
-                'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
-                'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
-                'image_url': self.image_url, 'spellbook': self.spellbook.to_dict(), 'raw_resists': self.raw_resists}
+        return {
+            'name': self.name, 'size': self.size, 'race': self.race, 'alignment': self.alignment, 'ac': self.ac,
+            'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
+            'ability_scores': self.stats.to_dict(),
+            'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
+            'vuln': self.resistances.vuln, 'resist': self.resistances.resist, 'immune': self.resistances.immume,
+            'condition_immune': self.condition_immune,
+            'saves': self.saves.to_dict(), 'skills': self.skills.to_dict(), 'languages': self.languages,
+            'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
+            'reactions': [t.to_dict() for t in self.reactions],
+            'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
+            'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
+            'image_url': self.image_url, 'spellbook': self.spellbook.to_dict(), 'raw_resists': self.raw_resists
+        }
 
     def get_stat_array(self):
         """
         Returns a string describing the monster's 6 core stats, with modifiers.
         """
-        return str(self.ability_scores)
+        return str(self.stats)
 
     def get_hidden_stat_array(self):
         stats = ["Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"]
         for i, stat in enumerate(
-                (self.ability_scores.strength, self.ability_scores.dexterity, self.ability_scores.constitution,
-                 self.ability_scores.intelligence, self.ability_scores.wisdom, self.ability_scores.charisma)):
+                (self.stats.strength, self.stats.dexterity, self.stats.constitution,
+                 self.stats.intelligence, self.stats.wisdom, self.stats.charisma)):
             if stat <= 3:
                 stats[i] = "Very Low"
             elif 3 < stat <= 7:
@@ -336,23 +338,12 @@ class Monster(StatBlock):
         """Returns a monster's name for use in embed titles."""
         return a_or_an(self.name, upper=True) if not self.proper else self.name
 
-    def get_name(self):
-        return self.get_title_name()
-
     def get_image_url(self):
         """Returns a monster's image URL."""
         if not self.source == 'homebrew':
             return f"https://media.avrae.io/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
         else:
             return self.image_url or ''
-
-    def get_mod(self, stat):
-        """
-        Gets the monster's stat modifier for a core stat.
-        :param stat: The core stat to get. Can be of the form "cha", "charisma", or "charismaMod".
-        :return: The monster's relevant stat modifier.
-        """
-        return self.ability_scores.get_mod(stat)
 
 
 def parse_type(_type):

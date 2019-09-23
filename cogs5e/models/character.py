@@ -7,9 +7,9 @@ import cachetools
 from cogs5e.funcs.scripting import MathEvaluator, ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, InvalidSpellLevel, NoCharacter, NoReset
-from cogs5e.models.sheet import AttackList, BaseStats, CharOptions, CustomCounter, DeathSaves, Levels, ManualOverrides, \
-    Resistances, Saves, Skills, Spellbook, SpellbookSpell, StatBlock
+from cogs5e.models.errors import InvalidArgument, NoCharacter, NoReset
+from cogs5e.models.sheet import AttackList, BaseStats, CharOptions, CustomCounter, DESERIALIZE_MAP, DeathSaves, Levels, \
+    ManualOverrides, Resistances, Saves, Skills, Spellbook, SpellbookSpell, StatBlock
 from cogs5e.sheets.abc import SHEET_VERSION
 from utils.constants import STAT_NAMES
 from utils.functions import search_and_select
@@ -17,10 +17,6 @@ from utils.functions import search_and_select
 log = logging.getLogger(__name__)
 
 INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
-DESERIALIZE_MAP = {
-    "stats": BaseStats, "levels": Levels, "attacks": AttackList, "skills": Skills, "saves": Saves,
-    "resistances": Resistances, "spellbook": Spellbook
-}
 
 
 class Character(StatBlock):
@@ -132,17 +128,16 @@ class Character(StatBlock):
 
     # ---------- Serialization ----------
     def to_dict(self):
-        return {
+        d = super(Character, self).to_dict()
+        d.update({
             "owner": self._owner, "upstream": self._upstream, "active": self._active, "sheet_type": self._sheet_type,
-            "import_version": self._import_version, "name": self._name, "description": self._description,
-            "image": self._image, "stats": self._stats.to_dict(), "levels": self._levels.to_dict(),
-            "attacks": self._attacks.to_dict(), "skills": self._skills.to_dict(),
-            "resistances": self._resistances.to_dict(), "saves": self._saves.to_dict(), "ac": self._ac,
-            "max_hp": self._max_hp, "hp": self._hp, "temp_hp": self._temp_hp, "cvars": self.cvars,
-            "options": self.options.to_dict(), "overrides": self.overrides.to_dict(),
-            "consumables": [co.to_dict() for co in self.consumables], "death_saves": self.death_saves.to_dict(),
-            "spellbook": self._spellbook.to_dict(), "live": self._live, "race": self.race, "background": self.background
-        }
+            "import_version": self._import_version, "description": self._description,
+            "image": self._image, "cvars": self.cvars, "options": self.options.to_dict(),
+            "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
+            "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
+            "background": self.background
+        })
+        return d
 
     @staticmethod
     async def delete(ctx, owner_id, upstream):
@@ -151,31 +146,8 @@ class Character(StatBlock):
             del Character._cache[owner_id, upstream]
 
     # ---------- Basic CRUD ----------
-    def get_name(self):
-        return self.name
-
     def get_color(self):
         return self.options.get('color') or random.randint(0, 0xffffff)
-
-    def get_resists(self):
-        """
-        Gets the resistances of a character.
-        :return: The resistances, immunities, and vulnerabilites of a character.
-        :rtype: dict
-        """
-        return {'resist': self.resistances.resist, 'immune': self.resistances.immune, 'vuln': self.resistances.vuln}
-
-    def get_level(self):
-        """:returns int - the character's total level."""
-        return self.levels.total_level
-
-    def get_mod(self, stat):
-        """
-        Gets the character's stat modifier for a core stat.
-        :param stat: The core stat to get. Can be of the form "cha", or "charisma".
-        :return: The character's relevant stat modifier.
-        """
-        return self.stats.get_mod(stat)
 
     @property
     def owner(self):
@@ -321,105 +293,16 @@ class Character(StatBlock):
         if self._live_integration:
             self._live_integration.sync_hp()
 
-    def get_hp_str(self):
-        out = f"{self.hp}/{self.max_hp}"
-        if self.temp_hp:
-            out += f' (+{self.temp_hp} temp)'
-        return out
-
-    def modify_hp(self, value, ignore_temp=False, overflow=True):
-        """Modifies the character's hit points. If ignore_temp is True, will deal damage to raw HP, ignoring temp."""
-        if value < 0 and not ignore_temp:
-            thp = self.temp_hp
-            self.temp_hp += value
-            value += min(thp, -value)  # how much did the THP absorb?
-        if overflow:
-            self.hp = self._hp + value
-        else:
-            self.hp = min(self._hp + value, self.max_hp)
-
-    def reset_hp(self):
-        """Resets the character's HP to max and THP to 0."""
-        self.temp_hp = 0
-        self.hp = self.max_hp
-
-    @property
-    def temp_hp(self):
-        return self._temp_hp
-
-    @temp_hp.setter
-    def temp_hp(self, value):
-        self._temp_hp = max(0, value)  # 0 ≤ temp_hp
-
     # ---------- SPELLBOOK ----------
-    def get_remaining_slots_str(self, level: int = None):
-        """:param level: The level of spell slot to return.
-        :returns A string representing the character's remaining spell slots."""
-        out = ''
-        if level:
-            assert 0 < level < 10
-            _max = self.spellbook.get_max_slots(level)
-            remaining = self.spellbook.get_slots(level)
-            numEmpty = _max - remaining
-            filled = '\u25c9' * remaining
-            empty = '\u3007' * numEmpty
-            out += f"`{level}` {filled}{empty}\n"
-        else:
-            for level in range(1, 10):
-                _max = self.spellbook.get_max_slots(level)
-                remaining = self.spellbook.get_slots(level)
-                if _max:
-                    numEmpty = _max - remaining
-                    filled = '\u25c9' * remaining
-                    empty = '\u3007' * numEmpty
-                    out += f"`{level}` {filled}{empty}\n"
-        if not out:
-            out = "No spell slots."
-        return out.strip()
-
     def set_remaining_slots(self, level: int, value: int):
-        """Sets the character's remaining spell slots of level level.
-        :param level - The spell level.
-        :param value - The number of remaining spell slots."""
-        if not 0 < level < 10:
-            raise InvalidSpellLevel()
-        if not 0 <= value <= self.spellbook.get_max_slots(level):
-            raise CounterOutOfBounds()
-
-        self.spellbook.set_slots(level, value)
-
+        super(Character, self).set_remaining_slots(level, value)
         if self._live_integration:
             self._live_integration.sync_slots()
-
-    def use_slot(self, level: int):
-        """Uses one spell slot of level level.
-        :raises CounterOutOfBounds if there are no remaining slots of the requested level."""
-        if level == 0:
-            return
-        if not 0 < level < 10:
-            raise InvalidSpellLevel()
-
-        val = self.spellbook.get_slots(level) - 1
-        if val < 0:
-            raise CounterOutOfBounds("You do not have any spell slots of this level remaining.")
-
-        self.set_remaining_slots(level, val)
 
     def reset_spellslots(self):
-        """Resets all spellslots to their max value.
-        :returns self"""
-        self.spellbook.reset_slots()
+        super(Character, self).reset_spellslots()
         if self._live_integration:
             self._live_integration.sync_slots()
-
-    def can_cast(self, spell, level) -> bool:
-        return self.spellbook.get_slots(level) > 0 and spell.name in self.spellbook
-
-    def cast(self, spell, level):
-        self.use_slot(level)
-
-    def remaining_casts_of(self, spell, level):
-        return self.get_remaining_slots_str(level)
 
     def add_known_spell(self, spell):
         """Adds a spell to the character's known spell list.
@@ -564,7 +447,7 @@ class Character(StatBlock):
 
         # combat details
         desc_details.append(f"**AC**: {self.ac}")
-        desc_details.append(f"**HP**: {self.get_hp_str()}")
+        desc_details.append(f"**HP**: {self.hp_str()}")
         desc_details.append(f"**Initiative**: {self.skills.initiative.value:+}")
 
         # stats

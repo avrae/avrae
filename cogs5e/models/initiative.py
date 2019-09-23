@@ -3,8 +3,9 @@ import cachetools
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
-from cogs5e.models.sheet import AttackList, Saves, Skill, StatBlock
-from cogs5e.models.sheet.spellcasting import Spellbook, Spellcaster
+from cogs5e.models.sheet import AttackList, BaseStats, DESERIALIZE_MAP, Levels, Resistances, Saves, Skill, Skills, \
+    StatBlock
+from cogs5e.models.sheet.spellcasting import Spellbook
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
 from utils.functions import get_selection
@@ -449,21 +450,29 @@ class Combat:
 
 
 class Combatant(StatBlock):
-    def __init__(self, name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 combat,
-                 index=None, notes=None, effects=None, group=None, temphp=0, spellbook=None, *args, **kwargs):
+    def __init__(self,
+                 # init metadata
+                 ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
+                 notes: str = None, effects: list = None, group: str = None,
+                 # statblock info
+                 stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
+                 skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
+                 spellbook: Spellbook = None,
+                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0):
         super(Combatant, self).__init__(
-            name=name, attacks=attacks, saves=saves, resistances=resists, spellbook=spellbook,
-            ac=ac, max_hp=hpMax, hp=hp, temp_hp=temphp
+            name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
+            spellbook=spellbook,
+            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp
         )
         if effects is None:
             effects = []
-        self._controller = controllerId
+        self.ctx = ctx
+        self.combat = combat
+
+        self._controller = controller_id
         self._init = init
         self._private = private
         self._index = index  # combat write only; position in combat
-        self.ctx = ctx
-        self.combat = combat
         self._notes = notes
         self._effects = effects
         self._group = group
@@ -471,32 +480,31 @@ class Combatant(StatBlock):
         self._cache = {}
 
     @classmethod
-    def default(cls, name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, ctx, combat):
-        return cls(name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, [], None, ctx, combat)
+    def new(cls, name: str, controller_id: str, init: int, init_skill: Skill, max_hp: int, ac: int, private: bool,
+            resists: Resistances, ctx, combat):
+        skills = Skills.default()
+        skills.update({"initiative": init_skill})
+        return cls(ctx, combat, name, controller_id, private, init, resistances=resists, skills=skills,
+                   max_hp=max_hp, ac=ac)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
-        if raw['saves']:
-            saves = Saves.from_dict(raw['saves'])
-        else:
-            saves = None
-        init_skill = Skill.from_dict(raw['init_skill'])
-        inst = cls(raw['name'], raw['controller'], raw['init'], init_skill, raw['hpMax'], raw['hp'], raw['ac'],
-                   raw['private'], raw['resists'], raw['attacks'], saves, ctx, combat,
-                   index=raw['index'], notes=raw['notes'], effects=[], group=raw['group'],
-                   # begin backwards compatibility
-                   temphp=raw.get('temphp'), spellbook=Spellbook.from_dict(raw.get('spellbook', {})))
-        inst._effects = [Effect.from_dict(e, combat, inst) for e in raw['effects']]
+        for key, klass in DESERIALIZE_MAP.items():
+            if key in raw:
+                raw[key] = klass.from_dict(raw[key])
+        effects = raw.pop('effects')
+        inst = cls(ctx, combat, **raw)
+        inst._effects = [Effect.from_dict(e, combat, inst) for e in effects]
         return inst
 
     def to_dict(self):
-        return {'name': self.name, 'controller': self.controller, 'init': self.init,
-                'init_skill': self.init_skill.to_dict(),
-                'hpMax': self._max_hp, 'hp': self._hp, 'ac': self._ac, 'private': self.is_private,
-                'resists': self._resists, 'attacks': self._attacks,
-                'saves': self._saves and self._saves.to_dict(), 'index': self.index,
-                'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
-                'temphp': self.temp_hp, 'spellbook': self.spellbook.to_dict(), 'type': 'common'}
+        d = super(Combatant, self).to_dict()
+        d.update({
+            'controller': self.controller, 'init': self.init, 'private': self.is_private,
+            'index': self.index, 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()],
+            'group': self.group, 'type': 'common'
+        })
+        return d
 
     @property
     def name(self):
@@ -507,9 +515,6 @@ class Combatant(StatBlock):
         for effect in self._effects:
             effect.on_name_change(self._name, new_name)
         self._name = new_name
-
-    def get_name(self):
-        return self.name
 
     @property
     def controller(self):
@@ -536,10 +541,10 @@ class Combatant(StatBlock):
         return self._max_hp
 
     @max_hp.setter
-    def max_hp(self, new_hpMax):
-        self._max_hp = new_hpMax
+    def max_hp(self, new_max_hp):
+        self._max_hp = new_max_hp
         if self._hp is None:
-            self._hp = new_hpMax
+            self._hp = new_max_hp
 
     @property
     def hp(self):
@@ -549,30 +554,14 @@ class Combatant(StatBlock):
     def hp(self, new_hp):
         self._hp = new_hp
 
-    def get_hp(self):
-        return self.hp
-
-    def mod_hp(self, delta, overheal=True, ignore_temp=False):
-        if delta < 0 and not ignore_temp:
-            thp = self._temp_hp or 0
-            self.temp_hp += delta
-            delta += min(thp, -delta)  # how much did the THP absorb?
-        if overheal or self.max_hp is None:
-            self.hp += delta
-        else:
-            self.hp = min(self.hp + delta, self.max_hp)
-
-    def set_hp(self, new_hp):  # set hp before temp hp
-        self._hp = new_hp
-
-    def get_hp_str(self, private=False):
+    def hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''
         if not self.is_private or private:
             hpStr = '<{}/{} HP>'.format(self.hp, self.max_hp) if self.max_hp is not None else '<{} HP>'.format(
                 self.hp) if self.hp is not None else ''
             if self.temp_hp and self.temp_hp > 0:
-                hpStr += f' <{self.temp_hp} THP>'
+                hpStr += f' (+{self.temp_hp} temp)'
         elif self.max_hp is not None and self.max_hp > 0:
             ratio = self.hp / self.max_hp
             if ratio >= 1:
@@ -586,14 +575,6 @@ class Combatant(StatBlock):
             elif ratio <= 0:
                 hpStr = "<Dead>"
         return hpStr
-
-    @property
-    def temp_hp(self):
-        return self._temp_hp or 0
-
-    @temp_hp.setter
-    def temp_hp(self, new_hp):
-        self._temp_hp = max(new_hp, 0)
 
     @property
     def ac(self):
@@ -772,7 +753,7 @@ class Combatant(StatBlock):
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        hpStr = f"{self.get_hp_str(private)} " if self.get_hp_str(private) else ''
+        hpStr = f"{self.hp_str(private)} " if self.hp_str(private) else ''
         if not no_notes:
             return f"{self.init:>2}: {self.name} {hpStr}{self.get_effects_and_notes()}"
         else:
@@ -807,7 +788,7 @@ class Combatant(StatBlock):
         return ""
 
     def get_hp_and_ac(self, private: bool = False):
-        out = [self.get_hp_str(private)]
+        out = [self.hp_str(private)]
         if self.ac is not None and (not self.is_private or private):
             out.append("(AC {})".format(self.ac))
         return ' '.join(out)
@@ -833,19 +814,27 @@ class Combatant(StatBlock):
         pass
 
     def __str__(self):
-        return f"{self.name}: {self.get_hp_str()}".strip()
+        return f"{self.name}: {self.hp_str()}".strip()
 
     def __hash__(self):
         return hash(f"{self.combat.channel}.{self.name}")
 
 
 class MonsterCombatant(Combatant):
-    def __init__(self, name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 combat,
-                 index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None, spellbook=None):
-        super(MonsterCombatant, self).__init__(name, controllerId, init, init_skill, hpMax, hp, ac, private, resists,
-                                               attacks, saves, ctx, combat, index, notes, effects, group, temphp,
-                                               spellbook)
+    def __init__(self,
+                 # init metadata
+                 ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
+                 notes: str = None, effects: list = None, group: str = None,
+                 # statblock info
+                 stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
+                 skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
+                 spellbook: Spellbook = None,
+                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+                 # monster specific
+                 monster_name=None):
+        super(MonsterCombatant, self).__init__(
+            ctx, combat, name, controller_id, private, init, index, notes, effects, group,
+            stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp)
         self._monster_name = monster_name
 
     @classmethod
@@ -895,16 +884,20 @@ class MonsterCombatant(Combatant):
 
 
 class PlayerCombatant(Combatant):
-    def __init__(self, name, controllerId, init, init_skill, hpMax, hp, ac, private, resists, attacks, saves, ctx,
-                 combat,
-                 index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None,
-                 temphp=None, spellbook=None):
-        super(PlayerCombatant, self).__init__(name, controllerId, init, init_skill, hpMax, hp, ac, private, resists,
-                                              attacks, saves, ctx, combat, index, notes, effects, group, temphp,
-                                              spellbook)
+    def __init__(self,
+                 # init metadata
+                 ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
+                 notes: str = None, effects: list = None, group: str = None,
+                 # character specific
+                 character_id=None, character_owner=None):
+        # note that the player combatant doesn't initialize the statblock
+        # because we want the combatant statblock attrs to reference the character attrs
+        super(PlayerCombatant, self).__init__(
+            ctx, combat, name, controller_id, private, init, index, notes, effects, group)
         self.character_id = character_id
         self.character_owner = character_owner
-        self._character = None  # shenanigans
+
+        self._character = None  # cache
 
     @classmethod
     async def from_character(cls, name, controllerId, init, ac, private, resists, ctx, combat, character_id,
@@ -927,8 +920,8 @@ class PlayerCombatant(Combatant):
         return self._max_hp or self.character.max_hp
 
     @max_hp.setter
-    def max_hp(self, new_hpMax):
-        self._max_hp = new_hpMax
+    def max_hp(self, new_max_hp):
+        self._max_hp = new_max_hp
 
     @property
     def hp(self):

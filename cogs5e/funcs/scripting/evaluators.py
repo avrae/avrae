@@ -180,7 +180,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             return character.spellbook.get_max_slots(level)
 
         def slots_str(level: int):
-            return character.get_remaining_slots_str(level)
+            return character.slots_str(level)
 
         def set_slots(level: int, value: int):
             character.set_remaining_slots(level, value)
@@ -198,11 +198,11 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.character_changed = True
 
         def mod_hp(val: int, overflow: bool = True):
-            character.modify_hp(val, overflow=overflow)
+            character.modify_hp(val)
             self.character_changed = True
 
         def hp_str():
-            return character.get_hp_str()
+            return character.hp_str()
 
         def get_temphp():
             return character.temp_hp

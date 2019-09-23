@@ -148,20 +148,28 @@ class Skills:
 
     # ---------- main funcs ----------
     @classmethod
-    def default(cls, base_stats: BaseStats):
+    def default(cls, base_stats: BaseStats = None):
         """Returns a skills object with skills set to default values, based on stats."""
+        if base_stats is None:
+            base_stats = BaseStats.default()
         skills = {}
         for skill in SKILL_NAMES:
             skills[skill] = Skill(base_stats.get_mod(SKILL_MAP[skill]))
         return cls(skills)
 
     def update(self, explicit_skills: dict):
-        """Updates skills with an explicit dictionary of modifiers. All provided are assumed to have prof=1."""
+        """
+        Updates skills with an explicit dictionary of modifiers or Skills.
+        All ints provided are assumed to have prof=1.
+        """
         for skill, mod in explicit_skills.items():
             if skill not in self.skills:
                 raise ValueError(f"{skill} is not a skill.")
-            self.skills[skill].value = mod
-            self.skills[skill].prof = 1
+            if isinstance(mod, int):
+                self.skills[skill].value = mod
+                self.skills[skill].prof = 1
+            else:
+                self.skills[skill] = mod
 
     def __getattr__(self, item):
         if item not in self.skills:

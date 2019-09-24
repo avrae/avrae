@@ -11,6 +11,7 @@ Welcome to avrae's documentation!
    :caption: Contents:
 
    aliasing/api
+   automation
 
 
 

@@ -103,6 +103,10 @@ class StatBlock:
     def hp(self):
         return self._hp
 
+    @hp.setter
+    def hp(self, value):
+        self._hp = max(0, value)
+
     @property
     def temp_hp(self):
         return self._temp_hp
@@ -138,18 +142,18 @@ class StatBlock:
             return f"Dealt {-value} damage!"
 
         if overflow:
-            self._hp = self._hp + value
+            self.hp = self.hp + value
         else:
-            self._hp = min(self._hp + value, self.max_hp)
+            self.hp = min(self.hp + value, self.max_hp)
         return self.hp_str()
 
     def set_hp(self, new_hp):  # set hp before temp hp
-        self._hp = new_hp
+        self.hp = new_hp
 
     def reset_hp(self):
         """Resets the actor's HP to max and THP to 0."""
         self._temp_hp = 0
-        self._hp = self.max_hp
+        self.hp = self.max_hp
 
     # ----- SLOTS -----
     def slots_str(self, level: int = None):

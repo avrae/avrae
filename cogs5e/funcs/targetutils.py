@@ -1,5 +1,5 @@
 from cogs5e.models.character import Character
-from cogs5e.models.errors import CombatNotFound
+from cogs5e.models.errors import CombatNotFound, SelectionException, InvalidArgument
 from cogs5e.models.initiative import Combat, CombatantGroup
 from utils.argparser import argparse
 
@@ -45,7 +45,10 @@ async def definitely_combat(combat, args, allow_groups=True):
             t, contextargs = t.split('|', 1)
             contextargs = argparse(contextargs)
 
-        target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=allow_groups)
+        try:
+            target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=allow_groups)
+        except SelectionException:
+            raise InvalidArgument(f"Target {t} not found.")
 
         if isinstance(target, CombatantGroup):
             for combatant in target.get_combatants():

@@ -232,14 +232,15 @@ class AutomationTarget:
 
     def damage(self, autoctx, amount):
         if not self.is_simple:
-            result = self.target.modify_hp(-amount, overflow=False)
+            result = self.target.modify_hp(-amount)
             autoctx.footer_queue(f"{self.target.name}: {result}")
 
-            if isinstance(self.target, Combatant) and self.target.is_private:
-                autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
+            if isinstance(self.target, Combatant):
+                if self.target.is_private:
+                    autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
 
-            if self.target.is_concentrating() and amount > 0:
-                autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
+                if self.target.is_concentrating() and amount > 0:
+                    autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
 
     @property
     def combatant(self):

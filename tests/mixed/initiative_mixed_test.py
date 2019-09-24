@@ -87,6 +87,7 @@ async def attack_I(avrae, dhttp, target='1', name='KO1'):
     await dhttp.receive_edit()
     await dhttp.receive_message(embed=embed)
     await dhttp.receive_delete()
+    await dhttp.drain()
 
     # ensure kobold is not at full health
     combat = await active_combat(avrae)
@@ -107,6 +108,7 @@ async def cast_I(avrae, dhttp, targets=('2', '3'), names=('KO2', 'KO3')):
     footer = '\n'.join(rf"{name}: <-?\d+/\d+ HP>" for name in names)
     embed.set_footer(text=footer)
     await dhttp.receive_message(embed=embed)
+    await dhttp.drain()
 
     # ensure kobolds are not at full health
     combat = await active_combat(avrae)

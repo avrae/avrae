@@ -254,7 +254,7 @@ class Saves:
             to_add = False
             modifiers = []
 
-            if save.prof > 0.5:
+            if save.prof > 0.5 or save.bonus:
                 to_add = True
             if save.prof == 2:
                 modifiers.append("expertise")
@@ -295,6 +295,18 @@ class Resistances:
         return {"resist": self.resist, "immune": self.immune, "vuln": self.vuln, "neutral": self.neutral}
 
     # ---------- main funcs ----------
+    def __getitem__(self, item):
+        if item == 'resist':
+            return self.resist
+        elif item == 'vuln':
+            return self.vuln
+        elif item == 'immune':
+            return self.immune
+        elif item == 'neutral':
+            return self.neutral
+        else:
+            raise ValueError(f"{item} is not a resistance type.")
+
     def __str__(self):
         out = []
         if self.resist:

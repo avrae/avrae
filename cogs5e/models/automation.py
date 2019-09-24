@@ -231,19 +231,15 @@ class AutomationTarget:
         return self.get_resists().neutral
 
     def damage(self, autoctx, amount):
-        if isinstance(self.target, Combatant):
-            if self.target.hp is not None:
-                self.target.modify_hp(-amount, overflow=False)
-                autoctx.footer_queue("{}: {}".format(self.target.name, self.target.hp_str()))
-                if self.target.is_private:
-                    autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
-            else:
-                autoctx.footer_queue("Dealt {} damage to {}!".format(amount, self.target.name))
+        if not self.is_simple:
+            result = self.target.modify_hp(-amount, overflow=False)
+            autoctx.footer_queue(f"{self.target.name}: {result}")
+
+            if isinstance(self.target, Combatant) and self.target.is_private:
+                autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
+
             if self.target.is_concentrating() and amount > 0:
                 autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
-        elif isinstance(self.target, Character):
-            self.target.modify_hp(-amount)
-            autoctx.footer_queue("{}: {}".format(self.target.name, self.target.hp_str()))
 
     @property
     def combatant(self):
@@ -870,7 +866,6 @@ class Text(Effect):
                 autoctx.effect_queue(text)
             else:
                 autoctx.add_pm(str(autoctx.ctx.author.id), text)
-
 
 
 EFFECT_MAP = {

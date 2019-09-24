@@ -155,17 +155,15 @@ class Dice(commands.Cog):
         attacks = monster.attacks
         monster_name = monster.get_title_name()
 
-        attack = await search_and_select(ctx, attacks, atk_name, lambda a: a['name'])
+        attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name)
         args = await scripting.parse_snippets(args, ctx)
         args = argparse(args)
         if not args.last('h', type_=bool):
             name = monster_name
-            image = args.get('thumb') or monster.get_image_url()
+            image = args.last('thumb') or monster.get_image_url()
         else:
             name = "An unknown creature"
             image = None
-
-        attack = Attack.from_old(attack)
 
         embed = discord.Embed()
         if args.last('title') is not None:
@@ -198,11 +196,7 @@ class Dice(commands.Cog):
 
         monster = await select_monster_full(ctx, monster_name)
         monster_name = monster.get_title_name()
-        attacks = monster.attacks
-        attacks_string = '\n'.join("**{0}:** +{1} To Hit, {2} damage.".format(a['name'],
-                                                                              a['attackBonus'],
-                                                                              a['damage'] or 'no') for a in attacks)
-        return await ctx.send("{}'s attacks:\n{}".format(monster_name, attacks_string))
+        return await ctx.send(f"{monster_name}'s attacks:\n{str(monster.attacks)}")
 
     @commands.command(aliases=['mc'])
     async def monster_check(self, ctx, monster_name, check, *args):

@@ -91,7 +91,7 @@ class SimpleCombatant:
         self.maxhp = self._combatant.max_hp
         self.initmod = int(self._combatant.init_skill)
         self.temphp = self._combatant.temp_hp
-        self.resists = self._combatant.resists
+        self.resists = self._combatant.resistances
         self.attacks = self._combatant.attacks
         self.init = self._combatant.init
         self.name = self._combatant.name
@@ -193,9 +193,9 @@ class SimpleCombatant:
 
         args = ParsedArguments.from_dict({
             'critdice': [critdice],
-            'resist': self._combatant.resists['resist'],
-            'immune': self._combatant.resists['immune'],
-            'vuln': self._combatant.resists['vuln']
+            'resist': self._combatant.resistances['resist'],
+            'immune': self._combatant.resistances['immune'],
+            'vuln': self._combatant.resistances['vuln']
         })
         if d:
             args['d'] = d

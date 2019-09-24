@@ -515,10 +515,10 @@ class SpellEvaluator(MathEvaluator):
             spell = caster.spellbook.spell_mod
         else:
             try:
-                spell = caster.spellbook.sab - caster.pb_from_level()
+                spell = caster.spellbook.sab - caster.stats.prof_bonus
             except TypeError:
                 spell = 0
-        names = {'spell': spell, 'proficiencyBonus': caster.pb_from_level()}
+        names = {'spell': spell, 'proficiencyBonus': caster.stats.prof_bonus}
         return cls(names=names)
 
     def parse(self, string, extra_names=None):

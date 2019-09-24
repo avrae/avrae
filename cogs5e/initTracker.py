@@ -180,7 +180,6 @@ class InitTracker(commands.Cog):
         -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
         -h - Hides HP, AC, Resists, etc. Default: True.
         -group <group> - Adds the combatant to a group.
-        -npr - Removes physical resistances when added.
         -rollhp - Rolls the monsters HP, instead of using the default value.
         -hp <hp> - Sets starting HP.
         -ac <ac> - Sets the combatant's starting AC."""
@@ -197,14 +196,9 @@ class InitTracker(commands.Cog):
         rollhp = args.last('rollhp', False, bool)
         hp = args.last('hp', type_=int)
         ac = args.last('ac', type_=int)
-        npr = args.last('npr', type_=bool)
         n = args.last('n', 1, int)
         name_template = args.last('name', monster.name[:2].upper() + '#')
         init_skill = monster.skills.initiative
-
-        opts = {}
-        if npr:
-            opts['npr'] = True
 
         combat = await Combat.from_ctx(ctx)
 
@@ -248,8 +242,8 @@ class InitTracker(commands.Cog):
                     to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
-                me = MonsterCombatant.from_monster(name, controller, init, init_skill, private, monster, ctx, combat,
-                                                   opts, hp=hp or rolled_hp, ac=ac)
+                me = MonsterCombatant.from_monster(monster, ctx, combat, name, controller, init, private,
+                                                   hp=hp or rolled_hp, ac=ac)
                 if group is None:
                     combat.add_combatant(me)
                     out += f"{name} was added to combat with initiative {check_roll.skeleton if p is None else p}.\n"
@@ -309,9 +303,7 @@ class InitTracker(commands.Cog):
 
         combat = await Combat.from_ctx(ctx)
 
-        me = await PlayerCombatant.from_character(char.name, controller, init, char.ac, private,
-                                                  char.get_resists(), ctx, combat, char.upstream, str(ctx.author.id),
-                                                  char)
+        me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
 
         if combat.get_combatant(char.name) is not None:
             await ctx.send("Combatant already exists.")

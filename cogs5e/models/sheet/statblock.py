@@ -133,10 +133,15 @@ class StatBlock:
             thp = self.temp_hp
             self.temp_hp += value
             value += min(thp, -value)  # how much did the THP absorb?
+
+        if self._hp is None:
+            return f"Dealt {-value} damage!"
+
         if overflow:
             self._hp = self._hp + value
         else:
             self._hp = min(self._hp + value, self.max_hp)
+        return self.hp_str()
 
     def set_hp(self, new_hp):  # set hp before temp hp
         self._hp = new_hp

@@ -492,6 +492,7 @@ class Combatant(StatBlock):
         for key, klass in DESERIALIZE_MAP.items():
             if key in raw:
                 raw[key] = klass.from_dict(raw[key])
+        del raw['type']
         effects = raw.pop('effects')
         inst = cls(ctx, combat, **raw)
         inst._effects = [Effect.from_dict(e, combat, inst) for e in effects]
@@ -500,7 +501,7 @@ class Combatant(StatBlock):
     def to_dict(self):
         d = super(Combatant, self).to_dict()
         d.update({
-            'controller': self.controller, 'init': self.init, 'private': self.is_private,
+            'controller_id': self.controller, 'init': self.init, 'private': self.is_private,
             'index': self.index, 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()],
             'group': self.group, 'type': 'common'
         })
@@ -602,7 +603,7 @@ class Combatant(StatBlock):
         self._private = new_privacy
 
     @property
-    def resists(self):
+    def resistances(self):
         checked = []
         out = {}
         for k in reversed(RESIST_TYPES):
@@ -612,21 +613,19 @@ class Combatant(StatBlock):
                     out[k].append(_type)
                     checked.append(_type)
         for k in reversed(RESIST_TYPES):
-            for _type in self._resists.get(k, []):
+            for _type in self._resistances[k]:
                 if _type not in checked:
                     out[k].append(_type)
                     checked.append(_type)
-        return out
+        return Resistances.from_dict(out)
 
     def set_resist(self, dmgtype, resisttype):
         if resisttype not in RESIST_TYPES:
             raise ValueError("Resistance type is invalid")
         for rt in RESIST_TYPES:
-            if dmgtype in self._resists.get(rt, []):
-                self._resists[rt].remove(dmgtype)
-        if resisttype not in self._resists:
-            self._resists[resisttype] = []
-        self._resists[resisttype].append(dmgtype)
+            if dmgtype in self._resistances[rt]:
+                self._resistances[rt].remove(dmgtype)
+        self._resistances[resisttype].append(dmgtype)
 
     @property
     def attacks(self):
@@ -795,16 +794,13 @@ class Combatant(StatBlock):
 
     def get_resist_string(self, private: bool = False):
         resistStr = ''
-        self._resists['resist'] = [r for r in self._resists['resist'] if r]  # clean empty resists
-        self._resists['immune'] = [r for r in self._resists['immune'] if r]  # clean empty resists
-        self._resists['vuln'] = [r for r in self._resists['vuln'] if r]  # clean empty resists
         if not self.is_private or private:
-            if len(self.resists['resist']) > 0:
-                resistStr += "\n> Resistances: " + ', '.join(self.resists['resist']).title()
-            if len(self.resists['immune']) > 0:
-                resistStr += "\n> Immunities: " + ', '.join(self.resists['immune']).title()
-            if len(self.resists['vuln']) > 0:
-                resistStr += "\n> Vulnerabilities: " + ', '.join(self.resists['vuln']).title()
+            if len(self.resistances.resist) > 0:
+                resistStr += "\n> Resistances: " + ', '.join(self.resistances['resist']).title()
+            if len(self.resistances.immune) > 0:
+                resistStr += "\n> Immunities: " + ', '.join(self.resistances['immune']).title()
+            if len(self.resistances.vuln) > 0:
+                resistStr += "\n> Vulnerabilities: " + ', '.join(self.resistances['vuln']).title()
         return resistStr
 
     def on_remove(self):
@@ -838,33 +834,18 @@ class MonsterCombatant(Combatant):
         self._monster_name = monster_name
 
     @classmethod
-    def from_monster(cls, name, controllerId, init, init_skill, private, monster, ctx, combat, opts=None, index=None,
-                     hp=None, ac=None):
+    def from_monster(cls, monster, ctx, combat, name, controller_id, init, private, hp=None, ac=None):
         monster_name = monster.name
         hp = int(monster.hp) if not hp else int(hp)
         ac = int(monster.ac) if not ac else int(ac)
 
-        resist = monster.raw_resists['resist']
-        immune = monster.raw_resists['immune']
-        vuln = monster.raw_resists['vuln']
-        # fix npr and blug/pierc/slash
-        if opts.get('npr'):
-            if resist:
-                resist = [r for r in resist if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
-            if immune:
-                immune = [r for r in immune if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
-            if vuln:
-                vuln = [r for r in vuln if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
-
-        resists = {'resist': [r.lower() for r in resist],
-                   'immune': [i.lower() for i in immune],
-                   'vuln': [v.lower() for v in vuln]}
-        attacks = monster.attacks
-        saves = monster.saves
-        spellcasting = monster.spellbook
-
-        return cls(name, controllerId, init, init_skill, hp, hp, ac, private, resists, attacks, saves, ctx, combat,
-                   index, monster_name, spellbook=spellcasting)
+        return cls(ctx, combat, name, controller_id, private, init,
+                   # statblock info
+                   stats=monster.stats, levels=monster.levels, attacks=monster.attacks,
+                   skills=monster.skills, saves=monster.saves, resistances=monster.resistances,
+                   spellbook=monster.spellbook, ac=ac, max_hp=hp,
+                   # monster specific
+                   monster_name=monster_name)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
@@ -888,23 +869,30 @@ class PlayerCombatant(Combatant):
                  # init metadata
                  ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
                  notes: str = None, effects: list = None, group: str = None,
+                 # statblock info
+                 stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
+                 skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
+                 spellbook: Spellbook = None,
+                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
                  # character specific
                  character_id=None, character_owner=None):
         # note that the player combatant doesn't initialize the statblock
         # because we want the combatant statblock attrs to reference the character attrs
         super(PlayerCombatant, self).__init__(
-            ctx, combat, name, controller_id, private, init, index, notes, effects, group)
+            ctx, combat, name, controller_id, private, init, index, notes, effects, group,
+            stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp
+        )
         self.character_id = character_id
         self.character_owner = character_owner
 
         self._character = None  # cache
 
     @classmethod
-    async def from_character(cls, name, controllerId, init, ac, private, resists, ctx, combat, character_id,
-                             character_owner, char):
-        inst = cls(name, controllerId, init, None, None, None, ac, private, resists, None, None, ctx, combat,
-                   character_id=character_id, character_owner=character_owner)
-        inst._character = char
+    async def from_character(cls, character, ctx, combat, controller_id, init, private):
+        inst = cls(ctx, combat, character.name, controller_id, private, init,
+                   # character specific
+                   character_id=character.upstream, character_owner=character.owner)
+        inst._character = character
         return inst
 
     @property
@@ -932,7 +920,14 @@ class PlayerCombatant(Combatant):
         self.character.hp = new_hp
 
     def set_hp(self, new_hp):
-        self.character.hp = new_hp
+        return self.character.set_hp(new_hp)
+
+    def modify_hp(self, value, ignore_temp=False, overflow=True):
+        self.character.modify_hp(value, ignore_temp, overflow)
+        return self.hp_str()
+
+    def reset_hp(self):
+        return self.character.reset_hp()
 
     @property
     def temp_hp(self):

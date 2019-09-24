@@ -106,11 +106,7 @@ class SheetManager(commands.Cog):
         args = await self.new_arg_stuff(args, ctx, char)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
-        if isinstance(caster, Character):
-            attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
-        else:  # caster is combatant
-            attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a['name'])
-            attack = Attack.from_old(attack)
+        attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
 
         embed = EmbedWithCharacter(char, name=False)
         if args.last('title') is not None:
@@ -139,15 +135,9 @@ class SheetManager(commands.Cog):
     async def attack_list(self, ctx):
         """Lists the active character's attacks."""
         char: Character = await Character.from_ctx(ctx)
-
-        atks = char.attacks
-        atk_str = ""
-        for attack in atks:
-            a = f"{str(attack)}\n"
-            if len(atk_str) + len(a) > 1000:
-                atk_str += "[...]"
-                break
-            atk_str += a
+        atk_str = str(char.attacks)
+        if len(atk_str) > 1000:
+            atk_str = f"{atk_str[:1000]}\n[...]"
         return await ctx.send(f"{char.name}'s attacks:\n{atk_str}")
 
     @attack.command(name="add", aliases=['create'])

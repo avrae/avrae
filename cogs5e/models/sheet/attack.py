@@ -83,9 +83,25 @@ class AttackList:
     def to_dict(self):  # technically to_list
         return [a.to_dict() for a in self.attacks]
 
+    # utils
+    def __str__(self):
+        return '\n'.join(str(atk) for atk in self.attacks)
+
     # list compat
+    def append(self, attack):
+        self.attacks.append(attack)
+
+    def remove(self, attack):
+        self.attacks.remove(attack)
+
     def __iter__(self):
         return iter(self.attacks)
 
     def __getitem__(self, item):
         return self.attacks[item]
+
+    def __add__(self, other):
+        return AttackList(self.attacks + other.attacks)
+
+    def __len__(self):
+        return len(self.attacks)

@@ -49,7 +49,10 @@ def test_gt_lt_selectors():
 
 def test_infinite_loops():
     r = roll("1d1e1")
-    assert r.total == 1002  # 1 + 1000 rerolls + 1 extra
+    assert r.total == 1001  # 1 + 1000 rerolls
+
+    r = roll("1d1e1rr1e1rr1")
+    assert r.total == 0  # error
 
 
 def test_randomness():

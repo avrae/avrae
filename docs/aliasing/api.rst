@@ -101,6 +101,7 @@ intelligenceSave Intelligence saving throw modifier.         int
 level            Character level.                            int
 name             The character's name.                       str
 proficiencyBonus Proficiency bonus.                          int
+spell            The character's spellcasting ability mod.   int
 strength         Strength score.                             int
 strengthMod      Strength modifier.                          int
 strengthSave     Strength saving throw modifier.             int

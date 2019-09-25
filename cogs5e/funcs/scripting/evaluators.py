@@ -509,16 +509,9 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 class SpellEvaluator(MathEvaluator):
     @classmethod
     def with_caster(cls, caster, spell_override=None):
+        names = caster.get_scope_locals()
         if spell_override is not None:
-            spell = spell_override
-        elif caster.spellbook.spell_mod is not None:
-            spell = caster.spellbook.spell_mod
-        else:
-            try:
-                spell = caster.spellbook.sab - caster.stats.prof_bonus
-            except TypeError:
-                spell = 0
-        names = {'spell': spell, 'proficiencyBonus': caster.stats.prof_bonus}
+            names['spell'] = spell_override
         return cls(names=names)
 
     def parse(self, string, extra_names=None):

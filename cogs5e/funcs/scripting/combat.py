@@ -2,7 +2,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting.functions import SimpleRollResult
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
-from cogs5e.models.sheet import Spellcaster
+from cogs5e.models.sheet import StatBlock
 from utils.argparser import ParsedArguments
 
 
@@ -202,7 +202,7 @@ class SimpleCombatant:
         if c:
             args['c'] = c
         damage = Damage(dice_str)
-        autoctx = _SimpleAutomationContext(Spellcaster(), self._combatant, args, self._combatant.combat, crit)
+        autoctx = _SimpleAutomationContext(StatBlock("generic"), self._combatant, args, self._combatant.combat, crit)
 
         return damage.run(autoctx)
 

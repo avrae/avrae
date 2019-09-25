@@ -65,6 +65,13 @@ class Automation:
             except:
                 pass
 
+    def build_str(self, caster):
+        """
+        :type caster: :class:`~cogs5e.models.sheet.statblock.StatBlock
+        """
+        evaluator = SpellEvaluator.with_caster(caster)
+        return f"{Effect.build_child_str(self.effects, caster, evaluator)}."
+
 
 class AutomationContext:
     def __init__(self, ctx, embed, caster, targets, args, combat, spell=None, conc_effect=None, ab_override=None,
@@ -99,10 +106,7 @@ class AutomationContext:
         elif isinstance(caster, Character):
             self.character = caster
 
-        if self.character:
-            self.evaluator = SpellEvaluator.with_character(self.character, spell_override=spell_override)
-        else:
-            self.evaluator = SpellEvaluator.with_caster(caster, spell_override=spell_override)
+        self.evaluator = SpellEvaluator.with_caster(caster, spell_override=spell_override)
 
         self.combatant = None
         if isinstance(caster, Combatant):
@@ -268,6 +272,16 @@ class Effect:
     def deserialize(data):
         return [EFFECT_MAP[e['type']].from_data(e) for e in data]
 
+    @staticmethod
+    def run_children_with_damage(child, autoctx):
+        damage = 0
+        for effect in child:
+            result = effect.run(autoctx)
+            if result and 'total' in result:
+                damage += result['total']
+        return damage
+
+    # required methods
     @classmethod
     def from_data(cls, data):  # catch-all
         data.pop('type')
@@ -279,14 +293,21 @@ class Effect:
             for metaeffect in self.meta:
                 metaeffect.run(autoctx)
 
+    def build_str(self, caster, evaluator):
+        if self.meta:
+            for metaeffect in self.meta:
+                # metaeffects shouldn't add anything to a str - they should set up annostrs
+                metaeffect.build_str(caster, evaluator)
+        return "I do something (you shouldn't see this)"
+
     @staticmethod
-    def run_children_with_damage(child, autoctx):
-        damage = 0
+    def build_child_str(child, caster, evaluator):
+        out = []
         for effect in child:
-            result = effect.run(autoctx)
-            if result and 'total' in result:
-                damage += result['total']
-        return damage
+            effect_str = effect.build_str(caster, evaluator)
+            if effect_str:
+                out.append(effect_str)
+        return ', '.join(out)
 
 
 class Target(Effect):
@@ -360,6 +381,10 @@ class Target(Effect):
                 autoctx.push_embed_field(autoctx.target.name)
             else:  # no target, no rr
                 autoctx.push_embed_field(None, to_meta=True)
+
+    def build_str(self, caster, evaluator):
+        super(Target, self).build_str(caster, evaluator)
+        return self.build_child_str(self.effects, caster, evaluator)
 
 
 class Attack(Effect):
@@ -511,6 +536,27 @@ class Attack(Effect):
         autoctx.queue("**Miss!**")
         return self.run_children_with_damage(self.miss, autoctx)
 
+    def build_str(self, caster, evaluator):
+        super(Attack, self).build_str(caster, evaluator)
+        attack_bonus = caster.spellbook.sab
+        if self.bonus:
+            explicit_bonus = evaluator.parse(self.bonus)
+            try:
+                attack_bonus = int(explicit_bonus)
+            except (TypeError, ValueError):
+                attack_bonus = 0
+
+        out = f"Attack: {attack_bonus:+} to hit"
+        if self.hit:
+            hit_out = self.build_child_str(self.hit, caster, evaluator)
+            if hit_out:
+                out += f". Hit: {hit_out}"
+        if self.miss:
+            miss_out = self.build_child_str(self.miss, caster, evaluator)
+            if miss_out:
+                out += f". Miss: {', '.join(miss_out)}"
+        return out
+
 
 class Save(Effect):
     def __init__(self, stat: str, fail: list, success: list, dc: str = None, **kwargs):
@@ -536,7 +582,7 @@ class Save(Effect):
         dc_override = None
         if self.dc:
             try:
-                dc_override = autoctx.evaluator.parse(self.dc, autoctx.metavars)
+                dc_override = autoctx.parse_annostr(self.dc)
                 dc_override = int(dc_override)
             except (TypeError, ValueError):
                 raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")
@@ -586,6 +632,27 @@ class Save(Effect):
 
     def on_fail(self, autoctx):
         return self.run_children_with_damage(self.fail, autoctx)
+
+    def build_str(self, caster, evaluator):
+        super(Save, self).build_str(caster, evaluator)
+        dc = caster.spellbook.dc
+        if self.dc:
+            try:
+                dc_override = evaluator.parse(self.dc)
+                dc = int(dc_override)
+            except (TypeError, ValueError):
+                dc = 0
+
+        out = f"DC {dc} {self.stat[:3].upper()} Save"
+        if self.fail:
+            fail_out = self.build_child_str(self.fail, caster, evaluator)
+            if fail_out:
+                out += f". Fail: {fail_out}"
+        if self.success:
+            success_out = self.build_child_str(self.success, caster, evaluator)
+            if success_out:
+                out += f". Success: {success_out}"
+        return out
 
 
 class Damage(Effect):
@@ -706,6 +773,11 @@ class Damage(Effect):
             return any(f"{{{v}}}" in self.damage for v in autoctx.metavars)
         return any(f"{{{v}}}" == self.damage for v in autoctx.metavars)
 
+    def build_str(self, caster, evaluator):
+        super(Damage, self).build_str(caster, evaluator)
+        damage = evaluator.parse(self.damage)
+        return f"{damage} damage"
+
 
 class TempHP(Effect):
     def __init__(self, amount: str, higher: dict = None, cantripScale: bool = None, **kwargs):
@@ -760,6 +832,11 @@ class TempHP(Effect):
             return any(f"{{{v}}}" in self.amount for v in autoctx.metavars)
         return any(f"{{{v}}}" == self.amount for v in autoctx.metavars)
 
+    def build_str(self, caster, evaluator):
+        super(TempHP, self).build_str(caster, evaluator)
+        amount = evaluator.parse(self.amount)
+        return f"{amount} temp HP"
+
 
 class IEffect(Effect):
     def __init__(self, name: str, duration: int, effects: str, end: bool = False, **kwargs):
@@ -789,6 +866,9 @@ class IEffect(Effect):
                                            tick_on_end=self.tick_on_end)
         autoctx.queue(f"**Effect**: {str(effect)}")
 
+    def build_str(self, caster, evaluator):
+        super(IEffect, self).build_str(caster, evaluator)
+        return self.name
 
 class Roll(Effect):
     def __init__(self, dice: str, name: str, higher: dict = None, cantripScale: bool = None, hidden: bool = False,
@@ -849,6 +929,11 @@ class Roll(Effect):
 
         autoctx.metavars[self.name] = rolled.consolidated()
 
+    def build_str(self, caster, evaluator):
+        super(Roll, self).build_str(caster, evaluator)
+        evaluator.names[self.name] = self.dice
+        return ""
+
 
 class Text(Effect):
     def __init__(self, text: str, **kwargs):
@@ -857,6 +942,7 @@ class Text(Effect):
         self.added = False
 
     def run(self, autoctx):
+        super(Text, self).run(autoctx)
         hide = autoctx.args.last('h', type_=bool)
 
         if self.text:
@@ -867,6 +953,10 @@ class Text(Effect):
                 autoctx.effect_queue(text)
             else:
                 autoctx.add_pm(str(autoctx.ctx.author.id), text)
+
+    def build_str(self, caster, evaluator):
+        super(Text, self).build_str(caster, evaluator)
+        return ""
 
 
 EFFECT_MAP = {

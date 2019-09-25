@@ -1,5 +1,5 @@
-from cogs5e.models.errors import InvalidSpellLevel, CounterOutOfBounds
-from cogs5e.models.sheet import AttackList, BaseStats, Levels, Resistances, Saves, Skills, Spellbook
+from cogs5e.models.errors import CounterOutOfBounds, InvalidSpellLevel
+from cogs5e.models.sheet import AttackList, BaseStats, Levels, Resistances, STAT_NAMES, Saves, Skills, Spellbook
 
 DESERIALIZE_MAP = {
     "stats": BaseStats, "levels": Levels, "attacks": AttackList, "skills": Skills, "saves": Saves,
@@ -223,6 +223,27 @@ class StatBlock:
 
     def remaining_casts_of(self, spell, level):
         return self.slots_str(level)
+
+    # ===== SCRIPTING =====
+    def get_scope_locals(self):
+        out = {}
+        if self.spellbook.spell_mod is not None:
+            spell_mod = self.spellbook.spell_mod
+        elif self.spellbook.sab is not None:
+            spell_mod = self.spellbook.sab - self.stats.prof_bonus
+        else:
+            spell_mod = None
+        out.update({
+            "name": self.name, "armor": self.ac, "hp": self.max_hp, "level": self.levels.total_level,
+            "proficiencyBonus": self.stats.prof_bonus, "spell": spell_mod
+        })
+        for cls, lvl in self.levels:
+            out[f"{cls}Level"] = lvl
+        for stat in STAT_NAMES:
+            out[stat] = self.stats[stat]
+            out[f"{stat}Mod"] = self.stats.get_mod(stat)
+            out[f"{stat}Save"] = self.saves.get(stat).value
+        return out
 
     # ===== SERIALIZATION =====
     # must implement deserializer

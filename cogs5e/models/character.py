@@ -235,27 +235,12 @@ class Character(StatBlock):
         self.cvars[name] = str(val)
 
     def get_scope_locals(self, no_cvars=False):
-        if no_cvars:
-            out = {}
-        else:
-            out = self.cvars.copy()
-        if self.spellbook.spell_mod is not None:
-            spell_mod = self.spellbook.spell_mod
-        elif self.spellbook.sab is not None:
-            spell_mod = self.spellbook.sab - self.stats.prof_bonus
-        else:
-            spell_mod = None
+        out = super(Character, self).get_scope_locals()
+        if not no_cvars:
+            out.update(self.cvars.copy())
         out.update({
-            "name": self.name, "armor": self.ac, "description": self.description, "hp": self.max_hp,
-            "image": self.image, "level": self.levels.total_level, "proficiencyBonus": self.stats.prof_bonus,
-            "spell": spell_mod, "color": hex(self.get_color())[2:]
+            "description": self.description, "image": self.image, "color": hex(self.get_color())[2:]
         })
-        for cls, lvl in self.levels:
-            out[f"{cls}Level"] = lvl
-        for stat in STAT_NAMES:
-            out[stat] = self.stats[stat]
-            out[f"{stat}Mod"] = self.stats.get_mod(stat)
-            out[f"{stat}Save"] = self.saves.get(stat).value
         return out
 
     # ---------- DATABASE ----------

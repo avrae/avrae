@@ -12,8 +12,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType, UserInputError
 
-from cogs5e.funcs import scripting
-from cogs5e.funcs.scripting import ScriptingEvaluator
+from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, EvaluationError, NoCharacter
@@ -114,7 +113,7 @@ class Customization(commands.Cog):
                     if char:
                         message.content = await char.parse_cvars(message.content, ctx)
                     else:
-                        message.content = await scripting.parse_no_char(message.content, ctx)
+                        message.content = await helpers.parse_no_char(message.content, ctx)
                 except EvaluationError as err:
                     e = err.original
                     if not isinstance(e, AvraeException):
@@ -178,7 +177,7 @@ class Customization(commands.Cog):
         if ' ' in alias_name or not alias_name:
             return await ctx.send('Invalid alias name.')
 
-        user_aliases = await scripting.get_aliases(ctx)
+        user_aliases = await helpers.get_aliases(ctx)
         if cmds is None:
             alias = user_aliases.get(alias_name)
             if alias is None:
@@ -194,7 +193,7 @@ class Customization(commands.Cog):
     @alias.command(name='list')
     async def alias_list(self, ctx):
         """Lists all user aliases."""
-        user_aliases = await scripting.get_aliases(ctx)
+        user_aliases = await helpers.get_aliases(ctx)
         aliases = list(user_aliases.keys())
         sorted_aliases = sorted(aliases)
         return await ctx.send('Your aliases:\n{}'.format(', '.join(sorted_aliases)))
@@ -229,7 +228,7 @@ class Customization(commands.Cog):
         if alias_name is None:
             return await ctx.invoke(self.bot.get_command("servalias list"))
 
-        server_aliases = await scripting.get_servaliases(ctx)
+        server_aliases = await helpers.get_servaliases(ctx)
         if alias_name in self.bot.all_commands:
             return await ctx.send('There is already a built-in command with that name!')
 
@@ -254,7 +253,7 @@ class Customization(commands.Cog):
     @commands.guild_only()
     async def servalias_list(self, ctx):
         """Lists all server aliases."""
-        server_aliases = await scripting.get_servaliases(ctx)
+        server_aliases = await helpers.get_servaliases(ctx)
         aliases = list(server_aliases.keys())
         sorted_aliases = sorted(aliases)
         return await ctx.send('This server\'s aliases:\n{}'.format(', '.join(sorted_aliases)))
@@ -287,7 +286,7 @@ class Customization(commands.Cog):
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await ctx.invoke(self.bot.get_command("snippet list"))
-        user_snippets = await scripting.get_snippets(ctx)
+        user_snippets = await helpers.get_snippets(ctx)
 
         if snippet is None:
             return await ctx.send(f'**{snipname}**:\n'
@@ -303,7 +302,7 @@ class Customization(commands.Cog):
     @snippet.command(name='list')
     async def snippet_list(self, ctx):
         """Lists your user snippets."""
-        user_snippets = await scripting.get_snippets(ctx)
+        user_snippets = await helpers.get_snippets(ctx)
         await ctx.send('Your snippets:\n{}'.format(', '.join(sorted([name for name in user_snippets.keys()]))))
 
     @snippet.command(name='delete', aliases=['remove'])
@@ -337,7 +336,7 @@ class Customization(commands.Cog):
         if snipname is None:
             return await ctx.invoke(self.bot.get_command("servsnippet list"))
         server_id = str(ctx.guild.id)
-        server_snippets = await scripting.get_servsnippets(ctx)
+        server_snippets = await helpers.get_servsnippets(ctx)
 
         if snippet is None:
             return await ctx.send(f'**{snipname}**:\n'
@@ -359,7 +358,7 @@ class Customization(commands.Cog):
     @commands.guild_only()
     async def servsnippet_list(self, ctx):
         """Lists this server's snippets."""
-        server_snippets = await scripting.get_servsnippets(ctx)
+        server_snippets = await helpers.get_servsnippets(ctx)
         await ctx.send(
             'This server\'s snippets:\n{}'.format(', '.join(sorted([name for name in server_snippets.keys()]))))
 
@@ -416,7 +415,7 @@ class Customization(commands.Cog):
         if name is None:
             return await ctx.invoke(self.bot.get_command("uservar list"))
 
-        user_vars = await scripting.get_uvars(ctx)
+        user_vars = await helpers.get_uvars(ctx)
 
         if value is None:  # display value
             uvar = user_vars.get(name)
@@ -427,7 +426,7 @@ class Customization(commands.Cog):
         if name in STAT_VAR_NAMES or not name.isidentifier():
             return await ctx.send("Could not create uvar: already builtin, or contains invalid character!")
 
-        await scripting.set_uvar(ctx, name, value)
+        await helpers.set_uvar(ctx, name, value)
         await ctx.send('User variable `{}` set to: `{}`'.format(name, value))
 
     @uservar.command(name='remove', aliases=['delete'])
@@ -441,7 +440,7 @@ class Customization(commands.Cog):
     @uservar.command(name='list')
     async def uvar_list(self, ctx):
         """Lists all uvars for the user."""
-        user_vars = await scripting.get_uvars(ctx)
+        user_vars = await helpers.get_uvars(ctx)
         await ctx.send('Your user variables:\n{}'.format(', '.join(sorted([name for name in user_vars.keys()]))))
 
     @uservar.command(name='deleteall', aliases=['removeall'])

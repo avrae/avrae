@@ -11,13 +11,13 @@ from discord.ext.commands import NoPrivateMessage
 from cogs5e.funcs import scripting, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
+from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
-from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
-from cogs5e.models.sheet import Resistances, Skill
+from cogs5e.models.sheet.base import Resistances, Skill
 from cogsmisc.stats import Stats
 from utils.argparser import argparse, argsplit
 from utils.functions import a_or_an, confirm, search_and_select
@@ -880,7 +880,7 @@ class InitTracker(commands.Cog):
         if combatant.is_private and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
             return await ctx.send("You do not have permission to view this combatant's attacks.")
 
-        atk_str = str(combatant.attacks)
+        atk_str = combatant.attacks.build_str(combatant)
         if len(atk_str) > 1000:
             atk_str = f"{atk_str[:1000]}\n[...]"
 
@@ -932,7 +932,7 @@ class InitTracker(commands.Cog):
 
     @staticmethod
     async def _attack(ctx, combatant_name, atk_name, unparsed_args):
-        args = await scripting.parse_snippets(unparsed_args, ctx)
+        args = await helpers.parse_snippets(unparsed_args, ctx)
         raw_args = argsplit(unparsed_args)
         combat = await Combat.from_ctx(ctx)
 
@@ -952,7 +952,7 @@ class InitTracker(commands.Cog):
         if is_player and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
         else:
-            args = await scripting.parse_no_char(args, ctx)
+            args = await helpers.parse_no_char(args, ctx)
         args = argparse(args)
 
         # handle old targeting method
@@ -1006,7 +1006,7 @@ class InitTracker(commands.Cog):
             embed.colour = random.randint(0, 0xffffff)
 
         # run
-        await Automation.from_attack(attack).run(ctx, embed, combatant, targets, args, title=embed.title)
+        await attack.automation.run(ctx, embed, combatant, targets, args, title=embed.title)
 
         # post-run
         _fields = args.get('f')
@@ -1077,7 +1077,7 @@ class InitTracker(commands.Cog):
 
     @staticmethod
     async def _cast(ctx, combatant_name, spell_name, args):
-        args = await scripting.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx)
         combat = await Combat.from_ctx(ctx)
 
         if combatant_name is None:
@@ -1098,7 +1098,7 @@ class InitTracker(commands.Cog):
         if is_character and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
         else:
-            args = await scripting.parse_no_char(args, ctx)
+            args = await helpers.parse_no_char(args, ctx)
         args = argparse(args)
 
         if not args.last('i', type_=bool):

@@ -1,5 +1,8 @@
 from cogs5e.models.errors import CounterOutOfBounds, InvalidSpellLevel
-from cogs5e.models.sheet import AttackList, BaseStats, Levels, Resistances, STAT_NAMES, Saves, Skills, Spellbook
+from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
+from cogs5e.models.sheet.spellcasting import Spellbook
+from utils.constants import STAT_NAMES
 
 DESERIALIZE_MAP = {
     "stats": BaseStats, "levels": Levels, "attacks": AttackList, "skills": Skills, "saves": Saves,

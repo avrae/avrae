@@ -12,13 +12,13 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
-from cogs5e.funcs import checkutils, scripting, targetutils
+from cogs5e.funcs import checkutils, targetutils
+from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
-from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet import Attack
+from cogs5e.models.sheet.attack import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
@@ -56,7 +56,7 @@ class SheetManager(commands.Cog):
 
     @staticmethod
     async def new_arg_stuff(args, ctx, character):
-        args = await scripting.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx)
         args = await character.parse_cvars(args, ctx)
         args = argparse(args)
         return args
@@ -116,7 +116,7 @@ class SheetManager(commands.Cog):
         else:
             embed.title = '{} attacks with {}!'.format(char.name, a_or_an(attack.name))
 
-        await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
+        await attack.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
         if combat:
             await combat.final()
 
@@ -135,7 +135,7 @@ class SheetManager(commands.Cog):
     async def attack_list(self, ctx):
         """Lists the active character's attacks."""
         char: Character = await Character.from_ctx(ctx)
-        atk_str = str(char.attacks)
+        atk_str = char.attacks.build_str(char)
         if len(atk_str) > 1000:
             atk_str = f"{atk_str[:1000]}\n[...]"
         return await ctx.send(f"{char.name}'s attacks:\n{atk_str}")
@@ -152,7 +152,7 @@ class SheetManager(commands.Cog):
         character: Character = await Character.from_ctx(ctx)
         parsed = argparse(args)
 
-        attack = Attack.new(character, name, bonus_calc=parsed.join('b', '+'),
+        attack = Attack.new(name, bonus_calc=parsed.join('b', '+'),
                             damage_calc=parsed.join('d', '+'), details=parsed.join('desc', '\n'))
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)

@@ -52,7 +52,7 @@ def argparse(args, character=None, splitter=argsplit):
     if isinstance(args, str):
         args = splitter(args)
     if character:
-        from cogs5e.funcs.scripting import MathEvaluator
+        from cogs5e.funcs.scripting.evaluators import MathEvaluator
         evaluator = MathEvaluator.with_character(character)
         args = [evaluator.parse(a) for a in args]
 

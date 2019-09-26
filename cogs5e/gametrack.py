@@ -11,9 +11,10 @@ import logging
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs import scripting, targetutils
+from cogs5e.funcs import targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
+from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
@@ -553,7 +554,7 @@ class GameTrack(commands.Cog):
 
         char: Character = await Character.from_ctx(ctx)
 
-        args = await scripting.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx)
         args = await char.parse_cvars(args, ctx)
         args = argparse(args)
 

@@ -7,9 +7,7 @@ from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, Si
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
-from cogs5e.models.sheet import CustomCounter
 from . import MAX_ITER_LENGTH, SCRIPTING_RE
-from .combat import SimpleCombat
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
 from .helpers import get_uvars, update_uvars
 from .legacy import LegacyRawCharacter
@@ -121,7 +119,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         # define character-specific functions
 
         # helpers
-        def _get_consumable(name) -> CustomCounter:
+        def _get_consumable(name):
             consumable = next((con for con in character.consumables if con.name == name), None)
             if consumable is None:
                 raise ConsumableException(f"There is no counter named {name}.")
@@ -158,6 +156,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                          dispType: str = None):
             if not cc_exists(name):
+                from cogs5e.models.sheet.player import CustomCounter
                 new_consumable = CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
                 character.consumables.append(new_consumable)
                 self.character_changed = True
@@ -280,6 +279,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
         :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleCombat`
         """
+        from .combat import SimpleCombat
         if 'combat' not in self._cache:
             self._cache['combat'] = SimpleCombat.from_ctx(self.ctx)
         self.combat_changed = True
@@ -526,7 +526,10 @@ class SpellEvaluator(MathEvaluator):
                 if match.group(1):  # {{}}
                     evalresult = self.eval(match.group(1))
                 elif match.group(3):  # {}
-                    evalresult = self.names.get(match.group(3), match.group(0))
+                    try:
+                        evalresult = self.eval(match.group(3))
+                    except:
+                        evalresult = match.group(0)
                 else:
                     evalresult = None
             except Exception as ex:
@@ -540,3 +543,9 @@ class SpellEvaluator(MathEvaluator):
             self.names = original_names
 
         return output
+
+
+if __name__ == '__main__':
+    e = ScriptingEvaluator(None)
+    while True:
+        print(e.eval(input()))

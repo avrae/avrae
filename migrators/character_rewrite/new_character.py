@@ -3,7 +3,7 @@ import sys
 import time
 
 from cogs5e.models.character import Character, CustomCounter
-from cogs5e.models.sheet import SpellbookSpell
+from cogs5e.models.sheet.spellcasting import SpellbookSpell
 from cogs5e.models.sheet.base import Skill
 from utils.constants import SAVE_NAMES, SKILL_NAMES
 

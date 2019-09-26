@@ -6,7 +6,10 @@ from urllib import parse
 import html2text
 
 from cogs5e.models import errors
-from cogs5e.models.sheet import AttackList, BaseStats, Resistances, Saves, Skills, Spellbook, SpellbookSpell, StatBlock
+from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.base import BaseStats, Resistances, Saves, Skills
+from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
+from cogs5e.models.sheet.statblock import StatBlock
 from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)

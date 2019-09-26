@@ -4,13 +4,12 @@ import re
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs import checkutils, scripting, targetutils
+from cogs5e.funcs import checkutils, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
+from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
-from cogs5e.models.automation import Automation
 from cogs5e.models.monster import Monster
-from cogs5e.models.sheet import Attack
 from cogsmisc.stats import Stats
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
@@ -156,7 +155,7 @@ class Dice(commands.Cog):
         monster_name = monster.get_title_name()
 
         attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name)
-        args = await scripting.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
         if not args.last('h', type_=bool):
             name = monster_name
@@ -177,7 +176,7 @@ class Dice(commands.Cog):
             embed.set_thumbnail(url=image)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args)
-        await Automation.from_attack(attack).run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
+        await attack.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
         if combat:
             await combat.final()
 
@@ -196,7 +195,7 @@ class Dice(commands.Cog):
 
         monster = await select_monster_full(ctx, monster_name)
         monster_name = monster.get_title_name()
-        return await ctx.send(f"{monster_name}'s attacks:\n{str(monster.attacks)}")
+        return await ctx.send(f"{monster_name}'s attacks:\n{monster.attacks.build_str(monster)}")
 
     @commands.command(aliases=['mc'])
     async def monster_check(self, ctx, monster_name, check, *args):
@@ -221,7 +220,7 @@ class Dice(commands.Cog):
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
 
-        args = await scripting.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
 
         checkutils.run_check(skill_key, monster, args, embed)
@@ -254,7 +253,7 @@ class Dice(commands.Cog):
         embed = discord.Embed()
         embed.colour = random.randint(0, 0xffffff)
 
-        args = await scripting.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
 
         checkutils.run_save(save_stat, monster, args, embed)

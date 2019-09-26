@@ -22,8 +22,9 @@ from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
-from cogs5e.models.sheet.base import Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.attack import Attack, AttackList
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute
 from utils.constants import DAMAGE_TYPES
@@ -219,15 +220,13 @@ class GoogleSheet(SheetLoaderABC):
         description = self.get_description()
         image = self.character_data.value("C176").strip()
 
-        stats = self.get_stats().to_dict()
-        levels = self.get_levels().to_dict()
+        stats = self.get_stats()
+        levels = self.get_levels()
         attacks = self.get_attacks()
 
-        skls, svs = self.get_skills_and_saves()
-        skills = skls.to_dict()
-        saves = svs.to_dict()
+        skills, saves = self.get_skills_and_saves()
 
-        resistances = self.get_resistances().to_dict()
+        resistances = self.get_resistances()
         ac = self.get_ac()
         max_hp = self.get_hp()
         hp = max_hp
@@ -239,7 +238,7 @@ class GoogleSheet(SheetLoaderABC):
         death_saves = {}
         consumables = []
 
-        spellbook = self.get_spellbook().to_dict()
+        spellbook = self.get_spellbook()
         live = None
         race = self.get_race()
         background = self.get_background()
@@ -333,21 +332,21 @@ class GoogleSheet(SheetLoaderABC):
         return levels
 
     def get_attacks(self):
-        """Returns a list of dicts of all of the character's attacks."""
+        """Returns an attack list."""
         if self.character_data is None: raise Exception('You must call get_character() first.')
-        attacks = []
+        attacks = AttackList()
         for rownum in range(32, 37):  # sht1, R32:R36
             a = self.parse_attack(f"R{rownum}", f"Y{rownum}", f"AC{rownum}")
             if a is not None:
-                attacks.append(a.to_dict())
+                attacks.append(a)
         if self.additional:
             for rownum in range(3, 14):  # sht2, B3:B13; W3:W13
                 additional = self.parse_attack(f"B{rownum}", f"I{rownum}", f"M{rownum}", self.additional)
                 other = self.parse_attack(f"W{rownum}", f"AD{rownum}", f"AH{rownum}", self.additional)
                 if additional is not None:
-                    attacks.append(additional.to_dict())
+                    attacks.append(additional)
                 if other is not None:
-                    attacks.append(other.to_dict())
+                    attacks.append(other)
         return attacks
 
     def get_skills_and_saves(self):
@@ -525,15 +524,13 @@ class GoogleSheet(SheetLoaderABC):
                 if comment.strip() and not details:
                     damage = comment.strip()
 
-        bonus_calc = None
         if bonus:
             try:
                 bonus = int(bonus)
             except (TypeError, ValueError):
-                bonus_calc = bonus
                 bonus = None
         else:
             bonus = None
 
-        attack = Attack(name, bonus, damage, details, bonus_calc)
+        attack = Attack.new(name, bonus, damage, details)
         return attack

@@ -3,9 +3,10 @@ import cachetools
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
-from cogs5e.models.sheet import AttackList, BaseStats, DESERIALIZE_MAP, Levels, Resistances, Saves, Skill, Skills, \
-    StatBlock
+from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
 from cogs5e.models.sheet.spellcasting import Spellbook
+from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
 from utils.functions import get_selection
@@ -890,6 +891,8 @@ class PlayerCombatant(Combatant):
     @classmethod
     async def from_character(cls, character, ctx, combat, controller_id, init, private):
         inst = cls(ctx, combat, character.name, controller_id, private, init,
+                   # statblock copies
+                   resistances=character.resistances,
                    # character specific
                    character_id=character.upstream, character_owner=character.owner)
         inst._character = character
@@ -902,6 +905,30 @@ class PlayerCombatant(Combatant):
     @property
     def init_skill(self):
         return self._character.skills.initiative
+
+    @property
+    def stats(self):
+        return self.character.stats
+
+    @property
+    def levels(self):
+        return self.character.levels
+
+    @property
+    def skills(self):
+        return self.character.skills
+
+    @property
+    def saves(self):
+        return self.character.saves
+
+    @property
+    def ac(self):
+        return self._ac or self.character.ac
+
+    @property
+    def spellbook(self):
+        return self.character.spellbook
 
     @property
     def max_hp(self):
@@ -940,14 +967,6 @@ class PlayerCombatant(Combatant):
     @property
     def attacks(self):
         return super(PlayerCombatant, self).attacks + self.character.attacks
-
-    @property
-    def saves(self):
-        return self.character.saves
-
-    @property
-    def spellbook(self):
-        return self.character.spellbook
 
     def can_cast(self, spell, level) -> bool:
         return self.character.can_cast(spell, level)

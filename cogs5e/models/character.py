@@ -4,14 +4,16 @@ import random
 
 import cachetools
 
-from cogs5e.funcs.scripting import MathEvaluator, ScriptingEvaluator
+from cogs5e.funcs.scripting.evaluators import MathEvaluator, ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NoReset
-from cogs5e.models.sheet import AttackList, BaseStats, CharOptions, CustomCounter, DESERIALIZE_MAP, DeathSaves, Levels, \
-    ManualOverrides, Resistances, Saves, Skills, Spellbook, SpellbookSpell, StatBlock
+from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
+from cogs5e.models.sheet.player import CharOptions, CustomCounter, DeathSaves, ManualOverrides
+from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
+from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from cogs5e.sheets.abc import SHEET_VERSION
-from utils.constants import STAT_NAMES
 from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
@@ -407,10 +409,6 @@ class Character(StatBlock):
         # overridden spells
         self.spellbook.spells.extend(self.overrides.spells)
 
-        # recalculate overridden attacks
-        for atk in self.overrides.attacks:
-            atk.update(self)
-
         # tracking
         self._hp = old_character._hp
         self._temp_hp = old_character._temp_hp
@@ -453,15 +451,9 @@ class Character(StatBlock):
         embed.description = '\n'.join(desc_details)
 
         # attacks
-        atks = self.attacks
-        atk_str = ""
-        for attack in atks:
-            a = f"{str(attack)}\n"
-            if len(atk_str) + len(a) > 1000:
-                atk_str += "[...]"
-                break
-            atk_str += a
-        atk_str = atk_str.strip()
+        atk_str = self.attacks.build_str(self)
+        if len(atk_str) > 1000:
+            atk_str = f"{atk_str[:1000]}\n[...]"
         if atk_str:
             embed.add_field(name="Attacks", value=atk_str)
 

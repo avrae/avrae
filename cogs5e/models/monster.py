@@ -1,3 +1,4 @@
+import itertools
 import logging
 import re
 from math import floor
@@ -7,9 +8,10 @@ import html2text
 
 from cogs5e.models import errors
 from cogs5e.models.sheet.attack import AttackList
-from cogs5e.models.sheet.base import BaseStats, Resistances, Saves, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import StatBlock
+from utils.constants import SKILL_MAP
 from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
@@ -32,16 +34,6 @@ class Trait:
         return {'name': self.name, 'desc': self.desc}
 
 
-SKILL_MAP = {'acrobatics': 'dex', 'animal handling': 'wis', 'arcana': 'int', 'athletics': 'str', 'deception': 'cha',
-             'history': 'int', 'initiative': 'dex', 'insight': 'wis', 'intimidation': 'cha', 'investigation': 'int',
-             'medicine': 'wis', 'nature': 'int', 'perception': 'wis', 'performance': 'cha', 'persuasion': 'cha',
-             'religion': 'int', 'sleight of hand': 'dex', 'stealth': 'dex', 'survival': 'wis', 'strength': 'str',
-             'dexterity': 'dex', 'constitution': 'con', 'intelligence': 'int', 'wisdom': 'wis', 'charisma': 'cha'}
-
-SAVE_MAP = {'strengthSave': 'str', 'dexteritySave': 'dex', 'constitutionSave': 'con', 'intelligenceSave': 'int',
-            'wisdomSave': 'wis', 'charismaSave': 'cha'}
-
-
 class Monster(StatBlock):
     def __init__(self, name: str, size: str, race: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
                  speed: str, ability_scores: BaseStats, cr: str, xp: int, passiveperc: int = None,
@@ -49,14 +41,13 @@ class Monster(StatBlock):
                  condition_immune: list = None, saves: Saves = None, skills: Skills = None, languages: list = None,
                  traits: list = None, actions: list = None, reactions: list = None, legactions: list = None,
                  la_per_round=3, srd=True, source='homebrew', attacks: AttackList = None, proper: bool = False,
-                 image_url: str = None, spellcasting=None, page=None, raw_resists: dict = None):
+                 image_url: str = None, spellcasting=None, page=None, **_):
         if vuln is None:
             vuln = []
         if resist is None:
             resist = []
         if immune is None:
             immune = []
-        resistances = Resistances(vuln=vuln, resist=resist, immune=immune)
         if condition_immune is None:
             condition_immune = []
         if saves is None:
@@ -79,11 +70,17 @@ class Monster(StatBlock):
             spellcasting = Spellbook({}, {}, [])
         if passiveperc is None:
             passiveperc = 10 + skills.perception.value
-        if raw_resists is None:
-            raw_resists = {}
+
+        try:
+            levels = Levels({"Monster": spellcasting.caster_level or int(cr)})
+        except ValueError:
+            levels = None
+
+        resistances = Resistances(vuln=vuln, resist=resist, immune=immune)
+
         super(Monster, self).__init__(
             name=name, stats=ability_scores, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
-            spellbook=spellcasting, ac=ac, max_hp=hp
+            spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels
         )
         self.size = size
         self.race = race
@@ -107,7 +104,6 @@ class Monster(StatBlock):
         self.proper = proper
         self.image_url = image_url
         self.page = page  # this should really be by source, but oh well
-        self.raw_resists = raw_resists
 
     @classmethod
     def from_data(cls, data):
@@ -135,12 +131,6 @@ class Monster(StatBlock):
         immune = parse_resists(data['immune']) if 'immune' in data else None
         condition_immune = data.get('conditionImmune', []) if 'conditionImmune' in data else None
 
-        raw_resists = {
-            "vuln": parse_resists(data['vulnerable'], False) if 'vulnerable' in data else [],
-            "resist": parse_resists(data['resist'], False) if 'resist' in data else [],
-            "immune": parse_resists(data['immune'], False) if 'immune' in data else []
-        }
-
         languages = data.get('languages', '').split(', ') if 'languages' in data else None
 
         traits = [Trait(t['name'], t['text']) for t in data.get('trait', [])]
@@ -153,6 +143,8 @@ class Monster(StatBlock):
 
         saves = Saves.default(scores)
         saves.update(data['save'])
+
+        scores.prof_bonus = _calc_prof(scores, saves, skills)
 
         source = data['source']
         proper = bool(data.get('isNamedCreature') or data.get('isNPC'))
@@ -167,11 +159,12 @@ class Monster(StatBlock):
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, saves, skills, languages, traits,
                    actions, reactions, legactions, 3, data.get('srd', False), source, attacks,
-                   spellcasting=spellbook, page=data.get('page'), proper=proper, raw_resists=raw_resists)
+                   spellcasting=spellbook, page=data.get('page'), proper=proper)
 
     @classmethod
     def from_critterdb(cls, data):
-        ability_scores = BaseStats(0, data['stats']['abilityScores']['strength'] or 10,
+        ability_scores = BaseStats(data['stats']['proficiencyBonus'] or 0,
+                                   data['stats']['abilityScores']['strength'] or 10,
                                    data['stats']['abilityScores']['dexterity'] or 10,
                                    data['stats']['abilityScores']['constitution'] or 10,
                                    data['stats']['abilityScores']['intelligence'] or 10,
@@ -224,13 +217,6 @@ class Monster(StatBlock):
         attacks.extend(atks)
 
         attacks = AttackList.from_dict(attacks)
-
-        resists = {
-            "resist": data['stats']['damageResistances'],
-            "immune": data['stats']['damageImmunities'],
-            "vuln": data['stats']['damageVulnerabilities']
-        }
-
         spellcasting = parse_critterdb_spellcasting(traits)
 
         return cls(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
@@ -241,7 +227,7 @@ class Monster(StatBlock):
                    data['stats']['conditionImmunities'], saves, skills,
                    data['stats']['languages'], traits, actions, reactions, legactions,
                    data['stats']['legendaryActionsPerRound'], True, 'homebrew', attacks,
-                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'], raw_resists=resists,
+                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'],
                    spellcasting=spellcasting)
 
     @classmethod
@@ -260,14 +246,14 @@ class Monster(StatBlock):
             'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
             'ability_scores': self.stats.to_dict(),
             'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
-            'vuln': self.resistances.vuln, 'resist': self.resistances.resist, 'immune': self.resistances.immume,
+            'vuln': self.resistances.vuln, 'resist': self.resistances.resist, 'immune': self.resistances.immune,
             'condition_immune': self.condition_immune,
             'saves': self.saves.to_dict(), 'skills': self.skills.to_dict(), 'languages': self.languages,
             'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
             'reactions': [t.to_dict() for t in self.reactions],
             'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
             'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
-            'image_url': self.image_url, 'spellbook': self.spellbook.to_dict(), 'raw_resists': self.raw_resists
+            'image_url': self.image_url, 'spellbook': self.spellbook.to_dict()
         }
 
     def get_stat_array(self):
@@ -508,3 +494,16 @@ def xp_by_cr(cr):
 
 def spaced_to_camel(spaced):
     return re.sub(r"\s+(\w)", lambda m: m.group(1).upper(), spaced.lower())
+
+
+def _calc_prof(stats, saves, skills):
+    """HACK: Calculates proficiency bonus from save/skill proficiencies."""
+    prof = None
+    for skill_name, skill in itertools.chain(saves, skills):
+        if skill.prof == 1:
+            prof = skill.value - stats.get_mod(SKILL_MAP[skill_name])
+            break
+
+    if prof is not None:
+        return prof
+    return 0

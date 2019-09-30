@@ -42,14 +42,6 @@ class Attack:
         """Creates a new attack for a character."""
         return cls(name, old_to_automation(bonus_calc.strip("<>{}"), damage_calc, details))
 
-    def to_old(self):  # todo
-        bonus = None
-        if self.bonus is not None:
-            bonus = str(self.bonus)
-        elif self.bonus_calc is not None:
-            bonus = self.bonus_calc
-        return {"name": self.name, "attackBonus": bonus, "damage": self.damage, "details": self.details}
-
     def build_str(self, caster):
         return f"**{self.name}**: {self.automation.build_str(caster)}"
 

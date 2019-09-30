@@ -46,10 +46,7 @@ class LegacyRawCharacter:
         return out
 
     def legacy_attacks(self):
-        out = []
-        for attack in self.character.attacks:
-            out.append(attack.to_old())
-        return out
+        return self.character.attacks.to_dict()
 
     def legacy_levels(self):
         out = {

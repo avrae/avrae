@@ -203,6 +203,10 @@ class Skills:
                 out.append(f"{camel_to_title(skill_name)} {skill.value:+}{modifiers}")
         return ", ".join(out)
 
+    def __iter__(self):
+        for key, value in self.skills.items():
+            yield key, value
+
 
 class Saves:
     def __init__(self, saves):
@@ -270,6 +274,10 @@ class Saves:
             if to_add:
                 out.append(f"{stat_name.title()} {save.value:+}{modifiers}")
         return ", ".join(out)
+
+    def __iter__(self):
+        for key, value in self.saves.items():
+            yield key, value
 
 
 class Resistances:

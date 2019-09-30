@@ -871,17 +871,15 @@ class PlayerCombatant(Combatant):
                  ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
                  notes: str = None, effects: list = None, group: str = None,
                  # statblock info
-                 stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
-                 skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
-                 spellbook: Spellbook = None,
-                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+                 attacks: AttackList = None, resistances: Resistances = None,
+                 ac: int = None, max_hp: int = None,
                  # character specific
                  character_id=None, character_owner=None):
         # note that the player combatant doesn't initialize the statblock
         # because we want the combatant statblock attrs to reference the character attrs
         super(PlayerCombatant, self).__init__(
             ctx, combat, name, controller_id, private, init, index, notes, effects, group,
-            stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp
+            attacks=attacks, resistances=resistances, ac=ac, max_hp=max_hp
         )
         self.character_id = character_id
         self.character_owner = character_owner
@@ -904,7 +902,7 @@ class PlayerCombatant(Combatant):
 
     @property
     def init_skill(self):
-        return self._character.skills.initiative
+        return self.character.skills.initiative
 
     @property
     def stats(self):
@@ -1007,7 +1005,10 @@ class PlayerCombatant(Combatant):
         return inst
 
     def to_dict(self):
+        IGNORED_ATTRIBUTES = ("stats", "levels", "skills", "saves", "spellbook", "hp", "temp_hp")
         raw = super(PlayerCombatant, self).to_dict()
+        for attr in IGNORED_ATTRIBUTES:
+            del raw[attr]
         raw['character_id'] = self.character_id
         raw['character_owner'] = self.character_owner
         raw['type'] = 'player'

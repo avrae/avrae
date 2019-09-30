@@ -238,6 +238,7 @@ class Monster(StatBlock):
         data['saves'] = Saves.from_dict(data['saves'])
         data['skills'] = Skills.from_dict(data['skills'])
         data['ability_scores'] = BaseStats.from_dict(data['ability_scores'])
+        data['attacks'] = AttackList.from_dict(data['attacks'])
         return cls(**data)
 
     def to_dict(self):
@@ -252,7 +253,7 @@ class Monster(StatBlock):
             'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
             'reactions': [t.to_dict() for t in self.reactions],
             'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
-            'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
+            'srd': self.srd, 'source': self.source, 'attacks': self.attacks.to_dict(), 'proper': self.proper,
             'image_url': self.image_url, 'spellbook': self.spellbook.to_dict()
         }
 
@@ -312,8 +313,8 @@ class Monster(StatBlock):
             desc += f"**Vulnerabilities:** {', '.join(self.resistances.vuln)}\n"
         if self.resistances.resist:
             desc += f"**Resistances:** {', '.join(self.resistances.resist)}\n"
-        if self.resistances.immume:
-            desc += f"**Damage Immunities:** {', '.join(self.resistances.immume)}\n"
+        if self.resistances.immune:
+            desc += f"**Damage Immunities:** {', '.join(self.resistances.immune)}\n"
         if self.condition_immune:
             desc += f"**Condition Immunities:** {', '.join(map(str, self.condition_immune))}\n"
         if self.languages:

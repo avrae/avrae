@@ -2,7 +2,7 @@ import discord
 import pytest
 
 from tests.conftest import end_init, start_init
-from tests.utils import D20_PATTERN
+from tests.utils import D20_PATTERN, active_character, active_combat
 
 pytestmark = pytest.mark.asyncio
 
@@ -56,4 +56,47 @@ class TestInitiativeWithCharacters:
         await dhttp.receive_message(embed=join_embed)
 
     async def test_init_end(self, avrae, dhttp):
+        await end_init(avrae, dhttp)
+
+
+@pytest.mark.usefixtures("init_fixture", "character")
+class TestYourStandardInitiative:
+    async def test_standard_init_setup(self, avrae, dhttp):
+        await start_init(avrae, dhttp)
+        avrae.message("!init join -p 50")
+        await dhttp.drain()
+        avrae.message("!init madd kobold -n 5")
+        await dhttp.drain()
+        avrae.message("!init add 0 TEST1")
+        await dhttp.drain()
+        avrae.message("!init add 0 TEST2")
+        await dhttp.drain()
+        avrae.message("!init next")
+        await dhttp.drain()
+
+    async def test_attacking(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1", "TEST2"):
+            avrae.message(f"!i a \"{character.attacks[0].name}\" -t \"{combatant}\" hit")
+            await dhttp.drain()
+            c = (await active_combat(avrae)).get_combatant(combatant)
+            if c.hp is not None:
+                assert c.hp < c.max_hp
+
+    async def test_hp_modifications(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1", "TEST2"):
+            avrae.message(f"!i hp \"{combatant}\" max 100")
+            await dhttp.drain()
+            assert (await active_combat(avrae)).get_combatant(combatant).max_hp == 100
+
+            avrae.message(f"!i hp \"{combatant}\" set 100")
+            await dhttp.drain()
+            assert (await active_combat(avrae)).get_combatant(combatant).hp == 100
+
+            avrae.message(f"!i a \"{character.attacks[0].name}\" -t \"{combatant}\" hit")
+            await dhttp.drain()
+            assert (await active_combat(avrae)).get_combatant(combatant).hp < 100
+
+    async def test_standard_init_teardown(self, avrae, dhttp):
         await end_init(avrae, dhttp)

@@ -1,3 +1,4 @@
+import itertools
 import logging
 import re
 from math import floor
@@ -6,7 +7,11 @@ from urllib import parse
 import html2text
 
 from cogs5e.models import errors
-from cogs5e.models.sheet import BaseStats, Saves, Skills, Spellbook, SpellbookSpell, Spellcaster
+from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
+from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
+from cogs5e.models.sheet.statblock import StatBlock
+from utils.constants import SKILL_MAP
 from utils.functions import a_or_an
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
@@ -29,24 +34,14 @@ class Trait:
         return {'name': self.name, 'desc': self.desc}
 
 
-SKILL_MAP = {'acrobatics': 'dex', 'animal handling': 'wis', 'arcana': 'int', 'athletics': 'str', 'deception': 'cha',
-             'history': 'int', 'initiative': 'dex', 'insight': 'wis', 'intimidation': 'cha', 'investigation': 'int',
-             'medicine': 'wis', 'nature': 'int', 'perception': 'wis', 'performance': 'cha', 'persuasion': 'cha',
-             'religion': 'int', 'sleight of hand': 'dex', 'stealth': 'dex', 'survival': 'wis', 'strength': 'str',
-             'dexterity': 'dex', 'constitution': 'con', 'intelligence': 'int', 'wisdom': 'wis', 'charisma': 'cha'}
-
-SAVE_MAP = {'strengthSave': 'str', 'dexteritySave': 'dex', 'constitutionSave': 'con', 'intelligenceSave': 'int',
-            'wisdomSave': 'wis', 'charismaSave': 'cha'}
-
-
-class Monster(Spellcaster):
+class Monster(StatBlock):
     def __init__(self, name: str, size: str, race: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
                  speed: str, ability_scores: BaseStats, cr: str, xp: int, passiveperc: int = None,
                  senses: str = '', vuln: list = None, resist: list = None, immune: list = None,
                  condition_immune: list = None, saves: Saves = None, skills: Skills = None, languages: list = None,
                  traits: list = None, actions: list = None, reactions: list = None, legactions: list = None,
-                 la_per_round=3, srd=True, source='homebrew', attacks: list = None, proper: bool = False,
-                 image_url: str = None, spellcasting=None, page=None, raw_resists: dict = None):
+                 la_per_round=3, srd=True, source='homebrew', attacks: AttackList = None, proper: bool = False,
+                 image_url: str = None, spellcasting=None, page=None, **_):
         if vuln is None:
             vuln = []
         if resist is None:
@@ -70,34 +65,34 @@ class Monster(Spellcaster):
         if legactions is None:
             legactions = []
         if attacks is None:
-            attacks = []
+            attacks = AttackList()
         if spellcasting is None:
             spellcasting = Spellbook({}, {}, [])
         if passiveperc is None:
             passiveperc = 10 + skills.perception.value
-        if raw_resists is None:
-            raw_resists = {}
-        super(Monster, self).__init__(spellbook=spellcasting)
-        self.name = name
+
+        try:
+            levels = Levels({"Monster": spellcasting.caster_level or int(cr)})
+        except ValueError:
+            levels = None
+
+        resistances = Resistances(vuln=vuln, resist=resist, immune=immune)
+
+        super(Monster, self).__init__(
+            name=name, stats=ability_scores, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
+            spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels
+        )
         self.size = size
         self.race = race
         self.alignment = alignment
-        self.ac = ac
         self.armortype = armortype
-        self.hp = hp
         self.hitdice = hitdice
         self.speed = speed
-        self.ability_scores = ability_scores
         self.cr = cr
         self.xp = xp
         self.passive = passiveperc
         self.senses = senses
-        self.vuln = vuln
-        self.resist = resist
-        self.immume = immune
         self.condition_immune = condition_immune
-        self.saves = saves
-        self.skills = skills
         self.languages = languages
         self.traits = traits
         self.actions = actions
@@ -106,11 +101,9 @@ class Monster(Spellcaster):
         self.la_per_round = la_per_round
         self.srd = srd
         self.source = source
-        self.attacks = attacks
         self.proper = proper
         self.image_url = image_url
         self.page = page  # this should really be by source, but oh well
-        self.raw_resists = raw_resists
 
     @classmethod
     def from_data(cls, data):
@@ -138,12 +131,6 @@ class Monster(Spellcaster):
         immune = parse_resists(data['immune']) if 'immune' in data else None
         condition_immune = data.get('conditionImmune', []) if 'conditionImmune' in data else None
 
-        raw_resists = {
-            "vuln": parse_resists(data['vulnerable'], False) if 'vulnerable' in data else [],
-            "resist": parse_resists(data['resist'], False) if 'resist' in data else [],
-            "immune": parse_resists(data['immune'], False) if 'immune' in data else []
-        }
-
         languages = data.get('languages', '').split(', ') if 'languages' in data else None
 
         traits = [Trait(t['name'], t['text']) for t in data.get('trait', [])]
@@ -157,10 +144,12 @@ class Monster(Spellcaster):
         saves = Saves.default(scores)
         saves.update(data['save'])
 
+        scores.prof_bonus = _calc_prof(scores, saves, skills)
+
         source = data['source']
         proper = bool(data.get('isNamedCreature') or data.get('isNPC'))
 
-        attacks = data.get('attacks', [])
+        attacks = AttackList.from_dict(data.get('attacks', []))
         spellcasting = data.get('spellcasting', {})
         spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
         spellbook = Spellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
@@ -170,11 +159,12 @@ class Monster(Spellcaster):
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, saves, skills, languages, traits,
                    actions, reactions, legactions, 3, data.get('srd', False), source, attacks,
-                   spellcasting=spellbook, page=data.get('page'), proper=proper, raw_resists=raw_resists)
+                   spellcasting=spellbook, page=data.get('page'), proper=proper)
 
     @classmethod
     def from_critterdb(cls, data):
-        ability_scores = BaseStats(0, data['stats']['abilityScores']['strength'] or 10,
+        ability_scores = BaseStats(data['stats']['proficiencyBonus'] or 0,
+                                   data['stats']['abilityScores']['strength'] or 10,
                                    data['stats']['abilityScores']['dexterity'] or 10,
                                    data['stats']['abilityScores']['constitution'] or 10,
                                    data['stats']['abilityScores']['intelligence'] or 10,
@@ -226,12 +216,7 @@ class Monster(Spellcaster):
         legactions, atks = parse_critterdb_traits(data, 'legendaryActions')
         attacks.extend(atks)
 
-        resists = {
-            "resist": data['stats']['damageResistances'],
-            "immune": data['stats']['damageImmunities'],
-            "vuln": data['stats']['damageVulnerabilities']
-        }
-
+        attacks = AttackList.from_dict(attacks)
         spellcasting = parse_critterdb_spellcasting(traits)
 
         return cls(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
@@ -242,7 +227,7 @@ class Monster(Spellcaster):
                    data['stats']['conditionImmunities'], saves, skills,
                    data['stats']['languages'], traits, actions, reactions, legactions,
                    data['stats']['legendaryActionsPerRound'], True, 'homebrew', attacks,
-                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'], raw_resists=resists,
+                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'],
                    spellcasting=spellcasting)
 
     @classmethod
@@ -253,32 +238,36 @@ class Monster(Spellcaster):
         data['saves'] = Saves.from_dict(data['saves'])
         data['skills'] = Skills.from_dict(data['skills'])
         data['ability_scores'] = BaseStats.from_dict(data['ability_scores'])
+        data['attacks'] = AttackList.from_dict(data['attacks'])
         return cls(**data)
 
     def to_dict(self):
-        return {'name': self.name, 'size': self.size, 'race': self.race, 'alignment': self.alignment, 'ac': self.ac,
-                'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
-                'ability_scores': self.ability_scores.to_dict(),
-                'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses, 'vuln': self.vuln,
-                'resist': self.resist, 'immune': self.immume, 'condition_immune': self.condition_immune,
-                'saves': self.saves.to_dict(), 'skills': self.skills.to_dict(), 'languages': self.languages,
-                'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
-                'reactions': [t.to_dict() for t in self.reactions],
-                'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
-                'srd': self.srd, 'source': self.source, 'attacks': self.attacks, 'proper': self.proper,
-                'image_url': self.image_url, 'spellbook': self.spellbook.to_dict(), 'raw_resists': self.raw_resists}
+        return {
+            'name': self.name, 'size': self.size, 'race': self.race, 'alignment': self.alignment, 'ac': self.ac,
+            'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
+            'ability_scores': self.stats.to_dict(),
+            'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
+            'vuln': self.resistances.vuln, 'resist': self.resistances.resist, 'immune': self.resistances.immune,
+            'condition_immune': self.condition_immune,
+            'saves': self.saves.to_dict(), 'skills': self.skills.to_dict(), 'languages': self.languages,
+            'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],
+            'reactions': [t.to_dict() for t in self.reactions],
+            'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
+            'srd': self.srd, 'source': self.source, 'attacks': self.attacks.to_dict(), 'proper': self.proper,
+            'image_url': self.image_url, 'spellbook': self.spellbook.to_dict()
+        }
 
     def get_stat_array(self):
         """
         Returns a string describing the monster's 6 core stats, with modifiers.
         """
-        return str(self.ability_scores)
+        return str(self.stats)
 
     def get_hidden_stat_array(self):
         stats = ["Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"]
         for i, stat in enumerate(
-                (self.ability_scores.strength, self.ability_scores.dexterity, self.ability_scores.constitution,
-                 self.ability_scores.intelligence, self.ability_scores.wisdom, self.ability_scores.charisma)):
+                (self.stats.strength, self.stats.dexterity, self.stats.constitution,
+                 self.stats.intelligence, self.stats.wisdom, self.stats.charisma)):
             if stat <= 3:
                 stats[i] = "Very Low"
             elif 3 < stat <= 7:
@@ -292,7 +281,7 @@ class Monster(Spellcaster):
             elif 25 < stat:
                 stats[i] = "Ludicrous"
         return f"**STR**: {stats[0]} **DEX**: {stats[1]} **CON**: {stats[2]}\n" \
-            f"**INT**: {stats[3]} **WIS**: {stats[4]} **CHA**: {stats[5]}"
+               f"**INT**: {stats[3]} **WIS**: {stats[4]} **CHA**: {stats[5]}"
 
     def get_senses_str(self):
         if self.senses:
@@ -320,12 +309,12 @@ class Monster(Spellcaster):
         if str(self.skills):
             desc += f"**Skills:** {self.skills}\n"
         desc += f"**Senses:** {self.get_senses_str()}.\n"
-        if self.vuln:
-            desc += f"**Vulnerabilities:** {', '.join(self.vuln)}\n"
-        if self.resist:
-            desc += f"**Resistances:** {', '.join(self.resist)}\n"
-        if self.immume:
-            desc += f"**Damage Immunities:** {', '.join(self.immume)}\n"
+        if self.resistances.vuln:
+            desc += f"**Vulnerabilities:** {', '.join(self.resistances.vuln)}\n"
+        if self.resistances.resist:
+            desc += f"**Resistances:** {', '.join(self.resistances.resist)}\n"
+        if self.resistances.immune:
+            desc += f"**Damage Immunities:** {', '.join(self.resistances.immune)}\n"
         if self.condition_immune:
             desc += f"**Condition Immunities:** {', '.join(map(str, self.condition_immune))}\n"
         if self.languages:
@@ -339,23 +328,12 @@ class Monster(Spellcaster):
         """Returns a monster's name for use in embed titles."""
         return a_or_an(self.name, upper=True) if not self.proper else self.name
 
-    def get_name(self):
-        return self.get_title_name()
-
     def get_image_url(self):
         """Returns a monster's image URL."""
         if not self.source == 'homebrew':
             return f"https://media.avrae.io/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
         else:
             return self.image_url or ''
-
-    def get_mod(self, stat):
-        """
-        Gets the monster's stat modifier for a core stat.
-        :param stat: The core stat to get. Can be of the form "cha", "charisma", or "charismaMod".
-        :return: The monster's relevant stat modifier.
-        """
-        return self.ability_scores.get_mod(stat)
 
 
 def parse_type(_type):
@@ -517,3 +495,16 @@ def xp_by_cr(cr):
 
 def spaced_to_camel(spaced):
     return re.sub(r"\s+(\w)", lambda m: m.group(1).upper(), spaced.lower())
+
+
+def _calc_prof(stats, saves, skills):
+    """HACK: Calculates proficiency bonus from save/skill proficiencies."""
+    prof = None
+    for skill_name, skill in itertools.chain(saves, skills):
+        if skill.prof == 1:
+            prof = skill.value - stats.get_mod(SKILL_MAP[skill_name])
+            break
+
+    if prof is not None:
+        return prof
+    return 0

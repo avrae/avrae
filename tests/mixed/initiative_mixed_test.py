@@ -87,11 +87,12 @@ async def attack_I(avrae, dhttp, target='1', name='KO1'):
     await dhttp.receive_edit()
     await dhttp.receive_message(embed=embed)
     await dhttp.receive_delete()
+    await dhttp.drain()
 
     # ensure kobold is not at full health
     combat = await active_combat(avrae)
     combatant = combat.get_combatant(name, strict=True)
-    assert combatant.hp < combatant.hpMax
+    assert combatant.hp < combatant.max_hp
 
 
 async def cast_I(avrae, dhttp, targets=('2', '3'), names=('KO2', 'KO3')):
@@ -107,12 +108,13 @@ async def cast_I(avrae, dhttp, targets=('2', '3'), names=('KO2', 'KO3')):
     footer = '\n'.join(rf"{name}: <-?\d+/\d+ HP>" for name in names)
     embed.set_footer(text=footer)
     await dhttp.receive_message(embed=embed)
+    await dhttp.drain()
 
     # ensure kobolds are not at full health
     combat = await active_combat(avrae)
     for k in names:
         kobold = combat.get_combatant(k, strict=True)
-        assert kobold.hp < kobold.hpMax
+        assert kobold.hp < kobold.max_hp
 
 
 @pytest.mark.usefixtures("init_fixture", "character", "_requires")

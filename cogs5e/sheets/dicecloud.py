@@ -20,8 +20,9 @@ from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import dicecloud_client
 from cogs5e.models.dicecloud.errors import DicecloudException
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet import Attack, BaseStats, Levels, Resistances, Skills, Spellbook, SpellbookSpell
-from cogs5e.models.sheet.base import Saves, Skill
+from cogs5e.models.sheet.attack import Attack, AttackList
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from .abc import SHEET_VERSION, SheetLoaderABC
@@ -65,15 +66,13 @@ class DicecloudParser(SheetLoaderABC):
         description = self.character_data['characters'][0]['description']
         image = self.character_data['characters'][0]['picture']
 
-        stats = self.get_stats().to_dict()
-        levels = self.get_levels().to_dict()
+        stats = self.get_stats()
+        levels = self.get_levels()
         attacks = self.get_attacks()
 
-        skls, svs = self.get_skills_and_saves()
-        skills = skls.to_dict()
-        saves = svs.to_dict()
+        skills, saves = self.get_skills_and_saves()
 
-        resistances = self.get_resistances().to_dict()
+        resistances = self.get_resistances()
         ac = self.get_ac()
         max_hp = int(self.calculate_stat('hitPoints'))
         hp = max_hp
@@ -88,7 +87,7 @@ class DicecloudParser(SheetLoaderABC):
         if args.last('cc'):
             consumables = self.get_custom_counters()
 
-        spellbook = self.get_spellbook().to_dict()
+        spellbook = self.get_spellbook()
         live = self.is_live()
         race = self.character_data['characters'][0]['race'].strip()
         background = self.character_data['characters'][0]['backstory'].strip()
@@ -155,7 +154,7 @@ class DicecloudParser(SheetLoaderABC):
         """Returns a list of dicts of all of the character's attacks."""
         if self.character_data is None: raise Exception('You must call get_character() first.')
         character = self.character_data
-        attacks = []
+        attacks = AttackList()
         atk_names = set()
         for attack in character.get('attacks', []):
             if attack.get('enabled') and not attack.get('removed'):
@@ -169,7 +168,7 @@ class DicecloudParser(SheetLoaderABC):
                     atk.name = f"{atk.name}{atk_num}"
                 atk_names.add(atk.name)
 
-                attacks.append(atk.to_dict())
+                attacks.append(atk)
         return attacks
 
     def get_skills_and_saves(self) -> (Skills, Saves):
@@ -444,7 +443,7 @@ class DicecloudParser(SheetLoaderABC):
 
         # build attack
         name = atk_dict['name']
-        attack = Attack(name, bonus, damage, details, bonus_calc, damage_calc)
+        attack = Attack.new(name, bonus, damage, details)
 
         self.evaluator.names = old_names
 

@@ -2,7 +2,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting.functions import SimpleRollResult
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
-from cogs5e.models.sheet import Spellcaster
+from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
 
 
@@ -80,7 +80,7 @@ class SimpleCombat:
 class SimpleCombatant:
     def __init__(self, combatant: Combatant, hidestats=True):
         self._combatant = combatant
-        self._hidden = hidestats and self._combatant.isPrivate
+        self._hidden = hidestats and self._combatant.is_private
         self.type = "combatant"
 
         self.ac = self._combatant.ac
@@ -88,18 +88,18 @@ class SimpleCombatant:
             self.hp = self._combatant.hp
         else:
             self.hp = None
-        self.maxhp = self._combatant.hpMax
+        self.maxhp = self._combatant.max_hp
         self.initmod = int(self._combatant.init_skill)
-        self.temphp = self._combatant.temphp
-        self.resists = self._combatant.resists
+        self.temphp = self._combatant.temp_hp
+        self.resists = self._combatant.resistances
         self.attacks = self._combatant.attacks
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
         # deprecated
-        if self._combatant.hp is not None and self._combatant.hpMax:
-            self.ratio = self._combatant.hp / self._combatant.hpMax
+        if self._combatant.hp is not None and self._combatant.max_hp:
+            self.ratio = self._combatant.hp / self._combatant.max_hp
         else:
             self.ratio = 0
         self.level = self._combatant.spellbook.caster_level
@@ -119,13 +119,13 @@ class SimpleCombatant:
         :param int mod: The amount of HP to add.
         :param bool overheal: Whether to allow exceeding max HP.
         """
-        self._combatant.mod_hp(mod, overheal)
+        self._combatant.modify_hp(mod, overheal)
 
     def hp_str(self):
         """
         Gets a string describing a combatant's HP.
         """
-        return self._combatant.get_hp_str()
+        return self._combatant.hp_str()
 
     def save(self, ability: str, adv: bool = None):
         """
@@ -193,16 +193,16 @@ class SimpleCombatant:
 
         args = ParsedArguments.from_dict({
             'critdice': [critdice],
-            'resist': self._combatant.resists['resist'],
-            'immune': self._combatant.resists['immune'],
-            'vuln': self._combatant.resists['vuln']
+            'resist': self._combatant.resistances['resist'],
+            'immune': self._combatant.resistances['immune'],
+            'vuln': self._combatant.resistances['vuln']
         })
         if d:
             args['d'] = d
         if c:
             args['c'] = c
         damage = Damage(dice_str)
-        autoctx = _SimpleAutomationContext(Spellcaster(), self._combatant, args, self._combatant.combat, crit)
+        autoctx = _SimpleAutomationContext(StatBlock("generic"), self._combatant, args, self._combatant.combat, crit)
 
         return damage.run(autoctx)
 
@@ -224,7 +224,7 @@ class SimpleCombatant:
         """
         if not isinstance(maxhp, int) and maxhp is not None:
             raise ValueError("Max HP must be an integer or None.")
-        self._combatant.hpMax = maxhp
+        self._combatant.max_hp = maxhp
 
     def set_thp(self, thp: int):
         """
@@ -234,7 +234,7 @@ class SimpleCombatant:
         """
         if not isinstance(thp, int):
             raise ValueError("Temp HP must be an integer.")
-        self._combatant.temphp = thp
+        self._combatant.temp_hp = thp
 
     def set_init(self, init: int):
         """

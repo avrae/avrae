@@ -11,13 +11,13 @@ from discord.ext.commands import NoPrivateMessage
 from cogs5e.funcs import scripting, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
+from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
-from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
-from cogs5e.models.sheet import Attack, Skill
+from cogs5e.models.sheet.base import Resistances, Skill
 from cogsmisc.stats import Stats
 from utils.argparser import argparse, argsplit
 from utils.functions import a_or_an, confirm, search_and_select
@@ -96,8 +96,9 @@ class InitTracker(commands.Cog):
 
     @init.command()
     async def add(self, ctx, modifier: int, name: str, *args):
-        """Adds a combatant to the initiative order.
-        If a character is set up with the SheetManager module, you can use !init dcadd instead.
+        """Adds a generic combatant to the initiative order.
+        Generic combatants have a 10 in every stat and +0 to every modifier.
+        If a character is set up with the SheetManager module, you can use !init join instead.
         If you are adding monsters to combat, you can use !init madd instead.
         
         __Valid Arguments__
@@ -154,16 +155,16 @@ class InitTracker(commands.Cog):
             modifier = 0
             init_roll_skeleton = str(init)
 
-        me = Combatant.default(name, controller, init, Skill(modifier), hp, hp, ac, private, resists, ctx, combat)
+        me = Combatant.new(name, controller, init, Skill(modifier), hp, ac, private, Resistances.from_dict(resists),
+                           ctx, combat)
 
         if group is None:
             combat.add_combatant(me)
-            await ctx.send(f"{name} was added to combat with initiative {init_roll_skeleton}.", delete_after=10)
+            await ctx.send(f"{name} was added to combat with initiative {init_roll_skeleton}.")
         else:
             grp = combat.get_group(group, create=init)
             grp.add_combatant(me)
-            await ctx.send(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.",
-                           delete_after=10)
+            await ctx.send(f"{name} was added to combat with initiative {grp.init} as part of group {grp.name}.")
 
         await combat.final()
 
@@ -178,7 +179,6 @@ class InitTracker(commands.Cog):
         -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
         -h - Hides HP, AC, Resists, etc. Default: True.
         -group <group> - Adds the combatant to a group.
-        -npr - Removes physical resistances when added.
         -rollhp - Rolls the monsters HP, instead of using the default value.
         -hp <hp> - Sets starting HP.
         -ac <ac> - Sets the combatant's starting AC."""
@@ -195,14 +195,9 @@ class InitTracker(commands.Cog):
         rollhp = args.last('rollhp', False, bool)
         hp = args.last('hp', type_=int)
         ac = args.last('ac', type_=int)
-        npr = args.last('npr', type_=bool)
         n = args.last('n', 1, int)
         name_template = args.last('name', monster.name[:2].upper() + '#')
         init_skill = monster.skills.initiative
-
-        opts = {}
-        if npr:
-            opts['npr'] = True
 
         combat = await Combat.from_ctx(ctx)
 
@@ -246,8 +241,8 @@ class InitTracker(commands.Cog):
                     to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
-                me = MonsterCombatant.from_monster(name, controller, init, init_skill, private, monster, ctx, combat,
-                                                   opts, hp=hp or rolled_hp, ac=ac)
+                me = MonsterCombatant.from_monster(monster, ctx, combat, name, controller, init, private,
+                                                   hp=hp or rolled_hp, ac=ac)
                 if group is None:
                     combat.add_combatant(me)
                     out += f"{name} was added to combat with initiative {check_roll.skeleton if p is None else p}.\n"
@@ -261,7 +256,7 @@ class InitTracker(commands.Cog):
                 out += "Error adding combatant: {}\n".format(e)
 
         await combat.final()
-        await ctx.send(out, delete_after=15)
+        await ctx.send(out)
         if to_pm:
             await ctx.author.send(to_pm)
 
@@ -307,9 +302,7 @@ class InitTracker(commands.Cog):
 
         combat = await Combat.from_ctx(ctx)
 
-        me = await PlayerCombatant.from_character(char.name, controller, init, char.ac, private,
-                                                  char.get_resists(), ctx, combat, char.upstream, str(ctx.author.id),
-                                                  char)
+        me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
 
         if combat.get_combatant(char.name) is not None:
             await ctx.send("Combatant already exists.")
@@ -487,7 +480,7 @@ class InitTracker(commands.Cog):
             outStr = combat.get_summary(True)
         else:
             outStr = combat.get_summary()
-        await destination.send(outStr, delete_after=60 if not private else None)
+        await destination.send(outStr if not private else None)
 
     @init.command()
     async def note(self, ctx, name: str, *, note: str = ''):
@@ -500,9 +493,9 @@ class InitTracker(commands.Cog):
 
         combatant.notes = note
         if note == '':
-            await ctx.send("Removed note.", delete_after=10)
+            await ctx.send("Removed note.")
         else:
-            await ctx.send("Added note.", delete_after=10)
+            await ctx.send("Added note.")
         await combat.final()
 
     @init.command(aliases=['opts'])
@@ -544,8 +537,8 @@ class InitTracker(commands.Cog):
 
         @option()
         async def h(combatant):
-            combatant.isPrivate = not combatant.isPrivate
-            return f"\u2705 {combatant.name} {'hidden' if combatant.isPrivate else 'unhidden'}."
+            combatant.is_private = not combatant.is_private
+            return f"\u2705 {combatant.name} {'hidden' if combatant.is_private else 'unhidden'}."
 
         @option()
         async def controller(combatant):
@@ -607,7 +600,7 @@ class InitTracker(commands.Cog):
             if maxhp < 1:
                 return "\u274c Max HP must be at least 1."
             else:
-                combatant.hpMax = maxhp
+                combatant.max_hp = maxhp
                 return f"\u2705 {combatant.name}'s HP max set to {maxhp}."
 
         @option()
@@ -639,7 +632,7 @@ class InitTracker(commands.Cog):
             if arg_name in args:
                 for target in targets:
                     response = await opt_func(target)
-                    if target.isPrivate:
+                    if target.is_private:
                         destination = ctx.guild.get_member(int(comb.controller)) or ctx.channel
                     else:
                         destination = ctx.channel
@@ -677,7 +670,7 @@ class InitTracker(commands.Cog):
             if controller:
                 await controller.send("```markdown\n" + status + "```")
         else:
-            await ctx.send("```markdown\n" + status + "```", delete_after=30)
+            await ctx.send("```markdown\n" + status + "```")
 
     @init.command()
     async def hp(self, ctx, name: str, operator: str, *, hp: str = ''):
@@ -696,36 +689,36 @@ class InitTracker(commands.Cog):
         if 'mod' in operator.lower():
             if combatant.hp is None:
                 combatant.set_hp(0)
-            combatant.mod_hp(hp_roll.total)
+            combatant.modify_hp(hp_roll.total)
         elif 'set' in operator.lower():
             combatant.set_hp(hp_roll.total)
         elif 'max' in operator.lower():
             if hp == '':
-                combatant.set_hp(combatant.hpMax)
+                combatant.set_hp(combatant.max_hp)
             elif hp_roll.total < 1:
                 return await ctx.send("You can't have a negative max HP!")
             else:
-                combatant.hpMax = hp_roll.total
+                combatant.max_hp = hp_roll.total
         elif hp == '':
             hp_roll = roll(operator, inline=True, show_blurbs=False)
             if combatant.hp is None:
                 combatant.set_hp(0)
-            combatant.mod_hp(hp_roll.total)
+            combatant.modify_hp(hp_roll.total)
         else:
             await ctx.send("Incorrect operator. Use mod, set, or max.")
             return
 
-        out = "{}: {}".format(combatant.name, combatant.get_hp_str())
+        out = "{}: {}".format(combatant.name, combatant.hp_str())
         if 'd' in hp: out += '\n' + hp_roll.skeleton
 
-        await ctx.send(out, delete_after=10)
-        if combatant.isPrivate:
+        await combat.final()
+        await ctx.send(out)
+        if combatant.is_private:
             try:
                 controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send("{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
+                await controller.send("{}'s HP: {}".format(combatant.name, combatant.hp_str(True)))
             except:
                 pass
-        await combat.final()
 
     @init.command()
     async def thp(self, ctx, name: str, *, thp: int):
@@ -739,19 +732,19 @@ class InitTracker(commands.Cog):
             return
 
         if thp >= 0:
-            combatant.temphp = thp
+            combatant.temp_hp = thp
         else:
-            if combatant.temphp:
-                combatant.temphp += thp
+            if combatant.temp_hp:
+                combatant.temp_hp += thp
             else:
                 return await ctx.send("Combatant has no temp hp.")
 
-        out = "{}: {}".format(combatant.name, combatant.get_hp_str())
-        await ctx.send(out, delete_after=10)
-        if combatant.isPrivate:
+        out = "{}: {}".format(combatant.name, combatant.hp_str())
+        await ctx.send(out)
+        if combatant.is_private:
             try:
                 controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send("{}'s HP: {}".format(combatant.name, combatant.get_hp_str(True)))
+                await controller.send("{}'s HP: {}".format(combatant.name, combatant.hp_str(True)))
             except:
                 pass
         await combat.final()
@@ -812,7 +805,7 @@ class InitTracker(commands.Cog):
                     conflicts = [e.name for e in result['conc_conflict']]
                     out += f"\nRemoved {', '.join(conflicts)} due to concentration conflict!"
             embed.add_field(name=combatant.name, value=out)
-        await ctx.send(embed=embed, delete_after=10 * len(targets))
+        await ctx.send(embed=embed)
         await combat.final()
 
     @init.command(name='re')
@@ -826,15 +819,14 @@ class InitTracker(commands.Cog):
 
         if effect is '':
             combatant.remove_all_effects()
-            await ctx.send("All effects removed from {}.".format(combatant.name), delete_after=10)
+            await ctx.send("All effects removed from {}.".format(combatant.name))
         else:
             to_remove = await combatant.select_effect(effect)
             children_removed = ""
             if to_remove.children:
                 children_removed = f"Also removed {len(to_remove.children)} child effects."
             to_remove.remove()
-            await ctx.send(f'Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}',
-                           delete_after=10)
+            await ctx.send(f'Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}')
         await combat.final()
 
     @init.group(aliases=['a'], invoke_without_command=True)
@@ -885,35 +877,18 @@ class InitTracker(commands.Cog):
         if combatant is None:
             return await ctx.send(f"You must start combat with `{ctx.prefix}init next` first.")
 
-        if combatant.isPrivate and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
+        if combatant.is_private and combatant.controller != str(ctx.author.id) and str(ctx.author.id) != combat.dm:
             return await ctx.send("You do not have permission to view this combatant's attacks.")
 
-        attacks = combatant.attacks
+        atk_str = combatant.attacks.build_str(combatant)
+        if len(atk_str) > 1000:
+            atk_str = f"{atk_str[:1000]}\n[...]"
 
-        tempAttacks = []
-        for a in attacks:
-            damage = a['damage'] if a['damage'] is not None else 'no'
-            if a['attackBonus'] is not None:
-                try:
-                    bonus = roll(a['attackBonus']).total
-                except:
-                    bonus = a['attackBonus']
-                tempAttacks.append(f"**{a['name']}:** +{bonus} To Hit, {damage} damage.")
-            else:
-                tempAttacks.append(f"**{a['name']}:** {damage} damage.")
-        if not tempAttacks:
-            tempAttacks = ['No attacks.']
-        a = '\n'.join(tempAttacks)
-        if len(a) > 2000:
-            a = ', '.join(atk['name'] for atk in attacks)
-        if len(a) > 2000:
-            a = "Too many attacks, values hidden!"
-
-        if not combatant.isPrivate:
+        if not combatant.is_private:
             destination = ctx.message.channel
         else:
             destination = ctx.message.author
-        return await destination.send("{}'s attacks:\n{}".format(combatant.name, a))
+        return await destination.send("{}'s attacks:\n{}".format(combatant.name, atk_str))
 
     @init.command()
     async def aoo(self, ctx, combatant_name, atk_name, *, args=''):
@@ -957,7 +932,7 @@ class InitTracker(commands.Cog):
 
     @staticmethod
     async def _attack(ctx, combatant_name, atk_name, unparsed_args):
-        args = await scripting.parse_snippets(unparsed_args, ctx)
+        args = await helpers.parse_snippets(unparsed_args, ctx)
         raw_args = argsplit(unparsed_args)
         combat = await Combat.from_ctx(ctx)
 
@@ -977,7 +952,7 @@ class InitTracker(commands.Cog):
         if is_player and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
         else:
-            args = await scripting.parse_no_char(args, ctx)
+            args = await helpers.parse_no_char(args, ctx)
         args = argparse(args)
 
         # handle old targeting method
@@ -992,11 +967,10 @@ class InitTracker(commands.Cog):
             attack = {'attackBonus': '0', 'damage': '0', 'name': atk_name}
         else:
             try:
-                attack = await search_and_select(ctx, attacks, atk_name, lambda a: a['name'],
+                attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name,
                                                  message="Select your attack.")
             except SelectionException:
                 return await ctx.send("Attack not found.")
-        attack = Attack.from_old(attack)
 
         # target handling
         if 't' not in args and target_name is not None:
@@ -1032,7 +1006,7 @@ class InitTracker(commands.Cog):
             embed.colour = random.randint(0, 0xffffff)
 
         # run
-        await Automation.from_attack(attack).run(ctx, embed, combatant, targets, args, title=embed.title)
+        await attack.automation.run(ctx, embed, combatant, targets, args, title=embed.title)
 
         # post-run
         _fields = args.get('f')
@@ -1103,7 +1077,7 @@ class InitTracker(commands.Cog):
 
     @staticmethod
     async def _cast(ctx, combatant_name, spell_name, args):
-        args = await scripting.parse_snippets(args, ctx)
+        args = await helpers.parse_snippets(args, ctx)
         combat = await Combat.from_ctx(ctx)
 
         if combatant_name is None:
@@ -1124,7 +1098,7 @@ class InitTracker(commands.Cog):
         if is_character and combatant.character_owner == str(ctx.author.id):
             args = await combatant.character.parse_cvars(args, ctx)
         else:
-            args = await scripting.parse_no_char(args, ctx)
+            args = await helpers.parse_no_char(args, ctx)
         args = argparse(args)
 
         if not args.last('i', type_=bool):
@@ -1164,7 +1138,7 @@ class InitTracker(commands.Cog):
                 return await ctx.send(
                     "You cannot remove a combatant if they are the only remaining combatant in this turn.")
         combat.remove_combatant(combatant)
-        await ctx.send("{} removed from combat.".format(combatant.name), delete_after=10)
+        await ctx.send("{} removed from combat.".format(combatant.name))
         await combat.final()
 
     @init.command()

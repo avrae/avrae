@@ -41,11 +41,11 @@ class BaseStats:
 
     def __str__(self):
         return f"**STR**: {self.strength} ({(self.strength - 10) // 2:+}) " \
-            f"**DEX**: {self.dexterity} ({(self.dexterity - 10) // 2:+}) " \
-            f"**CON**: {self.constitution} ({(self.constitution - 10) // 2:+})\n" \
-            f"**INT**: {self.intelligence} ({(self.intelligence - 10) // 2:+}) " \
-            f"**WIS**: {self.wisdom} ({(self.wisdom - 10) // 2:+}) " \
-            f"**CHA**: {self.charisma} ({(self.charisma - 10) // 2:+})"
+               f"**DEX**: {self.dexterity} ({(self.dexterity - 10) // 2:+}) " \
+               f"**CON**: {self.constitution} ({(self.constitution - 10) // 2:+})\n" \
+               f"**INT**: {self.intelligence} ({(self.intelligence - 10) // 2:+}) " \
+               f"**WIS**: {self.wisdom} ({(self.wisdom - 10) // 2:+}) " \
+               f"**CHA**: {self.charisma} ({(self.charisma - 10) // 2:+})"
 
     def __getitem__(self, item):  # little bit hacky, but works
         if item not in STAT_NAMES:
@@ -54,7 +54,9 @@ class BaseStats:
 
 
 class Levels:
-    def __init__(self, classes: dict, total_level: int = None):
+    def __init__(self, classes: dict = None, total_level: int = None):
+        if classes is None:
+            classes = {}
         self.total_level = total_level or sum(classes.values())
         self.classes = classes
 
@@ -146,20 +148,28 @@ class Skills:
 
     # ---------- main funcs ----------
     @classmethod
-    def default(cls, base_stats: BaseStats):
+    def default(cls, base_stats: BaseStats = None):
         """Returns a skills object with skills set to default values, based on stats."""
+        if base_stats is None:
+            base_stats = BaseStats.default()
         skills = {}
         for skill in SKILL_NAMES:
             skills[skill] = Skill(base_stats.get_mod(SKILL_MAP[skill]))
         return cls(skills)
 
     def update(self, explicit_skills: dict):
-        """Updates skills with an explicit dictionary of modifiers. All provided are assumed to have prof=1."""
+        """
+        Updates skills with an explicit dictionary of modifiers or Skills.
+        All ints provided are assumed to have prof=1.
+        """
         for skill, mod in explicit_skills.items():
             if skill not in self.skills:
                 raise ValueError(f"{skill} is not a skill.")
-            self.skills[skill].value = mod
-            self.skills[skill].prof = 1
+            if isinstance(mod, int):
+                self.skills[skill].value = mod
+                self.skills[skill].prof = 1
+            else:
+                self.skills[skill] = mod
 
     def __getattr__(self, item):
         if item not in self.skills:
@@ -192,6 +202,10 @@ class Skills:
             if to_add:
                 out.append(f"{camel_to_title(skill_name)} {skill.value:+}{modifiers}")
         return ", ".join(out)
+
+    def __iter__(self):
+        for key, value in self.skills.items():
+            yield key, value
 
 
 class Saves:
@@ -244,7 +258,7 @@ class Saves:
             to_add = False
             modifiers = []
 
-            if save.prof > 0.5:
+            if save.prof > 0.5 or save.bonus:
                 to_add = True
             if save.prof == 2:
                 modifiers.append("expertise")
@@ -261,21 +275,46 @@ class Saves:
                 out.append(f"{stat_name.title()} {save.value:+}{modifiers}")
         return ", ".join(out)
 
+    def __iter__(self):
+        for key, value in self.saves.items():
+            yield key, value
+
 
 class Resistances:
-    def __init__(self, resist: list, immune: list, vuln: list):
+    def __init__(self, resist=None, immune=None, vuln=None, neutral=None):
+        if neutral is None:
+            neutral = []
+        if vuln is None:
+            vuln = []
+        if immune is None:
+            immune = []
+        if resist is None:
+            resist = []
         self.resist = resist
         self.immune = immune
         self.vuln = vuln
+        self.neutral = neutral
 
     @classmethod
     def from_dict(cls, d):
         return cls(**d)
 
     def to_dict(self):
-        return {"resist": self.resist, "immune": self.immune, "vuln": self.vuln}
+        return {"resist": self.resist, "immune": self.immune, "vuln": self.vuln, "neutral": self.neutral}
 
     # ---------- main funcs ----------
+    def __getitem__(self, item):
+        if item == 'resist':
+            return self.resist
+        elif item == 'vuln':
+            return self.vuln
+        elif item == 'immune':
+            return self.immune
+        elif item == 'neutral':
+            return self.neutral
+        else:
+            raise ValueError(f"{item} is not a resistance type.")
+
     def __str__(self):
         out = []
         if self.resist:

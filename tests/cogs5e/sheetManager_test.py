@@ -64,14 +64,17 @@ class TestBasicSheetCommands:
 
     async def test_cvar(self, avrae, dhttp):
         avrae.message("!cvar TESTCVAR foo")
+        await dhttp.drain()
 
     async def test_remove_cvar(self, avrae, dhttp):
         avrae.message("!cvar delete TESTCVAR")
+        await dhttp.drain()
 
     async def test_cvar_deleteall(self, avrae, dhttp):
         avrae.message("!cvar deleteall")
         await dhttp.receive_message()
         avrae.message("Yes, I am sure")
+        await dhttp.drain()
 
     async def test_list_cvar(self, avrae, dhttp):
         avrae.message("!cvar list")

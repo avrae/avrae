@@ -15,8 +15,9 @@ import html2text
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet import Attack, BaseStats, Levels, Spellbook, SpellbookSpell
-from cogs5e.models.sheet.base import Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.attack import Attack, AttackList
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES
 from utils.functions import search
@@ -93,15 +94,13 @@ class BeyondSheetParser(SheetLoaderABC):
         description = self.character_data['traits']['appearance']
         image = self.character_data.get('avatarUrl') or ''
 
-        stats = self.get_stats().to_dict()
-        levels = self.get_levels().to_dict()
+        stats = self.get_stats()
+        levels = self.get_levels()
         attacks = self.get_attacks()
 
-        skls, svs = self.get_skills_and_saves()
-        skills = skls.to_dict()
-        saves = svs.to_dict()
+        skills, saves = self.get_skills_and_saves()
 
-        resistances = self.get_resistances().to_dict()
+        resistances = self.get_resistances()
         ac = self.get_ac()
         max_hp = self.get_hp()
         hp = max_hp
@@ -113,7 +112,7 @@ class BeyondSheetParser(SheetLoaderABC):
         death_saves = {}
         consumables = []
 
-        spellbook = self.get_spellbook().to_dict()
+        spellbook = self.get_spellbook()
         live = None
         race = self.get_race()
         background = self.get_background()
@@ -189,9 +188,9 @@ class BeyondSheetParser(SheetLoaderABC):
         return level_obj
 
     def get_attacks(self):
-        """Returns a list of dicts of all of the character's attacks."""
+        """Returns an attacklist"""
         if self.character_data is None: raise Exception('You must call get_character() first.')
-        attacks = []
+        attacks = AttackList()
         used_names = set()
 
         def extend(parsed_attacks):
@@ -557,7 +556,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 damage = f"{base_dice}+{dmgBonus}[{parse_dmg_type(atkIn)}]"
             else:
                 damage = f"{base_dice}[{parse_dmg_type(atkIn)}]"
-            attack = Attack(
+            attack = Attack.new(
                 atkIn['name'], atkBonus, damage,
                 atkIn['snippet']
             )
@@ -576,7 +575,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 dmgBonus += self.get_stat('natural-attacks-damage')
 
             damage = f"{atkIn['diceCount']}d{atkIn['diceType']}+{dmgBonus}[{parse_dmg_type(atkIn)}]"
-            attack = Attack(
+            attack = Attack.new(
                 atkIn['name'], atkBonus, damage, atkIn['snippet']
             )
             out.append(attack)
@@ -624,7 +623,7 @@ class BeyondSheetParser(SheetLoaderABC):
 
             atkBonus = weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus
             details = html2text.html2text(itemdef['description'], bodywidth=0).strip()
-            attack = Attack(
+            attack = Attack.new(
                 itemdef['name'], atkBonus, damage, details
             )
             out.append(attack)
@@ -633,7 +632,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 versDmg = next(p['notes'] for p in itemdef['properties'] if p['name'] == 'Versatile')
                 damage = f"{versDmg}+{dmgBonus}[{itemdef['damageType'].lower()}" \
                          f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
-                attack = Attack(
+                attack = Attack.new(
                     f"2-Handed {itemdef['name']}", atkBonus, damage, details
                 )
                 out.append(attack)
@@ -652,7 +651,7 @@ class BeyondSheetParser(SheetLoaderABC):
             if natural_bonus:
                 dmg = f"{dmg}+{natural_bonus}"
 
-            attack = Attack(
+            attack = Attack.new(
                 "Unarmed Strike", ability_mod + atkBonus, f"{dmg}[bludgeoning]"
             )
             out.append(attack)

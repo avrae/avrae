@@ -1,5 +1,12 @@
 class Spellbook:
-    def __init__(self, slots: dict, max_slots: dict, spells: list, dc=None, sab=None, caster_level=0, spell_mod=None):
+    def __init__(self, slots: dict = None, max_slots: dict = None, spells: list = None, dc=None, sab=None,
+                 caster_level=0, spell_mod=None):
+        if slots is None:
+            slots = {}
+        if max_slots is None:
+            max_slots = {}
+        if spells is None:
+            spells = []
         self.slots = slots
         self.max_slots = max_slots
         self.spells = spells
@@ -20,6 +27,7 @@ class Spellbook:
     def __contains__(self, spell_name: str):
         return spell_name.lower() in {s.name.lower() for s in self.spells}
 
+    # ===== utils =====
     def get_slots(self, level):
         if level == 0:
             return 1
@@ -55,55 +63,3 @@ class SpellbookSpell:
 
     def to_dict(self):
         return {"name": self.name, "strict": self.strict, "level": self.level, "dc": self.dc, "sab": self.sab}
-
-
-class Spellcaster:
-    def __init__(self, spellbook=None):
-        if spellbook is None:
-            spellbook = Spellbook({}, {}, [])
-        self._spellbook = spellbook
-
-    @property
-    def spellbook(self):
-        return self._spellbook
-
-    def can_cast(self, spell, level) -> bool:
-        """
-        Checks whether a combatant can cast a certain spell at a certain level.
-        :param spell: The spell to check.
-        :param level: The level to cast it at.
-        :return: Whether the combatant can cast the spell.
-        """
-        return spell.name in self._spellbook
-
-    def cast(self, spell, level):
-        """
-        Casts a spell at a certain level, using the necessary resources.
-        :param spell: The spell
-        :param level: The level
-        :return: None
-        """
-        pass
-
-    def remaining_casts_of(self, spell, level):
-        """
-        Gets the string representing how many more times this combatant can cast this spell.
-        :param spell: The spell
-        :param level: The level
-        """
-        return "Slots are not tracked for this caster."
-
-    def get_name(self):
-        """
-        Hm.
-        :return: The name of the caster.
-        """
-        return "Unnamed"
-
-    def pb_from_level(self):
-        """
-        Gets the proficiency bonus of the caster, given their level.
-        Not quite foolproof.
-        :return: The caster's probable PB.
-        """
-        return (self._spellbook.caster_level + 7) // 4

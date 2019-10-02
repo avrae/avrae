@@ -13,18 +13,18 @@ def run_check(skill_key, caster, args, embed):
     # str/dex/con/int/wis/cha
     if any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
         base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
-        mod = mod - caster.get_mod(SKILL_MAP[skill_key]) + caster.get_mod(base)
+        mod = mod - caster.stats.get_mod(SKILL_MAP[skill_key]) + caster.stats.get_mod(base)
         skill_name = f"{verbose_stat(base)} ({skill_name})"
 
     # -title
     if args.last('title'):
         embed.title = args.last('title', '') \
-            .replace('[name]', caster.get_name()) \
+            .replace('[name]', caster.get_title_name()) \
             .replace('[cname]', skill_name)
     elif args.last('h'):
         embed.title = f"An unknown creature makes {a_or_an(skill_name)} check!"
     else:
-        embed.title = f'{caster.get_name()} makes {a_or_an(skill_name)} check!'
+        embed.title = f'{caster.get_title_name()} makes {a_or_an(skill_name)} check!'
 
     _run_common(skill, args, embed, mod_override=mod)
 
@@ -39,12 +39,12 @@ def run_save(save_key, caster, args, embed):
     # -title
     if args.last('title'):
         embed.title = args.last('title', '') \
-            .replace('[name]', caster.get_name()) \
+            .replace('[name]', caster.get_title_name()) \
             .replace('[sname]', save_name)
     elif args.last('h'):
         embed.title = f"An unknown creature makes {a_or_an(save_name)}!"
     else:
-        embed.title = f'{caster.get_name()} makes {a_or_an(save_name)}!'
+        embed.title = f'{caster.get_title_name()} makes {a_or_an(save_name)}!'
 
     _run_common(save, args, embed, rr_format="Save {}")
 

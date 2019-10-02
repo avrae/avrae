@@ -4,7 +4,8 @@ import sys
 import time
 
 from cogs5e.models.monster import Monster
-from cogs5e.models.sheet import BaseStats, Saves, Skills, Spellbook, SpellbookSpell
+from cogs5e.models.sheet.base import BaseStats, Saves, Skills
+from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 
 
 def migrate_monster(old_monster):
@@ -22,7 +23,6 @@ def migrate_monster(old_monster):
                                              old_spellcasting['casterLevel']).to_dict()
     else:
         old_monster['spellbook'] = Spellbook({}, {}, []).to_dict()
-
 
     base_stats = BaseStats(
         0, old_monster.pop('strength'), old_monster.pop('dexterity'), old_monster.pop('constitution'),

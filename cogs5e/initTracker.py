@@ -503,17 +503,17 @@ class InitTracker(commands.Cog):
         """Edits the options of a combatant.
         __Valid Arguments__
         -h - Hides HP, AC, Resists, etc.
-        -p <value> - Changes the combatants' placement in the Initiative.
+        -p <value> - Changes the combatants' placement in the Initiative. Adds if starts with +/- or sets otherwise.
         -name <name> - Changes the combatants' name.
         -controller <controller> - Pings a different person on turn.
-        -ac <ac> - Sets or modifies combatants' AC.
+        -ac <ac> - Modifies combatants' AC. Adds if starts with +/- or sets otherwise.
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
         -neutral <damage type> - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
         -group <group> - Adds the combatant to a group. To remove them from group, use -group None.
-        -max <maxhp> - Sets or modifies the combatants' Max HP.
-        -hp <hp> - Sets or modifies current HP."""
+        -max <maxhp> - Modifies the combatants' Max HP. Adds if starts with +/- or sets otherwise.
+        -hp <hp> - Modifies current HP. Adds if starts with +/- or sets otherwise."""
         combat = await Combat.from_ctx(ctx)
 
         comb = await combat.select_combatant(name, select_group=True)
@@ -535,6 +535,13 @@ class InitTracker(commands.Cog):
 
             return wrapper
 
+        def mod_or_set(opt_name, old_value):
+            new_value = args.last(opt_name, type_=int)
+            if args.last(opt_name).startswith(('-', '+')):
+                new_value = old_value + args.last(opt_name, type_=int)
+            delta = new_value - old_value
+            return new_value, delta
+
         @option()
         async def h(combatant):
             combatant.is_private = not combatant.is_private
@@ -551,13 +558,10 @@ class InitTracker(commands.Cog):
 
         @option()
         async def ac(combatant):
-            old_ac = combatant.ac
             try:
-                if args.last('ac').startswith(('-', '+')):
-                    combatant.ac += args.last('ac', type_=int)
-                else:
-                    combatant.ac = args.last('ac', type_=int)
-                return f"\u2705 {combatant.name}'s AC set to {combatant.ac} ({combatant.ac - old_ac:+})."
+                new_ac, delta = mod_or_set('ac', combatant.ac)
+                combatant.ac = new_ac
+                return f"\u2705 {combatant.name}'s AC set to {combatant.ac} ({delta:+})."
             except InvalidArgument as e:
                 return f"\u274c {str(e)}"
 
@@ -565,14 +569,11 @@ class InitTracker(commands.Cog):
         async def p(combatant):
             if combatant is combat.current_combatant:
                 return "\u274c You cannot change a combatant's initiative on their own turn."
-            old_init = combatant.init
             try:
-                if args.last('p').startswith(('-', '+')):
-                    combatant.init += args.last('p', type_=int)
-                else:
-                    combatant.init = args.last('p', type_=int)
+                new_init, delta = mod_or_set('p', combatant.init)
+                combatant.init = new_init
                 combat.sort_combatants()
-                return f"\u2705 {combatant.name}'s initiative set to {combatant.init} ({combatant.init - old_init:+})."
+                return f"\u2705 {combatant.name}'s initiative set to {combatant.init} ({delta:+})."
             except InvalidArgument as e:
                 return f"\u274c {str(e)}"
 
@@ -593,35 +594,30 @@ class InitTracker(commands.Cog):
 
         @option()
         async def name(combatant):
+            old_name = combatant.name
             new_name = args.last('name')
             if combat.get_combatant(new_name, True) is not None:
                 return f"\u274c There is already another combatant with the name {new_name}."
             elif new_name:
                 combatant.name = new_name
-                return f"\u2705 {combatant.name}'s name set to {new_name}."
+                return f"\u2705 {old_name}'s name set to {new_name}."
             else:
                 return "\u274c You must pass in a name with the -name tag."
 
         @option("max")
         async def max_hp(combatant):
-            old_max = combatant.hpMax
-            maxhp = args.last('max', type_=int)
-            if args.last('max').startswith(('-', '+')):
-                maxhp += combatant.max_hp
-            if maxhp < 1:
+            new_max, delta = mod_or_set('max', combatant.max_hp)
+            if new_max < 1:
                 return "\u274c Max HP must be at least 1."
             else:
-                combatant.max_hp = maxhp
-                return f"\u2705 {combatant.name}'s HP max set to {maxhp} ({combatant.max_hp - old_max:+})."
+                combatant.max_hp = new_max
+                return f"\u2705 {combatant.name}'s HP max set to {new_max} ({delta:+})."
 
         @option()
         async def hp(combatant):
-            old_hp = combatant.hp
-            new_hp = args.last('hp', type_=int)
-            if args.last('hp').startswith(('-', '+')):
-                new_hp += combatant.hp
+            new_hp, delta = mod_or_set('hp', combatant.hp)
             combatant.set_hp(new_hp)
-            return f"\u2705 {combatant.name}'s HP set to {new_hp} ({combatant.hp - old_hp:+})."
+            return f"\u2705 {combatant.name}'s HP set to {new_hp} ({delta:+})."
 
         @option("resist", resist_type="resist")
         @option("immune", resist_type="immune")

@@ -506,14 +506,14 @@ class InitTracker(commands.Cog):
         -p <value> - Changes the combatants' placement in the Initiative.
         -name <name> - Changes the combatants' name.
         -controller <controller> - Pings a different person on turn.
-        -ac <ac> - Sets combatants' AC.
+        -ac <ac> - Sets or modifies combatants' AC.
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
         -neutral <damage type> - Removes the combatants' immunity, resistance, or vulnerability to the given damage type.
         -group <group> - Adds the combatant to a group. To remove them from group, use -group None.
-        -max <maxhp> - Sets the combatants' Max HP.
-        -hp <hp> - Sets current HP."""
+        -max <maxhp> - Sets or modifies the combatants' Max HP.
+        -hp <hp> - Sets or modifies current HP."""
         combat = await Combat.from_ctx(ctx)
 
         comb = await combat.select_combatant(name, select_group=True)
@@ -551,9 +551,13 @@ class InitTracker(commands.Cog):
 
         @option()
         async def ac(combatant):
+            old_ac = combatant.ac
             try:
-                combatant.ac = args.last('ac', type_=int)
-                return f"\u2705 {combatant.name}'s AC set to {combatant.ac}."
+                if args.last('ac').startswith(('-', '+')):
+                    combatant.ac += args.last('ac', type_=int)
+                else:
+                    combatant.ac = args.last('ac', type_=int)
+                return f"\u2705 {combatant.name}'s AC set to {combatant.ac} ({combatant.ac - old_ac:+})."
             except InvalidArgument as e:
                 return f"\u274c {str(e)}"
 
@@ -561,10 +565,14 @@ class InitTracker(commands.Cog):
         async def p(combatant):
             if combatant is combat.current_combatant:
                 return "\u274c You cannot change a combatant's initiative on their own turn."
+            old_init = combatant.init
             try:
-                combatant.init = args.last('p', type_=int)
+                if args.last('p').startswith(('-', '+')):
+                    combatant.init += args.last('p', type_=int)
+                else:
+                    combatant.init = args.last('p', type_=int)
                 combat.sort_combatants()
-                return f"\u2705 {combatant.name}'s initiative set to {combatant.init}."
+                return f"\u2705 {combatant.name}'s initiative set to {combatant.init} ({combatant.init - old_init:+})."
             except InvalidArgument as e:
                 return f"\u274c {str(e)}"
 
@@ -596,18 +604,24 @@ class InitTracker(commands.Cog):
 
         @option("max")
         async def max_hp(combatant):
+            old_max = combatant.hpMax
             maxhp = args.last('max', type_=int)
+            if args.last('max').startswith(('-', '+')):
+                maxhp += combatant.max_hp
             if maxhp < 1:
                 return "\u274c Max HP must be at least 1."
             else:
                 combatant.max_hp = maxhp
-                return f"\u2705 {combatant.name}'s HP max set to {maxhp}."
+                return f"\u2705 {combatant.name}'s HP max set to {maxhp} ({combatant.max_hp - old_max:+})."
 
         @option()
         async def hp(combatant):
+            old_hp = combatant.hp
             new_hp = args.last('hp', type_=int)
+            if args.last('hp').startswith(('-', '+')):
+                new_hp += combatant.hp
             combatant.set_hp(new_hp)
-            return f"\u2705 {combatant.name}'s HP set to {new_hp}."
+            return f"\u2705 {combatant.name}'s HP set to {new_hp} ({combatant.hp - old_hp:+})."
 
         @option("resist", resist_type="resist")
         @option("immune", resist_type="immune")

@@ -257,6 +257,8 @@ class Effect:
         self.type = type_
         if meta:
             meta = Effect.deserialize(meta)
+        else:
+            meta = []
         self.meta = meta
 
     @staticmethod
@@ -323,8 +325,10 @@ class Target(Effect):
         return super(Target, cls).from_data(data)
 
     def to_dict(self):
+        out = super(Target, self).to_dict()
         effects = [e.to_dict() for e in self.effects]
-        return {"type": "target", "target": self.target, "effects": effects}
+        out.update({"type": "target", "target": self.target, "effects": effects})
+        return out
 
     def run(self, autoctx):
         super(Target, self).run(autoctx)

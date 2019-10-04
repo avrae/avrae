@@ -1,7 +1,7 @@
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.scripting.functions import SimpleRollResult
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
-from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
+from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
 
@@ -96,13 +96,22 @@ class SimpleCombatant:
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes
+        self.skills = self._combatant.skills
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
+        self.level = self._combatant.spellbook.caster_level
+        if isinstance(combatant, MonsterCombatant):
+            self.monster_name = self._combatant.monster_name
+            self.cr = self._combatant.cr
+        else:
+            self.monster_name = self.name
+            self.cr = self.level
         # deprecated
         if self._combatant.hp is not None and self._combatant.max_hp:
             self.ratio = self._combatant.hp / self._combatant.max_hp
         else:
             self.ratio = 0
-        self.level = self._combatant.spellbook.caster_level
+
+
 
     def set_hp(self, newhp: int):
         """

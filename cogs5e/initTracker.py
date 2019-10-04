@@ -17,7 +17,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
-from cogs5e.models.sheet.attack import Attack, old_to_automation
+from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Resistances, Skill
 from cogsmisc.stats import Stats
 from utils.argparser import argparse, argsplit

@@ -537,10 +537,11 @@ class InitTracker(commands.Cog):
 
         def mod_or_set(opt_name, old_value):
             new_value = args.last(opt_name, type_=int)
+            if old_value is None:
+                old_value = 0
             if args.last(opt_name).startswith(('-', '+')):
-                new_value = old_value + args.last(opt_name, type_=int)
-            delta = new_value - old_value
-            return new_value, delta
+                new_value = old_value + new_value
+            return new_value, old_value
 
         @option()
         async def h(combatant):
@@ -559,9 +560,9 @@ class InitTracker(commands.Cog):
         @option()
         async def ac(combatant):
             try:
-                new_ac, delta = mod_or_set('ac', combatant.ac)
+                new_ac, old_ac = mod_or_set('ac', combatant.ac)
                 combatant.ac = new_ac
-                return f"\u2705 {combatant.name}'s AC set to {combatant.ac} ({delta:+})."
+                return f"\u2705 {combatant.name}'s AC set to {combatant.ac} (was {old_ac})."
             except InvalidArgument as e:
                 return f"\u274c {str(e)}"
 
@@ -570,10 +571,10 @@ class InitTracker(commands.Cog):
             if combatant is combat.current_combatant:
                 return "\u274c You cannot change a combatant's initiative on their own turn."
             try:
-                new_init, delta = mod_or_set('p', combatant.init)
+                new_init, old_init = mod_or_set('p', combatant.init)
                 combatant.init = new_init
                 combat.sort_combatants()
-                return f"\u2705 {combatant.name}'s initiative set to {combatant.init} ({delta:+})."
+                return f"\u2705 {combatant.name}'s initiative set to {combatant.init} (was {old_init})."
             except InvalidArgument as e:
                 return f"\u274c {str(e)}"
 
@@ -606,18 +607,18 @@ class InitTracker(commands.Cog):
 
         @option("max")
         async def max_hp(combatant):
-            new_max, delta = mod_or_set('max', combatant.max_hp)
+            new_max, old_max = mod_or_set('max', combatant.max_hp)
             if new_max < 1:
                 return "\u274c Max HP must be at least 1."
             else:
                 combatant.max_hp = new_max
-                return f"\u2705 {combatant.name}'s HP max set to {new_max} ({delta:+})."
+                return f"\u2705 {combatant.name}'s HP max set to {new_max} (was {old_max})."
 
         @option()
         async def hp(combatant):
-            new_hp, delta = mod_or_set('hp', combatant.hp)
+            new_hp, old_hp = mod_or_set('hp', combatant.hp)
             combatant.set_hp(new_hp)
-            return f"\u2705 {combatant.name}'s HP set to {new_hp} ({delta:+})."
+            return f"\u2705 {combatant.name}'s HP set to {new_hp} (was {old_hp})."
 
         @option("resist", resist_type="resist")
         @option("immune", resist_type="immune")

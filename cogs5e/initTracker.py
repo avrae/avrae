@@ -965,7 +965,7 @@ class InitTracker(commands.Cog):
         # attack selection
         attacks = combatant.attacks
         if 'custom' in args:
-            attack = Attack.new(name=atk_name, bonus_calc='', damage_calc='0')
+            attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
         else:
             try:
                 attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name,

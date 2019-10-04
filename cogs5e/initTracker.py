@@ -537,10 +537,11 @@ class InitTracker(commands.Cog):
 
         def mod_or_set(opt_name, old_value):
             new_value = args.last(opt_name, type_=int)
-            if old_value is None:
-                old_value = 0
+            temp_value = old_value
+            if temp_value is None:
+                temp_value = 0
             if args.last(opt_name).startswith(('-', '+')):
-                new_value = old_value + new_value
+                new_value = temp_value + new_value
             return new_value, old_value
 
         @option()

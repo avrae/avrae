@@ -17,6 +17,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
+from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Resistances, Skill
 from cogsmisc.stats import Stats
 from utils.argparser import argparse, argsplit
@@ -973,7 +974,7 @@ class InitTracker(commands.Cog):
         # attack selection
         attacks = combatant.attacks
         if 'custom' in args:
-            attack = {'attackBonus': '0', 'damage': '0', 'name': atk_name}
+            attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
         else:
             try:
                 attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name,

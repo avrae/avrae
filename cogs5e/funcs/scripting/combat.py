@@ -92,7 +92,7 @@ class SimpleCombatant:
         self.initmod = int(self._combatant.init_skill)
         self.temphp = self._combatant.temp_hp
         self.resists = self._combatant.resistances
-        self.attacks = self._combatant.attacks
+        self.attacks = self._combatant.attacks.to_dict()
         self.init = self._combatant.init
         self.name = self._combatant.name
         self.note = self._combatant.notes

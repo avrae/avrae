@@ -40,7 +40,10 @@ class Attack:
     @classmethod
     def new(cls, name, bonus_calc: str = None, damage_calc: str = None, details: str = None):
         """Creates a new attack for a character."""
-        return cls(name, old_to_automation(str(bonus_calc).strip("<>{}"), damage_calc, details))
+        if bonus_calc is not None:
+            bonus_calc = str(bonus_calc).strip("<>{}")
+
+        return cls(name, old_to_automation(bonus_calc, damage_calc, details))
 
     def build_str(self, caster):
         return f"**{self.name}**: {self.automation.build_str(caster)}"

@@ -195,13 +195,13 @@ class BeyondSheetParser(SheetLoaderABC):
 
         def extend(parsed_attacks):
             for atk in parsed_attacks:
-                if atk['name'] in used_names:
+                if atk.name in used_names:
                     num = 2
-                    while f"{atk['name']}{num}" in used_names:
+                    while f"{atk.name}{num}" in used_names:
                         num += 1
-                    atk['name'] = f"{atk['name']}{num}"
+                    atk.name = f"{atk.name}{num}"
             attacks.extend(parsed_attacks)
-            used_names.update(a['name'] for a in parsed_attacks)
+            used_names.update(a.name for a in parsed_attacks)
 
         for src in self.character_data['actions'].values():
             for action in src:
@@ -213,7 +213,7 @@ class BeyondSheetParser(SheetLoaderABC):
             if item['equipped'] and (item['definition']['filterType'] == "Weapon" or item.get('displayAsAttack')):
                 extend(self.parse_attack(item, "item"))
 
-        if 'Unarmed Strike' not in [a['name'] for a in attacks]:
+        if 'Unarmed Strike' not in [a.name for a in attacks]:
             extend(self.parse_attack(None, 'unarmed'))
         return attacks
 
@@ -655,7 +655,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 "Unarmed Strike", ability_mod + atkBonus, f"{dmg}[bludgeoning]"
             )
             out.append(attack)
-        return [a.to_dict() for a in out]
+        return out
 
     def _calculate_stats(self):
         ignored = set()

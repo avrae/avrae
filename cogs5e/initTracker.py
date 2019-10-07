@@ -814,7 +814,7 @@ class InitTracker(commands.Cog):
                                         concentration=conc, tick_on_end=end)
                 result = combatant.add_effect(effect_obj)
                 if parent:
-                    combatant.get_effect(effect_name).set_parent(parent)
+                    effect_obj.set_parent(parent)
                 out = f"Added effect {effect_name} to {combatant.name}."
                 if result['conc_conflict']:
                     conflicts = [e.name for e in result['conc_conflict']]

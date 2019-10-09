@@ -85,10 +85,10 @@ class Stats(commands.Cog):
 
     async def update_hourly(self):
         class _ContextProxy:
-            def __init__(self):
-                self.bot = self.bot
+            def __init__(self, bot):
+                self.bot = bot
 
-        ctx = _ContextProxy()
+        ctx = _ContextProxy(self.bot)
 
         commands_used_life = await self.get_statistic(ctx, "commands_used_life")
         num_characters = await self.bot.mdb.characters.estimated_document_count()  # fast

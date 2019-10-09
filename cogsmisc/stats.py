@@ -30,6 +30,7 @@ class Stats(commands.Cog):
         command = ctx.command.qualified_name
         self.command_stats[command] += 1
         await self.user_activity(ctx)
+        await self.guild_activity(ctx)
         await self.command_activity(ctx)
 
     @commands.Cog.listener()
@@ -56,6 +57,21 @@ class Stats(commands.Cog):
             upsert=True
         )
 
+    async def guild_activity(self, ctx):
+        if ctx.guild is None:
+            guild_id = 0
+        else:
+            guild_id = ctx.guild.id
+
+        await self.bot.mdb.analytics_guild_activity.update_one(
+            {"guild_id": guild_id},
+            {
+                "$inc": {"commands_called": 1},
+                "$currentDate": {"last_command_time": True}
+            },
+            upsert=True
+        )
+
     async def command_activity(self, ctx):
         await self.increase_stat(ctx, "commands_used_life")
         await self.bot.mdb.analytics_command_activity.update_one(
@@ -68,18 +84,31 @@ class Stats(commands.Cog):
         )
 
     async def update_hourly(self):
+        class _ContextProxy:
+            def __init__(self):
+                self.bot = self.bot
+
+        ctx = _ContextProxy()
+
+        commands_used_life = await self.get_statistic(ctx, "commands_used_life")
+        num_characters = await self.bot.mdb.characters.estimated_document_count()  # fast
+
         try:
-            commands_used_life = int(
-                (await self.bot.mdb.random_stats.find_one({"key": "commands_used_life"}))
-                    .get("value", 0)
-            )
+            num_inits_began = (await self.bot.mdb.analytics_command_activity.find_one({"name": "init begin"})) \
+                .get("num_invocations", 0)
         except AttributeError:
-            commands_used_life = 0
+            num_inits_began = 0
+
+
         data = {
             "timestamp": datetime.datetime.now(),
             "num_unique_members": len(self.bot.users),
             "num_commands_called": commands_used_life,
-            "num_servers": len(self.bot.guilds)
+            "num_servers": len(self.bot.guilds),
+            "num_characters": num_characters,
+            "num_inits_began": num_inits_began,
+            "num_init_turns": await self.get_statistic(ctx, "turns_init_tracked_life"),
+            "num_init_rounds": await self.get_statistic(ctx, "rounds_init_tracked_life")
         }
         await self.bot.mdb.analytics_over_time.insert_one(data)
 

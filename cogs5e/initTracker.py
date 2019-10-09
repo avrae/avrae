@@ -769,6 +769,7 @@ class InitTracker(commands.Cog):
         conc - Makes the effect require concentration. Will end any other concentration effects.
         end - Makes the effect duration tick on the end of turn, rather than the beginning.
         -t <target> - Specifies more combatant's to target, chainable (e.g., "-t or1 -t or2").
+        -parent <"[combatant]|[effect]"> - Sets a parent effect from a specified combatant.
         __Attacks__
         -b <bonus> - Adds a bonus to hit.
         -d <damage> - Adds additional damage.
@@ -785,13 +786,8 @@ class InitTracker(commands.Cog):
         args = argparse(args)
 
         targets = []
-        first_target = await combat.select_combatant(target_name)
-        if first_target is None:
-            await ctx.send("Combatant not found.")
-            return
-        targets.append(first_target)
 
-        for i, t in enumerate(args.get('t')):
+        for i, t in enumerate([target_name] + args.get('t')):
             target = await combat.select_combatant(t, f"Select target #{i + 1}.", select_group=True)
             if isinstance(target, CombatantGroup):
                 targets.extend(target.get_combatants())
@@ -801,16 +797,26 @@ class InitTracker(commands.Cog):
         duration = args.last('dur', -1, int)
         conc = args.last('conc', False, bool)
         end = args.last('end', False, bool)
+        parent = args.last('parent')
+
+        if parent is not None:
+            parent = parent.split('|', 1)
+            if not len(parent) == 2:
+                raise InvalidArgument("`parent` arg must be formatted `COMBATANT|EFFECT_NAME`")
+            p_combatant = await combat.select_combatant(parent[0], choice_message="Select the combatant with the parented effect.")
+            parent = await p_combatant.select_effect(parent[1])
 
         embed = EmbedWithAuthor(ctx)
         for combatant in targets:
             if effect_name.lower() in (e.name.lower() for e in combatant.get_effects()):
                 out = "Effect already exists."
             else:
-                effectObj = Effect.new(combat, combatant, duration=duration, name=effect_name, effect_args=args,
-                                       concentration=conc, tick_on_end=end)
-                result = combatant.add_effect(effectObj)
-                out = "Added effect {} to {}.".format(effect_name, combatant.name)
+                effect_obj = Effect.new(combat, combatant, duration=duration, name=effect_name, effect_args=args,
+                                        concentration=conc, tick_on_end=end)
+                result = combatant.add_effect(effect_obj)
+                if parent:
+                    effect_obj.set_parent(parent)
+                out = f"Added effect {effect_name} to {combatant.name}."
                 if result['conc_conflict']:
                     conflicts = [e.name for e in result['conc_conflict']]
                     out += f"\nRemoved {', '.join(conflicts)} due to concentration conflict!"
@@ -820,23 +826,31 @@ class InitTracker(commands.Cog):
 
     @init.command(name='re')
     async def remove_effect(self, ctx, name: str, effect: str = ''):
-        """Removes a status effect from a combatant. Removes all if effect is not passed."""
+        """Removes a status effect from a combatant or group. Removes all if effect is not passed."""
         combat = await Combat.from_ctx(ctx)
-        combatant = await combat.select_combatant(name)
-        if combatant is None:
-            await ctx.send("Combatant not found.")
-            return
 
-        if effect is '':
-            combatant.remove_all_effects()
-            await ctx.send("All effects removed from {}.".format(combatant.name))
+        targets = []
+
+        target = await combat.select_combatant(name, select_group=True)
+        if isinstance(target, CombatantGroup):
+            targets.extend(target.get_combatants())
         else:
-            to_remove = await combatant.select_effect(effect)
-            children_removed = ""
-            if to_remove.children:
-                children_removed = f"Also removed {len(to_remove.children)} child effects."
-            to_remove.remove()
-            await ctx.send(f'Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}')
+            targets.append(target)
+
+        out = ""
+
+        for combatant in targets:
+            if effect is '':
+                combatant.remove_all_effects()
+                out += f"All effects removed from {combatant.name}.\n"
+            else:
+                to_remove = await combatant.select_effect(effect)
+                children_removed = ""
+                if to_remove.children:
+                    children_removed = f"Also removed {len(to_remove.children)} child effects.\n"
+                to_remove.remove()
+                out += f'Effect {to_remove.name} removed from {combatant.name}.\n{children_removed}'
+        await ctx.send(out)
         await combat.final()
 
     @init.group(aliases=['a'], invoke_without_command=True)

@@ -28,6 +28,11 @@ db.compendiums.createIndex({"server_active": 1});
 
 analytics_user_activity:
 db.analytics_user_activity.createIndex({"user_id": 1}, {"unique": true});
+db.analytics_user_activity.createIndex({"last_command_time": -1});
+
+analytics_guild_activity:
+db.analytics_guild_activity.createIndex({"guild_id": 1}, {"unique": true});
+db.analytics_guild_activity.createIndex({"last_command_time": -1});
 
 analytics_command_activity:
 db.analytics_command_activity.createIndex({"name": 1}, {"unique": true});

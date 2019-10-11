@@ -342,7 +342,7 @@ class InitTracker(commands.Cog):
         toRemove = []
         if combat.current_combatant is not None:
             if isinstance(combat.current_combatant, CombatantGroup):
-                thisTurn = [co for co in combat.current_combatant.get_combatants()]
+                thisTurn = combat.current_combatant.get_combatants()
             else:
                 thisTurn = [combat.current_combatant]
             for co in thisTurn:
@@ -667,7 +667,7 @@ class InitTracker(commands.Cog):
             return
 
         private = 'private' in args.lower()
-        if isinstance(combatant, Combatant):
+        if not isinstance(combatant, CombatantGroup):
             private = private and str(ctx.author.id) == combatant.controller
             status = combatant.get_status(private=private)
             if private and isinstance(combatant, MonsterCombatant):
@@ -803,7 +803,8 @@ class InitTracker(commands.Cog):
             parent = parent.split('|', 1)
             if not len(parent) == 2:
                 raise InvalidArgument("`parent` arg must be formatted `COMBATANT|EFFECT_NAME`")
-            p_combatant = await combat.select_combatant(parent[0], choice_message="Select the combatant with the parented effect.")
+            p_combatant = await combat.select_combatant(parent[0],
+                                                        choice_message="Select the combatant with the parented effect.")
             parent = await p_combatant.select_effect(parent[1])
 
         embed = EmbedWithAuthor(ctx)
@@ -996,6 +997,15 @@ class InitTracker(commands.Cog):
             except SelectionException:
                 return await ctx.send("Attack not found.")
 
+        # caster handling
+        caster = combatant
+        if isinstance(combatant, CombatantGroup):
+            if 'custom' not in args:
+                caster = next(c for c in combatant.get_combatants() if attack in c.attacks)
+            else:
+                caster = combatant.get_combatants()[0]
+
+
         # target handling
         if 't' not in args and target_name is not None:
             # old single-target
@@ -1022,7 +1032,7 @@ class InitTracker(commands.Cog):
                 .replace('[name]', combatant.name) \
                 .replace('[aname]', attack.name)
         else:
-            embed.title = '{} attacks with {}!'.format(combatant.name, a_or_an(attack.name))
+            embed.title = '{} attacks with {}!'.format(combatant.get_title_name(), a_or_an(attack.name))
 
         if is_player:
             embed.colour = combatant.character.get_color()
@@ -1030,7 +1040,7 @@ class InitTracker(commands.Cog):
             embed.colour = random.randint(0, 0xffffff)
 
         # run
-        await attack.automation.run(ctx, embed, combatant, targets, args, title=embed.title)
+        await attack.automation.run(ctx, embed, caster, targets, args, title=embed.title)
 
         # post-run
         _fields = args.get('f')

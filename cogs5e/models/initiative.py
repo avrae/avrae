@@ -223,7 +223,7 @@ class Combat:
             grp = next((g for g in self.get_groups() if name.lower() in g.name.lower()), None)
 
         if grp is None and create is not None:
-            grp = CombatantGroup.new(name, create, self.ctx)
+            grp = CombatantGroup.new(self, name, init=create, ctx=self.ctx)
             self.add_combatant(grp)
 
         return grp
@@ -1026,8 +1026,8 @@ class CombatantGroup(Combatant):
         self._combatants = combatants
 
     @classmethod
-    def new(cls, name, init, ctx=None):
-        return cls(name, init, [], ctx)
+    def new(cls, combat, name, init, ctx=None):
+        return cls(ctx, combat, [], name, init)
 
     @property
     def name(self):

@@ -41,7 +41,7 @@ class Attack:
     def new(cls, name, bonus_calc: str = None, damage_calc: str = None, details: str = None):
         """Creates a new attack for a character."""
         if bonus_calc is not None:
-            bonus_calc = str(bonus_calc).strip("<>{}")
+            bonus_calc = str(bonus_calc)
 
         return cls(name, old_to_automation(bonus_calc, damage_calc, details))
 
@@ -104,7 +104,7 @@ def old_to_automation(bonus=None, damage=None, details=None):
 
     if bonus is not None:
         hit = [damage] if damage else []
-        attack_eff = [automation.Attack(hit=hit, miss=[], attackBonus=str(bonus))]
+        attack_eff = [automation.Attack(hit=hit, miss=[], attackBonus=str(bonus).strip('{}<>'))]
     else:
         attack_eff = [damage] if damage else []
 

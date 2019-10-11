@@ -19,7 +19,7 @@ ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit
                        r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]??'
                        r'(?:in melee, or [+-]?\d+ \((.+?)\) (\w+) damage at range[,.]?)?'
                        r'(?: or [+-]?\d+ \((.+?)\) (\w+) damage .*?[.,]?)?'
-                       r'(?: plus [+-]?\d+ \((.+?)\) (\w+) damage.)?', re.IGNORECASE)
+                       r'(?: (?:plus|and) [+-]?\d+ \((.+?)\) (\w+) damage.)?', re.IGNORECASE)
 JUST_DAMAGE_RE = re.compile(r'[+-]?\d+ \((.+?)\) (\w+) damage', re.IGNORECASE)
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class Monster(StatBlock):
                  condition_immune: list = None, saves: Saves = None, skills: Skills = None, languages: list = None,
                  traits: list = None, actions: list = None, reactions: list = None, legactions: list = None,
                  la_per_round=3, srd=True, source='homebrew', attacks: AttackList = None, proper: bool = False,
-                 image_url: str = None, spellcasting=None, page=None, **_):
+                 image_url: str = None, spellcasting=None, page=None, display_resists: Resistances = None, **_):
         if vuln is None:
             vuln = []
         if resist is None:
@@ -104,6 +104,8 @@ class Monster(StatBlock):
         self.proper = proper
         self.image_url = image_url
         self.page = page  # this should really be by source, but oh well
+        # resistances including notes, e.g. "Bludgeoning from nonmagical weapons"
+        self._displayed_resistances = display_resists or resistances
 
     @classmethod
     def from_data(cls, data):
@@ -126,9 +128,13 @@ class Monster(StatBlock):
         else:
             cr = data['cr']
 
-        vuln = parse_resists(data['vulnerable']) if 'vulnerable' in data else None
-        resist = parse_resists(data['resist']) if 'resist' in data else None
-        immune = parse_resists(data['immune']) if 'immune' in data else None
+        # resistances
+        vuln = parse_resists(data['vulnerable'], notated=False) if 'vulnerable' in data else None
+        resist = parse_resists(data['resist'], notated=False) if 'resist' in data else None
+        immune = parse_resists(data['immune'], notated=False) if 'immune' in data else None
+
+        display_resists = Resistances(*[parse_resists(data.get(r)) for r in ('resist', 'immune', 'vulnerable')])
+
         condition_immune = data.get('conditionImmune', []) if 'conditionImmune' in data else None
 
         languages = data.get('languages', '').split(', ') if 'languages' in data else None
@@ -159,7 +165,7 @@ class Monster(StatBlock):
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
                    vuln, resist, immune, condition_immune, saves, skills, languages, traits,
                    actions, reactions, legactions, 3, data.get('srd', False), source, attacks,
-                   spellcasting=spellbook, page=data.get('page'), proper=proper)
+                   spellcasting=spellbook, page=data.get('page'), proper=proper, display_resists=display_resists)
 
     @classmethod
     def from_critterdb(cls, data):
@@ -239,6 +245,8 @@ class Monster(StatBlock):
         data['skills'] = Skills.from_dict(data['skills'])
         data['ability_scores'] = BaseStats.from_dict(data['ability_scores'])
         data['attacks'] = AttackList.from_dict(data['attacks'])
+        if 'display_resists' in data:
+            data['display_resists'] = Resistances.from_dict(data['display_resists'])
         return cls(**data)
 
     def to_dict(self):
@@ -254,7 +262,8 @@ class Monster(StatBlock):
             'reactions': [t.to_dict() for t in self.reactions],
             'legactions': [t.to_dict() for t in self.legactions], 'la_per_round': self.la_per_round,
             'srd': self.srd, 'source': self.source, 'attacks': self.attacks.to_dict(), 'proper': self.proper,
-            'image_url': self.image_url, 'spellbook': self.spellbook.to_dict()
+            'image_url': self.image_url, 'spellbook': self.spellbook.to_dict(),
+            'display_resists': self._displayed_resistances.to_dict()
         }
 
     def get_stat_array(self):
@@ -309,12 +318,12 @@ class Monster(StatBlock):
         if str(self.skills):
             desc += f"**Skills:** {self.skills}\n"
         desc += f"**Senses:** {self.get_senses_str()}.\n"
-        if self.resistances.vuln:
-            desc += f"**Vulnerabilities:** {', '.join(self.resistances.vuln)}\n"
-        if self.resistances.resist:
-            desc += f"**Resistances:** {', '.join(self.resistances.resist)}\n"
-        if self.resistances.immune:
-            desc += f"**Damage Immunities:** {', '.join(self.resistances.immune)}\n"
+        if self._displayed_resistances.vuln:
+            desc += f"**Vulnerabilities:** {', '.join(self._displayed_resistances.vuln)}\n"
+        if self._displayed_resistances.resist:
+            desc += f"**Resistances:** {', '.join(self._displayed_resistances.resist)}\n"
+        if self._displayed_resistances.immune:
+            desc += f"**Damage Immunities:** {', '.join(self._displayed_resistances.immune)}\n"
         if self.condition_immune:
             desc += f"**Condition Immunities:** {', '.join(map(str, self.condition_immune))}\n"
         if self.languages:

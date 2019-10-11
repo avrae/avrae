@@ -614,3 +614,21 @@ async def try_delete(message):
         await message.delete()
     except discord.HTTPException:
         pass
+
+
+def maybe_mod(val: str, base=0):
+    """
+    Takes an argument, which is a string that may start with + or -, and returns the value.
+    If *val* starts with + or -, it returns *base + val*.
+    Otherwise, it returns *val*.
+    """
+    base = base or 0
+
+    try:
+        if val.startswith(('+', '-')):
+            base += int(val)
+        else:
+            base = int(val)
+    except (ValueError, TypeError):
+        return base
+    return base

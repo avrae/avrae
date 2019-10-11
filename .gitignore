@@ -7,7 +7,7 @@
 
 *.avrae
 
-/venv/
+venv/
 /venv*/
 /testenv/
 /venv-rewrite/
@@ -20,6 +20,7 @@
 *.json
 !*.spec.json
 *.pdf
+*.zip
 
 credentials.py
 

@@ -478,10 +478,10 @@ class InitTracker(commands.Cog):
         private = 'private' in args
         destination = ctx if not private else ctx.author
         if private and str(ctx.author.id) == combat.dm:
-            outStr = combat.get_summary(True)
+            out = combat.get_summary(True)
         else:
-            outStr = combat.get_summary()
-        await destination.send(outStr if not private else None)
+            out = combat.get_summary()
+        await destination.send(out)
 
     @init.command()
     async def note(self, ctx, name: str, *, note: str = ''):

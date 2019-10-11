@@ -9,7 +9,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
-from utils.functions import get_selection
+from utils.functions import get_selection, maybe_mod
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
@@ -170,7 +170,7 @@ class Combat:
         """
         combatants = []
         for c in self._combatants:
-            if isinstance(c, Combatant):
+            if not isinstance(c, CombatantGroup):
                 combatants.append(c)
             else:
                 combatants.extend(c.get_combatants())
@@ -582,13 +582,7 @@ class Combatant(StatBlock):
     def ac(self):
         _ac = self._ac
         for e in self.active_effects('ac'):
-            try:
-                if e.startswith(('+', '-')):
-                    _ac += int(e)
-                else:
-                    _ac = int(e)
-            except (ValueError, TypeError):
-                continue
+            _ac = maybe_mod(e, base=_ac)
         return _ac
 
     @ac.setter
@@ -922,7 +916,17 @@ class PlayerCombatant(Combatant):
 
     @property
     def ac(self):
-        return self._ac or self.character.ac
+        _ac = self._ac or self.character.ac
+        for e in self.active_effects('ac'):
+            _ac = maybe_mod(e, base=_ac)
+        return _ac
+
+    @ac.setter
+    def ac(self, new_ac):
+        """
+        :param int|None new_ac: The new AC
+        """
+        self._ac = new_ac
 
     @property
     def spellbook(self):
@@ -1015,17 +1019,11 @@ class PlayerCombatant(Combatant):
         return raw
 
 
-class CombatantGroup:
-    def __init__(self, name, init, combatants, ctx, index=None):
-        super(CombatantGroup, self).__init__()
-        self._name = name
-        self._init = init
+class CombatantGroup(Combatant):
+    def __init__(self, ctx, combat, combatants, name, init, index=None):
+        super(CombatantGroup, self).__init__(
+            ctx, combat, name=name, controller_id=str(ctx.author.id), private=False, init=init, index=index)
         self._combatants = combatants
-        self.ctx = ctx
-        self._index = index
-        self.init_skill = Skill(0)  # readonly
-        self.group = None  # groups cannot be in groups
-        self.is_private = False  # eh
 
     @classmethod
     def new(cls, name, init, ctx=None):
@@ -1060,7 +1058,7 @@ class CombatantGroup:
 
     @property
     def attacks(self):
-        a = []
+        a = AttackList()
         for c in self.get_combatants():
             a.extend(atk for atk in c.attacks if atk not in a)
         return a
@@ -1115,7 +1113,7 @@ class CombatantGroup:
     @classmethod
     async def from_dict(cls, raw, ctx, combat):
         combatants = []
-        for c in raw['combatants']:
+        for c in raw.pop('combatants'):
             if c['type'] == 'common':
                 combatants.append(Combatant.from_dict(c, ctx, combat))
             elif c['type'] == 'monster':
@@ -1124,12 +1122,13 @@ class CombatantGroup:
                 combatants.append(await PlayerCombatant.from_dict(c, ctx, combat))
             else:
                 raise CombatException("Unknown combatant type")
-        return cls(raw['name'], raw['init'], combatants, ctx, raw['index'])
+        del raw['type']
+        return cls(ctx, combat, combatants, **raw)
 
     @classmethod
     def from_dict_sync(cls, raw, ctx, combat):
         combatants = []
-        for c in raw['combatants']:
+        for c in raw.pop('combatants'):
             if c['type'] == 'common':
                 combatants.append(Combatant.from_dict(c, ctx, combat))
             elif c['type'] == 'monster':
@@ -1138,7 +1137,8 @@ class CombatantGroup:
                 combatants.append(PlayerCombatant.from_dict_sync(c, ctx, combat))
             else:
                 raise CombatException("Unknown combatant type")
-        return cls(raw['name'], raw['init'], combatants, ctx, raw['index'])
+        del raw['type']
+        return cls(ctx, combat, combatants, **raw)
 
     def to_dict(self):
         return {'name': self.name, 'init': self.init, 'combatants': [c.to_dict() for c in self.get_combatants()],

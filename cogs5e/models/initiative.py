@@ -9,7 +9,7 @@ from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
-from utils.functions import get_selection
+from utils.functions import get_selection, maybe_mod
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
@@ -582,13 +582,7 @@ class Combatant(StatBlock):
     def ac(self):
         _ac = self._ac
         for e in self.active_effects('ac'):
-            try:
-                if e.startswith(('+', '-')):
-                    _ac += int(e)
-                else:
-                    _ac = int(e)
-            except (ValueError, TypeError):
-                continue
+            _ac = maybe_mod(e, base=_ac)
         return _ac
 
     @ac.setter
@@ -922,7 +916,17 @@ class PlayerCombatant(Combatant):
 
     @property
     def ac(self):
-        return self._ac or self.character.ac
+        _ac = self._ac or self.character.ac
+        for e in self.active_effects('ac'):
+            _ac = maybe_mod(e, base=_ac)
+        return _ac
+
+    @ac.setter
+    def ac(self, new_ac):
+        """
+        :param int|None new_ac: The new AC
+        """
+        self._ac = new_ac
 
     @property
     def spellbook(self):

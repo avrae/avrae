@@ -38,7 +38,7 @@ def test_rerolling_operators():
     assert len([p for p in r.raw_dice.parts[0].rolled[:10] if p.value < 3 and p.kept]) == 0
 
     r = roll("10d2ra1")
-    assert 11 <= r.total <= 40
+    assert 11 <= r.total <= 21
 
     r = roll("10d2e1")
     assert 20 <= r.total

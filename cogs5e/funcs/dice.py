@@ -166,116 +166,121 @@ class Roll(object):
             return DiceResult(verbose_result="Invalid input: {}".format(ex))
 
     def roll_one(self, dice, adv: int = 0):
-        result = SingleDiceGroup()
-        result.rolled = []
-        # splits dice and comments
+        # splits dice and annotation
         split = re.match(r'^([^\[\]]*?)\s*(\[.*\])?\s*$', dice)
         dice = split.group(1).strip()
         annotation = split.group(2)
-        result.annotation = annotation if annotation is not None else ''
+
         # Recognizes dice
         obj = re.findall('\d+', dice)
         obj = [int(x) for x in obj]
         numArgs = len(obj)
 
+        # prepare dice and operators
         ops = []
         if numArgs == 1:
             if not dice.startswith('d'):
                 raise errors.InvalidArgument('Please pass in the value of the dice.')
             numDice = 1
-            diceVal = obj[0]
-            if adv is not 0 and diceVal == 20:
+            dice_size = obj[0]
+            if adv is not 0 and dice_size == 20:
                 numDice = 2
                 ops = ['k', 'h1'] if adv is 1 else ['k', 'l1']
         elif numArgs == 2:
             numDice = obj[0]
-            diceVal = obj[-1]
-            if adv is not 0 and diceVal == 20:
+            dice_size = obj[-1]
+            if adv is not 0 and dice_size == 20:
                 ops = ['k', 'h' + str(numDice)] if adv is 1 else ['k', 'l' + str(numDice)]
                 numDice = numDice * 2
         else:  # split into xdy and operators
             numDice = obj[0]
-            diceVal = obj[1]
+            dice_size = obj[1]
             dice = re.split('(\d+d\d+)', dice)[-1]
             ops = VALID_OPERATORS_2.split(dice)
             ops = [a for a in ops if a is not None]
 
-        # dice repair/modification
-        if numDice > 300 or diceVal < 1:
+        # ensure limits
+        if numDice > 300 or dice_size < 1:
             raise errors.InvalidArgument('Too many dice rolled.')
 
-        result.max_value = diceVal
-        result.num_dice = numDice
-        result.operators = ops
+        # prepare output
+        result = SingleDiceGroup(num_dice=numDice, max_value=dice_size, annotation=annotation or '', operators=ops)
 
+        # roll dice
         for _ in range(numDice):
             try:
-                tempdice = SingleDice()
-                tempdice.value = random.randint(1, diceVal)
-                tempdice.rolls = [tempdice.value]
-                tempdice.max_value = diceVal
-                tempdice.kept = True
+                tempdice = SingleDice(value=random.randint(1, dice_size), max_value=dice_size)
                 result.rolled.append(tempdice)
-            except:
+            except:  # ?
                 result.rolled.append(SingleDice())
 
+        # define operators
+        def _op_rr(buf):
+            self._rerolls += result.reroll(buf, greedy=True)
+
+        def _op_k(buf):
+            result.keep(buf)
+
+        def _op_ro(buf):
+            self._rerolls += result.reroll(buf, once=True)
+
+        def _op_ra(buf):
+            result.reroll(buf, once=True, keep_rerolled=True, unique=True)
+
+        def _op_e(buf):
+            self._rerolls += result.reroll(buf, greedy=True, keep_rerolled=True)
+
+        # run operators
         if ops is not None:
-
-            rerollList = []
-            reroll_once = []
-            keep = None
-            to_explode = []
-            to_reroll_add = []
-
-            valid_operators = VALID_OPERATORS_ARRAY
+            buffer = list()
+            operation = None
             last_operator = None
+
             for index, op in enumerate(ops):
                 if self._rerolls > MAX_REROLLS:
                     raise OverflowError("Tried to reroll too many dice.")
-                if last_operator is not None and op in valid_operators and not op == last_operator:
-                    self._rerolls += result.reroll(reroll_once, 1)
-                    reroll_once = []
-                    self._rerolls += result.reroll(rerollList, greedy=True)
-                    rerollList = []
-                    result.keep(keep)
-                    keep = None
-                    self._rerolls += result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
-                    to_reroll_add = []
-                    self._rerolls += result.reroll(to_explode, greedy=True, keep_rerolled=True)
-                    to_explode = []
+
+                if operation is not None and op in VALID_OPERATORS_ARRAY and not op == last_operator:
+                    operation(buffer)
+                    buffer = list()
+                    operation = None
+
                 if op == 'rr':
-                    rerollList += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
-                if op == 'k':
-                    keep = [] if keep is None else keep
-                    keep += parse_selectors([list_get(index + 1, 0, ops)], result)
-                if op == 'p':
-                    keep = [] if keep is None else keep
-                    keep += parse_selectors([list_get(index + 1, 0, ops)], result, inverse=True)
-                if op == 'ro':
-                    reroll_once += parse_selectors([list_get(index + 1, 0, ops)], result)
-                if op == 'mi':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
+                    operation = _op_rr
+                elif op == 'k':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result)
+                    operation = _op_k
+                elif op == 'p':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result, inverse=True)
+                    operation = _op_k
+                elif op == 'ro':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result)
+                    operation = _op_ro
+                elif op == 'mi':
                     _min = list_get(index + 1, 0, ops)
                     for r in result.rolled:
                         if r.value < int(_min):
                             r.update(int(_min))
-                if op == 'ma':
+                elif op == 'ma':
                     _max = list_get(index + 1, 0, ops)
                     for r in result.rolled:
                         if r.value > int(_max):
                             r.update(int(_max))
-                if op == 'ra':
-                    to_reroll_add += parse_selectors([list_get(index + 1, 0, ops)], result)
-                if op == 'e':
-                    to_explode += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
-                if op in valid_operators:
+                elif op == 'ra':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result)
+                    operation = _op_ra
+                elif op == 'e':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
+                    operation = _op_e
+
+                if op in VALID_OPERATORS_ARRAY:
                     last_operator = op
+
             if self._rerolls > MAX_REROLLS:
                 raise OverflowError("Tried to reroll too many dice.")
-            self._rerolls += result.reroll(reroll_once, 1)
-            self._rerolls += result.reroll(rerollList, greedy=True)
-            result.keep(keep)
-            self._rerolls += result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
-            self._rerolls += result.reroll(to_explode, greedy=True, keep_rerolled=True)
+            if operation is not None:
+                operation(buffer)
 
         return result
 
@@ -307,8 +312,9 @@ class SingleDiceGroup(Part):
             elif _roll.kept:
                 rolls_to_keep.remove(_roll.value)
 
-    def reroll(self, rerollList, max_iterations=1000, greedy=False, keep_rerolled=False, unique=False):
-        if not rerollList: return 0  # don't reroll nothing - minor optimization
+    def reroll(self, rerollList, max_iterations=1000, greedy=False, keep_rerolled=False, unique=False, once=False):
+        if not rerollList:
+            return 0  # don't reroll nothing - minor optimization
         if unique:
             rerollList = list(set(rerollList))  # remove duplicates
         if len(rerollList) > 100:
@@ -320,34 +326,34 @@ class SingleDiceGroup(Part):
             should_continue = False
             if any(d.value in set(rerollList) for d in self.rolled[last_index:] if d.kept and not d.exploded):
                 should_continue = True
+
             to_extend = []
             for r in self.rolled[last_index:]:  # no need to recheck everything
                 count += 1
                 if count > max_iterations:
                     should_continue = False
                     break
+
                 if r.value in rerollList and r.kept and not r.exploded:
                     try:
-                        tempdice = SingleDice()
-                        tempdice.value = random.randint(1, self.max_value)
-                        tempdice.rolls = [tempdice.value]
-                        tempdice.max_value = self.max_value
-                        tempdice.kept = True
+                        tempdice = SingleDice(value=random.randint(1, self.max_value), max_value=self.max_value)
                         to_extend.append(tempdice)
-                        if not keep_rerolled:
-                            r.drop()
-                        else:
-                            r.explode()
                     except:
                         to_extend.append(SingleDice())
-                        if not keep_rerolled:
-                            r.drop()
-                        else:
-                            r.explode()
+
+                    if not keep_rerolled:
+                        r.drop()
+                    else:
+                        r.explode()
+
                     if not greedy:
                         rerollList.remove(r.value)
+
             last_index = len(self.rolled)
             self.rolled.extend(to_extend)
+
+            if once:
+                break
 
         return count
 

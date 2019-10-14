@@ -184,7 +184,7 @@ class Customization(commands.Cog):
                 alias = 'Not defined.'
             else:
                 alias = f'{ctx.prefix}alias {alias_name} {alias}'
-            return await ctx.send(f'**{alias_name}**:\n(Copy-pastable)\n```md\n{alias}\n```')
+            return await ctx.send(f'**{alias_name}**: ```py\n{alias}\n```')
 
         await self.bot.mdb.aliases.update_one({"owner": str(ctx.author.id), "name": alias_name},
                                               {"$set": {"commands": cmds.lstrip('!')}}, True)
@@ -237,8 +237,8 @@ class Customization(commands.Cog):
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = f'{ctx.prefix}servalias {alias_name} {alias}'
-            return await ctx.send(f'**{alias_name}**:\n(Copy-pastable)```md\n{alias}\n```')
+                alias = f'{ctx.prefix}alias {alias_name} {alias}'
+            return await ctx.send(f'**{alias_name}**: ```py\n{alias}\n```')
 
         if not self.can_edit_servaliases(ctx):
             return await ctx.send("You do not have permission to edit server aliases. Either __Administrator__ "

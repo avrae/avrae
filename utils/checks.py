@@ -77,3 +77,21 @@ def admin_or_permissions(**perms):
             f"You require a role named Bot Admin or these permissions to run this command: {', '.join(perms)}")
 
     return commands.check(predicate)
+
+
+BREWER_ROLES = ("server brewer", "dragonspeaker")
+
+
+def can_edit_serverbrew():
+    def predicate(ctx):
+        if ctx.author.guild_permissions.manage_guild or \
+                any(r.name.lower() in BREWER_ROLES for r in ctx.author.roles) or \
+                author_is_owner(ctx):
+            return True
+        raise commands.CheckFailure(
+            "You do not have permission to manage server homebrew. Either __Manage Server__ "
+            "Discord permissions or a role named \"Server Brewer\" or \"Dragonspeaker\" "
+            "is required."
+        )
+
+    return commands.check(predicate)

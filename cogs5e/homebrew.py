@@ -10,9 +10,7 @@ from cogs5e.models.homebrew.bestiary import Bestiary, select_bestiary
 from cogs5e.models.homebrew.pack import Pack, select_pack
 from cogs5e.models.homebrew.tome import Tome, select_tome
 from utils import checks
-from utils.functions import confirm
-
-BREWER_ROLES = ("server brewer", "dragonspeaker")
+from utils.functions import confirm, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -22,12 +20,6 @@ class Homebrew(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-
-    @staticmethod
-    def can_manage_serverbrew(ctx):
-        return ctx.author.guild_permissions.manage_guild or \
-               any(r.name.lower() in BREWER_ROLES for r in ctx.author.roles) or \
-               checks.author_is_owner(ctx)
 
     @commands.group(invoke_without_command=True)
     async def bestiary(self, ctx, *, name=None):
@@ -139,13 +131,10 @@ class Homebrew(commands.Cog):
 
     @bestiary.group(name='server', invoke_without_command=True)
     @commands.guild_only()
+    @checks.can_edit_serverbrew()
     async def bestiary_server(self, ctx):
         """Toggles whether the active bestiary should be viewable by anyone on the server.
         Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
-        if not self.can_manage_serverbrew(ctx):
-            return await ctx.send("You do not have permission to manage server homebrew. Either __Manage Server__ "
-                                  "Discord permissions or a role named \"Server Brewer\" or \"Dragonspeaker\" "
-                                  "is required.")
         bestiary = await Bestiary.from_ctx(ctx)
         is_server_active = await bestiary.toggle_server_active(ctx)
         if is_server_active:
@@ -162,6 +151,19 @@ class Homebrew(commands.Cog):
             sharer = next(sh for sh in best.server_active if sh['guild_id'] == str(ctx.guild.id))
             desc.append(f"{best.name} (<@{sharer['subscriber_id']}>)")
         await ctx.send(embed=discord.Embed(title="Active Server Bestiaries", description="\n".join(desc)))
+
+    @bestiary_server.command(name='remove', aliases=['delete'])
+    @commands.guild_only()
+    @checks.can_edit_serverbrew()
+    async def bestiary_server_remove(self, ctx, bestiary_name):
+        """Removes a server bestiary."""
+        bestiaries = []
+        async for best in Bestiary.server_bestiaries(ctx):
+            bestiaries.append(best)
+
+        bestiary = await search_and_select(ctx, bestiaries, bestiary_name, lambda b: b.name)
+        await bestiary.toggle_server_active(ctx)
+        await ctx.send(f"Ok, {bestiary.name} is no longer active on {ctx.guild.name}.")
 
     @commands.group(invoke_without_command=True)
     async def pack(self, ctx, *, name=None):
@@ -241,7 +243,7 @@ class Homebrew(commands.Cog):
         if str(user.id) not in [s['id'] for s in pack.subscribers]:
             pack.subscribers.append({"username": str(user), "id": str(user.id)})
             out = f"Subscribed to {pack.name} by {pack.owner['username']}. " \
-                f"Use `{ctx.prefix}pack {pack.name}` to select it."
+                  f"Use `{ctx.prefix}pack {pack.name}` to select it."
         else:
             return await ctx.send(f"You are already subscribed to {pack.name}.")
         await pack.commit(ctx)
@@ -263,13 +265,10 @@ class Homebrew(commands.Cog):
 
     @pack.group(name='server', invoke_without_command=True)
     @commands.guild_only()
+    @checks.can_edit_serverbrew()
     async def pack_server(self, ctx):
         """Toggles whether the active pack should be viewable by anyone on the server.
         Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
-        if not self.can_manage_serverbrew(ctx):
-            return await ctx.send("You do not have permission to manage server homebrew. Either __Manage Server__ "
-                                  "Discord permissions or a role named \"Server Brewer\" or \"Dragonspeaker\" "
-                                  "is required.")
         pack = await Pack.from_ctx(ctx)
         is_server_active = await pack.toggle_server_active(ctx)
         if is_server_active:
@@ -285,6 +284,21 @@ class Homebrew(commands.Cog):
         async for doc in self.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}, ['name', 'owner']):
             desc += f"{doc['name']} (<@{doc['owner']['id']}>)\n"
         await ctx.send(embed=discord.Embed(title="Active Server Packs", description=desc))
+
+    @pack_server.command(name='remove', aliases=['delete'])
+    @commands.guild_only()
+    @checks.can_edit_serverbrew()
+    async def pack_server_remove(self, ctx, pack_name):
+        """Removes a server pack."""
+        pack_metas = []
+        async for doc in self.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}, ['name']):
+            pack_metas.append(doc)
+
+        pack_meta = await search_and_select(ctx, pack_metas, pack_name, lambda b: b['name'])
+        pack = await Pack.from_id(ctx, pack_meta['_id'])
+
+        await pack.toggle_server_active(ctx)
+        await ctx.send(f"Ok, {pack.name} is no longer active on {ctx.guild.name}.")
 
     @commands.group(invoke_without_command=True)
     async def tome(self, ctx, *, name=None):
@@ -364,7 +378,7 @@ class Homebrew(commands.Cog):
         if str(user.id) not in [s['id'] for s in tome.subscribers]:
             tome.subscribers.append({"username": str(user), "id": str(user.id)})
             out = f"Subscribed to {tome.name} by {tome.owner['username']}. " \
-                f"Use `{ctx.prefix}tome {tome.name}` to select it."
+                  f"Use `{ctx.prefix}tome {tome.name}` to select it."
         else:
             return await ctx.send(f"You are already subscribed to {tome.name}.")
         await tome.commit(ctx)
@@ -386,13 +400,10 @@ class Homebrew(commands.Cog):
 
     @tome.group(name='server', invoke_without_command=True)
     @commands.guild_only()
+    @checks.can_edit_serverbrew()
     async def tome_server(self, ctx):
         """Toggles whether the active tome should be viewable by anyone on the server.
         Requires __Manage Server__ permissions or a role named "Server Brewer" to run."""
-        if not self.can_manage_serverbrew(ctx):
-            return await ctx.send("You do not have permission to manage server homebrew. Either __Manage Server__ "
-                                  "Discord permissions or a role named \"Server Brewer\" or \"Dragonspeaker\" "
-                                  "is required.")
         tome = await Tome.from_ctx(ctx)
         is_server_active = await tome.toggle_server_active(ctx)
         if is_server_active:
@@ -408,6 +419,21 @@ class Homebrew(commands.Cog):
         async for doc in self.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['name', 'owner']):
             desc += f"{doc['name']} (<@{doc['owner']['id']}>)\n"
         await ctx.send(embed=discord.Embed(title="Active Server Tomes", description=desc))
+
+    @tome_server.command(name='remove', aliases=['delete'])
+    @commands.guild_only()
+    @checks.can_edit_serverbrew()
+    async def tome_server_remove(self, ctx, tome_name):
+        """Removes a server tome."""
+        tome_metas = []
+        async for doc in self.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['name']):
+            tome_metas.append(doc)
+
+        tome_meta = await search_and_select(ctx, tome_metas, tome_name, lambda b: b['name'])
+        tome = await Tome.from_id(ctx, tome_meta['_id'])
+
+        await tome.toggle_server_active(ctx)
+        await ctx.send(f"Ok, {tome.name} is no longer active on {ctx.guild.name}.")
 
 
 def setup(bot):

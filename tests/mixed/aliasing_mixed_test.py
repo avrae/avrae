@@ -2,6 +2,8 @@ import pytest
 
 from tests.utils import active_character
 
+pytestmark = pytest.mark.asyncio
+
 
 class TestSimpleAliases:
     async def test_echo_alias(self, avrae, dhttp):
@@ -20,6 +22,9 @@ class TestSimpleAliases:
 
         avrae.message("!alias foobar echo <foobar> {foobar} {{foobar}}\n" +
                       f"{{{{get_gvar('{address}')}}}}")  # {{get_gvar('1234...')}}
+        await dhttp.receive_message()
+        avrae.message("!foobar")
+        await dhttp.receive_delete()
         await dhttp.receive_message(".+: Hello world 0 Hello world\nI am a gvar")
 
 
@@ -30,8 +35,9 @@ class TestCharacterAliases:
         avrae.message("!alias foobar echo {charismaMod} {proficiencyBonus} {charismaMod+proficiencyBonus}\n"
                       "<name> <color>")
         await dhttp.receive_message()
-        avrae.message("!foobar")
 
-        await dhttp.receive_message(f"/+: {character.stats.get_mod('cha')} {character.stats.prof_bonus} "
+        avrae.message("!foobar")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(f".+: {character.stats.get_mod('cha')} {character.stats.prof_bonus} "
                                     f"{character.stats.get_mod('cha') + character.stats.prof_bonus}\n"
                                     f"{character.get_title_name()} [0-9a-f]+")

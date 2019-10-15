@@ -1,7 +1,7 @@
 import discord
 import pytest
 
-from tests.utils import ATTACK_PATTERN, D20_PATTERN, requires_data
+from tests.utils import ATTACK_PATTERN, D20_PATTERN, DAMAGE_PATTERN, TO_HIT_PATTERN, requires_data
 
 pytestmark = pytest.mark.asyncio
 
@@ -40,7 +40,7 @@ async def test_ma(avrae, dhttp):
     avrae.message("!ma kobold dagger -h")
     await dhttp.receive_delete()
     await dhttp.receive_message(f"An unknown creature attacks with a Dagger!\n"
-                                f"{ATTACK_PATTERN}\nMelee Weapon Attack:.+", dm=True)
+                                f"{TO_HIT_PATTERN}\n({DAMAGE_PATTERN}\n)?Melee Weapon Attack:.+", dm=True)
     atk_embed = discord.Embed(title="An unknown creature attacks with a Dagger!")
     atk_embed.add_field(name="Meta", inline=False, value=ATTACK_PATTERN)
     await dhttp.receive_message(embed=atk_embed)

@@ -178,6 +178,7 @@ class InitTracker(commands.Cog):
         -n <number> - Adds more than one of that monster.
         -p <value> - Places combatant at the given value, instead of rolling.
         -name <name> - Sets the combatant's name. Use "#" for auto-numbering, e.g. "Orc#"
+        fullname - Uses the full name of the monster with number appended, e.g. "Goblin 1"
         -h - Hides HP, AC, Resists, etc. Default: True.
         -group <group> - Adds the combatant to a group.
         -rollhp - Rolls the monsters HP, instead of using the default value.
@@ -197,7 +198,10 @@ class InitTracker(commands.Cog):
         hp = args.last('hp', type_=int)
         ac = args.last('ac', type_=int)
         n = args.last('n', 1, int)
-        name_template = args.last('name', monster.name[:2].upper() + '#')
+        if args.last('fullname', type_=bool):
+            name_template = f"{monster.name} #"
+        else:
+            name_template = args.last('name', monster.name[:2].upper() + '#')
         init_skill = monster.skills.initiative
 
         combat = await Combat.from_ctx(ctx)

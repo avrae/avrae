@@ -28,6 +28,7 @@ TESTING = get_positivity(os.environ.get("TESTING", False))
 if 'test' in sys.argv:
     TESTING = True
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
+GIT_COMMIT_SHA = os.getenv('GIT_COMMIT_SHA')
 MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
 REDIS_DB_NUM = int(os.getenv('REDIS_DB_NUM', 0))
 SHARD_COUNT = None if not TESTING else 1
@@ -76,7 +77,10 @@ class Avrae(commands.AutoShardedBot):
         self.muted = set()
 
         if SENTRY_DSN is not None:
-            sentry_sdk.init(dsn=SENTRY_DSN, environment=ENVIRONMENT.title())
+            release = None
+            if GIT_COMMIT_SHA:
+                release = f"avrae-bot@{GIT_COMMIT_SHA}"
+            sentry_sdk.init(dsn=SENTRY_DSN, environment=ENVIRONMENT.title(), release=release)
 
     async def get_server_prefix(self, msg):
         return (await get_prefix(self, msg))[-1]

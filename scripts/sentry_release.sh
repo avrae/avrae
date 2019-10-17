@@ -2,7 +2,7 @@
 # Usage: bash scripts/sentry_release.sh [environment]
 # sentry auth env vars should be set in travis.
 ENVIRONMENT=${1:-production}
-VERSION=$(sentry-cli releases propose-version)
+VERSION=$(git rev-parse HEAD)
 
 # Create a release
 sentry-cli releases new -p avrae-bot $VERSION

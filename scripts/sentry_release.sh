@@ -8,7 +8,7 @@ VERSION=$(git rev-parse HEAD)
 sentry-cli releases new -p avrae-bot $VERSION
 
 # Associate commits with the release
-sentry-cli releases set-commits --auto $VERSION
+sentry-cli releases set-commits $VERSION --auto
 
 # deploy the release
 sentry-cli releases deploys $VERSION new -e $ENVIRONMENT

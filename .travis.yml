@@ -7,6 +7,7 @@ after_success:
   - bash <(curl -s https://codecov.io/bash)
 before_deploy:
   - pip install --user awscli
+  - curl -sL https://sentry.io/get-cli/ | bash
   - export PATH=$PATH:$HOME/.local/bin
 deploy:
   - provider: script

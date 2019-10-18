@@ -12,6 +12,7 @@ venv/
 /testenv/
 /venv-rewrite/
 /.idea/
+temp/
 
 
 /.cache/

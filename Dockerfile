@@ -2,10 +2,13 @@ FROM python:3.7-stretch
 
 ARG DBOT_ARGS
 ARG ENVIRONMENT=production
+ARG COMMIT=""
 
 RUN useradd --create-home avrae
 USER avrae
 WORKDIR /home/avrae
+
+ENV GIT_COMMIT_SHA=${COMMIT}
 
 COPY --chown=avrae:avrae requirements.txt .
 RUN pip install --user --no-warn-script-location -r requirements.txt

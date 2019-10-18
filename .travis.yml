@@ -2,7 +2,7 @@ language: minimal
 script:
   - docker-compose -f docker-compose.ci.yml -p avrae build
   - docker-compose -f docker-compose.ci.yml -p avrae up --exit-code-from tests
-  - docker build -t avrae-bot .
+  - docker build -t avrae-bot --build-arg COMMIT=$(git rev-parse HEAD) .
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 before_deploy:

@@ -32,7 +32,6 @@ class Compendium:
         self.backgrounds = []
         self.cfeats = []
         self.classes = []
-        self.conditions = []
         self.fancyraces = []
         self.feats = []
         self.itemprops = {}
@@ -41,8 +40,8 @@ class Compendium:
         self.monsters = []
         self.names = []
         self.rfeats = []
-        self.rules = []
         self.spells = []
+        self.rule_references = []
         self.srd_backgrounds = []
         self.srd_items = []
         self.srd_races = []
@@ -78,11 +77,10 @@ class Compendium:
 
         self.cfeats = self.read_json('srd-classfeats.json', [])
         self.classes = self.read_json('srd-classes.json', [])
-        self.conditions = self.read_json('conditions.json', [])
         self.feats = self.read_json('srd-feats.json', [])
         self.monsters = self.read_json('srd-bestiary.json', [])
         self.names = self.read_json('names.json', [])
-        self.rules = self.read_json('rules.json', [])
+        self.rule_references = self.read_json('srd-references.json', [])
         self.srd_backgrounds = self.read_json('srd-backgrounds.json', [])
         self.srd_items = self.read_json('srd-items.json', [])
         self.srd_races = self.read_json('srd-races.json', [])
@@ -96,11 +94,10 @@ class Compendium:
 
         self.cfeats = lookup.get('srd-classfeats', [])
         self.classes = lookup.get('srd-classes', [])
-        self.conditions = lookup.get('conditions', [])
         self.feats = lookup.get('srd-feats', [])
         self.monsters = lookup.get('srd-bestiary', [])
         self.names = lookup.get('names', [])
-        self.rules = lookup.get('rules', [])
+        self.rule_references = lookup.get('srd-references', [])
         self.srd_backgrounds = lookup.get('srd-backgrounds', [])
         self.srd_items = lookup.get('srd-items', [])
         self.srd_races = lookup.get('srd-races', [])

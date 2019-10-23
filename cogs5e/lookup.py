@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs.lookupFuncs import HOMEBREW_EMOJI, HOMEBREW_ICON, compendium, select_monster_full, select_spell_full
-from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
+from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, add_homebrew_footer, set_maybe_long_desc
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
 from cogsmisc.stats import Stats
@@ -54,40 +54,59 @@ class Lookup(commands.Cog):
     @commands.command(aliases=['status'])
     async def condition(self, ctx, *, name: str):
         """Looks up a condition."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
+        # this is an invoke instead of an alias to make more sense in docs
+        await ctx.invoke(self.rule, name=f"Condition: {name}")
 
-        destination = ctx.author if pm else ctx.channel
-
-        result, metadata = await search_and_select(ctx, compendium.conditions, name, lambda e: e['name'], return_metadata=True)
-
-        await self.add_training_data("condition", name, result['name'], metadata=metadata)
-
+    @staticmethod
+    async def _show_reference_options(ctx, destination):
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        embed.description = result['desc']
+        embed.title = "Rules"
+        categories = ', '.join(a['type'] for a in compendium.rule_references)
+        embed.description = f"Use `{ctx.prefix}{ctx.invoked_with} <category>` to look at all actions of " \
+                            f"a certain type.\nCategories: {categories}"
+
+        for actiontype in compendium.rule_references:
+            embed.add_field(name=actiontype['fullName'], value=', '.join(a['name'] for a in actiontype['items']))
 
         await destination.send(embed=embed)
 
-    @commands.command()
-    async def rule(self, ctx, *, name: str):
+    @staticmethod
+    async def _show_action_options(ctx, actiontype, destination):
+        embed = EmbedWithAuthor(ctx)
+        embed.title = actiontype['fullName']
+
+        actions = []
+        for action in actiontype['items']:
+            actions.append(f"**{action['name']}** - *{action['short']}*")
+
+        embed.description = '\n'.join(actions)
+        await destination.send(embed=embed)
+
+    @commands.command(aliases=['reference'])
+    async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
-
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.rules, name, lambda e: e['name'], return_metadata=True)
+        if name is None:
+            return await self._show_reference_options(ctx, destination)
 
-        await self.add_training_data("rule", name, result['name'], metadata=metadata)
+        options = []
+        for actiontype in compendium.rule_references:
+            if name == actiontype['type']:
+                return await self._show_action_options(ctx, actiontype, destination)
+            else:
+                options.extend(actiontype['items'])
+
+        result, metadata = await search_and_select(ctx, options, name, lambda e: e['fullName'], return_metadata=True)
+        await self.add_training_data("reference", name, result['fullName'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        desc = result['desc']
-        desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
-        embed.description = ''.join(desc[:2])
-        for piece in desc[2:]:
-            embed.add_field(name="** **", value=piece)
+        embed.title = result['fullName']
+        embed.description = f"*{result['short']}*"
+        add_fields_from_long_text(embed, "Description", result['desc'])
+        embed.set_footer(text=f"Rule | {result['source']}")
 
         await destination.send(embed=embed)
 
@@ -98,7 +117,8 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.feats, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.feats, name, lambda e: e['name'],
+                                                   return_metadata=True)
         await self.add_training_data("feat", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -108,10 +128,8 @@ class Lookup(commands.Cog):
         if result['ability']:
             embed.add_field(name="Ability Improvement",
                             value=f"Increase your {result['ability']} score by 1, up to a maximum of 20.")
-        _name = 'Description'
-        for piece in [result['desc'][i:i + 1024] for i in range(0, len(result['desc']), 1024)]:
-            embed.add_field(name=_name, value=piece)
-            _name = '** **'
+
+        add_fields_from_long_text(embed, "Description", result['desc'])
         embed.set_footer(text=f"Feat | {result['source']} {result['page']}")
         await destination.send(embed=embed)
 
@@ -122,16 +140,13 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.rfeats, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.rfeats, name, lambda e: e['name'],
+                                                   return_metadata=True)
         await self.add_training_data("racefeat", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
-        desc = result['text']
-        desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
-        embed.description = ''.join(desc[:2])
-        for piece in desc[2:]:
-            embed.add_field(name="** **", value=piece)
+        set_maybe_long_desc(embed, result['text'])
 
         await destination.send(embed=embed)
 
@@ -142,7 +157,8 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.fancyraces, name, lambda e: e.name, return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.fancyraces, name, lambda e: e.name,
+                                                   return_metadata=True)
         await self.add_training_data("race", name, result.name, metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -168,16 +184,13 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.cfeats, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.cfeats, name, lambda e: e['name'],
+                                                   return_metadata=True)
         await self.add_training_data("classfeat", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
-        desc = result['text']
-        desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
-        embed.description = ''.join(desc[:2])
-        for piece in desc[2:]:
-            embed.add_field(name="** **", value=piece)
+        set_maybe_long_desc(embed, result['text'])
 
         await destination.send(embed=embed)
 
@@ -191,7 +204,8 @@ class Lookup(commands.Cog):
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        result, metadata = await search_and_select(ctx, compendium.classes, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.classes, name, lambda e: e['name'],
+                                                   return_metadata=True)
         await self.add_training_data("class", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -227,7 +241,7 @@ class Lookup(commands.Cog):
 
             level_features_str = ""
             for i, l in enumerate(levels):
-                level_features_str += f"`{i+1}` {l}\n"
+                level_features_str += f"`{i + 1}` {l}\n"
             embed.description = level_features_str
 
             embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature.")
@@ -261,7 +275,8 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.subclasses, name, lambda e: e['name'], return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.subclasses, name, lambda e: e['name'],
+                                                   return_metadata=True)
         await self.add_training_data("subclass", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -286,7 +301,8 @@ class Lookup(commands.Cog):
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        result, metadata = await search_and_select(ctx, compendium.backgrounds, name, lambda e: e.name, return_metadata=True)
+        result, metadata = await search_and_select(ctx, compendium.backgrounds, name, lambda e: e.name,
+                                                   return_metadata=True)
         await self.add_training_data("background", name, result.name, metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)

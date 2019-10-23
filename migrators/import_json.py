@@ -13,9 +13,7 @@ import credentials
 
 
 LOAD_FILES = {
-    'conditions': [],
     'names': [],
-    'rules': [],
     'srd-backgrounds': [],
     'srd-bestiary': [],
     'srd-classfeats': [],
@@ -24,6 +22,7 @@ LOAD_FILES = {
     'srd-items': [],
     'srd-races': [],
     'srd-spells': [],
+    'srd-references': [],
 
     'itemprops': {},
 }
@@ -37,7 +36,8 @@ async def run(mdb):
             with open(filepath, 'r')as f:
                 data = json.load(f)
         except FileNotFoundError:
-            print(f'File not found: {filepath}')
+            print(f'File not found: {filepath}; skipping import')
+            continue
 
         print(f'Inserting {len(data)} items for {basename}...', end=' ', flush=True)
         result = await mdb.static_data.update_one(

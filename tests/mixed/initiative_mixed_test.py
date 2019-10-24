@@ -79,6 +79,10 @@ class TestMixedInitiative:
 
 
 async def attack_I(avrae, dhttp, target='1', name='KO1'):
+    combat = await active_combat(avrae)
+    combatant = combat.get_combatant(name, strict=True)
+    hp_before = combatant.hp
+
     avrae.message(f"!attack dagger -t {target} hit")
 
     embed = discord.Embed(title=r".* attacks with a Dagger!")
@@ -89,13 +93,19 @@ async def attack_I(avrae, dhttp, target='1', name='KO1'):
     await dhttp.receive_delete()
     await dhttp.drain()
 
-    # ensure kobold is not at full health
+    # ensure kobold took damage
     combat = await active_combat(avrae)
     combatant = combat.get_combatant(name, strict=True)
-    assert combatant.hp < combatant.max_hp
+    assert combatant.hp < hp_before
 
 
 async def cast_I(avrae, dhttp, targets=('2', '3'), names=('KO2', 'KO3')):
+    hp_before = {}
+    combat = await active_combat(avrae)
+    for k in names:
+        kobold = combat.get_combatant(k, strict=True)
+        hp_before[k] = kobold.hp
+
     t_string = ' '.join(f'-t {target}' for target in targets)
     avrae.message(f"!cast fireball {t_string} -i")
 
@@ -110,11 +120,11 @@ async def cast_I(avrae, dhttp, targets=('2', '3'), names=('KO2', 'KO3')):
     await dhttp.receive_message(embed=embed)
     await dhttp.drain()
 
-    # ensure kobolds are not at full health
+    # ensure kobolds took damage
     combat = await active_combat(avrae)
     for k in names:
         kobold = combat.get_combatant(k, strict=True)
-        assert kobold.hp < kobold.max_hp
+        assert kobold.hp < hp_before[k]
 
 
 @pytest.mark.usefixtures("init_fixture", "character", "_requires")

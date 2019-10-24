@@ -110,7 +110,7 @@ class DiscordHTTPProxy(HTTPClient):
         for task in asyncio.all_tasks():
             if "ClientEventTask" in repr(task):  # tasks started by d.py in reply to an event
                 to_wait.add(task)
-            if "Message.delete" in repr(task):  # Messagable.send(..., delete_after=x)
+            elif "Message.delete" in repr(task):  # Messagable.send(..., delete_after=x)
                 to_cancel.add(task)
 
         for task in to_cancel:

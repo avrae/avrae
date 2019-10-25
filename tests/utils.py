@@ -1,5 +1,6 @@
 import os
 
+import discord
 import pytest
 
 from cogs5e.funcs.lookupFuncs import compendium
@@ -75,13 +76,14 @@ def requires_data():
 
 async def active_character(avrae):
     """Gets the character active in this test."""
-    return Character.from_dict(await avrae.mdb.characters.find_one({"owner": DEFAULT_USER_ID, "active": True}))
+    fakectx = ContextBotProxy(avrae)
+    fakectx.author = discord.Object(id=DEFAULT_USER_ID)
+    return await Character.from_ctx(fakectx)
 
 
 async def active_combat(avrae):
     """Gets the combat active in this test."""
-    return await Combat.from_dict(await avrae.mdb.combats.find_one({"channel": str(TEST_CHANNEL_ID)}),
-                                  ContextBotProxy(avrae))
+    return await Combat.from_id(str(TEST_CHANNEL_ID), ContextBotProxy(avrae))
 
 
 class ContextBotProxy:

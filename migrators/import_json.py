@@ -5,12 +5,7 @@ import sys
 
 sys.path.append('..')
 
-
 import motor.motor_asyncio
-
-
-import credentials
-
 
 LOAD_FILES = {
     'conditions': [],
@@ -41,8 +36,8 @@ async def run(mdb):
 
         print(f'Inserting {len(data)} items for {basename}...', end=' ', flush=True)
         result = await mdb.static_data.update_one(
-            { 'key': basename },
-            { '$set': { 'object': data } },
+            {'key': basename},
+            {'$set': {'object': data}},
             upsert=True
         )
         print(result.upserted_id)
@@ -56,8 +51,12 @@ async def run(mdb):
 if __name__ == '__main__':
     mdb = None
     if 'test' in sys.argv:
+        import credentials
+
         mdb = motor.motor_asyncio.AsyncIOMotorClient(credentials.test_mongo_url).avrae
     else:
-        mdb = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017")).avrae
+        mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
+        mdb = mclient[os.getenv('MONGO_DB', "avrae")]
 
+    input(f"Inserting into {mdb.name}. Press enter to continue.")
     asyncio.get_event_loop().run_until_complete(run(mdb))

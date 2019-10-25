@@ -473,7 +473,8 @@ class Customization(commands.Cog):
         if len(out) <= 2000:
             await ctx.send(out)
         else:
-            await ctx.send(f"**{name}**:\n*Owner: {gvar['owner_name']}*\nThis gvar is too long to display.")
+            await ctx.send(f"**{name}**:\n*Owner: {gvar['owner_name']}*\nThis gvar is too long to display in Discord.\n"
+                           f"You can view it here: <https://avrae.io/dashboard/gvars?lookup={name}>")
 
     @globalvar.command(name='create')
     async def gvar_create(self, ctx, *, value):

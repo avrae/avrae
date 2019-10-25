@@ -106,9 +106,16 @@ class DiscordHTTPProxy(HTTPClient):
     async def drain(self):
         """Waits until all requests have been sent and clears the queue."""
         to_wait = set()
+        to_cancel = set()
         for task in asyncio.all_tasks():
             if "ClientEventTask" in repr(task):  # tasks started by d.py in reply to an event
                 to_wait.add(task)
+            elif "Message.delete" in repr(task):  # Messagable.send(..., delete_after=x)
+                to_cancel.add(task)
+
+        for task in to_cancel:
+            task.cancel()
+
         await asyncio.wait_for(asyncio.gather(*to_wait), timeout=10)
         self.clear()
 

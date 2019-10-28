@@ -53,3 +53,30 @@ def add_homebrew_footer(embed):
         embed.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png", text=embed.footer.text)
     else:
         embed.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png", text="Homebrew content.")
+
+
+def set_maybe_long_desc(embed, desc):
+    """
+    Sets a description that might be longer than 2048 characters but is less than 6000 characters.
+    :param embed: The embed to add the description (and potentially fields) to.
+    :param str desc: The description to add. Will overwrite existing description.
+    """
+    desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
+    embed.description = ''.join(desc[:2])
+    for piece in desc[2:]:
+        embed.add_field(name="** **", value=piece)
+
+
+def add_fields_from_long_text(embed, field_name, text):
+    """
+    Splits a long text across multiple fields if needed.
+    :param embed: The embed to add the fields to.
+    :param str text: The text of the fields to add. Will append to existing fields.
+    :param str field_name: The name of the first field to add.
+    """
+    text = [text[i:i + 1024] for i in range(0, len(text), 1024)]
+    if not text:
+        return
+    embed.add_field(name=field_name, value=text[0])
+    for piece in text[1:]:
+        embed.add_field(name="** **", value=piece)

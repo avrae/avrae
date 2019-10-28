@@ -325,10 +325,10 @@ An attack from a poisoned blade:
       {
         "type": "target",
         "target": "each",
-        "attackBonus": "{strengthMod + proficiencyBonus}",
         "effects": [
           {
             "type": "attack",
+            "attackBonus": "{strengthMod + proficiencyBonus}",
             "hit": [
               {
                 "type": "damage",

@@ -307,7 +307,7 @@ class SimpleCombatant:
 
         :param str name: The name of the effect to remove.
         """
-        effect = self._combatant.get_effect(name)
+        effect = self._combatant.get_effect(name, strict=False)
         if effect:
             effect.remove()
 

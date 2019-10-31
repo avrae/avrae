@@ -47,6 +47,9 @@ class RedisIO:
     def setex(self, key, value, expiration):
         return self._db.setex(key, value, expiration)
 
+    def setnx(self, key, value):
+        return self._db.setnx(key, value)
+
     # ==== hashmaps ====
     def set_dict(self, key, dictionary):
         if len(dictionary) == 0:

@@ -148,13 +148,12 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
 async def _coordination_lock(rdb):
     cluster_lock_key = f"clusters.{GIT_COMMIT_SHA}.lock"
     i = 0
-    while rdb.exists(cluster_lock_key):
+    while not rdb.setnx(cluster_lock_key, "lockme"):
         await asyncio.sleep(1)
         i += 1
         log.info(f"Waiting for lock... ({i}s)")
 
     try:
-        rdb.set(cluster_lock_key, "lockme")
         yield
     finally:
         rdb.delete(cluster_lock_key)

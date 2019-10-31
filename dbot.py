@@ -9,6 +9,7 @@ import traceback
 import utils.newrelic
 
 utils.newrelic.hook_all()
+from utils import clustering
 
 import discord
 import motor.motor_asyncio
@@ -31,9 +32,10 @@ ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'develop
 GIT_COMMIT_SHA = os.getenv('GIT_COMMIT_SHA')
 MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
 REDIS_DB_NUM = int(os.getenv('REDIS_DB_NUM', 0))
-SHARD_COUNT = None if not TESTING else 1
 DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
+NUM_CLUSTERS = int(os.getenv('NUM_CLUSTERS')) if 'NUM_CLUSTERS' in os.environ else None
+NUM_SHARDS = int(os.getenv('NUM_SHARDS')) if 'NUM_SHARDS' in os.environ else None
 
 # -----COGS-----
 COGS = (
@@ -86,15 +88,21 @@ class Avrae(commands.AutoShardedBot):
         return (await get_prefix(self, msg))[-1]
 
     async def launch_shards(self):
-        if self.shard_count is None:
-            recommended_shards, _ = await self.http.get_bot_gateway()
-            if recommended_shards >= 96 and not recommended_shards % 16:
-                # half, round up to nearest 16
-                self.shard_count = recommended_shards // 2 + (16 - (recommended_shards // 2) % 16)
-            else:
-                self.shard_count = max(recommended_shards // 2, 1)
-        log.info(f"Launching {self.shard_count} shards!")
+        # set up my shard_ids
+        await clustering.coordinate_shards(self)
+        if self.shard_ids is not None:
+            log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
         await super(Avrae, self).launch_shards()
+        log.info(f"Launched {len(self.shards)} shards!")
+
+        if self.is_cluster_0:
+            self.rdb.incr('build_num')
+
+    @property
+    def is_cluster_0(self):
+        if self.shard_ids is None:  # we're not running in clustered mode anyway
+            return True
+        return 0 in self.shard_ids
 
     @staticmethod
     def log_exception(exception=None, context: commands.Context = None):
@@ -137,8 +145,8 @@ A full command list can be found [here](https://avrae.io/commands)!
 Invite Avrae to your server [here](https://invite.avrae.io)!
 Join the official development server [here](https://support.avrae.io)!
 '''
-bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
-            shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name=f'D&D 5e | {DEFAULT_PREFIX}help'))
+bot = Avrae(prefix=get_prefix, description=desc, pm_help=True, testing=TESTING,
+            activity=discord.Game(name=f'D&D 5e | {DEFAULT_PREFIX}help'))
 
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)
@@ -263,8 +271,5 @@ for cog in COGS:
 if __name__ == '__main__':
     faulthandler.enable()  # assumes we log errors to stderr, traces segfaults
     bot.state = "run"
-    if not bot.rdb.exists('build_num'):
-        bot.rdb.set('build_num', 0)
-    bot.rdb.incr('build_num')
     bot.loop.create_task(compendium.reload_task(bot.mdb))
     bot.run(bot.credentials.token)

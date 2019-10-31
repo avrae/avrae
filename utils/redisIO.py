@@ -47,6 +47,7 @@ class RedisIO:
     def setex(self, key, value, expiration):
         return self._db.setex(key, value, expiration)
 
+    # ==== hashmaps ====
     def set_dict(self, key, dictionary):
         if len(dictionary) == 0:
             return self._db.delete(key)
@@ -65,6 +66,31 @@ class RedisIO:
             out[k.decode()] = encoded_dict[k].decode()
         return out
 
+    def hget(self, key, field, default=None):
+        encoded_data = self._db.hget(key, field)
+        return encoded_data.decode() if encoded_data is not None else default
+
+    def hset(self, key, field, value):
+        return self._db.hset(key, field, value)
+
+    def hdel(self, key, *fields):
+        return self._db.hdel(key, *fields)
+
+    def hlen(self, key):
+        return self._db.hlen(key)
+
+    def hexists(self, hashkey, key):
+        return self._db.hexists(hashkey, key)
+
+    def jhget(self, key, field, default=None):
+        data = self.hget(key, field)
+        return json.loads(data) if data is not None else default
+
+    def jhset(self, key, field, value, **kwargs):
+        data = json.dumps(value, **kwargs)
+        return self.hset(key, field, data)
+
+    # ==== json ====
     def jset(self, key, data, **kwargs):
         return self.not_json_set(key, data, **kwargs)
 
@@ -83,23 +109,17 @@ class RedisIO:
         data = self.get(key)
         return json.loads(data) if data is not None else default
 
+    # ==== lists ====
+    def llen(self, key):
+        return self._db.llen(key)
+
+    def lindex(self, key, index):
+        encoded_data = self._db.lindex(key, index)
+        return encoded_data.decode() if encoded_data is not None else None
+
+    def rpush(self, key, *values):
+        return self._db.rpush(key, *values)
+
+    # ==== pubsub ====
     def publish(self, channel, data):
         return self._db.publish(channel, data)
-
-    def hget(self, key, field, default=None):
-        encoded_data = self._db.hget(key, field)
-        return encoded_data.decode() if encoded_data is not None else default
-
-    def hset(self, key, field, value):
-        return self._db.hset(key, field, value)
-
-    def hdel(self, key, *fields):
-        return self._db.hdel(key, *fields)
-
-    def jhget(self, key, field, default=None):
-        data = self.hget(key, field)
-        return json.loads(data) if data is not None else default
-
-    def jhset(self, key, field, value, **kwargs):
-        data = json.dumps(value, **kwargs)
-        return self.hset(key, field, data)

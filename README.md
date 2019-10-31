@@ -56,3 +56,11 @@ docker logs -f avrae_tests_1
 ```
 This should initialize an ephemeral database to run command unit tests in. 
 You should set the `DICECLOUD_USER`, `DICECLOUD_PASS`, `DICECLOUD_TOKEN`, and `GOOGLE_SERVICE_ACCOUNT` env vars to their correct values.
+
+#### Misc
+Env vars required to deploy to production:
+- `NUM_CLUSTERS` - equal to the number of ECS tasks running Avrae
+- `GIT_COMMIT_SHA` - should be set in Travis
+
+Optional env vars:
+- `NUM_SHARDS` - explicitly set the number of shards to run

@@ -11,6 +11,7 @@ import utils.newrelic
 utils.newrelic.hook_all()
 from utils import clustering
 
+import aioredis
 import discord
 import motor.motor_asyncio
 import sentry_sdk
@@ -68,13 +69,12 @@ class Avrae(commands.AutoShardedBot):
         self.state = "init"
         self.credentials = Credentials()
         if TESTING:
-            self.rdb = RedisIO(testing=True, database_url=self.credentials.test_redis_url, db=REDIS_DB_NUM)
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
         else:
-            self.rdb = RedisIO(database_url=os.getenv('REDIS_URL', ''), db=REDIS_DB_NUM)
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
-
         self.mdb = self.mclient[MONGODB_DB_NAME]
+        self.rdb = None
+        self.loop.create_task(self.setup_rdb())
         self.prefixes = dict()
         self.muted = set()
         self.cluster_id = 0
@@ -84,6 +84,13 @@ class Avrae(commands.AutoShardedBot):
             if GIT_COMMIT_SHA:
                 release = f"avrae-bot@{GIT_COMMIT_SHA}"
             sentry_sdk.init(dsn=SENTRY_DSN, environment=ENVIRONMENT.title(), release=release)
+
+    async def setup_rdb(self):
+        if TESTING:
+            redis_url = self.credentials.test_redis_url
+        else:
+            redis_url = os.getenv('REDIS_URL', '127.0.0.1')
+        self.rdb = RedisIO(await aioredis.create_redis_pool(redis_url, db=REDIS_DB_NUM))
 
     async def get_server_prefix(self, msg):
         return (await get_prefix(self, msg))[-1]
@@ -97,7 +104,7 @@ class Avrae(commands.AutoShardedBot):
         log.info(f"Launched {len(self.shards)} shards!")
 
         if self.is_cluster_0:
-            self.rdb.incr('build_num')
+            await self.rdb.incr('build_num')
 
     @property
     def is_cluster_0(self):

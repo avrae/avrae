@@ -33,7 +33,7 @@ class Customization(commands.Cog):
     async def on_ready(self):
         if self.bot.is_cluster_0:
             cmds = list(self.bot.all_commands.keys())
-            self.bot.rdb.jset('default_commands', cmds)
+            await self.bot.rdb.jset('default_commands', cmds)
 
     @commands.Cog.listener()
     async def on_message(self, message):

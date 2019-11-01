@@ -6,123 +6,109 @@ Created on Dec 28, 2016
 
 import json
 
-import redis
-from redis import Redis
-
-import credentials
-
 
 class RedisIO:
     """
     A simple class to interface with the redis database.
     """
 
-    def __init__(self, testing=False, database_url='', db=0):
-        if not testing:
-            if database_url != '':
-                self._db = redis.from_url(database_url, socket_connect_timeout=2, socket_timeout=2, db=db)
-            else:
-                self._db = Redis(host="127.0.0.1", db=db, socket_connect_timeout=2, socket_timeout=2,
-                                 password=credentials.redis_pass)
-        else:
-            self._db = redis.from_url(database_url)
-        self.pubsub = self._db.pubsub(ignore_subscribe_messages=True)
+    def __init__(self, _db):
+        """
+        :type _db: :class:`aioredis.Redis`
+        """
+        self._db = _db
 
-    def get(self, key, default=None):
-        encoded_data = self._db.get(key)
+    async def get(self, key, default=None):
+        encoded_data = await self._db.get(key)
         return encoded_data.decode() if encoded_data is not None else default
 
-    def set(self, key, value):
-        return self._db.set(key, value)
+    async def set(self, key, value, **kwargs):
+        return await self._db.set(key, value, **kwargs)
 
-    def incr(self, key):
-        return self._db.incr(key)
+    async def incr(self, key):
+        return await self._db.incr(key)
 
-    def exists(self, key):
-        return self._db.exists(key)
+    async def exists(self, *keys):
+        return await self._db.exists(*keys)
 
-    def delete(self, key):
-        return self._db.delete(key)
+    async def delete(self, *keys):
+        return await self._db.delete(*keys)
 
-    def setex(self, key, value, expiration):
-        return self._db.setex(key, value, expiration)
+    async def setex(self, key, value, expiration):
+        return await self._db.setex(key, expiration, value)
 
-    def setnx(self, key, value):
-        return self._db.setnx(key, value)
+    async def setnx(self, key, value):
+        return await self._db.setnx(key, value)
 
     # ==== hashmaps ====
-    def set_dict(self, key, dictionary):
-        if len(dictionary) == 0:
-            return self._db.delete(key)
-        return self._db.hmset(key, dictionary)
+    async def set_dict(self, key, dictionary):
+        return await self._db.hmset_dict(key, **dictionary)
 
-    def get_dict(self, key, dict_key):
-        return self._db.hget(key, dict_key).decode()
+    async def get_dict(self, key, dict_key):
+        return await self.hget(key, dict_key)
 
-    def get_whole_dict(self, key, default=None):
+    async def get_whole_dict(self, key, default=None):
         if default is None:
             default = {}
-        encoded_dict = self._db.hgetall(key)
-        if encoded_dict is None: return default
-        out = {}
-        for k in encoded_dict.keys():
-            out[k.decode()] = encoded_dict[k].decode()
+        out = await self._db.hgetall(key, encoding='utf-8')
+        if out is None:
+            return default
         return out
 
-    def hget(self, key, field, default=None):
-        encoded_data = self._db.hget(key, field)
-        return encoded_data.decode() if encoded_data is not None else default
+    async def hget(self, key, field, default=None):
+        out = await self._db.hget(key, field, encoding='utf-8')
+        return out if out is not None else default
 
-    def hset(self, key, field, value):
-        return self._db.hset(key, field, value)
+    async def hset(self, key, field, value):
+        return await self._db.hset(key, field, value)
 
-    def hdel(self, key, *fields):
-        return self._db.hdel(key, *fields)
+    async def hdel(self, key, *fields):
+        return await self._db.hdel(key, *fields)
 
-    def hlen(self, key):
-        return self._db.hlen(key)
+    async def hlen(self, key):
+        return await self._db.hlen(key)
 
-    def hexists(self, hashkey, key):
-        return self._db.hexists(hashkey, key)
+    async def hexists(self, hashkey, key):
+        return await self._db.hexists(hashkey, key)
 
-    def jhget(self, key, field, default=None):
-        data = self.hget(key, field)
+    async def jhget(self, key, field, default=None):
+        data = await self.hget(key, field)
         return json.loads(data) if data is not None else default
 
-    def jhset(self, key, field, value, **kwargs):
+    async def jhset(self, key, field, value, **kwargs):
         data = json.dumps(value, **kwargs)
-        return self.hset(key, field, data)
+        return await self.hset(key, field, data)
 
     # ==== json ====
-    def jset(self, key, data, **kwargs):
-        return self.not_json_set(key, data, **kwargs)
+    async def jset(self, key, data, **kwargs):
+        return await self.not_json_set(key, data, **kwargs)
 
-    def jsetex(self, key, data, exp, **kwargs):
+    async def jsetex(self, key, data, exp, **kwargs):
         data = json.dumps(data, **kwargs)
-        return self.setex(key, data, exp)
+        return await self.setex(key, data, exp)
 
-    def jget(self, key, default=None):
-        return self.not_json_get(key, default)
+    async def jget(self, key, default=None):
+        return await self.not_json_get(key, default)
 
-    def not_json_set(self, key, data, **kwargs):
+    async def not_json_set(self, key, data, **kwargs):
         data = json.dumps(data, **kwargs)
-        return self.set(key, data)
+        return await self.set(key, data)
 
-    def not_json_get(self, key, default=None):
-        data = self.get(key)
+    async def not_json_get(self, key, default=None):
+        data = await self.get(key)
         return json.loads(data) if data is not None else default
 
     # ==== lists ====
-    def llen(self, key):
-        return self._db.llen(key)
+    async def llen(self, key):
+        return await self._db.llen(key)
 
-    def lindex(self, key, index):
-        encoded_data = self._db.lindex(key, index)
+    async def lindex(self, key, index):
+        encoded_data = await self._db.lindex(key, index)
         return encoded_data.decode() if encoded_data is not None else None
 
-    def rpush(self, key, *values):
-        return self._db.rpush(key, *values)
+    async def rpush(self, key, *values):
+        return await self._db.rpush(key, *values)
 
     # ==== pubsub ====
-    def publish(self, channel, data):
-        return self._db.publish(channel, data)
+    async def publish(self, channel, data):
+        return await self._db.publish(channel, data)

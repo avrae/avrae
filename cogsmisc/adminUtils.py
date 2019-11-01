@@ -24,10 +24,17 @@ class AdminUtils(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.bot.muted = set(self.bot.rdb.jget('muted', []))
-        self.blacklisted_serv_ids = self.bot.rdb.jget('blacklist', [])
+        bot.loop.create_task(self.load_admin())
+        self.blacklisted_serv_ids = set()
+        self.whitelisted_serv_ids = set()
 
-        loglevels = self.bot.rdb.jget('loglevels', {})
+    async def load_admin(self):
+        await self.bot.wait_until_ready()
+        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
+        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
+        self.whitelisted_serv_ids = set(await self.bot.rdb.jget('server-whitelist', []))
+
+        loglevels = await self.bot.rdb.jget('loglevels', {})
         for logger, level in loglevels.items():
             try:
                 logging.getLogger(logger).setLevel(level)
@@ -37,17 +44,17 @@ class AdminUtils(commands.Cog):
     @commands.command(hidden=True)
     @checks.is_owner()
     async def blacklist(self, ctx, _id: int):
-        self.blacklisted_serv_ids = self.bot.rdb.jget('blacklist', [])
-        self.blacklisted_serv_ids.append(_id)
-        self.bot.rdb.jset('blacklist', self.blacklisted_serv_ids)
+        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
+        self.blacklisted_serv_ids.add(_id)
+        await self.bot.rdb.jset('blacklist', list(self.blacklisted_serv_ids))
         await ctx.send(':ok_hand:')
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def whitelist(self, ctx, _id: int):
-        whitelist = self.bot.rdb.jget('server-whitelist', [])
-        whitelist.append(_id)
-        self.bot.rdb.jset('server-whitelist', whitelist)
+        whitelist = set(await self.bot.rdb.jget('server-whitelist', []))
+        whitelist.add(_id)
+        await self.bot.rdb.jset('server-whitelist', list(whitelist))
         await ctx.send(':ok_hand:')
 
     @commands.command(hidden=True)
@@ -124,7 +131,7 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def mute(self, ctx, target: int):
         """Mutes a person by ID."""
-        self.bot.muted = set(self.bot.rdb.jget('muted', []))
+        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
         try:
             target_user = await self.bot.fetch_user(target)
         except NotFound:
@@ -135,15 +142,15 @@ class AdminUtils(commands.Cog):
         else:
             self.bot.muted.add(target)
             await ctx.send("{} ({}) muted.".format(target, target_user))
-        self.bot.rdb.jset('muted', list(self.bot.muted))
+        await self.bot.rdb.jset('muted', list(self.bot.muted))
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def loglevel(self, ctx, level: int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
-        loglevels = self.bot.rdb.jget('loglevels', {})
+        loglevels = await self.bot.rdb.jget('loglevels', {})
         loglevels[logger] = level
-        self.bot.rdb.jset('loglevels', loglevels)
+        await self.bot.rdb.jset('loglevels', loglevels)
         logging.getLogger(logger).setLevel(level)
         await ctx.send(f"Set level of {logger} to {level}.")
 
@@ -166,7 +173,7 @@ class AdminUtils(commands.Cog):
     async def on_guild_join(self, server):
         if server.id in self.blacklisted_serv_ids:
             return await server.leave()
-        elif server.id in self.bot.rdb.jget('server-whitelist', []):
+        elif server.id in self.whitelisted_serv_ids:
             return
         bots = sum(1 for m in server.members if m.bot)
         members = len(server.members)

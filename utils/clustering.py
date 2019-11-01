@@ -57,13 +57,13 @@ async def _coordinate_shards(bot):
     }
     """
     cluster_coordination_key = f"clusters.{GIT_COMMIT_SHA}"
-    coordinator_exists = bot.rdb.exists(cluster_coordination_key)
+    coordinator_exists = await bot.rdb.exists(cluster_coordination_key)
     my_task_arn, my_family, my_ecs_cluster_name = await _get_ecs_metadata()
 
     # get the total number of shards running on this acct
     if coordinator_exists:
         # get the canonical number of shards
-        bot.shard_count = int(bot.rdb.hget(cluster_coordination_key, "num_shards"))
+        bot.shard_count = int(await bot.rdb.hget(cluster_coordination_key, "num_shards"))
     else:
         if NUM_SHARDS is None:
             # how many shards does Discord want?
@@ -71,14 +71,14 @@ async def _coordinate_shards(bot):
         else:
             recommended_shards = NUM_SHARDS
         # create the task coordinator
-        bot.rdb.hset(cluster_coordination_key, "num_shards", recommended_shards)
+        await bot.rdb.hset(cluster_coordination_key, "num_shards", recommended_shards)
         bot.shard_count = recommended_shards
         log.info(f"Created task coordinator {cluster_coordination_key} with num_shards={bot.shard_count}!")
     log.debug(f"SHARD_COUNT={bot.shard_count}")
 
     # claim unclaimed shards, or take over a dead task
-    num_existing_clusters = bot.rdb.hlen(cluster_coordination_key) - 1
-    my_id_exists = bot.rdb.hexists(cluster_coordination_key, my_task_arn)
+    num_existing_clusters = await bot.rdb.hlen(cluster_coordination_key) - 1
+    my_id_exists = await bot.rdb.hexists(cluster_coordination_key, my_task_arn)
     if my_id_exists:
         await _claim_existing_cluster(bot, my_task_arn, cluster_coordination_key)
     elif num_existing_clusters < NUM_CLUSTERS:
@@ -98,7 +98,7 @@ async def _get_ecs_metadata():
 async def _claim_existing_cluster(bot, my_task_arn, cluster_coordination_key):
     shards_per_cluster = ceil(bot.shard_count / NUM_CLUSTERS)
     # I know what shards I'm supposed to be running
-    my_shards = bot.rdb.jhget(cluster_coordination_key, my_task_arn)
+    my_shards = await bot.rdb.jhget(cluster_coordination_key, my_task_arn)
     bot.shard_ids = range(*my_shards)
     bot.cluster_id = my_shards[0] // shards_per_cluster
     log.info(f"Found existing task in coordinator")
@@ -111,7 +111,7 @@ async def _claim_new_cluster_shards(bot, my_task_arn, cluster_coordination_key, 
     end = min(start + shards_per_cluster, bot.num_shards)
 
     # I hereby claim shards [start..end)
-    bot.rdb.jhset(cluster_coordination_key, my_task_arn, [start, end])
+    await bot.rdb.jhset(cluster_coordination_key, my_task_arn, [start, end])
     bot.shard_ids = range(start, end)
     bot.cluster_id = num_existing_clusters
     log.info(f"Claiming shards [{start}..{end})")
@@ -127,7 +127,7 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
     tasks = set(response['taskArns'])
 
     # who's supposed to be alive?
-    clusters = bot.rdb.get_whole_dict(cluster_coordination_key)
+    clusters = await bot.rdb.get_whole_dict(cluster_coordination_key)
     del clusters['num_shards']  # you're not a cluster
 
     for task_arn, shard_range in clusters.items():
@@ -137,11 +137,11 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
         raise RuntimeError("Tried to replace dead cluster but all clusters are OK!")
 
     # the king is dead, long live the king!
-    bot.rdb.hdel(task_arn)
+    await bot.rdb.hdel(task_arn)
 
     # I hereby claim shards [start..end)
     shard_range = json.loads(shard_range)
-    bot.rdb.jhset(cluster_coordination_key, my_task_arn, shard_range)
+    await bot.rdb.jhset(cluster_coordination_key, my_task_arn, shard_range)
     bot.shard_ids = range(*shard_range)
     bot.cluster_id = shard_range[0] // shards_per_cluster
     log.warning(f"Task {task_arn} is dead! Taking over...")
@@ -153,7 +153,7 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
 async def _coordination_lock(rdb):
     cluster_lock_key = f"clusters.{GIT_COMMIT_SHA}.lock"
     i = 0
-    while not rdb.setnx(cluster_lock_key, "lockme"):
+    while not await rdb.setnx(cluster_lock_key, "lockme"):
         await asyncio.sleep(1)
         i += 1
         log.info(f"Waiting for lock... ({i}s)")
@@ -161,4 +161,4 @@ async def _coordination_lock(rdb):
     try:
         yield
     finally:
-        rdb.delete(cluster_lock_key)
+        await rdb.delete(cluster_lock_key)

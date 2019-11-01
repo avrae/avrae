@@ -71,6 +71,9 @@ class RedisIO:
     async def hexists(self, hashkey, key):
         return await self._db.hexists(hashkey, key)
 
+    async def hincrby(self, key, field, increment):
+        return await self._db.hincrby(key, field, increment)
+
     async def jhget(self, key, field, default=None):
         data = await self.hget(key, field)
         return json.loads(data) if data is not None else default

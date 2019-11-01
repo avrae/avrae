@@ -10,16 +10,22 @@ from collections import Counter
 
 from discord.ext import commands
 
+from utils import config
+
+GUILD_RDB_KEY = "stats.cluster_guilds"
+
 
 class Stats(commands.Cog):
     """Statistics and analytics about bot usage."""
 
     def __init__(self, bot):
+        """
+        :type bot: :class:`dbot.Avrae`
+        """
         self.bot = bot
         self.start_time = time.monotonic()
         self.command_stats = Counter()
-        if bot.is_cluster_0:
-            self.bot.loop.create_task(self.scheduled_update())
+        self.bot.loop.create_task(self.scheduled_update())
 
     # ===== listeners =====
     @commands.Cog.listener()
@@ -33,9 +39,24 @@ class Stats(commands.Cog):
     # ===== tasks =====
     async def scheduled_update(self):
         await self.bot.wait_until_ready()
+        if self.bot.is_cluster_0:
+            await self.clean_published_stats()
         while not self.bot.is_closed():
-            await self.update_hourly()
+            if self.bot.is_cluster_0:
+                await self.update_hourly()
+            await self.publish_shared_statistics()
             await asyncio.sleep(60 * 60)  # every hour
+
+    # ===== internal stat sharing =====
+    async def clean_published_stats(self):
+        cluster_servers = await self.bot.rdb.get_whole_dict(GUILD_RDB_KEY)
+        for cluster_id in cluster_servers:
+            if int(cluster_id) >= (config.NUM_CLUSTERS or 1):
+                await self.bot.rdb.hdel(GUILD_RDB_KEY, cluster_id)
+
+    async def publish_shared_statistics(self):
+        cluster_servers = len(self.bot.guilds)
+        await self.bot.rdb.hset(GUILD_RDB_KEY, str(self.bot.cluster_id), cluster_servers)
 
     # ===== analytic loggers =====
     async def user_activity(self, ctx):
@@ -120,6 +141,16 @@ class Stats(commands.Cog):
         output = '\n'.join('{0:<{1}}: {2}'.format(k, width, c) for k, c in common)
         await ctx.send(f'```\n{output}\n{total} total\n```')
 
+    # ===== event listeners =====
+    # we can update our server count as we join/leave servers
+    @commands.Cog.listener()
+    async def on_guild_join(self, _):
+        await self.bot.rdb.hincrby(GUILD_RDB_KEY, str(self.bot.cluster_id), 1)
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, _):
+        await self.bot.rdb.hincrby(GUILD_RDB_KEY, str(self.bot.cluster_id), -1)
+
     # ===== utils =====
     @staticmethod
     async def increase_stat(ctx, stat):
@@ -143,7 +174,8 @@ class Stats(commands.Cog):
     @staticmethod
     async def get_guild_count(bot):
         """Returns the total number of guilds the entire bot can see, across all shards."""
-        pass
+        cluster_servers = await bot.rdb.get_whole_dict(GUILD_RDB_KEY)
+        return sum(int(v) for v in cluster_servers.values())
 
 
 def setup(bot):

@@ -49,7 +49,7 @@ class Core(commands.Cog):
         """Prints a link to invite Avrae to your server."""
         await ctx.send(
             "You can invite Avrae to your server here:\n"
-            "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=388160")
+            "<https://invite.avrae.io>")
 
     @commands.command(aliases=['stats', 'info'])
     async def about(self, ctx):
@@ -62,7 +62,7 @@ class Core(commands.Cog):
 
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
         embed.title = "Invite Avrae to your server!"
-        embed.url = "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808"
+        embed.url = "https://invite.avrae.io"
         embed.colour = 0x7289da
         total_members = sum(1 for _ in self.bot.get_all_members())
         unique_members = len(self.bot.users)
@@ -81,7 +81,8 @@ class Core(commands.Cog):
                        "{rounds_init_tracked_life} rounds of initiative tracked ({turns_init_tracked_life} turns)" \
             .format(**stats)
         embed.add_field(name="Commands Run", value=commands_run)
-        embed.add_field(name="Servers", value=str(await Stats.get_guild_count(self.bot)))
+        embed.add_field(name="Servers", value=f"{len(self.bot.guilds)} on this cluster\n"
+                                              f"{await Stats.get_guild_count(self.bot)} total")
         memory_usage = psutil.Process().memory_full_info().uss / 1024 ** 2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
         embed.add_field(name='About', value='Made with :heart: by zhu.exe#4211 and the D&D Beyond team\n'

@@ -1,18 +1,18 @@
 import asyncio
 import logging
 import os
-import sys
 import time
 import urllib.parse
 
 from MeteorClient import MeteorClient
 
 import credentials
+from utils import config
 from .errors import InsertFailure, LoginFailure
 from .http import DicecloudHTTP
 
-TESTING = (os.environ.get("TESTING", False) or 'test' in sys.argv)
-NO_DICECLOUD = os.environ.get("NO_DICECLOUD", False)
+TESTING = config.TESTING
+NO_DICECLOUD = config.NO_DICECLOUD
 UNAME = os.getenv('DICECLOUD_USER', 'avrae') if not TESTING else credentials.test_dicecloud_user
 PWD = credentials.dicecloud_pass.encode() if not TESTING else credentials.test_dicecloud_pass.encode()
 API_KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token

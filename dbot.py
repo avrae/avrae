@@ -9,7 +9,7 @@ import traceback
 import utils.newrelic
 
 utils.newrelic.hook_all()
-from utils import clustering
+from utils import clustering, config
 
 import aioredis
 import discord
@@ -22,21 +22,8 @@ from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.errors import AvraeException, EvaluationError
-from utils.functions import get_positivity
 from utils.help import help_command
 from utils.redisIO import RedisIO
-
-TESTING = get_positivity(os.environ.get("TESTING", False))
-if 'test' in sys.argv:
-    TESTING = True
-ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
-GIT_COMMIT_SHA = os.getenv('GIT_COMMIT_SHA')
-MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
-REDIS_DB_NUM = int(os.getenv('REDIS_DB_NUM', 0))
-DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
-SENTRY_DSN = os.getenv('SENTRY_DSN') or None
-NUM_CLUSTERS = int(os.getenv('NUM_CLUSTERS')) if 'NUM_CLUSTERS' in os.environ else None
-NUM_SHARDS = int(os.getenv('NUM_SHARDS')) if 'NUM_SHARDS' in os.environ else None
 
 # -----COGS-----
 COGS = (
@@ -48,16 +35,16 @@ COGS = (
 
 async def get_prefix(the_bot, message):
     if not message.guild:
-        return commands.when_mentioned_or(DEFAULT_PREFIX)(the_bot, message)
+        return commands.when_mentioned_or(config.DEFAULT_PREFIX)(the_bot, message)
     guild_id = str(message.guild.id)
     if guild_id in the_bot.prefixes:
-        gp = the_bot.prefixes.get(guild_id, DEFAULT_PREFIX)
+        gp = the_bot.prefixes.get(guild_id, config.DEFAULT_PREFIX)
     else:  # load from db and cache
         gp_obj = await the_bot.mdb.prefixes.find_one({"guild_id": guild_id})
         if gp_obj is None:
-            gp = DEFAULT_PREFIX
+            gp = config.DEFAULT_PREFIX
         else:
-            gp = gp_obj.get("prefix", DEFAULT_PREFIX)
+            gp = gp_obj.get("prefix", config.DEFAULT_PREFIX)
         the_bot.prefixes[guild_id] = gp
     return commands.when_mentioned_or(gp)(the_bot, message)
 
@@ -68,29 +55,29 @@ class Avrae(commands.AutoShardedBot):
         self.testing = testing
         self.state = "init"
         self.credentials = Credentials()
-        if TESTING:
+        if config.TESTING:
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
         else:
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
-        self.mdb = self.mclient[MONGODB_DB_NAME]
+        self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = None
         self.loop.create_task(self.setup_rdb())
         self.prefixes = dict()
         self.muted = set()
         self.cluster_id = 0
 
-        if SENTRY_DSN is not None:
+        if config.SENTRY_DSN is not None:
             release = None
-            if GIT_COMMIT_SHA:
-                release = f"avrae-bot@{GIT_COMMIT_SHA}"
-            sentry_sdk.init(dsn=SENTRY_DSN, environment=ENVIRONMENT.title(), release=release)
+            if config.GIT_COMMIT_SHA:
+                release = f"avrae-bot@{config.GIT_COMMIT_SHA}"
+            sentry_sdk.init(dsn=config.SENTRY_DSN, environment=config.ENVIRONMENT.title(), release=release)
 
     async def setup_rdb(self):
-        if TESTING:
+        if config.TESTING:
             redis_url = self.credentials.test_redis_url
         else:
             redis_url = os.getenv('REDIS_URL', '127.0.0.1')
-        self.rdb = RedisIO(await aioredis.create_redis_pool(redis_url, db=REDIS_DB_NUM))
+        self.rdb = RedisIO(await aioredis.create_redis_pool(redis_url, db=config.REDIS_DB_NUM))
 
     async def get_server_prefix(self, msg):
         return (await get_prefix(self, msg))[-1]
@@ -114,7 +101,7 @@ class Avrae(commands.AutoShardedBot):
 
     @staticmethod
     def log_exception(exception=None, context: commands.Context = None):
-        if SENTRY_DSN is None:
+        if config.SENTRY_DSN is None:
             return
 
         with sentry_sdk.push_scope() as scope:
@@ -141,7 +128,7 @@ class Credentials:
         self.token = credentials.officialToken
         self.test_redis_url = credentials.test_redis_url
         self.test_mongo_url = credentials.test_mongo_url
-        if TESTING:
+        if config.TESTING:
             self.token = credentials.testToken
         if 'ALPHA_TOKEN' in os.environ:
             self.token = os.environ.get("ALPHA_TOKEN")
@@ -153,8 +140,8 @@ A full command list can be found [here](https://avrae.io/commands)!
 Invite Avrae to your server [here](https://invite.avrae.io)!
 Join the official development server [here](https://support.avrae.io)!
 '''
-bot = Avrae(prefix=get_prefix, description=desc, pm_help=True, testing=TESTING,
-            activity=discord.Game(name=f'D&D 5e | {DEFAULT_PREFIX}help'))
+bot = Avrae(prefix=get_prefix, description=desc, pm_help=True, testing=config.TESTING,
+            activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'))
 
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)

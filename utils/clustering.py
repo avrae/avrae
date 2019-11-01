@@ -26,10 +26,12 @@ from math import ceil
 
 import aiohttp
 
-NUM_CLUSTERS = int(os.getenv('NUM_CLUSTERS')) if 'NUM_CLUSTERS' in os.environ else None
-NUM_SHARDS = int(os.getenv('NUM_SHARDS')) if 'NUM_SHARDS' in os.environ else None
-GIT_COMMIT_SHA = os.getenv('GIT_COMMIT_SHA')  # set by travis
-ECS_METADATA_ENDPT = os.getenv('ECS_CONTAINER_METADATA_URI')  # set by ECS
+from utils import config
+
+NUM_CLUSTERS = config.NUM_CLUSTERS
+NUM_SHARDS = config.NUM_SHARDS
+GIT_COMMIT_SHA = config.GIT_COMMIT_SHA
+ECS_METADATA_ENDPT = config.ECS_METADATA_ENDPT
 
 log = logging.getLogger(__name__)
 

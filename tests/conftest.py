@@ -19,6 +19,7 @@ from discord.http import HTTPClient, Route
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException
 from tests.setup import *
+from utils.config import DEFAULT_PREFIX
 
 SENTINEL = object()
 
@@ -210,7 +211,6 @@ def message(self, message_content, as_owner=False, dm=False):
         if not dm:
             message_content = f"{self.prefixes.get(str(TEST_GUILD_ID), '!')}{message_content[1:]}"
         else:
-            from dbot import DEFAULT_PREFIX
             message_content = f"{DEFAULT_PREFIX}{message_content[1:]}"
 
     log.info(f"Sending message {message_content}")

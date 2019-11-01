@@ -77,6 +77,7 @@ class Avrae(commands.AutoShardedBot):
         self.mdb = self.mclient[MONGODB_DB_NAME]
         self.prefixes = dict()
         self.muted = set()
+        self.cluster_id = 0
 
         if SENTRY_DSN is not None:
             release = None
@@ -100,9 +101,9 @@ class Avrae(commands.AutoShardedBot):
 
     @property
     def is_cluster_0(self):
-        if self.shard_ids is None:  # we're not running in clustered mode anyway
+        if self.cluster_id is None:  # we're not running in clustered mode anyway
             return True
-        return 0 in self.shard_ids
+        return self.cluster_id == 0
 
     @staticmethod
     def log_exception(exception=None, context: commands.Context = None):

@@ -31,7 +31,7 @@ class Customization(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        if getattr(self.bot, "shard_id", 0) == 0:
+        if self.bot.is_cluster_0:
             cmds = list(self.bot.all_commands.keys())
             self.bot.rdb.jset('default_commands', cmds)
 

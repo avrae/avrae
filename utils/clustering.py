@@ -96,9 +96,11 @@ async def _get_ecs_metadata():
 
 
 async def _claim_existing_cluster(bot, my_task_arn, cluster_coordination_key):
+    shards_per_cluster = ceil(bot.shard_count / NUM_CLUSTERS)
     # I know what shards I'm supposed to be running
     my_shards = bot.rdb.jhget(cluster_coordination_key, my_task_arn)
     bot.shard_ids = range(*my_shards)
+    bot.cluster_id = my_shards[0] // shards_per_cluster
     log.info(f"Found existing task in coordinator")
 
 
@@ -111,10 +113,12 @@ async def _claim_new_cluster_shards(bot, my_task_arn, cluster_coordination_key, 
     # I hereby claim shards [start..end)
     bot.rdb.jhset(cluster_coordination_key, my_task_arn, [start, end])
     bot.shard_ids = range(start, end)
+    bot.cluster_id = num_existing_clusters
     log.info(f"Claiming shards [{start}..{end})")
 
 
 async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my_family, my_ecs_cluster_name):
+    shards_per_cluster = ceil(bot.shard_count / NUM_CLUSTERS)
     # oh no. my ARN isn't in a claimed list and the number of claimed clusters is how many should be running
     # which means someone died.
     import boto3
@@ -139,6 +143,7 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
     shard_range = json.loads(shard_range)
     bot.rdb.jhset(cluster_coordination_key, my_task_arn, shard_range)
     bot.shard_ids = range(*shard_range)
+    bot.cluster_id = shard_range[0] // shards_per_cluster
     log.warning(f"Task {task_arn} is dead! Taking over...")
     log.info(f"Claiming shards [{shard_range[0]}..{shard_range[1]})")
 

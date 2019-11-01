@@ -17,12 +17,9 @@ class Stats(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.start_time = time.monotonic()
-
         self.command_stats = Counter()
-        self.socket_stats = Counter()
-        self.socket_bandwidth = Counter()
-
-        self.bot.loop.create_task(self.scheduled_update())
+        if bot.is_cluster_0:
+            self.bot.loop.create_task(self.scheduled_update())
 
     # ===== listeners =====
     @commands.Cog.listener()
@@ -32,12 +29,6 @@ class Stats(commands.Cog):
         await self.user_activity(ctx)
         await self.guild_activity(ctx)
         await self.command_activity(ctx)
-
-    @commands.Cog.listener()
-    async def on_socket_response(self, msg):
-        t = msg.get('t')
-        self.socket_stats[t] += 1
-        self.socket_bandwidth[t] += len(msg)
 
     # ===== tasks =====
     async def scheduled_update(self):
@@ -99,12 +90,10 @@ class Stats(commands.Cog):
         except AttributeError:
             num_inits_began = 0
 
-
         data = {
             "timestamp": datetime.datetime.now(),
-            "num_unique_members": len(self.bot.users),
             "num_commands_called": commands_used_life,
-            "num_servers": len(self.bot.guilds),
+            "num_servers": await self.get_guild_count(self.bot),
             "num_characters": num_characters,
             "num_inits_began": num_inits_began,
             "num_init_turns": await self.get_statistic(ctx, "turns_init_tracked_life"),
@@ -131,23 +120,7 @@ class Stats(commands.Cog):
         output = '\n'.join('{0:<{1}}: {2}'.format(k, width, c) for k, c in common)
         await ctx.send(f'```\n{output}\n{total} total\n```')
 
-    @commands.command(hidden=True)
-    async def socketstats(self, ctx):
-        minutes = round(time.monotonic() - self.start_time) / 60
-        total = sum(self.socket_stats.values())
-        cpm = total / minutes
-        await ctx.send(
-            '{0} socket events observed ({1:.2f}/minute):\n{2}'
-                .format(total, cpm, self.socket_stats))
-
-    @commands.command(hidden=True)
-    async def socketbandwidth(self, ctx):
-        minutes = round(time.monotonic() - self.start_time) / 60
-        total = sum(self.socket_bandwidth.values())
-        cpm = total / minutes
-        await ctx.send('{0} bytes of socket events observed ({1:.2f}/minute):\n{2}'
-                       .format(total, cpm, self.socket_bandwidth))
-
+    # ===== utils =====
     @staticmethod
     async def increase_stat(ctx, stat):
         await ctx.bot.mdb.random_stats.update_one(
@@ -166,6 +139,11 @@ class Stats(commands.Cog):
         except AttributeError:
             value = 0
         return value
+
+    @staticmethod
+    async def get_guild_count(bot):
+        """Returns the total number of guilds the entire bot can see, across all shards."""
+        pass
 
 
 def setup(bot):

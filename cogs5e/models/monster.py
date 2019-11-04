@@ -153,7 +153,7 @@ class Monster(StatBlock):
         scores.prof_bonus = _calc_prof(scores, saves, skills)
 
         source = data['source']
-        proper = bool(data.get('isNamedCreature') or data.get('isNPC'))
+        proper = bool(data.get('proper'))
 
         attacks = AttackList.from_dict(data.get('attacks', []))
         spellcasting = data.get('spellcasting', {})

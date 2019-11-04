@@ -4,9 +4,7 @@ import sys
 from utils.functions import get_positivity
 
 # ==== bot config constants / env vars ====
-TESTING = get_positivity(os.environ.get("TESTING", False))
-if 'test' in sys.argv:
-    TESTING = True
+TESTING = get_positivity(os.environ.get("TESTING", False)) or 'test' in sys.argv
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
 GIT_COMMIT_SHA = os.getenv('GIT_COMMIT_SHA')
 MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')

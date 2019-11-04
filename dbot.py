@@ -60,8 +60,7 @@ class Avrae(commands.AutoShardedBot):
         else:
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
-        self.rdb = None
-        self.loop.create_task(self.setup_rdb())
+        self.rdb = self.loop.run_until_complete(self.setup_rdb())
         self.prefixes = dict()
         self.muted = set()
         self.cluster_id = 0
@@ -77,7 +76,7 @@ class Avrae(commands.AutoShardedBot):
             redis_url = self.credentials.test_redis_url
         else:
             redis_url = os.getenv('REDIS_URL', '127.0.0.1')
-        self.rdb = RedisIO(await aioredis.create_redis_pool(redis_url, db=config.REDIS_DB_NUM))
+        return RedisIO(await aioredis.create_redis_pool(redis_url, db=config.REDIS_DB_NUM))
 
     async def get_server_prefix(self, msg):
         return (await get_prefix(self, msg))[-1]

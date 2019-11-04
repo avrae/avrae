@@ -5,6 +5,8 @@ Created on Dec 28, 2016
 """
 
 import json
+import logging
+import uuid
 
 
 class RedisIO:
@@ -113,5 +115,80 @@ class RedisIO:
         return await self._db.rpush(key, *values)
 
     # ==== pubsub ====
+    async def subscribe(self, *channels):
+        return await self._db.subscribe(*channels)
+
     async def publish(self, channel, data):
         return await self._db.publish(channel, data)
+
+
+class _PubSubMessageBase:
+    def __init__(self, type, id, sender):
+        self.type = type
+        self.id = id
+        self.sender = sender
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+    def to_dict(self):
+        return {"type": self.type, "id": self.id, "sender": self.sender}
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
+
+
+class PubSubCommand(_PubSubMessageBase):
+    def __init__(self, id, sender, command, args, kwargs):
+        super(PubSubCommand, self).__init__('cmd', id, sender)
+        self.command = command
+        self.args = args
+        self.kwargs = kwargs
+
+    @classmethod
+    def new(cls, bot, command, args=None, kwargs=None):
+        if args is None:
+            args = []
+        if kwargs is None:
+            kwargs = {}
+        _id = str(uuid.uuid4())
+        return cls(_id, bot.cluster_id, command, args, kwargs)
+
+    def to_dict(self):
+        inst = super(PubSubCommand, self).to_dict()
+        inst.update({"command": self.command, "args": self.args, "kwargs": self.kwargs})
+        return inst
+
+
+class PubSubReply(_PubSubMessageBase):
+    def __init__(self, id, sender, reply_to, data):
+        super(PubSubReply, self).__init__('reply', id, sender)
+        self.reply_to = reply_to
+        self.data = data
+
+    @classmethod
+    def new(cls, bot, reply_to, data):
+        _id = str(uuid.uuid4())
+        return cls(_id, bot.cluster_id, reply_to, data)
+
+    def to_dict(self):
+        inst = super(PubSubReply, self).to_dict()
+        inst.update({"reply_to": self.reply_to, "data": self.data})
+        return inst
+
+
+PS_DESER_MAP = {
+    "cmd": PubSubCommand,
+    "reply": PubSubReply
+}
+
+
+def deserialize_ps_msg(message: str):
+    data = json.loads(message)
+    t = data.pop('type')
+    if t not in PS_DESER_MAP:
+        raise TypeError(f"{t} is not a valid pubsub message type.")
+    return PS_DESER_MAP[t].from_dict(data)
+
+pslogger = logging.getLogger("rdb.pubsub")

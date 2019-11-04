@@ -42,7 +42,7 @@ class Core(commands.Cog):
         pong = await ctx.send("Pong.")
         delta = datetime.utcnow() - now
         msec = floor(delta.total_seconds() * 1000)
-        await pong.edit(content="Pong.\nPing = {} ms.".format(msec))
+        await pong.edit(content=f"Pong.\nHTTP Ping = {msec} ms.\nWS Ping = {floor(self.bot.latency * 1000)} ms.")
 
     @commands.command()
     async def invite(self, ctx):

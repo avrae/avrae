@@ -2,10 +2,9 @@ import os
 import sys
 
 import credentials
-from utils.functions import get_positivity
 
 # ==== bot config constants / env vars ====
-TESTING = get_positivity(os.environ.get("TESTING", False)) or 'test' in sys.argv
+TESTING = os.environ.get("TESTING") or 'test' in sys.argv
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
 ALPHA_TOKEN = os.environ.get("ALPHA_TOKEN")  # optional - if not supplied, will use credentials file
 GIT_COMMIT_SHA = os.getenv('GIT_COMMIT_SHA')

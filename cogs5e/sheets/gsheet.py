@@ -27,6 +27,7 @@ from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skil
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute
+from utils import config
 from utils.constants import DAMAGE_TYPES
 from utils.functions import search
 
@@ -144,9 +145,9 @@ class GoogleSheet(SheetLoaderABC):
     async def _init_gsheet_client():
         with GoogleSheet._client_lock():
             def _():
-                if "GOOGLE_SERVICE_ACCOUNT" in os.environ:
+                if config.GOOGLE_SERVICE_ACCOUNT is not None:
                     credentials = ServiceAccountCredentials.from_json_keyfile_dict(
-                        json.loads(os.environ['GOOGLE_SERVICE_ACCOUNT']),
+                        json.loads(config.GOOGLE_SERVICE_ACCOUNT),
                         scopes=SCOPES)
                 else:
                     credentials = ServiceAccountCredentials.from_json_keyfile_name(

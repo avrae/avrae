@@ -19,7 +19,8 @@ from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
 from cogs5e.models.spell import Spell
 from cogsmisc.stats import Stats
-from utils.functions import parse_data_entry, search_and_select, search
+from utils import config
+from utils.functions import parse_data_entry, search_and_select
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
 HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
@@ -51,7 +52,7 @@ class Compendium:
         self._base_path = os.path.relpath('res')
 
     async def reload_task(self, mdb=None):
-        wait_for = int(os.getenv('RELOAD_INTERVAL', '3600'))
+        wait_for = int(config.RELOAD_INTERVAL)
         if wait_for > 0:
             log.info("Reloading data every %d seconds", wait_for)
             while True:

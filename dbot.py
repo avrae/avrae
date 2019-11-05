@@ -58,7 +58,7 @@ class Avrae(commands.AutoShardedBot):
         if config.TESTING:
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
         else:
-            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
+            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
         self.prefixes = dict()
@@ -75,7 +75,7 @@ class Avrae(commands.AutoShardedBot):
         if config.TESTING:
             redis_url = self.credentials.test_redis_url
         else:
-            redis_url = os.getenv('REDIS_URL', '127.0.0.1')
+            redis_url = config.REDIS_URL
         return RedisIO(await aioredis.create_redis_pool(redis_url, db=config.REDIS_DB_NUM))
 
     async def get_server_prefix(self, msg):
@@ -129,8 +129,8 @@ class Credentials:
         self.test_mongo_url = credentials.test_mongo_url
         if config.TESTING:
             self.token = credentials.testToken
-        if 'ALPHA_TOKEN' in os.environ:
-            self.token = os.environ.get("ALPHA_TOKEN")
+        if config.ALPHA_TOKEN:
+            self.token = config.ALPHA_TOKEN
 
 
 desc = '''

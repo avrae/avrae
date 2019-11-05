@@ -344,6 +344,23 @@ class Monster(StatBlock):
         else:
             return self.image_url or ''
 
+    # ---- setter overrides ----
+    @property
+    def hp(self):
+        return self._hp
+
+    @hp.setter
+    def hp(self, value):
+        pass
+
+    @property
+    def temp_hp(self):
+        return self._temp_hp
+
+    @temp_hp.setter
+    def temp_hp(self, value):
+        pass
+
 
 def parse_type(_type):
     if isinstance(_type, dict):

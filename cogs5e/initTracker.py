@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
-from cogs5e.funcs import scripting, targetutils
+from cogs5e.funcs import scripting, targetutils, attackutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
@@ -1005,7 +1005,6 @@ class InitTracker(commands.Cog):
             else:
                 caster = combatant.get_combatants()[0]
 
-
         # target handling
         if 't' not in args and target_name is not None:
             # old single-target
@@ -1027,29 +1026,15 @@ class InitTracker(commands.Cog):
 
         # embed setup
         embed = discord.Embed()
-        if args.last('title') is not None:
-            embed.title = args.last('title') \
-                .replace('[name]', combatant.name) \
-                .replace('[aname]', attack.name)
-        else:
-            embed.title = '{} attacks with {}!'.format(combatant.get_title_name(), a_or_an(attack.name))
-
         if is_player:
             embed.colour = combatant.character.get_color()
         else:
             embed.colour = random.randint(0, 0xffffff)
 
         # run
-        await attack.automation.run(ctx, embed, caster, targets, args, title=embed.title)
-
-        # post-run
-        _fields = args.get('f')
-        embeds.add_fields_from_args(embed, _fields)
-        if 'thumb' in args:
-            embed.set_thumbnail(url=args.last('thumb'))
+        await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
-        await combat.final()
 
     @init.command()
     async def cast(self, ctx, spell_name, *, args=''):

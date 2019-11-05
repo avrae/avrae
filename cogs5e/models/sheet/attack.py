@@ -3,9 +3,11 @@ class Attack:
     Actually an automation script.
     """
 
-    def __init__(self, name, automation):
+    def __init__(self, name, automation, verb=None, proper=False):
         self.name = name
         self.automation = automation
+        self.verb = verb
+        self.proper = proper
 
     @classmethod
     def from_dict(cls, d):
@@ -15,7 +17,8 @@ class Attack:
             return cls.from_v1(d)
 
         from cogs5e.models import automation
-        return cls(name=d['name'], automation=automation.Automation.from_data(d['automation']))
+        return cls(name=d['name'], automation=automation.Automation.from_data(d['automation']),
+                   verb=d.get('verb'), proper=d.get('proper'))
 
     @classmethod
     def from_old(cls, d):
@@ -34,7 +37,8 @@ class Attack:
         return cls(d['name'], old_to_automation(bonus, damage, d['details']))
 
     def to_dict(self):
-        return {"name": self.name, "automation": self.automation.to_dict(), "_v": 2}
+        return {"name": self.name, "automation": self.automation.to_dict(), "verb": self.verb, "proper": self.proper,
+                "_v": 2}
 
     # ---------- main funcs ----------
     @classmethod

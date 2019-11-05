@@ -5,6 +5,7 @@ Created on Sep 23, 2016
 """
 import asyncio
 import logging
+from math import floor
 
 import discord
 from discord.errors import NotFound
@@ -54,7 +55,11 @@ class AdminUtils(commands.Cog):
             "leave": self._leave,
             "loglevel": self._loglevel,
             "changepresence": self._changepresence,
-            "reload_static": self._reload_static
+            "reload_static": self._reload_static,
+            "reload_lists": self._reload_lists,
+            "serv_info": self._serv_info,
+            "whois": self._whois,
+            "ping": self._ping
         }
         channel = (await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL))[0]
         async for msg in channel.iter(encoding="utf-8"):
@@ -64,18 +69,18 @@ class AdminUtils(commands.Cog):
     @commands.command(hidden=True)
     @checks.is_owner()
     async def blacklist(self, ctx, _id: int):
-        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
         self.blacklisted_serv_ids.add(_id)
         await self.bot.rdb.jset('blacklist', list(self.blacklisted_serv_ids))
-        await ctx.send(':ok_hand:')
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def whitelist(self, ctx, _id: int):
-        whitelist = set(await self.bot.rdb.jget('server-whitelist', []))
-        whitelist.add(_id)
-        await self.bot.rdb.jset('server-whitelist', list(whitelist))
-        await ctx.send(':ok_hand:')
+        self.whitelisted_serv_ids.add(_id)
+        await self.bot.rdb.jset('server-whitelist', list(self.whitelisted_serv_ids))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -135,6 +140,22 @@ class AdminUtils(commands.Cog):
         else:
             await ctx.send(out[page - 1])
 
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def whois(self, ctx, user_id: int):  # todo
+        pass
+
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def pingall(self, ctx):
+        resp = await self.pscall("ping")
+        embed = discord.Embed(title="Cluster Pings")
+        for cluster, pings in sorted(resp.items(), key=lambda i: i[0]):
+            pingstr = "\n".join(f"Shard {shard}: {floor(ping * 1000)}ms" for shard, ping in pings.items())
+            avgping = floor((sum(pings.values()) / len(pings)) * 1000)
+            embed.add_field(name=f"Cluster {cluster}: {avgping}ms", value=pingstr)
+        await ctx.send(embed=embed)
+
     @commands.command(hidden=True, name='leave')
     @checks.is_owner()
     async def leave_server(self, ctx, guild_id: int):
@@ -145,7 +166,6 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def mute(self, ctx, target: int):
         """Mutes a person by ID."""
-        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
         try:
             target_user = await self.bot.fetch_user(target)
         except NotFound:
@@ -157,6 +177,8 @@ class AdminUtils(commands.Cog):
             self.bot.muted.add(target)
             await ctx.send("{} ({}) muted.".format(target, target_user))
         await self.bot.rdb.jset('muted', list(self.bot.muted))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -205,7 +227,7 @@ class AdminUtils(commands.Cog):
     # ==== helper ====
     @staticmethod
     async def _send_replies(ctx, resp):
-        sorted_replies = sorted(list(resp.items()), key=lambda i: i[0])
+        sorted_replies = sorted(resp.items(), key=lambda i: i[0])
         out = '\n'.join(f"{cid}: {rep}" for cid, rep in sorted_replies)
         await ctx.send(out)
 
@@ -230,6 +252,21 @@ class AdminUtils(commands.Cog):
     async def _reload_static(self):
         await compendium.reload(self.bot.mdb)
         return "OK"
+
+    async def _reload_lists(self):
+        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
+        self.whitelisted_serv_ids = set(await self.bot.rdb.jget('server-whitelist', []))
+        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
+        return "OK"
+
+    async def _serv_info(self, guild_id):
+        pass
+
+    async def _whois(self, user_id):
+        pass
+
+    async def _ping(self):
+        return dict(self.bot.latencies)
 
     # ==== pubsub ====
     async def pscall(self, command, args=None, kwargs=None, *, expected_replies=config.NUM_CLUSTERS or 1, timeout=30):

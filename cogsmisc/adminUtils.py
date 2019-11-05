@@ -14,7 +14,6 @@ from discord.ext import commands
 import utils.redisIO as redis
 from cogs5e.funcs.lookupFuncs import compendium
 from utils import checks, config
-from utils.functions import discord_trim
 
 log = logging.getLogger(__name__)
 
@@ -91,59 +90,16 @@ class AdminUtils(commands.Cog):
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def servInfo(self, ctx, server: int):  # TODO
-        out = ''
-        page = None
-        if server < 9999:
-            page = server
-
-        if page:  # grab all server info
-            all_servers = self.bot.guilds
-            members = sum(len(g.members) for g in all_servers)
-            out += f"I am in {len(all_servers)} servers, with {members} members."
-            for s in sorted(all_servers, key=lambda k: len(k.members), reverse=True):
-                out += "\n{} ({}, {} members, {} bot)".format(s.name, s.id, len(s.members),
-                                                              sum(1 for m in s.members if m.bot))
-        else:  # grab one server info
-            guild = self.bot.get_guild(server)
-            user = None
-            if not guild:
-                channel = self.bot.get_channel(server)
-                if not channel:
-                    user = self.bot.get_user(server)
-                else:
-                    guild = channel.guild
-
-            if (not guild) and (not user):
-                return await ctx.send("Not found.")
-
-            if user:
-                return await ctx.send("{} - {}".format(str(user), user.id))
-            else:
-                try:
-                    invite = (
-                        await next(c for c in guild.channels if isinstance(c, discord.TextChannel)).create_invite()).url
-                except:
-                    invite = None
-
-                if invite:
-                    out += "\n\n**{} ({}, {})**".format(guild.name, guild.id, invite)
-                else:
-                    out += "\n\n**{} ({})**".format(guild.name, guild.id)
-                out += "\n{} members, {} bot".format(len(guild.members), sum(1 for m in guild.members if m.bot))
-                for c in guild.channels:
-                    out += '\n|- {} ({})'.format(c.name, c.id)
-        out = discord_trim(out)
-        if page is None:
-            for m in out:
-                await ctx.send(m)
-        else:
-            await ctx.send(out[page - 1])
+    async def servInfo(self, ctx, guild_id: int):
+        resp = await self.pscall("serv_info", kwargs={"guild_id": guild_id}, expected_replies=1)
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def whois(self, ctx, user_id: int):  # todo
-        pass
+    async def whois(self, ctx, user_id: int):
+        user = await self.bot.fetch_user(user_id)
+        resp = await self.pscall("whois", kwargs={"user_id": user_id})
+        await self._send_replies(ctx, resp, base=f"{user_id} is {user}:")
 
     @commands.command(hidden=True)
     @checks.is_owner()
@@ -226,9 +182,11 @@ class AdminUtils(commands.Cog):
 
     # ==== helper ====
     @staticmethod
-    async def _send_replies(ctx, resp):
+    async def _send_replies(ctx, resp, base=None):
         sorted_replies = sorted(resp.items(), key=lambda i: i[0])
         out = '\n'.join(f"{cid}: {rep}" for cid, rep in sorted_replies)
+        if base:
+            out = f"{base}\n{out}"
         await ctx.send(out)
 
     # ==== methods (called by pubsub) ====
@@ -239,7 +197,8 @@ class AdminUtils(commands.Cog):
         await guild.leave()
         return f"Left {guild.name}."
 
-    async def _loglevel(self, level, logger=None):
+    @staticmethod
+    async def _loglevel(level, logger=None):
         logging.getLogger(logger).setLevel(level)
         return f"Set level of {logger} to {level}."
 
@@ -260,10 +219,29 @@ class AdminUtils(commands.Cog):
         return "OK"
 
     async def _serv_info(self, guild_id):
-        pass
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            channel = self.bot.get_channel(guild_id)
+            if not channel:
+                return False
+            else:
+                guild = channel.guild
+
+        try:
+            invite = (
+                await next(c for c in guild.channels if isinstance(c, discord.TextChannel)).create_invite()).url
+        except:
+            invite = None
+
+        if invite:
+            out = f"{guild.name} ({guild.id}, <{invite}>)"
+        else:
+            out = f"{guild.name} ({guild.id})"
+        out += f"\n{len(guild.members)} members, {sum(m.bot for m in guild.members)} bot"
+        return out
 
     async def _whois(self, user_id):
-        pass
+        return [guild.id for guild in self.bot.guilds if user_id in {user.id for user in guild.members}]
 
     async def _ping(self):
         return dict(self.bot.latencies)

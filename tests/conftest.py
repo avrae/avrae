@@ -245,10 +245,11 @@ async def on_command_error(ctx, error):
     raise error
 
 
+from dbot import bot  # runs all bot setup
+
+
 @pytest.fixture(scope="session")
 async def avrae(dhttp):
-    from dbot import bot  # runs all bot setup
-
     # set up a way for us to send events to Avrae
     # monkey-patch in .message
     bot.message = message.__get__(bot, type(bot))

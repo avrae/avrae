@@ -6,7 +6,7 @@ Created on Dec 26, 2016
 import random
 import time
 from datetime import datetime, timedelta
-from math import floor
+from math import floor, isnan
 
 import discord
 import psutil
@@ -41,8 +41,9 @@ class Core(commands.Cog):
         now = datetime.utcnow()
         pong = await ctx.send("Pong.")
         delta = datetime.utcnow() - now
-        msec = floor(delta.total_seconds() * 1000)
-        await pong.edit(content=f"Pong.\nHTTP Ping = {msec} ms.\nWS Ping = {floor(self.bot.latency * 1000)} ms.")
+        httping = floor(delta.total_seconds() * 1000)
+        wsping = floor(self.bot.latency * 1000) if not isnan(self.bot.latency) else "Unknown"
+        await pong.edit(content=f"Pong.\nHTTP Ping = {httping} ms.\nWS Ping = {wsping} ms.")
 
     @commands.command()
     async def invite(self, ctx):

@@ -117,7 +117,8 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.feats, name, lambda e: e['name'],
+        choices = compendium.feats + compendium.nfeat_names
+        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
                                                    return_metadata=True)
         await self.add_training_data("feat", name, result['name'], metadata=metadata)
 
@@ -140,7 +141,8 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.rfeats, name, lambda e: e['name'],
+        choices = compendium.rfeats + compendium.nrfeat_names
+        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
                                                    return_metadata=True)
         await self.add_training_data("racefeat", name, result['name'], metadata=metadata)
 
@@ -157,7 +159,8 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.fancyraces, name, lambda e: e.name,
+        choices = compendium.fancyraces + compendium.nrace_names
+        result, metadata = await search_and_select(ctx, choices, name, lambda e: e.name,
                                                    return_metadata=True)
         await self.add_training_data("race", name, result.name, metadata=metadata)
 
@@ -184,7 +187,8 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.cfeats, name, lambda e: e['name'],
+        choices = compendium.cfeats + compendium.ncfeat_names
+        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
                                                    return_metadata=True)
         await self.add_training_data("classfeat", name, result['name'], metadata=metadata)
 
@@ -204,7 +208,8 @@ class Lookup(commands.Cog):
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        result, metadata = await search_and_select(ctx, compendium.classes, name, lambda e: e['name'],
+        choices = compendium.classes + compendium.nclass_names
+        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
                                                    return_metadata=True)
         await self.add_training_data("class", name, result['name'], metadata=metadata)
 
@@ -275,7 +280,8 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         destination = ctx.author if pm else ctx.channel
 
-        result, metadata = await search_and_select(ctx, compendium.subclasses, name, lambda e: e['name'],
+        choices = compendium.subclasses + compendium.nsubclass_names
+        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
                                                    return_metadata=True)
         await self.add_training_data("subclass", name, result['name'], metadata=metadata)
 
@@ -301,7 +307,8 @@ class Lookup(commands.Cog):
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        result, metadata = await search_and_select(ctx, compendium.backgrounds, name, lambda e: e.name,
+        choices = compendium.backgrounds + compendium.nbackground_names
+        result, metadata = await search_and_select(ctx, choices, name, lambda e: e.name,
                                                    return_metadata=True)
         await self.add_training_data("background", name, result.name, metadata=metadata)
 
@@ -424,7 +431,8 @@ class Lookup(commands.Cog):
         else:
             visible = True
 
-        monster, metadata = await select_monster_full(ctx, name, return_metadata=True)
+        monster, metadata = await select_monster_full(ctx, name, return_metadata=True,
+                                                      extra_choices=compendium.nmonster_names)
 
         metadata['homebrew'] = monster.source == 'homebrew'
         await self.add_training_data("monster", name, monster.name, metadata=metadata)
@@ -549,7 +557,8 @@ class Lookup(commands.Cog):
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
 
-        spell, metadata = await select_spell_full(ctx, name, return_metadata=True)
+        spell, metadata = await select_spell_full(ctx, name, return_metadata=True,
+                                                  extra_choices=compendium.nspell_names)
 
         metadata['homebrew'] = spell.source == 'homebrew'
         await self.add_training_data("spell", name, spell.name, metadata=metadata)
@@ -622,6 +631,9 @@ class Lookup(commands.Cog):
             async for servpack in ctx.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}):
                 if servpack['_id'] != pack_id:
                     choices.extend(Pack.from_dict(servpack).get_search_formatted_items())
+
+        # #881 - display nSRD names
+        choices.extend(compendium.nitem_names)
 
         def get_homebrew_formatted_name(_item):
             if _item.get('source') == 'homebrew':

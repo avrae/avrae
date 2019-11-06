@@ -48,6 +48,28 @@ class Compendium:
         self.srd_spells = []
         self.subclasses = []
 
+        # non-srd names
+        # lambda e: e['name']
+        self.nfeat_names = []
+        # lambda e: e['name']
+        self.nrfeat_names = []
+        # lambda e: e.name
+        self.nrace_names = []
+        # lambda e: e['name']
+        self.ncfeat_names = []
+        # lambda e: e['name']
+        self.nclass_names = []
+        # lambda e: e['name']
+        self.nsubclass_names = []
+        # lambda e: e.name
+        self.nbackground_names = []
+        # lambda e: e.name
+        self.nmonster_names = []
+        # lambda e: e.name
+        self.nspell_names = []
+        # lambda e: e['name']
+        self.nitem_names = []
+
         self._base_path = os.path.relpath('res')
 
     async def reload_task(self, mdb=None):
@@ -153,7 +175,7 @@ compendium = Compendium()
 
 # ----- Monster stuff
 async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                              return_metadata=False):
+                              return_metadata=False, extra_choices=None):
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
@@ -173,6 +195,10 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
             await servbestiary.load_monsters(ctx)
             choices.extend(servbestiary.monsters)
 
+    # #881
+    if extra_choices:
+        choices.extend(extra_choices)
+
     await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
     def get_homebrew_formatted_name(monster):
@@ -186,11 +212,14 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
 
 # ---- SPELL STUFF ----
 async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                            search_func=None, return_metadata=False):
+                            search_func=None, return_metadata=False, extra_choices=None):
     """
     Gets a Spell from the compendium and active tome(s).
     """
     choices = await get_spell_choices(ctx)
+    # #881
+    if extra_choices:
+        choices.extend(extra_choices)
 
     await Stats.increase_stat(ctx, "spells_looked_up_life")
 

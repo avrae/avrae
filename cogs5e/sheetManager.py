@@ -12,7 +12,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
-from cogs5e.funcs import checkutils, targetutils
+from cogs5e.funcs import checkutils, targetutils, attackutils
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
 from cogs5e.models.character import Character
@@ -91,7 +91,7 @@ class SheetManager(commands.Cog):
         *crit* (automatically crit)
         *max* (deals max damage)
 
-        -h (hides rolled values)
+        -h (hides name and rolled values)
         -phrase [flavor text]
         -title [title] *note: [name] and [aname] will be replaced automatically*
         -thumb [url]
@@ -109,21 +109,7 @@ class SheetManager(commands.Cog):
         attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
 
         embed = EmbedWithCharacter(char, name=False)
-        if args.last('title') is not None:
-            embed.title = args.last('title') \
-                .replace('[name]', char.name) \
-                .replace('[aname]', attack.name)
-        else:
-            embed.title = '{} attacks with {}!'.format(char.name, a_or_an(attack.name))
-
-        await attack.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
-        if combat:
-            await combat.final()
-
-        _fields = args.get('f')
-        embeds.add_fields_from_args(embed, _fields)
-        if 'thumb' in args:
-            embed.set_thumbnail(url=args.last('thumb'))
+        await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
         try:

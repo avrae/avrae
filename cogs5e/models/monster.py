@@ -153,7 +153,7 @@ class Monster(StatBlock):
         scores.prof_bonus = _calc_prof(scores, saves, skills)
 
         source = data['source']
-        proper = bool(data.get('isNamedCreature') or data.get('isNPC'))
+        proper = bool(data.get('proper'))
 
         attacks = AttackList.from_dict(data.get('attacks', []))
         spellcasting = data.get('spellcasting', {})
@@ -343,6 +343,23 @@ class Monster(StatBlock):
             return f"https://media.avrae.io/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
         else:
             return self.image_url or ''
+
+    # ---- setter overrides ----
+    @property
+    def hp(self):
+        return self._hp
+
+    @hp.setter
+    def hp(self, value):
+        pass
+
+    @property
+    def temp_hp(self):
+        return self._temp_hp
+
+    @temp_hp.setter
+    def temp_hp(self, value):
+        pass
 
 
 def parse_type(_type):

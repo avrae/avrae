@@ -4,7 +4,7 @@ import re
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs import checkutils, targetutils
+from cogs5e.funcs import checkutils, targetutils, attackutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.funcs.scripting import helpers
@@ -152,38 +152,19 @@ class Dice(commands.Cog):
 
         monster = await select_monster_full(ctx, monster_name)
         attacks = monster.attacks
-        monster_name = monster.get_title_name()
 
         attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name)
         args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
-        if not args.last('h', type_=bool):
-            name = monster_name
-            image = args.last('thumb') or monster.get_image_url()
-        else:
-            name = "An unknown creature"
-            image = None
 
         embed = discord.Embed()
-        if args.last('title') is not None:
-            embed.title = args.last('title') \
-                .replace('[name]', name) \
-                .replace('[aname]', attack.name)
-        else:
-            embed.title = '{} attacks with {}!'.format(name, a_or_an(attack.name))
-
-        if image:
-            embed.set_thumbnail(url=image)
+        if not args.last('h', type_=bool):
+            embed.set_thumbnail(url=monster.get_image_url())
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args)
-        await attack.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
-        if combat:
-            await combat.final()
+        await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
-        _fields = args.get('f')
-        embeds.add_fields_from_args(embed, _fields)
         embed.colour = random.randint(0, 0xffffff)
-
         if monster.source == 'homebrew':
             embeds.add_homebrew_footer(embed)
 

@@ -3,7 +3,7 @@ Created on Dec 28, 2016
 
 @author: andrew
 """
-
+import abc
 import json
 import logging
 import uuid
@@ -122,7 +122,7 @@ class RedisIO:
         return await self._db.publish(channel, data)
 
 
-class _PubSubMessageBase:
+class _PubSubMessageBase(abc.ABC):
     def __init__(self, type, id, sender):
         self.type = type
         self.id = id

@@ -28,14 +28,13 @@ from .abc import SHEET_VERSION, SheetLoaderABC
 
 log = logging.getLogger(__name__)
 
-TESTING = config.TESTING
 CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiorityDice")
 CLASS_RESOURCE_NAMES = {"expertiseDice": "Expertise Dice", "ki": "Ki", "rages": "Rages",
                         "sorceryPoints": "Sorcery Points", "superiorityDice": "Superiority Dice"}
 CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long',
                          "sorceryPoints": 'long', "superiorityDice": 'short'}
 API_BASE = "https://dicecloud.com/character/"
-KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
+KEY = credentials.dicecloud_token if not config.TESTING else credentials.test_dicecloud_token
 
 
 class DicecloudParser(SheetLoaderABC):

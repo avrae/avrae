@@ -20,7 +20,6 @@ else:
 import asyncio
 import json
 import logging
-import os
 from contextlib import asynccontextmanager
 from math import ceil
 
@@ -28,20 +27,15 @@ import aiohttp
 
 from utils import config
 
-NUM_CLUSTERS = config.NUM_CLUSTERS
-NUM_SHARDS = config.NUM_SHARDS
-GIT_COMMIT_SHA = config.GIT_COMMIT_SHA
-ECS_METADATA_ENDPT = config.ECS_METADATA_ENDPT
-
 log = logging.getLogger(__name__)
 
 
 async def coordinate_shards(bot):
     if bot.shard_ids is not None:  # we're already set up
         return
-    elif NUM_CLUSTERS is None:  # we aren't running in clustered mode, let d.py do its thing
+    elif config.NUM_CLUSTERS is None:  # we aren't running in clustered mode, let d.py do its thing
         return
-    elif ECS_METADATA_ENDPT is None:  # we aren't running on ECS
+    elif config.ECS_METADATA_ENDPT is None:  # we aren't running on ECS
         return
 
     async with _coordination_lock(bot.rdb):
@@ -58,7 +52,7 @@ async def _coordinate_shards(bot):
         task_id: [int, int]
     }
     """
-    cluster_coordination_key = f"clusters.{GIT_COMMIT_SHA}"
+    cluster_coordination_key = f"clusters.{config.GIT_COMMIT_SHA}"
     coordinator_exists = await bot.rdb.exists(cluster_coordination_key)
     my_task_arn, my_family, my_ecs_cluster_name = await _get_ecs_metadata()
 
@@ -67,11 +61,11 @@ async def _coordinate_shards(bot):
         # get the canonical number of shards
         bot.shard_count = int(await bot.rdb.hget(cluster_coordination_key, "num_shards"))
     else:
-        if NUM_SHARDS is None:
+        if config.NUM_SHARDS is None:
             # how many shards does Discord want?
             recommended_shards, _ = await bot.http.get_bot_gateway()
         else:
-            recommended_shards = NUM_SHARDS
+            recommended_shards = config.NUM_SHARDS
         # create the task coordinator
         await bot.rdb.hset(cluster_coordination_key, "num_shards", recommended_shards)
         bot.shard_count = recommended_shards
@@ -83,7 +77,7 @@ async def _coordinate_shards(bot):
     my_id_exists = await bot.rdb.hexists(cluster_coordination_key, my_task_arn)
     if my_id_exists:
         await _claim_existing_cluster(bot, my_task_arn, cluster_coordination_key)
-    elif num_existing_clusters < NUM_CLUSTERS:
+    elif num_existing_clusters < config.NUM_CLUSTERS:
         await _claim_new_cluster_shards(bot, my_task_arn, cluster_coordination_key, num_existing_clusters)
     else:
         await _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my_family, my_ecs_cluster_name)
@@ -91,14 +85,14 @@ async def _coordinate_shards(bot):
 
 async def _get_ecs_metadata():
     async with aiohttp.ClientSession() as session:
-        async with session.get(f"{ECS_METADATA_ENDPT}/task") as resp:
+        async with session.get(f"{config.ECS_METADATA_ENDPT}/task") as resp:
             data = await resp.json()
 
     return data['TaskARN'], data['Family'], data['Cluster']
 
 
 async def _claim_existing_cluster(bot, my_task_arn, cluster_coordination_key):
-    shards_per_cluster = ceil(bot.shard_count / NUM_CLUSTERS)
+    shards_per_cluster = ceil(bot.shard_count / config.NUM_CLUSTERS)
     # I know what shards I'm supposed to be running
     my_shards = await bot.rdb.jhget(cluster_coordination_key, my_task_arn)
     bot.shard_ids = range(*my_shards)
@@ -107,7 +101,7 @@ async def _claim_existing_cluster(bot, my_task_arn, cluster_coordination_key):
 
 
 async def _claim_new_cluster_shards(bot, my_task_arn, cluster_coordination_key, num_existing_clusters):
-    shards_per_cluster = ceil(bot.shard_count / NUM_CLUSTERS)
+    shards_per_cluster = ceil(bot.shard_count / config.NUM_CLUSTERS)
     # I am the Nth cluster to run
     start = num_existing_clusters * shards_per_cluster
     end = min(start + shards_per_cluster, bot.num_shards)
@@ -120,7 +114,7 @@ async def _claim_new_cluster_shards(bot, my_task_arn, cluster_coordination_key, 
 
 
 async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my_family, my_ecs_cluster_name):
-    shards_per_cluster = ceil(bot.shard_count / NUM_CLUSTERS)
+    shards_per_cluster = ceil(bot.shard_count / config.NUM_CLUSTERS)
     # oh no. my ARN isn't in a claimed list and the number of claimed clusters is how many should be running
     # which means someone died.
     import boto3
@@ -153,7 +147,7 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
 # lock: don't race when coordinating clusters
 @asynccontextmanager
 async def _coordination_lock(rdb):
-    cluster_lock_key = f"clusters.{GIT_COMMIT_SHA}.lock"
+    cluster_lock_key = f"clusters.{config.GIT_COMMIT_SHA}.lock"
     i = 0
     while not await rdb.setnx(cluster_lock_key, "lockme"):
         await asyncio.sleep(1)

@@ -141,7 +141,7 @@ class _PubSubMessageBase(abc.ABC):
 
 class PubSubCommand(_PubSubMessageBase):
     def __init__(self, id, sender, command, args, kwargs):
-        super(PubSubCommand, self).__init__('cmd', id, sender)
+        super().__init__('cmd', id, sender)
         self.command = command
         self.args = args
         self.kwargs = kwargs
@@ -163,7 +163,7 @@ class PubSubCommand(_PubSubMessageBase):
 
 class PubSubReply(_PubSubMessageBase):
     def __init__(self, id, sender, reply_to, data):
-        super(PubSubReply, self).__init__('reply', id, sender)
+        super().__init__('reply', id, sender)
         self.reply_to = reply_to
         self.data = data
 
@@ -173,7 +173,7 @@ class PubSubReply(_PubSubMessageBase):
         return cls(_id, bot.cluster_id, reply_to, data)
 
     def to_dict(self):
-        inst = super(PubSubReply, self).to_dict()
+        inst = super().to_dict()
         inst.update({"reply_to": self.reply_to, "data": self.data})
         return inst
 

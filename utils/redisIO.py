@@ -163,7 +163,7 @@ class PubSubCommand(_PubSubMessageBase):
 
 class PubSubReply(_PubSubMessageBase):
     def __init__(self, id, sender, reply_to, data):
-        super(PubSubReply, self).__init__('reply', id, sender)
+        super().__init__('reply', id, sender)
         self.reply_to = reply_to
         self.data = data
 

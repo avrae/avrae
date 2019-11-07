@@ -27,7 +27,7 @@ class Character(StatBlock):
     # retrieve/modify the same Character state
     # caches based on (owner, upstream)
     # FIXME: May lead to weird conditions if scaling to multiple clusters
-    _cache = cachetools.TTLCache(maxsize=50, ttl=10)
+    _cache = cachetools.TTLCache(maxsize=50, ttl=5)
 
     def __init__(self, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
                  name: str, description: str, image: str, stats: BaseStats, levels: Levels, attacks: AttackList,

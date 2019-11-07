@@ -5,16 +5,19 @@ Created on Sep 23, 2016
 """
 import asyncio
 import logging
+from math import floor
 
 import discord
 from discord.errors import NotFound
 from discord.ext import commands
 
+import utils.redisIO as redis
 from cogs5e.funcs.lookupFuncs import compendium
-from utils import checks
-from utils.functions import discord_trim
+from utils import checks, config
 
 log = logging.getLogger(__name__)
+
+COMMAND_PUBSUB_CHANNEL = "admin-commands"
 
 
 class AdminUtils(commands.Cog):
@@ -24,107 +27,101 @@ class AdminUtils(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.bot.muted = set(self.bot.rdb.jget('muted', []))
-        self.blacklisted_serv_ids = self.bot.rdb.jget('blacklist', [])
+        bot.loop.create_task(self.load_admin())
+        bot.loop.create_task(self.admin_pubsub())
+        self.blacklisted_serv_ids = set()
+        self.whitelisted_serv_ids = set()
 
-        loglevels = self.bot.rdb.jget('loglevels', {})
+        # pubsub stuff
+        self._ps_cmd_map = {}  # set up in admin_pubsub()
+        self._ps_requests_pending = {}
+
+    # ==== setup tasks ====
+    async def load_admin(self):
+        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
+        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
+        self.whitelisted_serv_ids = set(await self.bot.rdb.jget('server-whitelist', []))
+
+        loglevels = await self.bot.rdb.jget('loglevels', {})
         for logger, level in loglevels.items():
             try:
                 logging.getLogger(logger).setLevel(level)
             except:
                 log.warning(f"Failed to reset loglevel of {logger}")
 
+    async def admin_pubsub(self):
+        self._ps_cmd_map = {
+            "leave": self._leave,
+            "loglevel": self._loglevel,
+            "changepresence": self._changepresence,
+            "reload_static": self._reload_static,
+            "reload_lists": self._reload_lists,
+            "serv_info": self._serv_info,
+            "whois": self._whois,
+            "ping": self._ping
+        }
+        channel = (await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL))[0]
+        async for msg in channel.iter(encoding="utf-8"):
+            await self._ps_recv(msg)
+
+    # ==== commands ====
     @commands.command(hidden=True)
     @checks.is_owner()
     async def blacklist(self, ctx, _id: int):
-        self.blacklisted_serv_ids = self.bot.rdb.jget('blacklist', [])
-        self.blacklisted_serv_ids.append(_id)
-        self.bot.rdb.jset('blacklist', self.blacklisted_serv_ids)
-        await ctx.send(':ok_hand:')
+        self.blacklisted_serv_ids.add(_id)
+        await self.bot.rdb.jset('blacklist', list(self.blacklisted_serv_ids))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def whitelist(self, ctx, _id: int):
-        whitelist = self.bot.rdb.jget('server-whitelist', [])
-        whitelist.append(_id)
-        self.bot.rdb.jset('server-whitelist', whitelist)
-        await ctx.send(':ok_hand:')
+        self.whitelisted_serv_ids.add(_id)
+        await self.bot.rdb.jset('server-whitelist', list(self.whitelisted_serv_ids))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def chanSay(self, ctx, channel: int, *, message: str):
-        """Like .say, but works across servers. Requires channel id."""
-        chan = self.bot.get_channel(channel)
-        if not chan:
-            return await ctx.send("Channel not found.")
-        await chan.send(message)
-        await ctx.send(f"Sent message to {chan.name}.")
+        """Low-level calls `bot.http.send_message()`."""
+        await self.bot.http.send_message(channel, message)
+        await ctx.send(f"Sent message.")
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def servInfo(self, ctx, server: int):
-        out = ''
-        page = None
-        if server < 9999:
-            page = server
+    async def servInfo(self, ctx, guild_id: int):
+        resp = await self.pscall("serv_info", kwargs={"guild_id": guild_id}, expected_replies=1)
+        await self._send_replies(ctx, resp)
 
-        if page:  # grab all server info
-            all_servers = self.bot.guilds
-            members = sum(len(g.members) for g in all_servers)
-            out += f"I am in {len(all_servers)} servers, with {members} members."
-            for s in sorted(all_servers, key=lambda k: len(k.members), reverse=True):
-                out += "\n{} ({}, {} members, {} bot)".format(s.name, s.id, len(s.members),
-                                                              sum(1 for m in s.members if m.bot))
-        else:  # grab one server info
-            guild = self.bot.get_guild(server)
-            user = None
-            if not guild:
-                channel = self.bot.get_channel(server)
-                if not channel:
-                    user = self.bot.get_user(server)
-                else:
-                    guild = channel.guild
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def whois(self, ctx, user_id: int):
+        user = await self.bot.fetch_user(user_id)
+        resp = await self.pscall("whois", kwargs={"user_id": user_id})
+        await self._send_replies(ctx, resp, base=f"{user_id} is {user}:")
 
-            if (not guild) and (not user):
-                return await ctx.send("Not found.")
-
-            if user:
-                return await ctx.send("{} - {}".format(str(user), user.id))
-            else:
-                try:
-                    invite = (
-                        await next(c for c in guild.channels if isinstance(c, discord.TextChannel)).create_invite()).url
-                except:
-                    invite = None
-
-                if invite:
-                    out += "\n\n**{} ({}, {})**".format(guild.name, guild.id, invite)
-                else:
-                    out += "\n\n**{} ({})**".format(guild.name, guild.id)
-                out += "\n{} members, {} bot".format(len(guild.members), sum(1 for m in guild.members if m.bot))
-                for c in guild.channels:
-                    out += '\n|- {} ({})'.format(c.name, c.id)
-        out = discord_trim(out)
-        if page is None:
-            for m in out:
-                await ctx.send(m)
-        else:
-            await ctx.send(out[page - 1])
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def pingall(self, ctx):
+        resp = await self.pscall("ping")
+        embed = discord.Embed(title="Cluster Pings")
+        for cluster, pings in sorted(resp.items(), key=lambda i: i[0]):
+            pingstr = "\n".join(f"Shard {shard}: {floor(ping * 1000)}ms" for shard, ping in pings.items())
+            avgping = floor((sum(pings.values()) / len(pings)) * 1000)
+            embed.add_field(name=f"Cluster {cluster}: {avgping}ms", value=pingstr)
+        await ctx.send(embed=embed)
 
     @commands.command(hidden=True, name='leave')
     @checks.is_owner()
     async def leave_server(self, ctx, guild_id: int):
-        guild = self.bot.get_guild(guild_id)
-        if not guild:
-            return await ctx.send("Guild not found.")
-        await guild.leave()
-        await ctx.send(f"Left {guild.name}.")
+        resp = await self.pscall("leave", kwargs={"guild_id": guild_id}, expected_replies=1)
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def mute(self, ctx, target: int):
         """Mutes a person by ID."""
-        self.bot.muted = set(self.bot.rdb.jget('muted', []))
         try:
             target_user = await self.bot.fetch_user(target)
         except NotFound:
@@ -135,38 +132,39 @@ class AdminUtils(commands.Cog):
         else:
             self.bot.muted.add(target)
             await ctx.send("{} ({}) muted.".format(target, target_user))
-        self.bot.rdb.jset('muted', list(self.bot.muted))
+        await self.bot.rdb.jset('muted', list(self.bot.muted))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def loglevel(self, ctx, level: int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
-        loglevels = self.bot.rdb.jget('loglevels', {})
+        loglevels = await self.bot.rdb.jget('loglevels', {})
         loglevels[logger] = level
-        self.bot.rdb.jset('loglevels', loglevels)
-        logging.getLogger(logger).setLevel(level)
-        await ctx.send(f"Set level of {logger} to {level}.")
+        await self.bot.rdb.jset('loglevels', loglevels)
+        resp = await self.pscall("loglevel", args=[level], kwargs={"logger": logger})
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def changepresence(self, ctx, status=None, *, msg=None):
         """Changes Avrae's presence. Status: online, idle, dnd"""
-        statuslevel = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd}
-        status = statuslevel.get(status)
-        await self.bot.change_presence(status=status, activity=discord.Game(msg or "D&D 5e | !help"))
-        await ctx.send("Changed presence.")
+        resp = await self.pscall("changepresence", kwargs={"status": status, "msg": msg})
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
     async def reload_static(self, ctx):
-        await compendium.reload(self.bot.mdb)
-        await ctx.send("Reloaded static data.")
+        resp = await self.pscall("reload_static")
+        await self._send_replies(ctx, resp)
 
+    # ==== listener ====
     @commands.Cog.listener()
     async def on_guild_join(self, server):
         if server.id in self.blacklisted_serv_ids:
             return await server.leave()
-        elif server.id in self.bot.rdb.jget('server-whitelist', []):
+        elif server.id in self.whitelisted_serv_ids:
             return
         bots = sum(1 for m in server.members if m.bot)
         members = len(server.members)
@@ -182,6 +180,111 @@ class AdminUtils(commands.Cog):
             await asyncio.sleep(members / 200)
             await server.leave()
 
+    # ==== helper ====
+    @staticmethod
+    async def _send_replies(ctx, resp, base=None):
+        sorted_replies = sorted(resp.items(), key=lambda i: i[0])
+        out = '\n'.join(f"{cid}: {rep}" for cid, rep in sorted_replies)
+        if base:
+            out = f"{base}\n{out}"
+        await ctx.send(out)
 
+    # ==== methods (called by pubsub) ====
+    async def _leave(self, guild_id):
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            return False
+        await guild.leave()
+        return f"Left {guild.name}."
+
+    @staticmethod
+    async def _loglevel(level, logger=None):
+        logging.getLogger(logger).setLevel(level)
+        return f"Set level of {logger} to {level}."
+
+    async def _changepresence(self, status=None, msg=None):
+        statuslevel = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd}
+        status = statuslevel.get(status)
+        await self.bot.change_presence(status=status, activity=discord.Game(msg or "D&D 5e | !help"))
+        return "Changed presence."
+
+    async def _reload_static(self):
+        await compendium.reload(self.bot.mdb)
+        return "OK"
+
+    async def _reload_lists(self):
+        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
+        self.whitelisted_serv_ids = set(await self.bot.rdb.jget('server-whitelist', []))
+        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
+        return "OK"
+
+    async def _serv_info(self, guild_id):
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            channel = self.bot.get_channel(guild_id)
+            if not channel:
+                return False
+            else:
+                guild = channel.guild
+
+        try:
+            invite = (
+                await next(c for c in guild.channels if isinstance(c, discord.TextChannel)).create_invite()).url
+        except:
+            invite = None
+
+        if invite:
+            out = f"{guild.name} ({guild.id}, <{invite}>)"
+        else:
+            out = f"{guild.name} ({guild.id})"
+        out += f"\n{len(guild.members)} members, {sum(m.bot for m in guild.members)} bot"
+        return out
+
+    async def _whois(self, user_id):
+        return [guild.id for guild in self.bot.guilds if user_id in {user.id for user in guild.members}]
+
+    async def _ping(self):
+        return dict(self.bot.latencies)
+
+    # ==== pubsub ====
+    async def pscall(self, command, args=None, kwargs=None, *, expected_replies=config.NUM_CLUSTERS or 1, timeout=30):
+        """Makes an IPC call to all clusters. Returns a dict of {cluster_id: reply_data}."""
+        request = redis.PubSubCommand.new(self.bot, command, args, kwargs)
+        self._ps_requests_pending[request.id] = {}
+        await self.bot.rdb.publish(COMMAND_PUBSUB_CHANNEL, request.to_json())
+
+        for _ in range(timeout * 10):  # timeout after 30 sec
+            if len(self._ps_requests_pending[request.id]) >= expected_replies:
+                break
+            else:
+                await asyncio.sleep(0.1)
+
+        return self._ps_requests_pending.pop(request.id)
+
+    async def _ps_recv(self, message):
+        redis.pslogger.debug(message)
+        msg = redis.deserialize_ps_msg(message)
+        if msg.type == 'reply':
+            await self._ps_reply(msg)
+        elif msg.type == 'cmd':
+            await self._ps_cmd(msg)
+
+    async def _ps_reply(self, message: redis.PubSubReply):
+        if message.reply_to not in self._ps_requests_pending:
+            return
+        self._ps_requests_pending[message.reply_to][message.sender] = message.data
+
+    async def _ps_cmd(self, message: redis.PubSubCommand):
+        if message.command not in self._ps_cmd_map:
+            return
+        command = self._ps_cmd_map[message.command]
+        result = await command(*message.args, **message.kwargs)
+
+        if result is not False:
+            response = redis.PubSubReply.new(self.bot, reply_to=message.id, data=result)
+            await self.bot.rdb.publish(COMMAND_PUBSUB_CHANNEL, response.to_json())
+
+
+# ==== setup ====
 def setup(bot):
     bot.add_cog(AdminUtils(bot))

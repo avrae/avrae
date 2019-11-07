@@ -133,7 +133,7 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
         raise RuntimeError("Tried to replace dead cluster but all clusters are OK!")
 
     # the king is dead, long live the king!
-    await bot.rdb.hdel(task_arn)
+    await bot.rdb.hdel(cluster_coordination_key, task_arn)
 
     # I hereby claim shards [start..end)
     shard_range = json.loads(shard_range)

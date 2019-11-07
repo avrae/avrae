@@ -104,7 +104,7 @@ async def _claim_new_cluster_shards(bot, my_task_arn, cluster_coordination_key, 
     shards_per_cluster = ceil(bot.shard_count / config.NUM_CLUSTERS)
     # I am the Nth cluster to run
     start = num_existing_clusters * shards_per_cluster
-    end = min(start + shards_per_cluster, bot.num_shards)
+    end = min(start + shards_per_cluster, bot.shard_count)
 
     # I hereby claim shards [start..end)
     await bot.rdb.jhset(cluster_coordination_key, my_task_arn, [start, end])

@@ -52,7 +52,7 @@ async def _coordinate_shards(bot):
         task_id: [int, int]
     }
     """
-    cluster_coordination_key = f"clusters.{config.GIT_COMMIT_SHA}"
+    cluster_coordination_key = f"clusters.{config.GIT_COMMIT_SHA}:{config.NUM_CLUSTERS}"
     coordinator_exists = await bot.rdb.exists(cluster_coordination_key)
     my_task_arn, my_family, my_ecs_cluster_name = await _get_ecs_metadata()
 
@@ -147,7 +147,7 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
 # lock: don't race when coordinating clusters
 @asynccontextmanager
 async def _coordination_lock(rdb):
-    cluster_lock_key = f"clusters.{config.GIT_COMMIT_SHA}.lock"
+    cluster_lock_key = f"clusters.{config.GIT_COMMIT_SHA}.lock:{config.NUM_CLUSTERS}"
     i = 0
     while not await rdb.setnx(cluster_lock_key, "lockme"):
         await asyncio.sleep(1)

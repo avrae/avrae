@@ -17,7 +17,7 @@ from utils import checks, config
 
 log = logging.getLogger(__name__)
 
-COMMAND_PUBSUB_CHANNEL = "admin-commands"
+COMMAND_PUBSUB_CHANNEL = f"admin-commands:{config.ENVIRONMENT}"  # >:c
 
 
 class AdminUtils(commands.Cog):

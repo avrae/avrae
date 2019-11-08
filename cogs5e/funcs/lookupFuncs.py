@@ -19,7 +19,7 @@ from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
 from cogs5e.models.spell import Spell
 from cogsmisc.stats import Stats
-from utils.functions import parse_data_entry, search_and_select, search
+from utils.functions import parse_data_entry, search_and_select
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
 HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
@@ -49,25 +49,16 @@ class Compendium:
         self.subclasses = []
 
         # non-srd names
-        # lambda e: e['name']
+        self.all_nsrd_names = {}
         self.nfeat_names = []
-        # lambda e: e['name']
         self.nrfeat_names = []
-        # lambda e: e.name
         self.nrace_names = []
-        # lambda e: e['name']
         self.ncfeat_names = []
-        # lambda e: e['name']
         self.nclass_names = []
-        # lambda e: e['name']
         self.nsubclass_names = []
-        # lambda e: e.name
         self.nbackground_names = []
-        # lambda e: e.name
         self.nmonster_names = []
-        # lambda e: e.name
         self.nspell_names = []
-        # lambda e: e['name']
         self.nitem_names = []
 
         self._base_path = os.path.relpath('res')
@@ -110,6 +101,7 @@ class Compendium:
 
         # Dictionary!
         self.itemprops = self.read_json('itemprops.json', {})
+        self.all_nsrd_names = self.read_json('nsrd-names.json', {})
 
     async def load_all_mongodb(self, mdb):
         lookup = {d['key']: d['object'] for d in await mdb.static_data.find({}).to_list(length=None)}
@@ -127,6 +119,7 @@ class Compendium:
 
         # Dictionary!
         self.itemprops = lookup.get('itemprops', {})
+        self.all_nsrd_names = lookup.get('nsrd-names', {})
 
     def load_common(self):
         self.backgrounds = [Background.from_data(b) for b in self.srd_backgrounds]
@@ -136,10 +129,11 @@ class Compendium:
 
         self.items = [i for i in self.srd_items if i.get('type') is not '$']
 
-        self.rfeats = self.load_rfeats()
-        self.subclasses = self.load_subclasses()
+        self.rfeats = self._load_rfeats()
+        self.subclasses = self._load_subclasses()
+        self._load_nsrd_names()
 
-    def load_rfeats(self):
+    def _load_rfeats(self):
         ret = []
         for race in self.srd_races:
             for entry in race['entries']:
@@ -149,7 +143,7 @@ class Compendium:
                     ret.append(temp)
         return ret
 
-    def load_subclasses(self):
+    def _load_subclasses(self):
         s = []
         for _class in self.classes:
             subclasses = _class.get('subclasses', [])
@@ -157,6 +151,18 @@ class Compendium:
                 sc['name'] = f"{_class['name']}: {sc['name']}"
             s.extend(subclasses)
         return s
+
+    def _load_nsrd_names(self):
+        self.nfeat_names = nameify(self.all_nsrd_names.get('feat', []))
+        self.nrfeat_names = nameify(self.all_nsrd_names.get('rfeat', []))
+        self.nrace_names = nameify(self.all_nsrd_names.get('race', []))
+        self.ncfeat_names = nameify(self.all_nsrd_names.get('cfeat', []))
+        self.nclass_names = nameify(self.all_nsrd_names.get('class', []))
+        self.nsubclass_names = nameify(self.all_nsrd_names.get('subclass', []))
+        self.nbackground_names = nameify(self.all_nsrd_names.get('background', []))
+        self.nmonster_names = nameify(self.all_nsrd_names.get('monster', []))
+        self.nspell_names = nameify(self.all_nsrd_names.get('spell', []))
+        self.nitem_names = nameify(self.all_nsrd_names.get('item', []))
 
     def read_json(self, filename, default):
         data = default
@@ -247,3 +253,18 @@ async def get_spell_choices(ctx):
             if servtome['_id'] != tome_id:
                 choices.extend(Spell.from_dict(s) for s in servtome['spells'])
     return choices
+
+
+# ==== nsrd helper class ====
+class NSRDName:
+    def __init__(self, name):
+        self.name = name
+        self.srd = False
+
+    def __getitem__(self, item):
+        return self.__getattribute__(item)
+
+
+def nameify(iterable):
+    """Takes a list of strings and returns a list of NSRDNames."""
+    return list(map(NSRDName, iterable))

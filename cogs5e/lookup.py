@@ -85,9 +85,7 @@ class Lookup(commands.Cog):
     @commands.command(aliases=['reference'])
     async def rule(self, ctx, *, name: str = None):
         """Looks up a rule."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-        destination = ctx.author if pm else ctx.channel
+        destination = await self._get_destination(ctx)
 
         if name is None:
             return await self._show_reference_options(ctx, destination)
@@ -113,14 +111,10 @@ class Lookup(commands.Cog):
     @commands.command()
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-        destination = ctx.author if pm else ctx.channel
-
         choices = compendium.feats + compendium.nfeat_names
-        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
-                                                   return_metadata=True)
-        await self.add_training_data("feat", name, result['name'], metadata=metadata)
+        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='feat')
+        if not result:
+            return
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -132,37 +126,29 @@ class Lookup(commands.Cog):
 
         add_fields_from_long_text(embed, "Description", result['desc'])
         embed.set_footer(text=f"Feat | {result['source']} {result['page']}")
-        await destination.send(embed=embed)
+        await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-        destination = ctx.author if pm else ctx.channel
-
         choices = compendium.rfeats + compendium.nrfeat_names
-        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
-                                                   return_metadata=True)
-        await self.add_training_data("racefeat", name, result['name'], metadata=metadata)
+        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='racefeat')
+        if not result:
+            return
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         set_maybe_long_desc(embed, result['text'])
 
-        await destination.send(embed=embed)
+        await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-        destination = ctx.author if pm else ctx.channel
-
         choices = compendium.fancyraces + compendium.nrace_names
-        result, metadata = await search_and_select(ctx, choices, name, lambda e: e.name,
-                                                   return_metadata=True)
-        await self.add_training_data("race", name, result.name, metadata=metadata)
+        result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='race')
+        if not result:
+            return
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -178,40 +164,32 @@ class Lookup(commands.Cog):
             for piece in f_text[1:]:
                 embed.add_field(name="** **", value=piece)
 
-        await destination.send(embed=embed)
+        await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-        destination = ctx.author if pm else ctx.channel
-
         choices = compendium.cfeats + compendium.ncfeat_names
-        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
-                                                   return_metadata=True)
-        await self.add_training_data("classfeat", name, result['name'], metadata=metadata)
+        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='classfeat')
+        if not result:
+            return
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         set_maybe_long_desc(embed, result['text'])
 
-        await destination.send(embed=embed)
+        await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command(name='class')
     async def _class(self, ctx, name: str, level: int = None):
         """Looks up a class, or all features of a certain level."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-        destination = ctx.author if pm else ctx.channel
-
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
         choices = compendium.classes + compendium.nclass_names
-        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
-                                                   return_metadata=True)
-        await self.add_training_data("class", name, result['name'], metadata=metadata)
+        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='class')
+        if not result:
+            return
 
         embed = EmbedWithAuthor(ctx)
         if level is None:
@@ -271,19 +249,15 @@ class Lookup(commands.Cog):
 
             embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
 
-        await destination.send(embed=embed)
+        await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     async def subclass(self, ctx, name: str):
         """Looks up a subclass."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-        destination = ctx.author if pm else ctx.channel
-
         choices = compendium.subclasses + compendium.nsubclass_names
-        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
-                                                   return_metadata=True)
-        await self.add_training_data("subclass", name, result['name'], metadata=metadata)
+        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='subclass')
+        if not result:
+            return
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
@@ -299,18 +273,15 @@ class Lookup(commands.Cog):
 
         embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
 
-        await destination.send(embed=embed)
+        await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-
         choices = compendium.backgrounds + compendium.nbackground_names
-        result, metadata = await search_and_select(ctx, choices, name, lambda e: e.name,
-                                                   return_metadata=True)
-        await self.add_training_data("background", name, result.name, metadata=metadata)
+        result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='background')
+        if not result:
+            return
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -324,11 +295,7 @@ class Lookup(commands.Cog):
             text = textwrap.shorten(text, width=1020, placeholder="...")
             embed.add_field(name=trait['name'], value=text)
 
-        # do stuff here
-        if pm:
-            await ctx.author.send(embed=embed)
-        else:
-            await ctx.send(embed=embed)
+        await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     @commands.guild_only()
@@ -433,8 +400,9 @@ class Lookup(commands.Cog):
 
         monster, metadata = await select_monster_full(ctx, name, return_metadata=True,
                                                       extra_choices=compendium.nmonster_names)
-
         metadata['homebrew'] = monster.source == 'homebrew'
+        if not (metadata['homebrew'] or monster['srd']):
+            return await self._non_srd(ctx, monster, "monster")
         await self.add_training_data("monster", name, monster.name, metadata=metadata)
 
         embed_queue = [EmbedWithAuthor(ctx)]
@@ -554,13 +522,11 @@ class Lookup(commands.Cog):
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-
         spell, metadata = await select_spell_full(ctx, name, return_metadata=True,
                                                   extra_choices=compendium.nspell_names)
-
         metadata['homebrew'] = spell.source == 'homebrew'
+        if not (metadata['homebrew'] or spell['srd']):
+            return await self._non_srd(ctx, spell, "spell")
         await self.add_training_data("spell", name, spell.name, metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -607,18 +573,13 @@ class Lookup(commands.Cog):
         if spell.image:
             embed_queue[0].set_thumbnail(url=spell.image)
 
+        destination = await self._get_destination(ctx)
         for embed in embed_queue:
-            if pm:
-                await ctx.author.send(embed=embed)
-            else:
-                await ctx.send(embed=embed)
+            await destination.send(embed=embed)
 
     @commands.command(name='item')
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
-        guild_settings = await self.get_settings(ctx.guild)
-        pm = guild_settings.get("pm_result", False)
-
         try:
             pack = await Pack.from_ctx(ctx)
             custom_items = pack.get_search_formatted_items()
@@ -642,8 +603,9 @@ class Lookup(commands.Cog):
 
         result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
                                                    selectkey=get_homebrew_formatted_name, return_metadata=True)
-
         metadata['homebrew'] = result.get('source') == 'homebrew'
+        if not (metadata['homebrew'] or result['srd']):
+            return await self._non_srd(ctx, result, "item")
         await self.add_training_data("item", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
@@ -742,12 +704,8 @@ class Lookup(commands.Cog):
             embed.add_field(name=field_name, value=piece)
             field_name = "** **"
 
-        if pm:
-            await ctx.author.send(embed=embed)
-        else:
-            await ctx.send(embed=embed)
-
         await Stats.increase_stat(ctx, "items_looked_up_life")
+        await (await self._get_destination(ctx)).send(embed=embed)
 
     async def get_settings(self, guild):
         settings = {}  # default PM settings
@@ -762,6 +720,34 @@ class Lookup(commands.Cog):
             data['chosen_index'] = metadata.get('chosen_index', 0)
             data['homebrew'] = metadata.get('homebrew', False)
         await self.bot.mdb.nn_training.insert_one(data)
+
+    # ==== helpers ====
+    async def _get_destination(self, ctx):
+        guild_settings = await self.get_settings(ctx.guild)
+        pm = guild_settings.get("pm_result", False)
+        return ctx.author if pm else ctx.channel
+
+    async def _lookup_search(self, ctx, choices, query, key, search_type=None):
+        result, metadata = await search_and_select(ctx, choices, query, key, return_metadata=True)
+        if not result['srd']:
+            await self._non_srd(ctx, result, search_type)
+            return None
+        if search_type is not None:
+            await self.add_training_data(search_type, query, key(result), metadata=metadata)
+        return result
+
+    async def _non_srd(self, ctx, result, search_type=None):
+        if search_type is not None:
+            await self.bot.mdb.analytics_nsrd_lookup.update_one({"type": search_type, "name": result.name},
+                                                                {"$inc": {"num_lookups": 1}},
+                                                                upsert=True)
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = f"{result.name} is not available in the SRD!"
+        embed.description = f"Unfortunately, {result.name} is not available in the SRD (what Wizards of the Coast " \
+                            f"offers for free). You can see everything that is at " \
+                            f"<http://dnd.wizards.com/articles/features/systems-reference-document-srd>."
+        await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):

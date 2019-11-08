@@ -20,6 +20,7 @@ LOAD_FILES = {
     'srd-references': [],
 
     'itemprops': {},
+    'nsrd-names': {},
 }
 
 

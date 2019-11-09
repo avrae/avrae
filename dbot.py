@@ -9,7 +9,9 @@ import traceback
 import utils.newrelic
 
 utils.newrelic.hook_all()
+from utils import clustering, config
 
+import aioredis
 import discord
 import motor.motor_asyncio
 import sentry_sdk
@@ -20,20 +22,8 @@ from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.errors import AvraeException, EvaluationError
-from utils.functions import get_positivity
 from utils.help import help_command
 from utils.redisIO import RedisIO
-
-TESTING = get_positivity(os.environ.get("TESTING", False))
-if 'test' in sys.argv:
-    TESTING = True
-ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
-GIT_COMMIT_SHA = os.getenv('GIT_COMMIT_SHA')
-MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
-REDIS_DB_NUM = int(os.getenv('REDIS_DB_NUM', 0))
-SHARD_COUNT = None if not TESTING else 1
-DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
-SENTRY_DSN = os.getenv('SENTRY_DSN') or None
 
 # -----COGS-----
 COGS = (
@@ -45,16 +35,16 @@ COGS = (
 
 async def get_prefix(the_bot, message):
     if not message.guild:
-        return commands.when_mentioned_or(DEFAULT_PREFIX)(the_bot, message)
+        return commands.when_mentioned_or(config.DEFAULT_PREFIX)(the_bot, message)
     guild_id = str(message.guild.id)
     if guild_id in the_bot.prefixes:
-        gp = the_bot.prefixes.get(guild_id, DEFAULT_PREFIX)
+        gp = the_bot.prefixes.get(guild_id, config.DEFAULT_PREFIX)
     else:  # load from db and cache
         gp_obj = await the_bot.mdb.prefixes.find_one({"guild_id": guild_id})
         if gp_obj is None:
-            gp = DEFAULT_PREFIX
+            gp = config.DEFAULT_PREFIX
         else:
-            gp = gp_obj.get("prefix", DEFAULT_PREFIX)
+            gp = gp_obj.get("prefix", config.DEFAULT_PREFIX)
         the_bot.prefixes[guild_id] = gp
     return commands.when_mentioned_or(gp)(the_bot, message)
 
@@ -65,40 +55,52 @@ class Avrae(commands.AutoShardedBot):
         self.testing = testing
         self.state = "init"
         self.credentials = Credentials()
-        if TESTING:
-            self.rdb = RedisIO(testing=True, database_url=self.credentials.test_redis_url, db=REDIS_DB_NUM)
+        if config.TESTING:
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
         else:
-            self.rdb = RedisIO(database_url=os.getenv('REDIS_URL', ''), db=REDIS_DB_NUM)
-            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
-
-        self.mdb = self.mclient[MONGODB_DB_NAME]
+            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+        self.mdb = self.mclient[config.MONGODB_DB_NAME]
+        self.rdb = self.loop.run_until_complete(self.setup_rdb())
         self.prefixes = dict()
         self.muted = set()
+        self.cluster_id = 0
 
-        if SENTRY_DSN is not None:
+        if config.SENTRY_DSN is not None:
             release = None
-            if GIT_COMMIT_SHA:
-                release = f"avrae-bot@{GIT_COMMIT_SHA}"
-            sentry_sdk.init(dsn=SENTRY_DSN, environment=ENVIRONMENT.title(), release=release)
+            if config.GIT_COMMIT_SHA:
+                release = f"avrae-bot@{config.GIT_COMMIT_SHA}"
+            sentry_sdk.init(dsn=config.SENTRY_DSN, environment=config.ENVIRONMENT.title(), release=release)
+
+    async def setup_rdb(self):
+        if config.TESTING:
+            redis_url = self.credentials.test_redis_url
+        else:
+            redis_url = config.REDIS_URL
+        return RedisIO(await aioredis.create_redis_pool(redis_url, db=config.REDIS_DB_NUM))
 
     async def get_server_prefix(self, msg):
         return (await get_prefix(self, msg))[-1]
 
     async def launch_shards(self):
-        if self.shard_count is None:
-            recommended_shards, _ = await self.http.get_bot_gateway()
-            if recommended_shards >= 96 and not recommended_shards % 16:
-                # half, round up to nearest 16
-                self.shard_count = recommended_shards // 2 + (16 - (recommended_shards // 2) % 16)
-            else:
-                self.shard_count = max(recommended_shards // 2, 1)
-        log.info(f"Launching {self.shard_count} shards!")
+        # set up my shard_ids
+        await clustering.coordinate_shards(self)
+        if self.shard_ids is not None:
+            log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
         await super(Avrae, self).launch_shards()
+        log.info(f"Launched {len(self.shards)} shards!")
+
+        if self.is_cluster_0:
+            await self.rdb.incr('build_num')
+
+    @property
+    def is_cluster_0(self):
+        if self.cluster_id is None:  # we're not running in clustered mode anyway
+            return True
+        return self.cluster_id == 0
 
     @staticmethod
     def log_exception(exception=None, context: commands.Context = None):
-        if SENTRY_DSN is None:
+        if config.SENTRY_DSN is None:
             return
 
         with sentry_sdk.push_scope() as scope:
@@ -125,10 +127,10 @@ class Credentials:
         self.token = credentials.officialToken
         self.test_redis_url = credentials.test_redis_url
         self.test_mongo_url = credentials.test_mongo_url
-        if TESTING:
+        if config.TESTING:
             self.token = credentials.testToken
-        if 'ALPHA_TOKEN' in os.environ:
-            self.token = os.environ.get("ALPHA_TOKEN")
+        if config.ALPHA_TOKEN:
+            self.token = config.ALPHA_TOKEN
 
 
 desc = '''
@@ -137,8 +139,8 @@ A full command list can be found [here](https://avrae.io/commands)!
 Invite Avrae to your server [here](https://invite.avrae.io)!
 Join the official development server [here](https://support.avrae.io)!
 '''
-bot = Avrae(prefix=get_prefix, description=desc, pm_help=True,
-            shard_count=SHARD_COUNT, testing=TESTING, activity=discord.Game(name=f'D&D 5e | {DEFAULT_PREFIX}help'))
+bot = Avrae(prefix=get_prefix, description=desc, pm_help=True, testing=config.TESTING,
+            activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'))
 
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)
@@ -263,8 +265,5 @@ for cog in COGS:
 if __name__ == '__main__':
     faulthandler.enable()  # assumes we log errors to stderr, traces segfaults
     bot.state = "run"
-    if not bot.rdb.exists('build_num'):
-        bot.rdb.set('build_num', 0)
-    bot.rdb.incr('build_num')
     bot.loop.create_task(compendium.reload_task(bot.mdb))
     bot.run(bot.credentials.token)

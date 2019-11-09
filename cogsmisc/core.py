@@ -6,7 +6,7 @@ Created on Dec 26, 2016
 import random
 import time
 from datetime import datetime, timedelta
-from math import floor
+from math import floor, isnan
 
 import discord
 import psutil
@@ -41,15 +41,16 @@ class Core(commands.Cog):
         now = datetime.utcnow()
         pong = await ctx.send("Pong.")
         delta = datetime.utcnow() - now
-        msec = floor(delta.total_seconds() * 1000)
-        await pong.edit(content="Pong.\nPing = {} ms.".format(msec))
+        httping = floor(delta.total_seconds() * 1000)
+        wsping = floor(self.bot.latency * 1000) if not isnan(self.bot.latency) else "Unknown"
+        await pong.edit(content=f"Pong.\nHTTP Ping = {httping} ms.\nWS Ping = {wsping} ms.")
 
     @commands.command()
     async def invite(self, ctx):
         """Prints a link to invite Avrae to your server."""
         await ctx.send(
             "You can invite Avrae to your server here:\n"
-            "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=388160")
+            "<https://invite.avrae.io>")
 
     @commands.command(aliases=['stats', 'info'])
     async def about(self, ctx):
@@ -62,18 +63,18 @@ class Core(commands.Cog):
 
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
         embed.title = "Invite Avrae to your server!"
-        embed.url = "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808"
+        embed.url = "https://invite.avrae.io"
         embed.colour = 0x7289da
         total_members = sum(1 for _ in self.bot.get_all_members())
         unique_members = len(self.bot.users)
         members = '%s total\n%s unique' % (total_members, unique_members)
-        embed.add_field(name='Members', value=members)
+        embed.add_field(name='Members (Cluster)', value=members)
         embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
         motd = random.choice(["May the RNG be with you", "May your rolls be high",
                               "Will give higher rolls for cookies", ">:3",
                               "Does anyone even read these?"])
         embed.set_footer(
-            text='{} | Build {}'.format(motd, self.bot.rdb.get("build_num")))
+            text=f'{motd} | Build {await self.bot.rdb.get("build_num")} | Cluster {self.bot.cluster_id}')
 
         commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n" \
                        "{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n" \
@@ -81,7 +82,8 @@ class Core(commands.Cog):
                        "{rounds_init_tracked_life} rounds of initiative tracked ({turns_init_tracked_life} turns)" \
             .format(**stats)
         embed.add_field(name="Commands Run", value=commands_run)
-        embed.add_field(name="Servers", value=str(len(self.bot.guilds)))
+        embed.add_field(name="Servers", value=f"{len(self.bot.guilds)} on this cluster\n"
+                                              f"{await Stats.get_guild_count(self.bot)} total")
         memory_usage = psutil.Process().memory_full_info().uss / 1024 ** 2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
         embed.add_field(name='About', value='Made with :heart: by zhu.exe#4211 and the D&D Beyond team\n'

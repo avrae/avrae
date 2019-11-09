@@ -7,9 +7,7 @@ Created on Jan 19, 2017
 import ast
 import collections
 import logging
-import os
 import re
-import sys
 from math import ceil, floor
 
 from simpleeval import FunctionNotDefined, NameNotDefined, SimpleEval
@@ -23,20 +21,20 @@ from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
+from utils import config
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
 from .abc import SHEET_VERSION, SheetLoaderABC
 
 log = logging.getLogger(__name__)
 
-TESTING = (os.environ.get("TESTING", False) or 'test' in sys.argv)
 CLASS_RESOURCES = ("expertiseDice", "ki", "rages", "sorceryPoints", "superiorityDice")
 CLASS_RESOURCE_NAMES = {"expertiseDice": "Expertise Dice", "ki": "Ki", "rages": "Rages",
                         "sorceryPoints": "Sorcery Points", "superiorityDice": "Superiority Dice"}
 CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long',
                          "sorceryPoints": 'long', "superiorityDice": 'short'}
 API_BASE = "https://dicecloud.com/character/"
-KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
+KEY = credentials.dicecloud_token if not config.TESTING else credentials.test_dicecloud_token
 
 
 class DicecloudParser(SheetLoaderABC):

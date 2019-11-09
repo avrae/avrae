@@ -1,21 +1,14 @@
 import asyncio
 import logging
-import os
-import sys
 import time
 import urllib.parse
 
 from MeteorClient import MeteorClient
 
-import credentials
+from utils import config
 from .errors import InsertFailure, LoginFailure
 from .http import DicecloudHTTP
 
-TESTING = (os.environ.get("TESTING", False) or 'test' in sys.argv)
-NO_DICECLOUD = os.environ.get("NO_DICECLOUD", False)
-UNAME = os.getenv('DICECLOUD_USER', 'avrae') if not TESTING else credentials.test_dicecloud_user
-PWD = credentials.dicecloud_pass.encode() if not TESTING else credentials.test_dicecloud_pass.encode()
-API_KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
 API_BASE = "https://dicecloud.com"
 SOCKET_BASE = "wss://dicecloud.com/websocket"
 
@@ -28,27 +21,27 @@ class DicecloudClient:
 
     def __init__(self, debug=False):
         self.meteor_client = MeteorClient(SOCKET_BASE, debug=debug)
-        self.http = DicecloudHTTP(API_BASE, API_KEY, debug=debug)
+        self.http = DicecloudHTTP(API_BASE, config.DICECLOUD_API_KEY, debug=debug)
         self.logged_in = False
 
     @classmethod
     def getInstance(cls):
-        if cls.instance is None and not NO_DICECLOUD:
+        if cls.instance is None and not config.NO_DICECLOUD:
             try:
-                cls.instance = cls(debug=TESTING)
+                cls.instance = cls(debug=config.TESTING)
                 cls.instance.initialize()
             except:
                 return None
         return cls.instance
 
     def initialize(self):
-        log.info(f"Initializing Dicecloud Meteor client (debug={TESTING})")
+        log.info(f"Initializing Dicecloud Meteor client (debug={config.TESTING})")
         self.meteor_client.connect()
         loops = 0
         while (not self.meteor_client.connected) and loops < 100:
             time.sleep(0.1)
             loops += 1
-        log.info(f"Connected to Dicecloud in {loops/10} seconds")
+        log.info(f"Connected to Dicecloud in {loops / 10} seconds")
 
         def on_login(error, data):
             if data:
@@ -58,7 +51,7 @@ class DicecloudClient:
                 log.warning(error)
                 raise LoginFailure()
 
-        self.meteor_client.login(UNAME, PWD, callback=on_login)
+        self.meteor_client.login(config.DICECLOUD_USER, config.DICECLOUD_PASS, callback=on_login)
         loops = 0
         while not self.logged_in and loops < 100:
             time.sleep(0.1)

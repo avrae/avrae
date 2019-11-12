@@ -81,7 +81,7 @@ class Homebrew(commands.Cog):
     async def bestiary_import(self, ctx, url):
         """Imports a published bestiary from [CritterDB](https://critterdb.com/).
         If your attacks don't seem to be importing properly, you can add a hidden line to the description to set it:
-        `<avrae hidden>NAME|TOHITBONUS|DAMAGE</avrae>"""
+        `<avrae hidden>NAME|TOHITBONUS|DAMAGE</avrae>`"""
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
         # https://critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
         if not 'critterdb.com' in url:

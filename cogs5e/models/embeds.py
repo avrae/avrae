@@ -42,9 +42,13 @@ def add_fields_from_args(embed, _fields):
     """
     if type(_fields) == list:
         for f in _fields:
+            inline = False
             title = f.split('|')[0] if '|' in f else '\u200b'
             value = f.split('|', 1)[1] if '|' in f else f
-            embed.add_field(name=title, value=value)
+            if value.endswith('|inline'):
+                inline = True
+                value = value[:-7]
+            embed.add_field(name=title, value=value, inline=inline)
     return embed
 
 

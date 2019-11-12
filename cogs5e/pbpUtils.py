@@ -43,14 +43,16 @@ class PBPUtils(commands.Cog):
     @commands.command()
     async def embed(self, ctx, *, args):
         """Creates and prints an Embed.
-        Arguments: -title [title]
-        -desc [description text]
-        -thumb [image url]
-        -image [image url]
-        -footer [footer text]
-        -f ["Field Title|Field Text"]
-        -color [hex color]
-        -t [timeout (0..600)]
+        __Valid Arguments__
+        -title <title>
+        -desc <description text>
+        -thumb <image url>
+        -image <image url>
+        -footer <footer text>
+        -f "<Field Title>|<Field Text>[|inline]"
+            (e.g. "Donuts|I have 15 donuts|inline" for an inline field, or "Donuts|I have 15 donuts" for one with its own line.)
+        -color <hex color>
+        -t <timeout (0..600)>
         """
         try:
             await ctx.message.delete()

@@ -66,7 +66,8 @@ class Lookup(commands.Cog):
                             f"a certain type.\nCategories: {categories}"
 
         for actiontype in compendium.rule_references:
-            embed.add_field(name=actiontype['fullName'], value=', '.join(a['name'] for a in actiontype['items']))
+            embed.add_field(name=actiontype['fullName'], value=', '.join(a['name'] for a in actiontype['items']),
+                            inline=False)
 
         await destination.send(embed=embed)
 
@@ -124,10 +125,10 @@ class Lookup(commands.Cog):
         embed = EmbedWithAuthor(ctx)
         embed.title = result['name']
         if result['prerequisite']:
-            embed.add_field(name="Prerequisite", value=result['prerequisite'])
+            embed.add_field(name="Prerequisite", value=result['prerequisite'], inline=False)
         if result['ability']:
             embed.add_field(name="Ability Improvement",
-                            value=f"Increase your {result['ability']} score by 1, up to a maximum of 20.")
+                            value=f"Increase your {result['ability']} score by 1, up to a maximum of 20.", inline=False)
 
         add_fields_from_long_text(embed, "Description", result['desc'])
         embed.set_footer(text=f"Feat | {result['source']} {result['page']}")
@@ -169,11 +170,7 @@ class Lookup(commands.Cog):
         if result.ability:
             embed.add_field(name="Ability Bonuses", value=result.get_asi_str())
         for t in result.get_traits():
-            f_text = t['text']
-            f_text = [f_text[i:i + 1024] for i in range(0, len(f_text), 1024)]
-            embed.add_field(name=t['name'], value=f_text[0])
-            for piece in f_text[1:]:
-                embed.add_field(name="** **", value=piece)
+            add_fields_from_long_text(embed, t['name'], t['text'])
 
         await destination.send(embed=embed)
 
@@ -236,8 +233,8 @@ class Lookup(commands.Cog):
                     level_str.append(feature.get('name'))
                 levels.append(', '.join(level_str))
 
-            embed.add_field(name="Starting Proficiencies", value=starting_profs)
-            embed.add_field(name="Starting Equipment", value=starting_items)
+            embed.add_field(name="Starting Proficiencies", value=starting_profs, inline=False)
+            embed.add_field(name="Starting Equipment", value=starting_items, inline=False)
 
             level_features_str = ""
             for i, l in enumerate(levels):
@@ -262,7 +259,7 @@ class Lookup(commands.Cog):
 
             for f in level_features:
                 text = parse_data_entry(f['entries'])
-                embed.add_field(name=f['name'], value=(text[:1019] + "...") if len(text) > 1023 else text)
+                embed.add_field(name=f['name'], value=(text[:1019] + "...") if len(text) > 1023 else text, inline=False)
 
             embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
 
@@ -289,7 +286,8 @@ class Lookup(commands.Cog):
                     if not isinstance(entry, dict): continue
                     if not entry.get('type') == 'entries': continue
                     text = parse_data_entry(entry['entries'])
-                    embed.add_field(name=entry['name'], value=(text[:1019] + "...") if len(text) > 1023 else text)
+                    embed.add_field(name=entry['name'], value=(text[:1019] + "...") if len(text) > 1023 else text,
+                                    inline=False)
 
         embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
 
@@ -315,7 +313,7 @@ class Lookup(commands.Cog):
             if trait['name'].lower() in ignored_fields: continue
             text = trait['text']
             text = textwrap.shorten(text, width=1020, placeholder="...")
-            embed.add_field(name=trait['name'], value=text)
+            embed.add_field(name=trait['name'], value=text, inline=False)
 
         # do stuff here
         if pm:
@@ -436,7 +434,7 @@ class Lookup(commands.Cog):
 
         def safe_append(title, desc):
             if len(desc) < 1024:
-                embed_queue[-1].add_field(name=title, value=desc)
+                embed_queue[-1].add_field(name=title, value=desc, inline=False)
             elif len(desc) < 2048:
                 # noinspection PyTypeChecker
                 # I'm adding an Embed to a list of Embeds, shut up.
@@ -566,7 +564,7 @@ class Lookup(commands.Cog):
             time = spell.time
         embed.add_field(name="Casting Time", value=time)
         embed.add_field(name="Range", value=spell.range)
-        embed.add_field(name="Components", value=spell.components)
+        embed.add_field(name="Components", value=spell.components, inline=False)
         embed.add_field(name="Duration", value=spell.duration)
 
         text = spell.description
@@ -577,7 +575,7 @@ class Lookup(commands.Cog):
         else:
             pieces = [text]
 
-        embed.add_field(name="Description", value=pieces[0])
+        embed.add_field(name="Description", value=pieces[0], inline=False)
 
         embed_queue = [embed]
         if len(pieces) > 1:
@@ -588,7 +586,7 @@ class Lookup(commands.Cog):
                 embed_queue.append(temp_embed)
 
         if higher_levels:
-            embed_queue[-1].add_field(name="At Higher Levels", value=higher_levels)
+            embed_queue[-1].add_field(name="At Higher Levels", value=higher_levels, inline=False)
 
         if spell.source == 'homebrew':
             embed_queue[-1].set_footer(text="Homebrew content.", icon_url=HOMEBREW_ICON)
@@ -707,7 +705,7 @@ class Lookup(commands.Cog):
                 if item['reqAttune'] is True:  # can be truthy, but not true
                     embed.add_field(name="Attunement", value=f"Requires Attunement")
                 else:
-                    embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune']}")
+                    embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune']}", inline=False)
 
             embed.set_footer(text=f"Item | {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
         else:
@@ -725,10 +723,7 @@ class Lookup(commands.Cog):
         if len(text) > 5500:
             text = text[:5500] + "..."
 
-        field_name = "Description"
-        for piece in [text[i:i + 1024] for i in range(0, len(text), 1024)]:
-            embed.add_field(name=field_name, value=piece)
-            field_name = "** **"
+        add_fields_from_long_text(embed, "Description", text)
 
         if pm:
             await ctx.author.send(embed=embed)

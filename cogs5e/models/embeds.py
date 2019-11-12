@@ -43,7 +43,7 @@ def add_fields_from_args(embed, _fields):
     if type(_fields) == list:
         for f in _fields:
             title = f.split('|')[0] if '|' in f else '\u200b'
-            value = "|".join(f.split('|')[1:]) if '|' in f else f
+            value = f.split('|', 1)[1] if '|' in f else f
             embed.add_field(name=title, value=value)
     return embed
 
@@ -64,7 +64,7 @@ def set_maybe_long_desc(embed, desc):
     desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
     embed.description = ''.join(desc[:2])
     for piece in desc[2:]:
-        embed.add_field(name="** **", value=piece)
+        embed.add_field(name="** **", value=piece, inline=False)
 
 
 def add_fields_from_long_text(embed, field_name, text):
@@ -77,6 +77,6 @@ def add_fields_from_long_text(embed, field_name, text):
     text = [text[i:i + 1024] for i in range(0, len(text), 1024)]
     if not text:
         return
-    embed.add_field(name=field_name, value=text[0])
+    embed.add_field(name=field_name, value=text[0], inline=False)
     for piece in text[1:]:
-        embed.add_field(name="** **", value=piece)
+        embed.add_field(name="** **", value=piece, inline=False)

@@ -137,7 +137,7 @@ class AutomationContext:
         for field in self._field_queue:
             self.embed.add_field(**field)
         for effect in self._effect_queue:
-            self.embed.add_field(name="Effect", value=effect)
+            self.embed.add_field(name="Effect", value=effect, inline=False)
         self.embed.set_footer(text='\n'.join(self._footer_queue))
 
     def add_pm(self, user, message):

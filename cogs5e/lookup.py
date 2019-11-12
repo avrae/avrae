@@ -403,9 +403,9 @@ class Lookup(commands.Cog):
                                                       extra_choices=compendium.nmonster_names,
                                                       selectkey=self.nsrd_selectkey_obj)
         metadata['homebrew'] = monster.source == 'homebrew'
+        await self.add_training_data("monster", name, monster.name, metadata=metadata, srd=monster.srd)
         if not (metadata['homebrew'] or monster.srd):
             return await self._non_srd(ctx, monster, "monster")
-        await self.add_training_data("monster", name, monster.name, metadata=metadata)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -528,9 +528,9 @@ class Lookup(commands.Cog):
                                                   extra_choices=compendium.nspell_names,
                                                   selectkey=self.nsrd_selectkey_obj)
         metadata['homebrew'] = spell.source == 'homebrew'
+        await self.add_training_data("spell", name, spell.name, metadata=metadata, srd=spell.srd)
         if not (metadata['homebrew'] or spell.srd):
             return await self._non_srd(ctx, spell, "spell")
-        await self.add_training_data("spell", name, spell.name, metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         color = embed.colour
@@ -601,9 +601,9 @@ class Lookup(commands.Cog):
         result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
                                                    selectkey=self.nsrd_selectkey, return_metadata=True)
         metadata['homebrew'] = result.get('source') == 'homebrew'
+        await self.add_training_data("item", name, result['name'], metadata=metadata, srd=result['srd'])
         if not (metadata['homebrew'] or result['srd']):
             return await self._non_srd(ctx, result, "item")
-        await self.add_training_data("item", name, result['name'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         item = result
@@ -710,8 +710,8 @@ class Lookup(commands.Cog):
             settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
         return settings or {}
 
-    async def add_training_data(self, lookup_type, query, result_name, metadata=None):
-        data = {"type": lookup_type, "query": query, "result": result_name, "srd": True}
+    async def add_training_data(self, lookup_type, query, result_name, metadata=None, srd=True):
+        data = {"type": lookup_type, "query": query, "result": result_name, "srd": srd}
         if metadata:
             data['given_options'] = metadata.get('num_options', 1)
             data['chosen_index'] = metadata.get('chosen_index', 0)
@@ -729,12 +729,19 @@ class Lookup(commands.Cog):
             selectkey = self.nsrd_selectkey_obj
         else:
             selectkey = self.nsrd_selectkey
+
+        # get the object
         result, metadata = await search_and_select(ctx, choices, query, key, return_metadata=True, selectkey=selectkey)
-        if (is_obj and not result.srd) or (not is_obj and not result['srd']):
+        not_srd = (is_obj and not result.srd) or (not is_obj and not result['srd'])
+
+        # log the query
+        if search_type is not None:
+            await self.add_training_data(search_type, query, key(result), metadata=metadata, srd=not not_srd)
+
+        # display error if not srd
+        if not_srd:
             await self._non_srd(ctx, result, search_type)
             return None
-        if search_type is not None:
-            await self.add_training_data(search_type, query, key(result), metadata=metadata)
         return result
 
     async def _non_srd(self, ctx, result, search_type=None):

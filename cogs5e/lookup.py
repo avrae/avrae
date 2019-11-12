@@ -9,7 +9,8 @@ import textwrap
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs.lookupFuncs import HOMEBREW_EMOJI, HOMEBREW_ICON, compendium, select_monster_full, select_spell_full
+from cogs5e.funcs.lookupFuncs import HOMEBREW_EMOJI, HOMEBREW_ICON, compendium, get_homebrew_formatted_name, \
+    select_monster_full, select_spell_full
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, add_homebrew_footer, set_maybe_long_desc
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.pack import Pack
@@ -146,7 +147,7 @@ class Lookup(commands.Cog):
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
         choices = compendium.fancyraces + compendium.nrace_names
-        result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='race')
+        result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='race', is_obj=True)
         if not result:
             return
 
@@ -279,7 +280,7 @@ class Lookup(commands.Cog):
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
         choices = compendium.backgrounds + compendium.nbackground_names
-        result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='background')
+        result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='background', is_obj=True)
         if not result:
             return
 
@@ -399,9 +400,10 @@ class Lookup(commands.Cog):
             visible = True
 
         monster, metadata = await select_monster_full(ctx, name, return_metadata=True,
-                                                      extra_choices=compendium.nmonster_names)
+                                                      extra_choices=compendium.nmonster_names,
+                                                      selectkey=self.nsrd_selectkey_obj)
         metadata['homebrew'] = monster.source == 'homebrew'
-        if not (metadata['homebrew'] or monster['srd']):
+        if not (metadata['homebrew'] or monster.srd):
             return await self._non_srd(ctx, monster, "monster")
         await self.add_training_data("monster", name, monster.name, metadata=metadata)
 
@@ -523,9 +525,10 @@ class Lookup(commands.Cog):
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
         spell, metadata = await select_spell_full(ctx, name, return_metadata=True,
-                                                  extra_choices=compendium.nspell_names)
+                                                  extra_choices=compendium.nspell_names,
+                                                  selectkey=self.nsrd_selectkey_obj)
         metadata['homebrew'] = spell.source == 'homebrew'
-        if not (metadata['homebrew'] or spell['srd']):
+        if not (metadata['homebrew'] or spell.srd):
             return await self._non_srd(ctx, spell, "spell")
         await self.add_training_data("spell", name, spell.name, metadata=metadata)
 
@@ -595,14 +598,8 @@ class Lookup(commands.Cog):
 
         # #881 - display nSRD names
         choices.extend(compendium.nitem_names)
-
-        def get_homebrew_formatted_name(_item):
-            if _item.get('source') == 'homebrew':
-                return f"{_item['name']} ({HOMEBREW_EMOJI})"
-            return _item['name']
-
         result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
-                                                   selectkey=get_homebrew_formatted_name, return_metadata=True)
+                                                   selectkey=self.nsrd_selectkey, return_metadata=True)
         metadata['homebrew'] = result.get('source') == 'homebrew'
         if not (metadata['homebrew'] or result['srd']):
             return await self._non_srd(ctx, result, "item")
@@ -727,9 +724,13 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         return ctx.author if pm else ctx.channel
 
-    async def _lookup_search(self, ctx, choices, query, key, search_type=None):
-        result, metadata = await search_and_select(ctx, choices, query, key, return_metadata=True)
-        if not result['srd']:
+    async def _lookup_search(self, ctx, choices, query, key, search_type=None, is_obj=False):
+        if is_obj:
+            selectkey = self.nsrd_selectkey_obj
+        else:
+            selectkey = self.nsrd_selectkey
+        result, metadata = await search_and_select(ctx, choices, query, key, return_metadata=True, selectkey=selectkey)
+        if (is_obj and not result.srd) or (not is_obj and not result['srd']):
             await self._non_srd(ctx, result, search_type)
             return None
         if search_type is not None:
@@ -745,9 +746,25 @@ class Lookup(commands.Cog):
         embed = EmbedWithAuthor(ctx)
         embed.title = f"{result.name} is not available in the SRD!"
         embed.description = f"Unfortunately, {result.name} is not available in the SRD (what Wizards of the Coast " \
-                            f"offers for free). You can see everything that is at " \
-                            f"<http://dnd.wizards.com/articles/features/systems-reference-document-srd>."
+                            f"offers for free). You can see everything that is [here](" \
+                            f"http://dnd.wizards.com/articles/features/systems-reference-document-srd).\n\n" \
+                            f"In the near future, you will be able to connect your D&D Beyond account to Avrae to " \
+                            f"view non-SRD content; stay tuned!"
         await ctx.send(embed=embed)
+
+    @staticmethod
+    def nsrd_selectkey_obj(named):
+        if named.source == 'NSRD':
+            return f"{named.name}*"
+        return get_homebrew_formatted_name(named)
+
+    @staticmethod
+    def nsrd_selectkey(named):
+        if named.get('source') == 'NSRD':
+            return f"{named['name']}*"
+        elif named.get('source') == 'homebrew':
+            return f"{named['name']} ({HOMEBREW_EMOJI})"
+        return named['name']
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):

@@ -180,9 +180,16 @@ class Compendium:
 compendium = Compendium()
 
 
+# ---- helper ----
+def get_homebrew_formatted_name(named):
+    if named.source == 'homebrew':
+        return f"{named.name} ({HOMEBREW_EMOJI})"
+    return named.name
+
+
 # ----- Monster stuff
 async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                              return_metadata=False, extra_choices=None):
+                              return_metadata=False, extra_choices=None, selectkey=None):
     """
     Gets a Monster from the compendium and active bestiary/ies.
     """
@@ -202,41 +209,35 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
             await servbestiary.load_monsters(ctx)
             choices.extend(servbestiary.monsters)
 
+    await Stats.increase_stat(ctx, "monsters_looked_up_life")
+
     # #881
     if extra_choices:
         choices.extend(extra_choices)
-
-    await Stats.increase_stat(ctx, "monsters_looked_up_life")
-
-    def get_homebrew_formatted_name(monster):
-        if monster.source == 'homebrew':
-            return f"{monster.name} ({HOMEBREW_EMOJI})"
-        return monster.name
+    if selectkey is None:
+        selectkey = get_homebrew_formatted_name
 
     return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
-                                   selectkey=get_homebrew_formatted_name, return_metadata=return_metadata)
+                                   selectkey=selectkey, return_metadata=return_metadata)
 
 
 # ---- SPELL STUFF ----
 async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                            search_func=None, return_metadata=False, extra_choices=None):
+                            search_func=None, return_metadata=False, extra_choices=None, selectkey=None):
     """
     Gets a Spell from the compendium and active tome(s).
     """
     choices = await get_spell_choices(ctx)
+    await Stats.increase_stat(ctx, "spells_looked_up_life")
+
     # #881
     if extra_choices:
         choices.extend(extra_choices)
-
-    await Stats.increase_stat(ctx, "spells_looked_up_life")
-
-    def get_homebrew_formatted_name(spell):
-        if spell.source == 'homebrew':
-            return f"{spell.name} ({HOMEBREW_EMOJI})"
-        return spell.name
+    if selectkey is None:
+        selectkey = get_homebrew_formatted_name
 
     return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
-                                   selectkey=get_homebrew_formatted_name, search_func=search_func,
+                                   selectkey=selectkey, search_func=search_func,
                                    return_metadata=return_metadata)
 
 
@@ -261,6 +262,10 @@ class NSRDName:
     def __init__(self, name):
         self.name = name
         self.srd = False
+        self.source = "NSRD"
+
+    def get(self, attr, default=None):
+        return self.__getattribute__(attr) if hasattr(self, attr) else default
 
     def __getitem__(self, item):
         return self.__getattribute__(item)

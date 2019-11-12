@@ -299,52 +299,6 @@ class Lookup(commands.Cog):
         await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
-    @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def lookup_settings(self, ctx, *args):
-        """Changes settings for the lookup module.
-        __Valid Settings__
-        -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
-            -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
-        -pm_result [True/False] - PMs the result of the lookup to reduce spam.
-        """
-        guild_id = str(ctx.guild.id)
-        guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
-        if guild_settings is None:
-            guild_settings = {}
-        out = ""
-        if '-req_dm_monster' in args:
-            try:
-                setting = args[args.index('-req_dm_monster') + 1]
-            except IndexError:
-                setting = 'True'
-            setting = get_positivity(setting)
-            guild_settings['req_dm_monster'] = setting if setting is not None else True
-            out += 'req_dm_monster set to {}!\n'.format(str(guild_settings['req_dm_monster']))
-        if '-pm_dm' in args:
-            try:
-                setting = args[args.index('-pm_dm') + 1]
-            except IndexError:
-                setting = 'True'
-            setting = get_positivity(setting)
-            guild_settings['pm_dm'] = setting if setting is not None else True
-            out += 'pm_dm set to {}!\n'.format(str(guild_settings['pm_dm']))
-        if '-pm_result' in args:
-            try:
-                setting = args[args.index('-pm_result') + 1]
-            except IndexError:
-                setting = 'False'
-            setting = get_positivity(setting)
-            guild_settings['pm_result'] = setting if setting is not None else False
-            out += 'pm_result set to {}!\n'.format(str(guild_settings['pm_result']))
-
-        if guild_settings:
-            await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
-            await ctx.send("Lookup settings set:\n" + out)
-        else:
-            await ctx.send("No settings found. Make sure your syntax is correct.")
-
-    @commands.command()
     async def token(self, ctx, *, name=None):
         """Shows a token for a monster or player. May not support all monsters."""
 
@@ -704,6 +658,53 @@ class Lookup(commands.Cog):
         await Stats.increase_stat(ctx, "items_looked_up_life")
         await (await self._get_destination(ctx)).send(embed=embed)
 
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def lookup_settings(self, ctx, *args):
+        """Changes settings for the lookup module.
+        __Valid Settings__
+        -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
+            -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
+        -pm_result [True/False] - PMs the result of the lookup to reduce spam.
+        """
+        guild_id = str(ctx.guild.id)
+        guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
+        if guild_settings is None:
+            guild_settings = {}
+        out = ""
+        if '-req_dm_monster' in args:
+            try:
+                setting = args[args.index('-req_dm_monster') + 1]
+            except IndexError:
+                setting = 'True'
+            setting = get_positivity(setting)
+            guild_settings['req_dm_monster'] = setting if setting is not None else True
+            out += 'req_dm_monster set to {}!\n'.format(str(guild_settings['req_dm_monster']))
+        if '-pm_dm' in args:
+            try:
+                setting = args[args.index('-pm_dm') + 1]
+            except IndexError:
+                setting = 'True'
+            setting = get_positivity(setting)
+            guild_settings['pm_dm'] = setting if setting is not None else True
+            out += 'pm_dm set to {}!\n'.format(str(guild_settings['pm_dm']))
+        if '-pm_result' in args:
+            try:
+                setting = args[args.index('-pm_result') + 1]
+            except IndexError:
+                setting = 'False'
+            setting = get_positivity(setting)
+            guild_settings['pm_result'] = setting if setting is not None else False
+            out += 'pm_result set to {}!\n'.format(str(guild_settings['pm_result']))
+
+        if guild_settings:
+            await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
+            await ctx.send("Lookup settings set:\n" + out)
+        else:
+            await ctx.send("No settings found. Make sure your syntax is correct.")
+
+    # ==== helpers ====
     async def get_settings(self, guild):
         settings = {}  # default PM settings
         if guild is not None:
@@ -718,7 +719,6 @@ class Lookup(commands.Cog):
             data['homebrew'] = metadata.get('homebrew', False)
         await self.bot.mdb.nn_training.insert_one(data)
 
-    # ==== helpers ====
     async def _get_destination(self, ctx):
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)

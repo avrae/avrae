@@ -564,7 +564,7 @@ class Lookup(commands.Cog):
             time = spell.time
         embed.add_field(name="Casting Time", value=time)
         embed.add_field(name="Range", value=spell.range)
-        embed.add_field(name="Components", value=spell.components, inline=False)
+        embed.add_field(name="Components", value=spell.components)
         embed.add_field(name="Duration", value=spell.duration)
 
         text = spell.description

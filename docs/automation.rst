@@ -107,6 +107,7 @@ Damage
     {
         type: "damage";
         damage: AnnotatedString;
+        overheal?: boolean;
         higher?: {int: string};
         cantripScale?: boolean;
     }
@@ -116,6 +117,12 @@ Deals damage to a targeted creature. It must be inside a Target effect.
 .. attribute:: damage
 
      How much damage to deal. Can use variables defined in a Meta tag.
+
+.. attribute:: overheal
+
+    .. versionadded:: 1.4.1
+
+     *optional* - Whether this damage should allow a target to exceed its hit point maximum.
 
 .. attribute:: higher
 

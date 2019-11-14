@@ -169,7 +169,7 @@ class SimpleCombatant:
             return to_hit >= self._combatant.ac
         return None
 
-    def damage(self, dice_str: str, crit=False, d=None, c=None, critdice=0, overheal=False):
+    def damage(self, dice_str, crit=False, d=None, c=None, critdice=0, overheal=False):
         """
         Does damage to a combatant, and returns the rolled result and total, accounting for resistances.
 
@@ -178,7 +178,7 @@ class SimpleCombatant:
         :param str d: Any additional damage to add (equivalent of -d).
         :param str c: Any additional damage to add to crits (equivalent of -c).
         :param int critdice: How many extra weapon dice to roll on a crit (in addition to normal dice).
-        :param overheal: Old argument, does nothing.
+        :param bool overheal: Whether or not to allow this damage to exceed a target's HP max.
         :return: Dictionary representing the results of the Damage Automation.
         :rtype: dict
         """
@@ -201,7 +201,7 @@ class SimpleCombatant:
             args['d'] = d
         if c:
             args['c'] = c
-        damage = Damage(dice_str)
+        damage = Damage(dice_str, overheal=overheal)
         autoctx = _SimpleAutomationContext(StatBlock("generic"), self._combatant, args, self._combatant.combat, crit)
 
         return damage.run(autoctx)

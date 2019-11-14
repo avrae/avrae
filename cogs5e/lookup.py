@@ -753,10 +753,10 @@ class Lookup(commands.Cog):
         embed = EmbedWithAuthor(ctx)
         embed.title = f"{result.name} is not available in the SRD!"
         embed.description = f"Unfortunately, {result.name} is not available in the SRD (what Wizards of the Coast " \
-                            f"offers for free). You can see everything that is [here](" \
+                            f"offers for free). You can see everything that is available in the SRD [here](" \
                             f"http://dnd.wizards.com/articles/features/systems-reference-document-srd).\n\n" \
                             f"In the near future, you will be able to connect your D&D Beyond account to Avrae to " \
-                            f"view non-SRD content; stay tuned!"
+                            f"view the non-SRD content you own on D&D Beyond; stay tuned!"
         await ctx.send(embed=embed)
 
     @staticmethod

@@ -359,7 +359,7 @@ class GameTrack(commands.Cog):
         for level, spells in sorted(list(spells_known.items()), key=lambda k: k[0]):
             if spells:
                 spells.sort()
-                embed.add_field(name=level_name.get(level, "Unknown"), value=', '.join(spells))
+                embed.add_field(name=level_name.get(level, "Unknown"), value=', '.join(spells), inline=False)
 
         # dynamic help
         footer_out = []

@@ -8,6 +8,7 @@ from math import sqrt
 import discord
 from discord.ext import commands
 
+from cogs5e.models import embeds
 from utils.argparser import argparse
 from utils.functions import clean_content
 
@@ -42,22 +43,23 @@ class PBPUtils(commands.Cog):
     @commands.command()
     async def embed(self, ctx, *, args):
         """Creates and prints an Embed.
-        Arguments: -title [title]
-        -desc [description text]
-        -thumb [image url]
-        -image [image url]
-        -footer [footer text]
-        -f ["Field Title|Field Text"]
-        -color [hex color]
-        -t [timeout (0..600)]
+        __Valid Arguments__
+        -title <title>
+        -desc <description text>
+        -thumb <image url>
+        -image <image url>
+        -footer <footer text>
+        -f "<Field Title>|<Field Text>[|inline]"
+            (e.g. "Donuts|I have 15 donuts|inline" for an inline field, or "Donuts|I have 15 donuts" for one with its own line.)
+        -color <hex color>
+        -t <timeout (0..600)>
         """
         try:
             await ctx.message.delete()
         except:
             pass
 
-        embed = discord.Embed()
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+        embed = embeds.EmbedWithAuthor(ctx)
         args = argparse(args)
         embed.title = args.last('title')
         embed.description = args.last('desc')
@@ -68,11 +70,8 @@ class PBPUtils(commands.Cog):
             embed.colour = int(args.last('color', "0").strip('#'), base=16)
         except:
             pass
-        for f in args.get('f'):
-            if f:
-                title = f.split('|')[0] if '|' in f else '\u200b'
-                value = "|".join(f.split('|')[1:]) if '|' in f else f
-                embed.add_field(name=title, value=value)
+
+        embeds.add_fields_from_args(embed, args.get('f'))
 
         timeout = 0
         if 't' in args:

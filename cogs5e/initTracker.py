@@ -524,14 +524,26 @@ class InitTracker(commands.Cog):
 
         args = argparse(args)
         options = {}
+        target_is_group = isinstance(comb, CombatantGroup)
+        run_once = set()
 
-        def option(opt_name=None, **kwargs):
+        def option(opt_name=None, pass_group=False, **kwargs):
+            """
+            Wrapper to register an option.
+            :param str opt_name: The string to register the function under. Defaults to function name.
+            :param bool pass_group: Whether to pass a group as the first argument to the function or a combatant.
+            :param kwargs: kwargs that will always be passed to the function.
+            """
             def wrapper(func):
                 func_name = opt_name or func.__name__
-                if kwargs:
-                    options[func_name] = functools.partial(func, **kwargs)
-                else:
-                    options[func_name] = func
+                if pass_group and target_is_group:
+                    old_func = func
+                    async def func(_, *a, **k):
+                        if func_name in run_once:
+                            return
+                        run_once.add(func_name)
+                        return await old_func(comb, *a, **k)  # pop the combatant argument and sub in group
+                func = options[func_name] = functools.partial(func, **kwargs)
                 return func
 
             return wrapper
@@ -565,7 +577,7 @@ class InitTracker(commands.Cog):
             except InvalidArgument as e:
                 return f"\u274c {str(e)}"
 
-        @option()
+        @option(pass_group=True)
         async def p(combatant):
             if combatant is combat.current_combatant:
                 return "\u274c You cannot change a combatant's initiative on their own turn."
@@ -592,7 +604,7 @@ class InitTracker(commands.Cog):
                 c_group.add_combatant(combatant)
                 return f"\u2705 {combatant.name} added to group {c_group.name}."
 
-        @option()
+        @option(pass_group=True)
         async def name(combatant):
             old_name = combatant.name
             new_name = args.last('name')
@@ -632,7 +644,7 @@ class InitTracker(commands.Cog):
             return f"\u2705 Updated {combatant.name}'s {resist_type}s: {', '.join(result)}"
 
         # run options
-        if isinstance(comb, CombatantGroup):
+        if target_is_group:
             targets = comb.get_combatants().copy()
         else:
             targets = [comb]
@@ -642,11 +654,12 @@ class InitTracker(commands.Cog):
             if arg_name in args:
                 for target in targets:
                     response = await opt_func(target)
-                    if target.is_private:
-                        destination = ctx.guild.get_member(int(comb.controller)) or ctx.channel
-                    else:
-                        destination = ctx.channel
-                    out[destination].append(response)
+                    if response:
+                        if target.is_private:
+                            destination = ctx.guild.get_member(int(comb.controller)) or ctx.channel
+                        else:
+                            destination = ctx.channel
+                        out[destination].append(response)
 
         if out:
             for destination, messages in out.items():

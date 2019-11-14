@@ -1033,6 +1033,10 @@ class CombatantGroup(Combatant):
     def name(self):
         return self._name
 
+    @name.setter
+    def name(self, new_name):
+        self._name = new_name
+
     def get_name(self):
         return self.name
 

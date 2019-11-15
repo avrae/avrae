@@ -136,25 +136,23 @@ class Bestiary:
         :return: Whether the bestiary is now active on the server.
         """
         guild_id = str(ctx.guild.id)
-        sub_doc = {"guild_id": guild_id, "subscriber_id": str(ctx.author.id)}
+        sub_doc = next((d for d in self.server_active if d['guild_id'] == guild_id), None)
 
-        if sub_doc in self.server_active:  # I subscribed and want to unsubscribe
+        if sub_doc is not None:  # I subscribed and want to unsubscribe
             await ctx.bot.mdb.bestiaries.update_one(
                 {"_id": self.id},
                 {"$pull": {"server_active": sub_doc}}
             )
             self.server_active.remove(sub_doc)
-        elif guild_id in map(lambda s: s['guild_id'],
-                             self.server_active):  # someone else has already served this bestiary
-            raise NotAllowed("Another user is already sharing this bestiary with the server!")
+            return False
         else:  # no one has served this bestiary and I want to
+            sub_doc = {"guild_id": guild_id, "subscriber_id": str(ctx.author.id)}
             await ctx.bot.mdb.bestiaries.update_one(
                 {"_id": self.id},
                 {"$push": {"server_active": sub_doc}}
             )
             self.server_active.append(sub_doc)
-
-        return sub_doc in self.server_active
+            return True
 
     async def subscribe(self, ctx):
         await ctx.bot.mdb.bestiaries.update_one(

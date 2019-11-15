@@ -518,7 +518,7 @@ class Lookup(commands.Cog):
                 embed_queue.append(temp_embed)
 
         if higher_levels:
-            embed_queue[-1].add_field(name="At Higher Levels", value=higher_levels, inline=False)
+            add_fields_from_long_text(embed_queue[-1], "At Higher Levels", higher_levels)
 
         if spell.source == 'homebrew':
             embed_queue[-1].set_footer(text="Homebrew content.", icon_url=HOMEBREW_ICON)

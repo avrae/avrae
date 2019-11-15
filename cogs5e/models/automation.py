@@ -3,9 +3,9 @@ import re
 
 from cogs5e.funcs.dice import SingleDiceGroup, roll
 from cogs5e.funcs.scripting.evaluators import SpellEvaluator
-from cogs5e.models import initiative
+from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
-from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType, EvaluationError
+from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
 from utils.functions import parse_resistances
 
@@ -116,7 +116,8 @@ class AutomationContext:
         if to_meta:
             self._meta_queue.extend(self._embed_queue)
         else:
-            self._field_queue.append({"name": title, "value": '\n'.join(self._embed_queue), "inline": inline})
+            chunks = embeds.get_long_field_args('\n'.join(self._embed_queue), title)
+            self._field_queue.extend(chunks)
         self._embed_queue = []
 
     def insert_meta_field(self):
@@ -228,9 +229,9 @@ class AutomationTarget:
     def get_neutral(self):
         return self.get_resists().neutral
 
-    def damage(self, autoctx, amount):
+    def damage(self, autoctx, amount, allow_overheal=True):
         if not self.is_simple:
-            result = self.target.modify_hp(-amount)
+            result = self.target.modify_hp(-amount, overflow=allow_overheal)
             autoctx.footer_queue(f"{self.target.name}: {result}")
 
             if isinstance(self.target, Combatant):
@@ -682,15 +683,19 @@ class Save(Effect):
 
 
 class Damage(Effect):
-    def __init__(self, damage: str, higher: dict = None, cantripScale: bool = None, **kwargs):
+    def __init__(self, damage: str, overheal: bool = False, higher: dict = None, cantripScale: bool = None, **kwargs):
         super(Damage, self).__init__("damage", **kwargs)
         self.damage = damage
+        self.overheal = overheal
+        # common
         self.higher = higher
         self.cantripScale = cantripScale
 
     def to_dict(self):
         out = super(Damage, self).to_dict()
-        out.update({"damage": self.damage, "higher": self.higher, "cantripScale": self.cantripScale})
+        out.update({
+            "damage": self.damage, "overheal": self.overheal, "higher": self.higher, "cantripScale": self.cantripScale
+        })
         return out
 
     def run(self, autoctx):
@@ -794,7 +799,7 @@ class Damage(Effect):
             autoctx.queue(f"**{roll_for}**: {dmgroll.consolidated()} = `{dmgroll.total}`")
             autoctx.add_pm(str(autoctx.ctx.author.id), dmgroll.result)
 
-        autoctx.target.damage(autoctx, dmgroll.total)
+        autoctx.target.damage(autoctx, dmgroll.total, allow_overheal=self.overheal)
 
         # return metadata for scripting
         return {'damage': dmgroll.result, 'total': dmgroll.total, 'roll': dmgroll}

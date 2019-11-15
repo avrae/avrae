@@ -256,9 +256,9 @@ class DicecloudParser(SheetLoaderABC):
 
         spells = []
         for spell in spellnames:
-            result = search(compendium.spells, spell.strip(), lambda sp: sp.name)
-            if result and result[0] and result[1]:
-                spells.append(SpellbookSpell.from_spell(result[0]))
+            result, strict = search(compendium.spells, spell.strip(), lambda sp: sp.name, strict=True)
+            if result and strict:
+                spells.append(SpellbookSpell.from_spell(result))
             else:
                 spells.append(SpellbookSpell(spell.strip()))
 

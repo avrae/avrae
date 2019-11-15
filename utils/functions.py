@@ -125,10 +125,6 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
     :param return_metadata Whether to return a metadata object {num_options, chosen_index}.
     :return:
     """
-    if message:
-        message = f"{message}\nOnly results from the 5e SRD are included."
-    else:
-        message = "Only results from the 5e SRD are included."
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))
 

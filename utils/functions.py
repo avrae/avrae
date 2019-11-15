@@ -125,10 +125,6 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
     :param return_metadata Whether to return a metadata object {num_options, chosen_index}.
     :return:
     """
-    if message:
-        message = f"{message}\nOnly results from the 5e SRD are included."
-    else:
-        message = "Only results from the 5e SRD are included."
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))
 
@@ -310,7 +306,7 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
         embed.description = selectStr
         embed.colour = random.randint(0, 0xffffff)
         if message:
-            embed.add_field(name="Note", value=message)
+            embed.add_field(name="Note", value=message, inline=False)
         if selectMsg:
             try:
                 await selectMsg.delete()
@@ -321,7 +317,7 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
         else:
             embed.add_field(name="Instructions",
                             value="Type your response in the channel you called the command. This message was PMed to "
-                                  "you to hide the monster name.")
+                                  "you to hide the monster name.", inline=False)
             selectMsg = await ctx.author.send(embed=embed)
 
         try:

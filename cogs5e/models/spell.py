@@ -240,9 +240,9 @@ class Spell:
             text = self.description
             if len(text) > 1020:
                 text = f"{text[:1020]}..."
-            embed.add_field(name="Description", value=text)
+            embed.add_field(name="Description", value=text, inline=False)
             if l != self.level and self.higherlevels:
-                embed.add_field(name="At Higher Levels", value=self.higherlevels)
+                embed.add_field(name="At Higher Levels", value=self.higherlevels, inline=False)
             embed.set_footer(text="No spell automation found.")
 
         if l > 0 and not i:

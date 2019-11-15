@@ -34,7 +34,7 @@ async def test_ma(avrae, dhttp):
     await dhttp.receive_delete()
     atk_embed = discord.Embed(title=r"(\w+ ?){2,3} attacks with a Dagger!")
     atk_embed.add_field(name="Meta", inline=False, value=ATTACK_PATTERN)
-    atk_embed.add_field(name="Effect", value=r"Melee Weapon Attack:.+")
+    atk_embed.add_field(name="Effect", inline=False, value=r"Melee Weapon Attack:.+")
     await dhttp.receive_message(embed=atk_embed)
 
     avrae.message("!ma kobold dagger -h")

@@ -3,9 +3,9 @@ import re
 
 from cogs5e.funcs.dice import SingleDiceGroup, roll
 from cogs5e.funcs.scripting.evaluators import SpellEvaluator
-from cogs5e.models import initiative
+from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
-from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType, EvaluationError
+from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
 from utils.functions import parse_resistances
 
@@ -116,7 +116,8 @@ class AutomationContext:
         if to_meta:
             self._meta_queue.extend(self._embed_queue)
         else:
-            self._field_queue.append({"name": title, "value": '\n'.join(self._embed_queue), "inline": inline})
+            chunks = embeds.get_long_field_args('\n'.join(self._embed_queue), title)
+            self._field_queue.extend(chunks)
         self._embed_queue = []
 
     def insert_meta_field(self):

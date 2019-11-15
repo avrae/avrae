@@ -59,13 +59,26 @@ def add_homebrew_footer(embed):
         embed.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png", text="Homebrew content.")
 
 
+def chunk_text(text, chunk_size=1024):
+    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+
+
+def get_long_field_args(text, title, inline=False, chunk_size=1024):
+    """Returns a list of dicts (to pass as kwargs) given a long text."""
+    chunks = chunk_text(text, chunk_size=chunk_size)
+    out = [{"name": title, "value": chunks[0], "inline": inline}]
+    for chunk in chunks[1:]:
+        out.append({"name": "** **", "value": chunk, "inline": inline})
+    return out
+
+
 def set_maybe_long_desc(embed, desc):
     """
     Sets a description that might be longer than 2048 characters but is less than 6000 characters.
     :param embed: The embed to add the description (and potentially fields) to.
     :param str desc: The description to add. Will overwrite existing description.
     """
-    desc = [desc[i:i + 1024] for i in range(0, len(desc), 1024)]
+    desc = chunk_text(desc)
     embed.description = ''.join(desc[:2])
     for piece in desc[2:]:
         embed.add_field(name="** **", value=piece, inline=False)
@@ -78,9 +91,5 @@ def add_fields_from_long_text(embed, field_name, text):
     :param str text: The text of the fields to add. Will append to existing fields.
     :param str field_name: The name of the first field to add.
     """
-    text = [text[i:i + 1024] for i in range(0, len(text), 1024)]
-    if not text:
-        return
-    embed.add_field(name=field_name, value=text[0], inline=False)
-    for piece in text[1:]:
-        embed.add_field(name="** **", value=piece, inline=False)
+    for field in get_long_field_args(text, field_name):
+        embed.add_field(**field)

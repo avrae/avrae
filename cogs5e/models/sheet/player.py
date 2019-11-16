@@ -167,14 +167,14 @@ class CustomCounter:
         return self._max
 
     def get_reset(self):
-    if self._reset_to is None:
-        if self.reset_to is None:
-            return self.get_max(), True
-        else:
-            self._reset_to = self.evaluator.parse(self.reset_to)
-            _reset = roll(self._reset_to)
-            self._reset_type = all(isinstance(i, Constant) for i in _reset.raw_dice.parts)
-    return self._reset_to, self._reset_type
+        if self._reset_to is None:
+            if self.reset_to is None:
+                return self.get_max(), True
+            else:
+                self._reset_to = self.evaluator.parse(self.reset_to)
+                _reset = roll(self._reset_to)
+                self._reset_type = all(isinstance(i, Constant) for i in _reset.raw_dice.parts)
+        return self._reset_to, self._reset_type
 
     @property
     def value(self):

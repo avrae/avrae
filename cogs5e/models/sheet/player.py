@@ -193,7 +193,7 @@ class CustomCounter:
         if self.live_id:
             self._character.sync_consumable(self)
 
-        def reset(self):
+    def reset(self):
         if self.reset_on == 'none' or self.max is None:
             raise NoReset()
         if self.reset_to is None:

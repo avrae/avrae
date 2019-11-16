@@ -12,7 +12,6 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs import targetutils
-from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
@@ -142,12 +141,21 @@ class GameTrack(commands.Cog):
             # ccs
             displayed_counters = set()
             counters_out = []
-            for counter, delta in reset:
+            for counter, delta, resetv in reset:
                 if counter.name in displayed_counters:
                     continue
                 displayed_counters.add(counter.name)
                 if delta:
-                    counters_out.append(f"{counter.name}: {str(counter)} ({delta:+})")
+                    if resetv is not None:
+                        overflow = ""
+                        if resetv.total - delta:
+                            overflow = f" ({abs(resetv.total - delta)} overflow)"
+                        if all(isinstance(i, (Constant, Operator)) for i in resetv.raw_dice.parts):
+                            counters_out.append(f"{counter.name}: {str(counter)} ({resetv.total:+}) {overflow}")
+                        else:
+                            counters_out.append(f"{counter.name}: {str(counter)} ({delta:+}) {overflow}\n└─ {resetv.rolled.replace('-  ', '-')} = `{resetv.total}`")
+                    else:
+                        counters_out.append(f"{counter.name}: {str(counter)} ({delta:+})")
                 else:
                     counters_out.append(f"{counter.name}: {str(counter)}")
             if counters_out:
@@ -450,6 +458,7 @@ class GameTrack(commands.Cog):
         """Creates a new custom counter.
         __Valid Arguments__
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
+        `-reset_to` - What the counter will reset to. If the value starts with + or -, or is a dice roll, the change will be relative.
         `-max <max value>` - The maximum value of the counter.
         `-min <min value>` - The minimum value of the counter.
         `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers."""
@@ -467,8 +476,11 @@ class GameTrack(commands.Cog):
         _max = args.last('max')
         _min = args.last('min')
         _type = args.last('type')
+        _reset_to = args.last('reset_to')
+
         try:
-            new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type)
+            new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
+                                            reset_to=_reset_to)
             character.consumables.append(new_counter)
             await character.commit(ctx)
         except InvalidArgument as e:
@@ -515,12 +527,25 @@ class GameTrack(commands.Cog):
             counter = await character.select_consumable(ctx, name)
             before = counter.value
             try:
-                counter.reset()
+                reset = counter.reset()
                 await character.commit(ctx)
             except ConsumableException as e:
                 await ctx.send(f"Counter could not be reset: {e}")
             else:
                 delta = counter.value - before
+                if delta:
+                    if reset is not None:
+                        reset_dice = f"{reset.rolled} = {reset.total:+}"
+                        if all(isinstance(i, (Constant, Operator)) for i in reset.raw_dice.parts):
+                            reset_dice = f"{reset.total:+}"
+                        if reset.total - delta:
+                            reset_dice += f" ({abs(reset.total - delta)} overflow)"
+                        out = f"{counter.name}: {str(counter)} ({reset_dice})"
+                    else:
+                        out = f"{counter.name}: {str(counter)} ({delta:+})"
+                else:
+                    out = f"{counter.name}: {str(counter)}"
+                await ctx.send(out)
                 await ctx.send(f"{counter.name}: {str(counter)} ({delta:+}).")
         else:
             await self._rest(ctx, 'all', *args)

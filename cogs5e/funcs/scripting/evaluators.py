@@ -154,10 +154,10 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.character_changed = True
 
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
-                         dispType: str = None):
+                         dispType: str = None, reset_to: str = None):
             if not cc_exists(name):
                 from cogs5e.models.sheet.player import CustomCounter
-                new_consumable = CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
+                new_consumable = CustomCounter.new(character, name, minVal, maxVal, reset, dispType, reset_to=reset_to)
                 character.consumables.append(new_consumable)
                 self.character_changed = True
 

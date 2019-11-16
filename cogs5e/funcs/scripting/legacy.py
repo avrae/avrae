@@ -61,7 +61,7 @@ class LegacyRawCharacter:
         for counter in self.character.consumables:
             out[counter.name] = {
                 'value': counter.value, 'max': counter.max, 'min': counter.min, 'reset': counter.reset_on,
-                'type': counter.display_type
+                'type': counter.display_type, 'reset_to': counter.reset_to
             }
         return {"custom": out}
 

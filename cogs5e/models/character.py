@@ -349,19 +349,20 @@ class Character(StatBlock):
             self.death_saves.reset()
         return reset
 
-    def short_rest(self):
+    def short_rest(self, counter: bool = True):
         """
         Returns a list of all the reset counters and their deltas in [(counter, delta)].
         Resets but does not return Spell Slots or Death Saves.
         """
         reset = []
         reset.extend(self.on_hp())
-        reset.extend(self._reset_custom('short'))
+        if counter:
+            reset.extend(self._reset_custom('short'))
         if self.get_setting('srslots', False):
             self.reset_spellslots()
         return reset
 
-    def long_rest(self):
+    def long_rest(self, counter: bool = False):
         """
         Resets all applicable consumables.
         Returns a list of all the reset counters and their deltas in [(counter, delta)].
@@ -369,7 +370,7 @@ class Character(StatBlock):
         """
         reset = []
         reset.extend(self.on_hp())
-        reset.extend(self.short_rest())
+        reset.extend(self.short_rest(counter=not counter))
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
         if not self.get_setting('srslots', False):
@@ -383,8 +384,8 @@ class Character(StatBlock):
         """
         reset = []
         reset.extend(self.on_hp())
-        reset.extend(self.short_rest())
-        reset.extend(self.long_rest())
+        reset.extend(self.short_rest(counter=False))
+        reset.extend(self.long_rest(counter=False))
         reset.extend(self._reset_custom(None))
         return reset
 

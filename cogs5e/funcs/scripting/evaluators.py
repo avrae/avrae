@@ -1,15 +1,19 @@
 import ast
-import copy
 import re
 from math import ceil, floor
 
+import simpleeval
 from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.errors import EvaluationError, FunctionRequiresCharacter, InvalidArgument
-from .combat import SimpleCombat
+from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
+from . import MAX_ITER_LENGTH, SCRIPTING_RE
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
-from .helpers import MAX_ITER_LENGTH, SCRIPTING_RE, get_uvars, update_uvars
+from .helpers import get_uvars, update_uvars
+from .legacy import LegacyRawCharacter
+
+if 'format_map' not in simpleeval.DISALLOW_METHODS:
+    simpleeval.DISALLOW_METHODS.append('format_map')
 
 
 class MathEvaluator(SimpleEval):
@@ -26,16 +30,18 @@ class MathEvaluator(SimpleEval):
         super(MathEvaluator, self).__init__(operators, functions, names)
 
     @classmethod
-    def with_character(cls, character):
-        names = {}
-        names.update(character.get_cvars())
-        names.update(character.get_stat_vars())
-        names['spell'] = character.get_spell_ab() - character.get_prof_bonus()
+    def with_character(cls, character, spell_override=None):
+        names = character.get_scope_locals()
+        if spell_override is not None:
+            names['spell'] = spell_override
         return cls(names=names)
 
     def parse(self, string):
         """Parses a dicecloud-formatted string (evaluating text in {})."""
-        return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1))), string)
+        try:
+            return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1))), string)
+        except Exception as ex:
+            raise EvaluationError(ex, string)
 
 
 class ScriptingEvaluator(EvalWithCompoundTypes):
@@ -62,20 +68,22 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         self.functions.update(  # character-only functions
             get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
             get_cc_min=self.needs_char, mod_cc=self.needs_char,
-            cc_exists=self.needs_char, create_cc_nx=self.needs_char,
+            cc_exists=self.needs_char, create_cc_nx=self.needs_char, create_cc=self.needs_char,
             get_slots=self.needs_char, get_slots_max=self.needs_char, set_slots=self.needs_char,
             use_slot=self.needs_char,
-            get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char,
+            get_hp=self.needs_char, set_hp=self.needs_char, mod_hp=self.needs_char, hp_str=self.needs_char,
             get_temphp=self.needs_char, set_temphp=self.needs_char,
             set_cvar=self.needs_char, delete_cvar=self.needs_char, set_cvar_nx=self.needs_char,
-            get_raw=self.needs_char, combat=self.needs_char
+            get_raw=self.needs_char
         )
 
         self.functions.update(
-            set=self.set_value, exists=self.exists,
+            set=self.set, exists=self.exists, combat=self.combat,
             get_gvar=self.get_gvar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
-            uvar_exists=self.uvar_exists
+            uvar_exists=self.uvar_exists,
+            chanid=self.chanid, servid=self.servid,
+            get=self.get
         )
 
         self.assign_nodes = {
@@ -104,70 +112,74 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         return inst
 
     async def with_character(self, character):
-        self.names.update(character.get_cvars())
-        self.names.update(character.get_stat_vars())
-        self.names['spell'] = character.get_spell_ab() - character.get_prof_bonus()
-        self.names['color'] = hex(character.get_color())[2:]
-        self.names["currentHp"] = character.get_current_hp()
+        self.names.update(character.get_scope_locals())
 
-        self._cache['combat'] = await SimpleCombat.from_character(character, self.ctx)
         self._cache['character'] = character
 
         # define character-specific functions
+
+        # helpers
+        def _get_consumable(name):
+            consumable = next((con for con in character.consumables if con.name == name), None)
+            if consumable is None:
+                raise ConsumableException(f"There is no counter named {name}.")
+            return consumable
+
+        # funcs
+        def combat():
+            cmbt = self.combat()
+            if cmbt and not cmbt.me:
+                cmbt.func_set_character(character)
+            return cmbt
+
         def get_cc(name):
-            return character.get_consumable_value(name)
+            return _get_consumable(name).value
 
         def get_cc_max(name):
-            return character.evaluate_cvar(character.get_consumable(name).get('max', str(2 ** 32 - 1)))
+            return _get_consumable(name).get_max()
 
         def get_cc_min(name):
-            return character.evaluate_cvar(character.get_consumable(name).get('min', str(-(2 ** 32))))
+            return _get_consumable(name).get_min()
 
         def set_cc(name, value: int, strict=False):
-            character.set_consumable(name, value, strict)
+            _get_consumable(name).set(value, strict)
             self.character_changed = True
 
         def mod_cc(name, val: int, strict=False):
             return set_cc(name, get_cc(name) + val, strict)
 
         def delete_cc(name):
-            character.delete_consumable(name)
+            to_delete = _get_consumable(name)
+            character.consumables.remove(to_delete)
             self.character_changed = True
 
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                          dispType: str = None):
-            if not name in character.get_all_consumables():
-                character.create_consumable(name, minValue=minVal, maxValue=maxVal, reset=reset, displayType=dispType)
+            if not cc_exists(name):
+                from cogs5e.models.sheet.player import CustomCounter
+                new_consumable = CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
+                character.consumables.append(new_consumable)
                 self.character_changed = True
 
+        def create_cc(name: str, *args, **kwargs):
+            if cc_exists(name):
+                delete_cc(name)
+            create_cc_nx(name, *args, **kwargs)
+
         def cc_exists(name):
-            return name in character.get_all_consumables()
+            return name in set(con.name for con in character.consumables)
 
         def cc_str(name):
-            counter = character.get_consumable(name)
-            _max = counter.get('max')
-            val = str(counter.get('value', 0))
-            if counter.get('type') == 'bubble':
-                if _max is not None:
-                    _max = character.evaluate_cvar(_max)
-                    numEmpty = _max - counter.get('value', 0)
-                    filled = '\u25c9' * counter.get('value', 0)
-                    empty = '\u3007' * numEmpty
-                    val = f"{filled}{empty}"
-            else:
-                if _max is not None:
-                    _max = character.evaluate_cvar(_max)
-                    val = f"{counter.get('value')} / {_max}"
-            return val
+            return str(_get_consumable(name))
 
         def get_slots(level: int):
-            return character.get_remaining_slots(level)
+            return character.spellbook.get_slots(level)
 
         def get_slots_max(level: int):
-            return character.get_max_spellslots(level)
+            return character.spellbook.get_max_slots(level)
 
         def slots_str(level: int):
-            return character.get_remaining_slots_str(level).strip()
+            return character.slots_str(level)
 
         def set_slots(level: int, value: int):
             character.set_remaining_slots(level, value)
@@ -178,23 +190,24 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.character_changed = True
 
         def get_hp():
-            return character.get_current_hp() - character.get_temp_hp()
+            return character.hp
 
         def set_hp(val: int):
-            character.set_hp(val, True)
+            character.hp = val
             self.character_changed = True
 
         def mod_hp(val: int, overflow: bool = True):
-            if not overflow:
-                return set_hp(min(character.get_current_hp() + val, character.get_max_hp()))
-            else:
-                return set_hp(character.get_current_hp() + val)
+            character.modify_hp(val, overflow=overflow)
+            self.character_changed = True
+
+        def hp_str():
+            return character.hp_str()
 
         def get_temphp():
-            return character.get_temp_hp()
+            return character.temp_hp
 
         def set_temphp(val: int):
-            character.set_temp_hp(val)
+            character.temp_hp = val
             self.character_changed = True
 
         def set_cvar(name, val: str):
@@ -203,31 +216,27 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.character_changed = True
 
         def set_cvar_nx(name, val: str):
-            if not name in character.get_cvars():
+            if name not in character.cvars:
                 set_cvar(name, val)
 
         def delete_cvar(name):
-            if name in character.get_cvars():
-                del character.get_cvars()[name]
+            if name in character.cvars:
+                del character.cvars[name]
                 self.character_changed = True
 
         def get_raw():
-            return copy.copy(character.character)
-
-        def combat():
-            if not 'combat' in self._cache:
-                return None
-            self.combat_changed = True
-            return self._cache['combat']
+            return LegacyRawCharacter(character).to_dict()
 
         self.functions.update(
+            combat=combat,
             get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
-            delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, cc_str=cc_str,
+            delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, create_cc=create_cc, cc_str=cc_str,
             get_slots=get_slots, get_slots_max=get_slots_max, set_slots=set_slots, use_slot=use_slot,
             slots_str=slots_str,
-            get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, get_temphp=get_temphp, set_temphp=set_temphp,
+            get_hp=get_hp, set_hp=set_hp, mod_hp=mod_hp, hp_str=hp_str,
+            get_temphp=get_temphp, set_temphp=set_temphp,
             set_cvar=set_cvar, delete_cvar=delete_cvar, set_cvar_nx=set_cvar_nx,
-            get_raw=get_raw, combat=combat
+            get_raw=get_raw
         )
 
         return self
@@ -244,38 +253,122 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
     def needs_char(self, *args, **kwargs):
         raise FunctionRequiresCharacter()  # no. bad.
 
-    def set_value(self, name, value):
+    def set(self, name, value):
+        """
+        Sets the value of a name in the current scripting context.
+
+        .. deprecated:: 0.1.0
+            Use ``name = value`` instead.
+
+        :param name: The name to set.
+        :param value: The value to set it to.
+        """
         self.names[name] = value
 
     def exists(self, name):
+        """
+        Returns whether or not a name is set in the current evaluation context.
+
+        :rtype: bool
+        """
         return name in self.names
 
+    def combat(self):
+        """
+        Returns the combat active in the channel if one is. Otherwise, returns ``None``.
+
+        :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleCombat`
+        """
+        from .combat import SimpleCombat
+        if 'combat' not in self._cache:
+            self._cache['combat'] = SimpleCombat.from_ctx(self.ctx)
+        self.combat_changed = True
+        return self._cache['combat']
+
     def uvar_exists(self, name):
+        """
+        Returns whether a uvar exists.
+
+        :rtype: bool
+        """
         return self.exists(name) and name in self._cache['uvars']
 
-    def get_gvar(self, name):
-        if name not in self._cache['gvars']:
-            result = self.ctx.bot.mdb.gvars.delegate.find_one({"key": name})
+    def get_gvar(self, address):
+        """
+        Retrieves and returns the value of a gvar (global variable).
+
+        :param str address: The gvar address.
+        :return: The value of the gvar.
+        :rtype: str
+        """
+        if address not in self._cache['gvars']:
+            result = self.ctx.bot.mdb.gvars.delegate.find_one({"key": address})
             if result is None:
                 return None
-            self._cache['gvars'][name] = result['value']
-        return self._cache['gvars'][name]
+            self._cache['gvars'][address] = result['value']
+        return self._cache['gvars'][address]
 
-    def set_uvar(self, name, val: str):
-        if any(c in name for c in '/()[]\\.^$*+?|{}'):
+    def set_uvar(self, name: str, value: str):
+        """
+        Sets a user variable.
+
+        :param str name: The name of the variable to set.
+        :param str value: The value to set it to.
+        """
+        if not name.isidentifier():
             raise InvalidArgument("Cvar contains invalid character.")
-        self._cache['uvars'][name] = str(val)
-        self.names[name] = str(val)
+        self._cache['uvars'][name] = str(value)
+        self.names[name] = str(value)
         self.uvars_changed.add(name)
 
-    def set_uvar_nx(self, name, val: str):
+    def set_uvar_nx(self, name, value: str):
+        """
+        Sets a user variable if there is not already an existing name.
+
+        :param str name: The name of the variable to set.
+        :param str value: The value to set it to.
+        """
         if not name in self.names:
-            self.set_uvar(name, val)
+            self.set_uvar(name, value)
 
     def delete_uvar(self, name):
+        """
+        Deletes a user variable. Does nothing if the variable does not exist.
+
+        :param str name: The name of the variable to delete.
+        """
         if name in self._cache['uvars']:
             del self._cache['uvars'][name]
             self.uvars_changed.add(name)
+
+    def chanid(self):
+        """
+        Returns the ID of the active Discord channel.
+
+        :rtype: str
+        """
+        return str(self.ctx.channel.id)
+
+    def servid(self):
+        """
+        Returns the ID of the active Discord guild, or None if in DMs.
+
+        :rtype: str
+        """
+        if self.ctx.guild:
+            return str(self.ctx.guild.id)
+        return None
+
+    def get(self, name, default=None):
+        """
+        Gets the value of a name, or returns *default* if the name is not set.
+
+        :param str name: The name to retrieve.
+        :param default: What to return if the name is not set.
+        """
+        if name in self.names:
+            return self.names[name]
+        return default
 
     # evaluation
     def parse(self, string, double_curly=None, curly=None, ltgt=None):
@@ -283,35 +376,36 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):
-            if match.group(1):  # {{}}
-                double_func = double_curly or self.eval
-                evalresult = double_func(match.group(1))
-            elif match.group(2):  # <>
-                if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
-                    return match.group(0)
-                out = match.group(2)
-                ltgt_func = ltgt or (lambda s: str(self.names.get(s, s)))
-                evalresult = ltgt_func(out)
-            elif match.group(3):  # {}
-                varstr = match.group(3)
+            try:
+                if match.group(1):  # {{}}
+                    double_func = double_curly or self.eval
+                    evalresult = double_func(match.group(1))
+                elif match.group(2):  # <>
+                    if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
+                        return match.group(0)
+                    out = match.group(2)
+                    ltgt_func = ltgt or (lambda s: str(self.names.get(s, s)))
+                    evalresult = ltgt_func(out)
+                elif match.group(3):  # {}
+                    varstr = match.group(3)
 
-                def default_curly_func(s):
-                    curlyout = ""
-                    for substr in re.split(ops, s):
-                        temp = substr.strip()
-                        curlyout += str(self.names.get(temp, temp)) + " "
-                    return str(roll(curlyout).total)
+                    def default_curly_func(s):
+                        curlyout = ""
+                        for substr in re.split(ops, s):
+                            temp = substr.strip()
+                            curlyout += str(self.names.get(temp, temp)) + " "
+                        return str(roll(curlyout).total)
 
-                curly_func = curly or default_curly_func
-                evalresult = curly_func(varstr)
-            else:
-                evalresult = None
+                    curly_func = curly or default_curly_func
+                    evalresult = curly_func(varstr)
+                else:
+                    evalresult = None
+            except Exception as ex:
+                raise EvaluationError(ex, match.group(0))
+
             return str(evalresult) if evalresult is not None else ''
 
-        try:
-            output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
-        except Exception as ex:
-            raise EvaluationError(ex)
+        output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
         return output
 
@@ -413,6 +507,13 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
 
 class SpellEvaluator(MathEvaluator):
+    @classmethod
+    def with_caster(cls, caster, spell_override=None):
+        names = caster.get_scope_locals()
+        if spell_override is not None:
+            names['spell'] = spell_override
+        return cls(names=names)
+
     def parse(self, string, extra_names=None):
         """Parses a spell-formatted string (evaluating {{}} and replacing {} with rollstrings)."""
         original_names = None
@@ -421,20 +522,30 @@ class SpellEvaluator(MathEvaluator):
             self.names.update(extra_names)
 
         def evalrepl(match):
-            if match.group(1):  # {{}}
-                evalresult = self.eval(match.group(1))
-            elif match.group(3):  # {}
-                evalresult = self.names.get(match.group(3), match.group(0))
-            else:
-                evalresult = None
+            try:
+                if match.group(1):  # {{}}
+                    evalresult = self.eval(match.group(1))
+                elif match.group(3):  # {}
+                    try:
+                        evalresult = self.eval(match.group(3))
+                    except:
+                        evalresult = match.group(0)
+                else:
+                    evalresult = None
+            except Exception as ex:
+                raise EvaluationError(ex, match.group(0))
+
             return str(evalresult) if evalresult is not None else ''
 
-        try:
-            output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
-        except Exception as ex:
-            raise EvaluationError(ex)
+        output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
         if original_names:
             self.names = original_names
 
         return output
+
+
+if __name__ == '__main__':
+    e = ScriptingEvaluator(None)
+    while True:
+        print(e.eval(input()))

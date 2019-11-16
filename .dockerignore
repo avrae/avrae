@@ -1,0 +1,11 @@
+*.pyc
+
+
+/testenv/
+/venv/
+/venv-rewrite/
+/.git/
+/.github/
+/.idea/
+/.pytest_cache/
+/__pycache__/

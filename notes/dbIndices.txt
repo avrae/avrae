@@ -6,7 +6,10 @@ db.packs.createIndex({"active": 1});
 db.packs.createIndex({"server_active": 1});
 
 bestiaries:
-db.bestiaries.createIndex({"server_active": 1});
+db.bestiaries.createIndex({"upstream": 1, "sha256": 1}, {"unique": true});
+db.bestiaries.createIndex({"subscribers": 1});
+db.bestiaries.createIndex({"active": 1});
+db.bestiaries.createIndex({"server_active.guild_id": 1});
 
 tomes:
 db.tomes.createIndex({"owner.id": 1});
@@ -14,3 +17,34 @@ db.tomes.createIndex({"editors.id": 1});
 db.tomes.createIndex({"subscribers.id": 1});
 db.tomes.createIndex({"active": 1});
 db.tomes.createIndex({"server_active": 1});
+
+compendiums:
+db.compendiums.createIndex({"owner.id": 1});
+db.compendiums.createIndex({"editors.id": 1});
+db.compendiums.createIndex({"subscribers.id": 1});
+db.compendiums.createIndex({"stargazers.id": 1});
+db.compendiums.createIndex({"active": 1});
+db.compendiums.createIndex({"server_active": 1});
+
+analytics_user_activity:
+db.analytics_user_activity.createIndex({"user_id": 1}, {"unique": true});
+db.analytics_user_activity.createIndex({"last_command_time": -1});
+
+analytics_guild_activity:
+db.analytics_guild_activity.createIndex({"guild_id": 1}, {"unique": true});
+db.analytics_guild_activity.createIndex({"last_command_time": -1});
+
+analytics_command_activity:
+db.analytics_command_activity.createIndex({"name": 1}, {"unique": true});
+
+analytics_nsrd_lookup:
+db.analytics_command_activity.createIndex({"type": 1});
+
+random_stats:
+db.random_stats.createIndex({"key": 1}, {"unique": true});
+
+analytics_daily:
+db.analytics_daily.createIndex({"timestamp": -1});
+
+prefixes:
+db.prefixes.createIndex({"guild_id": 1}, {"unique": true});

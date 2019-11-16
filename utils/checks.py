@@ -4,22 +4,6 @@ from discord.ext import commands
 import credentials
 
 
-#
-# This is a modified version of checks.py, originally made by Rapptz
-#
-#                 https://github.com/Rapptz
-#          https://github.com/Rapptz/RoboDanny/tree/async
-#
-
-
-def is_owner_check(ctx):
-    return ctx.message.author.id == credentials.owner_id
-
-
-def is_owner():
-    return commands.check(is_owner_check)
-
-
 # The permission system of the bot is based on a "just works" basis
 # You have permissions and the bot has permissions. If you meet the permissions
 # required to execute the command (and the bot does as well) then it goes through
@@ -30,12 +14,17 @@ def is_owner():
 # the permissions required for them.
 # Of course, the owner will always be able to execute commands.
 
-def check_permissions(ctx, perms):
-    if is_owner_check(ctx):
+# ===== predicates =====
+def author_is_owner(ctx):
+    return ctx.author.id == credentials.owner_id
+
+
+def _check_permissions(ctx, perms):
+    if author_is_owner(ctx):
         return True
 
-    ch = ctx.message.channel
-    author = ctx.message.author
+    ch = ctx.channel
+    author = ctx.author
     try:
         resolved = ch.permissions_for(author)
     except AttributeError:
@@ -43,49 +32,66 @@ def check_permissions(ctx, perms):
     return all(getattr(resolved, name, None) == value for name, value in perms.items())
 
 
-def role_or_permissions(ctx, check, **perms):
-    if check_permissions(ctx, perms):
+def _role_or_permissions(ctx, role_filter, **perms):
+    if _check_permissions(ctx, perms):
         return True
 
     ch = ctx.message.channel
     author = ctx.message.author
-    if ch.is_private:
+    if isinstance(ch, discord.abc.PrivateChannel):
         return False  # can't have roles in PMs
 
     try:
-        role = discord.utils.find(check, author.roles)
+        role = discord.utils.find(role_filter, author.roles)
     except:
         return False
     return role is not None
 
 
-def mod_or_permissions(**perms):
+# ===== checks =====
+def is_owner():
     def predicate(ctx):
-        mod_role = "Bot Mod".lower()
-        admin_role = "Bot Admin".lower()
-        return role_or_permissions(ctx, lambda r: r.name.lower() in (mod_role, admin_role), **perms)
+        if author_is_owner(ctx):
+            return True
+        raise commands.CheckFailure("Only the bot owner may run this command.")
+
+    return commands.check(predicate)
+
+
+def role_or_permissions(role_name, **perms):
+    def predicate(ctx):
+        if _role_or_permissions(ctx, lambda r: r.name.lower() == role_name.lower(), **perms):
+            return True
+        raise commands.CheckFailure(
+            f"You require a role named {role_name} or these permissions to run this command: {', '.join(perms)}")
 
     return commands.check(predicate)
 
 
 def admin_or_permissions(**perms):
     def predicate(ctx):
-        admin_role = "Bot Admin".lower()
-        return role_or_permissions(ctx, lambda r: r.name.lower() == admin_role.lower(), **perms)
+        admin_role = "Bot Admin"
+        if _role_or_permissions(ctx, lambda r: r.name.lower() == admin_role.lower(), **perms):
+            return True
+        raise commands.CheckFailure(
+            f"You require a role named Bot Admin or these permissions to run this command: {', '.join(perms)}")
 
     return commands.check(predicate)
 
 
-def serverowner_or_permissions(**perms):
+BREWER_ROLES = ("server brewer", "dragonspeaker")
+
+
+def can_edit_serverbrew():
     def predicate(ctx):
-        if ctx.message.server is None:
-            return False
-        server = ctx.message.server
-        owner = server.owner
-
-        if ctx.message.author.id == owner.id:
+        if ctx.author.guild_permissions.manage_guild or \
+                any(r.name.lower() in BREWER_ROLES for r in ctx.author.roles) or \
+                author_is_owner(ctx):
             return True
-
-        return check_permissions(ctx, perms)
+        raise commands.CheckFailure(
+            "You do not have permission to manage server homebrew. Either __Manage Server__ "
+            "Discord permissions or a role named \"Server Brewer\" or \"Dragonspeaker\" "
+            "is required."
+        )
 
     return commands.check(predicate)

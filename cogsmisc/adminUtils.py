@@ -4,606 +4,287 @@ Created on Sep 23, 2016
 @author: andrew
 """
 import asyncio
-import gc
-import importlib
-import json
 import logging
-import os
-import sys
-import uuid
+from math import floor
 
 import discord
-from discord import Server
-from discord.channel import PrivateChannel
-from discord.enums import ChannelType
 from discord.errors import NotFound
 from discord.ext import commands
 
-from utils import checks
-from utils.functions import discord_trim
-
-GITPATH = os.environ.get("GITPATH", "git")
+import utils.redisIO as redis
+from cogs5e.funcs.lookupFuncs import compendium
+from utils import checks, config
 
 log = logging.getLogger(__name__)
 
-RELOADABLE_MODULES = (
-    "cogs5e.funcs.dice", "cogs5e.funcs.lookupFuncs", "cogs5e.funcs.sheetFuncs", "cogs5e.models.homebrew.bestiary",
-    "cogs5e.models.character", "cogs5e.models.embeds", "cogs5e.models.initiative", "cogs5e.models.monster",
-    "cogs5e.models.race", "cogs5e.sheets.beyond", "cogs5e.sheets.dicecloud", "cogs5e.funcs.scripting",
-    "cogs5e.sheets.errors", "cogs5e.sheets.gsheet", "cogs5e.sheets.sheetParser", "utils.functions", "utils.argparser",
-    "cogs5e.models.homebrew.pack", "utils.constants"
-)
+COMMAND_PUBSUB_CHANNEL = f"admin-commands:{config.ENVIRONMENT}"  # >:c
 
 
-class AdminUtils:
+class AdminUtils(commands.Cog):
     """
     Administrative Utilities.
     """
 
     def __init__(self, bot):
         self.bot = bot
-        self.muted = self.bot.rdb.not_json_get('muted', [])
-        self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
+        bot.loop.create_task(self.load_admin())
+        bot.loop.create_task(self.admin_pubsub())
+        self.blacklisted_serv_ids = set()
+        self.whitelisted_serv_ids = set()
 
-        self.bot.loop.create_task(self.handle_pubsub())
-        self.bot.rdb.pubsub.subscribe('server-info-requests', 'server-info-response',  # all-shard communication
-                                      'admin-commands'  # 1-shard communication
-                                      )
-        self.requests = {}
+        # pubsub stuff
+        self._ps_cmd_map = {}  # set up in admin_pubsub()
+        self._ps_requests_pending = {}
 
-        loglevels = self.bot.rdb.jget('loglevels', {})
+    # ==== setup tasks ====
+    async def load_admin(self):
+        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
+        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
+        self.whitelisted_serv_ids = set(await self.bot.rdb.jget('server-whitelist', []))
+
+        loglevels = await self.bot.rdb.jget('loglevels', {})
         for logger, level in loglevels.items():
             try:
                 logging.getLogger(logger).setLevel(level)
             except:
                 log.warning(f"Failed to reset loglevel of {logger}")
 
+    async def admin_pubsub(self):
+        self._ps_cmd_map = {
+            "leave": self._leave,
+            "loglevel": self._loglevel,
+            "changepresence": self._changepresence,
+            "reload_static": self._reload_static,
+            "reload_lists": self._reload_lists,
+            "serv_info": self._serv_info,
+            "whois": self._whois,
+            "ping": self._ping
+        }
+        channel = (await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL))[0]
+        async for msg in channel.iter(encoding="utf-8"):
+            await self._ps_recv(msg)
+
+    # ==== commands ====
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def blacklist(self, _id):
-        self.blacklisted_serv_ids = self.bot.rdb.not_json_get('blacklist', [])
-        self.blacklisted_serv_ids.append(_id)
-        self.bot.rdb.not_json_set('blacklist', self.blacklisted_serv_ids)
-        await self.bot.say(':ok_hand:')
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def whitelist(self, _id):
-        whitelist = self.bot.rdb.not_json_get('server-whitelist', [])
-        whitelist.append(_id)
-        self.bot.rdb.not_json_set('server-whitelist', whitelist)
-        await self.bot.say(':ok_hand:')
-
-    @commands.command(pass_context=True, hidden=True)
-    @checks.is_owner()
-    async def chanSay(self, ctx, channel: str, *, message: str):
-        """Like .say, but works across servers. Requires channel id."""
-        await self.admin_command(ctx, "chanSay", message=message, channel=channel)
-
-    @commands.command(hidden=True, pass_context=True)
-    @checks.is_owner()
-    async def shardping(self, ctx):
-        """Pings all shards."""
-        await self.admin_command(ctx, "ping", _expected_responses=self.bot.shard_count)
+    async def blacklist(self, ctx, _id: int):
+        self.blacklisted_serv_ids.add(_id)
+        await self.bot.rdb.jset('blacklist', list(self.blacklisted_serv_ids))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def servInfo(self, server: str = None):
-        out = ''
-        page = None
-        num_shards = int(getattr(self.bot, 'shard_count', 1))
-        if len(server) < 3:
-            page = int(server)
-            server = None
+    async def whitelist(self, ctx, _id: int):
+        self.whitelisted_serv_ids.add(_id)
+        await self.bot.rdb.jset('server-whitelist', list(self.whitelisted_serv_ids))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
 
-        req = self.request_server_info(server)
-        for _ in range(300):  # timeout after 30 sec
-            if len(self.requests[req]) >= num_shards:
-                break
-            else:
-                await asyncio.sleep(0.1)
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def chanSay(self, ctx, channel: int, *, message: str):
+        """Low-level calls `bot.http.send_message()`."""
+        await self.bot.http.send_message(channel, message)
+        await ctx.send(f"Sent message.")
 
-        data = self.requests[req]
-        del self.requests[req]
-        for shard in range(num_shards):
-            if str(shard) not in data:
-                out += '\nMissing data from shard {}'.format(shard)
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def servInfo(self, ctx, guild_id: int):
+        resp = await self.pscall("serv_info", kwargs={"guild_id": guild_id}, expected_replies=1)
+        await self._send_replies(ctx, resp)
 
-        if server is None:  # grab all server info
-            all_servers = []
-            for _shard, _data in data.items():
-                for s in _data:
-                    s['shard'] = _shard
-                all_servers += _data
-            out += f"I am in {len(all_servers)} servers, with {sum(s['members'] for s in all_servers)} members."
-            for s in sorted(all_servers, key=lambda k: k['members'], reverse=True):
-                out += "\n{} ({}, {} members, {} bot, shard {})".format(s['name'], s['id'], s['members'], s['bots'],
-                                                                        s['shard'])
-        else:  # grab one server info
-            try:
-                _data = next(
-                    (s, d) for s, d in data.items() if d is not None)  # here we assume only one shard will reply
-                shard = _data[0]
-                data = _data[1]
-            except StopIteration:
-                return await self.bot.say("Not found.")
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def whois(self, ctx, user_id: int):
+        user = await self.bot.fetch_user(user_id)
+        resp = await self.pscall("whois", kwargs={"user_id": user_id})
+        await self._send_replies(ctx, resp, base=f"{user_id} is {user}:")
 
-            if data.get('private_message'):
-                return await self.bot.say("{} - {} - Shard 0".format(data['name'], data['user']))
-            else:
-                if data.get('invite'):
-                    out += "\n\n**{} ({}, {}, shard {})**".format(data['name'], data['id'], data['invite'], shard)
-                else:
-                    out += "\n\n**{} ({}, shard {})**".format(data['name'], data['id'], shard)
-                out += "\n{} members, {} bot".format(data['members'], data['bots'])
-                for c in data['channels']:
-                    out += '\n|- {} ({})'.format(c['name'], c['id'])
-        out = discord_trim(out)
-        if page is None:
-            for m in out:
-                await self.bot.say(m)
-        else:
-            await self.bot.say(out[page - 1])
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def pingall(self, ctx):
+        resp = await self.pscall("ping")
+        embed = discord.Embed(title="Cluster Pings")
+        for cluster, pings in sorted(resp.items(), key=lambda i: i[0]):
+            pingstr = "\n".join(f"Shard {shard}: {floor(ping * 1000)}ms" for shard, ping in pings.items())
+            avgping = floor((sum(pings.values()) / len(pings)) * 1000)
+            embed.add_field(name=f"Cluster {cluster}: {avgping}ms", value=pingstr)
+        await ctx.send(embed=embed)
 
     @commands.command(hidden=True, name='leave')
     @checks.is_owner()
-    async def leave_server(self, servID: str):
-        req = self.request_leave_server(servID)
-        for _ in range(300):  # timeout after 30 sec
-            if len(self.requests[req]) >= 1:
-                break
-            else:
-                await asyncio.sleep(0.1)
-
-        out = ''
-        data = self.requests[req]
-        del self.requests[req]
-
-        for shard, response in data.items():
-            out += 'Shard {}: {}\n'.format(shard, response['response'])
-        await self.bot.say(out)
+    async def leave_server(self, ctx, guild_id: int):
+        resp = await self.pscall("leave", kwargs={"guild_id": guild_id}, expected_replies=1)
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def mute(self, target):
+    async def mute(self, ctx, target: int):
         """Mutes a person by ID."""
-        self.muted = self.bot.rdb.not_json_get('muted', [])
         try:
-            target_user = await self.bot.get_user_info(target)
+            target_user = await self.bot.fetch_user(target)
         except NotFound:
             target_user = "Not Found"
-        if target in self.muted:
-            self.muted.remove(target)
-            await self.bot.say("{} ({}) unmuted.".format(target, target_user))
+        if target in self.bot.muted:
+            self.bot.muted.remove(target)
+            await ctx.send("{} ({}) unmuted.".format(target, target_user))
         else:
-            self.muted.append(target)
-            await self.bot.say("{} ({}) muted.".format(target, target_user))
-        self.bot.rdb.not_json_set('muted', self.muted)
+            self.bot.muted.add(target)
+            await ctx.send("{} ({}) muted.".format(target, target_user))
+        await self.bot.rdb.jset('muted', list(self.bot.muted))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def loglevel(self, level: int, logger=None):
+    async def loglevel(self, ctx, level: int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
-        loglevels = self.bot.rdb.jget('loglevels', {})
+        loglevels = await self.bot.rdb.jget('loglevels', {})
         loglevels[logger] = level
-        self.bot.rdb.jset('loglevels', loglevels)
-        req = self.request_log_level(level, logger)
-        for _ in range(300):  # timeout after 30 sec
-            if len(self.requests[req]) >= self.bot.shard_count:
-                break
-            else:
-                await asyncio.sleep(0.1)
-
-        out = ''
-        data = self.requests[req]
-        del self.requests[req]
-
-        for shard, response in data.items():
-            out += 'Shard {}: {}\n'.format(shard, response['response'])
-        await self.bot.say(out)
+        await self.bot.rdb.jset('loglevels', loglevels)
+        resp = await self.pscall("loglevel", args=[level], kwargs={"logger": logger})
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def changepresence(self, status=None, *, msg=None):
+    async def changepresence(self, ctx, status=None, *, msg=None):
         """Changes Avrae's presence. Status: online, idle, dnd"""
-        statuslevel = {'online': 0, 'idle': 1, 'dnd': 2}
-        status = statuslevel.get(status)
-        req = self.request_presence_update(status, msg)
-        for _ in range(100):  # timeout after 10 sec
-            if len(self.requests[req]) >= self.bot.shard_count:
-                break
-            else:
-                await asyncio.sleep(0.1)
-
-        out = ''
-        data = self.requests.pop(req)
-
-        for shard, response in data.items():
-            out += 'Shard {}: {}\n'.format(shard, response['response'])
-        await self.bot.say(out)
+        resp = await self.pscall("changepresence", kwargs={"status": status, "msg": msg})
+        await self._send_replies(ctx, resp)
 
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def updatebot(self, pull_git: bool = True):
-        successful = True
-        self.bot.state = "updating"
+    async def reload_static(self, ctx):
+        resp = await self.pscall("reload_static")
+        await self._send_replies(ctx, resp)
 
-        for cog in self.bot.dynamic_cog_list:
-            try:
-                self.bot.unload_extension(cog)
-                log.info(f"Unloaded {cog}")
-            except Exception as e:
-                log.critical(f"Failed to unload {cog}: {type(e).__name__}: {e}")
-                return await self.bot.say(f"Failed to unload {cog} - update aborted but cogs unloaded!")
-
-        def _():
-            import subprocess
-            try:
-                output = subprocess.check_output([GITPATH, "pull"], stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as err:
-                output = err.output
-                nonlocal successful
-                successful = False
-            return output.decode()
-
-        if pull_git:
-            out = await self.bot.loop.run_in_executor(None, _)
-            await self.bot.say(f"```\n{out}\n```")
-
-        for module in RELOADABLE_MODULES:
-            mod = sys.modules.get(module)
-            if mod is None:
-                continue
-            log.info(f"Reloading module {module}")
-            importlib.reload(mod)
-
-        for cog in self.bot.dynamic_cog_list:
-            try:
-                self.bot.load_extension(cog)
-                log.info(f"Loaded {cog}")
-            except Exception as e:
-                log.critical(f"Failed to load {cog}: {type(e).__name__}: {e}")
-                successful = False
-                await self.bot.say(f"Failed to load {cog} - update continuing on this shard only!")
-
-        gc.collect()
-        build = self.bot.rdb.incr("build_num")
-        await self.bot.say(f"Okay, shard {self.bot.shard_id} has updated. Now on build {build}.")
-        self.bot.state = "run"
-
-        if successful:
-            req = self.request_bot_update(self.bot.shard_id)
-            for _ in range(100):  # timeout after 10 sec
-                if len(self.requests[req]) >= self.bot.shard_count - 1:
-                    break
-                else:
-                    await asyncio.sleep(0.1)
-
-            out = ''
-            data = self.requests.pop(req)
-
-            for shard, response in data.items():
-                out += 'Shard {}: {}\n'.format(shard, response['response'])
-            if out:
-                await self.bot.say(out)
-
-    async def on_message(self, message):
-        if message.author.id in self.muted:
-            try:
-                await self.bot.delete_message(message)
-            except:
-                pass
-
-    async def on_server_join(self, server):
-        if server.id in self.blacklisted_serv_ids: await self.bot.leave_server(server)
-        if server.id in self.bot.rdb.jget('server-whitelist', []): return
+    # ==== listener ====
+    @commands.Cog.listener()
+    async def on_guild_join(self, server):
+        if server.id in self.blacklisted_serv_ids:
+            return await server.leave()
+        elif server.id in self.whitelisted_serv_ids:
+            return
         bots = sum(1 for m in server.members if m.bot)
         members = len(server.members)
         ratio = bots / members
         if ratio >= 0.6 and members >= 20:
             log.info("Detected bot collection server ({}), ratio {}. Leaving.".format(server.id, ratio))
             try:
-                await self.bot.send_message(server.owner,
-                                            "Please do not add me to bot collection servers. "
-                                            "Your server was flagged for having over 60% bots. "
-                                            "If you believe this is an error, please PM the bot author.")
+                await server.owner.send("Please do not add me to bot collection servers. "
+                                        "Your server was flagged for having over 60% bots. "
+                                        "If you believe this is an error, please PM the bot author.")
             except:
                 pass
             await asyncio.sleep(members / 200)
-            await self.bot.leave_server(server)
+            await server.leave()
 
-    def request_server_info(self, serv_id):
-        request = ServerInfoRequest(self.bot, serv_id)
-        self.requests[request.uuid] = {}
-        r = json.dumps(request.to_dict())
-        self.bot.rdb.publish('server-info-requests', r)
-        return request.uuid
+    # ==== helper ====
+    @staticmethod
+    async def _send_replies(ctx, resp, base=None):
+        sorted_replies = sorted(resp.items(), key=lambda i: i[0])
+        out = '\n'.join(f"{cid}: {rep}" for cid, rep in sorted_replies)
+        if base:
+            out = f"{base}\n{out}"
+        await ctx.send(out)
 
-    def request_leave_server(self, serv_id):
-        request = CommandRequest(self.bot, 'leave', server_id=serv_id)
-        self.requests[request.uuid] = {}
-        r = json.dumps(request.to_dict())
-        self.bot.rdb.publish('admin-commands', r)
-        return request.uuid
+    # ==== methods (called by pubsub) ====
+    async def _leave(self, guild_id):
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            return False
+        await guild.leave()
+        return f"Left {guild.name}."
 
-    def request_log_level(self, level, logger):
-        request = CommandRequest(self.bot, 'loglevel', level=level, logger=logger)
-        self.requests[request.uuid] = {}
-        r = json.dumps(request.to_dict())
-        self.bot.rdb.publish('admin-commands', r)
-        return request.uuid
+    @staticmethod
+    async def _loglevel(level, logger=None):
+        logging.getLogger(logger).setLevel(level)
+        return f"Set level of {logger} to {level}."
 
-    def request_presence_update(self, status, msg):
-        request = CommandRequest(self.bot, 'presence', status=status, msg=msg)
-        self.requests[request.uuid] = {}
-        r = json.dumps(request.to_dict())
-        self.bot.rdb.publish('admin-commands', r)
-        return request.uuid
+    async def _changepresence(self, status=None, msg=None):
+        statuslevel = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd}
+        status = statuslevel.get(status)
+        await self.bot.change_presence(status=status, activity=discord.Game(msg or "D&D 5e | !help"))
+        return "Changed presence."
 
-    def request_bot_update(self, origin_shard):
-        request = CommandRequest(self.bot, 'bot_update', origin_shard=origin_shard)
-        self.requests[request.uuid] = {}
-        r = json.dumps(request.to_dict())
-        self.bot.rdb.publish('admin-commands', r)
-        return request.uuid
+    async def _reload_static(self):
+        await compendium.reload(self.bot.mdb)
+        return "OK"
 
-    async def admin_command(self, ctx, cmd, **kwargs):
-        expected_responses = kwargs.pop('_expected_responses', 1)
-        request = CommandRequest(ctx.bot, cmd, **kwargs)
-        self.requests[request.uuid] = {}
-        r = json.dumps(request.to_dict())
-        self.bot.rdb.publish('admin-commands', r)
-        for _ in range(300):  # timeout after 30 sec
-            if len(self.requests[request.uuid]) >= expected_responses:
+    async def _reload_lists(self):
+        self.blacklisted_serv_ids = set(await self.bot.rdb.jget('blacklist', []))
+        self.whitelisted_serv_ids = set(await self.bot.rdb.jget('server-whitelist', []))
+        self.bot.muted = set(await self.bot.rdb.jget('muted', []))
+        return "OK"
+
+    async def _serv_info(self, guild_id):
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            channel = self.bot.get_channel(guild_id)
+            if not channel:
+                return False
+            else:
+                guild = channel.guild
+
+        try:
+            invite = (
+                await next(c for c in guild.channels if isinstance(c, discord.TextChannel)).create_invite()).url
+        except:
+            invite = None
+
+        if invite:
+            out = f"{guild.name} ({guild.id}, <{invite}>)"
+        else:
+            out = f"{guild.name} ({guild.id})"
+        out += f"\n{len(guild.members)} members, {sum(m.bot for m in guild.members)} bot"
+        return out
+
+    async def _whois(self, user_id):
+        return [guild.id for guild in self.bot.guilds if user_id in {user.id for user in guild.members}]
+
+    async def _ping(self):
+        return dict(self.bot.latencies)
+
+    # ==== pubsub ====
+    async def pscall(self, command, args=None, kwargs=None, *, expected_replies=config.NUM_CLUSTERS or 1, timeout=30):
+        """Makes an IPC call to all clusters. Returns a dict of {cluster_id: reply_data}."""
+        request = redis.PubSubCommand.new(self.bot, command, args, kwargs)
+        self._ps_requests_pending[request.id] = {}
+        await self.bot.rdb.publish(COMMAND_PUBSUB_CHANNEL, request.to_json())
+
+        for _ in range(timeout * 10):  # timeout after 30 sec
+            if len(self._ps_requests_pending[request.id]) >= expected_replies:
                 break
             else:
                 await asyncio.sleep(0.1)
 
-        out = ''
-        data = self.requests[request.uuid]
-        del self.requests[request.uuid]
+        return self._ps_requests_pending.pop(request.id)
 
-        for shard, response in data.items():
-            out += 'Shard {}: {}\n'.format(shard, response['response'])
-        await self.bot.send_message(ctx.message.channel, out)
+    async def _ps_recv(self, message):
+        redis.pslogger.debug(message)
+        msg = redis.deserialize_ps_msg(message)
+        if msg.type == 'reply':
+            await self._ps_reply(msg)
+        elif msg.type == 'cmd':
+            await self._ps_cmd(msg)
 
-    async def handle_pubsub(self):
-        try:
-            await self.bot.wait_until_ready()
-            pslog = logging.getLogger("cogsmisc.adminUtils.PubSub")
-            while not self.bot.is_closed:
-                await asyncio.sleep(0.1)
-                message = self.bot.rdb.pubsub.get_message()
-                if message is None: continue
-                for k, v in message.items():
-                    if isinstance(v, bytes):
-                        message[k] = v.decode()
-                pslog.debug(str(message))
-                if not message['type'] in ('message', 'pmessage'): continue
-                if message['channel'] == 'server-info-requests':
-                    await self._handle_server_info_request(message)
-                elif message['channel'] == 'server-info-response':
-                    await self._handle_server_info_response(message)
-                elif message['channel'] == 'admin-commands':
-                    await self._handle_admin_command(message)
-        except asyncio.CancelledError:
-            pass
-
-    async def _handle_server_info_request(self, message):
-        _data = json.loads(message['data'])
-        server_id = _data['server-id']
-        reply_to = _data['uuid']
-        try:
-            invite = (
-                await self.bot.create_invite(
-                    self.bot.get_channel(server_id) or next(
-                        c for c in self.bot.get_server(server_id).channels if c.type == ChannelType.text))).url
-        except:
-            invite = None
-        response = ServerInfoResponse(self.bot, reply_to, server_id, invite)
-        r = json.dumps(response.to_dict())
-        self.bot.rdb.publish('server-info-response', r)
-
-    async def _handle_server_info_response(self, message):
-        _data = json.loads(message['data'])
-        reply_to = _data['reply-to']
-        __data = _data['data']
-        shard_id = _data['shard']
-        if not reply_to in self.requests:
+    async def _ps_reply(self, message: redis.PubSubReply):
+        if message.reply_to not in self._ps_requests_pending:
             return
-        else:
-            self.requests[reply_to][str(shard_id)] = __data
+        self._ps_requests_pending[message.reply_to][message.sender] = message.data
 
-    async def _handle_admin_command(self, message):
-        _data = json.loads(message['data'])
-        _commands = {'leave': self.__handle_leave_command,
-                     'loglevel': self.__handle_log_level_command,
-                     'reply': self.__handle_command_reply,
-                     'chanSay': self.__handle_chan_say_command,
-                     'ping': self.__handle_ping_command,
-                     'presence': self.__handle_presence_update_command,
-                     'bot_update': self.__handle_bot_update_command}
-        await _commands.get(_data['command'])(_data)  # ... don't question this.
-
-    async def __handle_leave_command(self, data):
-        _data = data['data']
-        reply_to = data['uuid']
-        server_id = _data['server_id']
-        serv = self.bot.get_server(server_id)
-        if serv is not None:
-            await self.bot.leave_server(serv)
-            response = CommandResponse(self.bot, reply_to, "Left {}.".format(serv))
-            r = json.dumps(response.to_dict())
-            self.bot.rdb.publish('admin-commands', r)
-
-    async def __handle_log_level_command(self, data):
-        _data = data['data']
-        reply_to = data['uuid']
-        level = _data['level']
-        logger = _data['logger']
-        logging.getLogger(logger).setLevel(level)
-        response = CommandResponse(self.bot, reply_to, "Set level of logger {} to {}.".format(logger, level))
-        r = json.dumps(response.to_dict())
-        self.bot.rdb.publish('admin-commands', r)
-
-    async def __handle_command_reply(self, data):
-        _data = data['data']
-        reply_to = data['reply-to']
-        shard_id = data['shard']
-        if not reply_to in self.requests:
+    async def _ps_cmd(self, message: redis.PubSubCommand):
+        if message.command not in self._ps_cmd_map:
             return
-        else:
-            self.requests[reply_to][str(shard_id)] = _data
+        command = self._ps_cmd_map[message.command]
+        result = await command(*message.args, **message.kwargs)
 
-    async def __handle_chan_say_command(self, data):
-        _data = data['data']
-        reply_to = data['uuid']
-        channel = _data['channel']
-        msg = _data['message']
-        channel = self.bot.get_channel(channel)
-        if channel is not None:
-            try:
-                await self.bot.send_message(channel, msg)
-            except Exception as e:
-                response = CommandResponse(self.bot, reply_to, f'Failed to send message: {e}')
-            else:
-                response = CommandResponse(self.bot, reply_to, "Sent message.")
-            r = json.dumps(response.to_dict())
-            self.bot.rdb.publish('admin-commands', r)
-
-    async def __handle_ping_command(self, data):
-        reply_to = data['uuid']
-        response = CommandResponse(self.bot, reply_to, "Pong.")
-        r = json.dumps(response.to_dict())
-        self.bot.rdb.publish('admin-commands', r)
-
-    async def __handle_presence_update_command(self, data):
-        reply_to = data['uuid']
-        _data = data['data']
-        status = _data['status']
-        msg = _data['msg']
-        statuses = {0: discord.Status.online, 1: discord.Status.idle, 2: discord.Status.dnd}
-        status = statuses.get(status, discord.Status.online)
-        await self.bot.change_presence(status=status, game=discord.Game(name=msg or "D&D 5e | !help"))
-        response = CommandResponse(self.bot, reply_to, "Changed presence.")
-        r = json.dumps(response.to_dict())
-        self.bot.rdb.publish('admin-commands', r)
-
-    async def __handle_bot_update_command(self, data):
-        reply_to = data['uuid']
-        _data = data['data']
-        origin_shard = _data['origin_shard']
-        if origin_shard == self.bot.shard_id:
-            return  # we've already updated
-
-        self.bot.state = "updating"
-        for cog in self.bot.dynamic_cog_list:  # this *should* be safe if the first shard updated fine, right?
-            self.bot.unload_extension(cog)
-
-        for module in RELOADABLE_MODULES:
-            mod = sys.modules.get(module)
-            if mod is None:
-                continue
-            log.info(f"Reloading module {module}")
-            importlib.reload(mod)
-
-        for cog in self.bot.dynamic_cog_list:
-            self.bot.load_extension(cog)
-
-        gc.collect()
-        self.bot.state = "run"
-        response = CommandResponse(self.bot, reply_to, "Updated!")
-        r = json.dumps(response.to_dict())
-        self.bot.rdb.publish('admin-commands', r)
+        if result is not False:
+            response = redis.PubSubReply.new(self.bot, reply_to=message.id, data=result)
+            await self.bot.rdb.publish(COMMAND_PUBSUB_CHANNEL, response.to_json())
 
 
-class PubSubMessage(object):
-    def __init__(self, bot):
-        self.shard_id = int(getattr(bot, 'shard_id', 0))
-        self.uuid = str(uuid.uuid4())
-
-    def to_dict(self):
-        d = {'shard': self.shard_id, 'uuid': self.uuid}
-        return d
-
-
-class CommandRequest(PubSubMessage):
-    def __init__(self, bot, command, **kwargs):
-        super().__init__(bot)
-        self.command = command
-        self.kwargs = kwargs
-
-    def to_dict(self):
-        d = super().to_dict()
-        d['command'] = self.command
-        d['data'] = self.kwargs
-        return d
-
-
-class CommandResponse(PubSubMessage):
-    def __init__(self, bot, reply_to, response):
-        super().__init__(bot)
-        self.reply_to = reply_to
-        self.response = response
-
-    def to_dict(self):
-        d = super().to_dict()
-        d['command'] = 'reply'
-        d['reply-to'] = self.reply_to
-        d['data'] = {'response': self.response}
-        return d
-
-
-class ServerInfoRequest(PubSubMessage):
-    def __init__(self, bot, server_id):
-        super().__init__(bot)
-        self.server_id = server_id
-
-    def to_dict(self):
-        d = super().to_dict()
-        d['server-id'] = self.server_id
-        return d
-
-
-class ServerInfoResponse(PubSubMessage):
-    def __init__(self, bot, reply_to, server_id, server_invite=None):
-        super().__init__(bot)
-        self.server_id = server_id
-        self.reply_to = reply_to
-        if server_id is None:
-            self.data = [{'id': s.id,
-                          'name': s.name,
-                          'members': len(s.members),
-                          'bots': sum(m.bot for m in s.members)} for s in bot.servers]
-        else:
-            s = bot.get_channel(server_id) or bot.get_server(server_id)
-            if s is None:
-                self.data = None
-            elif isinstance(s, PrivateChannel):
-                self.data = {'id': s.id,
-                             'name': str(s),
-                             'user': s.user.id,
-                             'private_message': True}
-            else:
-                if not isinstance(s, Server):
-                    s = s.server
-                channels = [{'id': c.id,
-                             'name': c.name} for c in s.channels if c.type is not ChannelType.voice]
-                self.data = {'id': s.id,
-                             'name': s.name,
-                             'members': len(s.members),
-                             'bots': sum(m.bot for m in s.members),
-                             'channels': channels,
-                             'invite': server_invite,
-                             'private_message': False}
-
-    def to_dict(self):
-        d = super().to_dict()
-        d['server-id'] = self.server_id
-        d['reply-to'] = self.reply_to
-        d['data'] = self.data
-        return d
-
-
+# ==== setup ====
 def setup(bot):
     bot.add_cog(AdminUtils(bot))

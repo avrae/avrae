@@ -1,59 +1,121 @@
 import asyncio
+import faulthandler
 import logging
 import os
 import sys
 import traceback
 
+# this hooks a lot of weird things and needs to be imported early
+import utils.newrelic
+
+utils.newrelic.hook_all()
+from utils import clustering, config
+
+import aioredis
 import discord
 import motor.motor_asyncio
-import redis
-from aiohttp import ClientResponseError
-from discord.errors import Forbidden, NotFound, HTTPException, InvalidArgument
+import sentry_sdk
+from aiohttp import ClientOSError, ClientResponseError
+from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
+from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.errors import AvraeException, EvaluationError
-from utils.functions import discord_trim, get_positivity, list_get, gen_error_message
+from utils.help import help_command
 from utils.redisIO import RedisIO
 
-TESTING = get_positivity(os.environ.get("TESTING", False))
-if 'test' in sys.argv:
-    TESTING = True
-prefix = '!' if not TESTING else '#'
-shard_id = 0
-shard_count = 1
-SHARDED = False
-if '-s' in sys.argv:
-    temp_shard_id = list_get(sys.argv.index('-s') + 1, None, sys.argv)
-    if temp_shard_id is not None:
-        shard_count = os.environ.get('SHARDS', 1)
-        shard_id = temp_shard_id if int(temp_shard_id) < int(shard_count) else 0
-        SHARDED = True
 # -----COGS-----
-DYNAMIC_COGS = ["cogs5e.dice", "cogs5e.charGen", "cogs5e.gametrack", "cogs5e.homebrew", "cogs5e.initTracker",
-                "cogs5e.lookup", "cogs5e.pbpUtils", "cogs5e.sheetManager", "cogsmisc.customization"]
-STATIC_COGS = ["cogsmisc.adminUtils", "cogsmisc.core", "cogsmisc.permissions", "cogsmisc.publicity", "cogsmisc.repl",
-               "cogsmisc.stats", "utils.help"]
+COGS = (
+    "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
+    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization", "cogsmisc.core",
+    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"
+)
 
 
-class Avrae(commands.Bot):
-    def __init__(self, command_prefix, formatter=None, description=None, pm_help=False, testing=False,
-                 **options):
-        super(Avrae, self).__init__(command_prefix, formatter, description, pm_help, **options)
-        self.prefix = prefix
-        self.remove_command("help")
+async def get_prefix(the_bot, message):
+    if not message.guild:
+        return commands.when_mentioned_or(config.DEFAULT_PREFIX)(the_bot, message)
+    guild_id = str(message.guild.id)
+    if guild_id in the_bot.prefixes:
+        gp = the_bot.prefixes.get(guild_id, config.DEFAULT_PREFIX)
+    else:  # load from db and cache
+        gp_obj = await the_bot.mdb.prefixes.find_one({"guild_id": guild_id})
+        if gp_obj is None:
+            gp = config.DEFAULT_PREFIX
+        else:
+            gp = gp_obj.get("prefix", config.DEFAULT_PREFIX)
+        the_bot.prefixes[guild_id] = gp
+    return commands.when_mentioned_or(gp)(the_bot, message)
+
+
+class Avrae(commands.AutoShardedBot):
+    def __init__(self, prefix, description=None, testing=False, **options):
+        super(Avrae, self).__init__(prefix, help_command=help_command, description=description, **options)
         self.testing = testing
         self.state = "init"
         self.credentials = Credentials()
-        if TESTING:
-            self.rdb = RedisIO(testing=True, test_database_url=self.credentials.test_redis_url)
+        if config.TESTING:
             self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
         else:
-            self.rdb = RedisIO()
-            self.mclient = motor.motor_asyncio.AsyncIOMotorClient("mongodb://localhost:27017")
+            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+        self.mdb = self.mclient[config.MONGODB_DB_NAME]
+        self.rdb = self.loop.run_until_complete(self.setup_rdb())
+        self.prefixes = dict()
+        self.muted = set()
+        self.cluster_id = 0
 
-        self.mdb = self.mclient.avrae  # let's just use the avrae db
-        self.dynamic_cog_list = DYNAMIC_COGS
+        if config.SENTRY_DSN is not None:
+            release = None
+            if config.GIT_COMMIT_SHA:
+                release = f"avrae-bot@{config.GIT_COMMIT_SHA}"
+            sentry_sdk.init(dsn=config.SENTRY_DSN, environment=config.ENVIRONMENT.title(), release=release)
+
+    async def setup_rdb(self):
+        if config.TESTING:
+            redis_url = self.credentials.test_redis_url
+        else:
+            redis_url = config.REDIS_URL
+        return RedisIO(await aioredis.create_redis_pool(redis_url, db=config.REDIS_DB_NUM))
+
+    async def get_server_prefix(self, msg):
+        return (await get_prefix(self, msg))[-1]
+
+    async def launch_shards(self):
+        # set up my shard_ids
+        await clustering.coordinate_shards(self)
+        if self.shard_ids is not None:
+            log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
+        await super(Avrae, self).launch_shards()
+        log.info(f"Launched {len(self.shards)} shards!")
+
+        if self.is_cluster_0:
+            await self.rdb.incr('build_num')
+
+    @property
+    def is_cluster_0(self):
+        if self.cluster_id is None:  # we're not running in clustered mode anyway
+            return True
+        return self.cluster_id == 0
+
+    @staticmethod
+    def log_exception(exception=None, context: commands.Context = None):
+        if config.SENTRY_DSN is None:
+            return
+
+        with sentry_sdk.push_scope() as scope:
+            if context:
+                # noinspection PyDunderSlots,PyUnresolvedReferences
+                # for some reason pycharm doesn't pick up the attribute setter here
+                scope.user = {"id": context.author.id, "username": str(context.author)}
+                scope.set_tag("message.content", context.message.content)
+                scope.set_tag("is_private_message", context.guild is None)
+                scope.set_tag("channel.id", context.channel.id)
+                scope.set_tag("channel.name", str(context.channel))
+                if context.guild is not None:
+                    scope.set_tag("guild.id", context.guild.id)
+                    scope.set_tag("guild.name", str(context.guild))
+            sentry_sdk.capture_exception(exception)
 
 
 class Credentials:
@@ -65,57 +127,36 @@ class Credentials:
         self.token = credentials.officialToken
         self.test_redis_url = credentials.test_redis_url
         self.test_mongo_url = credentials.test_mongo_url
-        if TESTING:
+        if config.TESTING:
             self.token = credentials.testToken
-        if 'ALPHA_TOKEN' in os.environ:
-            self.token = os.environ.get("ALPHA_TOKEN")
+        if config.ALPHA_TOKEN:
+            self.token = config.ALPHA_TOKEN
 
 
-description = '''Avrae, a D&D 5e utility bot made by @zhu.exe#4211.
+desc = '''
+Avrae, a D&D 5e utility bot designed to help you and your friends play D&D online.
 A full command list can be found [here](https://avrae.io/commands)!
-Invite Avrae to your server [here](https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808)!
-Join the official testing server [here](https://discord.gg/pQbd4s6)!
-Love the bot? Donate to me [here](https://www.paypal.me/avrae)! \u2764
+Invite Avrae to your server [here](https://invite.avrae.io)!
+Join the official development server [here](https://support.avrae.io)!
 '''
-if not SHARDED:
-    bot = Avrae(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True,
-                shard_id=0, shard_count=1, max_messages=1000, testing=TESTING)
-else:
-    bot = Avrae(command_prefix=commands.when_mentioned_or(prefix), description=description, pm_help=True,
-                shard_id=int(shard_id), shard_count=int(shard_count), max_messages=1000, testing=TESTING)
+bot = Avrae(prefix=get_prefix, description=desc, pm_help=True, testing=config.TESTING,
+            activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'))
 
-log_formatter = logging.Formatter(
-    '%(asctime)s s.{}:%(levelname)s:%(name)s: %(message)s'.format(getattr(bot, 'shard_id', 0)))
+log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(log_formatter)
-filehandler = logging.FileHandler(f"temp/log_shard_{bot.shard_id}_build_{bot.rdb.get('build_num')}.log", mode='w')
-filehandler.setFormatter(log_formatter)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
-logger.addHandler(filehandler)
-
 log = logging.getLogger('bot')
-msglog = logging.getLogger('messages')
 
 
 @bot.event
 async def on_ready():
-    print('Logged in as')
-    print(bot.user.name)
-    print(bot.user.id)
-    print('Shard ' + str(getattr(bot, 'shard_id', 0)))
-    print('------')
-    await enter()
-
-
-async def enter():
-    await bot.wait_until_ready()
-    appInfo = await bot.application_info()
-    bot.owner = appInfo.owner
-    if not bot.rdb.exists('build_num'): bot.rdb.set('build_num', 114)  # this was added in build 114
-    if getattr(bot, "shard_id", 0) == 0: bot.rdb.incr('build_num')
-    await bot.change_presence(game=discord.Game(name='D&D 5e | !help'))
+    log.info('Logged in as')
+    log.info(bot.user.name)
+    log.info(bot.user.id)
+    log.info('------')
 
 
 @bot.event
@@ -124,136 +165,105 @@ async def on_resumed():
 
 
 @bot.event
-async def on_command_error(error, ctx):
+async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
         return
-    log.debug("Error caused by message: `{}`".format(ctx.message.content))
-    log.debug('\n'.join(traceback.format_exception(type(error), error, error.__traceback__)))
-    if isinstance(error, AvraeException):
-        return await bot.send_message(ctx.message.channel, str(error))
-    tb = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
-    if isinstance(error, commands.CheckFailure):
-        await bot.send_message(ctx.message.channel,
-                               "Error: Either you do not have the permissions to run this command, the command is disabled, or something went wrong internally.")
-        return
-    elif isinstance(error,
-                    (commands.MissingRequiredArgument, commands.BadArgument, commands.NoPrivateMessage, ValueError)):
-        return await bot.send_message(ctx.message.channel, "Error: " + str(
-            error) + "\nUse `!help " + ctx.command.qualified_name + "` for help.")
+
+    elif isinstance(error, AvraeException):
+        return await ctx.send(str(error))
+
+    elif isinstance(error, (commands.UserInputError, commands.NoPrivateMessage, ValueError)):
+        return await ctx.send(
+            f"Error: {str(error)}\nUse `{ctx.prefix}help " + ctx.command.qualified_name + "` for help.")
+
+    elif isinstance(error, commands.CheckFailure):
+        msg = str(error) or "You are not allowed to run this command."
+        return await ctx.send(f"Error: {msg}")
+
     elif isinstance(error, commands.CommandOnCooldown):
-        return await bot.send_message(ctx.message.channel,
-                                      "This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
+        return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
+
     elif isinstance(error, CommandInvokeError):
         original = error.original
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
             e = original.original
             if not isinstance(e, AvraeException):
-                tb = f"```py\n{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
+                tb = f"```py\nError when parsing expression {original.expression}:\n" \
+                     f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
                 try:
-                    await bot.send_message(ctx.message.author, tb)
+                    await ctx.author.send(tb)
                 except Exception as e:
                     log.info(f"Error sending traceback: {e}")
-        if isinstance(original, AvraeException):
-            return await bot.send_message(ctx.message.channel, str(original))
-        if isinstance(original, Forbidden):
+            return await ctx.send(str(original))
+
+        elif isinstance(original, AvraeException):
+            return await ctx.send(str(original))
+
+        elif isinstance(original, Forbidden):
             try:
-                return await bot.send_message(ctx.message.author,
-                                              "Error: I am missing permissions to run this command. Please make sure I have permission to send messages to <#{}>.".format(
-                                                  ctx.message.channel.id))
-            except:
+                return await ctx.author.send(
+                    f"Error: I am missing permissions to run this command. "
+                    f"Please make sure I have permission to send messages to <#{ctx.channel.id}>."
+                )
+            except HTTPException:
                 try:
-                    return await bot.send_message(ctx.message.channel, f"Error: I cannot send messages to this user.")
-                except:
+                    return await ctx.send(f"Error: I cannot send messages to this user.")
+                except HTTPException:
                     return
-        if isinstance(original, NotFound):
-            return await bot.send_message(ctx.message.channel,
-                                          "Error: I tried to edit or delete a message that no longer exists.")
-        if isinstance(original, ValueError) and str(original) in ("No closing quotation", "No escaped character"):
-            return await bot.send_message(ctx.message.channel, "Error: No closing quotation.")
-        if isinstance(original, AttributeError) and str(original) in ("'NoneType' object has no attribute 'name'",):
-            return await bot.send_message(ctx.message.channel, "Error in Discord API. Please try again.")
-        if isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError)):
-            return await bot.send_message(ctx.message.channel, "Error in Discord API. Please try again.")
-        if isinstance(original, HTTPException):
+
+        elif isinstance(original, NotFound):
+            return await ctx.send("Error: I tried to edit or delete a message that no longer exists.")
+
+        elif isinstance(original, (ClientResponseError, InvalidArgument, asyncio.TimeoutError, ClientOSError)):
+            return await ctx.send("Error in Discord API. Please try again.")
+
+        elif isinstance(original, HTTPException):
             if original.response.status == 400:
-                return await bot.send_message(ctx.message.channel, "Error: Message is too long, malformed, or empty.")
-            if original.response.status == 500:
-                return await bot.send_message(ctx.message.channel,
-                                              "Error: Internal server error on Discord's end. Please try again.")
-        if isinstance(original, redis.ResponseError):
-            await bot.send_message(ctx.message.channel,
-                                   "Error: I am having an issue writing to my database. Please report this to the dev!")
-            return await bot.send_message(bot.owner, f"Database error!\n{repr(original)}")
-        if isinstance(original, OverflowError):
-            return await bot.send_message(ctx.message.channel,
-                                          f"Error: A number is too large for me to store. "
-                                          f"This generally means you've done something terribly wrong.")
+                return await ctx.send(f"Error: Message is too long, malformed, or empty.\n{original.text}")
+            elif original.response.status == 500:
+                return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
 
-    error_msg = gen_error_message()
+        elif isinstance(original, OverflowError):
+            return await ctx.send(f"Error: A number is too large for me to store.")
 
-    await bot.send_message(ctx.message.channel,
-                           f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
-                           f"Please join <http://support.avrae.io> and tell the developer that {error_msg}!")
-    try:
-        await bot.send_message(bot.owner,
-                               f"**{error_msg}**\n" \
-                               + "Error in channel {} ({}), server {} ({}), shard {}: {}\nCaused by message: `{}`".format(
-                                   ctx.message.channel, ctx.message.channel.id, ctx.message.server,
-                                   ctx.message.server.id, getattr(bot, 'shard_id', 0), repr(error),
-                                   ctx.message.content))
-    except AttributeError:
-        await bot.send_message(bot.owner, f"**{error_msg}**\n" \
-                               + "Error in PM with {} ({}), shard 0: {}\nCaused by message: `{}`".format(
-            ctx.message.author.mention, str(ctx.message.author), repr(error), ctx.message.content))
-    for o in discord_trim(tb):
-        await bot.send_message(bot.owner, o)
-    log.error("Error caused by message: `{}`".format(ctx.message.content))
-    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+    # send error to sentry.io
+    if isinstance(error, CommandInvokeError):
+        bot.log_exception(error.original, ctx)
+    else:
+        bot.log_exception(error, ctx)
+
+    await ctx.send(
+        f"Error: {str(error)}\nUh oh, that wasn't supposed to happen! "
+        f"Please join <http://support.avrae.io> and let us know about the error!")
+
+    log.warning("Error caused by message: `{}`".format(ctx.message.content))
+    for line in traceback.format_exception(type(error), error, error.__traceback__):
+        log.warning(line)
 
 
 @bot.event
 async def on_message(message):
-    try:
-        msglog.debug(
-            "chan {0.channel} ({0.channel.id}), serv {0.server} ({0.server.id}), author {0.author} ({0.author.id}): "
-            "{0.content}".format(message))
-    except AttributeError:
-        msglog.debug("PM with {0.author} ({0.author.id}): {0.content}".format(message))
-    if message.author.id in bot.get_cog("AdminUtils").muted:
+    if message.author.id in bot.muted:
         return
-    if not hasattr(bot, 'global_prefixes'):  # bot's still starting up!
-        return
-    try:
-        guild_prefix = bot.global_prefixes.get(message.server.id, bot.prefix)
-    except:
-        guild_prefix = bot.prefix
-    if message.content.startswith(guild_prefix):
-        message.content = message.content.replace(guild_prefix, bot.prefix, 1)
-    elif message.content.startswith(bot.prefix):
-        return
-    if message.content.startswith(bot.prefix) and bot.state in ("init", "updating"):
-        return await bot.send_message(message.channel, "Bot is initializing, try again in a few seconds!")
     await bot.process_commands(message)
 
 
 @bot.event
-async def on_command(command, ctx):
-    bot.rdb.incr('commands_used_life')
+async def on_command(ctx):
     try:
         log.debug(
-            "Command called in channel {0.message.channel} ({0.message.channel.id}), server {0.message.server} ({0.message.server.id}): {0.message.content}".format(
+            "cmd: chan {0.message.channel} ({0.message.channel.id}), serv {0.message.guild} ({0.message.guild.id}), "
+            "auth {0.message.author} ({0.message.author.id}): {0.message.content}".format(
                 ctx))
     except AttributeError:
         log.debug("Command in PM with {0.message.author} ({0.message.author.id}): {0.message.content}".format(ctx))
 
 
-for cog in DYNAMIC_COGS:
+for cog in COGS:
     bot.load_extension(cog)
 
-for cog in STATIC_COGS:
-    bot.load_extension(cog)
-
-if SHARDED: log.info("I am shard {} of {}.".format(str(int(bot.shard_id) + 1), str(bot.shard_count)))
-
-bot.state = "run"
-bot.run(bot.credentials.token)
+if __name__ == '__main__':
+    faulthandler.enable()  # assumes we log errors to stderr, traces segfaults
+    bot.state = "run"
+    bot.loop.create_task(compendium.reload_task(bot.mdb))
+    bot.run(bot.credentials.token)

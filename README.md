@@ -8,7 +8,12 @@ You can join the Avrae Development Discord [here](https://discord.gg/pQbd4s6)!
 
 ## Contributing
 
-#### How to run Avrae locally
+### How to run Avrae locally
+#### Using Docker (Recommended)
+
+Check out docker/readme.md.
+
+#### Building Manually
 ###### OS Requirements
 Avrae runs best on Ubuntu 16.04.4, but should be fully compatible with any UNIX-based system.
 It is possible to run Avrae on Windows, but is not recommended.
@@ -30,40 +35,6 @@ You'll need to create a few files first.
 You'll also need to create a Google Drive Service Account. You can find instructions on how to do this [here](https://gspread.readthedocs.io/en/latest/oauth2.html#using-signed-credentials).
 Follow steps 1-3 in the **Signed Credentials** portion. Rename the JSON `avrae-google.json` and put it in the project root.
 
-###### Resources
-After creating the credential files, you'll have to create a few files so that Lookup doesn't break:
-- `res/backgrounds.json`*
-- `res/bestiary.json`*
-- `res/classes.json`*
-- `res/classfeats.json`*
-- `res/conditions.json`
-- `res/feats.json`
-- `res/itemprops.json` (should be `{}`)
-- `res/items.json`*
-- `res/names.json`*
-- `res/races.json`*
-- `res/rules.json`
-- `res/spells.json`*
-
-These files (except for itemprops) should just contain an empty JSON array (`[]`) for testing.
-Files marked with a * can be obtained by running the [data parsers](https://github.com/avrae/avrae-data).
-
-###### Temp Folders
-You will need to create a folder named `temp`.
-
-###### Search Algorithm
-You will also need to change the search algorithm used by spell lookup to the standard algorithm.
-
-In `cogs5e/lookup.py`, delete line 14 (`from cogs5e.funcs.lookup_ml import ml_spell_search`) and
-edit line 627
-```py
-spell = await select_spell_full(ctx, name, srd=srd, search_func=ml_spell_search)
-```
-to
-```py
-spell = await select_spell_full(ctx, name, srd=srd)
-```
-
 ##### Actually Running Avrae
 ###### Redis
 You will need to run a Redis instance to serve as a high-performance cache. Download [Redis 4.0](https://redis.io/download) and run a redis server locally **before** launching Avrae.
@@ -73,7 +44,23 @@ You will also need to run a MongoDB instance to serve as Avrae's database.
 To actually run Avrae, you need Python version >= 3.6.0 < 3.7.
 First, install the dependencies with `pip install -r requirements.txt`.
 
-- If running Avrae in unsharded+unsupervised mode (**recommended for testing**), you can just run `python dbot.py test`.
-- If running Avrae in sharded+unsupervised mode, launch each shard with `SHARDS=[NUM_SHARDS] python dbot.py test -s [SHARD_ID]`.
-- If running Avrae in sharded+supervised mode, run `SHARDS=[NUM_SHARDS] python overseer.py test 0 [NUM_SHARDS-1]`.
+- If running Avrae in unsharded mode (**recommended for testing**), run `python dbot.py test`.
+- If running Avrae in sharded mode, run `python dbot.py`.
 
+#### Testing
+To test Avrae, run these commands:
+```
+docker-compose -f docker-compose.test.yml -p avrae build
+docker-compose -f docker-compose.test.yml -p avrae up -d
+docker logs -f avrae_tests_1
+```
+This should initialize an ephemeral database to run command unit tests in. 
+You should set the `DICECLOUD_USER`, `DICECLOUD_PASS`, `DICECLOUD_TOKEN`, and `GOOGLE_SERVICE_ACCOUNT` env vars to their correct values.
+
+#### Misc
+Env vars required to deploy to production:
+- `NUM_CLUSTERS` - equal to the number of ECS tasks running Avrae
+- `GIT_COMMIT_SHA` - should be set in Travis
+
+Optional env vars:
+- `NUM_SHARDS` - explicitly set the number of shards to run

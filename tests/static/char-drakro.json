@@ -1,0 +1,349 @@
+{
+  "owner": "187421759484592128",
+  "upstream": "dicecloud-Mq4wBTknMaTfvQuMS",
+  "active": true,
+  "sheet_type": "dicecloud",
+  "import_version": 15,
+  "name": "Drakro Lonver",
+  "description": "A personal character for testing.",
+  "image": "https://cdn.discordapp.com/attachments/263128686004404225/462243079055867924/CA-Drakro-Face.png",
+  "stats": {
+    "prof_bonus": 3,
+    "strength": 21,
+    "dexterity": 12,
+    "constitution": 16,
+    "intelligence": 10,
+    "wisdom": 11,
+    "charisma": 11
+  },
+  "levels": {
+    "total_level": 6,
+    "classes": {
+      "Fighter": 1,
+      "Barbarian": 5
+    }
+  },
+  "attacks": [
+    {
+      "name": "Gauntlet Spike (Javelin)",
+      "bonus": 8,
+      "damage": "1d6 + 5 [piercing]",
+      "details": "Thrown (range 30/120)",
+      "bonus_calc": "strengthMod + proficiencyBonus"
+    },
+    {
+      "name": "Handaxe",
+      "bonus": 8,
+      "damage": "1d6 + 5 [slashing]",
+      "details": "Light, thrown (range 20/60)",
+      "bonus_calc": "strengthMod + proficiencyBonus"
+    },
+    {
+      "name": "Gauntlet Swipe (Battleaxe)",
+      "bonus": 8,
+      "damage": "1d8 + 5 [slashing]",
+      "details": "Versatile (1d10)",
+      "bonus_calc": "strengthMod + proficiencyBonus"
+    },
+    {
+      "name": "Shard (Greatsword)",
+      "bonus": 8,
+      "damage": "2d6ro<3 + 5 [slashing]",
+      "details": "Heavy, two-handed",
+      "bonus_calc": "strengthMod + proficiencyBonus"
+    },
+    {
+      "name": "Faithful Daggo'",
+      "bonus": 8,
+      "damage": "1d4 + 5 [piercing]",
+      "details": "finesse, thrown 20/60, light",
+      "bonus_calc": "strengthMod + proficiencyBonus"
+    }
+  ],
+  "skills": {
+    "acrobatics": {
+      "value": 2,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "animalHandling": {
+      "value": 4,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "arcana": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "athletics": {
+      "value": 10,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "deception": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "history": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "initiative": {
+      "value": 2,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "insight": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "intimidation": {
+      "value": 4,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "investigation": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "medicine": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "nature": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "perception": {
+      "value": 4,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "performance": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "persuasion": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "religion": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "sleightOfHand": {
+      "value": 2,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "stealth": {
+      "value": 2,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "survival": {
+      "value": 4,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "strength": {
+      "value": 5,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "dexterity": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "constitution": {
+      "value": 3,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "intelligence": {
+      "value": 0,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "wisdom": {
+      "value": 0,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "charisma": {
+      "value": 0,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    }
+  },
+  "resistances": {
+    "resist": [
+      "acid",
+      "bludgeoning",
+      "cold",
+      "fire",
+      "force",
+      "lightning",
+      "necrotic",
+      "piercing",
+      "poison",
+      "radiant",
+      "slashing",
+      "thunder"
+    ],
+    "immune": [],
+    "vuln": []
+  },
+  "saves": {
+    "strengthSave": {
+      "value": 9,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "dexteritySave": {
+      "value": 2,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "constitutionSave": {
+      "value": 7,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "intelligenceSave": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "wisdomSave": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "charismaSave": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    }
+  },
+  "ac": 14,
+  "max_hp": 64,
+  "hp": 64,
+  "temp_hp": 0,
+  "cvars": {},
+  "options": {
+    "options": {}
+  },
+  "overrides": {
+    "desc": null,
+    "image": null,
+    "attacks": [],
+    "spells": []
+  },
+  "consumables": [
+    {
+      "name": "Rages",
+      "value": 3,
+      "minv": "0",
+      "maxv": "3",
+      "reset": "long",
+      "display_type": "bubble",
+      "live_id": null
+    },
+    {
+      "name": "Inspiration",
+      "value": 1,
+      "minv": "0",
+      "maxv": "1",
+      "reset": null,
+      "display_type": "bubble",
+      "live_id": null
+    },
+    {
+      "name": "Second Wind",
+      "value": 1,
+      "minv": "0",
+      "maxv": "1",
+      "reset": "short",
+      "display_type": "bubble",
+      "live_id": null
+    }
+  ],
+  "death_saves": {
+    "successes": 0,
+    "fails": 0
+  },
+  "spellbook": {
+    "slots": {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0
+    },
+    "max_slots": {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0
+    },
+    "spells": [],
+    "dc": 0,
+    "sab": 0,
+    "caster_level": 6
+  },
+  "live": null,
+  "race": "Human (Variant)",
+  "background": "Outlander"
+}

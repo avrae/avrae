@@ -1,9 +1,16 @@
 **Thanks to the following for supporting the development of Avrae!**
-- Dusk Argentum
-- Eylesis
+- Adi Nugroho Tj
+- Ian Baker
 - Joseph Keen
+- Josh Carden
+- Karew
+- Kim
+- Mac
 - Marcus Cole
-- Matthew J Scoville
+- Nathan Clark
 - Ninja Bob
 - Page
-- Ian Baker
+- Ross Penczek
+- Sierra Clark
+- TidusIV
+

@@ -7,8 +7,6 @@ Created on Dec 25, 2016
 import logging
 import random
 import re
-import traceback
-from copy import copy
 from heapq import nlargest, nsmallest
 from math import floor
 from re import IGNORECASE
@@ -19,12 +17,13 @@ from cogs5e.models import errors
 
 log = logging.getLogger(__name__)
 
-VALID_OPERATORS = 'k|rr|ro|mi|ma|ra|e'
-VALID_OPERATORS_2 = re.compile('|'.join(["({})".format(i) for i in VALID_OPERATORS.split('|')]))
+VALID_OPERATORS = 'k|rr|ro|mi|ma|ra|e|p'
 VALID_OPERATORS_ARRAY = VALID_OPERATORS.split('|')
+VALID_OPERATORS_2 = re.compile('|'.join(["({})".format(i) for i in VALID_OPERATORS_ARRAY]))
 DICE_PATTERN = re.compile(
     r'^\s*(?:(?:(\d*d\d+)(?:(?:' + VALID_OPERATORS + r')(?:[lh<>]?\d+))*|(\d+)|([-+*/().=])?)\s*(\[.*\])?)(.*?)\s*$',
     IGNORECASE)
+MAX_REROLLS = 1000
 
 
 def list_get(index, default, l):
@@ -68,6 +67,7 @@ class Roll(object):
         if parts is None:
             parts = []
         self.parts = parts
+        self._rerolls = 0
 
     def get_crit(self):
         """Returns: 0 for no crit, 1 for 20, 2 for 1."""
@@ -163,115 +163,124 @@ class Roll(object):
             return DiceResult(result=int(floor(total)), verbose_result=reply, crit=crit, rolled=rolled,
                               skeleton=skeletonReply, raw_dice=self)
         except Exception as ex:
-            if not isinstance(ex, (SyntaxError, KeyError, errors.AvraeException)):
-                log.error('Error in roll() caused by roll {}:'.format(rollStr))
-                traceback.print_exc()
             return DiceResult(verbose_result="Invalid input: {}".format(ex))
 
     def roll_one(self, dice, adv: int = 0):
-        result = SingleDiceGroup()
-        result.rolled = []
-        # splits dice and comments
+        # splits dice and annotation
         split = re.match(r'^([^\[\]]*?)\s*(\[.*\])?\s*$', dice)
         dice = split.group(1).strip()
         annotation = split.group(2)
-        result.annotation = annotation if annotation is not None else ''
+
         # Recognizes dice
         obj = re.findall('\d+', dice)
         obj = [int(x) for x in obj]
         numArgs = len(obj)
 
+        # prepare dice and operators
         ops = []
         if numArgs == 1:
             if not dice.startswith('d'):
                 raise errors.InvalidArgument('Please pass in the value of the dice.')
             numDice = 1
-            diceVal = obj[0]
-            if adv is not 0 and diceVal == 20:
+            dice_size = obj[0]
+            if adv is not 0 and dice_size == 20:
                 numDice = 2
                 ops = ['k', 'h1'] if adv is 1 else ['k', 'l1']
         elif numArgs == 2:
             numDice = obj[0]
-            diceVal = obj[-1]
-            if adv is not 0 and diceVal == 20:
+            dice_size = obj[-1]
+            if adv is not 0 and dice_size == 20:
                 ops = ['k', 'h' + str(numDice)] if adv is 1 else ['k', 'l' + str(numDice)]
                 numDice = numDice * 2
         else:  # split into xdy and operators
             numDice = obj[0]
-            diceVal = obj[1]
+            dice_size = obj[1]
             dice = re.split('(\d+d\d+)', dice)[-1]
             ops = VALID_OPERATORS_2.split(dice)
             ops = [a for a in ops if a is not None]
 
-        # dice repair/modification
-        if numDice > 300 or diceVal < 1:
+        # ensure limits
+        if numDice > 300 or dice_size < 1:
             raise errors.InvalidArgument('Too many dice rolled.')
 
-        result.max_value = diceVal
-        result.num_dice = numDice
-        result.operators = ops
+        # prepare output
+        result = SingleDiceGroup(num_dice=numDice, max_value=dice_size, annotation=annotation or '', operators=ops)
 
+        # roll dice
         for _ in range(numDice):
             try:
-                tempdice = SingleDice()
-                tempdice.value = random.randint(1, diceVal)
-                tempdice.rolls = [tempdice.value]
-                tempdice.max_value = diceVal
-                tempdice.kept = True
+                tempdice = SingleDice(value=random.randint(1, dice_size), max_value=dice_size)
                 result.rolled.append(tempdice)
-            except:
+            except:  # ?
                 result.rolled.append(SingleDice())
 
+        # define operators
+        def _op_rr(buf):
+            self._rerolls += result.reroll(buf, greedy=True)
+
+        def _op_k(buf):
+            result.keep(buf)
+
+        def _op_ro(buf):
+            self._rerolls += result.reroll(buf, once=True)
+
+        def _op_ra(buf):
+            result.reroll(buf, once=True, keep_rerolled=True, unique=True)
+
+        def _op_e(buf):
+            self._rerolls += result.reroll(buf, greedy=True, keep_rerolled=True)
+
+        # run operators
         if ops is not None:
-
-            rerollList = []
-            reroll_once = []
-            keep = None
-            to_explode = []
-            to_reroll_add = []
-
-            valid_operators = VALID_OPERATORS_ARRAY
+            buffer = list()
+            operation = None
             last_operator = None
+
             for index, op in enumerate(ops):
-                if last_operator is not None and op in valid_operators and not op == last_operator:
-                    result.reroll(reroll_once, 1)
-                    reroll_once = []
-                    result.reroll(rerollList)
-                    rerollList = []
-                    result.keep(keep)
-                    keep = None
-                    result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
-                    to_reroll_add = []
-                    result.reroll(to_explode, greedy=True, keep_rerolled=True)
-                    to_explode = []
+                if self._rerolls > MAX_REROLLS:
+                    raise OverflowError("Tried to reroll too many dice.")
+
+                if operation is not None and op in VALID_OPERATORS_ARRAY and not op == last_operator:
+                    operation(buffer)
+                    buffer = list()
+                    operation = None
+
                 if op == 'rr':
-                    rerollList += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
-                if op == 'k':
-                    keep = [] if keep is None else keep
-                    keep += parse_selectors([list_get(index + 1, 0, ops)], result)
-                if op == 'ro':
-                    reroll_once += parse_selectors([list_get(index + 1, 0, ops)], result)
-                if op == 'mi':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
+                    operation = _op_rr
+                elif op == 'k':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result)
+                    operation = _op_k
+                elif op == 'p':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result, inverse=True)
+                    operation = _op_k
+                elif op == 'ro':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result)
+                    operation = _op_ro
+                elif op == 'mi':
                     _min = list_get(index + 1, 0, ops)
                     for r in result.rolled:
                         if r.value < int(_min):
                             r.update(int(_min))
-                if op == 'ma':
+                elif op == 'ma':
                     _max = list_get(index + 1, 0, ops)
                     for r in result.rolled:
                         if r.value > int(_max):
                             r.update(int(_max))
-                if op == 'ra':
-                    to_reroll_add += parse_selectors([list_get(index + 1, 0, ops)], result)
-                if op == 'e':
-                    to_explode += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
-                if op in valid_operators:
+                elif op == 'ra':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result)
+                    operation = _op_ra
+                elif op == 'e':
+                    buffer += parse_selectors([list_get(index + 1, 0, ops)], result, greedy=True)
+                    operation = _op_e
+
+                if op in VALID_OPERATORS_ARRAY:
                     last_operator = op
-            result.reroll(reroll_once, 1)
-            result.reroll(rerollList)
-            result.keep(keep)
-            result.reroll(to_reroll_add, 1, keep_rerolled=True, unique=True)
-            result.reroll(to_explode, greedy=True, keep_rerolled=True)
+
+            if self._rerolls > MAX_REROLLS:
+                raise OverflowError("Tried to reroll too many dice.")
+            if operation is not None:
+                operation(buffer)
 
         return result
 
@@ -303,43 +312,50 @@ class SingleDiceGroup(Part):
             elif _roll.kept:
                 rolls_to_keep.remove(_roll.value)
 
-    def reroll(self, rerollList, iterations=250, greedy=False, keep_rerolled=False, unique=False):
-        if not rerollList: return  # don't reroll nothing - minor optimization
+    def reroll(self, rerollList, max_iterations=1000, greedy=False, keep_rerolled=False, unique=False, once=False):
+        if not rerollList:
+            return 0  # don't reroll nothing - minor optimization
         if unique:
             rerollList = list(set(rerollList))  # remove duplicates
         if len(rerollList) > 100:
             raise OverflowError("Too many dice to reroll (max 100)")
-        for i in range(iterations):  # let's only iterate 250 times for sanity
-            temp = copy(rerollList)
-            breakCheck = True
-            for r in rerollList:
-                if r in (d.value for d in self.rolled if d.kept and not d.exploded):
-                    breakCheck = False
+        last_index = 0
+        count = 0
+        should_continue = True
+        while should_continue:  # let's only iterate 250 times for sanity
+            should_continue = False
+            if any(d.value in set(rerollList) for d in self.rolled[last_index:] if d.kept and not d.exploded):
+                should_continue = True
+
             to_extend = []
-            for r in self.rolled:
-                if r.value in temp and r.kept and not r.exploded:
+            for r in self.rolled[last_index:]:  # no need to recheck everything
+                count += 1
+                if count > max_iterations:
+                    should_continue = False
+                    break
+
+                if r.value in rerollList and r.kept and not r.exploded:
                     try:
-                        tempdice = SingleDice()
-                        tempdice.value = random.randint(1, self.max_value)
-                        tempdice.rolls = [tempdice.value]
-                        tempdice.max_value = self.max_value
-                        tempdice.kept = True
+                        tempdice = SingleDice(value=random.randint(1, self.max_value), max_value=self.max_value)
                         to_extend.append(tempdice)
-                        if not keep_rerolled:
-                            r.drop()
-                        else:
-                            r.explode()
                     except:
                         to_extend.append(SingleDice())
-                        if not keep_rerolled:
-                            r.drop()
-                        else:
-                            r.explode()
+
+                    if not keep_rerolled:
+                        r.drop()
+                    else:
+                        r.explode()
+
                     if not greedy:
-                        temp.remove(r.value)
+                        rerollList.remove(r.value)
+
+            last_index = len(self.rolled)
             self.rolled.extend(to_extend)
-            if breakCheck:
+
+            if once:
                 break
+
+        return count
 
     def get_total(self):
         """Returns:
@@ -451,7 +467,7 @@ class Comment(Part):
         return {'type': 'comment', 'value': self.comment}
 
 
-def parse_selectors(opts, res, greedy=False):
+def parse_selectors(opts, res, greedy=False, inverse=False):
     """Returns a list of ints."""
     for o in range(len(opts)):
         if opts[o][0] is 'h':
@@ -476,7 +492,17 @@ def parse_selectors(opts, res, greedy=False):
             out.extend(int(o) for a in res.rolled if a.value is int(o) and a.kept)
         else:
             out.append(int(o))
-    return out
+
+    if not inverse:
+        return out
+
+    inverse_out = []
+    for rolled in res.rolled:
+        if rolled.kept and rolled.value in out:
+            out.remove(rolled.value)
+        elif rolled.kept:
+            inverse_out.append(rolled.value)
+    return inverse_out
 
 
 class DiceResult:

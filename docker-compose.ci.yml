@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  tests:
+    image: avrae-tests
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - DISCORD_OWNER_USER_ID=98765432109876543
+      - DICECLOUD_USER
+      - DICECLOUD_PASS
+      - DICECLOUD_TOKEN
+      - GOOGLE_SERVICE_ACCOUNT
+    volumes:
+      - "./shared:/app/shared"
+
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: topsecret
+    ports:
+      - 58017:27017
+
+  redis:
+    image: redis:5
+    ports:
+      - 58379:6379
+

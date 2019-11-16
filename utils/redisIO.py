@@ -3,13 +3,10 @@ Created on Dec 28, 2016
 
 @author: andrew
 """
-
+import abc
 import json
-
-import redis
-from redis import Redis
-
-import credentials
+import logging
+import uuid
 
 
 class RedisIO:
@@ -17,86 +14,181 @@ class RedisIO:
     A simple class to interface with the redis database.
     """
 
-    def __init__(self, testing=False, test_database_url=''):
-        if not testing:
-            self._db = Redis(host="127.0.0.1", db=0, socket_connect_timeout=2, socket_timeout=2,
-                             password=credentials.redis_pass)
-        else:
-            self._db = redis.from_url(test_database_url)
-        self.pubsub = self._db.pubsub(ignore_subscribe_messages=True)
+    def __init__(self, _db):
+        """
+        :type _db: :class:`aioredis.Redis`
+        """
+        self._db = _db
 
-    def get(self, key, default=None):
-        encoded_data = self._db.get(key)
+    async def get(self, key, default=None):
+        encoded_data = await self._db.get(key)
         return encoded_data.decode() if encoded_data is not None else default
 
-    def set(self, key, value):
-        return self._db.set(key, value)
+    async def set(self, key, value, **kwargs):
+        return await self._db.set(key, value, **kwargs)
 
-    def incr(self, key):
-        return self._db.incr(key)
+    async def incr(self, key):
+        return await self._db.incr(key)
 
-    def exists(self, key):
-        return self._db.exists(key)
+    async def exists(self, *keys):
+        return await self._db.exists(*keys)
 
-    def delete(self, key):
-        return self._db.delete(key)
+    async def delete(self, *keys):
+        return await self._db.delete(*keys)
 
-    def setex(self, key, value, expiration):
-        return self._db.setex(key, value, expiration)
+    async def setex(self, key, value, expiration):
+        return await self._db.setex(key, expiration, value)
 
-    def set_dict(self, key, dictionary):
-        if len(dictionary) == 0:
-            return self._db.delete(key)
-        return self._db.hmset(key, dictionary)
+    async def setnx(self, key, value):
+        return await self._db.setnx(key, value)
 
-    def get_dict(self, key, dict_key):
-        return self._db.hget(key, dict_key).decode()
+    # ==== hashmaps ====
+    async def set_dict(self, key, dictionary):
+        return await self._db.hmset_dict(key, **dictionary)
 
-    def get_whole_dict(self, key, default=None):
+    async def get_dict(self, key, dict_key):
+        return await self.hget(key, dict_key)
+
+    async def get_whole_dict(self, key, default=None):
         if default is None:
             default = {}
-        encoded_dict = self._db.hgetall(key)
-        if encoded_dict is None: return default
-        out = {}
-        for k in encoded_dict.keys():
-            out[k.decode()] = encoded_dict[k].decode()
+        out = await self._db.hgetall(key, encoding='utf-8')
+        if out is None:
+            return default
         return out
 
-    def jset(self, key, data, **kwargs):
-        return self.not_json_set(key, data, **kwargs)
+    async def hget(self, key, field, default=None):
+        out = await self._db.hget(key, field, encoding='utf-8')
+        return out if out is not None else default
 
-    def jsetex(self, key, data, exp, **kwargs):
-        data = json.dumps(data, **kwargs)
-        return self.setex(key, data, exp)
+    async def hset(self, key, field, value):
+        return await self._db.hset(key, field, value)
 
-    def jget(self, key, default=None):
-        return self.not_json_get(key, default)
+    async def hdel(self, key, *fields):
+        return await self._db.hdel(key, *fields)
 
-    def not_json_set(self, key, data, **kwargs):
-        data = json.dumps(data, **kwargs)
-        return self.set(key, data)
+    async def hlen(self, key):
+        return await self._db.hlen(key)
 
-    def not_json_get(self, key, default=None):
-        data = self.get(key)
+    async def hexists(self, hashkey, key):
+        return await self._db.hexists(hashkey, key)
+
+    async def hincrby(self, key, field, increment):
+        return await self._db.hincrby(key, field, increment)
+
+    async def jhget(self, key, field, default=None):
+        data = await self.hget(key, field)
         return json.loads(data) if data is not None else default
 
-    def publish(self, channel, data):
-        return self._db.publish(channel, data)
-
-    def hget(self, key, field, default=None):
-        encoded_data = self._db.hget(key, field)
-        return encoded_data.decode() if encoded_data is not None else default
-
-    def hset(self, key, field, value):
-        return self._db.hset(key, field, value)
-
-    def hdel(self, key, *fields):
-        return self._db.hdel(key, *fields)
-
-    def jhget(self, key, field, default=None):
-        data = self.hget(key, field)
-        return json.loads(data) if data is not None else default
-
-    def jhset(self, key, field, value, **kwargs):
+    async def jhset(self, key, field, value, **kwargs):
         data = json.dumps(value, **kwargs)
-        return self.hset(key, field, data)
+        return await self.hset(key, field, data)
+
+    # ==== json ====
+    async def jset(self, key, data, **kwargs):
+        return await self.not_json_set(key, data, **kwargs)
+
+    async def jsetex(self, key, data, exp, **kwargs):
+        data = json.dumps(data, **kwargs)
+        return await self.setex(key, data, exp)
+
+    async def jget(self, key, default=None):
+        return await self.not_json_get(key, default)
+
+    async def not_json_set(self, key, data, **kwargs):
+        data = json.dumps(data, **kwargs)
+        return await self.set(key, data)
+
+    async def not_json_get(self, key, default=None):
+        data = await self.get(key)
+        return json.loads(data) if data is not None else default
+
+    # ==== lists ====
+    async def llen(self, key):
+        return await self._db.llen(key)
+
+    async def lindex(self, key, index):
+        encoded_data = await self._db.lindex(key, index)
+        return encoded_data.decode() if encoded_data is not None else None
+
+    async def rpush(self, key, *values):
+        return await self._db.rpush(key, *values)
+
+    # ==== pubsub ====
+    async def subscribe(self, *channels):
+        return await self._db.subscribe(*channels)
+
+    async def publish(self, channel, data):
+        return await self._db.publish(channel, data)
+
+
+class _PubSubMessageBase(abc.ABC):
+    def __init__(self, type, id, sender):
+        self.type = type
+        self.id = id
+        self.sender = sender
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+    def to_dict(self):
+        return {"type": self.type, "id": self.id, "sender": self.sender}
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
+
+
+class PubSubCommand(_PubSubMessageBase):
+    def __init__(self, id, sender, command, args, kwargs):
+        super().__init__('cmd', id, sender)
+        self.command = command
+        self.args = args
+        self.kwargs = kwargs
+
+    @classmethod
+    def new(cls, bot, command, args=None, kwargs=None):
+        if args is None:
+            args = []
+        if kwargs is None:
+            kwargs = {}
+        _id = str(uuid.uuid4())
+        return cls(_id, bot.cluster_id, command, args, kwargs)
+
+    def to_dict(self):
+        inst = super(PubSubCommand, self).to_dict()
+        inst.update({"command": self.command, "args": self.args, "kwargs": self.kwargs})
+        return inst
+
+
+class PubSubReply(_PubSubMessageBase):
+    def __init__(self, id, sender, reply_to, data):
+        super().__init__('reply', id, sender)
+        self.reply_to = reply_to
+        self.data = data
+
+    @classmethod
+    def new(cls, bot, reply_to, data):
+        _id = str(uuid.uuid4())
+        return cls(_id, bot.cluster_id, reply_to, data)
+
+    def to_dict(self):
+        inst = super().to_dict()
+        inst.update({"reply_to": self.reply_to, "data": self.data})
+        return inst
+
+
+PS_DESER_MAP = {
+    "cmd": PubSubCommand,
+    "reply": PubSubReply
+}
+
+
+def deserialize_ps_msg(message: str):
+    data = json.loads(message)
+    t = data.pop('type')
+    if t not in PS_DESER_MAP:
+        raise TypeError(f"{t} is not a valid pubsub message type.")
+    return PS_DESER_MAP[t].from_dict(data)
+
+pslogger = logging.getLogger("rdb.pubsub")

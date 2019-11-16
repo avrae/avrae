@@ -31,12 +31,18 @@ class InvalidArgument(AvraeException):
     pass
 
 
+class NotAllowed(AvraeException):
+    """Raised when a user tries to do something they are not allowed to do by role or dependency."""
+    pass
+
+
 class EvaluationError(AvraeException):
     """Raised when a cvar evaluation causes an error."""
 
-    def __init__(self, original):
+    def __init__(self, original, expression=None):
         super().__init__(f"Error evaluating expression: {original}")
         self.original = original
+        self.expression = expression
 
 
 class FunctionRequiresCharacter(AvraeException):
@@ -55,16 +61,6 @@ class OutdatedSheet(AvraeException):
         super().__init__(msg or "This command requires an updated character sheet. Try running `!update`.")
 
 
-class NoSpellDC(AvraeException):
-    def __init__(self):
-        super().__init__("No spell save DC found.")
-
-
-class NoSpellAB(AvraeException):
-    def __init__(self):
-        super().__init__("No spell attack bonus found.")
-
-
 class InvalidSaveType(AvraeException):
     def __init__(self):
         super().__init__("Invalid save type.")
@@ -75,18 +71,11 @@ class ConsumableException(AvraeException):
     pass
 
 
-class ConsumableNotFound(ConsumableException):
-    """Raised when a consumable is not found."""
-
-    def __init__(self):
-        super().__init__("The requested counter does not exist.")
-
-
 class CounterOutOfBounds(ConsumableException):
     """Raised when a counter is set to a value out of bounds."""
 
-    def __init__(self):
-        super().__init__("The new value is out of bounds.")
+    def __init__(self, msg=None):
+        super().__init__(msg or "The new value is out of bounds.")
 
 
 class NoReset(ConsumableException):
@@ -120,25 +109,6 @@ class SelectionCancelled(SelectionException):
 
     def __init__(self):
         super().__init__("Selection timed out or was cancelled.")
-
-
-class MeteorClientException(AvraeException):
-    """A base exception for exceptions relating to the Dicecloud Meteor client to stem from."""
-    pass
-
-
-class LoginFailure(MeteorClientException):
-    """Raised when a login fails."""
-
-    def __init__(self):
-        super().__init__("Failed to login.")
-
-
-class InsertFailure(MeteorClientException):
-    """Raised when an insertion fails."""
-
-    def __init__(self, error):
-        super().__init__(f"Failed to insert: {error}")
 
 
 class CombatException(AvraeException):

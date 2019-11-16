@@ -2,23 +2,29 @@
 *.pyc
 
 *.log
+.coverage
 *.DS_Store
 
 *.avrae
 
-/venv/
+venv/
+/venv*/
 /testenv/
+/venv-rewrite/
 /.idea/
+temp/
 
 
 /.cache/
 /.pytest_cache/
 
-res/spell-nn/
-
 *.json
 !*.spec.json
 *.pdf
+*.zip
 
 credentials.py
 
+docker/env
+
+docs/_build/

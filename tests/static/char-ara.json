@@ -1,0 +1,536 @@
+{
+  "owner": "187421759484592128",
+  "upstream": "dicecloud-xQcuqBmuYQQicowfA",
+  "active": true,
+  "sheet_type": "dicecloud",
+  "import_version": 15,
+  "name": "Ara Fentas",
+  "description": "This is a copy of my personal character for testing.",
+  "image": "https://cdn.discordapp.com/attachments/425165102350860290/592751325976985621/zhucomm1.png",
+  "stats": {
+    "prof_bonus": 4,
+    "strength": 12,
+    "dexterity": 16,
+    "constitution": 13,
+    "intelligence": 12,
+    "wisdom": 14,
+    "charisma": 20
+  },
+  "levels": {
+    "total_level": 10,
+    "classes": {
+      "Bard": 8,
+      "Warlock": 2
+    }
+  },
+  "attacks": [
+    {
+      "name": "Rapier",
+      "bonus": 7,
+      "damage": "1d8 + 3 [piercing]",
+      "details": "Finesse",
+      "bonus_calc": "max(strengthMod, dexterityMod) + proficiencyBonus"
+    },
+    {
+      "name": "Dagger",
+      "bonus": 7,
+      "damage": "1d4 + 3 [piercing]",
+      "details": "Finesse, light, thrown (range 20/60)",
+      "bonus_calc": "max(strengthMod, dexterityMod) + proficiencyBonus"
+    }
+  ],
+  "skills": {
+    "acrobatics": {
+      "value": 7,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "animalHandling": {
+      "value": 4,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "arcana": {
+      "value": 5,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "athletics": {
+      "value": 3,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "deception": {
+      "value": 7,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "history": {
+      "value": 3,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "initiative": {
+      "value": 5,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "insight": {
+      "value": 10,
+      "prof": 2,
+      "bonus": 0,
+      "adv": null
+    },
+    "intimidation": {
+      "value": 7,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "investigation": {
+      "value": 3,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "medicine": {
+      "value": 4,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "nature": {
+      "value": 3,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "perception": {
+      "value": 6,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "performance": {
+      "value": 13,
+      "prof": 2,
+      "bonus": 0,
+      "adv": null
+    },
+    "persuasion": {
+      "value": 7,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "religion": {
+      "value": 3,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "sleightOfHand": {
+      "value": 5,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "stealth": {
+      "value": 5,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "survival": {
+      "value": 4,
+      "prof": 0.5,
+      "bonus": 0,
+      "adv": null
+    },
+    "strength": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "dexterity": {
+      "value": 3,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "constitution": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "intelligence": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "wisdom": {
+      "value": 2,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "charisma": {
+      "value": 5,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    }
+  },
+  "resistances": {
+    "resist": [
+      "cold",
+      "fire",
+      "poison"
+    ],
+    "immune": [],
+    "vuln": []
+  },
+  "saves": {
+    "strengthSave": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "dexteritySave": {
+      "value": 7,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    },
+    "constitutionSave": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "intelligenceSave": {
+      "value": 1,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "wisdomSave": {
+      "value": 2,
+      "prof": 0,
+      "bonus": 0,
+      "adv": null
+    },
+    "charismaSave": {
+      "value": 9,
+      "prof": 1,
+      "bonus": 0,
+      "adv": null
+    }
+  },
+  "ac": 15,
+  "max_hp": 63,
+  "hp": 63,
+  "temp_hp": 0,
+  "cvars": {},
+  "options": {
+    "options": {}
+  },
+  "overrides": {
+    "desc": null,
+    "image": null,
+    "attacks": [],
+    "spells": []
+  },
+  "consumables": [
+    {
+      "name": "Bardic Inspiration",
+      "value": 5,
+      "minv": "0",
+      "maxv": "charismaMod",
+      "reset": "short",
+      "display_type": "bubble",
+      "live_id": null
+    },
+    {
+      "name": "Infernal Legacy - Hellish Rebuke",
+      "value": 1,
+      "minv": "0",
+      "maxv": "1",
+      "reset": "long",
+      "display_type": "bubble",
+      "live_id": null
+    },
+    {
+      "name": "Enthralling Performance",
+      "value": 1,
+      "minv": "0",
+      "maxv": "1",
+      "reset": "short",
+      "display_type": "bubble",
+      "live_id": null
+    },
+    {
+      "name": "Mantle of Majesty",
+      "value": 1,
+      "minv": "0",
+      "maxv": "1",
+      "reset": "long",
+      "display_type": "bubble",
+      "live_id": null
+    },
+    {
+      "name": "Infernal Legacy - Darkness",
+      "value": 1,
+      "minv": "0",
+      "maxv": "1",
+      "reset": "long",
+      "display_type": "bubble",
+      "live_id": null
+    },
+    {
+      "name": "Fey Presence",
+      "value": 1,
+      "minv": "0",
+      "maxv": "1",
+      "reset": "short",
+      "display_type": "bubble",
+      "live_id": null
+    }
+  ],
+  "death_saves": {
+    "successes": 0,
+    "fails": 0
+  },
+  "spellbook": {
+    "slots": {
+      "1": 6,
+      "2": 3,
+      "3": 3,
+      "4": 2,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0
+    },
+    "max_slots": {
+      "1": 6,
+      "2": 3,
+      "3": 3,
+      "4": 2,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0,
+      "9": 0
+    },
+    "spells": [
+      {
+        "name": "Prestidigitation",
+        "strict": true,
+        "level": 0,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Healing Word",
+        "strict": true,
+        "level": 1,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Mage Hand",
+        "strict": true,
+        "level": 0,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Vicious Mockery",
+        "strict": true,
+        "level": 0,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Heat Metal",
+        "strict": true,
+        "level": 2,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Polymorph",
+        "strict": true,
+        "level": 4,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Detect Magic",
+        "strict": true,
+        "level": 1,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Hypnotic Pattern",
+        "strict": true,
+        "level": 3,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Lesser Restoration",
+        "strict": true,
+        "level": 2,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Dissonant Whispers",
+        "strict": false,
+        "level": null,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Hold Person",
+        "strict": true,
+        "level": 2,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Dimension Door",
+        "strict": true,
+        "level": 4,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Tongues",
+        "strict": true,
+        "level": 3,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Thaumaturgy",
+        "strict": true,
+        "level": 0,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Minor Illusion",
+        "strict": true,
+        "level": 0,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Eldritch Blast",
+        "strict": true,
+        "level": 0,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Faerie Fire",
+        "strict": true,
+        "level": 1,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Armor of Agathys",
+        "strict": false,
+        "level": null,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Wall of Fire",
+        "strict": true,
+        "level": 4,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Fly",
+        "strict": true,
+        "level": 3,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Protection from Evil and Good",
+        "strict": true,
+        "level": 1,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Levitate",
+        "strict": true,
+        "level": 2,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Stone Shape",
+        "strict": true,
+        "level": 4,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Wind Wall",
+        "strict": true,
+        "level": 3,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Invisibility",
+        "strict": true,
+        "level": 2,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Hellish Rebuke",
+        "strict": true,
+        "level": 1,
+        "dc": null,
+        "sab": null
+      },
+      {
+        "name": "Dispel Magic",
+        "strict": true,
+        "level": 3,
+        "dc": null,
+        "sab": null
+      }
+    ],
+    "dc": 17,
+    "sab": 9,
+    "caster_level": 10
+  },
+  "live": null,
+  "race": "Tiefling",
+  "background": "Entertainer"
+}

@@ -5,16 +5,17 @@ Created on Dec 26, 2016
 """
 import random
 import time
-from datetime import timedelta, datetime
-from math import floor
+from datetime import datetime, timedelta
+from math import floor, isnan
 
 import discord
 import psutil
-from discord.channel import PrivateChannel
 from discord.ext import commands
 
+from cogsmisc.stats import Stats
 
-class Core:
+
+class Core(commands.Cog):
     """
     Core utilty and general commands.
     """
@@ -23,97 +24,73 @@ class Core:
         self.bot = bot
         self.start_time = time.monotonic()
 
-    @commands.command(pass_context=True, aliases=['feedback'])
-    async def bug(self, ctx, *, report: str):
-        """Reports a bug to the developer."""
-        if not isinstance(ctx.message.channel, PrivateChannel):
-            await self.bot.send_message(self.bot.owner,
-                                        "Bug reported by {} ({}) from {} ({}):\n{}".format(ctx.message.author.mention,
-                                                                                           str(ctx.message.author),
-                                                                                           ctx.message.server,
-                                                                                           ctx.message.server.id,
-                                                                                           report))
-        else:
-            await self.bot.send_message(self.bot.owner,
-                                        "Bug reported by {} ({}):\n{}".format(ctx.message.author.mention,
-                                                                              str(ctx.message.author), report))
-        await self.bot.say("Bug report sent to developer! For faster response, check out <http://support.avrae.io>!")
-
-    @commands.command(hidden=True, pass_context=True)
-    async def avatar(self, ctx, user: discord.User = None):
+    @commands.command(hidden=True)
+    async def avatar(self, ctx, user: discord.Member = None):
         """Gets a user's avatar.
         Usage: !avatar <USER>"""
         if user is None:
             user = ctx.message.author
         if user.avatar_url is not "":
-            await self.bot.say(user.avatar_url)
+            await ctx.send(user.avatar_url)
         else:
-            await self.bot.say(user.display_name + " is using the default avatar.")
+            await ctx.send(user.display_name + " is using the default avatar.")
 
-    @commands.command(pass_context=True)
+    @commands.command()
     async def ping(self, ctx):
         """Checks the ping time to the bot."""
         now = datetime.utcnow()
-        pong = await self.bot.say("Pong.")
+        pong = await ctx.send("Pong.")
         delta = datetime.utcnow() - now
-        msec = floor(delta.total_seconds() * 1000)
-        await self.bot.edit_message(pong, "Pong.\nPing = {} ms.".format(msec))
+        httping = floor(delta.total_seconds() * 1000)
+        wsping = floor(self.bot.latency * 1000) if not isnan(self.bot.latency) else "Unknown"
+        await pong.edit(content=f"Pong.\nHTTP Ping = {httping} ms.\nWS Ping = {wsping} ms.")
 
     @commands.command()
-    async def invite(self):
+    async def invite(self, ctx):
         """Prints a link to invite Avrae to your server."""
-        await self.bot.say(
-            "You can invite Avrae to your server here:\nhttps://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808")
-
-    @commands.command()
-    async def donate(self):
-        """Prints a link to donate to the bot developer."""
-        await self.bot.say("You can donate to me here:\n<https://www.paypal.me/avrae>\n\u2764")
+        await ctx.send(
+            "You can invite Avrae to your server here:\n"
+            "<https://invite.avrae.io>")
 
     @commands.command(aliases=['stats', 'info'])
-    async def about(self):
+    async def about(self, ctx):
         """Information about the bot."""
-        botStats = {}
-        statKeys = ["dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life",
-                    "items_looked_up_life",
-                    "rounds_init_tracked_life", "turns_init_tracked_life"]
+        stats = {}
+        statKeys = ("dice_rolled_life", "spells_looked_up_life", "monsters_looked_up_life", "commands_used_life",
+                    "items_looked_up_life", "rounds_init_tracked_life", "turns_init_tracked_life")
         for k in statKeys:
-            botStats[k] = int(self.bot.rdb.get(k, "0"))
+            stats[k] = await Stats.get_statistic(ctx, k)
+
         embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
         embed.title = "Invite Avrae to your server!"
-        embed.url = "https://discordapp.com/oauth2/authorize?&client_id=261302296103747584&scope=bot&permissions=36727808"
+        embed.url = "https://invite.avrae.io"
         embed.colour = 0x7289da
-        embed.set_author(name=str(self.bot.owner), icon_url=self.bot.owner.avatar_url)
-        total_members = sum(len(s.members) for s in self.bot.servers)
-        total_online = sum(1 for m in self.bot.get_all_members() if m.status != discord.Status.offline)
-        unique_members = set(self.bot.get_all_members())
-        unique_online = sum(1 for m in unique_members if m.status != discord.Status.offline)
-        text = len([c for c in self.bot.get_all_channels() if c.type is discord.ChannelType.text])
-        voice = len([c for c in self.bot.get_all_channels() if c.type is discord.ChannelType.voice])
-        members = '%s total\n%s online\n%s unique\n%s unique online' % (
-            total_members, total_online, len(unique_members), unique_online)
-        embed.add_field(name='Shard Members', value=members)
-        embed.add_field(name='Shard Channels', value='{} total\n{} text\n{} voice'.format(text + voice, text, voice))
+        total_members = sum(1 for _ in self.bot.get_all_members())
+        unique_members = len(self.bot.users)
+        members = '%s total\n%s unique' % (total_members, unique_members)
+        embed.add_field(name='Members (Cluster)', value=members)
         embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
         motd = random.choice(["May the RNG be with you", "May your rolls be high",
                               "Will give higher rolls for cookies", ">:3",
                               "Does anyone even read these?"])
         embed.set_footer(
-            text='{} | Build {} | Shard {}'.format(motd, self.bot.rdb.get('build_num'),
-                                                   getattr(self.bot, 'shard_id', 0)))
-        commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n{items_looked_up_life} items looked up\n{rounds_init_tracked_life} rounds of initiative tracked ({turns_init_tracked_life} turns)".format(
-            **botStats)
+            text=f'{motd} | Build {await self.bot.rdb.get("build_num")} | Cluster {self.bot.cluster_id}')
+
+        commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n" \
+                       "{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n" \
+                       "{items_looked_up_life} items looked up\n" \
+                       "{rounds_init_tracked_life} rounds of initiative tracked ({turns_init_tracked_life} turns)" \
+            .format(**stats)
         embed.add_field(name="Commands Run", value=commands_run)
-        embed.add_field(name="Servers", value=str(len(self.bot.servers)) + ' on this shard\n' + str(
-            sum(a for a in self.bot.rdb.jget('shard_servers', {0: len(self.bot.servers)}).values())) + ' total')
+        embed.add_field(name="Servers", value=f"{len(self.bot.guilds)} on this cluster\n"
+                                              f"{await Stats.get_guild_count(self.bot)} total")
         memory_usage = psutil.Process().memory_full_info().uss / 1024 ** 2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
-        embed.add_field(name='About', value='Bot coded by @zhu.exe#4211\nFound a bug? Report it with `!bug`!\n'
-                                            'Help me buy a cup of coffee [here](https://www.paypal.me/avrae)!\n'
-                                            'Join the official testing server [here](https://discord.gg/pQbd4s6)!',
+        embed.add_field(name='About', value='Made with :heart: by zhu.exe#4211 and the D&D Beyond team\n'
+                                            'Join the official development server [here](https://discord.gg/pQbd4s6)!',
                         inline=False)
 
-        await self.bot.say(embed=embed)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

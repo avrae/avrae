@@ -1,20 +1,27 @@
-import copy
-
 import cachetools
 
 from cogs5e.funcs.dice import roll
-from cogs5e.models.caster import Spellcasting, Spellcaster
-from cogs5e.models.errors import CombatException, CombatNotFound, RequiresContext, ChannelInCombat, \
-    CombatChannelNotFound, NoCombatants, NoCharacter, InvalidArgument
+from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
+    InvalidArgument, NoCharacter, NoCombatants, RequiresContext
+from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.spellcasting import Spellbook
+from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
-from utils.functions import get_selection
+from utils.functions import get_selection, maybe_mod
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
 
 class Combat:
-    message_cache = cachetools.LRUCache(100)
+    # cache combats for 10 seconds to avoid race conditions
+    # this makes sure that multiple calls to Combat.from_ctx() in the same invocation or two simultaneous ones
+    # retrieve/modify the same Combat state
+    # caches based on channel id
+    # probably won't encounter any scaling issues, since a combat will be shard-specific
+    _cache = cachetools.TTLCache(maxsize=50, ttl=10)
+    message_cache = cachetools.LRUCache(500)
 
     def __init__(self, channelId, summaryMsgId, dmId, options, ctx, combatants=None, roundNum=0, turnNum=0,
                  currentIndex=None):
@@ -35,11 +42,36 @@ class Combat:
         return cls(channelId, summaryMsgId, dmId, options, ctx)
 
     @classmethod
-    async def from_ctx(cls, ctx):
-        raw = await ctx.bot.mdb.combats.find_one({"channel": ctx.message.channel.id})
-        if raw is None:
-            raise CombatNotFound
-        return await cls.from_dict(raw, ctx)
+    async def from_ctx(cls, ctx):  # cached
+        channel_id = str(ctx.channel.id)
+        return await cls.from_id(channel_id, ctx)
+
+    @classmethod
+    def from_ctx_sync(cls, ctx):  # cached
+        channel_id = str(ctx.channel.id)
+        if channel_id in cls._cache:
+            return cls._cache[channel_id]
+        else:
+            raw = ctx.bot.mdb.combats.delegate.find_one({"channel": channel_id})
+            if raw is None:
+                raise CombatNotFound
+            # write to cache
+            inst = cls.from_dict_sync(raw, ctx)
+            cls._cache[channel_id] = inst
+            return inst
+
+    @classmethod
+    async def from_id(cls, channel_id, ctx):  # cached
+        if channel_id in cls._cache:
+            return cls._cache[channel_id]
+        else:
+            raw = await ctx.bot.mdb.combats.find_one({"channel": channel_id})
+            if raw is None:
+                raise CombatNotFound
+            # write to cache
+            inst = await cls.from_dict(raw, ctx)
+            cls._cache[channel_id] = inst
+            return inst
 
     @classmethod
     async def from_dict(cls, raw, ctx):
@@ -59,11 +91,21 @@ class Combat:
         return inst
 
     @classmethod
-    async def from_id(cls, _id, ctx):
-        raw = await ctx.bot.mdb.combats.find_one({"channel": _id})
-        if raw is None:
-            raise CombatNotFound
-        return await cls.from_dict(raw, ctx)
+    def from_dict_sync(cls, raw, ctx):
+        inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+                   raw['turn'], raw['current'])
+        for c in raw['combatants']:
+            if c['type'] == 'common':
+                inst._combatants.append(Combatant.from_dict(c, ctx, inst))
+            elif c['type'] == 'monster':
+                inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
+            elif c['type'] == 'player':
+                inst._combatants.append(PlayerCombatant.from_dict_sync(c, ctx, inst))
+            elif c['type'] == 'group':
+                inst._combatants.append(CombatantGroup.from_dict_sync(c, ctx, inst))
+            else:
+                raise CombatException("Unknown combatant type")
+        return inst
 
     def to_dict(self):
         return {'channel': self.channel, 'summary': self.summary, 'dm': self.dm, 'options': self.options,
@@ -85,6 +127,10 @@ class Combat:
     @property
     def options(self):
         return self._options
+
+    @options.setter
+    def options(self, value):
+        self._options = value
 
     @property  # private write
     def round_num(self):
@@ -124,7 +170,7 @@ class Combat:
         """
         combatants = []
         for c in self._combatants:
-            if isinstance(c, Combatant):
+            if not isinstance(c, CombatantGroup):
                 combatants.append(c)
             else:
                 combatants.extend(c.get_combatants())
@@ -136,8 +182,8 @@ class Combat:
         self._combatants.append(combatant)
         self.sort_combatants()
 
-    def remove_combatant(self, combatant, ignore_callback=False):
-        if not ignore_callback:
+    def remove_combatant(self, combatant, ignore_remove_hook=False):
+        if not ignore_remove_hook:
             combatant.on_remove()
         if not combatant.group:
             self._combatants.remove(combatant)
@@ -149,29 +195,35 @@ class Combat:
 
     def sort_combatants(self):
         current = self.current_combatant
-        self._combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
+        self._combatants = sorted(self._combatants, key=lambda k: (k.init, int(k.init_skill)), reverse=True)
         for n, c in enumerate(self._combatants):
             c.index = n
-        self._current_index = current.index if current is not None else None
+        if current is not None:
+            self._current_index = current.index
+            self._turn = current.init
 
     def get_combatant(self, name, strict=True):
         if strict:
-            return next((c for c in self.get_combatants() if c.name == name), None)
+            return next((c for c in self.get_combatants() if c.name.lower() == name.lower()), None)
         else:
             return next((c for c in self.get_combatants() if name.lower() in c.name.lower()), None)
 
-    def get_group(self, name, create=None):
+    def get_group(self, name, create=None, strict=True):
         """
         Gets a combatant group.
         :rtype: CombatantGroup
         :param name: The name of the combatant group.
         :param create: The initiative to create a group at if a group is not found.
+        :param strict: Whether group name must be a full case insensitive match.
         :return: The combatant group.
         """
-        grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
+        if strict:
+            grp = next((g for g in self.get_groups() if g.name.lower() == name.lower()), None)
+        else:
+            grp = next((g for g in self.get_groups() if name.lower() in g.name.lower()), None)
 
         if grp is None and create is not None:
-            grp = CombatantGroup.new(name, create, self.ctx)
+            grp = CombatantGroup.new(self, name, init=create, ctx=self.ctx)
             self.add_combatant(grp)
 
         return grp
@@ -180,17 +232,32 @@ class Combat:
         return [c for c in self._combatants if isinstance(c, CombatantGroup)]
 
     def check_empty_groups(self):
+        removed = False
         for c in self._combatants:
             if isinstance(c, CombatantGroup) and len(c.get_combatants()) == 0:
                 self.remove_combatant(c)
+                removed = True
+        if removed:
+            self.sort_combatants()
 
     def reroll_dynamic(self):
         """
-        Rerolls all combatant initiatives.
+        Rerolls all combatant initiatives. Returns a string representing the new init order.
         """
+        rolls = {}
         for c in self._combatants:
-            c.init = roll(f"1d20+{c.initMod}").total
+            init_roll = roll(c.init_skill.d20(), inline=True)
+            c.init = init_roll.total
+            rolls[c.name] = init_roll
         self.sort_combatants()
+
+        order = []
+        for combatant_name, init_roll in sorted(rolls.items(), key=lambda r: r[1].total, reverse=True):
+            order.append(f"{init_roll.skeleton}: {combatant_name}")
+
+        order = "\n".join(order)
+
+        return order
 
     async def select_combatant(self, name, choice_message=None, select_group=False):
         """
@@ -207,8 +274,14 @@ class Combat:
         return await get_selection(self.ctx, matching, message=choice_message)
 
     def advance_turn(self):
+        """Advances the turn. If any caveats should be noted, returns them in messages."""
         if len(self._combatants) == 0:
             raise NoCombatants
+
+        messages = []
+
+        if self.current_combatant:
+            self.current_combatant.on_turn_end()
 
         changed_round = False
         if self.index is None:  # new round, no dynamic reroll
@@ -216,7 +289,7 @@ class Combat:
             self._round += 1
         elif self.index + 1 >= len(self._combatants):  # new round
             if self.options.get('dynamic'):
-                self.reroll_dynamic()
+                messages.append(f"New initiatives:\n{self.reroll_dynamic()}")
             self._current_index = 0
             self._round += 1
             changed_round = True
@@ -225,11 +298,14 @@ class Combat:
 
         self._turn = self.current_combatant.init
         self.current_combatant.on_turn()
-        return changed_round
+        return changed_round, messages
 
     def rewind_turn(self):
         if len(self._combatants) == 0:
             raise NoCombatants
+
+        if self.current_combatant:
+            self.current_combatant.on_turn_end()
 
         if self.index is None:  # start of combat
             self._current_index = len(self._combatants) - 1
@@ -245,6 +321,9 @@ class Combat:
         if len(self._combatants) == 0:
             raise NoCombatants
 
+        if self.current_combatant:
+            self.current_combatant.on_turn_end()
+
         if is_combatant:
             if init_num.group:
                 init_num = self.get_group(init_num.group)
@@ -259,11 +338,16 @@ class Combat:
         self._turn = self.current_combatant.init
 
     def skip_rounds(self, num_rounds):
+        messages = []
+
         self._round += num_rounds
         for com in self.get_combatants():
             com.on_turn(num_rounds)
+            com.on_turn_end(num_rounds)
         if self.options.get('dynamic'):
-            self.reroll_dynamic()
+            messages.append(f"New initiatives:\n{self.reroll_dynamic()}")
+
+        return messages
 
     def get_turn_str(self):
         nextCombatant = self.current_combatant
@@ -290,7 +374,7 @@ class Combat:
 
     @staticmethod
     async def ensure_unique_chan(ctx):
-        if await ctx.bot.mdb.combats.find_one({"channel": ctx.message.channel.id}):
+        if await ctx.bot.mdb.combats.find_one({"channel": str(ctx.channel.id)}):
             raise ChannelInCombat
 
     async def commit(self):
@@ -299,7 +383,7 @@ class Combat:
             raise RequiresContext
         for pc in self.get_combatants():
             if isinstance(pc, PlayerCombatant):
-                await pc.character.manual_commit(self.ctx.bot, pc.character_owner)
+                await pc.character.commit(self.ctx)
         await self.ctx.bot.mdb.combats.update_one(
             {"channel": self.channel},
             {"$set": self.to_dict(), "$currentDate": {"lastchanged": True}},
@@ -308,7 +392,7 @@ class Combat:
 
     def get_summary(self, private=False):
         """Returns the generated summary message content."""
-        combatants = sorted(self._combatants, key=lambda k: (k.init, k.initMod), reverse=True)
+        combatants = sorted(self._combatants, key=lambda k: (k.init, int(k.init_skill)), reverse=True)
         outStr = "```markdown\n{}: {} (round {})\n".format(
             self.options.get('name') if self.options.get('name') else "Current initiative",
             self.turn_num, self.round_num)
@@ -327,14 +411,14 @@ class Combat:
 
     async def update_summary(self):
         """Edits the summary message with the latest summary."""
-        await self.ctx.bot.edit_message(await self.get_summary_msg(), self.get_summary())
+        await (await self.get_summary_msg()).edit(content=self.get_summary())
 
     def get_channel(self):
         """Gets the Channel object of the combat."""
         if self.ctx:
             return self.ctx.message.channel
         else:
-            chan = self.ctx.bot.get_channel(self.channel)
+            chan = self.ctx.bot.get_channel(int(self.channel))
             if chan:
                 return chan
             else:
@@ -345,7 +429,7 @@ class Combat:
         if self.summary in Combat.message_cache:
             return Combat.message_cache[self.summary]
         else:
-            msg = await self.ctx.bot.get_message(self.get_channel(), self.summary)
+            msg = await self.get_channel().fetch_message(self.summary)
             Combat.message_cache[msg.id] = msg
             return msg
 
@@ -359,58 +443,70 @@ class Combat:
         for c in self._combatants:
             c.on_remove()
         await self.ctx.bot.mdb.combats.delete_one({"channel": self.channel})
+        if self.channel in Combat._cache:
+            del Combat._cache[self.channel]
+
+    def __str__(self):
+        return f"Initiative in <#{self.channel}>"
 
 
-class Combatant(Spellcaster):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
-                 index=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None, *args, **kwargs):
-        super(Combatant, self).__init__(spellcasting)
-        if resists is None:
-            resists = {}
-        if attacks is None:
-            attacks = []
+class Combatant(StatBlock):
+    def __init__(self,
+                 # init metadata
+                 ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
+                 notes: str = None, effects: list = None, group: str = None,
+                 # statblock info
+                 stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
+                 skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
+                 spellbook: Spellbook = None,
+                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0):
+        super(Combatant, self).__init__(
+            name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
+            spellbook=spellbook,
+            ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp
+        )
         if effects is None:
             effects = []
-        self._name = name
-        self._controller = controllerId
-        self._init = init
-        self._mod = initMod  # readonly
-        self._hpMax = hpMax  # optional
-        self._hp = hp  # optional
-        self._ac = ac  # optional
-        self._private = private
-        self._resists = resists
-        self._attacks = attacks
-        self._saves = saves
-        self._index = index  # combat write only; position in combat
         self.ctx = ctx
         self.combat = combat
+
+        self._controller = controller_id
+        self._init = init
+        self._private = private
+        self._index = index  # combat write only; position in combat
         self._notes = notes
         self._effects = effects
         self._group = group
-        self._temphp = temphp
 
         self._cache = {}
 
     @classmethod
-    def new(cls, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat):
-        return cls(name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat)
+    def new(cls, name: str, controller_id: str, init: int, init_skill: Skill, max_hp: int, ac: int, private: bool,
+            resists: Resistances, ctx, combat):
+        skills = Skills.default()
+        skills.update({"initiative": init_skill})
+        return cls(ctx, combat, name, controller_id, private, init, resistances=resists, skills=skills,
+                   max_hp=max_hp, ac=ac)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
-        inst = cls(raw['name'], raw['controller'], raw['init'], raw['mod'], raw['hpMax'], raw['hp'], raw['ac'],
-                   raw['private'], raw['resists'], raw['attacks'], raw['saves'], ctx, combat, index=raw['index'],
-                   notes=raw['notes'], effects=[], group=raw['group'],  # begin backwards compatibility
-                   temphp=raw.get('temphp'), spellcasting=Spellcasting.from_dict(raw.get('spellcasting', {})))
-        inst._effects = [Effect.from_dict(e, combat, inst) for e in raw['effects']]
+        for key, klass in DESERIALIZE_MAP.items():
+            if key in raw:
+                raw[key] = klass.from_dict(raw[key])
+        del raw['type']
+        effects = raw.pop('effects')
+        inst = cls(ctx, combat, **raw)
+        inst._effects = [Effect.from_dict(e, combat, inst) for e in effects]
         return inst
 
     def to_dict(self):
-        return {'name': self.name, 'controller': self.controller, 'init': self.init, 'mod': self.initMod,
-                'hpMax': self._hpMax, 'hp': self._hp, 'ac': self._ac, 'private': self.isPrivate,
-                'resists': self._resists, 'attacks': self._attacks, 'saves': self._saves, 'index': self.index,
-                'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()], 'group': self.group,
-                'temphp': self.temphp, 'spellcasting': self.spellcasting.to_dict(), 'type': 'common'}
+        d = super(Combatant, self).to_dict()
+        d.update({
+            'controller_id': self.controller, 'init': self.init, 'private': self.is_private,
+            'index': self.index, 'notes': self.notes, 'effects': [e.to_dict() for e in self.get_effects()],
+            'group': self.group, 'type': 'common'
+        })
+        return d
 
     @property
     def name(self):
@@ -421,9 +517,6 @@ class Combatant(Spellcaster):
         for effect in self._effects:
             effect.on_name_change(self._name, new_name)
         self._name = new_name
-
-    def get_name(self):
-        return self.name
 
     @property
     def controller(self):
@@ -442,64 +535,37 @@ class Combatant(Spellcaster):
         self._init = new_init
 
     @property
-    def initMod(self):
-        return self._mod
+    def init_skill(self):
+        return self.skills.initiative
 
     @property
-    def hpMax(self):
-        return self._hpMax
+    def max_hp(self):
+        return self._max_hp
 
-    @hpMax.setter
-    def hpMax(self, new_hpMax):
-        self._hpMax = new_hpMax
+    @max_hp.setter
+    def max_hp(self, new_max_hp):
+        self._max_hp = new_max_hp
         if self._hp is None:
-            self._hp = new_hpMax
+            self._hp = new_max_hp
 
     @property
     def hp(self):
         return self._hp
 
     @hp.setter
-    def hp(self, new_hp):  # may have odd side effects with temp hp
-        if self._temphp:
-            delta = new_hp - self._hp  # _hp includes all temp hp
-            if delta < 0:  # don't add thp by adding to hp
-                self._temphp = max(self._temphp + delta, 0)
+    def hp(self, new_hp):
         self._hp = new_hp
 
-    def get_hp(self, no_temp=False):
-        if not no_temp:
-            return self.hp
-
-        if self.temphp and self.temphp > 0:
-            hp = self.hp - self.temphp
-        else:
-            hp = self.hp
-        return hp
-
-    def mod_hp(self, delta, overheal=True):
-        if not overheal and delta > 0:
-            if self.get_hp(True) + delta > self.hpMax:
-                delta = max(self.hpMax - self.get_hp(True), 0)  # don't do damage by over-overhealing
-        self.hp += delta
-
-    def set_hp(self, new_hp):  # set hp before temp hp
-        if self._temphp:
-            self._hp = new_hp + self._temphp
-        else:
-            self._hp = new_hp
-
-    def get_hp_str(self, private=False):
+    def hp_str(self, private=False):
         """Returns a string representation of the combatant's HP."""
         hpStr = ''
-        hp = self.get_hp(no_temp=True)
-        if not self.isPrivate or private:
-            hpStr = '<{}/{} HP>'.format(hp, self.hpMax) if self.hpMax is not None else '<{} HP>'.format(
-                hp) if hp is not None else ''
-            if self.temphp and self.temphp > 0:
-                hpStr += f' <{self.temphp} THP>'
-        elif self.hpMax is not None and self.hpMax > 0:
-            ratio = self.hp / self.hpMax
+        if not self.is_private or private:
+            hpStr = '<{}/{} HP>'.format(self.hp, self.max_hp) if self.max_hp is not None else '<{} HP>'.format(
+                self.hp) if self.hp is not None else ''
+            if self.temp_hp and self.temp_hp > 0:
+                hpStr += f' (+{self.temp_hp} temp)'
+        elif self.max_hp is not None and self.max_hp > 0:
+            ratio = self.hp / self.max_hp
             if ratio >= 1:
                 hpStr = "<Healthy>"
             elif 0.5 < ratio < 1:
@@ -513,26 +579,10 @@ class Combatant(Spellcaster):
         return hpStr
 
     @property
-    def temphp(self):
-        return self._temphp
-
-    @temphp.setter
-    def temphp(self, new_hp):
-        delta = max(new_hp - (self._temphp or 0), -(self._temphp or 0))
-        self._temphp = max(new_hp, 0)
-        self._hp += delta  # hp includes thp
-
-    @property
     def ac(self):
         _ac = self._ac
         for e in self.active_effects('ac'):
-            try:
-                if e.startswith(('+', '-')):
-                    _ac += int(e)
-                else:
-                    _ac = int(e)
-            except (ValueError, TypeError):
-                continue
+            _ac = maybe_mod(e, base=_ac)
         return _ac
 
     @ac.setter
@@ -540,15 +590,15 @@ class Combatant(Spellcaster):
         self._ac = new_ac
 
     @property
-    def isPrivate(self):
+    def is_private(self):
         return self._private
 
-    @isPrivate.setter
-    def isPrivate(self, new_privacy):
+    @is_private.setter
+    def is_private(self, new_privacy):
         self._private = new_privacy
 
     @property
-    def resists(self):
+    def resistances(self):
         checked = []
         out = {}
         for k in reversed(RESIST_TYPES):
@@ -558,31 +608,24 @@ class Combatant(Spellcaster):
                     out[k].append(_type)
                     checked.append(_type)
         for k in reversed(RESIST_TYPES):
-            for _type in self._resists.get(k, []):
+            for _type in self._resistances[k]:
                 if _type not in checked:
                     out[k].append(_type)
                     checked.append(_type)
-        return out
+        return Resistances.from_dict(out)
 
     def set_resist(self, dmgtype, resisttype):
         if resisttype not in RESIST_TYPES:
             raise ValueError("Resistance type is invalid")
         for rt in RESIST_TYPES:
-            if dmgtype in self._resists.get(rt, []):
-                self._resists[rt].remove(dmgtype)
-        if resisttype not in self._resists:
-            self._resists[resisttype] = []
-        self._resists[resisttype].append(dmgtype)
+            if dmgtype in self._resistances[rt]:
+                self._resistances[rt].remove(dmgtype)
+        self._resistances[resisttype].append(dmgtype)
 
     @property
     def attacks(self):
-        attacks = self.attack_effects(self._attacks)
-        attacks.extend(self.attack_effects(self.active_effects('attack')))
+        attacks = self._attacks + AttackList.from_dict(self.active_effects('attack'))
         return attacks
-
-    @property
-    def saves(self):
-        return self._saves
 
     @property
     def index(self):
@@ -609,11 +652,18 @@ class Combatant(Spellcaster):
         self._group = value
 
     def add_effect(self, effect):
+        # handle name conflict
         if self.get_effect(effect.name, True):
             self.get_effect(effect.name).remove()
+
+        # handle concentration conflict
         conc_conflict = []
         if effect.concentration:
             conc_conflict = self.remove_all_effects(lambda e: e.concentration)
+
+        # invalidate cache
+        if 'parsed_effects' in self._cache:
+            del self._cache['parsed_effects']
 
         self._effects.append(effect)
         return {"conc_conflict": conc_conflict}
@@ -640,32 +690,21 @@ class Combatant(Spellcaster):
     def remove_effect(self, effect):
         try:
             self._effects.remove(effect)
+            # invalidate cache
+            if 'parsed_effects' in self._cache:
+                del self._cache['parsed_effects']
         except ValueError:
-            raise CombatException("Effect does not exist on combatant.")
+            # this should be safe
+            # the only case where this occurs is if a parent removes an effect while it's trying to remove itself
+            pass
 
     def remove_all_effects(self, _filter=None):
         if _filter is None:
             _filter = lambda _: True
         to_remove = list(filter(_filter, self._effects))
         for e in to_remove:
-            try:
-                e.remove()
-            except CombatException:  # effect was likely removed already, possibly by its parent being removed
-                continue
+            e.remove()
         return to_remove
-
-    def attack_effects(self, attacks):
-        b = self.active_effects('b')
-        d = self.active_effects('d')
-        if b or d:
-            at = copy.deepcopy(attacks)
-            for a in at:
-                if a['attackBonus'] is not None and b:
-                    a['attackBonus'] += f" + {'+'.join(b)}"
-                if a['damage'] is not None and d:
-                    a['damage'] += f" + {'+'.join(d)}"
-            return at
-        return attacks.copy()
 
     def active_effects(self, key=None):
         if 'parsed_effects' not in self._cache:
@@ -698,16 +737,21 @@ class Combatant(Spellcaster):
         for e in self.get_effects().copy():
             e.on_turn(num_turns)
 
+    def on_turn_end(self, num_turns=1):
+        """A method called at the end of each of the combatant's turns."""
+        for e in self.get_effects().copy():
+            e.on_turn_end(num_turns)
+
     def get_summary(self, private=False, no_notes=False):
         """
         Gets a short summary of a combatant's status.
         :return: A string describing the combatant.
         """
-        hpStr = f"{self.get_hp_str(private)} " if self.get_hp_str(private) else ''
+        hpStr = f"{self.hp_str(private)} " if self.hp_str(private) else ''
         if not no_notes:
-            return f"{self.init}: {self.name} {hpStr}({self.get_effects_and_notes()})"
+            return f"{self.init:>2}: {self.name} {hpStr}{self.get_effects_and_notes()}"
         else:
-            return f"{self.init}: {self.name} {hpStr}"
+            return f"{self.init:>2}: {self.name} {hpStr}"
 
     def get_status(self, private=False):
         """
@@ -727,33 +771,31 @@ class Combatant(Spellcaster):
 
     def get_effects_and_notes(self):
         out = []
-        if self.ac is not None and not self.isPrivate:
+        if self.ac is not None and not self.is_private:
             out.append('AC {}'.format(self.ac))
         for e in self.get_effects():
             out.append('{} [{} rds]'.format(e.name, e.remaining if not e.remaining < 0 else '∞'))
         if self.notes:
             out.append(self.notes)
-        out = ', '.join(out)
-        return out
+        if out:
+            return f"({', '.join(out)})"
+        return ""
 
     def get_hp_and_ac(self, private: bool = False):
-        out = [self.get_hp_str(private)]
-        if self.ac is not None and (not self.isPrivate or private):
+        out = [self.hp_str(private)]
+        if self.ac is not None and (not self.is_private or private):
             out.append("(AC {})".format(self.ac))
         return ' '.join(out)
 
     def get_resist_string(self, private: bool = False):
         resistStr = ''
-        self._resists['resist'] = [r for r in self._resists['resist'] if r]  # clean empty resists
-        self._resists['immune'] = [r for r in self._resists['immune'] if r]  # clean empty resists
-        self._resists['vuln'] = [r for r in self._resists['vuln'] if r]  # clean empty resists
-        if not self.isPrivate or private:
-            if len(self.resists['resist']) > 0:
-                resistStr += "\n> Resistances: " + ', '.join(self.resists['resist']).title()
-            if len(self.resists['immune']) > 0:
-                resistStr += "\n> Immunities: " + ', '.join(self.resists['immune']).title()
-            if len(self.resists['vuln']) > 0:
-                resistStr += "\n> Vulnerabilities: " + ', '.join(self.resists['vuln']).title()
+        if not self.is_private or private:
+            if len(self.resistances.resist) > 0:
+                resistStr += "\n> Resistances: " + ', '.join(self.resistances['resist']).title()
+            if len(self.resistances.immune) > 0:
+                resistStr += "\n> Immunities: " + ', '.join(self.resistances['immune']).title()
+            if len(self.resistances.vuln) > 0:
+                resistStr += "\n> Vulnerabilities: " + ', '.join(self.resistances['vuln']).title()
         return resistStr
 
     def on_remove(self):
@@ -762,45 +804,43 @@ class Combatant(Spellcaster):
         """
         pass
 
+    def __str__(self):
+        return f"{self.name}: {self.hp_str()}".strip()
+
+    def __hash__(self):
+        return hash(f"{self.combat.channel}.{self.name}")
+
 
 class MonsterCombatant(Combatant):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
-                 index=None, monster_name=None, notes=None, effects=None, group=None, temphp=None, spellcasting=None):
-        super(MonsterCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                               attacks, saves, ctx, combat, index, notes, effects, group, temphp,
-                                               spellcasting)
+    def __init__(self,
+                 # init metadata
+                 ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
+                 notes: str = None, effects: list = None, group: str = None,
+                 # statblock info
+                 stats: BaseStats = None, levels: Levels = None, attacks: AttackList = None,
+                 skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
+                 spellbook: Spellbook = None,
+                 ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
+                 # monster specific
+                 monster_name=None):
+        super(MonsterCombatant, self).__init__(
+            ctx, combat, name, controller_id, private, init, index, notes, effects, group,
+            stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp)
         self._monster_name = monster_name
 
     @classmethod
-    def from_monster(cls, name, controllerId, init, initMod, private, monster, ctx, combat, opts=None, index=None,
-                     hp=None, ac=None):
+    def from_monster(cls, monster, ctx, combat, name, controller_id, init, private, hp=None, ac=None):
         monster_name = monster.name
         hp = int(monster.hp) if not hp else int(hp)
         ac = int(monster.ac) if not ac else int(ac)
 
-        resist = monster.raw_resists['resist']
-        immune = monster.raw_resists['immune']
-        vuln = monster.raw_resists['vuln']
-        # fix npr and blug/pierc/slash
-        if opts.get('npr'):
-            if resist:
-                resist = [r for r in resist if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
-            if immune:
-                immune = [r for r in immune if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
-            if vuln:
-                vuln = [r for r in vuln if not any(t in r.lower() for t in ('bludgeoning', 'piercing', 'slashing'))]
-
-        resists = {'resist': [r.lower() for r in resist],
-                   'immune': [i.lower() for i in immune],
-                   'vuln': [v.lower() for v in vuln]}
-        attacks = monster.attacks
-        saves = monster.saves
-        spellcasting = Spellcasting(monster.spellcasting.get('spells', []), monster.spellcasting.get('dc', 0),
-                                    monster.spellcasting.get('attackBonus', 0),
-                                    monster.spellcasting.get('casterLevel', 0))
-
-        return cls(name, controllerId, init, initMod, hp, hp, ac, private, resists, attacks, saves, ctx, combat, index,
-                   monster_name, spellcasting=spellcasting)
+        return cls(ctx, combat, name, controller_id, private, init,
+                   # statblock info
+                   stats=monster.stats, levels=monster.levels, attacks=monster.attacks,
+                   skills=monster.skills, saves=monster.saves, resistances=monster.resistances,
+                   spellbook=monster.spellbook, ac=ac, max_hp=hp,
+                   # monster specific
+                   monster_name=monster_name)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
@@ -820,22 +860,34 @@ class MonsterCombatant(Combatant):
 
 
 class PlayerCombatant(Combatant):
-    def __init__(self, name, controllerId, init, initMod, hpMax, hp, ac, private, resists, attacks, saves, ctx, combat,
-                 index=None, character_id=None, character_owner=None, notes=None, effects=None, group=None,
-                 temphp=None, spellcasting=None):
-        super(PlayerCombatant, self).__init__(name, controllerId, init, initMod, hpMax, hp, ac, private, resists,
-                                              attacks, saves, ctx, combat, index, notes, effects, group, temphp,
-                                              spellcasting)
+    def __init__(self,
+                 # init metadata
+                 ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
+                 notes: str = None, effects: list = None, group: str = None,
+                 # statblock info
+                 attacks: AttackList = None, resistances: Resistances = None,
+                 ac: int = None, max_hp: int = None,
+                 # character specific
+                 character_id=None, character_owner=None):
+        # note that the player combatant doesn't initialize the statblock
+        # because we want the combatant statblock attrs to reference the character attrs
+        super(PlayerCombatant, self).__init__(
+            ctx, combat, name, controller_id, private, init, index, notes, effects, group,
+            attacks=attacks, resistances=resistances, ac=ac, max_hp=max_hp
+        )
         self.character_id = character_id
         self.character_owner = character_owner
-        self._character = None  # shenanigans
+
+        self._character = None  # cache
 
     @classmethod
-    async def from_character(cls, name, controllerId, init, initMod, ac, private, resists, ctx, combat, character_id,
-                             character_owner, char):
-        inst = cls(name, controllerId, init, initMod, None, None, ac, private, resists, None, None, ctx, combat,
-                   character_id=character_id, character_owner=character_owner)
-        inst._character = char
+    async def from_character(cls, character, ctx, combat, controller_id, init, private):
+        inst = cls(ctx, combat, character.name, controller_id, private, init,
+                   # statblock copies
+                   resistances=character.resistances,
+                   # character specific
+                   character_id=character.upstream, character_owner=character.owner)
+        inst._character = character
         return inst
 
     @property
@@ -843,46 +895,80 @@ class PlayerCombatant(Combatant):
         return self._character
 
     @property
-    def hpMax(self):
-        return self._hpMax or self.character.get_max_hp()
-
-    @hpMax.setter
-    def hpMax(self, new_hpMax):
-        self._hpMax = new_hpMax
+    def init_skill(self):
+        return self.character.skills.initiative
 
     @property
-    def hp(self):
-        return self.character.get_current_hp()
-
-    @hp.setter
-    def hp(self, new_hp):
-        self.character.set_hp(new_hp)
-
-    def set_hp(self, new_hp):
-        self.character.set_hp(new_hp, False)
+    def stats(self):
+        return self.character.stats
 
     @property
-    def temphp(self):
-        return self.character.get_temp_hp()
-
-    @temphp.setter
-    def temphp(self, new_hp):
-        self.character.set_temp_hp(new_hp)
+    def levels(self):
+        return self.character.levels
 
     @property
-    def attacks(self):
-        attacks = super(PlayerCombatant, self).attacks
-        attacks.extend(self.attack_effects(self.character.get_attacks()))
-        return attacks
+    def skills(self):
+        return self.character.skills
 
     @property
     def saves(self):
-        return self.character.get_saves()
+        return self.character.saves
 
     @property
-    def spellcasting(self):
-        return Spellcasting(self.character.get_spell_list(), self.character.get_save_dc(),
-                            self.character.get_spell_ab(), self.character.get_level())
+    def ac(self):
+        _ac = self._ac or self.character.ac
+        for e in self.active_effects('ac'):
+            _ac = maybe_mod(e, base=_ac)
+        return _ac
+
+    @ac.setter
+    def ac(self, new_ac):
+        """
+        :param int|None new_ac: The new AC
+        """
+        self._ac = new_ac
+
+    @property
+    def spellbook(self):
+        return self.character.spellbook
+
+    @property
+    def max_hp(self):
+        return self._max_hp or self.character.max_hp
+
+    @max_hp.setter
+    def max_hp(self, new_max_hp):
+        self._max_hp = new_max_hp
+
+    @property
+    def hp(self):
+        return self.character.hp
+
+    @hp.setter
+    def hp(self, new_hp):
+        self.character.hp = new_hp
+
+    def set_hp(self, new_hp):
+        return self.character.set_hp(new_hp)
+
+    def modify_hp(self, value, ignore_temp=False, overflow=True):
+        self.character.modify_hp(value, ignore_temp, overflow)
+        return self.hp_str()
+
+    def reset_hp(self):
+        return self.character.reset_hp()
+
+    @property
+    def temp_hp(self):
+        return self.character.temp_hp
+
+    @temp_hp.setter
+    def temp_hp(self, new_hp):
+        self.character.temp_hp = new_hp
+
+    @property
+    def attacks(self):
+        return super(PlayerCombatant, self).attacks + self.character.attacks
 
     def can_cast(self, spell, level) -> bool:
         return self.character.can_cast(spell, level)
@@ -903,36 +989,56 @@ class PlayerCombatant(Combatant):
             from cogs5e.models.character import Character
             inst._character = await Character.from_bot_and_ids(ctx.bot, inst.character_owner, inst.character_id)
         except NoCharacter:
-            raise CombatException("A character in combat was deleted. Please run `!init end -force` to end combat.")
+            raise CombatException(f"A character in combat was deleted. "
+                                  f"Please run `{ctx.prefix}init end -force` to end combat.")
 
         return inst
 
+    @classmethod
+    def from_dict_sync(cls, raw, ctx, combat):
+        inst = super(PlayerCombatant, cls).from_dict(raw, ctx, combat)
+        inst.character_id = raw['character_id']
+        inst.character_owner = raw['character_owner']
+
+        try:
+            from cogs5e.models.character import Character
+            inst._character = Character.from_bot_and_ids_sync(ctx.bot, inst.character_owner, inst.character_id)
+        except NoCharacter:
+            raise CombatException(f"A character in combat was deleted. "
+                                  f"Please run `{ctx.prefix}init end -force` to end combat.")
+        return inst
+
     def to_dict(self):
+        IGNORED_ATTRIBUTES = ("stats", "levels", "skills", "saves", "spellbook", "hp", "temp_hp")
         raw = super(PlayerCombatant, self).to_dict()
+        for attr in IGNORED_ATTRIBUTES:
+            del raw[attr]
         raw['character_id'] = self.character_id
         raw['character_owner'] = self.character_owner
         raw['type'] = 'player'
         return raw
 
 
-class CombatantGroup:
-    def __init__(self, name, init, combatants, ctx, index=None):
-        self._name = name
-        self._init = init
+class CombatantGroup(Combatant):
+    def __init__(self, ctx, combat, combatants, name, init, index=None):
+        super(CombatantGroup, self).__init__(
+            ctx, combat, name=name, controller_id=str(ctx.author.id), private=False, init=init, index=index)
         self._combatants = combatants
-        self.ctx = ctx
-        self._index = index
-        self.initMod = 0  # for sorting
-        self.group = None  # groups cannot be in groups
-        self.isPrivate = False  # eh
 
     @classmethod
-    def new(cls, name, init, ctx=None):
-        return cls(name, init, [], ctx)
+    def new(cls, combat, name, init, ctx=None):
+        return cls(ctx, combat, [], name, init)
 
     @property
     def name(self):
         return self._name
+
+    @name.setter
+    def name(self, new_name):
+        self._name = new_name
+
+    def get_name(self):
+        return self.name
 
     @property
     def init(self):
@@ -952,11 +1058,11 @@ class CombatantGroup:
 
     @property
     def controller(self):
-        return self.ctx.message.author.id  # workaround
+        return str(self.ctx.author.id)  # workaround
 
     @property
     def attacks(self):
-        a = []
+        a = AttackList()
         for c in self.get_combatants():
             a.extend(atk for atk in c.attacks if atk not in a)
         return a
@@ -978,11 +1084,11 @@ class CombatantGroup:
         :return: A string describing the combatant.
         """
         if len(self._combatants) > 7 and not private:
-            status = f"{self.init}: {self.name} ({len(self.get_combatants())} combatants)"
+            status = f"{self.init:>2}: {self.name} ({len(self.get_combatants())} combatants)"
         else:
-            status = f"{self.init}: {self.name}"
+            status = f"{self.init:>2}: {self.name}"
             for c in self.get_combatants():
-                status += f'\n    - {": ".join(c.get_summary(private, no_notes).split(": ")[1:])}'
+                status += f'\n     - {": ".join(c.get_summary(private, no_notes).split(": ")[1:])}'
         return status
 
     def get_status(self, private=False):
@@ -997,6 +1103,10 @@ class CombatantGroup:
         for c in self.get_combatants():
             c.on_turn(num_turns)
 
+    def on_turn_end(self, num_turns=1):
+        for c in self.get_combatants():
+            c.on_turn_end(num_turns)
+
     def on_remove(self):
         for c in self.get_combatants():
             c.on_remove()
@@ -1007,7 +1117,7 @@ class CombatantGroup:
     @classmethod
     async def from_dict(cls, raw, ctx, combat):
         combatants = []
-        for c in raw['combatants']:
+        for c in raw.pop('combatants'):
             if c['type'] == 'common':
                 combatants.append(Combatant.from_dict(c, ctx, combat))
             elif c['type'] == 'monster':
@@ -1016,11 +1126,30 @@ class CombatantGroup:
                 combatants.append(await PlayerCombatant.from_dict(c, ctx, combat))
             else:
                 raise CombatException("Unknown combatant type")
-        return cls(raw['name'], raw['init'], combatants, ctx, raw['index'])
+        del raw['type']
+        return cls(ctx, combat, combatants, **raw)
+
+    @classmethod
+    def from_dict_sync(cls, raw, ctx, combat):
+        combatants = []
+        for c in raw.pop('combatants'):
+            if c['type'] == 'common':
+                combatants.append(Combatant.from_dict(c, ctx, combat))
+            elif c['type'] == 'monster':
+                combatants.append(MonsterCombatant.from_dict(c, ctx, combat))
+            elif c['type'] == 'player':
+                combatants.append(PlayerCombatant.from_dict_sync(c, ctx, combat))
+            else:
+                raise CombatException("Unknown combatant type")
+        del raw['type']
+        return cls(ctx, combat, combatants, **raw)
 
     def to_dict(self):
         return {'name': self.name, 'init': self.init, 'combatants': [c.to_dict() for c in self.get_combatants()],
                 'index': self.index, 'type': 'group'}
+
+    def __str__(self):
+        return f"{self.name} ({len(self.get_combatants())} combatants)"
 
 
 def parse_attack_arg(arg, name):
@@ -1046,7 +1175,7 @@ class Effect:
                   'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus'}
 
     def __init__(self, combat, combatant, name: str, duration: int, remaining: int, effect: dict,
-                 concentration: bool = False, children: list = None, parent: dict = None):
+                 concentration: bool = False, children: list = None, parent: dict = None, tonend: bool = False):
         if children is None:
             children = []
         self.combat = combat
@@ -1058,9 +1187,11 @@ class Effect:
         self._concentration = concentration
         self.children = children
         self.parent = parent
+        self.ticks_on_end = tonend
 
     @classmethod
-    def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None):
+    def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None,
+            tick_on_end=False):
         if isinstance(effect_args, str):
             if (combatant and isinstance(combatant, PlayerCombatant)) or character:
                 effect_args = argparse(effect_args, combatant.character or character)
@@ -1078,7 +1209,8 @@ class Effect:
             duration = int(duration)
         except (ValueError, TypeError):
             raise InvalidArgument("Effect duration must be an integer.")
-        return cls(combat, combatant, name, duration, duration, effect_dict, concentration=concentration)
+        return cls(combat, combatant, name, duration, duration, effect_dict, concentration=concentration,
+                   tonend=tick_on_end)
 
     def set_parent(self, parent):
         """Sets the parent of an effect."""
@@ -1108,7 +1240,12 @@ class Effect:
 
     def __str__(self):
         desc = self.name
-        if self.remaining >= 0:
+        if 0 <= self.remaining <= 1:
+            if self.ticks_on_end:
+                desc += " [until end of turn]"
+            else:
+                desc += " [until start of next turn]"
+        elif self.remaining >= 0:  # ...an effect could have 0 duration
             desc += f" [{self.remaining} rounds]"
         desc += self.get_parenthetical()
         if self.concentration:
@@ -1139,17 +1276,29 @@ class Effect:
 
     def on_turn(self, num_turns=1):
         """
-        :return: Whether to remove the effect.
+        Reduces the turn counter if applicable, and removes itself if at 0.
         """
-        if self.remaining >= 0:
+        if self.remaining >= 0 and not self.ticks_on_end:
             if self.remaining - num_turns <= 0:
                 self.remove()
             self._remaining -= num_turns
 
-    def remove(self):
-        for effect in self.get_children_effects():
-            effect.remove()
+    def on_turn_end(self, num_turns=1):
+        """
+        Reduces the turn counter if applicable, and removes itself if at 0.
+        """
+        if self.remaining >= 0 and self.ticks_on_end:
+            if self.remaining - num_turns <= 0:
+                self.remove()
+            self._remaining -= num_turns
 
+    def remove(self, removed=None):
+        if removed is None:
+            removed = [self]
+        for effect in self.get_children_effects():
+            if effect not in removed:  # no infinite recursion please
+                removed.append(effect)
+                effect.remove(removed)
         self.combatant.remove_effect(self)
 
     def on_name_change(self, old_name, new_name):
@@ -1186,4 +1335,5 @@ class Effect:
 
     def to_dict(self):
         return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect,
-                'concentration': self.concentration, 'children': self.children, 'parent': self.parent}
+                'concentration': self.concentration, 'children': self.children, 'parent': self.parent,
+                'tonend': self.ticks_on_end}

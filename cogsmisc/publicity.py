@@ -5,50 +5,55 @@ Created on Dec 29, 2016
 """
 import asyncio
 import logging
-import time
+
+import aiohttp
+from discord.ext import commands
+
+import credentials
+from cogsmisc.stats import Stats
 
 log = logging.getLogger(__name__)
 
-DISCORD_BOTS_API = 'https://bots.discord.pw/api'
-CARBONITEX_API_BOTDATA = 'https://www.carbonitex.net/discord/data/botdata.php'
+DBL_API = "https://discordbots.org/api/bots/"
 
 
-class Publicity:
+class Publicity(commands.Cog):
     """
     Sends updates to bot repos.
     """
 
     def __init__(self, bot):
         self.bot = bot
-        self.bot.loop.create_task(self.background_update())
+        if bot.is_cluster_0:
+            self.bot.loop.create_task(self.background_update())
 
-    async def backup(self):
-        shard_servers = self.bot.rdb.jget('shard_servers', {0: len(self.bot.servers)})
-        shard_servers[self.bot.shard_id] = len(self.bot.servers)
-        self.bot.rdb.jset('shard_servers', shard_servers)
-
-        backup_chan = self.bot.get_channel('298542945479557120')
-        if backup_chan is None or self.bot.testing: return
-        await self.bot.send_message(backup_chan, '{0} - {1}'.format(time.time(), sum(
-            a for a in self.bot.rdb.jget('shard_servers', {0: len(self.bot.servers)}).values())))
+    async def update_server_count(self):
+        if self.bot.testing or not credentials.dbl_token:
+            return
+        payload = {"server_count": await Stats.get_guild_count(self.bot)}
+        async with aiohttp.ClientSession() as aioclient:
+            try:
+                await aioclient.post(f"{DBL_API}{self.bot.user.id}/stats", data=payload,
+                                     headers={"Authorization": credentials.dbl_token})
+            except Exception as e:
+                log.error(f"Error posting server count: {e}")
 
     async def background_update(self):
         try:
             await self.bot.wait_until_ready()
-            while not self.bot.is_closed:
+            while not self.bot.is_closed():
+                await self.update_server_count()
                 await asyncio.sleep(3600)  # every hour
-                await self.backup()
         except asyncio.CancelledError:
             pass
 
-    async def on_ready(self):
-        await self.backup()
-
-    async def on_server_join(self, server):
+    @commands.Cog.listener()
+    async def on_guild_join(self, server):
         log.info('Joined server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
                                                                     sum(1 for m in server.members if m.bot)))
 
-    async def on_server_remove(self, server):
+    @commands.Cog.listener()
+    async def on_guild_remove(self, server):
         log.info('Left server {}: {}, {} members ({} bot)'.format(server, server.id, len(server.members),
                                                                   sum(1 for m in server.members if m.bot)))
 

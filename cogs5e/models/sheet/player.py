@@ -1,4 +1,6 @@
+from cogs5e.funcs.dice import roll, Constant
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, NoReset
+from cogs5e.funcs.scripting.evaluators import SpellEvaluator
 from .attack import AttackList
 from .spellcasting import SpellbookSpell
 
@@ -88,19 +90,25 @@ class CustomCounter:
                  'reset': "`!cc reset`",
                  'hp': "Gaining HP"}
 
-    def __init__(self, character, name, value, minv=None, maxv=None, reset=None, display_type=None, live_id=None):
+    def __init__(self, character, name, value, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
+                 reset_to=None):
         self._character = character
         self.name = name
         self._value = value
         self.min = minv
         self.max = maxv
         self.reset_on = reset
+        self.reset_to = reset_to
         self.display_type = display_type
         self.live_id = live_id
 
         # cached values
         self._max = None
         self._min = None
+        self._reset_to = None
+        self._reset_type = None
+
+        self.evaluator = SpellEvaluator.with_character(self._character)
 
     @classmethod
     def from_dict(cls, char, d):
@@ -108,10 +116,10 @@ class CustomCounter:
 
     def to_dict(self):
         return {"name": self.name, "value": self._value, "minv": self.min, "maxv": self.max, "reset": self.reset_on,
-                "display_type": self.display_type, "live_id": self.live_id}
+                "display_type": self.display_type, "live_id": self.live_id, "reset_to": self.reset_to}
 
     @classmethod
-    def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None):
+    def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None, reset_to=None):
         if reset not in ('short', 'long', 'none', None):
             raise InvalidArgument("Invalid reset.")
         if any(c in name for c in ".$"):
@@ -127,11 +135,19 @@ class CustomCounter:
         if display_type == 'bubble' and (maxv is None or minv is None):
             raise InvalidArgument("Bubble display requires a max and min value.")
 
-        if maxv:
+        if reset_to:
+            reset_val = SpellEvaluator.with_character(character).parse(reset_to)
+            if reset_val.startswith('+'):
+                value = 0
+            elif reset_val.startswith('-') and maxv:
+                value = character.evaluate_math(maxv)
+            else:
+                value = 0
+        elif maxv:
             value = character.evaluate_math(maxv)
         else:
             value = 0
-        return cls(character, name.strip(), value, minv, maxv, reset, display_type, live_id)
+        return cls(character, name.strip(), value, minv, maxv, reset, display_type, live_id, reset_to)
 
     # ---------- main funcs ----------
     def get_min(self):
@@ -150,6 +166,16 @@ class CustomCounter:
                 self._max = self._character.evaluate_math(self.max)
         return self._max
 
+    def get_reset(self):
+    if self._reset_to is None:
+        if self.reset_to is None:
+            return self.get_max(), True
+        else:
+            self._reset_to = self.evaluator.parse(self.reset_to)
+            _reset = roll(self._reset_to)
+            self._reset_type = all(isinstance(i, Constant) for i in _reset.raw_dice.parts)
+    return self._reset_to, self._reset_type
+
     @property
     def value(self):
         return self._value
@@ -167,15 +193,26 @@ class CustomCounter:
         if self.live_id:
             self._character.sync_consumable(self)
 
-    def reset(self):
+        def reset(self):
         if self.reset_on == 'none' or self.max is None:
             raise NoReset()
-        self.set(self.get_max())
+        if self.reset_to is None:
+            self.set(self.get_max())
+        else:
+            resetv, reset_type = self.get_reset()
+            resetv = roll(resetv)
+            if reset_type:
+                self.set(resetv.total)
+            else:
+                self.set(self.value + resetv.total)
+                return resetv
 
     def full_str(self):
         _min = self.get_min()
         _max = self.get_max()
         _reset = self.RESET_MAP.get(self.reset_on)
+        _resetv, _reset_type = self.get_reset()
+        _reset_to = 'Resets to' if _reset_type else 'Modified by'
 
         if self.display_type == 'bubble':
             assert self.max is not None
@@ -193,6 +230,8 @@ class CustomCounter:
                 val += f"**Range**: \u2264{_max}\n"
         if _reset:
             val += f"**Resets On**: {_reset}\n"
+        if self.reset_on != 'none':
+            val += f"**{_reset_to}:** {_resetv}"
         return val.strip()
 
     def __str__(self):

@@ -66,6 +66,8 @@ def chunk_text(text, chunk_size=1024):
 def get_long_field_args(text, title, inline=False, chunk_size=1024):
     """Returns a list of dicts (to pass as kwargs) given a long text."""
     chunks = chunk_text(text, chunk_size=chunk_size)
+    if not chunks:
+        return []
     out = [{"name": title, "value": chunks[0], "inline": inline}]
     for chunk in chunks[1:]:
         out.append({"name": "** **", "value": chunk, "inline": inline})

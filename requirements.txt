@@ -9,7 +9,7 @@ cachetools==3.1.1
 certifi==2019.6.16
 chardet==3.0.4
 coverage==4.5.4
-discord.py==1.3.0a2132+g89bfd9c
+git+https://github.com/Rapptz/discord.py@89bfd9cc2029d76e7580e14543ddc66ea182bf30 # discord.py==1.3.0a2132+g89bfd9c
 dnspython==1.16.0
 docutils==0.15.2
 fuzzywuzzy==0.17.0

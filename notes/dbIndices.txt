@@ -11,6 +11,9 @@ db.bestiaries.createIndex({"subscribers": 1});
 db.bestiaries.createIndex({"active": 1});
 db.bestiaries.createIndex({"server_active.guild_id": 1});
 
+db.bestiary_subscriptions.createIndex({"type": 1, "subscriber_id": 1}, {"unique": true});
+db.bestiary_subscriptions.createIndex({"type": 1, "object_id": 1});
+
 tomes:
 db.tomes.createIndex({"owner.id": 1});
 db.tomes.createIndex({"editors.id": 1});

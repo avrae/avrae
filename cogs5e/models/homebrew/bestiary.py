@@ -11,17 +11,16 @@ log = logging.getLogger(__name__)
 
 
 class Bestiary:
-    def __init__(self, _id, sha256: str, upstream: str, subscribers: list, active: list, server_active: list,
-                 name: str, monsters: list = None, desc: str = None):
+    def __init__(self, _id, sha256: str, upstream: str,
+                 name: str, monsters: list = None, desc: str = None,
+                 **_):
         # metadata - should never change
         self.id = _id
         self.sha256 = sha256
         self.upstream = upstream
 
         # subscription data - only atomic writes
-        self.subscribers = subscribers
-        self.active = active
-        self.server_active = server_active  # [{"subscriber_id": string, "guild_id": string}, ...]
+        self.server_active = server_active  # [{"subscriber_id": string, "guild_id": string}, ...] todo
 
         # content
         self.name = name
@@ -79,17 +78,26 @@ class Bestiary:
             return existing_bestiary
 
         parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
-        b = cls(None, sha256, url, [], [], [], name, parsed_creatures, desc)
+        b = cls(None, sha256, url, name, parsed_creatures, desc)
         await b.write_to_db(ctx)
+        await b.subscribe(ctx)
         return b
 
     @classmethod
     async def from_ctx(cls, ctx):
-        active_bestiary = await ctx.bot.mdb.bestiaries.find_one({"active": str(ctx.author.id)},
-                                                                projection={"monsters": False})
+        active_bestiary = await ctx.bot.bestiary_subscriptions.find_one(
+            {"type": "active", "subscriber_id": ctx.author.id})
         if active_bestiary is None:
             raise NoActiveBrew()
-        return cls.from_dict(active_bestiary)
+        return await cls.from_id(ctx, active_bestiary['object_id'])
+
+    @classmethod
+    async def from_id(cls, ctx, oid):
+        bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": oid},
+                                                         projection={"monsters": False})
+        if bestiary is None:
+            raise ValueError("Bestiary does not exist")
+        return cls.from_dict(bestiary)
 
     async def load_monsters(self, ctx):
         if not self._monsters:
@@ -106,12 +114,11 @@ class Bestiary:
     async def write_to_db(self, ctx):
         """Writes a new bestiary object to the database."""
         assert self._monsters is not None
-        subscribers = [str(ctx.author.id)]
         monsters = [m.to_dict() for m in self._monsters]
 
         data = {
-            "sha256": self.sha256, "upstream": self.upstream, "subscribers": subscribers, "active": [],
-            "server_active": [], "name": self.name, "desc": self.desc, "monsters": monsters
+            "sha256": self.sha256, "upstream": self.upstream,
+            "name": self.name, "desc": self.desc, "monsters": monsters
         }
 
         result = await ctx.bot.mdb.bestiaries.insert_one(data)
@@ -119,13 +126,11 @@ class Bestiary:
 
     async def set_active(self, ctx):
         """Sets the bestiary as active for the contextual author."""
-        await ctx.bot.mdb.bestiaries.update_many(
-            {"active": str(ctx.author.id)},
-            {"$pull": {"active": str(ctx.author.id)}}
+        await ctx.bot.mdb.bestiary_subscriptions.delete_many(
+            {"type": "active", "subscriber_id": ctx.author.id}
         )
-        await ctx.bot.mdb.bestiaries.update_one(
-            {"_id": self.id},
-            {"$push": {"active": str(ctx.author.id)}}
+        await ctx.bot.mdb.bestiary_subscriptions.insert_one(
+            {"type": "active", "subscriber_id": ctx.author.id, "object_id": self.id}
         )
         return self
 
@@ -135,57 +140,37 @@ class Bestiary:
         :param ctx: Context
         :return: Whether the bestiary is now active on the server.
         """
-        guild_id = str(ctx.guild.id)
-        sub_doc = next((d for d in self.server_active if d['guild_id'] == guild_id), None)
+        sub_query = {"type": "server_active", "subscriber_id": ctx.guild.id}
+        sub_doc = await ctx.bot.bestiary_subscriptions.find_one(sub_query)
 
         if sub_doc is not None:  # I subscribed and want to unsubscribe
-            await ctx.bot.mdb.bestiaries.update_one(
-                {"_id": self.id},
-                {"$pull": {"server_active": sub_doc}}
-            )
-            self.server_active.remove(sub_doc)
+            await ctx.bot.mdb.bestiary_subscriptions.delete_one(sub_query)
             return False
         else:  # no one has served this bestiary and I want to
-            sub_doc = {"guild_id": guild_id, "subscriber_id": str(ctx.author.id)}
-            await ctx.bot.mdb.bestiaries.update_one(
-                {"_id": self.id},
-                {"$push": {"server_active": sub_doc}}
-            )
-            self.server_active.append(sub_doc)
+            sub_doc = {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id}
+            await ctx.bot.mdb.bestiary_subscriptions.insert_one(sub_doc)
             return True
 
     async def subscribe(self, ctx):
-        await ctx.bot.mdb.bestiaries.update_one(
-            {"_id": self.id},
-            {"$addToSet": {"subscribers": str(ctx.author.id)}}
+        await ctx.bot.mdb.bestiary_subscriptions.insert_one(
+            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
         )
-        self.subscribers.append(str(ctx.author.id))
 
     async def unsubscribe(self, ctx):
-        author_id = str(ctx.author.id)
-        await ctx.bot.mdb.bestiaries.update_one(
-            {"_id": self.id},
-            {"$pull": {"subscribers": author_id,
-                       "server_active": {"subscriber_id": author_id}}
-             }
+        await ctx.bot.mdb.bestiary_subscriptions.delete_one(
+            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
         )
 
-        if author_id in self.subscribers:
-            self.subscribers.remove(author_id)
-        for serv_sub in self.server_subscriptions(ctx):
-            if serv_sub in self.server_active:
-                self.server_active.remove(serv_sub)
-
         # if no one is subscribed to this bestiary anymore, delete it.
-        if not self.subscribers:
+        if not await ctx.bot.mdb.bestiary_subscriptions.count_documents({"type": "subscribe", "object_id": self.id}):
             await self.delete(ctx)
 
-    def server_subscriptions(self, ctx):
+    def server_subscriptions(self, ctx):  # todo
         """Returns a list of server_active objects supplied by the contextual author.
         Mainly used to determine what subscriptions should be carried over to a new bestiary when updated."""
         return [s for s in self.server_active if s['subscriber_id'] == str(ctx.author.id)]
 
-    async def add_server_subscriptions(self, ctx, subscriptions):
+    async def add_server_subscriptions(self, ctx, subscriptions):  # todo
         """Adds a list of server_active objects to the existing list."""
         existing_serv_sub_set = set(s['guild_id'] for s in self.server_active)
         for sub in reversed(subscriptions):
@@ -204,21 +189,23 @@ class Bestiary:
     @staticmethod
     async def num_user(ctx):
         """Returns the number of bestiaries a user has imported."""
-        return await ctx.bot.mdb.bestiaries.count_documents({"subscribers": str(ctx.author.id)})
+        return await ctx.bot.mdb.bestiary_subscriptions.count_documents(
+            {"type": "subscribe", "subscriber_id": ctx.author.id}
+        )
 
     @staticmethod
     async def user_bestiaries(ctx):
         """Returns an async iterator of partial Bestiary objects that the user has imported."""
-        async for b in ctx.bot.mdb.bestiaries.find({"subscribers": str(ctx.author.id)},
-                                                   projection={"monsters": False}):
-            yield Bestiary.from_dict(b)
+        async for b in ctx.bot.mdb.bestiary_subscriptions.find(
+                {"type": "subscribe", "subscriber_id": ctx.author.id}):
+            yield await Bestiary.from_id(ctx, b['object_id'])
 
     @staticmethod
     async def server_bestiaries(ctx):
         """Returns an async iterator of partial Bestiary objects that are active on the server."""
-        async for b in ctx.bot.mdb.bestiaries.find({"server_active.guild_id": str(ctx.guild.id)},
-                                                   projection={"monsters": False}):
-            yield Bestiary.from_dict(b)
+        async for b in ctx.bot.mdb.bestiary_subscriptions.find(
+                {"type": "server_active", "subscriber_id": ctx.guild.id}):
+            yield await Bestiary.from_id(ctx, b['object_id'])
 
 
 async def select_bestiary(ctx, name):

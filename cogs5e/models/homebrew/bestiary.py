@@ -147,7 +147,8 @@ class Bestiary:
             await ctx.bot.mdb.bestiary_subscriptions.delete_one(sub_query)
             return False
         else:  # no one has served this bestiary and I want to
-            sub_doc = {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id}
+            sub_doc = {"type": "server_active", "subscriber_id": ctx.guild.id,
+                       "object_id": self.id, "provider_id": ctx.author.id}
             await ctx.bot.mdb.bestiary_subscriptions.insert_one(sub_doc)
             return True
 
@@ -157,34 +158,40 @@ class Bestiary:
         )
 
     async def unsubscribe(self, ctx):
+        # unsubscribe me
         await ctx.bot.mdb.bestiary_subscriptions.delete_one(
             {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
+        )
+
+        # remove all server subs that I provide
+        await ctx.bot.mdb.bestiary_subscriptions.delete_many(
+            {"type": "server_active", "provider_id": ctx.author.id, "object_id": self.id}
         )
 
         # if no one is subscribed to this bestiary anymore, delete it.
         if not await ctx.bot.mdb.bestiary_subscriptions.count_documents({"type": "subscribe", "object_id": self.id}):
             await self.delete(ctx)
 
-    def server_subscriptions(self, ctx):  # todo
-        """Returns a list of server_active objects supplied by the contextual author.
+    async def server_subscriptions(self, ctx):
+        """Returns a list of server ids (ints) representing server subscriptions supplied by the contextual author.
         Mainly used to determine what subscriptions should be carried over to a new bestiary when updated."""
-        return [s for s in self.server_active if s['subscriber_id'] == str(ctx.author.id)]
+        return await ctx.bot.bestiary_subscriptions.find(
+            {"type": "server_active", "object_id": self.id, "provider_id": ctx.author.id}).to_list(None)
 
-    async def add_server_subscriptions(self, ctx, subscriptions):  # todo
-        """Adds a list of server_active objects to the existing list."""
-        existing_serv_sub_set = set(s['guild_id'] for s in self.server_active)
-        for sub in reversed(subscriptions):
-            if sub['guild_id'] in existing_serv_sub_set:
-                subscriptions.remove(sub)
-
-        await ctx.bot.mdb.bestiaries.update_one(
-            {"_id": self.id},
-            {"$push": {"server_active": {"$each": subscriptions}}}
-        )
-        self.server_active.extend(subscriptions)
+    async def add_server_subscriptions(self, ctx, serv_ids):
+        """Subscribes a list of servers to this bestiary."""
+        existing = await ctx.bot.mdb.bestiary_subscriptions.find(
+            {"type": "server_active", "subscriber_id": {"$in": serv_ids}}
+        ).to_list(None)
+        existing = {e['subscriber_id'] for e in existing}
+        sub_docs = [{"type": "server_active", "subscriber_id": serv_id,
+                     "object_id": self.id, "provider_id": ctx.author.id} for serv_id in serv_ids if
+                    serv_id not in existing]
+        await ctx.bot.mdb.bestiary_subscriptions.insert_many(sub_docs)
 
     async def delete(self, ctx):
         await ctx.bot.mdb.bestiaries.delete_one({"_id": self.id})
+        await ctx.bot.mdb.bestiary_subscriptions.delete_many({"object_id": self.id})
 
     @staticmethod
     async def num_user(ctx):

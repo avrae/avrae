@@ -116,7 +116,7 @@ class Homebrew(commands.Cog):
                 f"You don't have a bestiary active. Add one with `{ctx.prefix}bestiary import` first!")
         loading = await ctx.send("Updating bestiary (this may take a while for large bestiaries)...")
 
-        old_server_subs = active_bestiary.server_subscriptions(ctx)
+        old_server_subs = await active_bestiary.server_subscriptions(ctx)
         await active_bestiary.unsubscribe(ctx)
         bestiary = await Bestiary.from_critterdb(ctx, active_bestiary.upstream)
 

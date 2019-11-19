@@ -4,13 +4,14 @@ import logging
 import aiohttp
 
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
+from cogs5e.models.homebrew.mixins import CommonHomebrewMixin
 from cogs5e.models.monster import Monster
 from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
 
 
-class Bestiary:
+class Bestiary(CommonHomebrewMixin):
     def __init__(self, _id, sha256: str, upstream: str,
                  name: str, monsters: list = None, desc: str = None,
                  **_):
@@ -190,6 +191,9 @@ class Bestiary:
 
     async def delete(self, ctx):
         await ctx.bot.mdb.bestiaries.delete_one({"_id": self.id})
+        await self.remove_all_tracking(ctx)
+
+    async def remove_all_tracking(self, ctx):
         await ctx.bot.mdb.bestiary_subscriptions.delete_many({"object_id": self.id})
 
     @staticmethod

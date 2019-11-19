@@ -148,8 +148,8 @@ class Homebrew(commands.Cog):
         """Shows what bestiaries are currently active on the server."""
         desc = []
         async for best in Bestiary.server_bestiaries(ctx):
-            sharer = next(sh for sh in best.server_active if sh['guild_id'] == str(ctx.guild.id))
-            desc.append(f"{best.name} (<@{sharer['subscriber_id']}>)")
+            sharer = await best.get_server_sharer(ctx)
+            desc.append(f"{best.name} (<@{sharer}>)")
         await ctx.send(embed=discord.Embed(title="Active Server Bestiaries", description="\n".join(desc)))
 
     @bestiary_server.command(name='remove', aliases=['delete'])

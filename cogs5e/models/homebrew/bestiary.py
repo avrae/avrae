@@ -3,7 +3,7 @@ import logging
 
 import aiohttp
 
-from cogs5e.models.errors import ExternalImportError, NoActiveBrew, NotAllowed
+from cogs5e.models.errors import ExternalImportError, NoActiveBrew
 from cogs5e.models.monster import Monster
 from utils.functions import search_and_select
 
@@ -18,9 +18,6 @@ class Bestiary:
         self.id = _id
         self.sha256 = sha256
         self.upstream = upstream
-
-        # subscription data - only atomic writes
-        self.server_active = server_active  # [{"subscriber_id": string, "guild_id": string}, ...] todo
 
         # content
         self.name = name
@@ -85,7 +82,7 @@ class Bestiary:
 
     @classmethod
     async def from_ctx(cls, ctx):
-        active_bestiary = await ctx.bot.bestiary_subscriptions.find_one(
+        active_bestiary = await ctx.bot.mdb.bestiary_subscriptions.find_one(
             {"type": "active", "subscriber_id": ctx.author.id})
         if active_bestiary is None:
             raise NoActiveBrew()
@@ -141,7 +138,7 @@ class Bestiary:
         :return: Whether the bestiary is now active on the server.
         """
         sub_query = {"type": "server_active", "subscriber_id": ctx.guild.id}
-        sub_doc = await ctx.bot.bestiary_subscriptions.find_one(sub_query)
+        sub_doc = await ctx.bot.mdb.bestiary_subscriptions.find_one(sub_query)
 
         if sub_doc is not None:  # I subscribed and want to unsubscribe
             await ctx.bot.mdb.bestiary_subscriptions.delete_one(sub_query)
@@ -159,7 +156,7 @@ class Bestiary:
 
     async def unsubscribe(self, ctx):
         # unsubscribe me
-        await ctx.bot.mdb.bestiary_subscriptions.delete_one(
+        await ctx.bot.mdb.bestiary_subscriptions.delete_many(
             {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
         )
 
@@ -175,8 +172,9 @@ class Bestiary:
     async def server_subscriptions(self, ctx):
         """Returns a list of server ids (ints) representing server subscriptions supplied by the contextual author.
         Mainly used to determine what subscriptions should be carried over to a new bestiary when updated."""
-        return await ctx.bot.bestiary_subscriptions.find(
-            {"type": "server_active", "object_id": self.id, "provider_id": ctx.author.id}).to_list(None)
+        subs = ctx.bot.mdb.bestiary_subscriptions.find(
+            {"type": "server_active", "object_id": self.id, "provider_id": ctx.author.id})
+        return [s['subscriber_id'] async for s in subs]
 
     async def add_server_subscriptions(self, ctx, serv_ids):
         """Subscribes a list of servers to this bestiary."""
@@ -187,7 +185,8 @@ class Bestiary:
         sub_docs = [{"type": "server_active", "subscriber_id": serv_id,
                      "object_id": self.id, "provider_id": ctx.author.id} for serv_id in serv_ids if
                     serv_id not in existing]
-        await ctx.bot.mdb.bestiary_subscriptions.insert_many(sub_docs)
+        if sub_docs:
+            await ctx.bot.mdb.bestiary_subscriptions.insert_many(sub_docs)
 
     async def delete(self, ctx):
         await ctx.bot.mdb.bestiaries.delete_one({"_id": self.id})
@@ -213,6 +212,15 @@ class Bestiary:
         async for b in ctx.bot.mdb.bestiary_subscriptions.find(
                 {"type": "server_active", "subscriber_id": ctx.guild.id}):
             yield await Bestiary.from_id(ctx, b['object_id'])
+
+    async def get_server_sharer(self, ctx):
+        """Returns the user ID of the user who shared this bestiary with the server."""
+        sub = await ctx.bot.mdb.bestiary_subscriptions.find_one(
+            {"type": "server_active", "object_id": self.id}
+        )
+        if sub is None:
+            raise ValueError("This bestiary is not active on this server.")
+        return sub.get("provider_id")
 
 
 async def select_bestiary(ctx, name):

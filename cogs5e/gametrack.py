@@ -116,7 +116,7 @@ class GameTrack(commands.Cog):
             raise ValueError(f"Invalid rest type: {rest_type}")
 
         if '-h' in args:
-            values = ', '.join(set(ctr.name for ctr, _ in reset) | {"Hit Points", "Death Saves", "Spell Slots"})
+            values = ', '.join(set(ctr.name for ctr, _, _ in reset) | {"Hit Points", "Death Saves", "Spell Slots"})
             embed.add_field(name="Reset Values", value=values)
         else:
             # hp

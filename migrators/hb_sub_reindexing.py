@@ -1,6 +1,8 @@
 """
 Converts homebrew bestiary, pack, and tome subscriber indices:
 removes "subscribers", "active", and "server_active" keys from objects and inserts into subscriber collection
+
+Usage: python hb_sub_reindexing.py [bestiary] [tome] [pack] [test]
 """
 import asyncio
 import os
@@ -73,8 +75,9 @@ async def run():
         mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
         mdb = mclient[os.getenv('MONGO_DB', "avrae")]
 
-    input(f"Reindexing {mdb.name} bestiaries. Press enter to continue.")
-    await migrate_bestiaries(mdb)
+    if 'bestiary' in sys.argv:
+        input(f"Reindexing {mdb.name} bestiaries. Press enter to continue.")
+        await migrate_bestiaries(mdb)
 
 
 if __name__ == '__main__':

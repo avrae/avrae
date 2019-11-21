@@ -68,12 +68,15 @@ class ActiveMixin(MixinBase, abc.ABC):
 class GuildActiveMixin(MixinBase, abc.ABC):
     """A mixin that offers guild active support."""
 
+    async def is_server_active(self, ctx):
+        """Returns whether the object is active on this server."""
+        return (await self.sub_coll(ctx).find_one(
+            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id})) is not None
+
     async def toggle_server_active(self, ctx):
         """Toggles whether the object is active in the contextual guild.
         Returns a bool representing its new activity."""
-        sub_doc = await self.sub_coll(ctx).find_one({"type": "server_active", "subscriber_id": ctx.guild.id})
-
-        if sub_doc is not None:  # I subscribed and want to unsubscribe
+        if await self.is_server_active(ctx):  # I subscribed and want to unsubscribe
             await self.unset_server_active(ctx)
             return False
         else:  # no one has served this object and I want to
@@ -82,12 +85,13 @@ class GuildActiveMixin(MixinBase, abc.ABC):
 
     async def set_server_active(self, ctx):
         """Sets the object as active for the contextual guild."""
-        sub_doc = {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id}
-        await self.sub_coll(ctx).insert_one(sub_doc)
+        await self.sub_coll(ctx).insert_one(
+            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id})
 
     async def unset_server_active(self, ctx):
         """Sets the object as inactive for the contextual guild."""
-        await self.sub_coll(ctx).delete_one({"type": "server_active", "subscriber_id": ctx.guild.id})
+        await self.sub_coll(ctx).delete_many(
+            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id})
 
     @classmethod
     async def guild_active_ids(cls, ctx):
@@ -98,7 +102,36 @@ class GuildActiveMixin(MixinBase, abc.ABC):
 
 class EditorMixin(MixinBase, abc.ABC):
     """A mixin that offers editor tracking."""
-    pass
+
+    async def is_editor(self, ctx, user):
+        """Returns whether the given user can edit this object."""
+        return (await self.sub_coll(ctx).find_one(
+            {"type": "editor", "subscriber_id": user.id, "object_id": self.id})) is not None
+
+    async def toggle_editor(self, ctx, user):
+        """Toggles whether a user is allowed to edit the given object.
+        Returns whether they can after operations.
+        :type user: :class:`discord.User`"""
+        if not await self.is_editor(ctx, user):
+            await self.add_editor(ctx, user)
+            return True
+        else:
+            await self.remove_editor(ctx, user)
+            return False
+
+    async def add_editor(self, ctx, user):
+        """Adds the user to the editor list of this object."""
+        await self.sub_coll(ctx).insert_one({"type": "editor", "subscriber_id": user.id, "object_id": self.id})
+
+    async def remove_editor(self, ctx, user):
+        """Removes the user from the editor list of this object."""
+        await self.sub_coll(ctx).delete_many({"type": "editor", "subscriber_id": user.id, "object_id": self.id})
+
+    @classmethod
+    async def my_editable_ids(cls, ctx):
+        """Returns an async iterator of ObjectIds representing objects the contextual author can edit."""
+        async for sub in cls.sub_coll(ctx).find({"type": "editor", "subscriber_id": ctx.author.id}):
+            yield sub['object_id']
 
 
 # ==== utilities ====

@@ -32,6 +32,21 @@ class Bestiary(CommonHomebrewMixin):
         return cls(**d)
 
     @classmethod
+    async def from_ctx(cls, ctx):
+        active_bestiary = await cls.active_id(ctx)
+        if active_bestiary is None:
+            raise NoActiveBrew()
+        return await cls.from_id(ctx, active_bestiary)
+
+    @classmethod
+    async def from_id(cls, ctx, oid):
+        bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": oid},
+                                                         projection={"monsters": False})
+        if bestiary is None:
+            raise ValueError("Bestiary does not exist")
+        return cls.from_dict(bestiary)
+
+    @classmethod
     async def from_critterdb(cls, ctx, url):
         log.info(f"Getting bestiary ID {url}...")
         index = 1
@@ -80,21 +95,6 @@ class Bestiary(CommonHomebrewMixin):
         await b.write_to_db(ctx)
         await b.subscribe(ctx)
         return b
-
-    @classmethod
-    async def from_ctx(cls, ctx):
-        active_bestiary = await cls.active_id(ctx)
-        if active_bestiary is None:
-            raise NoActiveBrew()
-        return await cls.from_id(ctx, active_bestiary)
-
-    @classmethod
-    async def from_id(cls, ctx, oid):
-        bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": oid},
-                                                         projection={"monsters": False})
-        if bestiary is None:
-            raise ValueError("Bestiary does not exist")
-        return cls.from_dict(bestiary)
 
     async def load_monsters(self, ctx):
         if not self._monsters:

@@ -7,9 +7,11 @@ db.packs.createIndex({"server_active": 1});
 
 bestiaries:
 db.bestiaries.createIndex({"upstream": 1, "sha256": 1}, {"unique": true});
-db.bestiaries.createIndex({"subscribers": 1});
-db.bestiaries.createIndex({"active": 1});
-db.bestiaries.createIndex({"server_active.guild_id": 1});
+
+db.bestiary_subscriptions.createIndex({"type": 1});
+db.bestiary_subscriptions.createIndex({"subscriber_id": 1});
+db.bestiary_subscriptions.createIndex({"object_id": 1});
+db.bestiary_subscriptions.createIndex({"provider_id": 1});
 
 tomes:
 db.tomes.createIndex({"owner.id": 1});

@@ -116,7 +116,7 @@ class Homebrew(commands.Cog):
                 f"You don't have a bestiary active. Add one with `{ctx.prefix}bestiary import` first!")
         loading = await ctx.send("Updating bestiary (this may take a while for large bestiaries)...")
 
-        old_server_subs = active_bestiary.server_subscriptions(ctx)
+        old_server_subs = await active_bestiary.server_subscriptions(ctx)
         await active_bestiary.unsubscribe(ctx)
         bestiary = await Bestiary.from_critterdb(ctx, active_bestiary.upstream)
 
@@ -148,8 +148,8 @@ class Homebrew(commands.Cog):
         """Shows what bestiaries are currently active on the server."""
         desc = []
         async for best in Bestiary.server_bestiaries(ctx):
-            sharer = next(sh for sh in best.server_active if sh['guild_id'] == str(ctx.guild.id))
-            desc.append(f"{best.name} (<@{sharer['subscriber_id']}>)")
+            sharer = await best.get_server_sharer(ctx)
+            desc.append(f"{best.name} (<@{sharer}>)")
         await ctx.send(embed=discord.Embed(title="Active Server Bestiaries", description="\n".join(desc)))
 
     @bestiary_server.command(name='remove', aliases=['delete'])

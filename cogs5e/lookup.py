@@ -544,9 +544,9 @@ class Lookup(commands.Cog):
             pack_id = None
         choices = list(itertools.chain(compendium.items, custom_items))
         if ctx.guild:
-            async for servpack in ctx.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}):
-                if servpack['_id'] != pack_id:
-                    choices.extend(Pack.from_dict(servpack).get_search_formatted_items())
+            async for servpack in Pack.server_packs(ctx):
+                if servpack.id != pack_id:
+                    choices.extend(servpack.get_search_formatted_items())
 
         # #881 - display nSRD names
         choices.extend(compendium.nitem_names)

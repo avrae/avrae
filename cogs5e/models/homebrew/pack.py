@@ -3,22 +3,24 @@ import copy
 from bson import ObjectId
 
 from cogs5e.models.errors import NoActiveBrew
+from cogs5e.models.homebrew.mixins import CommonHomebrewMixin, EditorMixin
 from utils.functions import search_and_select
 
 
-class Pack:
-    def __init__(self, _id: ObjectId, name: str, owner: dict, editors: list, public: bool, active: list,
-                 server_active: list, items: list, image: str, desc: str, subscribers=None, **kwargs):
-        if subscribers is None:
-            subscribers = []
-        self._id = _id
+class Pack(CommonHomebrewMixin, EditorMixin):
+    def __init__(self, _id: ObjectId, name: str, owner: dict, public: bool,
+                 items: list, image: str, desc: str, **_):
+        # metadata
+        super().__init__(_id)
         self.name = name
         self.owner = owner
+        self.public = public
+
+        # todo
         self.editors = editors
         self.subscribers = subscribers
-        self.public = public
-        self.active = active
-        self.server_active = server_active
+
+        # content
         self.items = items
         self.image = image
         self.desc = desc
@@ -29,95 +31,88 @@ class Pack:
 
     @classmethod
     async def from_ctx(cls, ctx):
-        active_pack = await ctx.bot.mdb.packs.find_one({"active": str(ctx.author.id)})
+        active_pack = await cls.active_id(ctx)
         if active_pack is None:
             raise NoActiveBrew()
-        return cls.from_dict(active_pack)
+        return cls.from_id(ctx, active_pack)
 
     @classmethod
-    async def from_id(cls, ctx, pack_id):
-        pack = await ctx.bot.mdb.packs.find_one({"_id": ObjectId(pack_id)})
+    async def from_id(cls, ctx, pack_id, meta_only=False):
+        if not isinstance(pack_id, ObjectId):
+            pack_id = ObjectId(pack_id)
+
+        if meta_only:
+            pack = await ctx.bot.mdb.packs.find_one({"_id": pack_id}, ['_id', 'name', 'owner', 'public'])
+        else:
+            pack = await ctx.bot.mdb.packs.find_one({"_id": pack_id})
         if pack is None:
             raise NoActiveBrew()
-        return cls.from_dict(pack)
+
+        if not meta_only:
+            return cls.from_dict(pack)
+        return pack
 
     def to_dict(self):
-        items = self.items  # TODO make Item structured
-        return {'name': self.name, 'owner': self.owner, 'editors': self.editors, 'public': self.public,
-                'active': self.active, 'server_active': self.server_active, 'items': items, 'image': self.image,
-                'desc': self.desc,  # end v1
-                'subscribers': self.subscribers}
-
-    @property
-    def id(self):
-        return self._id
+        return {'name': self.name, 'owner': self.owner, 'public': self.public,  # todo
+                'items': self.items, 'image': self.image, 'desc': self.desc}
 
     def get_search_formatted_items(self):
-        _items = copy.deepcopy(self.items)
-        for i in _items:
+        for i in self.items:
             i['srd'] = True
             i['source'] = 'homebrew'
-        return _items
+        return self.items
 
     async def commit(self, ctx):
         """Writes a pack object to the database."""
         data = {"$set": self.to_dict()}
 
         await ctx.bot.mdb.packs.update_one(
-            {"_id": self._id}, data
+            {"_id": self.id}, data
         )
 
-    async def set_active(self, ctx):
-        await ctx.bot.mdb.packs.update_many(
-            {"active": str(ctx.author.id)},
-            {"$pull": {"active": str(ctx.author.id)}}
-        )
-        await ctx.bot.mdb.packs.update_one(
-            {"_id": self._id},
-            {"$push": {"active": str(ctx.author.id)}}
-        )
-
-    async def toggle_server_active(self, ctx):
-        """
-        Toggles whether the pack should be active on the contextual server.
-        :param ctx: Context
-        :return: Whether the pack is now active on the server.
-        """
-        data = await ctx.bot.mdb.packs.find_one({"_id": self._id}, ["server_active"])
-        server_active = data.get('server_active', [])
-        if str(ctx.guild.id) in server_active:
-            server_active.remove(str(ctx.guild.id))
-        else:
-            server_active.append(str(ctx.guild.id))
-        await ctx.bot.mdb.packs.update_one(
-            {"_id": self._id},
-            {"$set": {"server_active": server_active}}
-        )
-        return str(ctx.guild.id) in server_active
+    # helper methods
+    def is_owned_by(self, user):
+        """Returns whether the member owns the pack.
+        :type user: :class:`discord.User`"""
+        return self.owner['id'] == user.id  # todo
 
     @staticmethod
-    def view_query(user_id):
-        """Returns the MongoDB query to find all documents a user can set active."""
-        return {"$or": [
-            {"owner.id": user_id},
-            {"editors.id": user_id},
-            {"$and": [
-                {"subscribers.id": user_id},
-                {"public": True}
-            ]}
-        ]}
+    async def user_owned_ids(ctx):
+        """Returns an async iterator of ObjectIds of packs the contextual user owns."""
+        async for pack in ctx.bot.mdb.packs.find({"owner.id": ctx.author.id}, ['_id']):
+            yield pack['_id']
+
+    @staticmethod
+    async def user_packs(ctx, meta_only=False):
+        """Returns an async iterator of Pack objects (or dicts, if meta_only is set) that the user can set active."""
+        async for pack_id in Pack.user_owned_ids(ctx):
+            yield await Pack.from_id(ctx, pack_id, meta_only=meta_only)
+        async for pack_id in Pack.my_editable_ids(ctx):
+            yield await Pack.from_id(ctx, pack_id, meta_only=meta_only)
+        async for pack_id in Pack.my_sub_ids(ctx):
+            yield await Pack.from_id(ctx, pack_id, meta_only=meta_only)
+
+    @staticmethod
+    async def server_packs(ctx, meta_only=False):
+        """Returns an async generator of Pack objects (or dicts, if meta_only is set) that the server has active."""
+        async for pack_id in Pack.guild_active_ids(ctx):
+            yield await Pack.from_id(ctx, pack_id, meta_only=meta_only)
+
+    @staticmethod
+    async def num_visible(ctx):
+        """Returns the number of packs the contextual user can set active."""
+        return sum(1 async for _ in Pack.user_packs(ctx, meta_only=True))
+
+    # subscription helpers
+    @staticmethod
+    def sub_coll(ctx):
+        return ctx.bot.mdb.pack_subscriptions
 
 
 async def select_pack(ctx, name):
-    available_pack_names = await ctx.bot.mdb.packs.find(
-        Pack.view_query(str(ctx.author.id)),
-        ['name', '_id']
-    ).to_list(None)
-
+    available_pack_names = [pack async for pack in Pack.user_packs(ctx, meta_only=True)]
     if not available_pack_names:
         raise NoActiveBrew()
 
     result = await search_and_select(ctx, available_pack_names, name, lambda p: p['name'])
-    final_pack = await ctx.bot.mdb.packs.find_one({"_id": result['_id']})
-
-    return Pack.from_dict(final_pack)
+    return await Pack.from_id(ctx, result['_id'])

@@ -1,9 +1,13 @@
 packs:
 db.packs.createIndex({"owner.id": 1});
+
 db.packs.createIndex({"editors.id": 1});
 db.packs.createIndex({"subscribers.id": 1});
 db.packs.createIndex({"active": 1});
 db.packs.createIndex({"server_active": 1});
+
+db.pack_subscriptions.createIndex({"type": 1, "subscriber_id": 1});
+db.pack_subscriptions.createIndex({"object_id": 1});
 
 bestiaries:
 db.bestiaries.createIndex({"upstream": 1, "sha256": 1}, {"unique": true});

@@ -289,9 +289,9 @@ class Homebrew(commands.Cog):
         """Commands to manage homebrew spells.
         When called without an argument, lists the current tome and its description.
         When called with a name, switches to a different tome."""
-        user_tomes = await self.bot.mdb.tomes.count_documents(Tome.view_query(str(ctx.author.id)))
+        num_visible = await Tome.num_visible(ctx)
 
-        if not user_tomes:
+        if not num_visible:
             return await ctx.send(
                 "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!")
 
@@ -321,28 +321,24 @@ class Homebrew(commands.Cog):
     @tome.command(name='list')
     async def tome_list(self, ctx):
         """Lists your available tomes."""
-        available_tome_names = await self.bot.mdb.tomes.find(
-            Tome.view_query(str(ctx.author.id)),
-            ['name']
-        ).to_list(None)
-        await ctx.send(f"Your available tomes: {', '.join(p['name'] for p in available_tome_names)}")
+        available_tome_names = Tome.user_tomes(ctx, meta_only=True)
+        await ctx.send(f"Your available tomes: {', '.join(p['name'] async for p in available_tome_names)}")
 
     @tome.command(name='editor')
     async def tome_editor(self, ctx, user: discord.Member):
         """Allows another user to edit your active tome."""
         tome = await Tome.from_ctx(ctx)
-        if not tome.owner['id'] == str(ctx.author.id):
+        if not tome.is_owned_by(ctx.author):
             return await ctx.send("You do not have permission to add editors to this tome.")
-        if tome.owner['id'] == str(user.id):
+        elif tome.is_owned_by(user):
             return await ctx.send("You already own this tome.")
 
-        if str(user.id) not in [e['id'] for e in tome.editors]:
-            tome.editors.append({"username": str(user), "id": str(user.id)})
+        can_edit = await tome.toggle_editor(ctx, user)
+
+        if can_edit:
             await ctx.send(f"{user} added to {tome.name}'s editors.")
         else:
-            tome.editors.remove(next(e for e in tome.editors if e['id'] == str(user.id)))
             await ctx.send(f"{user} removed from {tome.name}'s editors.")
-        await tome.commit(ctx)
 
     @tome.command(name='subscribe', aliases=['sub'])
     async def tome_sub(self, ctx, url):
@@ -358,29 +354,19 @@ class Homebrew(commands.Cog):
         if not tome.public:
             return await ctx.send("This tome is not public.")
 
-        user = ctx.author
-        if str(user.id) not in [s['id'] for s in tome.subscribers]:
-            tome.subscribers.append({"username": str(user), "id": str(user.id)})
-            out = f"Subscribed to {tome.name} by {tome.owner['username']}. " \
-                  f"Use `{ctx.prefix}tome {tome.name}` to select it."
-        else:
-            return await ctx.send(f"You are already subscribed to {tome.name}.")
-        await tome.commit(ctx)
-        await ctx.send(out)
+        await tome.subscribe(ctx)
+        await ctx.send(f"Subscribed to {tome.name} by {tome.owner['username']}. "  # todo
+                       f"Use `{ctx.prefix}tome {tome.name}` to select it.")
 
     @tome.command(name='unsubscribe', aliases=['unsub'])
     async def tome_unsub(self, ctx, name):
         """Unsubscribes from another user's tome."""
         tome = await select_tome(ctx, name)
-
-        user = ctx.author
-        if str(user.id) not in [s['id'] for s in tome.subscribers]:
+        try:
+            await tome.unsubscribe(ctx)
+        except NotAllowed:
             return await ctx.send("You aren't subscribed to this tome! Maybe you own it, or are an editor?")
-        else:
-            tome.subscribers.remove(next(s for s in tome.subscribers if s['id'] == str(user.id)))
-            out = f"Unsubscribed from {tome.name}."
-        await tome.commit(ctx)
-        await ctx.send(out)
+        await ctx.send(f"Unsubscribed from {tome.name}.")
 
     @tome.group(name='server', invoke_without_command=True)
     @commands.guild_only()
@@ -400,8 +386,8 @@ class Homebrew(commands.Cog):
     async def tome_server_list(self, ctx):
         """Shows what tomes are currently active on the server."""
         desc = ""
-        async for doc in self.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['name', 'owner']):
-            desc += f"{doc['name']} (<@{doc['owner']['id']}>)\n"
+        async for tome in Tome.server_tomes(ctx, meta_only=True):
+            desc += f"{tome['name']} (<@{tome['owner']['id']}>)\n"  # todo
         await ctx.send(embed=discord.Embed(title="Active Server Tomes", description=desc))
 
     @tome_server.command(name='remove', aliases=['delete'])
@@ -409,9 +395,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def tome_server_remove(self, ctx, tome_name):
         """Removes a server tome."""
-        tome_metas = []
-        async for doc in self.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['name']):
-            tome_metas.append(doc)
+        tome_metas = [t async for t in Tome.server_tomes(ctx, meta_only=True)]
 
         tome_meta = await search_and_select(ctx, tome_metas, tome_name, lambda b: b['name'])
         tome = await Tome.from_id(ctx, tome_meta['_id'])

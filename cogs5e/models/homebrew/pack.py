@@ -52,23 +52,11 @@ class Pack(CommonHomebrewMixin, EditorMixin):
             return cls.from_dict(pack)
         return pack
 
-    def to_dict(self):
-        return {'name': self.name, 'owner': self.owner, 'public': self.public,  # todo
-                'items': self.items, 'image': self.image, 'desc': self.desc}
-
     def get_search_formatted_items(self):
         for i in self.items:
             i['srd'] = True
             i['source'] = 'homebrew'
         return self.items
-
-    async def commit(self, ctx):
-        """Writes a pack object to the database."""
-        data = {"$set": self.to_dict()}
-
-        await ctx.bot.mdb.packs.update_one(
-            {"_id": self.id}, data
-        )
 
     # helper methods
     def is_owned_by(self, user):
@@ -79,7 +67,7 @@ class Pack(CommonHomebrewMixin, EditorMixin):
     @staticmethod
     async def user_owned_ids(ctx):
         """Returns an async iterator of ObjectIds of packs the contextual user owns."""
-        async for pack in ctx.bot.mdb.packs.find({"owner.id": ctx.author.id}, ['_id']):
+        async for pack in ctx.bot.mdb.packs.find({"owner.id": ctx.author.id}, ['_id']):  # todo
             yield pack['_id']
 
     @staticmethod

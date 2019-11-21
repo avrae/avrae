@@ -251,9 +251,9 @@ async def get_spell_choices(ctx):
         tome_id = None
     choices = list(itertools.chain(compendium.spells, custom_spells))
     if ctx.guild:
-        async for servtome in ctx.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['spells']):
-            if servtome['_id'] != tome_id:
-                choices.extend(Spell.from_dict(s) for s in servtome['spells'])
+        async for servtome in Tome.server_tomes(ctx):
+            if servtome.id != tome_id:
+                choices.extend(servtome.spells)
     return choices
 
 

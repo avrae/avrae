@@ -6,9 +6,8 @@ from discord.ext import commands
 
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew, NoSelectionElements, NotAllowed
+from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary, select_bestiary
-from cogs5e.models.homebrew.pack import Pack, select_pack
-from cogs5e.models.homebrew.tome import Tome, select_tome
 from utils import checks
 from utils.functions import confirm, search_and_select
 
@@ -180,7 +179,7 @@ class Homebrew(commands.Cog):
             pack = await Pack.from_ctx(ctx)
         else:
             try:
-                pack = await select_pack(ctx, name)
+                pack = await Pack.select(ctx, name)
             except NoActiveBrew:
                 return await ctx.send(
                     "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!")
@@ -202,7 +201,7 @@ class Homebrew(commands.Cog):
     @pack.command(name='list')
     async def pack_list(self, ctx):
         """Lists your available packs."""
-        available_pack_names = Pack.user_packs(ctx, meta_only=True)
+        available_pack_names = Pack.user_visible(ctx, meta_only=True)
         await ctx.send(f"Your available packs: {', '.join(p['name'] async for p in available_pack_names)}")
 
     @pack.command(name='editor')
@@ -242,7 +241,7 @@ class Homebrew(commands.Cog):
     @pack.command(name='unsubscribe', aliases=['unsub'])
     async def pack_unsub(self, ctx, name):
         """Unsubscribes from another user's pack."""
-        pack = await select_pack(ctx, name)
+        pack = await Pack.select(ctx, name)
         try:
             await pack.unsubscribe(ctx)
         except NotAllowed:
@@ -267,7 +266,7 @@ class Homebrew(commands.Cog):
     async def pack_server_list(self, ctx):
         """Shows what packs are currently active on the server."""
         desc = ""
-        async for pack in Pack.server_packs(ctx, meta_only=True):
+        async for pack in Pack.server_active(ctx, meta_only=True):
             desc += f"{pack['name']} (<@{pack['owner']['id']}>)\n"  # todo
         await ctx.send(embed=discord.Embed(title="Active Server Packs", description=desc))
 
@@ -276,7 +275,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def pack_server_remove(self, ctx, pack_name):
         """Removes a server pack."""
-        pack_metas = [p async for p in Pack.server_packs(ctx, meta_only=True)]
+        pack_metas = [p async for p in Pack.server_active(ctx, meta_only=True)]
 
         pack_meta = await search_and_select(ctx, pack_metas, pack_name, lambda b: b['name'])
         pack = await Pack.from_id(ctx, pack_meta['_id'])
@@ -299,7 +298,7 @@ class Homebrew(commands.Cog):
             tome = await Tome.from_ctx(ctx)
         else:
             try:
-                tome = await select_tome(ctx, name)
+                tome = await Tome.select(ctx, name)
             except NoActiveBrew:
                 return await ctx.send(
                     "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!")
@@ -321,7 +320,7 @@ class Homebrew(commands.Cog):
     @tome.command(name='list')
     async def tome_list(self, ctx):
         """Lists your available tomes."""
-        available_tome_names = Tome.user_tomes(ctx, meta_only=True)
+        available_tome_names = Tome.user_visible(ctx, meta_only=True)
         await ctx.send(f"Your available tomes: {', '.join(p['name'] async for p in available_tome_names)}")
 
     @tome.command(name='editor')
@@ -361,7 +360,7 @@ class Homebrew(commands.Cog):
     @tome.command(name='unsubscribe', aliases=['unsub'])
     async def tome_unsub(self, ctx, name):
         """Unsubscribes from another user's tome."""
-        tome = await select_tome(ctx, name)
+        tome = await Tome.select(ctx, name)
         try:
             await tome.unsubscribe(ctx)
         except NotAllowed:
@@ -386,7 +385,7 @@ class Homebrew(commands.Cog):
     async def tome_server_list(self, ctx):
         """Shows what tomes are currently active on the server."""
         desc = ""
-        async for tome in Tome.server_tomes(ctx, meta_only=True):
+        async for tome in Tome.server_active(ctx, meta_only=True):
             desc += f"{tome['name']} (<@{tome['owner']['id']}>)\n"  # todo
         await ctx.send(embed=discord.Embed(title="Active Server Tomes", description=desc))
 
@@ -395,7 +394,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def tome_server_remove(self, ctx, tome_name):
         """Removes a server tome."""
-        tome_metas = [t async for t in Tome.server_tomes(ctx, meta_only=True)]
+        tome_metas = [t async for t in Tome.server_active(ctx, meta_only=True)]
 
         tome_meta = await search_and_select(ctx, tome_metas, tome_name, lambda b: b['name'])
         tome = await Tome.from_id(ctx, tome_meta['_id'])

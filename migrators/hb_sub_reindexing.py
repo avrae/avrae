@@ -109,7 +109,7 @@ async def _migrate(data_coll, sub_coll):
     # db.tome_subscriptions.createIndex({"type": 1, "subscriber_id": 1});
     # db.tome_subscriptions.createIndex({"object_id": 1});
     print(f'Creating new indices...', end=' ', flush=True)
-    await sub_coll.create_index({"type": ASCENDING, "subscriber_id": ASCENDING})
+    await sub_coll.create_index([("type", ASCENDING), ("subscriber_id", ASCENDING)])
     await sub_coll.create_index("object_id")
     print("OK")
 

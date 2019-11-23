@@ -202,7 +202,7 @@ class Homebrew(commands.Cog):
     async def pack_list(self, ctx):
         """Lists your available packs."""
         available_pack_names = Pack.user_visible(ctx, meta_only=True)
-        await ctx.send(f"Your available packs: {', '.join(p['name'] async for p in available_pack_names)}")
+        await ctx.send(f"Your available packs: {', '.join([p['name'] async for p in available_pack_names])}")
 
     @pack.command(name='editor')
     async def pack_editor(self, ctx, user: discord.Member):
@@ -321,7 +321,7 @@ class Homebrew(commands.Cog):
     async def tome_list(self, ctx):
         """Lists your available tomes."""
         available_tome_names = Tome.user_visible(ctx, meta_only=True)
-        await ctx.send(f"Your available tomes: {', '.join(p['name'] async for p in available_tome_names)}")
+        await ctx.send(f"Your available tomes: {', '.join([p['name'] async for p in available_tome_names])}")
 
     @tome.command(name='editor')
     async def tome_editor(self, ctx, user: discord.Member):

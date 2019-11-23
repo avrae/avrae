@@ -35,7 +35,7 @@ class HomebrewContainer(CommonHomebrewMixin, EditorMixin, abc.ABC):
         active_id = await cls.active_id(ctx)
         if active_id is None:
             raise NoActiveBrew()
-        return cls.from_id(ctx, active_id)
+        return await cls.from_id(ctx, active_id)
 
     @classmethod
     async def from_id(cls, ctx, _id, meta_only=False):
@@ -84,7 +84,7 @@ class HomebrewContainer(CommonHomebrewMixin, EditorMixin, abc.ABC):
     @classmethod
     async def num_visible(cls, ctx):
         """Returns the number of tomes the contextual user can set active."""
-        return sum(1 async for _ in cls.user_visible(ctx, meta_only=True))
+        return sum([1 async for _ in cls.user_visible(ctx, meta_only=True)])
 
     @classmethod
     async def select(cls, ctx, name):

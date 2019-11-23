@@ -852,6 +852,12 @@ class MonsterCombatant(Combatant):
     def monster_name(self):
         return self._monster_name
 
+    def use_slot(self, level: int):  # todo
+        return
+
+    def can_cast(self, spell, level) -> bool:
+        return spell.name in self.spellbook
+
     def to_dict(self):
         raw = super(MonsterCombatant, self).to_dict()
         raw['monster_name'] = self.monster_name

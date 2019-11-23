@@ -57,13 +57,13 @@ class HomebrewContainer(CommonHomebrewMixin, EditorMixin, abc.ABC):
     @classmethod
     async def user_owned_ids(cls, ctx):
         """Returns an async iterator of ObjectIds of objects the contextual user owns."""
-        async for obj in cls.data_coll(ctx).find({"owner": ctx.author.id}, ['_id']):  # todo
+        async for obj in cls.data_coll(ctx).find({"owner": ctx.author.id}, ['_id']):
             yield obj['_id']
 
     def is_owned_by(self, user):
         """Returns whether the member owns the object.
         :type user: :class:`discord.User`"""
-        return self.owner == user.id  # todo
+        return self.owner == user.id
 
     @classmethod
     async def user_visible(cls, ctx, meta_only=False):

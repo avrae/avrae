@@ -235,7 +235,7 @@ class Homebrew(commands.Cog):
             return await ctx.send("This pack is not public.")
 
         await pack.subscribe(ctx)
-        await ctx.send(f"Subscribed to {pack.name} by {pack.owner['username']}. "  # todo owner?
+        await ctx.send(f"Subscribed to {pack.name}. "  # by {pack.owner['username']}. "  # todo owner username
                        f"Use `{ctx.prefix}pack {pack.name}` to select it.")
 
     @pack.command(name='unsubscribe', aliases=['unsub'])
@@ -267,7 +267,7 @@ class Homebrew(commands.Cog):
         """Shows what packs are currently active on the server."""
         desc = ""
         async for pack in Pack.server_active(ctx, meta_only=True):
-            desc += f"{pack['name']} (<@{pack['owner']['id']}>)\n"  # todo
+            desc += f"{pack['name']} (<@{pack['owner']}>)\n"
         await ctx.send(embed=discord.Embed(title="Active Server Packs", description=desc))
 
     @pack_server.command(name='remove', aliases=['delete'])
@@ -354,7 +354,7 @@ class Homebrew(commands.Cog):
             return await ctx.send("This tome is not public.")
 
         await tome.subscribe(ctx)
-        await ctx.send(f"Subscribed to {tome.name} by {tome.owner['username']}. "  # todo
+        await ctx.send(f"Subscribed to {tome.name}. "  # by {tome.owner['username']}. "  # todo
                        f"Use `{ctx.prefix}tome {tome.name}` to select it.")
 
     @tome.command(name='unsubscribe', aliases=['unsub'])
@@ -386,7 +386,7 @@ class Homebrew(commands.Cog):
         """Shows what tomes are currently active on the server."""
         desc = ""
         async for tome in Tome.server_active(ctx, meta_only=True):
-            desc += f"{tome['name']} (<@{tome['owner']['id']}>)\n"  # todo
+            desc += f"{tome['name']} (<@{tome['owner']}>)\n"
         await ctx.send(embed=discord.Embed(title="Active Server Tomes", description=desc))
 
     @tome_server.command(name='remove', aliases=['delete'])

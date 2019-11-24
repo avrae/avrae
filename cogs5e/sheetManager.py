@@ -617,7 +617,7 @@ class SheetManager(commands.Cog):
 
     @commands.command()
     async def beyond(self, ctx, url: str, *args):
-        """Loads a character sheet from D&D Beyond, resetting all settings."""
+        """Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings."""
 
         loading = await ctx.send('Loading character data from Beyond...')
         url = re.search(r"/characters/(\d+)", url)

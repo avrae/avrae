@@ -188,7 +188,8 @@ class Customization(commands.Cog):
 
         await self.bot.mdb.aliases.update_one({"owner": str(ctx.author.id), "name": alias_name},
                                               {"$set": {"commands": cmds.lstrip('!')}}, True)
-        await ctx.send(f'Alias `{ctx.prefix}{alias_name}` added for command:\n`{ctx.prefix}{cmds.lstrip("!")}`')
+        await ctx.send(f'Alias `{ctx.prefix}{alias_name}` added for command:'
+                       f'```py\n{ctx.prefix}{alias_name} {cmds.lstrip("!")}\n```')
 
     @alias.command(name='list')
     async def alias_list(self, ctx):
@@ -247,7 +248,8 @@ class Customization(commands.Cog):
 
         await self.bot.mdb.servaliases.update_one({"server": str(ctx.guild.id), "name": alias_name},
                                                   {"$set": {"commands": cmds.lstrip('!')}}, True)
-        await ctx.send(f'Server alias `{ctx.prefix}{alias_name}` added for command:\n`{ctx.prefix}{cmds.lstrip("!")}`')
+        await ctx.send(f'Server alias `{ctx.prefix}{alias_name}` added for command:'
+                       f'```py\n{ctx.prefix}{alias_name} {cmds.lstrip("!")}\n```')
 
     @servalias.command(name='list')
     @commands.guild_only()
@@ -289,15 +291,14 @@ class Customization(commands.Cog):
         user_snippets = await helpers.get_snippets(ctx)
 
         if snippet is None:
-            return await ctx.send(f'**{snipname}**:\n'
-                                  f'(Copy-pastable)```md\n'
+            return await ctx.send(f'**{snipname}**:```py\n'
                                   f'{ctx.prefix}snippet {snipname} {user_snippets.get(snipname, "Not defined.")}'
                                   f'\n```')
 
         if len(snipname) < 2: return await ctx.send("Snippets must be at least 2 characters long!")
         await self.bot.mdb.snippets.update_one({"owner": str(ctx.author.id), "name": snipname},
                                                {"$set": {"snippet": snippet}}, True)
-        await ctx.send('Shortcut {} added for arguments:\n`{}`'.format(snipname, snippet))
+        await ctx.send(f'Snippet {snipname} added for arguments:```py\n{ctx.prefix}snippet {snippet}\n```')
 
     @snippet.command(name='list')
     async def snippet_list(self, ctx):
@@ -339,16 +340,15 @@ class Customization(commands.Cog):
         server_snippets = await helpers.get_servsnippets(ctx)
 
         if snippet is None:
-            return await ctx.send(f'**{snipname}**:\n'
-                                  f'(Copy-pastable)```md\n'
-                                  f'{ctx.prefix}snippet {snipname} {server_snippets.get(snipname, "Not defined.")}\n'
-                                  f'```')
+            return await ctx.send(f'**{snipname}**:```py\n'
+                                  f'{ctx.prefix}snippet {snipname} {server_snippets.get(snipname, "Not defined.")}'
+                                  f'\n```')
 
         if self.can_edit_servaliases(ctx):
             if len(snipname) < 2: return await ctx.send("Snippets must be at least 2 characters long!")
             await self.bot.mdb.servsnippets.update_one({"server": server_id, "name": snipname},
                                                        {"$set": {"snippet": snippet}}, True)
-            await ctx.send('Server snippet {} added for arguments:\n`{}`'.format(snipname, snippet))
+            await ctx.send(f'Server snippet {snipname} added for arguments:```py\n{ctx.prefix}snippet {snippet}\n```')
         else:
             return await ctx.send("You do not have permission to edit server snippets. Either __Administrator__ "
                                   "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "

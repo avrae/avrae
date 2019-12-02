@@ -407,10 +407,20 @@ class GoogleSheet(SheetLoaderABC):
             if resist:
                 out['resist'].append(resist.lower())
 
-        for immune_row in range(69, 80):  # AE69:AE79
-            immune = self.additional.value(f"AE{immune_row}")
+        for immune_row_old in range(69, 80):  # AE69:AE79
+            immune = self.additional.value(f"AE{immune_row_old}")
             if immune:
                 out['immune'].append(immune.lower())
+
+        for immune_row in range(69, 80):  # AB69:AB79
+            immune = self.additional.value(f"AB{immune_row}")
+            if immune:
+                out['immune'].append(immune.lower())
+
+        for vuln_row in range(69, 80):  # AI69:AI79
+            vuln = self.additional.value(f"AI{vuln_row}")
+            if vuln:
+                out['vuln'].append(immune.lower())
 
         return Resistances.from_dict(out)
 

@@ -52,6 +52,10 @@ SKILL_CELL_MAP = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
     (41, 'stealth', None), (17, 'strengthSave', None), (42, 'survival', None),
     (21, 'wisdomSave', None)
 )
+RESIST_COLS = (('resist', 'T'),  # T69:T79, 1.4/2.x
+               ('immune', 'AE'),  # AE69:AE79, 1.4/2.0
+               ('immune', 'AB'),  # AB69:AB79, 2.1 only
+               ('vuln', 'AI'))  # AI69:AI79, 2.1 only
 SCOPES = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 
 
@@ -402,25 +406,11 @@ class GoogleSheet(SheetLoaderABC):
         if not self.additional:  # requires 2.0
             return Resistances.from_dict(out)
 
-        for resist_row in range(69, 80):  # T69:T79
-            resist = self.additional.value(f"T{resist_row}")
-            if resist:
-                out['resist'].append(resist.lower())
-
-        for immune_row_old in range(69, 80):  # AE69:AE79
-            immune = self.additional.value(f"AE{immune_row_old}")
-            if immune:
-                out['immune'].append(immune.lower())
-
-        for immune_row in range(69, 80):  # AB69:AB79
-            immune = self.additional.value(f"AB{immune_row}")
-            if immune:
-                out['immune'].append(immune.lower())
-
-        for vuln_row in range(69, 80):  # AI69:AI79
-            vuln = self.additional.value(f"AI{vuln_row}")
-            if vuln:
-                out['vuln'].append(vuln.lower())
+        for rownum in range(69, 80):
+            for resist_type, col in RESIST_COLS:
+                dtype = self.additional.value(f"{col}{rownum}")
+                if dtype:
+                    out[resist_type].append(dtype.lower())
 
         return Resistances.from_dict(out)
 

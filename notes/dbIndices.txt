@@ -1,9 +1,14 @@
 packs:
-db.packs.createIndex({"owner.id": 1});
+db.packs.createIndex({"owner": 1});  // changed: owner.id -> owner
+
+// to remove
 db.packs.createIndex({"editors.id": 1});
 db.packs.createIndex({"subscribers.id": 1});
 db.packs.createIndex({"active": 1});
 db.packs.createIndex({"server_active": 1});
+
+db.pack_subscriptions.createIndex({"type": 1, "subscriber_id": 1});
+db.pack_subscriptions.createIndex({"object_id": 1});
 
 bestiaries:
 db.bestiaries.createIndex({"upstream": 1, "sha256": 1}, {"unique": true});
@@ -14,19 +19,24 @@ db.bestiary_subscriptions.createIndex({"object_id": 1});
 db.bestiary_subscriptions.createIndex({"provider_id": 1});
 
 tomes:
-db.tomes.createIndex({"owner.id": 1});
+db.tomes.createIndex({"owner": 1});  // changed: owner.id -> owner
+
+// to remove
 db.tomes.createIndex({"editors.id": 1});
 db.tomes.createIndex({"subscribers.id": 1});
 db.tomes.createIndex({"active": 1});
 db.tomes.createIndex({"server_active": 1});
 
-compendiums:
-db.compendiums.createIndex({"owner.id": 1});
-db.compendiums.createIndex({"editors.id": 1});
-db.compendiums.createIndex({"subscribers.id": 1});
-db.compendiums.createIndex({"stargazers.id": 1});
-db.compendiums.createIndex({"active": 1});
-db.compendiums.createIndex({"server_active": 1});
+db.tome_subscriptions.createIndex({"type": 1, "subscriber_id": 1});
+db.tome_subscriptions.createIndex({"object_id": 1});
+
+// compendiums:
+// db.compendiums.createIndex({"owner.id": 1});
+// db.compendiums.createIndex({"editors.id": 1});
+// db.compendiums.createIndex({"subscribers.id": 1});
+// db.compendiums.createIndex({"stargazers.id": 1});
+// db.compendiums.createIndex({"active": 1});
+// db.compendiums.createIndex({"server_active": 1});
 
 analytics_user_activity:
 db.analytics_user_activity.createIndex({"user_id": 1}, {"unique": true});
@@ -40,7 +50,7 @@ analytics_command_activity:
 db.analytics_command_activity.createIndex({"name": 1}, {"unique": true});
 
 analytics_nsrd_lookup:
-db.analytics_command_activity.createIndex({"type": 1});
+db.analytics_nsrd_lookup.createIndex({"type": 1});
 
 random_stats:
 db.random_stats.createIndex({"key": 1}, {"unique": true});

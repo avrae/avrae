@@ -420,7 +420,7 @@ class GoogleSheet(SheetLoaderABC):
         for vuln_row in range(69, 80):  # AI69:AI79
             vuln = self.additional.value(f"AI{vuln_row}")
             if vuln:
-                out['vuln'].append(immune.lower())
+                out['vuln'].append(vuln.lower())
 
         return Resistances.from_dict(out)
 

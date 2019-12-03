@@ -407,9 +407,10 @@ class Lookup(commands.Cog):
                 if reaction:
                     safe_append("Reactions", reaction)
             if monster.legactions:
-                legendary = f"The {monster.name} can take {monster.la_per_round} legendary actions, choosing from " \
+                proper_name = f'The {monster.name}' if not monster.proper else monster.name
+                legendary = f"{proper_name} can take {monster.la_per_round} legendary actions, choosing from " \
                             f"the options below. Only one legendary action can be used at a time and only at the " \
-                            f"end of another creature's turn. The {monster.name} regains spent legendary actions at " \
+                            f"end of another creature's turn. {proper_name} regains spent legendary actions at " \
                             f"the start of its turn.\n"
                 for a in monster.legactions:
                     if a.name:

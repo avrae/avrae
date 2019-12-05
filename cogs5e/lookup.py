@@ -13,7 +13,7 @@ from cogs5e.funcs.lookupFuncs import HOMEBREW_EMOJI, HOMEBREW_ICON, compendium, 
     select_monster_full, select_spell_full
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, add_homebrew_footer, set_maybe_long_desc
 from cogs5e.models.errors import NoActiveBrew
-from cogs5e.models.homebrew.pack import Pack
+from cogs5e.models.homebrew import Pack
 from cogsmisc.stats import Stats
 from utils import checks
 from utils.functions import ABILITY_MAP, generate_token, get_positivity, parse_data_entry, search_and_select
@@ -554,9 +554,9 @@ class Lookup(commands.Cog):
             pack_id = None
         choices = list(itertools.chain(compendium.items, custom_items))
         if ctx.guild:
-            async for servpack in ctx.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}):
-                if servpack['_id'] != pack_id:
-                    choices.extend(Pack.from_dict(servpack).get_search_formatted_items())
+            async for servpack in Pack.server_active(ctx):
+                if servpack.id != pack_id:
+                    choices.extend(servpack.get_search_formatted_items())
 
         # #881 - display nSRD names
         choices.extend(compendium.nitem_names)

@@ -14,7 +14,7 @@ import newrelic.agent
 from cogs5e.models.background import Background
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew.bestiary import Bestiary
-from cogs5e.models.homebrew.tome import Tome
+from cogs5e.models.homebrew import Tome
 from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
 from cogs5e.models.spell import Spell
@@ -251,9 +251,9 @@ async def get_spell_choices(ctx):
         tome_id = None
     choices = list(itertools.chain(compendium.spells, custom_spells))
     if ctx.guild:
-        async for servtome in ctx.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['spells']):
-            if servtome['_id'] != tome_id:
-                choices.extend(Spell.from_dict(s) for s in servtome['spells'])
+        async for servtome in Tome.server_active(ctx):
+            if servtome.id != tome_id:
+                choices.extend(servtome.spells)
     return choices
 
 

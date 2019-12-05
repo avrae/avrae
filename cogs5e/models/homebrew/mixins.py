@@ -1,5 +1,7 @@
 import abc
 
+from cogs5e.models.errors import NotAllowed
+
 
 class MixinBase(abc.ABC):
     def __init__(self, oid):
@@ -20,15 +22,25 @@ class MixinBase(abc.ABC):
 
 class SubscriberMixin(MixinBase, abc.ABC):
     """A mixin that offers subscription support."""
+    async def is_subscribed(self, ctx):
+        """Returns whether the contextual author is subscribed to this object."""
+        return (await self.sub_coll(ctx).find_one(
+            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id})) is not None
 
     async def subscribe(self, ctx):
         """Adds the contextual author as a subscriber."""
+        if await self.is_subscribed(ctx):
+            raise NotAllowed("You are already subscribed to this.")
+
         await self.sub_coll(ctx).insert_one(
             {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
         )
 
     async def unsubscribe(self, ctx):
         """Removes the contextual author from subscribers."""
+        if not await self.is_subscribed(ctx):
+            raise NotAllowed("You are not subscribed to this.")
+
         await self.sub_coll(ctx).delete_many(
             {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
         )

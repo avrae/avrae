@@ -5,10 +5,9 @@ import discord
 from discord.ext import commands
 
 from cogs5e.models.embeds import HomebrewEmbedWithAuthor
-from cogs5e.models.errors import NoActiveBrew, NoSelectionElements
+from cogs5e.models.errors import NoActiveBrew, NoSelectionElements, NotAllowed
+from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary, select_bestiary
-from cogs5e.models.homebrew.pack import Pack, select_pack
-from cogs5e.models.homebrew.tome import Tome, select_tome
 from utils import checks
 from utils.functions import confirm, search_and_select
 
@@ -170,9 +169,9 @@ class Homebrew(commands.Cog):
         """Commands to manage homebrew items.
         When called without an argument, lists the current pack and its description.
         When called with a name, switches to a different pack."""
-        user_packs = await self.bot.mdb.packs.count_documents(Pack.view_query(str(ctx.author.id)))
+        num_visible = await Pack.num_visible(ctx)
 
-        if not user_packs:
+        if not num_visible:
             return await ctx.send(
                 "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!")
 
@@ -180,7 +179,7 @@ class Homebrew(commands.Cog):
             pack = await Pack.from_ctx(ctx)
         else:
             try:
-                pack = await select_pack(ctx, name)
+                pack = await Pack.select(ctx, name)
             except NoActiveBrew:
                 return await ctx.send(
                     "You have no packs. You can make one at <https://avrae.io/dashboard/homebrew/items>!")
@@ -202,28 +201,24 @@ class Homebrew(commands.Cog):
     @pack.command(name='list')
     async def pack_list(self, ctx):
         """Lists your available packs."""
-        available_pack_names = await self.bot.mdb.packs.find(
-            Pack.view_query(str(ctx.author.id)),
-            ['name']
-        ).to_list(None)
-        await ctx.send(f"Your available packs: {', '.join(p['name'] for p in available_pack_names)}")
+        available_pack_names = Pack.user_visible(ctx, meta_only=True)
+        await ctx.send(f"Your available packs: {', '.join([p['name'] async for p in available_pack_names])}")
 
     @pack.command(name='editor')
     async def pack_editor(self, ctx, user: discord.Member):
         """Allows another user to edit your active pack."""
         pack = await Pack.from_ctx(ctx)
-        if not pack.owner['id'] == str(ctx.author.id):
+        if not pack.is_owned_by(ctx.author):
             return await ctx.send("You do not have permission to add editors to this pack.")
-        if pack.owner['id'] == str(user.id):
+        elif pack.is_owned_by(user):
             return await ctx.send("You already own this pack.")
 
-        if str(user.id) not in [e['id'] for e in pack.editors]:
-            pack.editors.append({"username": str(user), "id": str(user.id)})
+        can_edit = await pack.toggle_editor(ctx, user)
+
+        if can_edit:
             await ctx.send(f"{user} added to {pack.name}'s editors.")
         else:
-            pack.editors.remove(next(e for e in pack.editors if e['id'] == str(user.id)))
             await ctx.send(f"{user} removed from {pack.name}'s editors.")
-        await pack.commit(ctx)
 
     @pack.command(name='subscribe', aliases=['sub'])
     async def pack_sub(self, ctx, url):
@@ -232,36 +227,26 @@ class Homebrew(commands.Cog):
         if not pack_id_match:
             return await ctx.send("Invalid pack URL.")
         try:
-            pack = await Pack.from_id(ctx, pack_id_match.group(1))
+            pack = await Pack.from_id(ctx, pack_id_match.group(1), meta_only=True)
         except NoActiveBrew:
             return await ctx.send("Pack not found.")
 
         if not pack.public:
             return await ctx.send("This pack is not public.")
 
-        user = ctx.author
-        if str(user.id) not in [s['id'] for s in pack.subscribers]:
-            pack.subscribers.append({"username": str(user), "id": str(user.id)})
-            out = f"Subscribed to {pack.name} by {pack.owner['username']}. " \
-                  f"Use `{ctx.prefix}pack {pack.name}` to select it."
-        else:
-            return await ctx.send(f"You are already subscribed to {pack.name}.")
-        await pack.commit(ctx)
-        await ctx.send(out)
+        await pack.subscribe(ctx)
+        await ctx.send(f"Subscribed to {pack.name}. "  # by {pack.owner['username']}. "  # todo owner username
+                       f"Use `{ctx.prefix}pack {pack.name}` to select it.")
 
     @pack.command(name='unsubscribe', aliases=['unsub'])
     async def pack_unsub(self, ctx, name):
         """Unsubscribes from another user's pack."""
-        pack = await select_pack(ctx, name)
-
-        user = ctx.author
-        if str(user.id) not in [s['id'] for s in pack.subscribers]:
+        pack = await Pack.select(ctx, name)
+        try:
+            await pack.unsubscribe(ctx)
+        except NotAllowed:
             return await ctx.send("You aren't subscribed to this pack! Maybe you own it, or are an editor?")
-        else:
-            pack.subscribers.remove(next(s for s in pack.subscribers if s['id'] == str(user.id)))
-            out = f"Unsubscribed from {pack.name}."
-        await pack.commit(ctx)
-        await ctx.send(out)
+        await ctx.send(f"Unsubscribed from {pack.name}.")
 
     @pack.group(name='server', invoke_without_command=True)
     @commands.guild_only()
@@ -281,8 +266,8 @@ class Homebrew(commands.Cog):
     async def pack_server_list(self, ctx):
         """Shows what packs are currently active on the server."""
         desc = ""
-        async for doc in self.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}, ['name', 'owner']):
-            desc += f"{doc['name']} (<@{doc['owner']['id']}>)\n"
+        async for pack in Pack.server_active(ctx, meta_only=True):
+            desc += f"{pack['name']} (<@{pack['owner']}>)\n"
         await ctx.send(embed=discord.Embed(title="Active Server Packs", description=desc))
 
     @pack_server.command(name='remove', aliases=['delete'])
@@ -290,9 +275,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def pack_server_remove(self, ctx, pack_name):
         """Removes a server pack."""
-        pack_metas = []
-        async for doc in self.bot.mdb.packs.find({"server_active": str(ctx.guild.id)}, ['name']):
-            pack_metas.append(doc)
+        pack_metas = [p async for p in Pack.server_active(ctx, meta_only=True)]
 
         pack_meta = await search_and_select(ctx, pack_metas, pack_name, lambda b: b['name'])
         pack = await Pack.from_id(ctx, pack_meta['_id'])
@@ -305,9 +288,9 @@ class Homebrew(commands.Cog):
         """Commands to manage homebrew spells.
         When called without an argument, lists the current tome and its description.
         When called with a name, switches to a different tome."""
-        user_tomes = await self.bot.mdb.tomes.count_documents(Tome.view_query(str(ctx.author.id)))
+        num_visible = await Tome.num_visible(ctx)
 
-        if not user_tomes:
+        if not num_visible:
             return await ctx.send(
                 "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!")
 
@@ -315,7 +298,7 @@ class Homebrew(commands.Cog):
             tome = await Tome.from_ctx(ctx)
         else:
             try:
-                tome = await select_tome(ctx, name)
+                tome = await Tome.select(ctx, name)
             except NoActiveBrew:
                 return await ctx.send(
                     "You have no tomes. You can make one at <https://avrae.io/dashboard/homebrew/spells>!")
@@ -337,28 +320,24 @@ class Homebrew(commands.Cog):
     @tome.command(name='list')
     async def tome_list(self, ctx):
         """Lists your available tomes."""
-        available_tome_names = await self.bot.mdb.tomes.find(
-            Tome.view_query(str(ctx.author.id)),
-            ['name']
-        ).to_list(None)
-        await ctx.send(f"Your available tomes: {', '.join(p['name'] for p in available_tome_names)}")
+        available_tome_names = Tome.user_visible(ctx, meta_only=True)
+        await ctx.send(f"Your available tomes: {', '.join([p['name'] async for p in available_tome_names])}")
 
     @tome.command(name='editor')
     async def tome_editor(self, ctx, user: discord.Member):
         """Allows another user to edit your active tome."""
         tome = await Tome.from_ctx(ctx)
-        if not tome.owner['id'] == str(ctx.author.id):
+        if not tome.is_owned_by(ctx.author):
             return await ctx.send("You do not have permission to add editors to this tome.")
-        if tome.owner['id'] == str(user.id):
+        elif tome.is_owned_by(user):
             return await ctx.send("You already own this tome.")
 
-        if str(user.id) not in [e['id'] for e in tome.editors]:
-            tome.editors.append({"username": str(user), "id": str(user.id)})
+        can_edit = await tome.toggle_editor(ctx, user)
+
+        if can_edit:
             await ctx.send(f"{user} added to {tome.name}'s editors.")
         else:
-            tome.editors.remove(next(e for e in tome.editors if e['id'] == str(user.id)))
             await ctx.send(f"{user} removed from {tome.name}'s editors.")
-        await tome.commit(ctx)
 
     @tome.command(name='subscribe', aliases=['sub'])
     async def tome_sub(self, ctx, url):
@@ -374,29 +353,19 @@ class Homebrew(commands.Cog):
         if not tome.public:
             return await ctx.send("This tome is not public.")
 
-        user = ctx.author
-        if str(user.id) not in [s['id'] for s in tome.subscribers]:
-            tome.subscribers.append({"username": str(user), "id": str(user.id)})
-            out = f"Subscribed to {tome.name} by {tome.owner['username']}. " \
-                  f"Use `{ctx.prefix}tome {tome.name}` to select it."
-        else:
-            return await ctx.send(f"You are already subscribed to {tome.name}.")
-        await tome.commit(ctx)
-        await ctx.send(out)
+        await tome.subscribe(ctx)
+        await ctx.send(f"Subscribed to {tome.name}. "  # by {tome.owner['username']}. "  # todo
+                       f"Use `{ctx.prefix}tome {tome.name}` to select it.")
 
     @tome.command(name='unsubscribe', aliases=['unsub'])
     async def tome_unsub(self, ctx, name):
         """Unsubscribes from another user's tome."""
-        tome = await select_tome(ctx, name)
-
-        user = ctx.author
-        if str(user.id) not in [s['id'] for s in tome.subscribers]:
+        tome = await Tome.select(ctx, name)
+        try:
+            await tome.unsubscribe(ctx)
+        except NotAllowed:
             return await ctx.send("You aren't subscribed to this tome! Maybe you own it, or are an editor?")
-        else:
-            tome.subscribers.remove(next(s for s in tome.subscribers if s['id'] == str(user.id)))
-            out = f"Unsubscribed from {tome.name}."
-        await tome.commit(ctx)
-        await ctx.send(out)
+        await ctx.send(f"Unsubscribed from {tome.name}.")
 
     @tome.group(name='server', invoke_without_command=True)
     @commands.guild_only()
@@ -416,8 +385,8 @@ class Homebrew(commands.Cog):
     async def tome_server_list(self, ctx):
         """Shows what tomes are currently active on the server."""
         desc = ""
-        async for doc in self.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['name', 'owner']):
-            desc += f"{doc['name']} (<@{doc['owner']['id']}>)\n"
+        async for tome in Tome.server_active(ctx, meta_only=True):
+            desc += f"{tome['name']} (<@{tome['owner']}>)\n"
         await ctx.send(embed=discord.Embed(title="Active Server Tomes", description=desc))
 
     @tome_server.command(name='remove', aliases=['delete'])
@@ -425,9 +394,7 @@ class Homebrew(commands.Cog):
     @checks.can_edit_serverbrew()
     async def tome_server_remove(self, ctx, tome_name):
         """Removes a server tome."""
-        tome_metas = []
-        async for doc in self.bot.mdb.tomes.find({"server_active": str(ctx.guild.id)}, ['name']):
-            tome_metas.append(doc)
+        tome_metas = [t async for t in Tome.server_active(ctx, meta_only=True)]
 
         tome_meta = await search_and_select(ctx, tome_metas, tome_name, lambda b: b['name'])
         tome = await Tome.from_id(ctx, tome_meta['_id'])

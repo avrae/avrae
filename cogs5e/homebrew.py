@@ -227,7 +227,7 @@ class Homebrew(commands.Cog):
         if not pack_id_match:
             return await ctx.send("Invalid pack URL.")
         try:
-            pack = await Pack.from_id(ctx, pack_id_match.group(1), meta_only=True)
+            pack = await Pack.from_id(ctx, pack_id_match.group(1))
         except NoActiveBrew:
             return await ctx.send("Pack not found.")
 

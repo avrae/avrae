@@ -19,7 +19,7 @@ from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
 from utils.argparser import argparse
-from utils.functions import confirm, search, search_and_select
+from utils.functions import confirm, search, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
 
@@ -35,10 +35,7 @@ class GameTrack(commands.Cog):
         """Commands to help track character information in a game. Use `!help game` to view subcommands."""
         if ctx.invoked_subcommand is None:
             await ctx.send(f"Incorrect usage. Use {ctx.prefix}help game for help.")
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @game.command(name='status', aliases=['summary'])
     async def game_status(self, ctx):
@@ -439,10 +436,7 @@ class GameTrack(commands.Cog):
 
         result_embed.add_field(name=counter.name, value=out)
 
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
         await ctx.send(embed=result_embed)
 
     @customcounter.command(name='create')
@@ -550,10 +544,7 @@ class GameTrack(commands.Cog):
         -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
         int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
         """
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
         char: Character = await Character.from_ctx(ctx)
 

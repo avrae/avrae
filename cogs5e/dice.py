@@ -4,7 +4,7 @@ import re
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs import checkutils, targetutils, attackutils
+from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full
 from cogs5e.funcs.scripting import helpers
@@ -13,7 +13,7 @@ from cogs5e.models.monster import Monster
 from cogsmisc.stats import Stats
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import a_or_an, search_and_select, try_delete
+from utils.functions import search_and_select, try_delete
 
 
 class Dice(commands.Cog):

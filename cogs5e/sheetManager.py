@@ -12,9 +12,8 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
-from cogs5e.funcs import checkutils, targetutils, attackutils
+from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.funcs.scripting import helpers
-from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
@@ -24,7 +23,7 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import a_or_an, auth_and_chan, get_positivity, list_get, try_delete
+from utils.functions import auth_and_chan, get_positivity, list_get, try_delete
 from utils.functions import extract_gsheet_id_from_url, generate_token, search_and_select
 from utils.user_settings import CSetting
 
@@ -112,10 +111,7 @@ class SheetManager(commands.Cog):
         await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @attack.command(name="list")
     async def attack_list(self, ctx):
@@ -258,10 +254,7 @@ class SheetManager(commands.Cog):
         embed.description = desc
 
         await ctx.send(embed=embed)
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @desc.command(name='update', aliases=['edit'])
     async def edit_desc(self, ctx, *, desc):
@@ -293,10 +286,7 @@ class SheetManager(commands.Cog):
         embed.set_image(url=char.image)
 
         await ctx.send(embed=embed)
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @portrait.command(name='update', aliases=['edit'])
     async def edit_portrait(self, ctx, *, url):
@@ -339,10 +329,7 @@ class SheetManager(commands.Cog):
         char: Character = await Character.from_ctx(ctx)
 
         await ctx.send(embed=char.get_sheet_embed())
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @commands.group(aliases=['char'], invoke_without_command=True)
     async def character(self, ctx, *, name: str = None):
@@ -361,10 +348,7 @@ class SheetManager(commands.Cog):
         char = Character.from_dict(selected_char)
         await char.set_active(ctx)
 
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
         await ctx.send(f"Active character changed to {char.name}.", delete_after=20)
 

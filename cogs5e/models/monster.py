@@ -156,10 +156,16 @@ class Monster(StatBlock):
         proper = bool(data.get('proper'))
 
         attacks = AttackList.from_dict(data.get('attacks', []))
-        spellcasting = data.get('spellcasting', {})
-        spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
-        spellbook = Spellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
-                              spellcasting.get('casterLevel', 1))
+        if 'spellbook' in data:
+            spellbook = MonsterSpellbook.from_dict(data['spellbook'])
+        elif 'spellcasting' in data:
+            # old system, todo delete after data migration
+            spellcasting = data['spellcasting']
+            spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
+            spellbook = Spellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
+                                  spellcasting.get('casterLevel', 1))
+        else:
+            spellbook = None
 
         return cls(data['name'], parsesize(data['size']), _type, alignment, ac, armortype, hp, hitdice,
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
@@ -361,6 +367,13 @@ class Monster(StatBlock):
     def temp_hp(self, value):
         pass
 
+    # ---- spellbook overrides ----
+    def use_slot(self, level: int):  # todo
+        return
+
+    def can_cast(self, spell, level) -> bool:
+        return spell.name in self.spellbook
+
 
 def parse_type(_type):
     if isinstance(_type, dict):
@@ -534,3 +547,40 @@ def _calc_prof(stats, saves, skills):
     if prof is not None:
         return prof
     return 0
+
+
+class MonsterSpellbook(Spellbook):
+    def __init__(self, *args, at_will=None, daily=None, **kwargs):
+        """
+        :param at_will: The list of spells the monster can cast at will. These spells should be in the spells list.
+        :type at_will: list[str]
+        :param daily: A dict of spells -> x the monster can cast x/day. These spells should be in the spells list.
+        :type daily: dict[str, int]
+        """
+        super().__init__(*args, **kwargs)
+        self.at_will = at_will
+        self.daily = daily
+
+    def to_dict(self):
+        d = super().to_dict()
+        d.update({
+            "at_will": self.at_will,
+            "daily": self.daily
+        })
+        return d
+
+    # ===== utils =====
+    def get_slots(self, level):  # todo these should probably be changed to replace StatBlock.casts_of/can_cast
+        if level == 0:
+            return 1
+        return self.slots.get(str(level), 0)
+
+    def set_slots(self, level, value):
+        self.slots[str(level)] = value
+
+    def reset_slots(self):
+        for level in range(1, 10):
+            self.set_slots(level, self.get_max_slots(level))
+
+    def get_max_slots(self, level):
+        return self.max_slots.get(str(level), 0)

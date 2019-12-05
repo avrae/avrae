@@ -6,9 +6,10 @@ from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import select_monster_full
+from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
+from cogs5e.models.embeds import add_fields_from_args
 from cogs5e.models.monster import Monster
 from cogsmisc.stats import Stats
 from utils.argparser import argparse
@@ -249,6 +250,65 @@ class Dice(commands.Cog):
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
+
+    @commands.command(aliases=['mcast'])
+    async def monster_cast(self, ctx, monster_name, spell_name, *args):
+        """
+        Casts a spell as a monster.
+        __Valid Arguments__
+        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
+        -l <level> - Specifies the level to cast the spell at.
+        noconc - Ignores concentration requirements.
+        -h - Hides rolled values.
+        **__Save Spells__**
+        -dc <Save DC> - Overrides the spell save DC.
+        -save <Save type> - Overrides the spell save type.
+        -d <damage> - Adds additional damage.
+        pass - Target automatically succeeds save.
+        fail - Target automatically fails save.
+        adv/dis - Target makes save at advantage/disadvantage.
+        **__Attack Spells__**
+        See `!a`.
+        **__All Spells__**
+        -phrase <phrase> - adds flavor text.
+        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
+        -thumb <url> - adds an image to the cast.
+        -dur <duration> - changes the duration of any effect applied by the spell.
+        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
+        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
+        """
+        await try_delete(ctx.message)
+        monster: Monster = await select_monster_full(ctx, monster_name)
+
+        args = await helpers.parse_snippets(args, ctx)
+        args = argparse(args)
+
+        if not args.last('i', type_=bool):
+            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
+        else:
+            spell = await select_spell_full(ctx, spell_name)
+
+        caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args)
+        result = await spell.cast(ctx, caster, targets, args, combat=combat)
+
+        # embed display
+        embed = result['embed']
+        embed.colour = random.randint(0, 0xffffff)
+
+        add_fields_from_args(embed, args.get('f'))
+
+        if args.last('thumb') is not None:
+            embed.set_thumbnail(url=args.last('thumb'))
+        elif not args.last('h', type_=bool):
+            embed.set_thumbnail(url=monster.get_image_url())
+
+        if monster.source == 'homebrew':
+            embeds.add_homebrew_footer(embed)
+
+        # save changes: combat state
+        if combat:
+            await combat.final()
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

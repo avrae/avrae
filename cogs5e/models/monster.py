@@ -162,7 +162,7 @@ class Monster(StatBlock):
             # old system, todo delete after data migration
             spellcasting = data['spellcasting']
             spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
-            spellbook = Spellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
+            spellbook = MonsterSpellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
                                   spellcasting.get('casterLevel', 1))
         else:
             spellbook = None
@@ -353,7 +353,7 @@ class Monster(StatBlock):
     # ---- setter overrides ----
     @property
     def hp(self):
-        return self._hp
+        return super().hp
 
     @hp.setter
     def hp(self, value):
@@ -361,18 +361,11 @@ class Monster(StatBlock):
 
     @property
     def temp_hp(self):
-        return self._temp_hp
+        return super().temp_hp
 
     @temp_hp.setter
     def temp_hp(self, value):
         pass
-
-    # ---- spellbook overrides ----
-    def use_slot(self, level: int):  # todo
-        return
-
-    def can_cast(self, spell, level) -> bool:
-        return spell.name in self.spellbook
 
 
 def parse_type(_type):
@@ -574,17 +567,11 @@ class MonsterSpellbook(Spellbook):
         return d
 
     # ===== utils =====
-    def get_slots(self, level):  # todo these should probably be changed to replace StatBlock.casts_of/can_cast
-        if level == 0:
-            return 1
-        return self.slots.get(str(level), 0)
+    def cast(self, spell, level):
+        return  # monster singletons should not have mutable slots
 
-    def set_slots(self, level, value):
-        self.slots[str(level)] = value
-
-    def reset_slots(self):
-        for level in range(1, 10):
-            self.set_slots(level, self.get_max_slots(level))
-
-    def get_max_slots(self, level):
-        return self.max_slots.get(str(level), 0)
+    def can_cast(self, spell, level) -> bool:
+        has_slot = self.get_slots(level) > 0
+        is_at_will = spell.name in self.at_will
+        is_daily = spell.name in self.daily and self.daily[spell.name] > 0
+        return spell.name in self and (has_slot or is_daily or is_at_will)

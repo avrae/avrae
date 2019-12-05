@@ -3,6 +3,7 @@ import cachetools
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
+from cogs5e.models.monster import MonsterSpellbook
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
 from cogs5e.models.sheet.spellcasting import Spellbook
@@ -451,6 +452,8 @@ class Combat:
 
 
 class Combatant(StatBlock):
+    DESERIALIZE_MAP = DESERIALIZE_MAP  # allow making class-specific deser maps
+
     def __init__(self,
                  # init metadata
                  ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
@@ -490,7 +493,7 @@ class Combatant(StatBlock):
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
-        for key, klass in DESERIALIZE_MAP.items():
+        for key, klass in cls.DESERIALIZE_MAP.items():
             if key in raw:
                 raw[key] = klass.from_dict(raw[key])
         del raw['type']
@@ -812,6 +815,8 @@ class Combatant(StatBlock):
 
 
 class MonsterCombatant(Combatant):
+    DESERIALIZE_MAP = {**DESERIALIZE_MAP, "spellbook": MonsterSpellbook}
+
     def __init__(self,
                  # init metadata
                  ctx, combat, name: str, controller_id: str, private: bool, init: int, index: int = None,
@@ -851,12 +856,6 @@ class MonsterCombatant(Combatant):
     @property
     def monster_name(self):
         return self._monster_name
-
-    def use_slot(self, level: int):  # todo
-        return
-
-    def can_cast(self, spell, level) -> bool:
-        return spell.name in self.spellbook
 
     def to_dict(self):
         raw = super(MonsterCombatant, self).to_dict()
@@ -975,15 +974,6 @@ class PlayerCombatant(Combatant):
     @property
     def attacks(self):
         return super(PlayerCombatant, self).attacks + self.character.attacks
-
-    def can_cast(self, spell, level) -> bool:
-        return self.character.can_cast(spell, level)
-
-    def cast(self, spell, level):
-        self.character.cast(spell, level)
-
-    def remaining_casts_of(self, spell, level):
-        return self.character.remaining_casts_of(spell, level)
 
     @classmethod
     async def from_dict(cls, raw, ctx, combat):

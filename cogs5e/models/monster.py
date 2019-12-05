@@ -558,6 +558,10 @@ class MonsterSpellbook(Spellbook):
         :type daily: dict[str, int]
         """
         super().__init__(*args, **kwargs)
+        if daily is None:
+            daily = {}
+        if at_will is None:
+            at_will = []
         self.at_will = at_will
         self.daily = daily
 

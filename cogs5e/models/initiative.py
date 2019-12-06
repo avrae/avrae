@@ -3,7 +3,7 @@ import cachetools
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
-from cogs5e.models.monster import MonsterSpellbook
+from cogs5e.models.monster import MonsterCastableSpellbook
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
 from cogs5e.models.sheet.spellcasting import Spellbook
@@ -815,7 +815,7 @@ class Combatant(StatBlock):
 
 
 class MonsterCombatant(Combatant):
-    DESERIALIZE_MAP = {**DESERIALIZE_MAP, "spellbook": MonsterSpellbook}
+    DESERIALIZE_MAP = {**DESERIALIZE_MAP, "spellbook": MonsterCastableSpellbook}
 
     def __init__(self,
                  # init metadata

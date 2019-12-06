@@ -12,7 +12,7 @@ from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skil
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.constants import SKILL_MAP
-from utils.functions import a_or_an
+from utils.functions import a_or_an, bubble_format
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
 ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
@@ -158,12 +158,6 @@ class Monster(StatBlock):
         attacks = AttackList.from_dict(data.get('attacks', []))
         if 'spellbook' in data:
             spellbook = MonsterSpellbook.from_dict(data['spellbook'])
-        elif 'spellcasting' in data:
-            # old system, todo delete after data migration
-            spellcasting = data['spellcasting']
-            spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
-            spellbook = MonsterSpellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
-                                  spellcasting.get('casterLevel', 1))
         else:
             spellbook = None
 
@@ -542,8 +536,9 @@ def _calc_prof(stats, saves, skills):
     return 0
 
 
+# ===== spellcasting =====
 class MonsterSpellbook(Spellbook):
-    def __init__(self, *args, at_will=None, daily=None, **kwargs):
+    def __init__(self, *args, at_will=None, daily=None, daily_max=None, **kwargs):
         """
         :param at_will: The list of spells the monster can cast at will. These spells should be in the spells list.
         :type at_will: list[str]
@@ -557,16 +552,38 @@ class MonsterSpellbook(Spellbook):
             at_will = []
         self.at_will = at_will
         self.daily = daily
+        self.daily_max = daily_max or daily.copy()  # only monsters can have daily, and we'll init their max to immutable daily
 
     def to_dict(self):
         d = super().to_dict()
         d.update({
             "at_will": self.at_will,
-            "daily": self.daily
+            "daily": self.daily,
+            "daily_max": self.daily_max
         })
         return d
 
     # ===== utils =====
+    def slots_str(self, level: int = None):
+        if level is not None:
+            return super().slots_str()
+
+        slots = super().slots_str(level)
+        before = []
+        if self.at_will:
+            before.append(f"**At Will**: {', '.join(self.at_will)}")
+        for spell, remaining in self.daily.items():
+            before.append(f"**{spell}**: {bubble_format(remaining, self.daily_max[spell])}")
+        before = '\n'.join(before)
+        return f"{before}\n{slots}".strip()
+
+    def remaining_casts_of(self, spell, level):
+        if spell.name in self.at_will:
+            return f"**{spell.name}**: At Will"
+        elif spell.name in self.daily:
+            return f"**{spell.name}**: {bubble_format(self.daily[spell.name], self.daily_max[spell.name])}"
+        return super().remaining_casts_of(spell, level)
+
     def cast(self, spell, level):
         return  # monster singletons should not have mutable slots
 
@@ -575,3 +592,13 @@ class MonsterSpellbook(Spellbook):
         is_at_will = spell.name in self.at_will
         is_daily = spell.name in self.daily and self.daily[spell.name] > 0
         return spell.name in self and (has_slot or is_daily or is_at_will)
+
+
+class MonsterCastableSpellbook(MonsterSpellbook):
+    def cast(self, spell, level):
+        if spell.name in self.at_will:
+            return
+        elif spell.name in self.daily:
+            self.daily[spell.name] -= 1
+        else:
+            self.use_slot(level)

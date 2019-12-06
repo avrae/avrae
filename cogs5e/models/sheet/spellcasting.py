@@ -1,4 +1,5 @@
 from cogs5e.models.errors import CounterOutOfBounds, InvalidSpellLevel
+from utils.functions import bubble_format
 
 
 class Spellbook:
@@ -41,19 +42,13 @@ class Spellbook:
             assert 0 < level < 10
             _max = self.get_max_slots(level)
             remaining = self.get_slots(level)
-            used = _max - remaining
-            filled = '\u25c9' * remaining
-            empty = '\u3007' * used
-            out += f"`{level}` {filled}{empty}\n"
+            out += f"`{level}` {bubble_format(remaining, _max)}\n"
         else:
             for level in range(1, 10):
                 _max = self.get_max_slots(level)
                 remaining = self.get_slots(level)
                 if _max:
-                    used = _max - remaining
-                    filled = '\u25c9' * remaining
-                    empty = '\u3007' * used
-                    out += f"`{level}` {filled}{empty}\n"
+                    out += f"`{level}` {bubble_format(remaining, _max)}\n"
         if not out:
             out = "No spell slots."
         return out.strip()

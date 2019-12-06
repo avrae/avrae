@@ -628,3 +628,13 @@ def maybe_mod(val: str, base=0):
     except (ValueError, TypeError):
         return base
     return base
+
+
+def bubble_format(value: int, max_: int, fill_from_right=False):
+    """Returns a bubble string to represent a counter's value."""
+    used = max_ - value
+    filled = '\u25c9' * value
+    empty = '\u3007' * used
+    if fill_from_right:
+        return f"{empty}{filled}"
+    return f"{filled}{empty}"

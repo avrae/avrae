@@ -687,7 +687,8 @@ class InitTracker(commands.Cog):
         else:
             status = "\n".join([co.get_status(private=private and str(ctx.author.id) == co.controller) for co in
                                 combatant.get_combatants()])
-        if 'private' in args.lower():
+
+        if private:
             controller = ctx.guild.get_member(int(combatant.controller))
             if controller:
                 await controller.send("```markdown\n" + status + "```")

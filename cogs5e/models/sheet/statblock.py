@@ -241,7 +241,7 @@ class StatBlock:
             "proficiencyBonus": self.stats.prof_bonus, "spell": spell_mod
         })
         for cls, lvl in self.levels:
-            out[f"{cls}Level"] = lvl
+            out[f"{cls.replace(' ', '')}Level"] = lvl
         for stat in STAT_NAMES:
             out[stat] = self.stats[stat]
             out[f"{stat}Mod"] = self.stats.get_mod(stat)

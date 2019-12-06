@@ -566,7 +566,7 @@ class MonsterSpellbook(Spellbook):
     # ===== utils =====
     def slots_str(self, level: int = None):
         if level is not None:
-            return super().slots_str()
+            return super().slots_str(level)
 
         slots = super().slots_str(level)
         before = []

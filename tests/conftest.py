@@ -48,7 +48,9 @@ def compare_embeds(request_embed, embed, *, regex: bool = True):
 
     if isinstance(embed, dict):
         for k, v in embed.items():
-            if isinstance(v, (dict, list)):
+            if k == 'inline':
+                continue
+            elif isinstance(v, (dict, list)):
                 compare_embeds(request_embed[k], embed[k])
             elif isinstance(v, str) and regex:
                 assert re.match(embed[k], request_embed[k])

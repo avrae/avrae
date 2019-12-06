@@ -55,7 +55,7 @@ def requires_data():
     Names: Elf, Family
     Rules: Fake Rule
     Backgrounds: Acolyte
-    Monsters: Acolyte, Kobold
+    Monsters: Mage, Kobold
     Classes: Fighter (Champion)
     Classfeats: None
     Feats: Grappler

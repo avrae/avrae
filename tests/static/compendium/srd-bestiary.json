@@ -1,6 +1,6 @@
 [
   {
-    "name": "Acolyte",
+    "name": "Mage",
     "size": "M",
     "type": {
       "type": "humanoid",
@@ -13,64 +13,171 @@
       "A"
     ],
     "ac": {
-      "ac": 10
+      "ac": 12
     },
     "hp": {
-      "average": 9,
-      "formula": "2d8"
+      "average": 40,
+      "formula": "9d8"
     },
     "speed": {
       "walk": 30
     },
-    "str": 10,
-    "dex": 10,
-    "con": 10,
-    "int": 10,
-    "wis": 14,
+    "str": 9,
+    "dex": 14,
+    "con": 11,
+    "int": 17,
+    "wis": 12,
     "cha": 11,
-    "skill": {
-      "medicine": 4,
-      "religion": 2
+    "save": {
+      "intelligenceSave": 6,
+      "wisdomSave": 4
     },
-    "passive": 12,
-    "languages": "any one language (usually Common)",
-    "cr": "1/4",
+    "skill": {
+      "arcana": 6,
+      "history": 6
+    },
+    "passive": 11,
+    "languages": "any four languages",
+    "cr": "6",
     "action": [
       {
-        "name": "Club",
-        "text": "Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 2 (1d4) bludgeoning damage."
+        "name": "Dagger",
+        "text": "Melee or Ranged Weapon Attack: +5 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d4 + 2) piercing damage."
       }
     ],
-    "page": 342,
-    "spellcasting": {
-      "spells": [
-        "light",
-        "sacred flame",
-        "thaumaturgy",
-        "bless",
-        "cure wounds",
-        "sanctuary"
-      ],
-      "dc": 12,
-      "attackBonus": 4,
-      "casterLevel": 1
-    },
+    "page": 347,
     "srd": true,
-    "save": {},
     "trait": [
       {
         "name": "Spellcasting",
-        "text": "The acolyte is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save DC 12, +4 to hit with spell attacks). The acolyte has following cleric spells prepared:\nCantrips (at will): light, sacred flame, thaumaturgy\n1st level (3 slots): bless, cure wounds, sanctuary"
+        "text": "The mage is a 9th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 14, +6 to hit with spell attacks). The mage has the following wizard spells prepared:\nCantrips (at will): fire bolt, light, mage hand, prestidigitation\n1st level (4 slots): detect magic, mage armor, magic missile, shield\n2nd level (3 slots): misty step, suggestion\n3rd level (3 slots): counterspell, fireball, fly\n4th level (3 slots): greater invisibility, ice storm\n5th level (1 slots): cone of cold"
       }
     ],
     "attacks": [
       {
-        "name": "Club",
-        "attackBonus": "2",
-        "damage": "1d4[bludgeoning]",
-        "details": "Melee Weapon Attack: +2 to hit, reach 5 ft., one target. Hit: 2 (1d4) bludgeoning damage."
+        "name": "Dagger",
+        "automation": [
+          {
+            "type": "target",
+            "target": "each",
+            "effects": [
+              {
+                "type": "attack",
+                "hit": [
+                  {
+                    "type": "damage",
+                    "damage": "1d4 + 2 [piercing]"
+                  }
+                ],
+                "miss": [],
+                "attackBonus": "5"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "*Melee or Ranged Weapon Attack:* +5 to hit, reach 5 ft. or range 20/60 ft., one target. *Hit:* 4 (1d4 + 2) piercing damage."
+          }
+        ],
+        "_v": 2
       }
-    ]
+    ],
+    "spellbook": {
+      "slots": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 1,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "max_slots": {
+        "1": 4,
+        "2": 3,
+        "3": 3,
+        "4": 3,
+        "5": 1,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "spells": [
+        {
+          "name": "Fire Bolt",
+          "strict": true
+        },
+        {
+          "name": "Light",
+          "strict": true
+        },
+        {
+          "name": "Mage Hand",
+          "strict": true
+        },
+        {
+          "name": "Prestidigitation",
+          "strict": true
+        },
+        {
+          "name": "Detect Magic",
+          "strict": true
+        },
+        {
+          "name": "Mage Armor",
+          "strict": true
+        },
+        {
+          "name": "Magic Missile",
+          "strict": true
+        },
+        {
+          "name": "Shield",
+          "strict": true
+        },
+        {
+          "name": "Misty Step",
+          "strict": true
+        },
+        {
+          "name": "Suggestion",
+          "strict": true
+        },
+        {
+          "name": "Counterspell",
+          "strict": true
+        },
+        {
+          "name": "Fireball",
+          "strict": true
+        },
+        {
+          "name": "Fly",
+          "strict": true
+        },
+        {
+          "name": "Greater Invisibility",
+          "strict": true
+        },
+        {
+          "name": "Ice Storm",
+          "strict": true
+        },
+        {
+          "name": "Cone of Cold",
+          "strict": true
+        }
+      ],
+      "dc": 14,
+      "sab": 6,
+      "caster_level": 9,
+      "spell_mod": 3,
+      "at_will": [],
+      "daily": {}
+    }
   },
   {
     "name": "Kobold",

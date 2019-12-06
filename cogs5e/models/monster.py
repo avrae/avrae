@@ -595,6 +595,15 @@ class MonsterSpellbook(Spellbook):
 
 
 class MonsterCastableSpellbook(MonsterSpellbook):
+    @classmethod
+    def copy(cls, other: Spellbook):
+        """Makes a copy of a MonsterSpellbook (for adding to init)."""
+        new = other.to_dict()
+        if 'daily' in new:
+            new['daily'] = new['daily'].copy()
+        new['slots'] = new['slots'].copy()
+        return cls.from_dict(new)
+
     def cast(self, spell, level):
         if spell.name in self.at_will:
             return

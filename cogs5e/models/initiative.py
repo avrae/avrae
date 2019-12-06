@@ -840,7 +840,7 @@ class MonsterCombatant(Combatant):
         ac = int(monster.ac) if not ac else int(ac)
         spellbook = None
         if monster.spellbook is not None:
-            spellbook = MonsterCastableSpellbook.from_dict(monster.spellbook.to_dict())  # make copy
+            spellbook = MonsterCastableSpellbook.copy(monster.spellbook)  # make copy
 
         return cls(ctx, combat, name, controller_id, private, init,
                    # statblock info

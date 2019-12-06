@@ -36,6 +36,7 @@ class TestCharacterMixedInitiative:
     async def test_init_XX_to_XI(self, avrae, dhttp):  # start init, XX -> XI
         await start_init(avrae, dhttp)
         avrae.message("!init madd kobold -n 10 -h")  # add 10 kobolds, KO1-KO10
+        await dhttp.drain()
 
     async def test_attack_XI(self, avrae, dhttp):
         await attack_I(avrae, dhttp)
@@ -202,14 +203,13 @@ async def test_monster_cast_consumption_II(avrae, dhttp):
     await dhttp.drain()
 
     mage = next(m for m in compendium.monster_mash if m.name == "Mage")
-    before = (await active_combat(avrae)).get_combatant("MA1")
 
     avrae.message("!init cast fireball")
     await dhttp.drain()
 
     after = (await active_combat(avrae)).get_combatant("MA1")
     assert mage.spellbook.get_slots(3) == mage.spellbook.get_max_slots(3)
-    assert after.spellbook.get_slots(3) == before.spellbook.get_slots(3) - 1
+    assert after.spellbook.get_slots(3) == mage.spellbook.get_max_slots(3) - 1
 
 
 @pytest.fixture()

@@ -1,4 +1,5 @@
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, NoReset
+from utils.functions import bubble_format
 from .attack import AttackList
 from .spellcasting import SpellbookSpell
 
@@ -77,8 +78,8 @@ class DeathSaves:
         self.fails = 0
 
     def __str__(self):
-        successes = '\u25c9' * self.successes + '\u3007' * (3 - self.successes)
-        fails = '\u3007' * (3 - self.fails) + '\u25c9' * self.fails
+        successes = bubble_format(self.successes, 3)
+        fails = bubble_format(self.fails, 3, True)
         return f"F {fails} | {successes} S"
 
 
@@ -179,10 +180,7 @@ class CustomCounter:
 
         if self.display_type == 'bubble':
             assert self.max is not None
-            numEmpty = _max - self.value
-            filled = '\u25c9' * self.value
-            empty = '\u3007' * numEmpty
-            val = f"{filled}{empty}\n"
+            val = f"{bubble_format(self.value, _max)}\n"
         else:
             val = f"**Current Value**: {self.value}\n"
             if self.min is not None and self.max is not None:
@@ -200,10 +198,7 @@ class CustomCounter:
 
         if self.display_type == 'bubble':
             assert self.max is not None
-            numEmpty = _max - self.value
-            filled = '\u25c9' * self.value
-            empty = '\u3007' * numEmpty
-            out = f"{filled}{empty}"
+            out = bubble_format(self.value, _max)
         else:
             if self.max is not None:
                 out = f"{self.value}/{_max}"

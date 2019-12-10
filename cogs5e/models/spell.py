@@ -126,7 +126,8 @@ class Spell:
             'prepared': 'prepared'
         }
 
-    async def cast(self, ctx, caster, targets, args, combat=None):
+    async def cast(self, ctx, caster, targets, args, combat=None,
+                   dc_override=None, ab_override=None, spell_override=None):
         """
         Casts this spell.
         :param ctx: The context of the casting.
@@ -135,6 +136,9 @@ class Spell:
         :param targets: A list of targets (Combatants)
         :param args: Args
         :param combat: The combat the spell was cast in, if applicable.
+        :param int dc_override: An explicit DC to cast the spell with.
+        :param int ab_override: An explicit SAB to cast the spell with.
+        :param int spell_override: An explicit spellcasting mod to cast the spell with.
         :return: {embed: Embed}
         """
 
@@ -150,34 +154,37 @@ class Spell:
         if not i:
             # if I'm a warlock, and I didn't have any slots of this level anyway (#655)
             # automatically scale up to the next level s.t. our slots are not 0
-            if l > 0 and l == self.level and not caster.spellbook.get_max_slots(l):
+            if l > 0 \
+                    and l == self.level \
+                    and not caster.spellbook.get_max_slots(l) \
+                    and not caster.spellbook.can_cast(self, l):
                 l = next((sl for sl in range(l, 6) if caster.spellbook.get_max_slots(sl)), l)  # only scale up to l5
                 args['l'] = l
 
             # can I cast this spell?
-            if not caster.can_cast(self, l):
+            if not caster.spellbook.can_cast(self, l):
                 embed = EmbedWithAuthor(ctx)
                 embed.title = "Cannot cast spell!"
                 if not caster.spellbook.get_slots(l):
                     # out of spell slots
                     err = f"You don't have enough level {l} slots left! Use `-l <level>` to cast at a different level, " \
-                        f"`{ctx.prefix}g lr` to take a long rest, or `-i` to ignore spell slots!"
+                          f"`{ctx.prefix}g lr` to take a long rest, or `-i` to ignore spell slots!"
                 elif self.name not in caster.spellbook:
                     # don't know spell
                     err = f"You don't know this spell! Use `{ctx.prefix}sb add {self.name}` to add it to your spellbook, " \
-                        f"or pass `-i` to ignore restrictions."
+                          f"or pass `-i` to ignore restrictions."
                 else:
                     # ?
                     err = "Not enough spell slots remaining, or spell not in known spell list!\n" \
-                        f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, " \
-                        f"or pass `-i` to ignore restrictions."
+                          f"Use `{ctx.prefix}game longrest` to restore all spell slots if this is a character, " \
+                          f"or pass `-i` to ignore restrictions."
                 embed.description = err
                 if l > 0:
-                    embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
+                    embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))
                 return {"embed": embed}
 
             # use resource
-            caster.cast(self, l)
+            caster.spellbook.cast(self, l)
 
         # character setup
         character = None
@@ -188,9 +195,6 @@ class Spell:
 
         # base stat stuff
         mod_arg = args.last("mod", type_=int)
-        dc_override = None
-        ab_override = None
-        spell_override = None
         stat_override = ''
         if mod_arg is not None:
             mod = mod_arg
@@ -246,7 +250,7 @@ class Spell:
             embed.set_footer(text="No spell automation found.")
 
         if l > 0 and not i:
-            embed.add_field(name="Spell Slots", value=caster.remaining_casts_of(self, l))
+            embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))
 
         if conc_conflict:
             conflicts = ', '.join(e.name for e in conc_conflict)

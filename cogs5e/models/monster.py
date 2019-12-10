@@ -12,7 +12,7 @@ from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skil
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.constants import SKILL_MAP
-from utils.functions import a_or_an
+from utils.functions import a_or_an, bubble_format
 
 AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
 ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
@@ -158,12 +158,6 @@ class Monster(StatBlock):
         attacks = AttackList.from_dict(data.get('attacks', []))
         if 'spellbook' in data:
             spellbook = MonsterSpellbook.from_dict(data['spellbook'])
-        elif 'spellcasting' in data:
-            # old system, todo delete after data migration
-            spellcasting = data['spellcasting']
-            spells = [SpellbookSpell(s) for s in spellcasting.get('spells', [])]
-            spellbook = Spellbook({}, {}, spells, spellcasting.get('dc'), spellcasting.get('attackBonus'),
-                                  spellcasting.get('casterLevel', 1))
         else:
             spellbook = None
 
@@ -353,7 +347,7 @@ class Monster(StatBlock):
     # ---- setter overrides ----
     @property
     def hp(self):
-        return self._hp
+        return super().hp
 
     @hp.setter
     def hp(self, value):
@@ -361,18 +355,11 @@ class Monster(StatBlock):
 
     @property
     def temp_hp(self):
-        return self._temp_hp
+        return super().temp_hp
 
     @temp_hp.setter
     def temp_hp(self, value):
         pass
-
-    # ---- spellbook overrides ----
-    def use_slot(self, level: int):  # todo
-        return
-
-    def can_cast(self, spell, level) -> bool:
-        return spell.name in self.spellbook
 
 
 def parse_type(_type):
@@ -549,8 +536,9 @@ def _calc_prof(stats, saves, skills):
     return 0
 
 
+# ===== spellcasting =====
 class MonsterSpellbook(Spellbook):
-    def __init__(self, *args, at_will=None, daily=None, **kwargs):
+    def __init__(self, *args, at_will=None, daily=None, daily_max=None, **kwargs):
         """
         :param at_will: The list of spells the monster can cast at will. These spells should be in the spells list.
         :type at_will: list[str]
@@ -564,27 +552,62 @@ class MonsterSpellbook(Spellbook):
             at_will = []
         self.at_will = at_will
         self.daily = daily
+        self.daily_max = daily_max or daily.copy()  # only monsters can have daily, and we'll init their max to immutable daily
 
     def to_dict(self):
         d = super().to_dict()
         d.update({
             "at_will": self.at_will,
-            "daily": self.daily
+            "daily": self.daily,
+            "daily_max": self.daily_max
         })
         return d
 
     # ===== utils =====
-    def get_slots(self, level):  # todo these should probably be changed to replace StatBlock.casts_of/can_cast
-        if level == 0:
-            return 1
-        return self.slots.get(str(level), 0)
+    def slots_str(self, level: int = None):
+        if level is not None:
+            return super().slots_str(level)
 
-    def set_slots(self, level, value):
-        self.slots[str(level)] = value
+        slots = super().slots_str(level)
+        before = []
+        if self.at_will:
+            before.append(f"**At Will**: {', '.join(self.at_will)}")
+        for spell, remaining in self.daily.items():
+            before.append(f"**{spell}**: {bubble_format(remaining, self.daily_max[spell])}")
+        before = '\n'.join(before)
+        return f"{before}\n{slots}".strip()
 
-    def reset_slots(self):
-        for level in range(1, 10):
-            self.set_slots(level, self.get_max_slots(level))
+    def remaining_casts_of(self, spell, level):
+        if spell.name in self.at_will:
+            return f"**{spell.name}**: At Will"
+        elif spell.name in self.daily:
+            return f"**{spell.name}**: {bubble_format(self.daily[spell.name], self.daily_max[spell.name])}"
+        return super().remaining_casts_of(spell, level)
 
-    def get_max_slots(self, level):
-        return self.max_slots.get(str(level), 0)
+    def cast(self, spell, level):
+        return  # monster singletons should not have mutable slots
+
+    def can_cast(self, spell, level) -> bool:
+        has_slot = self.get_slots(level) > 0
+        is_at_will = spell.name in self.at_will
+        is_daily = spell.name in self.daily and self.daily[spell.name] > 0
+        return spell.name in self and (has_slot or is_daily or is_at_will)
+
+
+class MonsterCastableSpellbook(MonsterSpellbook):
+    @classmethod
+    def copy(cls, other: Spellbook):
+        """Makes a copy of a MonsterSpellbook (for adding to init)."""
+        new = other.to_dict()
+        if 'daily' in new:
+            new['daily'] = new['daily'].copy()
+        new['slots'] = new['slots'].copy()
+        return cls.from_dict(new)
+
+    def cast(self, spell, level):
+        if spell.name in self.at_will:
+            return
+        elif spell.name in self.daily:
+            self.daily[spell.name] -= 1
+        else:
+            self.use_slot(level)

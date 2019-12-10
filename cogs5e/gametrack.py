@@ -43,7 +43,7 @@ class GameTrack(commands.Cog):
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.add_field(name="Hit Points", value=character.hp_str())
-        embed.add_field(name="Spell Slots", value=character.slots_str())
+        embed.add_field(name="Spell Slots", value=character.spellbook.slots_str())
         for counter in character.consumables:
             embed.add_field(name=counter.name, value=counter.full_str())
         await ctx.send(embed=embed)
@@ -65,10 +65,10 @@ class GameTrack(commands.Cog):
         embed = EmbedWithCharacter(character)
         embed.set_footer(text="\u25c9 = Available / \u3007 = Used")
         if level is None and value is None:  # show remaining
-            embed.description = f"__**Remaining Spell Slots**__\n{character.slots_str()}"
+            embed.description = f"__**Remaining Spell Slots**__\n{character.spellbook.slots_str()}"
         elif value is None:
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
-                                f"{character.slots_str(level)}"
+                                f"{character.spellbook.slots_str(level)}"
         else:
             try:
                 if value.startswith(('+', '-')):
@@ -81,10 +81,10 @@ class GameTrack(commands.Cog):
                 assert 0 <= value <= character.spellbook.get_max_slots(level)
             except AssertionError:
                 raise CounterOutOfBounds()
-            character.set_remaining_slots(level, value)
+            character.spellbook.set_slots(level, value)
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
-                                f"{character.slots_str(level)}"
+                                f"{character.spellbook.slots_str(level)}"
         await ctx.send(embed=embed)
 
     async def _rest(self, ctx, rest_type, *args):
@@ -130,9 +130,9 @@ class GameTrack(commands.Cog):
             for lvl in range(1, 10):
                 if character.spellbook.get_max_slots(lvl):
                     if slots_delta[lvl]:
-                        slots_out.append(f"{character.slots_str(lvl)} ({slots_delta[lvl]:+})")
+                        slots_out.append(f"{character.spellbook.slots_str(lvl)} ({slots_delta[lvl]:+})")
                     else:
-                        slots_out.append(character.slots_str(lvl))
+                        slots_out.append(character.spellbook.slots_str(lvl))
             if slots_out:
                 embed.add_field(name="Spell Slots", value='\n'.join(slots_out))
 
@@ -324,7 +324,7 @@ class GameTrack(commands.Cog):
         embed.description = f"{character.name} knows {len(character.spellbook.spells)} spells."
         embed.add_field(name="DC", value=str(character.spellbook.dc))
         embed.add_field(name="Spell Attack Bonus", value=str(character.spellbook.sab))
-        embed.add_field(name="Spell Slots", value=character.slots_str() or "None")
+        embed.add_field(name="Spell Slots", value=character.spellbook.slots_str() or "None")
 
         # dynamic help flags
         flag_show_multiple_source_help = False

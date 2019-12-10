@@ -1,6 +1,7 @@
 import discord
 import pytest
 
+from cogs5e.funcs.lookupFuncs import compendium
 from tests.utils import ATTACK_PATTERN, D20_PATTERN, DAMAGE_PATTERN, TO_HIT_PATTERN, requires_data
 
 pytestmark = pytest.mark.asyncio
@@ -74,6 +75,22 @@ async def test_ms(avrae, dhttp):
     await dhttp.receive_message(embed=discord.Embed(title="An unknown creature makes a Dexterity Save!",
                                                     description=D20_PATTERN))
     await dhttp.receive_delete()
+
+
+@requires_data()
+async def test_mcast(avrae, dhttp):
+    dhttp.clear()
+
+    mage = next(m for m in compendium.monster_mash if m.name == "Mage")
+
+    avrae.message("!mcast mage fireball")
+    await dhttp.receive_delete()
+    embed = discord.Embed(title="A Mage casts Fireball!")
+    embed.add_field(name="Meta", value=rf"{DAMAGE_PATTERN}\n\*\*DC\*\*: {mage.spellbook.dc}\nDEX Save")
+    embed.add_field(name="Effect", value=".*")
+    embed.add_field(name="Spell Slots", value="`3` ◉◉◉")
+    await dhttp.receive_message(embed=embed)
+    assert mage.spellbook.get_slots(3) == mage.spellbook.get_max_slots(3)  # do not modify singleton slots
 
 
 async def test_multiroll(avrae, dhttp):

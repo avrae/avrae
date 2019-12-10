@@ -222,10 +222,11 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
 
 
 # ---- SPELL STUFF ----
-async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
-                            search_func=None, return_metadata=False, extra_choices=None, selectkey=None):
+async def select_spell_full(ctx, name, *args, extra_choices=None, **kwargs):
     """
     Gets a Spell from the compendium and active tome(s).
+
+    :rtype: :class:`~cogs5e.models.spell.Spell`
     """
     choices = await get_spell_choices(ctx)
     await Stats.increase_stat(ctx, "spells_looked_up_life")
@@ -233,12 +234,10 @@ async def select_spell_full(ctx, name, cutoff=5, return_key=False, pm=False, mes
     # #881
     if extra_choices:
         choices.extend(extra_choices)
-    if selectkey is None:
-        selectkey = get_homebrew_formatted_name
+    if 'selectkey' not in kwargs:
+        kwargs['selectkey'] = get_homebrew_formatted_name
 
-    return await search_and_select(ctx, choices, name, lambda e: e.name, cutoff, return_key, pm, message, list_filter,
-                                   selectkey=selectkey, search_func=search_func,
-                                   return_metadata=return_metadata)
+    return await search_and_select(ctx, choices, name, lambda e: e.name, *args, **kwargs)
 
 
 async def get_spell_choices(ctx):

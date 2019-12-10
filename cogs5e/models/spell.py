@@ -126,19 +126,18 @@ class Spell:
             'prepared': 'prepared'
         }
 
-    async def cast(self, ctx, caster, targets, args, combat=None,
-                   dc_override=None, ab_override=None, spell_override=None):
+    async def cast(self, ctx, caster, targets, args, combat=None):
         """
         Casts this spell.
+
         :param ctx: The context of the casting.
         :param caster: The caster of this spell.
-        :type caster: cogs5e.models.sheet.StatBlock
-        :param targets: A list of targets (Combatants)
+        :type caster: :class:`~cogs5e.models.sheet.statblock.StatBlock`
+        :param targets: A list of targets
+        :type targets: list of :class:`~cogs5e.models.sheet.statblock.StatBlock`
         :param args: Args
+        :type args: :class:`~utils.argparser.ParsedArguments`
         :param combat: The combat the spell was cast in, if applicable.
-        :param int dc_override: An explicit DC to cast the spell with.
-        :param int ab_override: An explicit SAB to cast the spell with.
-        :param int spell_override: An explicit spellcasting mod to cast the spell with.
         :return: {embed: Embed}
         """
 
@@ -150,6 +149,15 @@ class Spell:
         # meta checks
         if not self.level <= l <= 9:
             raise SpellException("Invalid spell level.")
+
+        # caster spell-specific overrides
+        dc_override = None
+        ab_override = None
+        spell_override = None
+        spellbook_spell = caster.spellbook.get_spell(self)
+        if spellbook_spell is not None:
+            dc_override = spellbook_spell.dc
+            ab_override = spellbook_spell.sab
 
         if not i:
             # if I'm a warlock, and I didn't have any slots of this level anyway (#655)

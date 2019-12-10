@@ -287,14 +287,9 @@ class Dice(commands.Cog):
             spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
         else:
             spell = await select_spell_full(ctx, spell_name)
-        spellbook_spell = monster.spellbook.get_spell(spell)
 
         caster, targets, combat = await targetutils.maybe_combat(ctx, monster, args)
-        if spellbook_spell:
-            result = await spell.cast(ctx, caster, targets, args, combat=combat,
-                                      dc_override=spellbook_spell.dc, ab_override=spellbook_spell.sab)
-        else:
-            result = await spell.cast(ctx, caster, targets, args, combat=combat)
+        result = await spell.cast(ctx, caster, targets, args, combat=combat)
 
         # embed display
         embed = result['embed']

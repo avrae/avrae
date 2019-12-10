@@ -158,6 +158,7 @@ class Spell:
         if spellbook_spell is not None:
             dc_override = spellbook_spell.dc
             ab_override = spellbook_spell.sab
+            spell_override = spellbook_spell.mod
 
         if not i:
             # if I'm a warlock, and I didn't have any slots of this level anyway (#655)

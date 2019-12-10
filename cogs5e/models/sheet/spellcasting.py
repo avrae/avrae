@@ -150,9 +150,9 @@ class SpellbookSpell:
         self.mod = mod  # spellcasting ability mod
 
     @classmethod
-    def from_spell(cls, spell):
+    def from_spell(cls, spell, dc=None, sab=None, mod=None):
         strict = spell.source != 'homebrew'
-        return cls(spell.name, strict, spell.level)
+        return cls(spell.name, strict, spell.level, dc, sab, mod)
 
     @classmethod
     def from_dict(cls, d):

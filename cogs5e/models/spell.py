@@ -126,7 +126,8 @@ class Spell:
             'prepared': 'prepared'
         }
 
-    async def cast(self, ctx, caster, targets, args, combat=None):
+    async def cast(self, ctx, caster, targets, args, combat=None,
+                   dc_override=None, ab_override=None, spell_override=None):
         """
         Casts this spell.
         :param ctx: The context of the casting.
@@ -135,6 +136,9 @@ class Spell:
         :param targets: A list of targets (Combatants)
         :param args: Args
         :param combat: The combat the spell was cast in, if applicable.
+        :param int dc_override: An explicit DC to cast the spell with.
+        :param int ab_override: An explicit SAB to cast the spell with.
+        :param int spell_override: An explicit spellcasting mod to cast the spell with.
         :return: {embed: Embed}
         """
 
@@ -191,9 +195,6 @@ class Spell:
 
         # base stat stuff
         mod_arg = args.last("mod", type_=int)
-        dc_override = None
-        ab_override = None
-        spell_override = None
         stat_override = ''
         if mod_arg is not None:
             mod = mod_arg

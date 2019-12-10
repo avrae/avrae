@@ -101,6 +101,16 @@ class Spellbook:
 
         self.set_slots(level, val)
 
+    def get_spell(self, spell):
+        """
+        Returns a SpellbookSpell representing the caster's ability to cast this spell, or None if the spell is
+        not in the caster's spellbook.
+
+        :type spell: :class:`~cogs5e.models.spell.Spell`
+        :rtype: :class:`~cogs5e.models.sheet.spellcasting.SpellbookSpell` or None
+        """
+        return next((s for s in self.spells if s.name.lower() == spell.name.lower()), None)
+
     # ===== cast utils =====
     def cast(self, spell, level):
         """

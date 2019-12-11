@@ -260,7 +260,10 @@ class DicecloudParser(SheetLoaderABC):
                 ab_calc = sl.get('attackBonus')
                 ab = int(self.evaluator.eval(ab_calc))
                 dc = int(self.evaluator.eval(sl.get('saveDC')))
-                scam = self.get_stats().get_mod(next(m for m in STAT_NAMES if m in ab_calc))
+                try:
+                    scam = self.get_stats().get_mod(next(m for m in STAT_NAMES if m in ab_calc))
+                except StopIteration:
+                    scam = 0
                 spell_lists[sl['_id']] = (ab, dc, scam)
             except:
                 pass

@@ -62,7 +62,10 @@ class AdminUtils(commands.Cog):
         }
         channel = (await self.bot.rdb.subscribe(COMMAND_PUBSUB_CHANNEL))[0]
         async for msg in channel.iter(encoding="utf-8"):
-            await self._ps_recv(msg)
+            try:
+                await self._ps_recv(msg)
+            except Exception as e:
+                log.error(str(e))
 
     # ==== commands ====
     @commands.command(hidden=True)

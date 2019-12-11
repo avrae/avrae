@@ -69,17 +69,29 @@ class HomebrewContainer(CommonHomebrewMixin, EditorMixin, abc.ABC):
     async def user_visible(cls, ctx, meta_only=False):
         """Returns an async iterator of objects (or dicts, if meta_only is set) that the user can set active."""
         async for tome_id in cls.user_owned_ids(ctx):
-            yield await cls.from_id(ctx, tome_id, meta_only=meta_only)
+            try:
+                yield await cls.from_id(ctx, tome_id, meta_only=meta_only)
+            except NoActiveBrew:
+                continue
         async for tome_id in cls.my_editable_ids(ctx):
-            yield await cls.from_id(ctx, tome_id, meta_only=meta_only)
+            try:
+                yield await cls.from_id(ctx, tome_id, meta_only=meta_only)
+            except NoActiveBrew:
+                continue
         async for tome_id in cls.my_sub_ids(ctx):
-            yield await cls.from_id(ctx, tome_id, meta_only=meta_only)
+            try:
+                yield await cls.from_id(ctx, tome_id, meta_only=meta_only)
+            except NoActiveBrew:
+                continue
 
     @classmethod
     async def server_active(cls, ctx, meta_only=False):
         """Returns an async generator of objects (or dicts, if meta_only is set) that the server has active."""
         async for tome_id in cls.guild_active_ids(ctx):
-            yield await cls.from_id(ctx, tome_id, meta_only=meta_only)
+            try:
+                yield await cls.from_id(ctx, tome_id, meta_only=meta_only)
+            except NoActiveBrew:
+                continue
 
     @classmethod
     async def num_visible(cls, ctx):

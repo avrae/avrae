@@ -1,6 +1,7 @@
 import discord
 import pytest
 
+from cogs5e.funcs.lookupFuncs import compendium
 from tests.conftest import end_init, start_init
 from tests.utils import ATTACK_PATTERN, DAMAGE_PATTERN, SAVE_PATTERN, active_character, active_combat
 
@@ -8,7 +9,7 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.usefixtures("init_fixture", "character", "_requires")
-class TestMixedInitiative:
+class TestCharacterMixedInitiative:
     """
     3 cases:
     caster not in init, channel not in init [XX]
@@ -18,27 +19,36 @@ class TestMixedInitiative:
 
     async def test_attack_XX(self, avrae, dhttp):
         avrae.message("!attack dagger -t someone")
-        embed = discord.Embed(title=r".* attacks with a Dagger!")
-        embed.add_field(name="someone", value=ATTACK_PATTERN, inline=False)
-        await dhttp.receive_message(embed=embed)
-        await dhttp.receive_delete()
+        await attack_X(dhttp)
+
+    async def test_attack_XX_mon(self, avrae, dhttp):
+        avrae.message("!ma kobold dagger -t someone")
+        await attack_X(dhttp, delete_first=True)
 
     async def test_cast_XX(self, avrae, dhttp):
         avrae.message("!cast fireball -t someone -i")
-        await dhttp.receive_delete()
-        embed = discord.Embed(title=r".* casts Fireball!")
-        embed.add_field(name="Meta", value=rf"{DAMAGE_PATTERN}\n\*\*DC\*\*: \d+\nDEX Save", inline=False)
-        await dhttp.receive_message(embed=embed)
+        await cast_X(dhttp)
+
+    async def test_cast_XX_mon(self, avrae, dhttp):
+        avrae.message("!mcast mage fireball -t someone")
+        await cast_X(dhttp)
 
     async def test_init_XX_to_XI(self, avrae, dhttp):  # start init, XX -> XI
         await start_init(avrae, dhttp)
-        avrae.message("!init madd kobold -n 5 -h")  # add 5 kobolds, KO1-KO5, for... testing
+        avrae.message("!init madd kobold -n 10 -h")  # add 10 kobolds, KO1-KO10
+        await dhttp.drain()
 
     async def test_attack_XI(self, avrae, dhttp):
         await attack_I(avrae, dhttp)
 
+    async def test_attack_XI_mon(self, avrae, dhttp):
+        await attack_I(avrae, dhttp, name="KO6", attack_command="!ma kobold", delete_first=True)
+
     async def test_cast_XI(self, avrae, dhttp):
         await cast_I(avrae, dhttp)
+
+    async def test_cast_XI_mon(self, avrae, dhttp):
+        await cast_I(avrae, dhttp, names=["KO7", "KO8"], cast_command="!mcast mage")
 
     async def test_init_XI_to_II(self, avrae, dhttp):  # join init, XI -> II
         avrae.message("!init join")
@@ -47,14 +57,14 @@ class TestMixedInitiative:
         await dhttp.receive_message()
 
     async def test_attack_II(self, avrae, dhttp):
-        await attack_I(avrae, dhttp, target='4', name='KO4')
+        await attack_I(avrae, dhttp, name='KO4')
 
     async def test_cast_II(self, avrae, dhttp):
-        await cast_I(avrae, dhttp, targets=['5'], names=['KO5'])
+        await cast_I(avrae, dhttp, names=['KO5'])
 
     async def test_attack_II_self(self, avrae, dhttp):
         char = await active_character(avrae)
-        await attack_I(avrae, dhttp, target=char.name, name=char.name)
+        await attack_I(avrae, dhttp, name=char.name)
         await dhttp.drain()
 
         # make sure damage was saved to character
@@ -65,7 +75,7 @@ class TestMixedInitiative:
 
     async def test_cast_II_self(self, avrae, dhttp):
         char = await active_character(avrae)
-        await cast_I(avrae, dhttp, targets=[char.name], names=[char.name])
+        await cast_I(avrae, dhttp, names=[char.name])
         await dhttp.drain()
 
         # make sure damage was saved to character
@@ -78,19 +88,37 @@ class TestMixedInitiative:
         await end_init(avrae, dhttp)
 
 
-async def attack_I(avrae, dhttp, target='1', name='KO1'):
+async def attack_X(dhttp, delete_first=False):
+    if delete_first:
+        await dhttp.receive_delete()
+    embed = discord.Embed(title=r".* attacks with a Dagger!")
+    embed.add_field(name="someone", value=ATTACK_PATTERN, inline=False)
+    await dhttp.receive_message(embed=embed)
+    if not delete_first:
+        await dhttp.receive_delete()
+
+
+async def cast_X(dhttp):
+    await dhttp.receive_delete()
+    embed = discord.Embed(title=r".* casts Fireball!")
+    embed.add_field(name="Meta", value=rf"{DAMAGE_PATTERN}\n\*\*DC\*\*: \d+\nDEX Save", inline=False)
+    await dhttp.receive_message(embed=embed)
+
+
+async def attack_I(avrae, dhttp, name='KO1', attack_command="!attack", delete_first=False):
     combat = await active_combat(avrae)
     combatant = combat.get_combatant(name, strict=True)
     hp_before = combatant.hp
 
-    avrae.message(f"!attack dagger -t {target} hit")
+    avrae.message(f"{attack_command} dagger -t {name} hit")
 
+    if delete_first:
+        await dhttp.receive_delete()
     embed = discord.Embed(title=r".* attacks with a Dagger!")
     embed.add_field(name=name, value=ATTACK_PATTERN, inline=False)
     embed.set_footer(text=rf"{name}: <-?\d+/\d+ HP>")
     await dhttp.receive_edit()
     await dhttp.receive_message(embed=embed)
-    await dhttp.receive_delete()
     await dhttp.drain()
 
     # ensure kobold took damage
@@ -99,15 +127,15 @@ async def attack_I(avrae, dhttp, target='1', name='KO1'):
     assert combatant.hp < hp_before
 
 
-async def cast_I(avrae, dhttp, targets=('2', '3'), names=('KO2', 'KO3')):
+async def cast_I(avrae, dhttp, names=('KO2', 'KO3'), cast_command="!cast"):
     hp_before = {}
     combat = await active_combat(avrae)
     for k in names:
         kobold = combat.get_combatant(k, strict=True)
         hp_before[k] = kobold.hp
 
-    t_string = ' '.join(f'-t {target}' for target in targets)
-    avrae.message(f"!cast fireball {t_string} -i")
+    t_string = ' '.join(f'-t {target}' for target in names)
+    avrae.message(f"{cast_command} fireball {t_string} -i")
 
     await dhttp.receive_delete()
     await dhttp.receive_edit()
@@ -164,6 +192,24 @@ class TestSpellSlotConsumption:
         avrae.message("!init join")
         await dhttp.drain()
         await self.cast_fireball(avrae, dhttp)
+
+
+@pytest.mark.usefixtures("init_fixture")
+async def test_monster_cast_consumption_II(avrae, dhttp):
+    await start_init(avrae, dhttp)
+    avrae.message("!init madd mage")
+    await dhttp.drain()
+    avrae.message("!init next")
+    await dhttp.drain()
+
+    mage = next(m for m in compendium.monster_mash if m.name == "Mage")
+
+    avrae.message("!init cast fireball")
+    await dhttp.drain()
+
+    after = (await active_combat(avrae)).get_combatant("MA1")
+    assert mage.spellbook.get_slots(3) == mage.spellbook.get_max_slots(3)
+    assert after.spellbook.get_slots(3) == mage.spellbook.get_max_slots(3) - 1
 
 
 @pytest.fixture()

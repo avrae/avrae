@@ -338,18 +338,24 @@ class Lookup(commands.Cog):
     async def monster(self, ctx, *, name: str):
         """Looks up a monster.
         Generally requires a Game Master role to show full stat block.
-        Game Master Roles: GM, DM, Game Master, Dungeon Master"""
+        Game Master Roles: GM, DM, Game Master, Dungeon Master
+        __Valid Arguments__
+        -h - Shows the obfuscated stat block, even if you can see the full stat block."""
         guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         pm_dm = guild_settings.get("pm_dm", False)
         req_dm_monster = guild_settings.get("req_dm_monster", True)
 
-        visible_roles = ['gm', 'game master', 'dm', 'dungeon master']
+        visible_roles = {'gm', 'game master', 'dm', 'dungeon master'}
         if req_dm_monster and ctx.guild:
-            visible = True if any(
-                ro in [str(r).lower() for r in ctx.author.roles] for ro in visible_roles) else False
+            visible = True if visible_roles.intersection(set(str(r).lower() for r in ctx.author.roles)) else False
         else:
             visible = True
+
+        # #817 -h arg for monster lookup
+        if name.endswith(' -h'):
+            name = name[:-3]
+            visible = False
 
         monster, metadata = await select_monster_full(ctx, name, return_metadata=True,
                                                       extra_choices=compendium.nmonster_names,
@@ -401,7 +407,11 @@ class Lookup(commands.Cog):
                 if reaction:
                     safe_append("Reactions", reaction)
             if monster.legactions:
-                legendary = ""
+                proper_name = f'The {monster.name}' if not monster.proper else monster.name
+                legendary = f"{proper_name} can take {monster.la_per_round} legendary actions, choosing from " \
+                            f"the options below. Only one legendary action can be used at a time and only at the " \
+                            f"end of another creature's turn. {proper_name} regains spent legendary actions at " \
+                            f"the start of its turn.\n"
                 for a in monster.legactions:
                     if a.name:
                         legendary += f"**{a.name}:** {a.desc}\n"

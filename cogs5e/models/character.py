@@ -12,14 +12,14 @@ from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
 from cogs5e.models.sheet.player import CharOptions, CustomCounter, DeathSaves, ManualOverrides
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
-from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
+from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock
 from cogs5e.sheets.abc import SHEET_VERSION
 from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
 
-INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
 
+# constants at bottom (yay execution order)
 
 class Character(StatBlock):
     # cache characters for 10 seconds to avoid race conditions
@@ -84,7 +84,9 @@ class Character(StatBlock):
         for key, klass in DESERIALIZE_MAP.items():
             if key in d:
                 d[key] = klass.from_dict(d[key])
-        return cls(**d)
+        inst = cls(**d)
+        inst._spellbook._live_integration = inst._live_integration
+        return inst
 
     @classmethod
     async def from_ctx(cls, ctx):
@@ -281,16 +283,6 @@ class Character(StatBlock):
             self._live_integration.sync_hp()
 
     # ---------- SPELLBOOK ----------
-    def set_remaining_slots(self, level: int, value: int):
-        super(Character, self).set_remaining_slots(level, value)
-        if self._live_integration:
-            self._live_integration.sync_slots()
-
-    def reset_spellslots(self):
-        super(Character, self).reset_spellslots()
-        if self._live_integration:
-            self._live_integration.sync_slots()
-
     def add_known_spell(self, spell):
         """Adds a spell to the character's known spell list.
         :param spell (Spell) - the Spell.
@@ -358,7 +350,7 @@ class Character(StatBlock):
         reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
         if self.get_setting('srslots', False):
-            self.reset_spellslots()
+            self.spellbook.reset_slots()
         return reset
 
     def long_rest(self):
@@ -373,7 +365,7 @@ class Character(StatBlock):
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
         if not self.get_setting('srslots', False):
-            self.reset_spellslots()
+            self.spellbook.reset_slots()
         return reset
 
     def reset_all_consumables(self):
@@ -463,3 +455,20 @@ class Character(StatBlock):
                                   f"Please run !update.")
 
         return embed
+
+
+class CharacterSpellbook(Spellbook):
+    """A subclass of spellbook to support live integrations."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._live_integration = None
+
+    def set_slots(self, level: int, value: int):
+        super().set_slots(level, value)
+        if self._live_integration:
+            self._live_integration.sync_slots()
+
+
+INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
+DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook}

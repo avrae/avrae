@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
-from cogs5e.funcs import scripting, targetutils, attackutils
+from cogs5e.funcs import attackutils, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
@@ -21,7 +21,7 @@ from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Resistances, Skill
 from cogsmisc.stats import Stats
 from utils.argparser import argparse, argsplit
-from utils.functions import a_or_an, confirm, search_and_select
+from utils.functions import confirm, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
 
@@ -54,10 +54,7 @@ class InitTracker(commands.Cog):
         return True
 
     async def cog_before_invoke(self, ctx):
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
     @init.command()
     async def begin(self, ctx, *args):
@@ -534,10 +531,12 @@ class InitTracker(commands.Cog):
             :param bool pass_group: Whether to pass a group as the first argument to the function or a combatant.
             :param kwargs: kwargs that will always be passed to the function.
             """
+
             def wrapper(func):
                 func_name = opt_name or func.__name__
                 if pass_group and target_is_group:
                     old_func = func
+
                     async def func(_, *a, **k):
                         if func_name in run_once:
                             return
@@ -688,7 +687,8 @@ class InitTracker(commands.Cog):
         else:
             status = "\n".join([co.get_status(private=private and str(ctx.author.id) == co.controller) for co in
                                 combatant.get_combatants()])
-        if 'private' in args.lower():
+
+        if private:
             controller = ctx.guild.get_member(int(combatant.controller))
             if controller:
                 await controller.send("```markdown\n" + status + "```")

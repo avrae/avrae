@@ -5,12 +5,11 @@ Created on Jan 13, 2017
 """
 from math import sqrt
 
-import discord
 from discord.ext import commands
 
 from cogs5e.models import embeds
 from utils.argparser import argparse
-from utils.functions import clean_content
+from utils.functions import clean_content, try_delete
 
 
 class PBPUtils(commands.Cog):
@@ -22,19 +21,13 @@ class PBPUtils(commands.Cog):
     @commands.command()
     async def echo(self, ctx, *, msg):
         """Echos a message."""
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
         await ctx.send(f"{ctx.author.display_name}: {clean_content(msg, ctx)}")
 
     @commands.command()
     async def techo(self, ctx, seconds: int, *, msg):
         """Echos a message, and deletes it after a few seconds."""
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
         seconds = min(max(0, seconds), 600)
 
@@ -54,10 +47,7 @@ class PBPUtils(commands.Cog):
         -color <hex color>
         -t <timeout (0..600)>
         """
-        try:
-            await ctx.message.delete()
-        except:
-            pass
+        await try_delete(ctx.message)
 
         embed = embeds.EmbedWithAuthor(ctx)
         args = argparse(args)
@@ -88,11 +78,7 @@ class PBPUtils(commands.Cog):
     @commands.command()
     async def br(self, ctx):
         """Prints a scene break."""
-        try:
-            await ctx.message.delete()
-        except:
-            pass
-
+        await try_delete(ctx.message)
         await ctx.send("``` ```")
 
     @commands.command(hidden=True)

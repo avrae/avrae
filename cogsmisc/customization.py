@@ -183,13 +183,23 @@ class Customization(commands.Cog):
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = f'{ctx.prefix}alias {alias_name} {alias}'
-            return await ctx.send(f'**{alias_name}**: ```py\n{alias}\n```')
+                alias = f'{ctx.prefix}alias {alias_name} {alias}'            out = f'**{alias_name}**: ```py\n{alias}\n```'
+            out = out if len(out) <= 2000 else f'**{alias_name}**:\nCommand output too long to display.\n' \
+                                               f'You can view your personal aliases (and more) on the dashboard.\n' \
+                                               f'https://avrae.io/dashboard/aliases'
+            return await ctx.send(out)
 
         await self.bot.mdb.aliases.update_one({"owner": str(ctx.author.id), "name": alias_name},
                                               {"$set": {"commands": cmds.lstrip('!')}}, True)
-        await ctx.send(f'Alias `{ctx.prefix}{alias_name}` added for command:'
-                       f'```py\n{ctx.prefix}{alias_name} {cmds.lstrip("!")}\n```')
+
+        out = f'Alias `{ctx.prefix}{alias_name}` added for command:' \
+              f'```py\n{ctx.prefix}{alias_name} {cmds.lstrip("!")}\n```'
+
+        out = out if len(out) <= 2000 else f'Alias `{ctx.prefix}{alias_name}` added.\n' \
+                                           f'Command output too long to display.\n' \
+                                           f'You can view your personal aliases (and more) on the dashboard.\n' \
+                                           f'https://avrae.io/dashboard/aliases'
+        await ctx.send(out)
 
     @alias.command(name='list')
     async def alias_list(self, ctx):
@@ -239,7 +249,10 @@ class Customization(commands.Cog):
                 alias = 'Not defined.'
             else:
                 alias = f'{ctx.prefix}alias {alias_name} {alias}'
-            return await ctx.send(f'**{alias_name}**: ```py\n{alias}\n```')
+            out = f'**{alias_name}**: ```py\n{alias}\n```'
+            out = out if len(out) <= 2000 else f'Servalias `{ctx.prefix}{alias_name}` added.\n' \
+                                               f'Command output too long to display.'
+            return await ctx.send(out)
 
         if not self.can_edit_servaliases(ctx):
             return await ctx.send("You do not have permission to edit server aliases. Either __Administrator__ "
@@ -248,8 +261,12 @@ class Customization(commands.Cog):
 
         await self.bot.mdb.servaliases.update_one({"server": str(ctx.guild.id), "name": alias_name},
                                                   {"$set": {"commands": cmds.lstrip('!')}}, True)
-        await ctx.send(f'Server alias `{ctx.prefix}{alias_name}` added for command:'
-                       f'```py\n{ctx.prefix}{alias_name} {cmds.lstrip("!")}\n```')
+
+        out = f'Server alias `{ctx.prefix}{alias_name}` added for command:' \
+              f'```py\n{ctx.prefix}{alias_name} {cmds.lstrip("!")}\n```'
+        out = out if len(out) <= 2000 else f'Servalias `{ctx.prefix}{alias_name}` added.\n' \
+                                           f'Command output too long to display.'
+        await ctx.send(out)
 
     @servalias.command(name='list')
     @commands.guild_only()
@@ -291,14 +308,25 @@ class Customization(commands.Cog):
         user_snippets = await helpers.get_snippets(ctx)
 
         if snippet is None:
-            return await ctx.send(f'**{snipname}**:```py\n'
-                                  f'{ctx.prefix}snippet {snipname} {user_snippets.get(snipname, "Not defined.")}'
-                                  f'\n```')
+            out = f'**{snipname}**:```py\n' \
+                  f'{ctx.prefix}snippet {snipname} {user_snippets.get(snipname, "Not defined.")}'\
+                  f'\n```'
+            out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
+                                               f'Command output too long to display.\n' \
+                                               f'You can view your personal snippets (and more) on the dashboard.\n' \
+                                               f'https://avrae.io/dashboard/aliases'
+            return await ctx.send(out)
 
         if len(snipname) < 2: return await ctx.send("Snippets must be at least 2 characters long!")
         await self.bot.mdb.snippets.update_one({"owner": str(ctx.author.id), "name": snipname},
                                                {"$set": {"snippet": snippet}}, True)
-        await ctx.send(f'Snippet {snipname} added for arguments:```py\n{ctx.prefix}snippet {snippet}\n```')
+        out = f'Snippet {snipname} added for arguments:```py\n' \
+              f'{ctx.prefix}snippet {snippet}\n```'
+        out = out if len(out) <= 2000 else f'Snippet {snipname} added.\n' \
+                                           f'Command output too long to display.\n' \
+                                           f'You can view your personal snippets (and more) on the dashboard.\n' \
+                                           f'https://avrae.io/dashboard/aliases'
+        await ctx.send(out)
 
     @snippet.command(name='list')
     async def snippet_list(self, ctx):
@@ -340,15 +368,23 @@ class Customization(commands.Cog):
         server_snippets = await helpers.get_servsnippets(ctx)
 
         if snippet is None:
-            return await ctx.send(f'**{snipname}**:```py\n'
-                                  f'{ctx.prefix}snippet {snipname} {server_snippets.get(snipname, "Not defined.")}'
-                                  f'\n```')
+            out = f'**{snipname}**:```py\n' \
+                  f'{ctx.prefix}snippet {snipname} {server_snippets.get(snipname, "Not defined.")}' \
+                  f'\n```'
+            out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
+                                               f'Command output too long to display.'
+            return await ctx.send(out)
 
         if self.can_edit_servaliases(ctx):
             if len(snipname) < 2: return await ctx.send("Snippets must be at least 2 characters long!")
             await self.bot.mdb.servsnippets.update_one({"server": server_id, "name": snipname},
                                                        {"$set": {"snippet": snippet}}, True)
-            await ctx.send(f'Server snippet {snipname} added for arguments:```py\n{ctx.prefix}snippet {snippet}\n```')
+            out = f'Server snippet {snipname} added for arguments:```py\n' \
+                           f'{ctx.prefix}snippet {snippet}' \
+                           f'\n```'
+            out = out if len(out) <= 2000 else f'Server snippet {snipname} added.\n' \
+                                               f'Command output too long to display.'
+            await ctx.send(out)
         else:
             return await ctx.send("You do not have permission to edit server snippets. Either __Administrator__ "
                                   "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "

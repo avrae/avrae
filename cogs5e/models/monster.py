@@ -223,7 +223,7 @@ class Monster(StatBlock):
         attacks.extend(atks)
 
         attacks = AttackList.from_dict(attacks)
-        spellcasting = parse_critterdb_spellcasting(traits)
+        spellcasting = parse_critterdb_spellcasting(traits, ability_scores)
 
         return cls(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
                    data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
@@ -451,40 +451,92 @@ def parse_critterdb_traits(data, key):
     return traits, attacks
 
 
-def parse_critterdb_spellcasting(traits):
+def parse_critterdb_spellcasting(traits, base_stats):
+    from cogs5e.funcs.lookupFuncs import compendium
+
     known_spells = []
+    will_spells = []
+    daily_spells = {}
     usual_dc = (0, 0)  # dc, number of spells using dc
     usual_sab = (0, 0)  # same thing
+    usual_cab = (0, 0)
     caster_level = 1
+    slots = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0}
+
     for trait in traits:
         if not 'Spellcasting' in trait.name:
             continue
         desc = trait.desc
-        level_match = re.search(r"is a (\d+)[stndrh]{2}-level", desc)
-        ab_dc_match = re.search(r"spell save DC (\d+), [+-](\d+) to hit", desc)
-        spells = []
-        for spell_match in re.finditer(
-                r"(?:(?:(?:\d[stndrh]{2}\slevel)|(?:Cantrip))\s(?:\(.+\))|(?:At will)|(?:\d/day)): (.+)$", desc,
-                re.MULTILINE):
-            spell_texts = spell_match.group(1).split(', ')
-            for spell_text in spell_texts:
-                s = spell_text.strip('* _')
-                spells.append(s.lower())
-        if level_match:
-            caster_level = max(caster_level, int(level_match.group(1)))
-        if ab_dc_match:
-            ab = int(ab_dc_match.group(2))
-            dc = int(ab_dc_match.group(1))
-            if len(spells) > usual_dc[1]:
-                usual_dc = (dc, len(spells))
-            if len(spells) > usual_sab[1]:
-                usual_sab = (ab, len(spells))
-        known_spells.extend(s for s in spells if s not in known_spells)
-    dc = usual_dc[0]
-    sab = usual_sab[0]
-    log.debug(f"Lvl {caster_level}; DC: {dc}; SAB: {sab}; Spells: {known_spells}")
-    spells = [SpellbookSpell(s) for s in known_spells]
-    spellbook = MonsterSpellbook({}, {}, spells, dc, sab, caster_level)
+
+        type_match = re.search(r'spellcasting ability is (\w+) \(spell save DC (\d+), [+\-](\d+) to hit', desc)
+        type_dc = int(type_match.group(2)) if type_match else None
+        type_sab = int(type_match.group(3)) if type_match else None
+        type_casting_ability = base_stats.get_mod(type_match.group(1)) if type_match else None
+        type_caster_level_match = re.search(r'(\d+)[stndrh]{2}-level', desc)
+        caster_level = max(caster_level,
+                           int(type_caster_level_match.group(1))) if type_caster_level_match else caster_level
+        type_spells = []
+
+        def extract_spells(text):
+            extracted = []
+            spell_names = text.split(', ')
+            for name in spell_names:
+                s = name.strip('* _')
+
+                try:
+                    real_name = next(sp for sp in compendium.spells if sp.name.lower() == s).name
+                    strict = True
+                except StopIteration:
+                    real_name = s
+                    strict = False
+
+                extracted.append(
+                    SpellbookSpell(real_name, strict=strict, dc=type_dc, sab=type_sab, mod=type_casting_ability))
+            type_spells.extend(extracted)
+            return extracted
+
+        for type_leveled_spells in re.finditer(
+                r"(?:"
+                r"(?:(?P<level>\d)[stndrh]{2}\slevel \((?P<slots>\d+) slots\))"
+                r"|(?:Cantrip \(at will\))): "
+                r"(?P<spells>.+)$",
+                desc, re.MULTILINE):
+            extract_spells(type_leveled_spells.group("spells"))
+            if type_leveled_spells.group("level") and type_leveled_spells.group("slots"):
+                slots[type_leveled_spells.group("level")] = int(type_leveled_spells.group("slots"))
+
+        for type_will_spells in re.finditer(r"At will: (?P<spells>.+)$", desc, re.MULTILINE):
+            extracted = extract_spells(type_will_spells.group("spells"))
+            will_spells.extend(s.name for s in extracted)
+
+        for type_daily_spells in re.finditer(r"(?P<times>\d+)/day: (?P<spells>.+)$", desc, re.MULTILINE):
+            extracted = extract_spells(type_daily_spells.group("spells"))
+            times_per_day = int(type_daily_spells.group("times"))
+            for ts in extracted:
+                daily_spells[ts.name] = times_per_day
+
+        known_spells.extend(type_spells)
+        if type_dc and (len(type_spells) > usual_dc[1] or not usual_dc[0]):
+            usual_dc = (type_dc, len(type_spells))
+        if type_sab and (len(type_spells) > usual_sab[1] or not usual_sab[0]):
+            usual_sab = (type_sab, len(type_spells))
+        if len(type_spells) > usual_cab[1] or not usual_cab[0]:
+            usual_cab = (type_casting_ability, len(type_spells))
+
+    spellbook = MonsterSpellbook(
+        slots=slots, max_slots=slots, spells=known_spells, dc=usual_dc[0], sab=usual_sab[0],
+        caster_level=caster_level, spell_mod=usual_cab[0], at_will=will_spells, daily=daily_spells
+    )
+
+    for spell in spellbook.spells:  # remove redundant data
+        if spell.dc == spellbook.dc:
+            spell.dc = None
+        if spell.sab == spellbook.sab:
+            spell.sab = None
+        if spell.mod == spellbook.spell_mod:
+            spell.mod = None
+
+    log.debug(f"Critter spellbook: {spellbook.to_dict()}")
     return spellbook
 
 

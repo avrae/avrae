@@ -240,7 +240,7 @@ class Monster(StatBlock):
     def from_bestiary(cls, data):
         for key in ('traits', 'actions', 'reactions', 'legactions'):
             data[key] = [Trait(**t) for t in data.pop(key)]
-        data['spellcasting'] = Spellbook.from_dict(data.pop('spellbook'))
+        data['spellcasting'] = MonsterSpellbook.from_dict(data.pop('spellbook'))
         data['saves'] = Saves.from_dict(data['saves'])
         data['skills'] = Skills.from_dict(data['skills'])
         data['ability_scores'] = BaseStats.from_dict(data['ability_scores'])
@@ -484,7 +484,7 @@ def parse_critterdb_spellcasting(traits):
     sab = usual_sab[0]
     log.debug(f"Lvl {caster_level}; DC: {dc}; SAB: {sab}; Spells: {known_spells}")
     spells = [SpellbookSpell(s) for s in known_spells]
-    spellbook = Spellbook({}, {}, spells, dc, sab, caster_level)
+    spellbook = MonsterSpellbook({}, {}, spells, dc, sab, caster_level)
     return spellbook
 
 

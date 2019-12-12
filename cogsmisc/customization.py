@@ -187,7 +187,7 @@ class Customization(commands.Cog):
             out = f'**{alias_name}**: ```py\n{alias}\n```'
             out = out if len(out) <= 2000 else f'**{alias_name}**:\nCommand output too long to display.\n' \
                                                f'You can view your personal aliases (and more) on the dashboard.\n' \
-                                               f'https://avrae.io/dashboard/aliases'
+                                               f'<https://avrae.io/dashboard/aliases>'
             return await ctx.send(out)
 
         await self.bot.mdb.aliases.update_one({"owner": str(ctx.author.id), "name": alias_name},
@@ -199,7 +199,7 @@ class Customization(commands.Cog):
         out = out if len(out) <= 2000 else f'Alias `{ctx.prefix}{alias_name}` added.\n' \
                                            f'Command output too long to display.\n' \
                                            f'You can view your personal aliases (and more) on the dashboard.\n' \
-                                           f'https://avrae.io/dashboard/aliases'
+                                           f'<https://avrae.io/dashboard/aliases>'
         await ctx.send(out)
 
     @alias.command(name='list')
@@ -315,7 +315,7 @@ class Customization(commands.Cog):
             out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
                                                f'Command output too long to display.\n' \
                                                f'You can view your personal snippets (and more) on the dashboard.\n' \
-                                               f'https://avrae.io/dashboard/aliases'
+                                               f'<https://avrae.io/dashboard/aliases>'
             return await ctx.send(out)
 
         if len(snipname) < 2: return await ctx.send("Snippets must be at least 2 characters long!")
@@ -326,7 +326,7 @@ class Customization(commands.Cog):
         out = out if len(out) <= 2000 else f'Snippet {snipname} added.\n' \
                                            f'Command output too long to display.\n' \
                                            f'You can view your personal snippets (and more) on the dashboard.\n' \
-                                           f'https://avrae.io/dashboard/aliases'
+                                           f'<https://avrae.io/dashboard/aliases>'
         await ctx.send(out)
 
     @snippet.command(name='list')

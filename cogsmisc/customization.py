@@ -183,7 +183,8 @@ class Customization(commands.Cog):
             if alias is None:
                 alias = 'Not defined.'
             else:
-                alias = f'{ctx.prefix}alias {alias_name} {alias}'            out = f'**{alias_name}**: ```py\n{alias}\n```'
+                alias = f'{ctx.prefix}alias {alias_name} {alias}'
+            out = f'**{alias_name}**: ```py\n{alias}\n```'
             out = out if len(out) <= 2000 else f'**{alias_name}**:\nCommand output too long to display.\n' \
                                                f'You can view your personal aliases (and more) on the dashboard.\n' \
                                                f'https://avrae.io/dashboard/aliases'

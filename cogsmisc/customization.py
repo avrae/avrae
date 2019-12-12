@@ -193,8 +193,8 @@ class Customization(commands.Cog):
         await self.bot.mdb.aliases.update_one({"owner": str(ctx.author.id), "name": alias_name},
                                               {"$set": {"commands": cmds.lstrip('!')}}, True)
 
-        out = f'Alias `{ctx.prefix}{alias_name}` added for command:' \
-              f'```py\n{ctx.prefix}{alias_name} {cmds.lstrip("!")}\n```'
+        out = f'Alias `{ctx.prefix}{alias_name}` added.' \
+              f'```py\n{ctx.prefix}alias {alias_name} {cmds.lstrip("!")}\n```'
 
         out = out if len(out) <= 2000 else f'Alias `{ctx.prefix}{alias_name}` added.\n' \
                                            f'Command output too long to display.\n' \
@@ -251,7 +251,7 @@ class Customization(commands.Cog):
             else:
                 alias = f'{ctx.prefix}alias {alias_name} {alias}'
             out = f'**{alias_name}**: ```py\n{alias}\n```'
-            out = out if len(out) <= 2000 else f'Servalias `{ctx.prefix}{alias_name}` added.\n' \
+            out = out if len(out) <= 2000 else f'Servalias `{ctx.prefix}{alias_name}`.\n' \
                                                f'Command output too long to display.'
             return await ctx.send(out)
 
@@ -263,8 +263,8 @@ class Customization(commands.Cog):
         await self.bot.mdb.servaliases.update_one({"server": str(ctx.guild.id), "name": alias_name},
                                                   {"$set": {"commands": cmds.lstrip('!')}}, True)
 
-        out = f'Server alias `{ctx.prefix}{alias_name}` added for command:' \
-              f'```py\n{ctx.prefix}{alias_name} {cmds.lstrip("!")}\n```'
+        out = f'Server alias `{ctx.prefix}{alias_name}` added.' \
+              f'```py\n{ctx.prefix}alias {alias_name} {cmds.lstrip("!")}\n```'
         out = out if len(out) <= 2000 else f'Servalias `{ctx.prefix}{alias_name}` added.\n' \
                                            f'Command output too long to display.'
         await ctx.send(out)
@@ -321,8 +321,9 @@ class Customization(commands.Cog):
         if len(snipname) < 2: return await ctx.send("Snippets must be at least 2 characters long!")
         await self.bot.mdb.snippets.update_one({"owner": str(ctx.author.id), "name": snipname},
                                                {"$set": {"snippet": snippet}}, True)
-        out = f'Snippet {snipname} added for arguments:```py\n' \
-              f'{ctx.prefix}snippet {snippet}\n```'
+
+        out = f'Snippet {snipname} added.```py\n' \
+              f'{ctx.prefix}snippet {snipname} {snippet}\n```'
         out = out if len(out) <= 2000 else f'Snippet {snipname} added.\n' \
                                            f'Command output too long to display.\n' \
                                            f'You can view your personal snippets (and more) on the dashboard.\n' \
@@ -380,8 +381,8 @@ class Customization(commands.Cog):
             if len(snipname) < 2: return await ctx.send("Snippets must be at least 2 characters long!")
             await self.bot.mdb.servsnippets.update_one({"server": server_id, "name": snipname},
                                                        {"$set": {"snippet": snippet}}, True)
-            out = f'Server snippet {snipname} added for arguments:```py\n' \
-                           f'{ctx.prefix}snippet {snippet}' \
+            out = f'Server snippet {snipname} added.```py\n' \
+                           f'{ctx.prefix}snippet {snipname} {snippet}' \
                            f'\n```'
             out = out if len(out) <= 2000 else f'Server snippet {snipname} added.\n' \
                                                f'Command output too long to display.'

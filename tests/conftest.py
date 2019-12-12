@@ -18,6 +18,7 @@ from discord.http import HTTPClient, Route
 
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException
+from cogs5e.models.initiative import Combat
 from tests.setup import *
 from utils.config import DEFAULT_PREFIX
 
@@ -48,7 +49,9 @@ def compare_embeds(request_embed, embed, *, regex: bool = True):
 
     if isinstance(embed, dict):
         for k, v in embed.items():
-            if isinstance(v, (dict, list)):
+            if k == 'inline':
+                continue
+            elif isinstance(v, (dict, list)):
                 compare_embeds(request_embed[k], embed[k])
             elif isinstance(v, str) and regex:
                 assert re.match(embed[k], request_embed[k])
@@ -301,6 +304,7 @@ def character(request, avrae):
     avrae.mdb.characters.delegate.delete_one(
         {"owner": char.owner, "upstream": char.upstream}
     )
+    Character._cache.clear()
 
 
 # ===== Init Fixture/Utils =====
@@ -310,6 +314,7 @@ async def init_fixture(avrae):
     await avrae.mdb.combats.delete_one({"channel": str(TEST_CHANNEL_ID)})
     yield
     await avrae.mdb.combats.delete_one({"channel": str(TEST_CHANNEL_ID)})
+    Combat._cache.clear()
 
 
 async def start_init(avrae, dhttp):

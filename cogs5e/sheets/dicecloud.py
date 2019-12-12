@@ -247,32 +247,44 @@ class DicecloudParser(SheetLoaderABC):
 
     def get_spellbook(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')
-        spellnames = [s.get('name', '') for s in self.character_data.get('spells', []) if not s.get('removed', False)]
+        potential_spells = [s for s in self.character_data.get('spells', []) if not s.get('removed', False)]
 
         slots = {}
         for lvl in range(1, 10):
             num_slots = int(self.calculate_stat(f"level{lvl}SpellSlots"))
             slots[str(lvl)] = num_slots
 
-        spells = []
-        for spell in spellnames:
-            result, strict = search(compendium.spells, spell.strip(), lambda sp: sp.name, strict=True)
-            if result and strict:
-                spells.append(SpellbookSpell.from_spell(result))
-            else:
-                spells.append(SpellbookSpell(spell.strip()))
-
-        spell_lists = [(0, 0, 0)]  # ab, dc, scam
+        spell_lists = {}  # list_id: (ab, dc, scam)
         for sl in self.character_data.get('spellLists', []):
             try:
                 ab_calc = sl.get('attackBonus')
                 ab = int(self.evaluator.eval(ab_calc))
                 dc = int(self.evaluator.eval(sl.get('saveDC')))
-                scam = self.get_stats().get_mod(next(m for m in STAT_NAMES if m in ab_calc))
-                spell_lists.append((ab, dc, scam))
+                try:
+                    scam = self.get_stats().get_mod(next(m for m in STAT_NAMES if m in ab_calc))
+                except StopIteration:
+                    scam = 0
+                spell_lists[sl['_id']] = (ab, dc, scam)
             except:
                 pass
-        sab, dc, scam = sorted(spell_lists, key=lambda k: k[0], reverse=True)[0]
+        sab, dc, scam = sorted(spell_lists.values(), key=lambda k: k[0], reverse=True)[0]  # use max as default
+
+        spells = []
+        for spell in potential_spells:
+            spell_list_id = spell['parent']['id']
+            spell_ab, spell_dc, spell_mod = spell_lists.get(spell_list_id, (None, None, None))
+            if spell_ab == sab:
+                spell_ab = None
+            if spell_dc == dc:
+                spell_dc = None
+            if spell_mod == scam:
+                spell_mod = None
+
+            result, strict = search(compendium.spells, spell['name'].strip(), lambda sp: sp.name, strict=True)
+            if result and strict:
+                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod))
+            else:
+                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod))
 
         spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level, scam)
 

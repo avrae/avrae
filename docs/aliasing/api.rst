@@ -674,6 +674,12 @@ SimpleCombatant
 
         :type: str
 
+    .. attribute:: note
+
+        The note on the combatant. Can be ``None``.
+
+        :type: Optional[str]
+
     .. attribute:: ratio
 
         .. deprecated:: 1.1.5

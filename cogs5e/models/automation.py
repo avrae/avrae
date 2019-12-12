@@ -896,11 +896,13 @@ class IEffect(Effect):
         super(IEffect, self).run(autoctx)
         if isinstance(self.duration, str):
             try:
-                self.duration = int(autoctx.parse_annostr(self.duration))
+                duration = int(autoctx.parse_annostr(self.duration))
             except ValueError:
                 raise InvalidArgument(f"{self.duration} is not an integer (in effect duration)")
+        else:
+            duration = self.duration
 
-        duration = autoctx.args.last('dur', self.duration, int)
+        duration = autoctx.args.last('dur', duration, int)
         if isinstance(autoctx.target.target, Combatant):
             effect = initiative.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
                                            duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end)

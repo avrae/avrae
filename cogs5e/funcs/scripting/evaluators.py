@@ -179,14 +179,14 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             return character.spellbook.get_max_slots(level)
 
         def slots_str(level: int):
-            return character.slots_str(level)
+            return character.spellbook.slots_str(level)
 
         def set_slots(level: int, value: int):
-            character.set_remaining_slots(level, value)
+            character.spellbook.set_slots(level, value)
             self.character_changed = True
 
         def use_slot(level: int):
-            character.use_slot(level)
+            character.spellbook.use_slot(level)
             self.character_changed = True
 
         def get_hp():

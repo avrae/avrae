@@ -158,75 +158,6 @@ class StatBlock:
         self._temp_hp = 0
         self.hp = self.max_hp
 
-    # ----- SLOTS -----
-    def slots_str(self, level: int = None):
-        """
-        :param level: The level of spell slot to return.
-        :returns A string representing the caster's remaining spell slots.
-        """
-        out = ''
-        if level:
-            assert 0 < level < 10
-            _max = self._spellbook.get_max_slots(level)
-            remaining = self._spellbook.get_slots(level)
-            numEmpty = _max - remaining
-            filled = '\u25c9' * remaining
-            empty = '\u3007' * numEmpty
-            out += f"`{level}` {filled}{empty}\n"
-        else:
-            for level in range(1, 10):
-                _max = self._spellbook.get_max_slots(level)
-                remaining = self._spellbook.get_slots(level)
-                if _max:
-                    numEmpty = _max - remaining
-                    filled = '\u25c9' * remaining
-                    empty = '\u3007' * numEmpty
-                    out += f"`{level}` {filled}{empty}\n"
-        if not out:
-            out = "No spell slots."
-        return out.strip()
-
-    def set_remaining_slots(self, level: int, value: int):
-        """
-        Sets the actor's remaining spell slots of level level.
-        :param level - The spell level.
-        :param value - The number of remaining spell slots.
-        """
-        if not 0 < level < 10:
-            raise InvalidSpellLevel()
-        if not 0 <= value <= self.spellbook.get_max_slots(level):
-            raise CounterOutOfBounds()
-        self.spellbook.set_slots(level, value)
-
-    def use_slot(self, level: int):
-        """
-        Uses one spell slot of level level.
-        :raises CounterOutOfBounds if there are no remaining slots of the requested level.
-        """
-        if level == 0:
-            return
-        if not 0 < level < 10:
-            raise InvalidSpellLevel()
-
-        val = self.spellbook.get_slots(level) - 1
-        if val < 0:
-            raise CounterOutOfBounds("You do not have any spell slots of this level remaining.")
-
-        self.set_remaining_slots(level, val)
-
-    def reset_spellslots(self):
-        """Resets all spellslots to their max value."""
-        self.spellbook.reset_slots()
-
-    def can_cast(self, spell, level) -> bool:
-        return self.spellbook.get_slots(level) > 0 and spell.name in self.spellbook
-
-    def cast(self, spell, level):
-        self.use_slot(level)
-
-    def remaining_casts_of(self, spell, level):
-        return self.slots_str(level)
-
     # ===== SCRIPTING =====
     def get_scope_locals(self):
         out = {}
@@ -241,7 +172,7 @@ class StatBlock:
             "proficiencyBonus": self.stats.prof_bonus, "spell": spell_mod
         })
         for cls, lvl in self.levels:
-            out[f"{cls}Level"] = lvl
+            out[f"{cls.replace(' ', '')}Level"] = lvl
         for stat in STAT_NAMES:
             out[stat] = self.stats[stat]
             out[f"{stat}Mod"] = self.stats.get_mod(stat)

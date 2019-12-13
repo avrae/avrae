@@ -28,7 +28,7 @@ Common arguments include:
 
 Then to at them to combat use this command:
 
-   !i add <iiative modifier> <name> [arguments]
+   !i add <initiative modifier> <name> [arguments]
 
    If you are adding a homebrew monster and haven't imported it with !bestiary, but still want to use the integrated tracker you have to use this command.
 
@@ -37,7 +37,7 @@ Hiding Stats
 
 As a DM, you probably want to hide certain stats from your players.  !i has arguments for hiding stats as well:
 
-   !i add <iiative modifier> <name> -h
+   !i add <initiative modifier> <name> -h
 
 This will Hide HP and AC.
 
@@ -46,11 +46,11 @@ Adding Homebrew Monsters
 
 To add a homebrew monster that hasn't been imported with !bestiary, Use the following:
 
-   !i add <iiative modifier> <name>
+   !i add <initiative modifier> <name>
 
 You can also set the HP and AC of the added monster.
 
-   !i add <iiative modifier> <name> -hp <max HP> -ac <AC>
+   !i add <initiative modifier> <name> -hp <max HP> -ac <AC>
 
 Running combat
 -------------------

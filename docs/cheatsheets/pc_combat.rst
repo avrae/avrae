@@ -14,7 +14,7 @@ Joining Combat
 
 To join combat, your DM must first start it.  Once they have, proceed below to the follwoing commands.
 
-   !init cadd [arguments]
+   !i cadd [arguments]
 
    This will add you **Current Active** character in SheetManager to combat.
 
@@ -25,7 +25,7 @@ To join combat, your DM must first start it.  Once they have, proceed below to t
 
 To add add a character that is no tracked by Avrae you can use the following:
 
-   !init add <initiative modifier> <name> [arguments]
+   !i add <initiative modifier> <name> [arguments]
 
    .. note::
       If you add an untracked character you will want to supply -hp <max HP> to set Hit points and -ac <AC> to set Armor class.
@@ -41,15 +41,15 @@ Your turn
 Its your Turn! Lets go through some commands you can use:
 
 Attack with a weapon:
-   !init attack <target name> <weapon name> [arguments]
+   !i attack <target name> <weapon name> [arguments]
 
    To see a list of your character's attacks use !a
 
 Cast a spell:
-   !init cast <spell name> -t <target name> [arguments]
+   !i cast <spell name> -t <target name> [arguments]
 
    .. note::
-      You can use !init aoo <combatant name> <target name> <weapon name> [arguments] for Attacks of Opportunity when it is not your turn.
+      You can use !i aoo <combatant name> <target name> <weapon name> [arguments] for Attacks of Opportunity when it is not your turn.
 
 
 Helper Commands
@@ -57,11 +57,11 @@ Helper Commands
 
 To Modify a combatant's HP value:
 
-   !init hp <combatant name> [operator] <value>
+   !i hp <combatant name> [operator] <value>
 
 To modify an attribute of a combatant (most common uses are -ac <AC>, -resist/immune/vulv <damage type>, -h)
 
-   !init opt <combatant name> <arguments>
+   !i opt <combatant name> <arguments>
 
    Most common Arguments:
      -ac <AC> (sets AC to new value)
@@ -70,10 +70,10 @@ To modify an attribute of a combatant (most common uses are -ac <AC>, -resist/im
 
 To add Effects :
 
-   !init effect <combatant name> <duration> <effect name> [roll arguments]
+   !i effect <combatant name> <duration> <effect name> [roll arguments]
 
-   duration is number of rounds.  If roll arguments are passed they will append to any calls of !init attack from the effected combatant until the effect ends.
+   duration is number of rounds.  If roll arguments are passed they will append to any calls of !i attack from the effected combatant until the effect ends.
 
 To remove Effects:
 
-   !init re <combatant name> [effect name]
+   !i re <combatant name> [effect name]

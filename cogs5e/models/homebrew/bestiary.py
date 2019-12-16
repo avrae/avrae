@@ -10,6 +10,10 @@ from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
 
+# presented to the hash first - update this when bestiary or monster schema changes
+# to invalidate the existing cache of data
+BESTIARY_SCHEMA_VERSION = b'1'
+
 
 class Bestiary(CommonHomebrewMixin):
     def __init__(self, _id, sha256: str, upstream: str,
@@ -52,6 +56,7 @@ class Bestiary(CommonHomebrewMixin):
         index = 1
         creatures = []
         sha256_hash = hashlib.sha256()
+        sha256_hash.update(BESTIARY_SCHEMA_VERSION)
         async with aiohttp.ClientSession() as session:
             for _ in range(100):  # 100 pages max
                 log.info(f"Getting page {index} of {url}...")

@@ -1,3 +1,5 @@
+.. _dm_combat:
+
 DM Combat Guide
 ===========================
 
@@ -139,6 +141,11 @@ Examples
     !i cast "fire bolt" -t Qal
     # casts Fire Bolt at Qal
 
+Ending A Turn
+^^^^^^^^^^^^^^^^
+When you're done with a turn, use this command to move to the next combatant::
+
+    !i next
 
 Helper Commands
 ------------------

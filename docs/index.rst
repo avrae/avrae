@@ -7,23 +7,18 @@ Welcome to Avrae's documentation!
 =================================
 .. toctree::
    :maxdepth: 4
-   :caption: Contents:
+   :caption: Cheatsheets:
 
-   get_started
-   aliasing/api
-   automation
+   cheatsheets/get_started
+   cheatsheets/dm_combat
+   cheatsheets/pc_combat
 
 .. toctree::
-  :maxdepth: 4
-  :caption: Cheatsheets:
+   :maxdepth: 4
+   :caption: Contents:
 
-  cheatsheets/dm_combat
-  cheatsheets/pc_combat
-
-
-
-
-
+   aliasing/api
+   automation
 
 Indices and tables
 ==================

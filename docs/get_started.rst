@@ -1,12 +1,14 @@
 Invite Avrae to your server
 ===============================
 
-If you are new to Avrae and want to add it to your discord you can do so in a few ways.
+If you are new to Avrae and want to add it to your discord you can do so in a few ways.::
 
   !invite - produce a link to invite Avrae to your Discord server.
 
+Link will be provided.
+
   .. note::
-    the !invite command can be sent in any discord server where avrae is active, as well as DM'd to the bot itself. Adding Avrae to your server requires admin permissions on the server you wish to add.
+    the !invite command can be sent in any discord server where avrae is active, as well as DM'd to the bot itself. Adding Avrae to your server requires "Manage Server" permissions on the server you wish to add.
 
   You can also use the following link to add to your server as well:
 
@@ -16,18 +18,22 @@ If you are new to Avrae and want to add it to your discord you can do so in a fe
 Setting a Prefix
 ==================================
 
-After you add the bot, the first thing to do is set the prefix you want to use on your server.
+After you add the bot, the first thing to do is set the prefix you want to use on your server::
 
-!prefix ! - Insert any prefix you want to use based on your server (ex. !, #, $, !!, etc.)
+  !prefix ! - Insert any prefix you want to use based on your server (ex. !, #, $, !!, etc.)
 
 Using Help
 =================================
 
-With the built in !help command, you get information about other commands in the bot. Here is the syntax for using Help
+With the built in !help command, you get information about other commands in the bot. Here is the syntax for using Help::
 
-!help attack - this will bring up the help dialog for the !attack command. try it out for yourself!
+  !help attack
 
-!help - Will give you examples of commands you can use and informatoin about them. 
+This will bring up the help dialog for the !attack command. try it out for yourself!::
+
+  !help
+
+help will give you examples of commands you can use and information about them.
 
 Adding a character to Avrae
 =================================
@@ -43,23 +49,23 @@ Each source has its own commands and information.  Lets look at each of them.
 Character from DnD Beyond
 ----------------------------------
 
-To add a character from DnD Beyond use the following command:
+To add a character from DnD Beyond use the following command::
 
-!beyond <dndbeyond Character URL>
+  !beyond <dndbeyond Character URL>
 
 Character from GSheet
 ----------------------------------
 
-To add a Character from GSheet use the following command:
+To add a Character from GSheet use the following command::
 
-!gsheet <Gsheet URL>
+  !gsheet <Gsheet URL>
 
 .. note::
-   You will also need to share your sheet with the gmail account to be added later.
+   You will also need to share your sheet with the gmail account (to be added soon).
 
 Character from Dicecloud
 ----------------------------------
 
-To add a character from Dicecloud use teh following command:
+To add a character from Dicecloud use the following command::
 
-!dicecloud <dicecloud char URL>
+  !dicecloud <dicecloud char URL>

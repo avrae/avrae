@@ -69,7 +69,7 @@ To modify an attribute of a combatant::
 Most common Arguments:
      * -ac <AC> (sets AC to new value)
      * -resist/immune/vulv <damage type> (gives resistance, immunity, or vulnerability or specified type)
-     * -h (toggles weather combatants AC and HP are hidden.)
+     * -h (toggles whether combatants AC and HP are hidden.)
 
 To add Effects to a combatant::
 

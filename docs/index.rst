@@ -5,18 +5,11 @@
 
 Welcome to Avrae's documentation!
 =================================
-
-.. toctree::
-  :maxdepth: 4
-  :caption: Getting Started:
-
-  get_started
-
-
 .. toctree::
    :maxdepth: 4
    :caption: Contents:
 
+   get_started
    aliasing/api
    automation
 

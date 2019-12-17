@@ -1,71 +1,78 @@
-Invite Avrae to your server
-===============================
+Getting Started
+===============
+Avrae is a powerful bot, but it can be pretty daunting to get everything set up! Here's
+three quick steps to getting a character sheet linked with Avrae, and ready to play in a game!
 
-If you are new to Avrae and want to add it to your discord you can do so in a few ways.::
+Step 1: Invite Avrae to Your Server
+-----------------------------------
+The first step is to add Avrae to your server. Make sure you have the **Manage Server** permission, and head over to
+`invite.avrae.io <https://invite.avrae.io/>`_.
 
-  !invite - produce a link to invite Avrae to your Discord server.
+Optional: Setting a Prefix
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+After you add Avrae, you might want to change the prefix in case other bots use the same prefix::
 
-Link will be provided.
-
-  .. note::
-    the !invite command can be sent in any discord server where avrae is active, as well as DM'd to the bot itself. Adding Avrae to your server requires "Manage Server" permissions on the server you wish to add.
-
-  You can also use the following link to add to your server as well:
-
-  `Invite
-  <http://invite.avrae.io/>`_.
-
-Setting a Prefix
-==================================
-
-After you add the bot, the first thing to do is set the prefix you want to use on your server::
-
-  !prefix ! - Insert any prefix you want to use based on your server (ex. !, #, $, !!, etc.)
+  !prefix <prefix> - Insert any prefix you want to use based on your server (ex. !, #, $, !!, etc.)
 
 Using Help
-=================================
+^^^^^^^^^^
 
-With the built in !help command, you get information about other commands in the bot. Here is the syntax for using Help::
+With the built in !help command, you get information about other commands in the bot. Here is the syntax for using help::
 
-  !help attack
+  !help <command>
 
-This will bring up the help dialog for the !attack command. try it out for yourself!::
+For example, ``!help attack`` will bring up the help dialog for the !attack command. Try it out for yourself! ::
 
   !help
 
-help will give you examples of commands you can use and information about them.
+Help will give you examples of commands you can use and information about them.
 
-Adding a character to Avrae
-=================================
+Step 2: Add a Character
+-----------------------
+Once you have your stats, think of what character you want to play and make them a sheet on
+`D&D Beyond <https://www.dndbeyond.com/>`_, `Dicecloud <https://dicecloud.com/>`_,
+or `Google Sheets <https://gsheet2.avrae.io/>`_!
 
-In Avrae there are three ways to add a character.
+Once you're done making your character, make sure it's publicly viewable (Avrae needs to be able to see your sheet),
+grab the sharing URL, and follow the steps below depending on what sheet system you chose to use.
+You should see your character's stats pop up in Discord!
 
-  * DnDBeyond
-  * GSheet
-  * Dicecloud
+D&D Beyond
+^^^^^^^^^^
+To add a character from D&D Beyond, use the following command::
 
-Each source has its own commands and information.  Lets look at each of them.
+  !beyond https://ddb.ac/characters/...
 
-Character from DnD Beyond
-----------------------------------
+Dicecloud
+^^^^^^^^^
+To add a character from Dicecloud, use the following command::
 
-To add a character from DnD Beyond use the following command::
-
-  !beyond <dndbeyond Character URL>
-
-Character from GSheet
-----------------------------------
-
-To add a Character from GSheet use the following command::
-
-  !gsheet <Gsheet URL>
+  !dicecloud https://dicecloud.com/character/...
 
 .. note::
-   You will also need to share your sheet with the gmail account (to be added soon).
+    Avrae can update your HP and consumables live on Dicecloud - share the sheet with edit permissions with ``avrae``.
 
-Character from Dicecloud
-----------------------------------
+Google Sheets
+^^^^^^^^^^^^^
+To add a character from GSheet, use the following command::
 
-To add a character from Dicecloud use the following command::
+  !gsheet https://docs.google.com/spreadsheets/d/...
 
-  !dicecloud <dicecloud char URL>
+.. note::
+    You will need to share your sheet with ``avrae-320@avrae-bot.iam.gserviceaccount.com``.
+
+Step 3: Ready to Roll
+---------------------
+You're ready to roll now! You can use the ``!check`` command to roll skill checks, ``!save`` for saving throws,
+and ``!attack`` to attack with your weapons!
+
+For example:
+    * ``!check arcana`` - rolls an Intelligence (Arcana) check
+    * ``!save dexterity`` - rolls a Dexterity Save
+    * ``!attack longsword`` - rolls an attack with a longsword
+
+Next Steps
+----------
+For more detailed documentation on how each command works, you can use ``!help <command>`` to view a list of supported
+arguments, or come join us at the `Avrae Development Discord <https://support.avrae.io>`_!
+

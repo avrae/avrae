@@ -198,7 +198,7 @@ class GoogleSheet(SheetLoaderABC):
         vcell = self.character_data.value("AQ4")
         if ("1.3" not in vcell) and vcell:
             self.additional = TempCharacter(doc.get_worksheet(1))
-            self.version = 2 if "2" in vcell else 1
+            self.version = 2.1 if "2.1" in vcell else 2 if "2" in vcell else 1
 
     # main loading methods
     async def load_character(self, owner_id: str, args):
@@ -360,7 +360,7 @@ class GoogleSheet(SheetLoaderABC):
 
         skills = {}
         saves = {}
-        is_joat = self.version == 2 and bool(character.value("AR45"))
+        is_joat = self.version == 2 and bool(character.value("AR45")) or self.version == 2.1 and bool(character.value("AQ59"))
         for cell, skill, advcell in SKILL_CELL_MAP:
             if isinstance(cell, int):
                 advcell = f"F{cell}"
@@ -369,12 +369,12 @@ class GoogleSheet(SheetLoaderABC):
             else:
                 profcell = None
             try:
-                value = int(character.value(cell))
+                value = int(character.value(cell)) + int("C" in cell and (self.version == 2.1 and character.value("AR58") or self.version == 2 and character.value("AQ26"))) + int("C" in cell and is_joat and int(character.value("H14"))//2)
             except (TypeError, ValueError):
                 raise MissingAttribute(skill)
 
             adv = None
-            if self.version == 2 and advcell:
+            if self.version >= 2 and advcell:
                 advtype = character.unformatted_value(advcell)
                 if advtype in {'a', 'adv', 'advantage'}:
                     adv = True
@@ -430,7 +430,7 @@ class GoogleSheet(SheetLoaderABC):
         return self.character_data.value('T7').strip()
 
     def get_background(self):
-        if self.version == 2:
+        if self.version >= 2:
             return self.character_data.value('AJ11').strip()
         return self.character_data.value('Z5').strip()
 

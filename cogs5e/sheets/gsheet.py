@@ -39,9 +39,11 @@ IGNORED_SPELL_VALUES = {
     '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL', '\u25c9', '\u25cd',
     "You can hide each level of spells individually by hiding the rows (on the left)."
 }
-SKILL_CELL_MAP = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
+BASE_ABILITY_CHECKS = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
     ('C13', 'strength', None), ('C18', 'dexterity', None), ('C23', 'constitution', None),
-    ('C33', 'wisdom', None), ('C28', 'intelligence', None), ('C38', 'charisma', None),
+    ('C33', 'wisdom', None), ('C28', 'intelligence', None), ('C38', 'charisma', None)
+)
+SKILL_CELL_MAP = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
     (25, 'acrobatics', None), (26, 'animalHandling', None), (27, 'arcana', None),
     (28, 'athletics', None), (22, 'charismaSave', None), (19, 'constitutionSave', None),
     (29, 'deception', None), (18, 'dexteritySave', None), (30, 'history', None),
@@ -198,7 +200,7 @@ class GoogleSheet(SheetLoaderABC):
         vcell = self.character_data.value("AQ4")
         if ("1.3" not in vcell) and vcell:
             self.additional = TempCharacter(doc.get_worksheet(1))
-            self.version = 2.1 if "2.1" in vcell else 2 if "2" in vcell else 1
+            self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
 
     # main loading methods
     async def load_character(self, owner_id: str, args):
@@ -360,7 +362,25 @@ class GoogleSheet(SheetLoaderABC):
 
         skills = {}
         saves = {}
-        is_joat = self.version == 2 and bool(character.value("AR45")) or self.version == 2.1 and bool(character.value("AQ59"))
+        is_joat = self.version == (2, 0) and bool(character.value("AR45")) or self.version == (2, 1) and bool(character.value("AQ59"))
+		all_check_bonus = int(self.version == (2, 0) and character.value("AQ26") or self.version == (2, 1) and character.value("AR58"))
+		joat = int(is_joat and self.get_stats().prof_bonus//2)
+		
+		for cell, skill, advcell in BASE_ABILITY_CHECKS:
+			profcell = None
+			try:
+				value = int(character.value(cell)) + all_check_bonus + joat
+			except (TypeError, ValueError):
+				raise MissingAttribute(skill)
+				
+			adv = None
+			prof = 0
+			if is_joat:
+				prof = 0.5
+			
+			skl_obj = Skill(value, prof, adv=adv)
+			skills[skill] = skl_obj
+				
         for cell, skill, advcell in SKILL_CELL_MAP:
             if isinstance(cell, int):
                 advcell = f"F{cell}"
@@ -369,12 +389,12 @@ class GoogleSheet(SheetLoaderABC):
             else:
                 profcell = None
             try:
-                value = int(character.value(cell)) + int("C" in cell and (self.version == 2.1 and character.value("AR58") or self.version == 2 and character.value("AQ26"))) + int("C" in cell and is_joat and int(character.value("H14"))//2)
+                value = int(character.value(cell))
             except (TypeError, ValueError):
                 raise MissingAttribute(skill)
 
             adv = None
-            if self.version >= 2 and advcell:
+            if self.version >= (2, 0) and advcell:
                 advtype = character.unformatted_value(advcell)
                 if advtype in {'a', 'adv', 'advantage'}:
                     adv = True
@@ -430,7 +450,7 @@ class GoogleSheet(SheetLoaderABC):
         return self.character_data.value('T7').strip()
 
     def get_background(self):
-        if self.version >= 2:
+        if self.version >= (2, 0):
             return self.character_data.value('AJ11').strip()
         return self.character_data.value('Z5').strip()
 

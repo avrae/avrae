@@ -5,6 +5,13 @@
 
 Welcome to Avrae's documentation!
 =================================
+.. toctree::
+   :maxdepth: 4
+   :caption: Cheatsheets:
+
+   cheatsheets/get_started
+   cheatsheets/dm_combat
+   cheatsheets/pc_combat
 
 .. toctree::
    :maxdepth: 4
@@ -12,18 +19,6 @@ Welcome to Avrae's documentation!
 
    aliasing/api
    automation
-
-.. toctree::
-  :maxdepth: 4
-  :caption: Cheatsheets
-
-  cheatsheets/dm_combat
-  cheatsheets/pc_combat
-
-
-
-
-
 
 Indices and tables
 ==================

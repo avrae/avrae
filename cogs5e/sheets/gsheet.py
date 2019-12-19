@@ -362,25 +362,27 @@ class GoogleSheet(SheetLoaderABC):
 
         skills = {}
         saves = {}
-        is_joat = self.version == (2, 0) and bool(character.value("AR45")) or self.version == (2, 1) and bool(character.value("AQ59"))
-		all_check_bonus = int(self.version == (2, 0) and character.value("AQ26") or self.version == (2, 1) and character.value("AR58"))
-		joat = int(is_joat and self.get_stats().prof_bonus//2)
-		
-		for cell, skill, advcell in BASE_ABILITY_CHECKS:
-			profcell = None
-			try:
-				value = int(character.value(cell)) + all_check_bonus + joat
-			except (TypeError, ValueError):
-				raise MissingAttribute(skill)
-				
-			adv = None
-			prof = 0
-			if is_joat:
-				prof = 0.5
-			
-			skl_obj = Skill(value, prof, adv=adv)
-			skills[skill] = skl_obj
-				
+        is_joat = self.version == (2, 0) and bool(character.value("AR45")) or self.version == (2, 1) and bool(
+            character.value("AQ59"))
+        all_check_bonus = int(
+            self.version == (2, 0) and character.value("AQ26") or self.version == (2, 1) and character.value("AR58"))
+        joat = int(is_joat and self.get_stats().prof_bonus // 2)
+
+        for cell, skill, advcell in BASE_ABILITY_CHECKS:
+            profcell = None
+            try:
+                value = int(character.value(cell)) + all_check_bonus + joat
+            except (TypeError, ValueError):
+                raise MissingAttribute(skill)
+
+            adv = None
+            prof = 0
+            if is_joat:
+                prof = 0.5
+
+            skl_obj = Skill(value, prof, adv=adv)
+            skills[skill] = skl_obj
+
         for cell, skill, advcell in SKILL_CELL_MAP:
             if isinstance(cell, int):
                 advcell = f"F{cell}"

@@ -368,7 +368,7 @@ class GoogleSheet(SheetLoaderABC):
 
         if self.version == (2, 0):
             is_joat = bool(character.value("AR45"))
-            all_check_bonus = int(character.value("AQ26"))
+            all_check_bonus = int(character.value("AQ26") or 0)
         elif self.version == (2, 1):
             is_joat = bool(character.value("AQ59"))
             all_check_bonus = int(character.value("AR58"))
@@ -438,7 +438,10 @@ class GoogleSheet(SheetLoaderABC):
 
         for rownum in range(69, 80):
             for resist_type, col in RESIST_COLS:
-                dtype = self.additional.value(f"{col}{rownum}")
+                try:
+                    dtype = self.additional.value(f"{col}{rownum}")
+                except IndexError:
+                    dtype = None
                 if dtype:
                     out[resist_type].append(dtype.lower())
 

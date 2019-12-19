@@ -130,7 +130,7 @@ class GoogleSheet(SheetLoaderABC):
     def __init__(self, url):
         super(GoogleSheet, self).__init__(url)
         self.additional = None
-        self.version = 1
+        self.version = (1, 0)  # major, minor
 
         self.total_level = 0
 
@@ -198,7 +198,9 @@ class GoogleSheet(SheetLoaderABC):
         doc = GoogleSheet.g_client.open_by_key(self.url)
         self.character_data = TempCharacter(doc.sheet1)
         vcell = self.character_data.value("AQ4")
-        if ("1.3" not in vcell) and vcell:
+        if '1.3' in vcell:
+            self.version = (1, 3)
+        elif vcell:
             self.additional = TempCharacter(doc.get_worksheet(1))
             self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
 
@@ -359,30 +361,36 @@ class GoogleSheet(SheetLoaderABC):
     def get_skills_and_saves(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         character = self.character_data
-
         skills = {}
         saves = {}
-        is_joat = self.version == (2, 0) and bool(character.value("AR45")) or self.version == (2, 1) and bool(
-            character.value("AQ59"))
-        all_check_bonus = int(
-            self.version == (2, 0) and character.value("AQ26") or self.version == (2, 1) and character.value("AR58"))
-        joat = int(is_joat and self.get_stats().prof_bonus // 2)
+        is_joat = False
+        all_check_bonus = 0
 
+        if self.version == (2, 0):
+            is_joat = bool(character.value("AR45"))
+            all_check_bonus = int(character.value("AQ26"))
+        elif self.version == (2, 1):
+            is_joat = bool(character.value("AQ59"))
+            all_check_bonus = int(character.value("AR58"))
+
+        joat_bonus = int(is_joat and self.get_stats().prof_bonus // 2)
+
+        # calculate str, dex, con, etc checks
         for cell, skill, advcell in BASE_ABILITY_CHECKS:
-            profcell = None
             try:
-                value = int(character.value(cell)) + all_check_bonus + joat
+                # add bonuses manually since the cell does not include them
+                value = int(character.value(cell)) + all_check_bonus + joat_bonus
             except (TypeError, ValueError):
                 raise MissingAttribute(skill)
 
-            adv = None
             prof = 0
             if is_joat:
                 prof = 0.5
 
-            skl_obj = Skill(value, prof, adv=adv)
+            skl_obj = Skill(value, prof)
             skills[skill] = skl_obj
 
+        # read the value of the rest of the skills
         for cell, skill, advcell in SKILL_CELL_MAP:
             if isinstance(cell, int):
                 advcell = f"F{cell}"

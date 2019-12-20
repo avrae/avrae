@@ -267,7 +267,7 @@ class DicecloudParser(SheetLoaderABC):
                 spell_lists[sl['_id']] = (ab, dc, scam)
             except:
                 pass
-        sab, dc, scam = sorted(spell_lists.values(), key=lambda k: k[0], reverse=True)[0]  # use max as default
+        sab, dc, scam = sorted(spell_lists.values(), key=lambda k: k[0], reverse=True)[0] if spell_lists else 0, 0, 0
 
         spells = []
         for spell in potential_spells:

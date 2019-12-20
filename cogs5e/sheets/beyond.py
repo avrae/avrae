@@ -393,10 +393,6 @@ class BeyondSheetParser(SheetLoaderABC):
         # Dual Wielder feat
         miscBonus += self.get_stat('dual-wield-armor-class')
 
-        # Warforged: Integrated Protection
-        if "Integrated Protection" in self._all_features:
-            miscBonus += self.get_stats().prof_bonus
-
         if armortype == 'Medium Armor':
             maxDexBonus = 2
         elif armortype == 'Heavy Armor' or self.get_race() == 'Tortle':  # HACK - tortle natural armor

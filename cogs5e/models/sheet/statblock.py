@@ -146,8 +146,10 @@ class StatBlock:
 
         if overflow:
             self.hp = self.hp + value
-        else:
+        elif self.max_hp is not None:
             self.hp = min(self.hp + value, self.max_hp)
+        else:
+            self.hp = self.hp + value
         return self.hp_str()
 
     def set_hp(self, new_hp):  # set hp before temp hp

@@ -1,14 +1,25 @@
 import hashlib
 import logging
+import re
+from math import floor
 
 import aiohttp
+import html2text
 
+from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
 from cogs5e.models.homebrew.mixins import CommonHomebrewMixin
-from cogs5e.models.monster import Monster
+from cogs5e.models.monster import Monster, MonsterSpellbook, Trait
+from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.base import BaseStats, Saves, Skills
+from cogs5e.models.sheet.spellcasting import SpellbookSpell
 from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
+
+# presented to the hash first - update this when bestiary or monster schema changes
+# to invalidate the existing cache of data
+BESTIARY_SCHEMA_VERSION = b'1'
 
 
 class Bestiary(CommonHomebrewMixin):
@@ -52,6 +63,7 @@ class Bestiary(CommonHomebrewMixin):
         index = 1
         creatures = []
         sha256_hash = hashlib.sha256()
+        sha256_hash.update(BESTIARY_SCHEMA_VERSION)
         async with aiohttp.ClientSession() as session:
             for _ in range(100):  # 100 pages max
                 log.info(f"Getting page {index} of {url}...")
@@ -90,7 +102,7 @@ class Bestiary(CommonHomebrewMixin):
             await existing_bestiary.subscribe(ctx)
             return existing_bestiary
 
-        parsed_creatures = [Monster.from_critterdb(c) for c in creatures]
+        parsed_creatures = [_monster_factory(c) for c in creatures]
         b = cls(None, sha256, url, name, parsed_creatures, desc)
         await b.write_to_db(ctx)
         await b.subscribe(ctx)
@@ -212,3 +224,221 @@ async def select_bestiary(ctx, name):
     bestiary = await search_and_select(ctx, user_bestiaries, name, key=lambda b: b.name,
                                        selectkey=lambda b: f"{b.name} (`{b.upstream})`")
     return bestiary
+
+
+# critterdb -> bestiary helpers
+AVRAE_ATTACK_OVERRIDES_RE = re.compile(r'<avrae hidden>(.*?)\|([+-]?\d*)\|(.*?)</avrae>', re.IGNORECASE)
+ATTACK_RE = re.compile(r'(?:<i>)?(?:\w+ ){1,4}Attack:(?:</i>)? ([+-]?\d+) to hit, .*?(?:<i>)?'
+                       r'Hit:(?:</i>)? [+-]?\d+ \((.+?)\) (\w+) damage[., ]??'
+                       r'(?:in melee, or [+-]?\d+ \((.+?)\) (\w+) damage at range[,.]?)?'
+                       r'(?: or [+-]?\d+ \((.+?)\) (\w+) damage .*?[.,]?)?'
+                       r'(?: (?:plus|and) [+-]?\d+ \((.+?)\) (\w+) damage.)?', re.IGNORECASE)
+JUST_DAMAGE_RE = re.compile(r'[+-]?\d+ \((.+?)\) (\w+) damage', re.IGNORECASE)
+
+
+def spaced_to_camel(spaced):
+    return re.sub(r"\s+(\w)", lambda m: m.group(1).upper(), spaced.lower())
+
+
+def _monster_factory(data):
+    ability_scores = BaseStats(data['stats']['proficiencyBonus'] or 0,
+                               data['stats']['abilityScores']['strength'] or 10,
+                               data['stats']['abilityScores']['dexterity'] or 10,
+                               data['stats']['abilityScores']['constitution'] or 10,
+                               data['stats']['abilityScores']['intelligence'] or 10,
+                               data['stats']['abilityScores']['wisdom'] or 10,
+                               data['stats']['abilityScores']['charisma'] or 10)
+    cr = {0.125: '1/8', 0.25: '1/4', 0.5: '1/2'}.get(data['stats']['challengeRating'],
+                                                     str(data['stats']['challengeRating']))
+    num_hit_die = data['stats']['numHitDie']
+    hit_die_size = data['stats']['hitDieSize']
+    con_by_level = num_hit_die * ability_scores.get_mod('con')
+    hp = floor(((hit_die_size + 1) / 2) * num_hit_die) + con_by_level
+    hitdice = f"{num_hit_die}d{hit_die_size} + {con_by_level}"
+
+    proficiency = data['stats']['proficiencyBonus']
+    if proficiency is None:
+        raise ExternalImportError(f"Monster's proficiency bonus is nonexistent ({data['name']}).")
+
+    skills = Skills.default(ability_scores)
+    skill_updates = {}
+    for skill in data['stats']['skills']:
+        name = spaced_to_camel(skill['name'])
+        if skill['proficient']:
+            mod = skills[name].value + proficiency
+        else:
+            mod = skill.get('value')
+        if mod is not None:
+            skill_updates[name] = mod
+    skills.update(skill_updates)
+
+    saves = Saves.default(ability_scores)
+    save_updates = {}
+    for save in data['stats']['savingThrows']:
+        name = save['ability'].lower() + 'Save'
+        if save['proficient']:
+            mod = saves.get(name).value + proficiency
+        else:
+            mod = save.get('value')
+        if mod is not None:
+            save_updates[name] = mod
+    saves.update(save_updates)
+
+    attacks = []
+    traits, atks = parse_critterdb_traits(data, 'additionalAbilities')
+    attacks.extend(atks)
+    actions, atks = parse_critterdb_traits(data, 'actions')
+    attacks.extend(atks)
+    reactions, atks = parse_critterdb_traits(data, 'reactions')
+    attacks.extend(atks)
+    legactions, atks = parse_critterdb_traits(data, 'legendaryActions')
+    attacks.extend(atks)
+
+    attacks = AttackList.from_dict(attacks)
+    spellcasting = parse_critterdb_spellcasting(traits, ability_scores)
+
+    return Monster(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
+                   data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
+                   ability_scores, cr, data['stats']['experiencePoints'], None,
+                   ', '.join(data['stats']['senses']), data['stats']['damageVulnerabilities'],
+                   data['stats']['damageResistances'], data['stats']['damageImmunities'],
+                   data['stats']['conditionImmunities'], saves, skills,
+                   data['stats']['languages'], traits, actions, reactions, legactions,
+                   data['stats']['legendaryActionsPerRound'], True, 'homebrew', attacks,
+                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'],
+                   spellcasting=spellcasting)
+
+
+def parse_critterdb_traits(data, key):
+    traits = []
+    attacks = []
+    for trait in data['stats'][key]:
+        name = trait['name']
+        raw = trait['description']
+
+        overrides = list(AVRAE_ATTACK_OVERRIDES_RE.finditer(raw))
+        raw_atks = list(ATTACK_RE.finditer(raw))
+        raw_damage = list(JUST_DAMAGE_RE.finditer(raw))
+
+        filtered = AVRAE_ATTACK_OVERRIDES_RE.sub('', raw)
+        desc = '\n'.join(html2text.html2text(text, bodywidth=0).strip() for text in filtered.split('\n')).strip()
+
+        if overrides:
+            for override in overrides:
+                attacks.append({'name': override.group(1) or name,
+                                'attackBonus': override.group(2) or None, 'damage': override.group(3) or None,
+                                'details': desc})
+        elif raw_atks:
+            for atk in raw_atks:
+                if atk.group(6) and atk.group(7):  # versatile
+                    damage = f"{atk.group(6)}[{atk.group(7)}]"
+                    if atk.group(8) and atk.group(8):  # bonus damage
+                        damage += f"+{atk.group(8)}[{atk.group(9)}]"
+                    attacks.append(
+                        {'name': f"2 Handed {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
+                         'details': desc})
+                if atk.group(4) and atk.group(5):  # ranged
+                    damage = f"{atk.group(4)}[{atk.group(5)}]"
+                    if atk.group(8) and atk.group(8):  # bonus damage
+                        damage += f"+{atk.group(8)}[{atk.group(9)}]"
+                    attacks.append({'name': f"Ranged {name}", 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage,
+                                    'details': desc})
+                damage = f"{atk.group(2)}[{atk.group(3)}]"
+                if atk.group(8) and atk.group(9):  # bonus damage
+                    damage += f"+{atk.group(8)}[{atk.group(9)}]"
+                attacks.append(
+                    {'name': name, 'attackBonus': atk.group(1).lstrip('+'), 'damage': damage, 'details': desc})
+        else:
+            for dmg in raw_damage:
+                damage = f"{dmg.group(1)}[{dmg.group(2)}]"
+                attacks.append({'name': name, 'attackBonus': None, 'damage': damage, 'details': desc})
+
+        traits.append(Trait(name, desc))
+    return traits, attacks
+
+
+def parse_critterdb_spellcasting(traits, base_stats):
+    known_spells = []
+    will_spells = []
+    daily_spells = {}
+    usual_dc = (0, 0)  # dc, number of spells using dc
+    usual_sab = (0, 0)  # same thing
+    usual_cab = (0, 0)
+    caster_level = 1
+    slots = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0}
+
+    for trait in traits:
+        if not 'Spellcasting' in trait.name:
+            continue
+        desc = trait.desc
+
+        type_match = re.search(r'spellcasting ability is (\w+) \(spell save DC (\d+), [+\-](\d+) to hit', desc)
+        type_dc = int(type_match.group(2)) if type_match else None
+        type_sab = int(type_match.group(3)) if type_match else None
+        type_casting_ability = base_stats.get_mod(type_match.group(1)) if type_match else None
+        type_caster_level_match = re.search(r'(\d+)[stndrh]{2}-level', desc)
+        caster_level = max(caster_level,
+                           int(type_caster_level_match.group(1))) if type_caster_level_match else caster_level
+        type_spells = []
+
+        def extract_spells(text):
+            extracted = []
+            spell_names = text.split(', ')
+            for name in spell_names:
+                s = name.strip('* _')
+
+                try:
+                    real_name = next(sp for sp in compendium.spells if sp.name.lower() == s).name
+                    strict = True
+                except StopIteration:
+                    real_name = s
+                    strict = False
+
+                extracted.append(
+                    SpellbookSpell(real_name, strict=strict, dc=type_dc, sab=type_sab, mod=type_casting_ability))
+            type_spells.extend(extracted)
+            return extracted
+
+        for type_leveled_spells in re.finditer(
+                r"(?:"
+                r"(?:(?P<level>\d)[stndrh]{2}\slevel \((?P<slots>\d+) slots\))"
+                r"|(?:Cantrip \(at will\))): "
+                r"(?P<spells>.+)$",
+                desc, re.MULTILINE):
+            extract_spells(type_leveled_spells.group("spells"))
+            if type_leveled_spells.group("level") and type_leveled_spells.group("slots"):
+                slots[type_leveled_spells.group("level")] = int(type_leveled_spells.group("slots"))
+
+        for type_will_spells in re.finditer(r"At will: (?P<spells>.+)$", desc, re.MULTILINE):
+            extracted = extract_spells(type_will_spells.group("spells"))
+            will_spells.extend(s.name for s in extracted)
+
+        for type_daily_spells in re.finditer(r"(?P<times>\d+)/day: (?P<spells>.+)$", desc, re.MULTILINE):
+            extracted = extract_spells(type_daily_spells.group("spells"))
+            times_per_day = int(type_daily_spells.group("times"))
+            for ts in extracted:
+                daily_spells[ts.name] = times_per_day
+
+        known_spells.extend(type_spells)
+        if type_dc and (len(type_spells) > usual_dc[1] or not usual_dc[0]):
+            usual_dc = (type_dc, len(type_spells))
+        if type_sab and (len(type_spells) > usual_sab[1] or not usual_sab[0]):
+            usual_sab = (type_sab, len(type_spells))
+        if len(type_spells) > usual_cab[1] or not usual_cab[0]:
+            usual_cab = (type_casting_ability, len(type_spells))
+
+    spellbook = MonsterSpellbook(
+        slots=slots, max_slots=slots, spells=known_spells, dc=usual_dc[0], sab=usual_sab[0],
+        caster_level=caster_level, spell_mod=usual_cab[0], at_will=will_spells, daily=daily_spells
+    )
+
+    for spell in spellbook.spells:  # remove redundant data
+        if spell.dc == spellbook.dc:
+            spell.dc = None
+        if spell.sab == spellbook.sab:
+            spell.sab = None
+        if spell.mod == spellbook.spell_mod:
+            spell.mod = None
+
+    log.debug(f"Critter spellbook: {spellbook.to_dict()}")
+    return spellbook

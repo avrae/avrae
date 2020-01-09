@@ -39,9 +39,11 @@ IGNORED_SPELL_VALUES = {
     '6TH LEVEL', '7TH LEVEL', '8TH LEVEL', '9TH LEVEL', '\u25c9', '\u25cd',
     "You can hide each level of spells individually by hiding the rows (on the left)."
 }
-SKILL_CELL_MAP = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
+BASE_ABILITY_CHECKS = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
     ('C13', 'strength', None), ('C18', 'dexterity', None), ('C23', 'constitution', None),
-    ('C33', 'wisdom', None), ('C28', 'intelligence', None), ('C38', 'charisma', None),
+    ('C33', 'wisdom', None), ('C28', 'intelligence', None), ('C38', 'charisma', None)
+)
+SKILL_CELL_MAP = (  # list of (MOD_CELL/ROW, SKILL_NAME, ADV_CELL)
     (25, 'acrobatics', None), (26, 'animalHandling', None), (27, 'arcana', None),
     (28, 'athletics', None), (22, 'charismaSave', None), (19, 'constitutionSave', None),
     (29, 'deception', None), (18, 'dexteritySave', None), (30, 'history', None),
@@ -128,7 +130,7 @@ class GoogleSheet(SheetLoaderABC):
     def __init__(self, url):
         super(GoogleSheet, self).__init__(url)
         self.additional = None
-        self.version = 1
+        self.version = (1, 0)  # major, minor
 
         self.total_level = 0
 
@@ -196,9 +198,11 @@ class GoogleSheet(SheetLoaderABC):
         doc = GoogleSheet.g_client.open_by_key(self.url)
         self.character_data = TempCharacter(doc.sheet1)
         vcell = self.character_data.value("AQ4")
-        if ("1.3" not in vcell) and vcell:
+        if '1.3' in vcell:
+            self.version = (1, 3)
+        elif vcell:
             self.additional = TempCharacter(doc.get_worksheet(1))
-            self.version = 2 if "2" in vcell else 1
+            self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
 
     # main loading methods
     async def load_character(self, owner_id: str, args):
@@ -357,10 +361,36 @@ class GoogleSheet(SheetLoaderABC):
     def get_skills_and_saves(self):
         if self.character_data is None: raise Exception('You must call get_character() first.')
         character = self.character_data
-
         skills = {}
         saves = {}
-        is_joat = self.version == 2 and bool(character.value("AR45"))
+        is_joat = False
+        all_check_bonus = 0
+
+        if self.version == (2, 0):
+            is_joat = bool(character.value("AR45"))
+            all_check_bonus = int(character.value("AQ26") or 0)
+        elif self.version == (2, 1):
+            is_joat = bool(character.value("AQ59"))
+            all_check_bonus = int(character.value("AR58"))
+
+        joat_bonus = int(is_joat and self.get_stats().prof_bonus // 2)
+
+        # calculate str, dex, con, etc checks
+        for cell, skill, advcell in BASE_ABILITY_CHECKS:
+            try:
+                # add bonuses manually since the cell does not include them
+                value = int(character.value(cell)) + all_check_bonus + joat_bonus
+            except (TypeError, ValueError):
+                raise MissingAttribute(skill)
+
+            prof = 0
+            if is_joat:
+                prof = 0.5
+
+            skl_obj = Skill(value, prof)
+            skills[skill] = skl_obj
+
+        # read the value of the rest of the skills
         for cell, skill, advcell in SKILL_CELL_MAP:
             if isinstance(cell, int):
                 advcell = f"F{cell}"
@@ -374,7 +404,7 @@ class GoogleSheet(SheetLoaderABC):
                 raise MissingAttribute(skill)
 
             adv = None
-            if self.version == 2 and advcell:
+            if self.version >= (2, 0) and advcell:
                 advtype = character.unformatted_value(advcell)
                 if advtype in {'a', 'adv', 'advantage'}:
                     adv = True
@@ -408,7 +438,10 @@ class GoogleSheet(SheetLoaderABC):
 
         for rownum in range(69, 80):
             for resist_type, col in RESIST_COLS:
-                dtype = self.additional.value(f"{col}{rownum}")
+                try:
+                    dtype = self.additional.value(f"{col}{rownum}")
+                except IndexError:
+                    dtype = None
                 if dtype:
                     out[resist_type].append(dtype.lower())
 
@@ -430,7 +463,7 @@ class GoogleSheet(SheetLoaderABC):
         return self.character_data.value('T7').strip()
 
     def get_background(self):
-        if self.version == 2:
+        if self.version >= (2, 0):
             return self.character_data.value('AJ11').strip()
         return self.character_data.value('Z5').strip()
 

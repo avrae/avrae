@@ -437,8 +437,10 @@ class Attack(Effect):
 
         # character-specific arguments
         if autoctx.character:
-            reroll = autoctx.character.get_setting('reroll') or reroll
-            criton = autoctx.character.get_setting('criton') or criton
+            if 'reroll' not in args:
+                reroll = autoctx.character.get_setting('reroll', 0)
+            if 'criton' not in args:
+                criton = autoctx.character.get_setting('criton', 20)
 
         # check for combatant IEffect bonus (#224)
         if autoctx.combatant:

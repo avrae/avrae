@@ -892,7 +892,7 @@ class PlayerCombatant(Combatant):
     async def from_character(cls, character, ctx, combat, controller_id, init, private):
         inst = cls(ctx, combat, character.name, controller_id, private, init,
                    # statblock copies
-                   resistances=character.resistances,
+                   resistances=character.resistances.copy(),
                    # character specific
                    character_id=character.upstream, character_owner=character.owner)
         inst._character = character

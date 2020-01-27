@@ -694,12 +694,12 @@ class Combatant(StatBlock):
     def remove_effect(self, effect):
         try:
             self._effects.remove(effect)
-            # invalidate cache
-            self._invalidate_effect_cache()
         except ValueError:
             # this should be safe
             # the only case where this occurs is if a parent removes an effect while it's trying to remove itself
             pass
+        # invalidate cache
+        self._invalidate_effect_cache()
 
     def remove_all_effects(self, _filter=None):
         if _filter is None:

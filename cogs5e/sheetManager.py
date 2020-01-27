@@ -185,9 +185,7 @@ class SheetManager(commands.Cog):
 
         args = await self.new_arg_stuff(args, ctx, char)
 
-        # halfling luck
-        args['ro'] = char.get_setting('reroll')
-
+        checkutils.update_csetting_args(char, args, skill)
         checkutils.run_save(skill, char, args, embed)
 
         if args.last('image') is not None:
@@ -220,13 +218,7 @@ class SheetManager(commands.Cog):
 
         args = await self.new_arg_stuff(args, ctx, char)
 
-        # reliable talent (#654)
-        rt = char.get_setting('talent', 0) and skill.prof >= 1
-        args['mc'] = args.get('mc') or 10 * rt
-
-        # halfling luck
-        args['ro'] = char.get_setting('reroll')
-
+        checkutils.update_csetting_args(char, args, skill)
         checkutils.run_check(skill_key, char, args, embed)
 
         if args.last('image') is not None:

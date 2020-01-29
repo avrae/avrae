@@ -627,8 +627,10 @@ class Combatant(StatBlock):
 
     @property
     def attacks(self):
-        attacks = self._attacks + AttackList.from_dict(self.active_effects('attack'))
-        return attacks
+        if 'attacks' not in self._cache:
+            # attacks granted by attacks are cached so that the same object is referenced in initTracker (#950)
+            self._cache['attacks'] = self._attacks + AttackList.from_dict(self.active_effects('attack'))
+        return self._cache['attacks']
 
     @property
     def index(self):
@@ -665,8 +667,7 @@ class Combatant(StatBlock):
             conc_conflict = self.remove_all_effects(lambda e: e.concentration)
 
         # invalidate cache
-        if 'parsed_effects' in self._cache:
-            del self._cache['parsed_effects']
+        self._invalidate_effect_cache()
 
         self._effects.append(effect)
         return {"conc_conflict": conc_conflict}
@@ -693,13 +694,12 @@ class Combatant(StatBlock):
     def remove_effect(self, effect):
         try:
             self._effects.remove(effect)
-            # invalidate cache
-            if 'parsed_effects' in self._cache:
-                del self._cache['parsed_effects']
         except ValueError:
             # this should be safe
             # the only case where this occurs is if a parent removes an effect while it's trying to remove itself
             pass
+        # invalidate cache
+        self._invalidate_effect_cache()
 
     def remove_all_effects(self, _filter=None):
         if _filter is None:
@@ -724,6 +724,12 @@ class Combatant(StatBlock):
         if key:
             return self._cache['parsed_effects'].get(key, [])
         return self._cache['parsed_effects']
+
+    def _invalidate_effect_cache(self):
+        if 'parsed_effects' in self._cache:
+            del self._cache['parsed_effects']
+        if 'attacks' in self._cache:
+            del self._cache['attacks']
 
     def is_concentrating(self):
         return any(e.concentration for e in self.get_effects())
@@ -892,7 +898,7 @@ class PlayerCombatant(Combatant):
     async def from_character(cls, character, ctx, combat, controller_id, init, private):
         inst = cls(ctx, combat, character.name, controller_id, private, init,
                    # statblock copies
-                   resistances=character.resistances,
+                   resistances=character.resistances.copy(),
                    # character specific
                    character_id=character.upstream, character_owner=character.owner)
         inst._character = character

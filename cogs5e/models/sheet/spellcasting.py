@@ -141,7 +141,7 @@ class Spellbook:
 
 
 class SpellbookSpell:
-    def __init__(self, name, strict=False, level=None, dc=None, sab=None, mod=None):
+    def __init__(self, name, strict=False, level: int = None, dc: int = None, sab: int = None, mod: int = None):
         self.name = name
         self.strict = strict
         self.level = level

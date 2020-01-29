@@ -250,6 +250,10 @@ class Spell:
                                       ab_override=ab_override, dc_override=dc_override, spell_override=spell_override,
                                       title=title)
         else:
+            phrase = args.join('phrase', '\n')
+            if phrase:
+                embed.description = f"*{phrase}*"
+
             text = self.description
             if len(text) > 1020:
                 text = f"{text[:1020]}..."

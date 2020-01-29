@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
-from cogs5e.funcs import attackutils, targetutils
+from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
@@ -269,27 +269,19 @@ class InitTracker(commands.Cog):
         -h - Hides HP, AC, Resists, etc.
         -group <group> - Adds the combatant to a group."""
         char: Character = await Character.from_ctx(ctx)
+        args = argparse(args)
 
         embed = EmbedWithCharacter(char, False)
-        embed.colour = char.get_color()
 
-        args = argparse(args)
-        adv = args.adv(boolwise=True)
-        b = args.join('b', '+') or None
         p = args.last('p', type_=int)
-        phrase = args.join('phrase', '\n') or None
         group = args.last('group')
-        init_skill = char.skills.initiative
 
         if p is None:
-            roll_str = init_skill.d20(base_adv=adv)
-            if b:
-                roll_str = f"{roll_str}+{b}"
-            check_roll = roll(roll_str, inline=True)
-
-            embed.title = '{} makes an Initiative check!'.format(char.name)
-            embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
-            init = check_roll.total
+            args.ignore('rr')
+            args.ignore('dc')
+            checkutils.update_csetting_args(char, args)
+            totals = checkutils.run_check('initiative', char, args, embed)
+            init = totals[-1]
         else:
             init = p
             embed.title = "{} already rolled initiative!".format(char.name)
@@ -300,11 +292,11 @@ class InitTracker(commands.Cog):
 
         combat = await Combat.from_ctx(ctx)
 
-        me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
-
         if combat.get_combatant(char.name) is not None:
             await ctx.send("Combatant already exists.")
             return
+
+        me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
 
         if group is None:
             combat.add_combatant(me)
@@ -314,9 +306,11 @@ class InitTracker(commands.Cog):
             grp.add_combatant(me)
             embed.set_footer(text=f"Joined group {grp.name}!")
 
+        if args.last('image') is not None:  # todo consistency and move this into a util module
+            embed.set_thumbnail(url=args.last('image'))
+
         await combat.final()
         await ctx.send(embed=embed)
-        await char.commit(ctx)
 
     @init.command(name="next", aliases=['n'])
     async def nextInit(self, ctx):

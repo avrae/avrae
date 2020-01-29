@@ -7,9 +7,8 @@ from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, Si
 
 from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
-from . import MAX_ITER_LENGTH, SCRIPTING_RE
+from . import MAX_ITER_LENGTH, SCRIPTING_RE, helpers
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
-from .helpers import get_uvars, update_uvars
 from .legacy import LegacyRawCharacter
 
 if 'format_map' not in simpleeval.DISALLOW_METHODS:
@@ -106,7 +105,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
     @classmethod
     async def new(cls, ctx):
         inst = cls(ctx)
-        uvars = await get_uvars(ctx)
+        uvars = await helpers.get_uvars(ctx)
         inst.names.update(uvars)
         inst._cache['uvars'].update(uvars)
         return inst
@@ -211,7 +210,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             self.character_changed = True
 
         def set_cvar(name, val: str):
-            character.set_cvar(name, val)
+            helpers.set_cvar(character, name, val)
             self.names[name] = str(val)
             self.character_changed = True
 
@@ -247,7 +246,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         if self.combat_changed and 'combat' in self._cache and self._cache['combat']:
             await self._cache['combat'].func_commit()
         if self.uvars_changed and 'uvars' in self._cache and self._cache['uvars']:
-            await update_uvars(self.ctx, self._cache['uvars'], self.uvars_changed)
+            await helpers.update_uvars(self.ctx, self._cache['uvars'], self.uvars_changed)
 
     # helpers
     def needs_char(self, *args, **kwargs):

@@ -371,11 +371,24 @@ class GameTrack(commands.Cog):
         await ctx.send(embed=embed)
 
     @spellbook.command(name='add')
-    async def spellbook_add(self, ctx, *, spell_name):
-        """Adds a spell to the spellbook override."""
+    async def spellbook_add(self, ctx, spell_name, *args):
+        """
+        Adds a spell to the spellbook override.
+
+        __Valid Arguments__
+        *Note: These arguments do not support calculations.*
+        -dc <dc> - When cast, this spell always uses this DC.
+        -b <sab> - When cast, this spell always uses this spell attack bonus.
+        -mod <mod> - When cast, this spell always uses this as the value of its casting stat (usually for healing spells).
+        """
         spell = await select_spell_full(ctx, spell_name)
         character: Character = await Character.from_ctx(ctx)
-        character.add_known_spell(spell)
+        args = argparse(args)
+
+        dc = args.last('dc', type_=int)
+        sab = args.last('b', type_=int)
+        mod = args.last('mod', type_=int)
+        character.add_known_spell(spell, dc, sab, mod)
         await character.commit(ctx)
         await ctx.send(f"{spell.name} added to known spell list!")
 

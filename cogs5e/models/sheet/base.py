@@ -302,6 +302,9 @@ class Resistances:
     def to_dict(self):
         return {"resist": self.resist, "immune": self.immune, "vuln": self.vuln, "neutral": self.neutral}
 
+    def copy(self):
+        return Resistances(self.resist.copy(), self.immune.copy(), self.vuln.copy(), self.neutral.copy())
+
     # ---------- main funcs ----------
     def __getitem__(self, item):
         if item == 'resist':

@@ -19,7 +19,7 @@ def set_cvar(character, name, value):
         raise InvalidArgument("Cvar names must be identifiers "
                               "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
     elif name in character.get_scope_locals(True):
-        raise InvalidArgument("This variable is already built in!")
+        raise InvalidArgument(f"The variable `{name}` is already built in.")
     elif len(value) > CVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Cvars must be shorter than {CVAR_SIZE_LIMIT} characters.")
 

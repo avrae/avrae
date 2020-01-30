@@ -441,9 +441,11 @@ class BeyondSheetParser(SheetLoaderABC):
                 castingClasses += 1 if casterMult else 0  # warlock multiclass fix
                 spell_mod = max(spell_mod, self.stat_from_id(castingAbility))
 
-                class_features = {cf['name'] for cf in _class['definition']['classFeatures']}
+                class_features = {cf['name'] for cf in _class['definition']['classFeatures'] if
+                                  cf['requiredLevel'] <= _class['level']}
                 if _class['subclassDefinition']:
-                    class_features.update({cf['name'] for cf in _class['subclassDefinition']['classFeatures']})
+                    class_features.update({cf['name'] for cf in _class['subclassDefinition']['classFeatures'] if
+                                           cf['requiredLevel'] <= _class['level']})
 
                 hasSpells = 'Spellcasting' in class_features or hasSpells
 

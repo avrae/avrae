@@ -22,6 +22,11 @@ from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES
 from utils.functions import search
 
+try:
+    from credentials import ddb_json_headers as HEADERS
+except ImportError:
+    HEADERS = {}
+
 log = logging.getLogger(__name__)
 
 API_BASE = "https://www.dndbeyond.com/character/"
@@ -128,7 +133,7 @@ class BeyondSheetParser(SheetLoaderABC):
         charId = self.url
         character = None
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{API_BASE}{charId}/json") as resp:
+            async with session.get(f"{API_BASE}{charId}/json", headers=HEADERS) as resp:
                 log.debug(f"DDB returned {resp.status}")
                 if resp.status == 200:
                     character = await resp.json()
@@ -618,9 +623,10 @@ class BeyondSheetParser(SheetLoaderABC):
                 damage = None
 
             atkBonus = weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus
-            details = html2text.html2text(itemdef['description'], bodywidth=0).strip()
+            details = weirdBonuses['note'] or html2text.html2text(itemdef['description'], bodywidth=0).strip()
+            name = weirdBonuses['name'] or itemdef['name']
             attack = Attack.new(
-                itemdef['name'], atkBonus, damage, details
+                name, atkBonus, damage, details
             )
             out.append(attack)
 
@@ -629,7 +635,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 damage = f"{versDmg}+{dmgBonus}[{itemdef['damageType'].lower()}" \
                          f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
                 attack = Attack.new(
-                    f"2-Handed {itemdef['name']}", atkBonus, damage, details
+                    f"2-Handed {name}", atkBonus, damage, details
                 )
                 out.append(attack)
         elif atkType == 'unarmed':
@@ -741,11 +747,17 @@ class BeyondSheetParser(SheetLoaderABC):
             'attackBonusOverride': 0,
             'damage': 0,
             'isPact': False,
-            'isHex': False
+            'isHex': False,
+            'name': None,
+            'note': None
         }
         for val in self.character_data['characterValues']:
             if not val['valueId'] == itemId: continue
-            if val['typeId'] == 10:  # damage bonus
+            if val['typeId'] == 8:  # name
+                out['name'] = val['value']
+            elif val['typeId'] == 9:  # note
+                out['note'] = val['value']
+            elif val['typeId'] == 10:  # damage bonus
                 out['damage'] += val['value']
             elif val['typeId'] == 12:  # to hit bonus
                 out['attackBonus'] += val['value']

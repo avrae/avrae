@@ -14,6 +14,7 @@ SNIPPET_SIZE_LIMIT = 2_000
 
 # cvars
 def set_cvar(character, name, value):
+    value = str(value)
     if not name.isidentifier():
         raise InvalidArgument("Cvar names must be identifiers "
                               "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
@@ -34,6 +35,7 @@ async def get_uvars(ctx):
 
 
 async def set_uvar(ctx, name, value):
+    value = str(value)
     if not name.isidentifier():
         raise InvalidArgument("Uvar names must be valid identifiers "
                               "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
@@ -59,6 +61,7 @@ async def update_uvars(ctx, uvar_dict, changed=None):
 
 # gvars
 async def create_gvar(ctx, value):
+    value = str(value)
     if len(value) > GVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT} characters.")
     name = str(uuid.uuid4())
@@ -69,6 +72,7 @@ async def create_gvar(ctx, value):
 
 
 async def update_gvar(ctx, gid, value):
+    value = str(value)
     gvar = await ctx.bot.mdb.gvars.find_one({"key": gid})
     if gvar is None:
         raise InvalidArgument("Global variable not found.")
@@ -81,6 +85,7 @@ async def update_gvar(ctx, gid, value):
 
 # aliases
 async def create_alias(ctx, alias_name, commands):
+    commands = str(commands)
     if len(commands) > ALIAS_SIZE_LIMIT:
         raise InvalidArgument(f"Aliases must be shorter than {ALIAS_SIZE_LIMIT} characters.")
     await ctx.bot.mdb.aliases.update_one({"owner": str(ctx.author.id), "name": alias_name},
@@ -95,6 +100,7 @@ async def get_aliases(ctx):
 
 
 async def create_servalias(ctx, alias_name, commands):
+    commands = str(commands)
     if len(commands) > ALIAS_SIZE_LIMIT:
         raise InvalidArgument(f"Aliases must be shorter than {ALIAS_SIZE_LIMIT} characters.")
     await ctx.bot.mdb.servaliases.update_one({"server": str(ctx.guild.id), "name": alias_name},
@@ -110,6 +116,7 @@ async def get_servaliases(ctx):
 
 # snippets
 async def create_snippet(ctx, snipname, snippet):
+    snippet = str(snippet)
     if len(snippet) > SNIPPET_SIZE_LIMIT:
         raise InvalidArgument(f"Snippets must be shorter than {SNIPPET_SIZE_LIMIT} characters.")
     elif len(snipname) < 2:
@@ -129,6 +136,7 @@ async def get_snippets(ctx):
 
 
 async def create_servsnippet(ctx, snipname, snippet):
+    snippet = str(snippet)
     if len(snippet) > SNIPPET_SIZE_LIMIT:
         raise InvalidArgument(f"Snippets must be shorter than {SNIPPET_SIZE_LIMIT} characters.")
     elif len(snipname) < 2:

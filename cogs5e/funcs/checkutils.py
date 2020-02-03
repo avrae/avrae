@@ -15,7 +15,7 @@ def update_csetting_args(char, args, skill=None):
     :return:
     """
     # reliable talent (#654)
-    rt = char.get_setting('talent', 0) and (skill and skill.prof >= 1)
+    rt = bool(char.get_setting('talent', 0) and (skill and skill.prof >= 1))
     args['mc'] = args.get('mc') or 10 * rt
 
     # halfling luck

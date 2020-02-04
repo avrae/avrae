@@ -279,7 +279,7 @@ class InitTracker(commands.Cog):
         if p is None:
             args.ignore('rr')
             args.ignore('dc')
-            checkutils.update_csetting_args(char, args)
+            checkutils.update_csetting_args(char, args, char.skills.initiative)
             totals = checkutils.run_check('initiative', char, args, embed)
             init = totals[-1]
         else:

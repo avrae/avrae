@@ -328,9 +328,7 @@ class Effect:
         return cls(**data)
 
     def to_dict(self):
-        meta = self.meta
-        if meta is not None:
-            meta = Effect.serialize(meta)
+        meta = Effect.serialize(self.meta or [])
         return {"type": self.type, "meta": meta}
 
     def run(self, autoctx):
@@ -456,7 +454,9 @@ class Attack(Effect):
         out = super(Attack, self).to_dict()
         hit = Effect.serialize(self.hit)
         miss = Effect.serialize(self.miss)
-        out.update({"hit": hit, "miss": miss, "attackBonus": self.bonus})
+        out.update({"hit": hit, "miss": miss})
+        if self.bonus is not None:
+            out["attackBonus"] = self.bonus
         return out
 
     def run(self, autoctx: AutomationContext):
@@ -637,7 +637,9 @@ class Save(Effect):
         out = super(Save, self).to_dict()
         fail = Effect.serialize(self.fail)
         success = Effect.serialize(self.success)
-        out.update({"stat": self.stat, "fail": fail, "success": success, "dc": self.dc})
+        out.update({"stat": self.stat, "fail": fail, "success": success})
+        if self.dc is not None:
+            out["dc"] = self.dc
         return out
 
     def run(self, autoctx):
@@ -735,8 +737,12 @@ class Damage(Effect):
     def to_dict(self):
         out = super(Damage, self).to_dict()
         out.update({
-            "damage": self.damage, "overheal": self.overheal, "higher": self.higher, "cantripScale": self.cantripScale
+            "damage": self.damage, "overheal": self.overheal
         })
+        if self.higher is not None:
+            out['higher'] = self.higher
+        if self.cantripScale is not None:
+            out['cantripScale'] = self.cantripScale
         return out
 
     def run(self, autoctx):
@@ -865,7 +871,11 @@ class TempHP(Effect):
 
     def to_dict(self):
         out = super(TempHP, self).to_dict()
-        out.update({"amount": self.amount, "higher": self.higher, "cantripScale": self.cantripScale})
+        out.update({"amount": self.amount})
+        if self.higher is not None:
+            out['higher'] = self.higher
+        if self.cantripScale is not None:
+            out['cantripScale'] = self.cantripScale
         return out
 
     def run(self, autoctx):
@@ -973,9 +983,12 @@ class Roll(Effect):
     def to_dict(self):
         out = super(Roll, self).to_dict()
         out.update({
-            "dice": self.dice, "name": self.name, "higher": self.higher, "cantripScale": self.cantripScale,
-            "hidden": self.hidden
+            "dice": self.dice, "name": self.name, "hidden": self.hidden
         })
+        if self.higher is not None:
+            out['higher'] = self.higher
+        if self.cantripScale is not None:
+            out['cantripScale'] = self.cantripScale
         return out
 
     def run(self, autoctx):

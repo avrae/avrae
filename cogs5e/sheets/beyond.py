@@ -22,6 +22,11 @@ from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES
 from utils.functions import search
 
+try:
+    from credentials import ddb_json_headers as HEADERS
+except ImportError:
+    HEADERS = {}
+
 log = logging.getLogger(__name__)
 
 API_BASE = "https://www.dndbeyond.com/character/"
@@ -128,7 +133,7 @@ class BeyondSheetParser(SheetLoaderABC):
         charId = self.url
         character = None
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{API_BASE}{charId}/json") as resp:
+            async with session.get(f"{API_BASE}{charId}/json", headers=HEADERS) as resp:
                 log.debug(f"DDB returned {resp.status}")
                 if resp.status == 200:
                     character = await resp.json()
@@ -436,9 +441,11 @@ class BeyondSheetParser(SheetLoaderABC):
                 castingClasses += 1 if casterMult else 0  # warlock multiclass fix
                 spell_mod = max(spell_mod, self.stat_from_id(castingAbility))
 
-                class_features = {cf['name'] for cf in _class['definition']['classFeatures']}
+                class_features = {cf['name'] for cf in _class['definition']['classFeatures'] if
+                                  cf['requiredLevel'] <= _class['level']}
                 if _class['subclassDefinition']:
-                    class_features.update({cf['name'] for cf in _class['subclassDefinition']['classFeatures']})
+                    class_features.update({cf['name'] for cf in _class['subclassDefinition']['classFeatures'] if
+                                           cf['requiredLevel'] <= _class['level']})
 
                 hasSpells = 'Spellcasting' in class_features or hasSpells
 
@@ -577,17 +584,23 @@ class BeyondSheetParser(SheetLoaderABC):
             out.append(attack)
         elif atkType == 'item':
             itemdef = atkIn['definition']
-            weirdBonuses = self.get_specific_item_bonuses(atkIn['id'])
-            isProf = self.get_prof(itemdef['type']) or weirdBonuses['isPact']
-            magicBonus = self._item_magic_bonus(itemdef)
-            modBonus = self.get_relevant_atkmod(itemdef) if not weirdBonuses['isHex'] else self.stat_from_id(6)
+            character_item_bonuses = self.get_specific_item_bonuses(atkIn['id'])
+            item_specific_bonuses = self._item_modifiers(itemdef)
+
+            item_properties = itemdef['properties'] + [collections.defaultdict(lambda: None, name=n) for n in
+                                                       item_specific_bonuses['extraProperties']]
+
+            isProf = self.get_prof(itemdef['type']) or character_item_bonuses['isPact']
+            mod_bonus = self.get_relevant_atkmod(itemdef, item_properties) if not character_item_bonuses[
+                'isHex'] else self.stat_from_id(6)
+            magic_bonus = item_specific_bonuses['magicBonus']
             item_dmg_bonus = self.get_stat(f"{itemdef['type'].lower()}-damage")
 
-            dmgBonus = modBonus + magicBonus + weirdBonuses['damage'] + item_dmg_bonus
-            toHitBonus = (prof if isProf else 0) + magicBonus + weirdBonuses['attackBonus']
+            dmgBonus = mod_bonus + magic_bonus + character_item_bonuses['damage'] + item_dmg_bonus
+            toHitBonus = (prof if isProf else 0) + magic_bonus + character_item_bonuses['attackBonus']
 
-            is_melee = not 'Range' in [p['name'] for p in itemdef['properties']]
-            is_one_handed = not 'Two-Handed' in [p['name'] for p in itemdef['properties']]
+            is_melee = not 'Range' in [p['name'] for p in item_properties]
+            is_one_handed = not 'Two-Handed' in [p['name'] for p in item_properties]
             is_weapon = itemdef['filterType'] == 'Weapon'
 
             if is_melee and is_one_handed:
@@ -596,7 +609,7 @@ class BeyondSheetParser(SheetLoaderABC):
             if not is_melee and is_weapon:
                 toHitBonus += self.get_stat('ranged-weapon-attacks')
 
-            if weirdBonuses['isPact'] and self._improved_pact_weapon_applies(itemdef):
+            if character_item_bonuses['isPact'] and self._improved_pact_weapon_applies(itemdef):
                 dmgBonus += 1
                 toHitBonus += 1
 
@@ -610,26 +623,28 @@ class BeyondSheetParser(SheetLoaderABC):
                     dice_size = max(monk_scale(), itemdef['damage']['diceValue'])
                     base_dice = f"{itemdef['damage']['diceCount']}d{dice_size}"
 
+            damage_type = item_specific_bonuses['replaceDamageType'] or itemdef['damageType'].lower()
+
             if base_dice:
-                damage = f"{base_dice}+{dmgBonus}" \
-                         f"[{itemdef['damageType'].lower()}" \
-                         f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+                damage = f"{base_dice}+{dmgBonus}[{damage_type}" \
+                         f"{'^' if itemdef['magic'] or character_item_bonuses['isPact'] else ''}]"
             else:
                 damage = None
 
-            atkBonus = weirdBonuses['attackBonusOverride'] or modBonus + toHitBonus
-            details = html2text.html2text(itemdef['description'], bodywidth=0).strip()
+            atkBonus = character_item_bonuses['attackBonusOverride'] or mod_bonus + toHitBonus
+            details = character_item_bonuses['note'] or html2text.html2text(itemdef['description'], bodywidth=0).strip()
+            name = character_item_bonuses['name'] or itemdef['name']
             attack = Attack.new(
-                itemdef['name'], atkBonus, damage, details
+                name, atkBonus, damage, details
             )
             out.append(attack)
 
-            if 'Versatile' in [p['name'] for p in itemdef['properties']]:
-                versDmg = next(p['notes'] for p in itemdef['properties'] if p['name'] == 'Versatile')
-                damage = f"{versDmg}+{dmgBonus}[{itemdef['damageType'].lower()}" \
-                         f"{'^' if itemdef['magic'] or weirdBonuses['isPact'] else ''}]"
+            if 'Versatile' in [p['name'] for p in item_properties]:
+                versDmg = next(p['notes'] for p in item_properties if p['name'] == 'Versatile')
+                damage = f"{versDmg}+{dmgBonus}[{damage_type}" \
+                         f"{'^' if itemdef['magic'] or character_item_bonuses['isPact'] else ''}]"
                 attack = Attack.new(
-                    f"2-Handed {itemdef['name']}", atkBonus, damage, details
+                    f"2-Handed {name}", atkBonus, damage, details
                 )
                 out.append(attack)
         elif atkType == 'unarmed':
@@ -726,11 +741,11 @@ class BeyondSheetParser(SheetLoaderABC):
             self.prof = p
         return proftype in self.prof
 
-    def get_relevant_atkmod(self, itemdef):
+    def get_relevant_atkmod(self, itemdef, item_properties):
         if itemdef['attackType'] == 2:  # ranged, dex
             return self.stat_from_id(2)
         elif itemdef['attackType'] == 1:  # melee
-            if 'Finesse' in [p['name'] for p in itemdef['properties']] or \
+            if 'Finesse' in [p['name'] for p in item_properties] or \
                     (itemdef['isMonkWeapon'] and self.get_levels().get('Monk')):  # finesse, monk weapon
                 return max(self.stat_from_id(1), self.stat_from_id(2))
         return self.stat_from_id(1)  # strength
@@ -741,11 +756,17 @@ class BeyondSheetParser(SheetLoaderABC):
             'attackBonusOverride': 0,
             'damage': 0,
             'isPact': False,
-            'isHex': False
+            'isHex': False,
+            'name': None,
+            'note': None
         }
         for val in self.character_data['characterValues']:
             if not val['valueId'] == itemId: continue
-            if val['typeId'] == 10:  # damage bonus
+            if val['typeId'] == 8:  # name
+                out['name'] = val['value']
+            elif val['typeId'] == 9:  # note
+                out['note'] = val['value']
+            elif val['typeId'] == 10:  # damage bonus
                 out['damage'] += val['value']
             elif val['typeId'] == 12:  # to hit bonus
                 out['attackBonus'] += val['value']
@@ -773,8 +794,21 @@ class BeyondSheetParser(SheetLoaderABC):
 
     # ===== Specific helpers =====
     @staticmethod
-    def _item_magic_bonus(itemdef):
-        return sum(m['value'] for m in itemdef['grantedModifiers'] if m['type'] == 'bonus' and m['subType'] == 'magic')
+    def _item_modifiers(itemdef):
+        out = {
+            'magicBonus': 0,
+            'replaceDamageType': None,
+            'extraProperties': []
+        }
+        for modifier in itemdef['grantedModifiers']:
+            if modifier['type'] == 'bonus' and modifier['subType'] == 'magic':
+                out['magicBonus'] += modifier['value']
+            elif modifier['type'] == 'replace-damage-type':
+                out['replaceDamageType'] = modifier['subType']
+            elif modifier['type'] == 'weapon-property':
+                out['extraProperties'].append(modifier['subType'])
+
+        return out
 
     def _improved_pact_weapon_applies(self, itemdef):
         # precondition: item is a pact weapon
@@ -783,7 +817,7 @@ class BeyondSheetParser(SheetLoaderABC):
             return False
 
         # item must not have a magical bonus
-        if self._item_magic_bonus(itemdef):
+        if self._item_modifiers(itemdef)['magicBonus']:
             return False
 
         return True

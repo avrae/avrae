@@ -1,11 +1,13 @@
 import random
 import re
 
+import d20
 import discord
+from d20 import roll
 from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.dice import roll
+from cogs5e.funcs.dice import old_roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
@@ -14,6 +16,7 @@ from cogs5e.models.monster import Monster
 from cogsmisc.stats import Stats
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
+from utils.dice import ContextPersistingRoller, VerboseMDStringifier
 from utils.functions import search_and_select, try_delete
 
 
@@ -58,20 +61,18 @@ class Dice(commands.Cog):
         if rollStr == '0/0':  # easter eggs
             return await ctx.send("What do you expect me to do, destroy the universe?")
 
-        adv = 0
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
-            rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
-        res = roll(rollStr, adv=adv)
-        out = res.result
+        rollStr, adv = self._string_search_adv(rollStr)
+
+        res = roll(rollStr, advantage=adv, allow_comments=True, stringifier=VerboseMDStringifier())
+        out = f"{ctx.author.mention}  :game_die:\n" \
+              f"{str(res)}"
+        if len(out) > 1999:
+            out = f"{ctx.author.mention}  :game_die:\n" \
+                  f"{str(res)[:100]}...\n" \
+                  f"**Total:** {res.total}"
+
         await try_delete(ctx.message)
-        outStr = ctx.author.mention + '  :game_die:\n' + out
-        if len(outStr) > 1999:
-            await ctx.send(
-                ctx.author.mention + '  :game_die:\n[Output truncated due to length]\n**Result:** ' + str(
-                    res.plain))
-        else:
-            await ctx.send(outStr)
+        await ctx.send(out)
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.command(name='multiroll', aliases=['rr'])
@@ -80,23 +81,28 @@ class Dice(commands.Cog):
         Usage: !rr <iterations> <xdy> [args]"""
         if iterations < 1 or iterations > 100:
             return await ctx.send("Too many or too few iterations.")
-        adv = 0
-        out = []
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', args) is not None else -1
-            args = re.sub('(adv|dis)(\s+|$)', '', args)
+        results = []
+        args, adv = self._string_search_adv(args)
+        ast = d20.parse(rollStr)
+        roller = ContextPersistingRoller()
+
         for _ in range(iterations):
-            res = roll(rollStr, adv=adv, rollFor=args, inline=True)
-            out.append(res)
-        outStr = "Rolling {} iterations...\n".format(iterations)
-        outStr += '\n'.join([o.skeleton for o in out])
-        if len(outStr) < 1500:
-            outStr += '\n{} total.'.format(sum(o.total for o in out))
-        else:
-            outStr = "Rolling {} iterations...\n[Output truncated due to length]\n".format(iterations) + \
-                     '{} total.'.format(sum(o.total for o in out))
+            res = roller.roll(ast, advantage=adv)
+            results.append(res)
+
+        header = f"Rolling {iterations} iterations..."
+        footer = f"{sum(o.total for o in results)} total."
+        result_strs = '\n'.join([str(o) for o in results])
+
+        out = f"{header}\n{result_strs}\n{footer}"
+
+        if len(out) > 1500:
+            one_result = str(results[0])[:100]
+            one_result = f"{one_result}..." if len(one_result) > 100 else one_result
+            out = f"{header}\n{one_result}\n{footer}"
+
         await try_delete(ctx.message)
-        await ctx.send(ctx.author.mention + '\n' + outStr)
+        await ctx.send(f"{ctx.author.mention}\n{out}")
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.command(name='iterroll', aliases=['rrr'])
@@ -105,27 +111,31 @@ class Dice(commands.Cog):
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
         if iterations < 1 or iterations > 100:
             return await ctx.send("Too many or too few iterations.")
-        adv = 0
-        out = []
+        results = []
         successes = 0
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', args) is not None else -1
-            args = re.sub('(adv|dis)(\s+|$)', '', args)
-        for r in range(iterations):
-            res = roll(rollStr, adv=adv, rollFor=args, inline=True)
-            if res.plain >= dc:
+        args, adv = self._string_search_adv(args)
+        ast = d20.parse(rollStr)
+        roller = ContextPersistingRoller()
+
+        for _ in range(iterations):
+            res = roller.roll(ast, advantage=adv)
+            if res.total >= dc:
                 successes += 1
-            out.append(res)
-        outStr = "Rolling {} iterations, DC {}...\n".format(iterations, dc)
-        outStr += '\n'.join([o.skeleton for o in out])
-        if len(outStr) < 1500:
-            outStr += '\n{} successes.'.format(str(successes))
-        else:
-            outStr = "Rolling {} iterations, DC {}...\n[Output truncated due to length]\n".format(iterations,
-                                                                                                  dc) + '{} successes.'.format(
-                str(successes))
+            results.append(res)
+
+        header = f"Rolling {iterations} iterations, DC {dc}..."
+        footer = f"{successes} successes, {sum(o.total for o in results)} total."
+        result_strs = '\n'.join([str(o) for o in results])
+
+        out = f"{header}\n{result_strs}\n{footer}"
+
+        if len(out) > 1500:
+            one_result = str(results[0])[:100]
+            one_result = f"{one_result}..." if len(one_result) > 100 else one_result
+            out = f"{header}\n{one_result}\n{footer}"
+
         await try_delete(ctx.message)
-        await ctx.send(ctx.author.mention + '\n' + outStr)
+        await ctx.send(ctx.author.mention + '\n' + out)
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)
@@ -309,6 +319,14 @@ class Dice(commands.Cog):
         if combat:
             await combat.final()
         await ctx.send(embed=embed)
+
+    @staticmethod
+    def _string_search_adv(rollstr):
+        adv = d20.AdvType.NONE
+        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollstr) is not None:
+            adv = d20.AdvType.ADV if re.search('(^|\s+)adv(\s+|$)', rollstr) is not None else d20.AdvType.DIS
+            rollstr = re.sub('(adv|dis)(\s+|$)', '', rollstr)
+        return rollstr, adv
 
 
 def setup(bot):

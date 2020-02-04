@@ -12,7 +12,7 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs import targetutils
-from cogs5e.funcs.dice import roll
+from cogs5e.funcs.dice import old_roll
 from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
@@ -175,7 +175,7 @@ class GameTrack(commands.Cog):
         character: Character = await Character.from_ctx(ctx)
 
         if not operator == '':
-            hp_roll = roll(hp, inline=True, show_blurbs=False)
+            hp_roll = old_roll(hp, inline=True, show_blurbs=False)
 
             if 'mod' in operator.lower():
                 character.modify_hp(hp_roll.total)
@@ -184,7 +184,7 @@ class GameTrack(commands.Cog):
             elif 'max' in operator.lower() and not hp:
                 character.hp = character.max_hp
             elif hp == '':
-                hp_roll = roll(operator, inline=True, show_blurbs=False)
+                hp_roll = old_roll(operator, inline=True, show_blurbs=False)
                 hp = operator
                 character.modify_hp(hp_roll.total)
             else:
@@ -228,9 +228,9 @@ class GameTrack(commands.Cog):
         phrase = args.join('phrase', '\n')
 
         if b:
-            save_roll = roll('1d20+' + b, adv=adv, inline=True)
+            save_roll = old_roll('1d20+' + b, adv=adv, inline=True)
         else:
-            save_roll = roll('1d20', adv=adv, inline=True)
+            save_roll = old_roll('1d20', adv=adv, inline=True)
 
         embed = discord.Embed()
         embed.title = args.last('title', '') \

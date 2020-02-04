@@ -2,9 +2,9 @@ import asyncio
 import logging
 import random
 
+from d20 import roll
 from discord.ext import commands
 
-from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument
@@ -42,8 +42,8 @@ class CharGenerator(commands.Cog):
             return
 
         if level == 0:
-            rolls = [roll("4d6kh3", inline=True) for _ in range(6)]
-            stats = '\n'.join(r.skeleton for r in rolls)
+            rolls = [roll("4d6kh3") for _ in range(6)]
+            stats = '\n'.join(str(r) for r in rolls)
             total = sum([r.total for r in rolls])
             await ctx.send(f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`")
             return

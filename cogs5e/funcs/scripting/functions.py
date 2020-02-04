@@ -7,7 +7,7 @@ from math import ceil, floor, sqrt
 import simpleeval
 from simpleeval import IterableTooLong
 
-from cogs5e.funcs.dice import roll
+from cogs5e.funcs.dice import old_roll
 from cogs5e.models.errors import AvraeException
 from utils.argparser import argparse
 from . import MAX_ITER_LENGTH
@@ -25,7 +25,7 @@ def simple_roll(dice):
     :return: The roll's total, or 0 if an error was encountered.
     :rtype: int
     """
-    return roll(dice).total
+    return old_roll(dice).total
 
 
 # vroll()
@@ -73,7 +73,7 @@ def vroll(dice, multiply=1, add=0):
             return str((int(matchobj.group(1)) * multiply) + add) + 'd' + matchobj.group(2)
 
         dice = re.sub(r'(\d+)d(\d+)', subDice, dice)
-    rolled = roll(dice, inline=True)
+    rolled = old_roll(dice, inline=True)
     try:
         return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
                                 [part.to_dict() for part in rolled.raw_dice.parts], rolled)

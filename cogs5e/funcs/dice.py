@@ -34,7 +34,8 @@ def list_get(index, default, l):
     return a
 
 
-def roll(rollStr, adv: int = 0, rollFor='', inline=False, double=False, show_blurbs=True, **kwargs):
+def old_roll(rollStr, adv: int = 0, rollFor='', inline=False, double=False, show_blurbs=True, **kwargs):
+    raise RuntimeError("Make me new roll!")
     roller = Roll()
     result = roller.roll(rollStr, adv, rollFor, inline, double, show_blurbs, **kwargs)
     return result
@@ -546,17 +547,17 @@ class DiceResult:
         out = ""
         for numbers, annotation in parts:
             if annotation and annotation != last_annotation and to_roll:
-                out += f"{roll(to_roll).total:+} {last_annotation}"
+                out += f"{old_roll(to_roll).total:+} {last_annotation}"
                 to_roll = ""
             if annotation:
                 last_annotation = annotation
             to_roll += numbers
         if to_roll:
-            out += f"{roll(to_roll).total:+} {last_annotation}"
+            out += f"{old_roll(to_roll).total:+} {last_annotation}"
         out = out.strip('+ ')
         return out
 
 
 if __name__ == '__main__':
     while True:
-        print(roll(input().strip()))
+        print(old_roll(input().strip()))

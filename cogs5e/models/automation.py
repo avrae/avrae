@@ -1,7 +1,7 @@
 import logging
 import re
 
-from cogs5e.funcs.dice import SingleDiceGroup, roll
+from cogs5e.funcs.dice import SingleDiceGroup, old_roll
 from cogs5e.funcs.scripting.evaluators import SpellEvaluator
 from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
@@ -523,10 +523,10 @@ class Attack(Effect):
                 to_hit_message = f'To Hit (AC {ac})'
 
             if b:
-                toHit = roll(f"{formatted_d20}+{attack_bonus}+{b}", rollFor=to_hit_message, inline=True,
-                             show_blurbs=False)
+                toHit = old_roll(f"{formatted_d20}+{attack_bonus}+{b}", rollFor=to_hit_message, inline=True,
+                                 show_blurbs=False)
             else:
-                toHit = roll(f"{formatted_d20}+{attack_bonus}", rollFor=to_hit_message, inline=True, show_blurbs=False)
+                toHit = old_roll(f"{formatted_d20}+{attack_bonus}", rollFor=to_hit_message, inline=True, show_blurbs=False)
 
             # crit processing
             try:
@@ -679,7 +679,7 @@ class Save(Effect):
                 autoctx.queue(f"**{save_blurb}:** Automatic failure!")
             else:
                 saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
-                save_roll = roll(saveroll, rollFor=save_blurb, inline=True, show_blurbs=False)
+                save_roll = old_roll(saveroll, rollFor=save_blurb, inline=True, show_blurbs=False)
                 is_success = save_roll.total >= dc
                 success_str = ("; Success!" if is_success else "; Failure!")
                 if not hide:
@@ -837,7 +837,7 @@ class Damage(Effect):
 
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
-        dmgroll = roll(damage, rollFor=roll_for, inline=True, show_blurbs=False)
+        dmgroll = old_roll(damage, rollFor=roll_for, inline=True, show_blurbs=False)
 
         # output
         if not hide:
@@ -907,7 +907,7 @@ class TempHP(Effect):
 
             amount = re.sub(r'(\d+)d(\d+)', maxSub, amount)
 
-        dmgroll = roll(amount, rollFor=roll_for, inline=True, show_blurbs=False)
+        dmgroll = old_roll(amount, rollFor=roll_for, inline=True, show_blurbs=False)
         autoctx.queue(dmgroll.result)
 
         if autoctx.target.combatant:
@@ -1031,7 +1031,7 @@ class Roll(Effect):
 
             dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
 
-        rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
+        rolled = old_roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
         if not self.hidden:
             autoctx.meta_queue(rolled.result)
 

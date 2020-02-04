@@ -9,7 +9,7 @@ from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.dice import roll
+from cogs5e.funcs.dice import old_roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
@@ -145,7 +145,7 @@ class InitTracker(commands.Cog):
             return
 
         if not place:
-            init_roll = roll(f"1d20+{modifier}", inline=True)
+            init_roll = old_roll(f"1d20+{modifier}", inline=True)
             init = init_roll.total
             init_roll_skeleton = init_roll.skeleton
         else:
@@ -225,9 +225,9 @@ class InitTracker(commands.Cog):
                 check_roll = None  # to make things happy
                 if p is None:
                     if b:
-                        check_roll = roll(f'{init_skill.d20(base_adv=adv)}+{b}', inline=True)
+                        check_roll = old_roll(f'{init_skill.d20(base_adv=adv)}+{b}', inline=True)
                     else:
-                        check_roll = roll(init_skill.d20(base_adv=adv), inline=True)
+                        check_roll = old_roll(init_skill.d20(base_adv=adv), inline=True)
                     init = check_roll.total
                 else:
                     init = int(p)
@@ -235,7 +235,7 @@ class InitTracker(commands.Cog):
 
                 rolled_hp = None
                 if rollhp:
-                    rolled_hp = roll(monster.hitdice, inline=True)
+                    rolled_hp = old_roll(monster.hitdice, inline=True)
                     to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
@@ -701,7 +701,7 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant not found.")
             return
 
-        hp_roll = roll(hp, inline=True, show_blurbs=False)
+        hp_roll = old_roll(hp, inline=True, show_blurbs=False)
 
         if 'mod' in operator.lower():
             if combatant.hp is None:
@@ -717,7 +717,7 @@ class InitTracker(commands.Cog):
             else:
                 combatant.max_hp = hp_roll.total
         elif hp == '':
-            hp_roll = roll(operator, inline=True, show_blurbs=False)
+            hp_roll = old_roll(operator, inline=True, show_blurbs=False)
             if combatant.hp is None:
                 combatant.set_hp(0)
             combatant.modify_hp(hp_roll.total)

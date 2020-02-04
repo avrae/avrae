@@ -1,4 +1,4 @@
-from cogs5e.funcs.dice import roll
+from cogs5e.funcs.dice import old_roll
 from cogs5e.funcs.scripting.functions import SimpleRollResult
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
@@ -149,8 +149,8 @@ class SimpleCombatant:
             saveroll = '1d20{:+}'.format(mod)
         adv = 0 if adv is None else 1 if adv else -1
 
-        save_roll = roll(saveroll, adv=adv,
-                         rollFor='{} Save'.format(ability[:3].upper()), inline=True, show_blurbs=False)
+        save_roll = old_roll(saveroll, adv=adv,
+                             rollFor='{} Save'.format(ability[:3].upper()), inline=True, show_blurbs=False)
         return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,
                                 [part.to_dict() for part in save_roll.raw_dice.parts], save_roll)
 

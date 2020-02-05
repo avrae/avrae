@@ -7,7 +7,6 @@ from d20 import roll
 from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.dice import old_roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
@@ -79,19 +78,36 @@ class Dice(commands.Cog):
     async def rr(self, ctx, iterations: int, rollStr, *, args=''):
         """Rolls dice in xdy format a given number of times.
         Usage: !rr <iterations> <xdy> [args]"""
+        await self._roll_many(ctx, iterations, rollStr, None, args)
+
+    @commands.command(name='iterroll', aliases=['rrr'])
+    async def rrr(self, ctx, iterations: int, rollStr, dc: int = 0, *, args=''):
+        """Rolls dice in xdy format, given a set dc.
+        Usage: !rrr <iterations> <xdy> <DC> [args]"""
+        await self._roll_many(ctx, iterations, rollStr, dc, args)
+
+    async def _roll_many(self, ctx, iterations, rollStr, dc, args):
         if iterations < 1 or iterations > 100:
             return await ctx.send("Too many or too few iterations.")
         results = []
+        successes = 0
         args, adv = self._string_search_adv(args)
         ast = d20.parse(rollStr)
         roller = ContextPersistingRoller()
 
         for _ in range(iterations):
             res = roller.roll(ast, advantage=adv)
+            if dc is not None and res.total >= dc:
+                successes += 1
             results.append(res)
 
-        header = f"Rolling {iterations} iterations..."
-        footer = f"{sum(o.total for o in results)} total."
+        if dc is None:
+            header = f"Rolling {iterations} iterations..."
+            footer = f"{sum(o.total for o in results)} total."
+        else:
+            header = f"Rolling {iterations} iterations, DC {dc}..."
+            footer = f"{successes} successes, {sum(o.total for o in results)} total."
+
         result_strs = '\n'.join([str(o) for o in results])
 
         out = f"{header}\n{result_strs}\n{footer}"
@@ -103,39 +119,6 @@ class Dice(commands.Cog):
 
         await try_delete(ctx.message)
         await ctx.send(f"{ctx.author.mention}\n{out}")
-        await Stats.increase_stat(ctx, "dice_rolled_life")
-
-    @commands.command(name='iterroll', aliases=['rrr'])
-    async def rrr(self, ctx, iterations: int, rollStr, dc: int = 0, *, args=''):
-        """Rolls dice in xdy format, given a set dc.
-        Usage: !rrr <iterations> <xdy> <DC> [args]"""
-        if iterations < 1 or iterations > 100:
-            return await ctx.send("Too many or too few iterations.")
-        results = []
-        successes = 0
-        args, adv = self._string_search_adv(args)
-        ast = d20.parse(rollStr)
-        roller = ContextPersistingRoller()
-
-        for _ in range(iterations):
-            res = roller.roll(ast, advantage=adv)
-            if res.total >= dc:
-                successes += 1
-            results.append(res)
-
-        header = f"Rolling {iterations} iterations, DC {dc}..."
-        footer = f"{successes} successes, {sum(o.total for o in results)} total."
-        result_strs = '\n'.join([str(o) for o in results])
-
-        out = f"{header}\n{result_strs}\n{footer}"
-
-        if len(out) > 1500:
-            one_result = str(results[0])[:100]
-            one_result = f"{one_result}..." if len(one_result) > 100 else one_result
-            out = f"{header}\n{one_result}\n{footer}"
-
-        await try_delete(ctx.message)
-        await ctx.send(ctx.author.mention + '\n' + out)
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)

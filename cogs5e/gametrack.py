@@ -8,11 +8,12 @@ Most of this module was coded 5 miles in the air. (Aug 8, 2017)
 import collections
 import logging
 
+import d20
 import discord
+from d20 import roll
 from discord.ext import commands
 
 from cogs5e.funcs import targetutils
-from cogs5e.funcs.dice import old_roll
 from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
@@ -169,33 +170,35 @@ class GameTrack(commands.Cog):
 
     @game.command(name='hp')
     async def game_hp(self, ctx, operator='', *, hp=''):
-        """Modifies the HP of a the current active character. Synchronizes live with Dicecloud.
+        """Modifies the HP of a the current active character.
         If operator is not passed, assumes `mod`.
         Operators: `mod`, `set`."""
         character: Character = await Character.from_ctx(ctx)
 
         if not operator == '':
-            hp_roll = old_roll(hp, inline=True, show_blurbs=False)
+            hp_roll = roll(hp)
 
-            if 'mod' in operator.lower():
+            if 'mod' == operator.lower():
                 character.modify_hp(hp_roll.total)
-            elif 'set' in operator.lower():
+            elif 'set' == operator.lower():
                 character.hp = hp_roll.total
-            elif 'max' in operator.lower() and not hp:
+            elif 'max' == operator.lower() and not hp:
                 character.hp = character.max_hp
             elif hp == '':
-                hp_roll = old_roll(operator, inline=True, show_blurbs=False)
+                hp_roll = roll(operator)
                 hp = operator
                 character.modify_hp(hp_roll.total)
             else:
-                await ctx.send("Incorrect operator. Use mod or set.")
+                await ctx.send(f"Invalid operator. Use `{ctx.prefix}game hp +/-X`, `{ctx.prefix}game hp mod +/-X`, "
+                               f"or `{ctx.prefix}game hp set X`.")
                 return
 
             await character.commit(ctx)
-            out = "{}: {}".format(character.name, character.hp_str())
-            if 'd' in hp: out += '\n' + hp_roll.skeleton
+            out = f"{character.name}: {character.hp_str()}"
+            if 'd' in hp:
+                out += f'\n{hp_roll.result}'
         else:
-            out = "{}: {}".format(character.name, character.hp_str())
+            out = f"{character.name}: {character.hp_str()}"
 
         await ctx.send(out)
 
@@ -213,7 +216,7 @@ class GameTrack(commands.Cog):
 
             await character.commit(ctx)
 
-        out = "{}: {}".format(character.name, character.hp_str())
+        out = f"{character.name}: {character.hp_str()}"
         await ctx.send(out)
 
     @game.group(name='deathsave', aliases=['ds'], invoke_without_command=True)
@@ -228,9 +231,9 @@ class GameTrack(commands.Cog):
         phrase = args.join('phrase', '\n')
 
         if b:
-            save_roll = old_roll('1d20+' + b, adv=adv, inline=True)
+            save_roll = roll('1d20+' + b, adv=adv, inline=True)
         else:
-            save_roll = old_roll('1d20', adv=adv, inline=True)
+            save_roll = roll('1d20', adv=adv, inline=True)
 
         embed = discord.Embed()
         embed.title = args.last('title', '') \
@@ -240,16 +243,16 @@ class GameTrack(commands.Cog):
         embed.colour = character.get_color()
 
         death_phrase = ''
-        if save_roll.crit == 1:
+        if save_roll.crit == d20.CritType.CRIT:
             character.hp = 1
-        elif save_roll.crit == 2:
+        elif save_roll.crit == d20.CritType.FAIL:
             character.death_saves.fail(2)
         elif save_roll.total >= 10:
             character.death_saves.succeed()
         else:
             character.death_saves.fail()
 
-        if save_roll.crit == 1:
+        if save_roll.crit == d20.CritType.CRIT:
             death_phrase = f"{character.name} is UP with 1 HP!"
         elif character.death_saves.is_dead():
             death_phrase = f"{character.name} is DEAD!"
@@ -257,8 +260,9 @@ class GameTrack(commands.Cog):
             death_phrase = f"{character.name} is STABLE!"
 
         await character.commit(ctx)
-        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase else '')
-        if death_phrase: embed.set_footer(text=death_phrase)
+        embed.description = save_roll.result + (f'\n*{phrase}*' if phrase else '')
+        if death_phrase:
+            embed.set_footer(text=death_phrase)
 
         embed.add_field(name="Death Saves", value=str(character.death_saves))
 

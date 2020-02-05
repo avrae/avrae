@@ -19,25 +19,25 @@ class TestGame:
 
         avrae.message("!g hp set 1")
         await dhttp.receive_delete()
-        await dhttp.receive_message(r".+: 1/\d+")
+        await dhttp.receive_message(r".+: 1/\d+ \([+-]\d+\)")
         char = await active_character(avrae)
         assert char.hp == 1
 
         avrae.message("!g hp mod 1")
         await dhttp.receive_delete()
-        await dhttp.receive_message(r".+: 2/\d+")
+        await dhttp.receive_message(r".+: 2/\d+ \([+-]\d+\)")
         char = await active_character(avrae)
         assert char.hp == 2
 
         avrae.message("!g hp -1")
         await dhttp.receive_delete()
-        await dhttp.receive_message(r".+: 1/\d+")
+        await dhttp.receive_message(r".+: 1/\d+ \([+-]\d+\)")
         char = await active_character(avrae)
         assert char.hp == 1
 
         avrae.message("!g hp max")
         await dhttp.receive_delete()
-        await dhttp.receive_message(r".+: (\d+)/\1")
+        await dhttp.receive_message(r".+: (\d+)/\1 \([+-]\d+\)")
         char = await active_character(avrae)
         assert char.hp == char.max_hp
 

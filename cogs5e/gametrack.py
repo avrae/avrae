@@ -169,39 +169,46 @@ class GameTrack(commands.Cog):
         -h - Hides the character summary output."""
         await self._rest(ctx, 'short', *args)
 
-    @game.command(name='hp')
-    async def game_hp(self, ctx, operator='', *, hp=''):
-        """Modifies the HP of a the current active character.
-        If operator is not passed, assumes `mod`.
-        Operators: `mod`, `set`."""
+    @game.group(name='hp', invoke_without_command=True)
+    async def game_hp(self, ctx, *, hp: str = None):
+        """Modifies the HP of a the current active character."""
         character: Character = await Character.from_ctx(ctx)
 
-        if not operator == '':
-            hp_roll = roll(hp)
+        if hp is None:
+            return await ctx.send(f"{character.name}: {character.hp_str()}")
 
-            if 'mod' == operator.lower():
-                character.modify_hp(hp_roll.total)
-            elif 'set' == operator.lower():
-                character.hp = hp_roll.total
-            elif 'max' == operator.lower() and not hp:
-                character.hp = character.max_hp
-            elif hp == '':
-                hp_roll = roll(operator)
-                hp = operator
-                character.modify_hp(hp_roll.total)
-            else:
-                await ctx.send(f"Invalid operator. Use `{ctx.prefix}game hp +/-X`, `{ctx.prefix}game hp mod +/-X`, "
-                               f"or `{ctx.prefix}game hp set X`.")
-                return
-
-            await character.commit(ctx)
-            out = f"{character.name}: {character.hp_str()}"
-            if 'd' in hp:
-                out += f'\n{hp_roll.result}'
+        hp_roll = roll(hp)
+        character.modify_hp(hp_roll.total)
+        await character.commit(ctx)
+        if 'd' in hp:
+            delta = hp_roll.result
         else:
-            out = f"{character.name}: {character.hp_str()}"
+            delta = f"{hp_roll.total:+}"
+        await ctx.send(f"{character.name}: {character.hp_str()} ({delta})")
 
-        await ctx.send(out)
+    @game_hp.command(name='max')
+    async def game_hp_max(self, ctx):
+        """Sets the character's HP to their maximum."""
+        character: Character = await Character.from_ctx(ctx)
+        before = character.hp
+        character.hp = character.max_hp
+        await character.commit(ctx)
+        await ctx.send(f"{character.name}: {character.hp_str()} ({character.hp - before:+})")
+
+    @game_hp.command(name='mod', hidden=True)
+    async def game_hp_mod(self, ctx, *, hp):
+        """Modifies the character's current HP."""
+        await ctx.invoke(self.game_hp, hp=hp)
+
+    @game_hp.command(name='set')
+    async def game_hp_set(self, ctx, *, hp):
+        """Sets the character's HP to a certain value."""
+        character: Character = await Character.from_ctx(ctx)
+        before = character.hp
+        hp_roll = roll(hp)
+        character.hp = hp_roll.total
+        await character.commit(ctx)
+        await ctx.send(f"{character.name}: {character.hp_str()} ({character.hp - before:+})")
 
     @game.command(name='thp')
     async def game_thp(self, ctx, thp: int = None):

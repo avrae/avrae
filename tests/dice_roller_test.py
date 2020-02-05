@@ -30,14 +30,6 @@ def test_rerolling_operators():
     assert 12 <= r.total <= 24
     assert len([p for p in r.roll.roll.set if p.number < 3 and p.kept]) == 0
 
-    r = d20.roll("10d6ro1")
-    # any 1s in the first batch should have rerolled
-    assert len([p for p in r.roll.roll.set[:10] if p.number == 1 and p.kept]) == 0
-
-    r = d20.roll("10d6ro<3")
-    # any 1s or 2s in the first batch should have rerolled
-    assert len([p for p in r.roll.roll.set[:10] if p.number < 3 and p.kept]) == 0
-
     r = d20.roll("10d2ra1")
     assert 11 <= r.total <= 21
 

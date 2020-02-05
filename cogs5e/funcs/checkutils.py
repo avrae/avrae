@@ -128,9 +128,9 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
 
         # output
         if iterations > 1:
-            embed.add_field(name=rr_format.format(str(i + 1)), value=result.skeleton)
+            embed.add_field(name=rr_format.format(str(i + 1)), value=result.result)
         else:
-            desc_out.append(result.skeleton)
+            desc_out.append(result.result)
 
     # phrase
     if phrase:

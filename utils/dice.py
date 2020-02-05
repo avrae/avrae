@@ -20,3 +20,15 @@ class ContextPersistingRoller(d20.Roller):
     def __init__(self):
         super().__init__()
         self.context = PersistentRollContext()
+
+
+def d20_with_adv(adv):
+    if adv == d20.AdvType.NONE:
+        return "1d20"
+    elif adv == d20.AdvType.ADV:
+        return "2d20kh1"
+    elif adv == d20.AdvType.DIS:
+        return "2d20kl1"
+    elif adv == 2:  # todo d20 support for elven advantage
+        return "3d20kh1"
+    return "1d20"

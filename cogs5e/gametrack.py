@@ -20,6 +20,7 @@ from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
 from utils.argparser import argparse
+from utils.dice import d20_with_adv
 from utils.functions import confirm, search, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
@@ -231,15 +232,15 @@ class GameTrack(commands.Cog):
         phrase = args.join('phrase', '\n')
 
         if b:
-            save_roll = roll('1d20+' + b, adv=adv, inline=True)
+            save_roll = roll(f"{d20_with_adv(adv)}+{b}")
         else:
-            save_roll = roll('1d20', adv=adv, inline=True)
+            save_roll = roll(d20_with_adv(adv))
 
         embed = discord.Embed()
         embed.title = args.last('title', '') \
-                          .replace('[charname]', character.name) \
+                          .replace('[name]', character.name) \
                           .replace('[sname]', 'Death') \
-                      or '{} makes {}!'.format(character.name, "a Death Save")
+                      or f'{character.name} makes a Death Save!'
         embed.colour = character.get_color()
 
         death_phrase = ''

@@ -1,4 +1,5 @@
-from cogs5e.funcs.dice import old_roll
+from d20 import roll
+
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS
@@ -119,7 +120,7 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
             roll_str = f"{roll_str}+{b}"
 
         # roll
-        result = old_roll(roll_str, inline=True)
+        result = roll(roll_str)
         if dc and result.total >= dc:
             num_successes += 1
 

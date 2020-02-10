@@ -4,10 +4,12 @@ import re
 import time
 from math import ceil, floor, sqrt
 
+import d20
+import d20.utils
 import simpleeval
+from d20 import roll
 from simpleeval import IterableTooLong
 
-from cogs5e.funcs.dice import old_roll
 from cogs5e.models.errors import AvraeException
 from utils.argparser import argparse
 from . import MAX_ITER_LENGTH
@@ -25,17 +27,21 @@ def simple_roll(dice):
     :return: The roll's total, or 0 if an error was encountered.
     :rtype: int
     """
-    return old_roll(dice).total
+    return roll(dice).total
 
 
 # vroll()
 class SimpleRollResult:
-    def __init__(self, dice, total, full, raw, roll_obj):
-        self.dice = dice.strip()
-        self.total = total
-        self.full = full.strip()
-        self.raw = raw
-        self._roll = roll_obj
+    def __init__(self, result):
+        """
+        :type result: d20.RollResult
+        """
+        self.dice = d20.MarkdownStringifier().stringify(result.expr.roll)
+        self.total = result.total
+        self.full = str(result)
+        self.result = result
+        self.raw = result.expr  # todo docs on this
+        self._roll = result
 
     def __str__(self):
         """
@@ -55,7 +61,8 @@ class SimpleRollResult:
 
         :rtype: str
         """
-        return self._roll.consolidated()
+        d20.utils.simplify_expr(self._roll.expr.roll, ambig_inherit='right')
+        return d20.MarkdownStringifier().stringify(self._roll.expr.roll)
 
 
 def vroll(dice, multiply=1, add=0):
@@ -73,12 +80,11 @@ def vroll(dice, multiply=1, add=0):
             return str((int(matchobj.group(1)) * multiply) + add) + 'd' + matchobj.group(2)
 
         dice = re.sub(r'(\d+)d(\d+)', subDice, dice)
-    rolled = old_roll(dice, inline=True)
     try:
-        return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
-                                [part.to_dict() for part in rolled.raw_dice.parts], rolled)
-    except AttributeError:
+        rolled = roll(dice)
+    except d20.RollError:
         return None
+    return SimpleRollResult(rolled)
 
 
 # range()

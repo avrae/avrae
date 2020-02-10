@@ -1,4 +1,5 @@
-from cogs5e.funcs.dice import old_roll
+from d20 import roll
+
 from cogs5e.funcs.scripting.functions import SimpleRollResult
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
@@ -143,16 +144,13 @@ class SimpleCombatant:
             raise InvalidSaveType
 
         sb = self._combatant.active_effects('sb')
+        saveroll = save.d20(base_adv=0 if adv is None else 1 if adv else -1)
         if sb:
-            saveroll = '1d20{:+}+{}'.format(mod, '+'.join(sb))
-        else:
-            saveroll = '1d20{:+}'.format(mod)
-        adv = 0 if adv is None else 1 if adv else -1
+            saveroll = f'{saveroll}+{"+".join(sb)}'
 
-        save_roll = old_roll(saveroll, adv=adv,
-                             rollFor='{} Save'.format(ability[:3].upper()), inline=True, show_blurbs=False)
-        return SimpleRollResult(save_roll.rolled, save_roll.total, save_roll.skeleton,
-                                [part.to_dict() for part in save_roll.raw_dice.parts], save_roll)
+
+        save_roll = roll(saveroll)
+        return SimpleRollResult(save_roll)
 
     def wouldhit(self, to_hit: int):
         """

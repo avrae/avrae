@@ -3,9 +3,9 @@ import re
 from math import ceil, floor
 
 import simpleeval
+from d20 import roll
 from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
-from cogs5e.funcs.dice import old_roll
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
 from . import MAX_ITER_LENGTH, SCRIPTING_RE, helpers
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
@@ -393,7 +393,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                         for substr in re.split(ops, s):
                             temp = substr.strip()
                             curlyout += str(self.names.get(temp, temp)) + " "
-                        return str(old_roll(curlyout).total)
+                        return str(roll(curlyout).total)
 
                     curly_func = curly or default_curly_func
                     evalresult = curly_func(varstr)

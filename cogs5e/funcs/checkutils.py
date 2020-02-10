@@ -144,5 +144,7 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
     # build embed
     embed.description = '\n'.join(desc_out)
     embeds.add_fields_from_args(embed, args.get('f'))
+    if 'thumb' in args:
+        embed.set_thumbnail(url=args.last('thumb'))
 
     return results

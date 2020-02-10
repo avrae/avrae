@@ -265,6 +265,7 @@ class InitTracker(commands.Cog):
         adv/dis - Give advantage or disadvantage to the initiative roll.
         -b <condition bonus> - Adds a bonus to the combatants' Initiative roll.
         -phrase <phrase> - Adds flavor text.
+        -thumb <thumbnail URL> - Adds flavor image.
         -p <value> - Places combatant at the given value, instead of rolling.
         -h - Hides HP, AC, Resists, etc.
         -group <group> - Adds the combatant to a group."""
@@ -305,9 +306,6 @@ class InitTracker(commands.Cog):
             grp = combat.get_group(group, create=init)
             grp.add_combatant(me)
             embed.set_footer(text=f"Joined group {grp.name}!")
-
-        if args.last('image') is not None:  # todo consistency and move this into a util module
-            embed.set_thumbnail(url=args.last('image'))
 
         await combat.final()
         await ctx.send(embed=embed)

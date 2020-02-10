@@ -139,7 +139,6 @@ class SimpleCombatant:
         """
         try:
             save = self._combatant.saves.get(ability)
-            mod = save.value
         except ValueError:
             raise InvalidSaveType
 

@@ -11,6 +11,7 @@ utils.newrelic.hook_all()
 from utils import clustering, config
 
 import aioredis
+import d20
 import discord
 import motor.motor_asyncio
 import sentry_sdk
@@ -197,6 +198,9 @@ async def on_command_error(ctx, error):
 
         elif isinstance(original, AvraeException):
             return await ctx.send(str(original))
+
+        elif isinstance(original, d20.RollError):
+            return await ctx.send(f"Error in roll: {original}")
 
         elif isinstance(original, Forbidden):
             try:

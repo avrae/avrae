@@ -167,7 +167,7 @@ class SheetManager(commands.Cog):
         *-b [conditional bonus]*
         -phrase [flavor text]
         -title [title] *note: [name] and [sname] will be replaced automatically*
-        -image [image URL]
+        -thumb [thumbnail URL]
         -dc [dc] (does not apply to Death Saves)
         -rr [iterations] (does not apply to Death Saves)
 
@@ -188,9 +188,6 @@ class SheetManager(commands.Cog):
         checkutils.update_csetting_args(char, args)
         checkutils.run_save(skill, char, args, embed)
 
-        if args.last('image') is not None:
-            embed.set_thumbnail(url=args.last('image'))
-
         # send
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -203,6 +200,7 @@ class SheetManager(commands.Cog):
         *-b [conditional bonus]*
         -phrase [flavor text]
         -title [title] *note: [name] and [cname] will be replaced automatically*
+        -thumb [thumbnail URL]
         -dc [dc]
         -mc [minimum roll]
         -rr [iterations]
@@ -220,9 +218,6 @@ class SheetManager(commands.Cog):
 
         checkutils.update_csetting_args(char, args, skill)
         checkutils.run_check(skill_key, char, args, embed)
-
-        if args.last('image') is not None:
-            embed.set_thumbnail(url=args.last('image'))
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)

@@ -4,7 +4,7 @@ from cogs5e.funcs.dice import old_roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
 from cogs5e.models.monster import MonsterCastableSpellbook
-from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
 from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
@@ -1068,8 +1068,15 @@ class CombatantGroup(Combatant):
     @property
     def attacks(self):
         a = AttackList()
+        seen = set()
         for c in self.get_combatants():
-            a.extend(atk for atk in c.attacks if atk not in a)
+            for atk in c.attacks:
+                if atk in seen:
+                    continue
+                seen.add(atk)
+                atk_copy = Attack.copy(atk)
+                atk_copy.name = f"{atk.name} ({c.name})"
+                a.append(atk_copy)
         return a
 
     def get_combatants(self):
@@ -1078,6 +1085,7 @@ class CombatantGroup(Combatant):
     def add_combatant(self, combatant):
         self._combatants.append(combatant)
         combatant.group = self.name
+        combatant.init = self.init
 
     def remove_combatant(self, combatant):
         self._combatants.remove(combatant)
@@ -1155,6 +1163,12 @@ class CombatantGroup(Combatant):
 
     def __str__(self):
         return f"{self.name} ({len(self.get_combatants())} combatants)"
+
+    def __contains__(self, item):
+        return item in self._combatants
+
+    def __len__(self):
+        return len(self._combatants)
 
 
 def parse_attack_arg(arg, name):

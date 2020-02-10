@@ -180,6 +180,7 @@ class Dice(commands.Cog):
         *-b [conditional bonus]*
         -phrase [flavor text]
         -title [title] *note: [name] and [cname] will be replaced automatically*
+        -thumb [thumbnail URL]
         -dc [dc]
         -rr [iterations]
         str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
@@ -198,12 +199,10 @@ class Dice(commands.Cog):
         args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
 
-        checkutils.run_check(skill_key, monster, args, embed)
-
-        if args.last('image') is not None:
-            embed.set_thumbnail(url=args.last('image'))
-        elif not args.last('h', type_=bool):
+        if not args.last('h', type_=bool):
             embed.set_thumbnail(url=monster.get_image_url())
+
+        checkutils.run_check(skill_key, monster, args, embed)
 
         if monster.source == 'homebrew':
             embeds.add_homebrew_footer(embed)
@@ -219,6 +218,7 @@ class Dice(commands.Cog):
         -b [conditional bonus]
         -phrase [flavor text]
         -title [title] *note: [name] and [cname] will be replaced automatically*
+        -thumb [thumbnail URL]
         -dc [dc]
         -rr [iterations]
         -h (hides name and image of monster)"""
@@ -231,12 +231,10 @@ class Dice(commands.Cog):
         args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
 
-        checkutils.run_save(save_stat, monster, args, embed)
-
-        if args.last('image') is not None:
-            embed.set_thumbnail(url=args.last('image'))
-        elif not args.last('h', type_=bool):
+        if not args.last('h', type_=bool):
             embed.set_thumbnail(url=monster.get_image_url())
+
+        checkutils.run_save(save_stat, monster, args, embed)
 
         if monster.source == 'homebrew':
             embeds.add_homebrew_footer(embed)

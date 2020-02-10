@@ -993,24 +993,29 @@ class InitTracker(commands.Cog):
             target_name = atk_name
             atk_name = raw_args[0]
 
-        # attack selection
-        attacks = combatant.attacks
-        if 'custom' in args:
-            attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
-        else:
-            try:
-                attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name,
-                                                 message="Select your attack.")
-            except SelectionException:
-                return await ctx.send("Attack not found.")
+        # attack selection/caster handling
+        try:
+            if isinstance(combatant, CombatantGroup):
+                if 'custom' in args:  # group, custom
+                    caster = combatant.get_combatants()[0]
+                    attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                else:  # group, noncustom
+                    choices = []  # list of (name, caster, attack)
+                    for com in combatant.get_combatants():
+                        for atk in com.attacks:
+                            choices.append((f"{atk.name} ({com.name})", com, atk))
 
-        # caster handling
-        caster = combatant
-        if isinstance(combatant, CombatantGroup):
-            if 'custom' not in args:
-                caster = next(c for c in combatant.get_combatants() if attack in c.attacks)
+                    _, caster, attack = await search_and_select(ctx, choices, atk_name, lambda choice: choice[0],
+                                                                message="Select your attack.")
             else:
-                caster = combatant.get_combatants()[0]
+                caster = combatant
+                if 'custom' in args:  # single, custom
+                    attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                else:  # single, noncustom
+                    attack = await search_and_select(ctx, combatant.attacks, atk_name, lambda a: a.name,
+                                                     message="Select your attack.")
+        except SelectionException:
+            return await ctx.send("Attack not found.")
 
         # target handling
         if 't' not in args and target_name is not None:

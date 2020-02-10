@@ -11,24 +11,24 @@ def test_roll():
 def test_keeping_operators():
     # k, p
     r = d20.roll("10d6k1")
-    assert len(r.roll.roll.keptset) == r.total  # the total is the number of 1s kept
+    assert len(r.expr.roll.keptset) == r.total  # the total is the number of 1s kept
 
     r = d20.roll("10d6k<11")
-    assert len(r.roll.roll.keptset) == 10
+    assert len(r.expr.roll.keptset) == 10
 
     r = d20.roll("10d6p<11")
-    assert len(r.roll.roll.keptset) == 0
+    assert len(r.expr.roll.keptset) == 0
 
 
 def test_rerolling_operators():
     # rr, ro, ra, e
     r = d20.roll("4d6rr1")
     assert 8 <= r.total <= 24
-    assert len([p for p in r.roll.roll.set if p.number == 1 and p.kept]) == 0
+    assert len([p for p in r.expr.roll.set if p.number == 1 and p.kept]) == 0
 
     r = d20.roll("4d6rr<3")
     assert 12 <= r.total <= 24
-    assert len([p for p in r.roll.roll.set if p.number < 3 and p.kept]) == 0
+    assert len([p for p in r.expr.roll.set if p.number < 3 and p.kept]) == 0
 
     r = d20.roll("10d2ra1")
     assert 11 <= r.total <= 21
@@ -49,25 +49,25 @@ def test_bounding_operators():
 def test_h_l_selectors():
     r = d20.roll("10d6kl1")
     assert 1 <= r.total <= 6
-    assert len(r.roll.roll.keptset) == 1
-    assert len([p for p in r.roll.roll.set if not p.kept]) == 9
+    assert len(r.expr.roll.keptset) == 1
+    assert len([p for p in r.expr.roll.set if not p.kept]) == 9
 
     r = d20.roll("10d6kh2")
     assert 2 <= r.total <= 12
-    assert len(r.roll.roll.keptset) == 2
-    assert len([p for p in r.roll.roll.set if not p.kept]) == 8
+    assert len(r.expr.roll.keptset) == 2
+    assert len([p for p in r.expr.roll.set if not p.kept]) == 8
 
 
 def test_gt_lt_selectors():
     r = d20.roll("10d6k>6")
     assert r.total == 0
-    assert len(r.roll.roll.keptset) == 0
-    assert len([p for p in r.roll.roll.set if not p.kept]) == 10
+    assert len(r.expr.roll.keptset) == 0
+    assert len([p for p in r.expr.roll.set if not p.kept]) == 10
 
     r = d20.roll("10d6k<1")
     assert r.total == 0
-    assert len(r.roll.roll.keptset) == 0
-    assert len([p for p in r.roll.roll.set if not p.kept]) == 10
+    assert len(r.expr.roll.keptset) == 0
+    assert len([p for p in r.expr.roll.set if not p.kept]) == 10
 
     r = d20.roll("10d6rr<6")
     assert r.total == 60
@@ -77,8 +77,8 @@ def test_gt_lt_selectors():
 
     r = d20.roll("10d6k<6")
     assert 10 <= r.total <= 50
-    assert len(r.roll.roll.keptset) <= 10
-    assert all(p.number < 6 for p in r.roll.roll.keptset)
+    assert len(r.expr.roll.keptset) <= 10
+    assert all(p.number < 6 for p in r.expr.roll.keptset)
 
 
 def test_complex_rolls():
@@ -89,13 +89,13 @@ def test_complex_rolls():
 
     r = d20.roll("5d6kh4e0kl3")
     assert 3 <= r.total <= 18
-    assert len(r.roll.roll.keptset) == 3
-    assert len([p for p in r.roll.roll.set if not p.kept]) == 2
+    assert len(r.expr.roll.keptset) == 3
+    assert len([p for p in r.expr.roll.set if not p.kept]) == 2
 
     r = d20.roll("10d6kh4kl3")
     assert 7 <= r.total <= 42
-    assert len(r.roll.roll.keptset) == 7
-    assert len([p for p in r.roll.roll.set if not p.kept]) == 3
+    assert len(r.expr.roll.keptset) == 7
+    assert len([p for p in r.expr.roll.set if not p.kept]) == 3
 
 
 def test_infinite_loops():

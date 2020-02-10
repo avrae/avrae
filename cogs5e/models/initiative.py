@@ -1085,6 +1085,7 @@ class CombatantGroup(Combatant):
     def add_combatant(self, combatant):
         self._combatants.append(combatant)
         combatant.group = self.name
+        combatant.init = self.init
 
     def remove_combatant(self, combatant):
         self._combatants.remove(combatant)
@@ -1162,6 +1163,12 @@ class CombatantGroup(Combatant):
 
     def __str__(self):
         return f"{self.name} ({len(self.get_combatants())} combatants)"
+
+    def __contains__(self, item):
+        return item in self._combatants
+
+    def __len__(self):
+        return len(self._combatants)
 
 
 def parse_attack_arg(arg, name):

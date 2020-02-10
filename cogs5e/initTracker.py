@@ -582,17 +582,21 @@ class InitTracker(commands.Cog):
 
         @option()
         async def group(combatant):
-            if combatant is combat.current_combatant:
-                return "\u274c You cannot change a combatant's group on their own turn."
+            current = combat.current_combatant
+            was_current = combatant is current or \
+                          (isinstance(current, CombatantGroup) and combatant in current and len(current) == 1)
             group_name = args.last('group')
+            combat.remove_combatant(combatant, ignore_remove_hook=True)
             if group_name.lower() == 'none':
-                combat.remove_combatant(combatant)
                 combat.add_combatant(combatant)
+                if was_current:
+                    combat.goto_turn(combatant, True)
                 return f"\u2705 {combatant.name} removed from all groups."
             else:
-                combat.remove_combatant(combatant)
                 c_group = combat.get_group(group_name, create=combatant.init)
                 c_group.add_combatant(combatant)
+                if was_current:
+                    combat.goto_turn(combatant, True)
                 return f"\u2705 {combatant.name} added to group {c_group.name}."
 
         @option(pass_group=True)

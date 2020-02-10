@@ -49,6 +49,11 @@ class Attack:
 
         return cls(name, old_to_automation(bonus_calc, damage_calc, details))
 
+    @classmethod
+    def copy(cls, other):
+        """Returns a shallow copy of an attack."""
+        return cls(other.name, other.automation, other.verb, other.proper)
+
     def build_str(self, caster):
         return f"**{self.name}**: {self.automation.build_str(caster)}"
 

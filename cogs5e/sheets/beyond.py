@@ -623,7 +623,7 @@ class BeyondSheetParser(SheetLoaderABC):
                     dice_size = max(monk_scale(), itemdef['damage']['diceValue'])
                     base_dice = f"{itemdef['damage']['diceCount']}d{dice_size}"
 
-            damage_type = item_specific_bonuses['replaceDamageType'] or itemdef['damageType'].lower()
+            damage_type = (item_specific_bonuses['replaceDamageType'] or itemdef['damageType'] or 'unknown').lower()
 
             if base_dice:
                 damage = f"{base_dice}+{dmgBonus}[{damage_type}" \

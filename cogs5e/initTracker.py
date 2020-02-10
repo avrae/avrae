@@ -265,6 +265,7 @@ class InitTracker(commands.Cog):
         adv/dis - Give advantage or disadvantage to the initiative roll.
         -b <condition bonus> - Adds a bonus to the combatants' Initiative roll.
         -phrase <phrase> - Adds flavor text.
+        -thumb <thumbnail URL> - Adds flavor image.
         -p <value> - Places combatant at the given value, instead of rolling.
         -h - Hides HP, AC, Resists, etc.
         -group <group> - Adds the combatant to a group."""
@@ -305,9 +306,6 @@ class InitTracker(commands.Cog):
             grp = combat.get_group(group, create=init)
             grp.add_combatant(me)
             embed.set_footer(text=f"Joined group {grp.name}!")
-
-        if args.last('image') is not None:  # todo consistency and move this into a util module
-            embed.set_thumbnail(url=args.last('image'))
 
         await combat.final()
         await ctx.send(embed=embed)
@@ -584,17 +582,21 @@ class InitTracker(commands.Cog):
 
         @option()
         async def group(combatant):
-            if combatant is combat.current_combatant:
-                return "\u274c You cannot change a combatant's group on their own turn."
+            current = combat.current_combatant
+            was_current = combatant is current or \
+                          (isinstance(current, CombatantGroup) and combatant in current and len(current) == 1)
             group_name = args.last('group')
+            combat.remove_combatant(combatant, ignore_remove_hook=True)
             if group_name.lower() == 'none':
-                combat.remove_combatant(combatant)
                 combat.add_combatant(combatant)
+                if was_current:
+                    combat.goto_turn(combatant, True)
                 return f"\u2705 {combatant.name} removed from all groups."
             else:
-                combat.remove_combatant(combatant)
                 c_group = combat.get_group(group_name, create=combatant.init)
                 c_group.add_combatant(combatant)
+                if was_current:
+                    combat.goto_turn(combatant, True)
                 return f"\u2705 {combatant.name} added to group {c_group.name}."
 
         @option(pass_group=True)
@@ -993,24 +995,29 @@ class InitTracker(commands.Cog):
             target_name = atk_name
             atk_name = raw_args[0]
 
-        # attack selection
-        attacks = combatant.attacks
-        if 'custom' in args:
-            attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
-        else:
-            try:
-                attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name,
-                                                 message="Select your attack.")
-            except SelectionException:
-                return await ctx.send("Attack not found.")
+        # attack selection/caster handling
+        try:
+            if isinstance(combatant, CombatantGroup):
+                if 'custom' in args:  # group, custom
+                    caster = combatant.get_combatants()[0]
+                    attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                else:  # group, noncustom
+                    choices = []  # list of (name, caster, attack)
+                    for com in combatant.get_combatants():
+                        for atk in com.attacks:
+                            choices.append((f"{atk.name} ({com.name})", com, atk))
 
-        # caster handling
-        caster = combatant
-        if isinstance(combatant, CombatantGroup):
-            if 'custom' not in args:
-                caster = next(c for c in combatant.get_combatants() if attack in c.attacks)
+                    _, caster, attack = await search_and_select(ctx, choices, atk_name, lambda choice: choice[0],
+                                                                message="Select your attack.")
             else:
-                caster = combatant.get_combatants()[0]
+                caster = combatant
+                if 'custom' in args:  # single, custom
+                    attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                else:  # single, noncustom
+                    attack = await search_and_select(ctx, combatant.attacks, atk_name, lambda a: a.name,
+                                                     message="Select your attack.")
+        except SelectionException:
+            return await ctx.send("Attack not found.")
 
         # target handling
         if 't' not in args and target_name is not None:

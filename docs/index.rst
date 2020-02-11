@@ -18,7 +18,7 @@ Welcome to Avrae's documentation!
    :caption: Contents:
 
    automation
-   automation_ex
+   automation_tut
    aliasing/api
    automation_ref
 

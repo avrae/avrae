@@ -4,14 +4,16 @@ Automation Basics
 Avrae has vast potential for automation.  It allows you to create and maintain commands. These commands can be used personally or shared with other users on a server.  Let's take a look at some of the basics of automation that you can start using in your server.
 
 .. note::
-  If you have experience with JSON and API's and are looking for more advanced documentation, head on over to the `Automation Reference Page <automation_ref>`_ or `Aliasing API Page <aliasing/api>`_.
+  If you have experience with JSON and API's and are looking for more advanced documentation, head on over to the `Automation Reference Page <automation_ref.html>`_ or `Aliasing API Page <aliasing/api.html>`_.
 
 Automation Types
 ------------------------
 
 Avrae has a few different types of commands that are used for different purposes.
 
-**Alias** - Used to shorten commands that would require a large or lengthy amount of text to use.  (in many cases aliases are used to track features or abilities)
+**Alias** - Used to shorten commands that would require a large or lengthy amount of text to use,
+to run code before running an Avrae command, or to write your own custom command.
+(In many cases, aliases are used to track features or abilities)
 
   Examples for Alias usage:
     - Short rest
@@ -32,23 +34,24 @@ Avrae has a few different types of commands that are used for different purposes
 Automation Levels
 ------------------------
 
-There are two levels of commands that are built into avrae.  User level and server level. aliases and snippets can be setup at either level.  Below is how to look at snippets or aliases at each level.
+There are two levels of commands that are built into Avrae: user level and server level.
+Aliases and snippets can be setup at either level. Below is how to look at snippets or aliases at each level.
 
 .. note::
   If a user and a server have aliases with the same name, the user alias will take priority.
 
 **!alias** - Will show user level aliases.
 
-**!Serveralias** - Will show server level aliases.
+**!servalias** - Will show server level aliases.
 
 **!snippet** - Will show user level snippets
 
 **!servsnippet** - will show server level snippets
 
-.. warning::
-  Dragonspeaker or Dungeon Master role is required to add commands to a server.
+.. note::
+  To add server-level aliases or snippets, a user must have a role called "Dragonspeaker" or "Server Aliaser".
 
 Help
 --------------------
 
-As always you can also come to the Avrae Development Discord for help with automation, `HERE <https://support.avrae.io>`_.
+As always you can also come to the Avrae Development Discord for help with aliasing, `here <https://support.avrae.io>`_.

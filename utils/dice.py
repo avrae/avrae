@@ -32,3 +32,8 @@ def d20_with_adv(adv):
     elif adv == 2:  # todo d20 support for elven advantage
         return "3d20kh1"
     return "1d20"
+
+
+def get_roll_comment(expr):
+    result = d20.parse(expr)
+    return result.comment or ''

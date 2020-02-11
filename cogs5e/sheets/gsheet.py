@@ -8,7 +8,6 @@ import asyncio
 import datetime
 import json
 import logging
-import os
 import re
 from contextlib import contextmanager
 
@@ -18,7 +17,6 @@ from gspread.exceptions import APIError
 from gspread.utils import a1_to_rowcol, fill_gaps
 from oauth2client.service_account import ServiceAccountCredentials
 
-from cogs5e.funcs.dice import get_roll_comment
 from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
@@ -29,6 +27,7 @@ from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute
 from utils import config
 from utils.constants import DAMAGE_TYPES
+from utils.dice import get_roll_comment
 from utils.functions import search
 
 log = logging.getLogger(__name__)

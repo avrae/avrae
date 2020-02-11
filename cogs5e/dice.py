@@ -293,11 +293,7 @@ class Dice(commands.Cog):
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff)
 
-        add_fields_from_args(embed, args.get('f'))
-
-        if args.last('thumb') is not None:
-            embed.set_thumbnail(url=args.last('thumb'))
-        elif not args.last('h', type_=bool):
+        if not args.last('h', type_=bool) and 'thumb' not in args:
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':

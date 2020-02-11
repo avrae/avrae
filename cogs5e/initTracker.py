@@ -1146,9 +1146,6 @@ class InitTracker(commands.Cog):
 
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
-        embeds.add_fields_from_args(embed, args.get('f'))
-        if 'thumb' in args:
-            embed.set_thumbnail(url=args.last('thumb'))
         await ctx.send(embed=embed)
         await combat.final()
 

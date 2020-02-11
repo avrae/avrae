@@ -393,7 +393,10 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                         for substr in re.split(ops, s):
                             temp = substr.strip()
                             curlyout += str(self.names.get(temp, temp)) + " "
-                        return str(roll(curlyout).total)
+                        try:
+                            return str(roll(curlyout).total)
+                        except:
+                            return '0'
 
                     curly_func = curly or default_curly_func
                     evalresult = curly_func(varstr)

@@ -41,7 +41,7 @@ DAMAGE_PATTERN = rf"((\*\*Damage( \(CRIT!\))?:?\*\*:? {DICE_PATTERN})|(\*\*Miss!
 ATTACK_PATTERN = rf"{TO_HIT_PATTERN}\n{DAMAGE_PATTERN}"
 
 # save: d20, success or failure
-SAVE_PATTERN = rf"\*\*\w+ Save:\*\* {D20_PATTERN}; (Failure|Success)!"
+SAVE_PATTERN = rf"\*\*\w+ Save:?\*\*:? {D20_PATTERN}; (Failure|Success)!"
 
 # save spell: saving throw and damage on two lines
 SAVE_SPELL_PATTERN = rf"{SAVE_PATTERN}\n{DAMAGE_PATTERN}"

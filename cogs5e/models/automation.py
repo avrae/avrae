@@ -1,7 +1,10 @@
 import logging
 import re
 
-from cogs5e.funcs.dice import SingleDiceGroup, old_roll
+import d20
+import d20.utils
+from d20 import roll
+
 from cogs5e.funcs.scripting.evaluators import SpellEvaluator
 from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
@@ -523,22 +526,20 @@ class Attack(Effect):
                 to_hit_message = f'To Hit (AC {ac})'
 
             if b:
-                toHit = old_roll(f"{formatted_d20}+{attack_bonus}+{b}", rollFor=to_hit_message, inline=True,
-                                 show_blurbs=False)
+                to_hit_roll = roll(f"{formatted_d20}+{attack_bonus}+{b}")
             else:
-                toHit = old_roll(f"{formatted_d20}+{attack_bonus}", rollFor=to_hit_message, inline=True, show_blurbs=False)
+                to_hit_roll = roll(f"{formatted_d20}+{attack_bonus}")
 
             # crit processing
-            try:
-                d20_value = next(p for p in toHit.raw_dice.parts if
-                                 isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
-            except (StopIteration, AttributeError):
-                d20_value = 0
+            left = to_hit_roll.expr
+            while left.children:
+                left = left.children[0]
+            d20_value = left.total
 
             if d20_value >= criton:
                 itercrit = 1
             else:
-                itercrit = toHit.crit
+                itercrit = to_hit_roll.crit
 
             # -ac #
             target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
@@ -546,12 +547,12 @@ class Attack(Effect):
                 ac = ac or autoctx.target.ac
 
             if itercrit == 0 and ac:
-                if toHit.total < ac:
+                if to_hit_roll.total < ac:
                     itercrit = 2  # miss!
 
             # output
             if not hide:  # not hidden
-                autoctx.queue(toHit.result)
+                autoctx.queue(f"**{to_hit_message}**: {to_hit_roll.result}")
             elif target_has_ac:  # hidden
                 if itercrit == 2:
                     hit_type = 'MISS'
@@ -560,10 +561,10 @@ class Attack(Effect):
                 else:
                     hit_type = 'HIT'
                 autoctx.queue(f"**To Hit**: {formatted_d20}... = `{hit_type}`")
-                autoctx.add_pm(str(autoctx.ctx.author.id), toHit.result)
+                autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
             else:  # hidden, no ac
-                autoctx.queue(f"**To Hit**: {formatted_d20}... = `{toHit.total}`")
-                autoctx.add_pm(str(autoctx.ctx.author.id), toHit.result)
+                autoctx.queue(f"**To Hit**: {formatted_d20}... = `{to_hit_roll.total}`")
+                autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
 
             if itercrit == 2:
                 damage += self.on_miss(autoctx)
@@ -679,13 +680,14 @@ class Save(Effect):
                 autoctx.queue(f"**{save_blurb}:** Automatic failure!")
             else:
                 saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
-                save_roll = old_roll(saveroll, rollFor=save_blurb, inline=True, show_blurbs=False)
+                save_roll = roll(saveroll)
                 is_success = save_roll.total >= dc
                 success_str = ("; Success!" if is_success else "; Failure!")
+                out = f"**{save_blurb}**: {save_roll.result}{success_str}"
                 if not hide:
-                    autoctx.queue(f"{save_roll.result}{success_str}")
+                    autoctx.queue(out)
                 else:
-                    autoctx.add_pm(str(autoctx.ctx.author.id), f"{save_roll.result}{success_str}")
+                    autoctx.add_pm(str(autoctx.ctx.author.id), out)
                     autoctx.queue(f"**{save_blurb}**: 1d20...{success_str}")
         else:
             autoctx.meta_queue('{} Save'.format(save_skill[:3].upper()))
@@ -829,7 +831,7 @@ class Damage(Effect):
             damage = f"{damage}+{c}"
 
         # max
-        if maxdmg:
+        if maxdmg:  # todo modify ast instead
             def maxSub(matchobj):
                 return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
 
@@ -837,19 +839,20 @@ class Damage(Effect):
 
         damage = parse_resistances(damage, resist, immune, vuln, neutral)
 
-        dmgroll = old_roll(damage, rollFor=roll_for, inline=True, show_blurbs=False)
+        dmgroll = roll(damage)
 
         # output
         if not hide:
-            autoctx.queue(dmgroll.result)
+            autoctx.queue(f"**{roll_for}**: {dmgroll.result}")
         else:
-            autoctx.queue(f"**{roll_for}**: {dmgroll.consolidated()} = `{dmgroll.total}`")
-            autoctx.add_pm(str(autoctx.ctx.author.id), dmgroll.result)
+            d20.utils.simplify_expr(dmgroll.expr)
+            autoctx.queue(f"**{roll_for}**: {d20.MarkdownStringifier().stringify(dmgroll.expr)}")
+            autoctx.add_pm(str(autoctx.ctx.author.id), f"**{roll_for}**: {dmgroll.result}")
 
         autoctx.target.damage(autoctx, dmgroll.total, allow_overheal=self.overheal)
 
         # return metadata for scripting
-        return {'damage': dmgroll.result, 'total': dmgroll.total, 'roll': dmgroll}
+        return {'damage': f"**{roll_for}**: {dmgroll.result}", 'total': dmgroll.total, 'roll': dmgroll}
 
     def is_meta(self, autoctx, strict=False):
         if not strict:
@@ -899,16 +902,14 @@ class TempHP(Effect):
                 if higher:
                     amount = f"{amount}+{higher}"
 
-        roll_for = "THP"
-
         if maxdmg:
-            def maxSub(matchobj):
+            def maxSub(matchobj):  # todo ast
                 return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
 
             amount = re.sub(r'(\d+)d(\d+)', maxSub, amount)
 
-        dmgroll = old_roll(amount, rollFor=roll_for, inline=True, show_blurbs=False)
-        autoctx.queue(dmgroll.result)
+        dmgroll = roll(amount)
+        autoctx.queue(f"**THP**: {dmgroll.result}")
 
         if autoctx.target.combatant:
             autoctx.target.combatant.temp_hp = max(dmgroll.total, 0)
@@ -1031,14 +1032,12 @@ class Roll(Effect):
 
             dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
 
-        rolled = old_roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
+        rolled = roll(dice)
         if not self.hidden:
-            autoctx.meta_queue(rolled.result)
+            autoctx.meta_queue(f"**{self.name.title()}**: {rolled.result}")
 
-        if not rolled.raw_dice:
-            raise InvalidArgument(f"Invalid roll in meta roll: {rolled.result}")
-
-        autoctx.metavars[self.name] = rolled.consolidated()
+        d20.utils.simplify_expr(rolled.expr)
+        autoctx.metavars[self.name] = d20.MarkdownStringifier().stringify(rolled.expr.roll)
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)

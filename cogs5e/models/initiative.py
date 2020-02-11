@@ -1,6 +1,6 @@
 import cachetools
+from d20 import roll
 
-from cogs5e.funcs.dice import old_roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
 from cogs5e.models.monster import MonsterCastableSpellbook
@@ -247,14 +247,14 @@ class Combat:
         """
         rolls = {}
         for c in self._combatants:
-            init_roll = old_roll(c.init_skill.d20(), inline=True)
+            init_roll = roll(c.init_skill.d20())
             c.init = init_roll.total
             rolls[c.name] = init_roll
         self.sort_combatants()
 
         order = []
         for combatant_name, init_roll in sorted(rolls.items(), key=lambda r: r[1].total, reverse=True):
-            order.append(f"{init_roll.skeleton}: {combatant_name}")
+            order.append(f"{init_roll.result}: {combatant_name}")
 
         order = "\n".join(order)
 

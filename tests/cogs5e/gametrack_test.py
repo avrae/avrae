@@ -122,21 +122,21 @@ class TestGame:
 
         avrae.message("!g thp 5")
         await dhttp.receive_delete()
-        await dhttp.receive_message(r".+: (\d+)/\1 \(\+5 temp\)")
+        await dhttp.receive_message(r".+: (\d+)/\1 \(5 temp\)")
         char = await active_character(avrae)
         assert char.temp_hp == 5
         assert char.hp == char.max_hp
 
         avrae.message("!g thp 10")
         await dhttp.receive_delete()
-        await dhttp.receive_message(r".+: (\d+)/\1 \(\+10 temp\)")
+        await dhttp.receive_message(r".+: (\d+)/\1 \(10 temp\)")
         char = await active_character(avrae)
         assert char.temp_hp == 10
         assert char.hp == char.max_hp
 
         avrae.message("!g thp -8")
         await dhttp.receive_delete()
-        await dhttp.receive_message(r".+: (\d+)/\1 \(\+2 temp\)")
+        await dhttp.receive_message(r".+: (\d+)/\1 \(2 temp\)")
         char = await active_character(avrae)
         assert char.temp_hp == 2
         assert char.hp == char.max_hp

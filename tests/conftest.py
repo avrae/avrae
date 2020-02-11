@@ -38,7 +38,7 @@ class Request:
         self.url = url
         self.data = data
 
-    def __str__(self):
+    def __repr__(self):
         return f"{self.method} {self.url}\n{self.data}"
 
 

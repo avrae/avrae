@@ -61,7 +61,7 @@ class SimpleRollResult:
 
         :rtype: str
         """
-        d20.utils.simplify_expr(self._roll.expr.roll, ambig_inherit='right')
+        d20.utils.simplify_expr(self._roll.expr, ambig_inherit='right')
         return d20.MarkdownStringifier().stringify(self._roll.expr.roll)
 
 

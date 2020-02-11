@@ -53,9 +53,11 @@ class Dice(commands.Cog):
         e (explode dice of value)
         ra (reroll and add)
         __Supported Selectors__
+        X (literal X)
         lX (lowest X)
         hX (highest X)
-        >X/<X (greater than or less than X)"""
+        >X (greater than X)
+        <X (less than X)"""
 
         if rollStr == '0/0':  # easter eggs
             return await ctx.send("What do you expect me to do, destroy the universe?")

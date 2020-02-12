@@ -1,8 +1,8 @@
-Automation Tutorials
+Aliasing Tutorials
 ====================================
 
 Here are a few tutorials for aliases that were created by the Avrae Development Discord.
-These should take you step by step throught how two example aliases work.
+These should take you step by step through two example aliases.
 Thanks to @Croebh#5603 and @silverbass#2407 for writing these, and to @Ydomat#2886 for converting them to this format!
 
 Half-Orc Relentless Endurance Tutorial

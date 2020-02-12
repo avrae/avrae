@@ -1,12 +1,12 @@
-Automation Basics
+Aliasing Basics
 ======================
 
-Avrae has vast potential for automation.  It allows you to create and maintain commands. These commands can be used personally or shared with other users on a server.  Let's take a look at some of the basics of automation that you can start using in your server.
+Avrae has vast potential for making long commands simple.  It allows you to create and maintain commands. These commands can be used personally or shared with other users on a server.  Let's take a look at some of the basics of automation that you can start using in your server.
 
 .. note::
-  If you have experience with JSON and API's and are looking for more advanced documentation, head on over to the `Automation Reference Page <automation_ref.html>`_ or `Aliasing API Page <aliasing/api.html>`_.
+  If you have experience with JSON and API's and are looking for more advanced documentation, head on over to the `Aliasing API Page <aliasing/api.html>`_.
 
-Automation Types
+Command Types
 ------------------------
 
 Avrae has a few different types of commands that are used for different purposes.
@@ -31,7 +31,7 @@ to run code before running an Avrae command, or to write your own custom command
     - Barbarian Rage (Damage)
     - Bardic Inspiration
 
-Automation Levels
+Command Levels
 ------------------------
 
 There are two levels of commands that are built into Avrae: user level and server level.

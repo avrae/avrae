@@ -1,6 +1,5 @@
 import ast
 import json
-import re
 import time
 from math import ceil, floor, sqrt
 
@@ -75,13 +74,18 @@ def vroll(dice, multiply=1, add=0):
     :return: The result of the roll.
     :rtype: :class:`~cogs5e.funcs.scripting.functions.SimpleRollResult`
     """
-    if multiply != 1 or add != 0:
-        def subDice(matchobj):
-            return str((int(matchobj.group(1)) * multiply) + add) + 'd' + matchobj.group(2)
+    dice_ast = d20.parse(dice)
 
-        dice = re.sub(r'(\d+)d(\d+)', subDice, dice)
+    if multiply != 1 or add != 0:
+        def mapper(node):
+            if isinstance(node, d20.ast.Dice):
+                node.num = (node.num * multiply) + add
+            return node
+
+        dice_ast = d20.utils.tree_map(mapper, dice_ast)
+
     try:
-        rolled = roll(dice)
+        rolled = roll(dice_ast)
     except d20.RollError:
         return None
     return SimpleRollResult(rolled)

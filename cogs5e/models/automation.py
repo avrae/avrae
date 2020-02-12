@@ -1,5 +1,5 @@
+import copy
 import logging
-import re
 
 import d20
 import d20.utils
@@ -205,24 +205,6 @@ class AutomationContext:
             raise EvaluationError(ex, annostr)
         self.evaluator.names = original_names
         return out
-
-    def cantrip_scale(self, damage_dice):
-        if not self.is_spell:
-            return damage_dice
-
-        def scale(matchobj):
-            level = self.caster.spellbook.caster_level
-            if level < 5:
-                levelDice = "1"
-            elif level < 11:
-                levelDice = "2"
-            elif level < 17:
-                levelDice = "3"
-            else:
-                levelDice = "4"
-            return levelDice + 'd' + matchobj.group(2)
-
-        return re.sub(r'(\d+)d(\d+)', scale, damage_dice)
 
 
 class AutomationTarget:
@@ -793,53 +775,42 @@ class Damage(Effect):
             d = None  # d was likely applied in the Roll effect already
 
         damage = autoctx.parse_annostr(damage)
-
-        if autoctx.is_spell:
-            if self.cantripScale:
-                damage = autoctx.cantrip_scale(damage)
-
-            if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
-                higher = self.higher.get(str(autoctx.get_cast_level()))
-                if higher:
-                    damage = f"{damage}+{higher}"
+        dice_ast = copy.copy(d20.parse(damage))
+        dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
 
         # crit
         in_crit = autoctx.in_crit or crit
         roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
 
-        def parsecrit(damage_dice, wep=False):
-            if in_crit:
-                def critSub(matchobj):
-                    extracritdice = critdice if (critdice and wep) else 0
-                    return f"{int(matchobj.group(1)) * 2 + extracritdice}d{matchobj.group(2)}"
-
-                damage_dice = re.sub(r'(\d+)d(\d+)', critSub, damage_dice)
-            return damage_dice
-
         # -mi # (#527)
         if mi:
-            damage = re.sub(r'(\d+d\d+)', rf'\1mi{mi}', damage)
+            dice_ast = d20.utils.tree_map(_mi_mapper(mi), dice_ast)
 
         # -d #
         if d:
-            damage = parsecrit(damage, wep=not autoctx.is_spell) + '+' + parsecrit(d)
-        else:
-            damage = parsecrit(damage, wep=not autoctx.is_spell)
+            d_ast = d20.parse(d)
+            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
+
+        if in_crit:
+            dice_ast = d20.utils.tree_map(_crit_mapper, dice_ast)
+            if critdice and not autoctx.is_spell:
+                # add X critdice to the leftmost node if it's dice
+                left = d20.utils.leftmost(dice_ast)
+                if isinstance(left, d20.ast.Dice):
+                    left.num += int(critdice)
 
         # -c #
         if c and in_crit:
-            damage = f"{damage}+{c}"
+            c_ast = d20.parse(c)
+            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', c_ast.roll)
 
         # max
-        if maxdmg:  # todo modify ast instead
-            def maxSub(matchobj):
-                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+        if maxdmg:
+            dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
-            damage = re.sub(r'(\d+)d(\d+)', maxSub, damage)
+        damage = parse_resistances(damage, resist, immune, vuln, neutral)  # todo
 
-        damage = parse_resistances(damage, resist, immune, vuln, neutral)
-
-        dmgroll = roll(damage)
+        dmgroll = roll(dice_ast)
 
         # output
         if not hide:
@@ -892,23 +863,13 @@ class TempHP(Effect):
             return
 
         amount = autoctx.parse_annostr(amount)
-
-        if autoctx.is_spell:
-            if self.cantripScale:
-                amount = autoctx.cantrip_scale(amount)
-
-            if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
-                higher = self.higher.get(str(autoctx.get_cast_level()))
-                if higher:
-                    amount = f"{amount}+{higher}"
+        dice_ast = copy.copy(d20.parse(amount))
+        dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
 
         if maxdmg:
-            def maxSub(matchobj):  # todo ast
-                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+            dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
-            amount = re.sub(r'(\d+)d(\d+)', maxSub, amount)
-
-        dmgroll = roll(amount)
+        dmgroll = roll(dice_ast)
         autoctx.queue(f"**THP**: {dmgroll.result}")
 
         if autoctx.target.combatant:
@@ -1007,32 +968,22 @@ class Roll(Effect):
                 else:
                     d = effect_d
 
-        dice = self.dice
-
-        if autoctx.is_spell:
-            if self.cantripScale:
-                dice = autoctx.cantrip_scale(dice)
-
-            if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
-                higher = self.higher.get(str(autoctx.get_cast_level()))
-                if higher:
-                    dice = f"{dice}+{higher}"
+        dice_ast = copy.copy(d20.parse(self.dice))
+        dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
 
         if not self.hidden:
             # -mi # (#527)
             if mi:
-                dice = re.sub(r'(\d+d\d+)', rf'\1mi{mi}', dice)
+                dice_ast = d20.utils.tree_map(_mi_mapper(mi), dice_ast)
 
             if d:
-                dice = f"{dice}+{d}"
+                d_ast = d20.parse(d)
+                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
 
-        if maxdmg:
-            def maxSub(matchobj):
-                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+            if maxdmg:
+                dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
-            dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
-
-        rolled = roll(dice)
+        rolled = roll(dice_ast)
         if not self.hidden:
             autoctx.meta_queue(f"**{self.name.title()}**: {rolled.result}")
 
@@ -1086,6 +1037,65 @@ EFFECT_MAP = {
 }
 
 
+# ==== helpers ====
+def _upcast_scaled_dice(effect, autoctx, dice_ast):
+    """Scales the dice of the cast to its appropriate amount (handling cantrip scaling and higher level addition)."""
+    if autoctx.is_spell:
+        if effect.cantripScale:
+            level = autoctx.caster.spellbook.caster_level
+            if level < 5:
+                level_dice = 1
+            elif level < 11:
+                level_dice = 2
+            elif level < 17:
+                level_dice = 3
+            else:
+                level_dice = 4
+
+            def mapper(node):
+                if isinstance(node, d20.ast.Dice):
+                    node.num = level_dice
+                return node
+
+            dice_ast = d20.utils.tree_map(mapper, dice_ast)
+
+        if effect.higher and not autoctx.get_cast_level() == autoctx.spell.level:
+            higher = effect.higher.get(str(autoctx.get_cast_level()))
+            if higher:
+                higher_ast = d20.parse(higher)
+                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', higher_ast.roll)
+
+    return dice_ast
+
+
+def _mi_mapper(minimum):
+    """Returns a function that maps Dice AST objects to OperatedDice with miX attached."""
+
+    def mapper(node):
+        if isinstance(node, d20.ast.Dice):
+            miX = d20.ast.SetOperator('mi', [d20.ast.SetSelector(None, int(minimum))])
+            return d20.ast.OperatedDice(node, miX)
+        return node
+
+    return mapper
+
+
+def _max_mapper(node):
+    """A function that maps Dice AST objects to OperatedDice that set their values to their maximum."""
+    if isinstance(node, d20.ast.Dice):
+        miX = d20.ast.SetOperator('mi', [d20.ast.SetSelector(None, node.size)])
+        return d20.ast.OperatedDice(node, miX)
+    return node
+
+
+def _crit_mapper(node):
+    """A function that doubles the number of dice for each Dice AST node."""
+    if isinstance(node, d20.ast.Dice):
+        node.num *= 2
+    return node
+
+
+# ==== exceptions ====
 class AutomationException(AvraeException):
     pass
 

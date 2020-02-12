@@ -23,6 +23,7 @@ class ContextPersistingRoller(d20.Roller):
 
 
 def d20_with_adv(adv):
+    """Returns Xd20 for the correct advantage type."""
     if adv == d20.AdvType.NONE:
         return "1d20"
     elif adv == d20.AdvType.ADV:
@@ -35,5 +36,6 @@ def d20_with_adv(adv):
 
 
 def get_roll_comment(expr):
+    """Gets the comment from a roll expression."""
     result = d20.parse(expr)
     return result.comment or ''

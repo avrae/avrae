@@ -4,7 +4,6 @@ import time
 from math import ceil, floor, sqrt
 
 import d20
-import d20.utils
 import simpleeval
 from d20 import roll
 from simpleeval import IterableTooLong
@@ -60,7 +59,7 @@ class SimpleRollResult:
 
         :rtype: str
         """
-        d20.utils.simplify_expr(self._roll.expr, ambig_inherit='right')
+        d20.utils.simplify_expr(self._roll.expr, ambig_inherit='left')
         return d20.MarkdownStringifier().stringify(self._roll.expr.roll)
 
 

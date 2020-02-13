@@ -2,7 +2,6 @@ import copy
 import logging
 
 import d20
-import d20.utils
 from d20 import roll
 
 from cogs5e.funcs.scripting.evaluators import SpellEvaluator
@@ -10,7 +9,7 @@ from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
-from utils.functions import parse_resistances
+from utils.dice import do_resistances
 
 log = logging.getLogger(__name__)
 
@@ -808,22 +807,22 @@ class Damage(Effect):
         if maxdmg:
             dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
-        damage = parse_resistances(damage, resist, immune, vuln, neutral)  # todo
-
         dmgroll = roll(dice_ast)
+        do_resistances(dmgroll.expr, resist, immune, vuln, neutral)
+        result = d20.MarkdownStringifier().stringify(dmgroll.expr)
 
         # output
         if not hide:
-            autoctx.queue(f"**{roll_for}**: {dmgroll.result}")
+            autoctx.queue(f"**{roll_for}**: {result}")
         else:
             d20.utils.simplify_expr(dmgroll.expr)
             autoctx.queue(f"**{roll_for}**: {d20.MarkdownStringifier().stringify(dmgroll.expr)}")
-            autoctx.add_pm(str(autoctx.ctx.author.id), f"**{roll_for}**: {dmgroll.result}")
+            autoctx.add_pm(str(autoctx.ctx.author.id), f"**{roll_for}**: {result}")
 
         autoctx.target.damage(autoctx, dmgroll.total, allow_overheal=self.overheal)
 
         # return metadata for scripting
-        return {'damage': f"**{roll_for}**: {dmgroll.result}", 'total': dmgroll.total, 'roll': dmgroll}
+        return {'damage': f"**{roll_for}**: {result}", 'total': dmgroll.total, 'roll': dmgroll}
 
     def is_meta(self, autoctx, strict=False):
         if not strict:
@@ -988,7 +987,7 @@ class Roll(Effect):
             autoctx.meta_queue(f"**{self.name.title()}**: {rolled.result}")
 
         d20.utils.simplify_expr(rolled.expr)
-        autoctx.metavars[self.name] = d20.MarkdownStringifier().stringify(rolled.expr.roll)
+        autoctx.metavars[self.name] = d20.SimpleStringifier().stringify(rolled.expr.roll)  # todo guarantee rerollability
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)

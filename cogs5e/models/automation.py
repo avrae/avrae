@@ -9,7 +9,7 @@ from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
-from utils.dice import do_resistances
+from utils.dice import RerollableStringifier, do_resistances
 
 log = logging.getLogger(__name__)
 
@@ -987,7 +987,7 @@ class Roll(Effect):
             autoctx.meta_queue(f"**{self.name.title()}**: {rolled.result}")
 
         d20.utils.simplify_expr(rolled.expr)
-        autoctx.metavars[self.name] = d20.SimpleStringifier().stringify(rolled.expr.roll)  # todo guarantee rerollability
+        autoctx.metavars[self.name] = RerollableStringifier().stringify(rolled.expr.roll)
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)

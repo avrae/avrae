@@ -22,6 +22,36 @@ class ContextPersistingRoller(d20.Roller):
         self.context = PersistentRollContext()
 
 
+class RerollableStringifier(d20.SimpleStringifier):
+    """A stringifier that's guaranteed to output a string that can be rerolled without modifying the semantics."""
+
+    def _stringify(self, node):
+        if not node.kept:
+            return None
+        return super()._stringify(node)
+
+    def _str_expression(self, node):
+        return self._stringify(node.roll)
+
+    def _str_literal(self, node):
+        return str(node.total)
+
+    def _str_parenthetical(self, node):
+        return f"({self._stringify(node.value)})"
+
+    def _str_set(self, node):
+        out = f"{', '.join([self._stringify(v) for v in node.values if v.kept])}"
+        if len(node.values) == 1:
+            return f"({out},)"
+        return f"({out})"
+
+    def _str_dice(self, node):
+        return self._str_set(node)
+
+    def _str_die(self, node):
+        return str(node.total)
+
+
 def d20_with_adv(adv):
     """Returns Xd20 for the correct advantage type."""
     if adv == d20.AdvType.NONE:

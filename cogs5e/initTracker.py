@@ -119,14 +119,17 @@ class InitTracker(commands.Cog):
 
         if args.last('h', type_=bool):
             private = True
-        try:
-            place_arg = args.last('p')
-            if place_arg is True:
+
+        if 'p' in args:
+            try:
+                place_arg = args.last('p')
+                if place_arg is True:
+                    place = modifier
+                else:
+                    place = int(place_arg)
+            except ValueError:
                 place = modifier
-            else:
-                place = int(place_arg)
-        except ValueError:
-            place = modifier
+
         if args.last('controller'):
             controller_name = args.last('controller')
             member = await commands.MemberConverter().convert(ctx, controller_name)

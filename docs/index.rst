@@ -17,8 +17,10 @@ Welcome to Avrae's documentation!
    :maxdepth: 4
    :caption: Contents:
 
+   aliasing/aliasing
+   aliasing/aliasing_tut
    aliasing/api
-   automation
+   automation_ref
 
 Indices and tables
 ==================

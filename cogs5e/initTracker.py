@@ -110,6 +110,7 @@ class InitTracker(commands.Cog):
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type."""
         private = False
+        place = None
         controller = str(ctx.author.id)
         group = None
         hp = None

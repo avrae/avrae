@@ -91,7 +91,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             ast.Subscript: self._assign_subscript
         }
 
-        self._loops = 0
+        self._loops = 0  # todo: roll limiting
         self._cache = {
             "gvars": {},
             "uvars": {}

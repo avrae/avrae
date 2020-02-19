@@ -57,4 +57,5 @@ html_static_path = ['_static']
 
 # -- Intersphinx --------
 
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
+                       'd20': ('https://d20.readthedocs.io/en/latest', None)}

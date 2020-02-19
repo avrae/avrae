@@ -10,6 +10,7 @@ from simpleeval import IterableTooLong
 
 from cogs5e.models.errors import AvraeException
 from utils.argparser import argparse
+from utils.dice import RerollableStringifier
 from . import MAX_ITER_LENGTH
 
 
@@ -38,7 +39,7 @@ class SimpleRollResult:
         self.total = result.total
         self.full = str(result)
         self.result = result
-        self.raw = result.expr  # todo docs on this
+        self.raw = result.expr
         self._roll = result
 
     def __str__(self):
@@ -51,6 +52,8 @@ class SimpleRollResult:
         """
         Gets the most simplified version of the roll string. Consolidates totals and damage types together.
 
+        Note that this modifies the result expression in place!
+
         >>> result = vroll("3d6[fire]+1d4[cold]")
         >>> str(result)
         '3d6 (3, 3, 2) [fire] + 1d4 (2) [cold] = `10`'
@@ -60,7 +63,7 @@ class SimpleRollResult:
         :rtype: str
         """
         d20.utils.simplify_expr(self._roll.expr, ambig_inherit='left')
-        return d20.MarkdownStringifier().stringify(self._roll.expr.roll)
+        return RerollableStringifier().stringify(self._roll.expr.roll)
 
 
 def vroll(dice, multiply=1, add=0):

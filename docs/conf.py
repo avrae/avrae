@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'avrae'
-copyright = '2019, Andrew Zhu, D&D Beyond'
+copyright = '2019-2020, Andrew Zhu, D&D Beyond'
 author = 'Andrew Zhu, D&D Beyond'
 
 # -- General configuration ---------------------------------------------------

@@ -580,13 +580,13 @@ SimpleRollResult
 
         The RollResult object returned by the roll.
 
-        :type: :class:`~d20::RollResult`
+        :type: :class:`d20.RollResult`
 
     .. attribute:: raw
 
         The Expression object returned by the roll. Equivalent to ``SimpleRollResult.result.expr``.
 
-        :type: :class:`~d20::Expression`
+        :type: :class:`d20.Expression`
 
     .. automethod:: consolidated
 

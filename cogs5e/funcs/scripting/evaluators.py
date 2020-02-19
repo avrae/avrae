@@ -3,12 +3,12 @@ import re
 from math import ceil, floor
 
 import simpleeval
-from d20 import roll
 from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
+from utils.dice import ContextPersistingRoller
 from . import MAX_ITER_LENGTH, SCRIPTING_RE, helpers
-from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
+from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS, _roll, _vroll
 from .legacy import LegacyRawCharacter
 
 if 'format_map' not in simpleeval.DISALLOW_METHODS:
@@ -91,7 +91,14 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             ast.Subscript: self._assign_subscript
         }
 
-        self._loops = 0  # todo: roll limiting
+        # roll limiting
+        self._roller = ContextPersistingRoller(max_rolls=1_000, max_total_rolls=10_000)
+        self.functions.update(
+            vroll=self._limited_vroll,
+            roll=self._limited_roll
+        )
+
+        self._loops = 0
         self._cache = {
             "gvars": {},
             "uvars": {}
@@ -369,6 +376,12 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             return self.names[name]
         return default
 
+    def _limited_vroll(self, dice, mul, add):
+        return _vroll(dice, mul, add, roller=self._roller)
+
+    def _limited_roll(self, dice):
+        return _roll(dice, roller=self._roller)
+
     # evaluation
     def parse(self, string, double_curly=None, curly=None, ltgt=None):
         """Parses a scripting string (evaluating text in {{}})."""
@@ -394,7 +407,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                             temp = substr.strip()
                             curlyout += str(self.names.get(temp, temp)) + " "
                         try:
-                            return str(roll(curlyout).total)
+                            return str(self._limited_roll(curlyout).total)
                         except:
                             return '0'
 

@@ -5,7 +5,6 @@ from math import ceil, floor, sqrt
 
 import d20
 import simpleeval
-from d20 import roll
 from simpleeval import IterableTooLong
 
 from cogs5e.models.errors import AvraeException
@@ -14,22 +13,7 @@ from utils.dice import RerollableStringifier
 from . import MAX_ITER_LENGTH
 
 
-# roll()
-def simple_roll(dice):
-    """
-    Rolls dice and returns the total.
-
-    .. note::
-        This function's true signature is ``roll(dice)``.
-
-    :param str dice: The dice to roll.
-    :return: The roll's total, or 0 if an error was encountered.
-    :rtype: int
-    """
-    return roll(dice).total
-
-
-# vroll()
+# vroll(), roll()
 class SimpleRollResult:
     def __init__(self, result):
         """
@@ -76,7 +60,35 @@ def vroll(dice, multiply=1, add=0):
     :return: The result of the roll.
     :rtype: :class:`~cogs5e.funcs.scripting.functions.SimpleRollResult`
     """
-    dice_ast = d20.parse(dice)
+    return _vroll(dice, multiply, add)
+
+
+def roll(dice):
+    """
+    Rolls dice and returns the total.
+
+    :param str dice: The dice to roll.
+    :return: The roll's total, or 0 if an error was encountered.
+    :rtype: int
+    """
+    return _roll(dice)
+
+
+def _roll(dice, roller=None):
+    if roller is None:
+        roller = d20.Roller()
+
+    result = roller.roll(dice)
+    if result is None:
+        return 0
+    return result.total
+
+
+def _vroll(dice, multiply=1, add=0, roller=None):
+    if roller is None:
+        roller = d20.Roller()
+
+    dice_ast = roller.parse(dice)
 
     if multiply != 1 or add != 0:
         def mapper(node):
@@ -87,7 +99,7 @@ def vroll(dice, multiply=1, add=0):
         dice_ast = d20.utils.tree_map(mapper, dice_ast)
 
     try:
-        rolled = roll(dice_ast)
+        rolled = roller.roll(dice_ast)
     except d20.RollError:
         return None
     return SimpleRollResult(rolled)
@@ -162,6 +174,6 @@ DEFAULT_FUNCTIONS.update({
     'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
     'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
     # ours
-    'roll': simple_roll, 'vroll': vroll, 'load_json': load_json, 'dump_json': dump_json,
+    'roll': roll, 'vroll': vroll, 'load_json': load_json, 'dump_json': dump_json,
     'err': err, 'typeof': typeof, 'argparse': argparse
 })

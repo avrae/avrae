@@ -9,25 +9,27 @@ class VerboseMDStringifier(d20.MarkdownStringifier):
 
 class PersistentRollContext(d20.RollContext):
     """
-    A roll context that does not reset between rolls.
+    A roll context that tracks lifetime rolls as well as individual rolls.
     """
 
     def __init__(self, max_rolls=1000, max_total_rolls=None):
+        """
+        :param max_rolls: The maximum number of rolls allowed in an individual roll.
+        :param max_total_rolls: The maximum number of rolls allowed throughout this object's lifetime.
+        """
         super().__init__(max_rolls)
         self.max_total_rolls = max_total_rolls or max_rolls
         self.total_rolls = 0
 
-    def reset(self):
-        self.rolls = 0
-
     def count_roll(self, n=1):
-        self.rolls += 1
+        super().count_roll(n)
         self.total_rolls += 1
-        if self.rolls > self.max_rolls or self.total_rolls > self.max_total_rolls:
+        if self.total_rolls > self.max_total_rolls:
             raise d20.TooManyRolls("Too many dice rolled.")
 
 
 class ContextPersistingRoller(d20.Roller):
+    # todo use d20.roller with context arg
     def __init__(self, max_rolls=1_000, max_total_rolls=1_000):
         super().__init__()
         self.context = PersistentRollContext(max_rolls, max_total_rolls)

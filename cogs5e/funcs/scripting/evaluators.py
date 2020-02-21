@@ -408,7 +408,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
                             temp = substr.strip()
                             curlyout += str(self.names.get(temp, temp)) + " "
                         try:
-                            return str(self._limited_roll(curlyout).total)
+                            return str(self._limited_roll(curlyout))
                         except:
                             return '0'
 

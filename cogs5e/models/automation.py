@@ -750,7 +750,7 @@ class Damage(Effect):
             critdice = autoctx.character.get_setting('critdice') or critdice
 
         # combat-specific arguments
-        if not autoctx.target.is_simple:
+        if not autoctx.target.is_simple:  # todo handle type (get_resist returns list of Resistance)
             resist = resist or autoctx.target.get_resist()
             immune = immune or autoctx.target.get_immune()
             vuln = vuln or autoctx.target.get_vuln()

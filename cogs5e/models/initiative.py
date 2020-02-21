@@ -601,7 +601,7 @@ class Combatant(StatBlock):
         self._private = new_privacy
 
     @property
-    def resistances(self):
+    def resistances(self):  # todo
         checked = []
         out = {}
         for k in reversed(RESIST_TYPES):

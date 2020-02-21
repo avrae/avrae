@@ -83,17 +83,13 @@ def do_resistances(damage_expr, resistances, immunities, vulnerabilities, neutra
     damage types.
 
     :type damage_expr: d20.Expression
-    :type resistances: list of str
-    :type immunities: list of str
-    :type vulnerabilities: list of str
-    :type neutrals: list of str
+    :type resistances: list of cogs5e.models.sheet.base.Resistance
+    :type immunities: list of cogs5e.models.sheet.base.Resistance
+    :type vulnerabilities: list of cogs5e.models.sheet.base.Resistance
+    :type neutrals: list of cogs5e.models.sheet.base.Resistance
     """
 
-    # clean resists and whatnot
-    resistances = {r for r in resistances if r}
-    immunities = {r for r in immunities if r}
-    vulnerabilities = {r for r in vulnerabilities if r}
-    neutrals = {r for r in neutrals if r}
+    # todo
 
     # simplify damage types
     d20.utils.simplify_expr_annotations(damage_expr.roll, ambig_inherit='left')

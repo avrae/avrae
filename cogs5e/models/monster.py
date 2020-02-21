@@ -3,7 +3,7 @@ import logging
 from urllib import parse
 
 from cogs5e.models.sheet.attack import AttackList
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistance, Resistances, Saves, Skills
 from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.constants import SKILL_MAP
@@ -24,17 +24,12 @@ class Trait:
 class Monster(StatBlock):
     def __init__(self, name: str, size: str, race: str, alignment: str, ac: int, armortype: str, hp: int, hitdice: str,
                  speed: str, ability_scores: BaseStats, cr: str, xp: int, passiveperc: int = None,
-                 senses: str = '', vuln: list = None, resist: list = None, immune: list = None,
+                 senses: str = '', resistances: Resistances = None,
                  condition_immune: list = None, saves: Saves = None, skills: Skills = None, languages: list = None,
                  traits: list = None, actions: list = None, reactions: list = None, legactions: list = None,
                  la_per_round=3, srd=True, source='homebrew', attacks: AttackList = None, proper: bool = False,
-                 image_url: str = None, spellcasting=None, page=None, display_resists: Resistances = None, **_):
-        if vuln is None:
-            vuln = []
-        if resist is None:
-            resist = []
-        if immune is None:
-            immune = []
+                 image_url: str = None, spellcasting=None, page=None, display_resists: Resistances = None,
+                 **kwargs):
         if condition_immune is None:
             condition_immune = []
         if saves is None:
@@ -54,18 +49,24 @@ class Monster(StatBlock):
         if attacks is None:
             attacks = AttackList()
         if spellcasting is None:
-            spellcasting = Spellbook({}, {}, [])
+            spellcasting = Spellbook()
         if passiveperc is None:
             passiveperc = 10 + skills.perception.value
+
+        # old/new resist handling
+        if resistances is None:
+            # fall back to old-style resistances (deprecated)
+            vuln = kwargs.get('vuln', [])
+            resist = kwargs.get('resist', [])
+            immune = kwargs.get('immune', [])
+            resistances = Resistances.from_dict(dict(vuln=vuln, resist=resist, immune=immune))
 
         try:
             levels = Levels({"Monster": spellcasting.caster_level or int(cr)})
         except ValueError:
             levels = None
 
-        resistances = Resistances(vuln=vuln, resist=resist, immune=immune)
-
-        super(Monster, self).__init__(
+        super().__init__(
             name=name, stats=ability_scores, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
             spellbook=spellcasting, ac=ac, max_hp=hp, levels=levels
         )
@@ -116,11 +117,13 @@ class Monster(StatBlock):
             cr = data['cr']
 
         # resistances
-        vuln = parse_resists(data['vulnerable'], notated=False) if 'vulnerable' in data else None
-        resist = parse_resists(data['resist'], notated=False) if 'resist' in data else None
-        immune = parse_resists(data['immune'], notated=False) if 'immune' in data else None
+        vuln = parse_resists(data['vulnerable'], notated=False) if 'vulnerable' in data else []
+        resist = parse_resists(data['resist'], notated=False) if 'resist' in data else []
+        immune = parse_resists(data['immune'], notated=False) if 'immune' in data else []
+        resistances = Resistances.from_dict(dict(vuln=vuln, resist=resist, immune=immune))
 
-        display_resists = Resistances(*[parse_resists(data.get(r)) for r in ('resist', 'immune', 'vulnerable')])
+        display_resists = Resistances(*[[Resistance.from_dict(r) for r in parse_resists(data.get(rs))]
+                                        for rs in ('resist', 'immune', 'vulnerable')])
 
         condition_immune = data.get('conditionImmune', []) if 'conditionImmune' in data else None
 
@@ -150,7 +153,7 @@ class Monster(StatBlock):
 
         return cls(data['name'], parsesize(data['size']), _type, alignment, ac, armortype, hp, hitdice,
                    speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
-                   vuln, resist, immune, condition_immune, saves, skills, languages, traits,
+                   resistances, condition_immune, saves, skills, languages, traits,
                    actions, reactions, legactions, 3, data.get('srd', False), source, attacks,
                    spellcasting=spellbook, page=data.get('page'), proper=proper, display_resists=display_resists)
 
@@ -163,6 +166,7 @@ class Monster(StatBlock):
         data['skills'] = Skills.from_dict(data['skills'])
         data['ability_scores'] = BaseStats.from_dict(data['ability_scores'])
         data['attacks'] = AttackList.from_dict(data['attacks'])
+        data['resistances'] = Resistances.from_dict(data['resistances'])
         if 'display_resists' in data:
             data['display_resists'] = Resistances.from_dict(data['display_resists'])
         return cls(**data)
@@ -173,7 +177,7 @@ class Monster(StatBlock):
             'armortype': self.armortype, 'hp': self.hp, 'hitdice': self.hitdice, 'speed': self.speed,
             'ability_scores': self.stats.to_dict(),
             'cr': self.cr, 'xp': self.xp, 'passiveperc': self.passive, 'senses': self.senses,
-            'vuln': self.resistances.vuln, 'resist': self.resistances.resist, 'immune': self.resistances.immune,
+            'resistances': self.resistances.to_dict(),
             'condition_immune': self.condition_immune,
             'saves': self.saves.to_dict(), 'skills': self.skills.to_dict(), 'languages': self.languages,
             'traits': [t.to_dict() for t in self.traits], 'actions': [t.to_dict() for t in self.actions],

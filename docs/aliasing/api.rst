@@ -576,11 +576,17 @@ SimpleRollResult
 
         :type: str
 
+    .. attribute:: result
+
+        The RollResult object returned by the roll.
+
+        :type: :class:`d20.RollResult`
+
     .. attribute:: raw
 
-        A dictionary representing a low level roll object.
+        The Expression object returned by the roll. Equivalent to ``SimpleRollResult.result.expr``.
 
-        :type: dict
+        :type: :class:`d20.Expression`
 
     .. automethod:: consolidated
 

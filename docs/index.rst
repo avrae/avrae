@@ -6,7 +6,7 @@
 Welcome to Avrae's documentation!
 =================================
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
    :caption: Cheatsheets:
 
    cheatsheets/get_started
@@ -14,7 +14,7 @@ Welcome to Avrae's documentation!
    cheatsheets/pc_combat
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
    :caption: Contents:
 
    aliasing/aliasing

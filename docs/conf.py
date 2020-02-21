@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'avrae'
-copyright = '2019, Andrew Zhu, D&D Beyond'
+copyright = '2019-2020, Andrew Zhu, D&D Beyond'
 author = 'Andrew Zhu, D&D Beyond'
 
 # -- General configuration ---------------------------------------------------
@@ -57,4 +57,5 @@ html_static_path = ['_static']
 
 # -- Intersphinx --------
 
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
+                       'd20': ('https://d20.readthedocs.io/en/latest', None)}

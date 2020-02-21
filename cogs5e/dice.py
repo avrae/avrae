@@ -15,7 +15,7 @@ from cogs5e.models.monster import Monster
 from cogsmisc.stats import Stats
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.dice import ContextPersistingRoller, VerboseMDStringifier
+from utils.dice import PersistentRollContext, VerboseMDStringifier
 from utils.functions import search_and_select, try_delete
 
 
@@ -95,7 +95,7 @@ class Dice(commands.Cog):
         successes = 0
         args, adv = self._string_search_adv(args)
         ast = d20.parse(rollStr)
-        roller = ContextPersistingRoller()
+        roller = d20.Roller(context=PersistentRollContext())
 
         for _ in range(iterations):
             res = roller.roll(ast, advantage=adv)

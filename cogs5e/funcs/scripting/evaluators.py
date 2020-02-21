@@ -2,11 +2,12 @@ import ast
 import re
 from math import ceil, floor
 
+import d20
 import simpleeval
 from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
-from utils.dice import ContextPersistingRoller
+from utils.dice import PersistentRollContext
 from . import MAX_ITER_LENGTH, SCRIPTING_RE, helpers
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS, _roll, _vroll
 from .legacy import LegacyRawCharacter
@@ -92,7 +93,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         }
 
         # roll limiting
-        self._roller = ContextPersistingRoller(max_rolls=1_000, max_total_rolls=10_000)
+        self._roller = d20.Roller(context=PersistentRollContext(max_rolls=1_000, max_total_rolls=10_000))
         self.functions.update(
             vroll=self._limited_vroll,
             roll=self._limited_roll

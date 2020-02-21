@@ -28,13 +28,6 @@ class PersistentRollContext(d20.RollContext):
             raise d20.TooManyRolls("Too many dice rolled.")
 
 
-class ContextPersistingRoller(d20.Roller):
-    # todo use d20.roller with context arg
-    def __init__(self, max_rolls=1_000, max_total_rolls=1_000):
-        super().__init__()
-        self.context = PersistentRollContext(max_rolls, max_total_rolls)
-
-
 class RerollableStringifier(d20.SimpleStringifier):
     """A stringifier that's guaranteed to output a string that can be rerolled without modifying the semantics."""
 
@@ -73,7 +66,7 @@ def d20_with_adv(adv):
         return "2d20kh1"
     elif adv == d20.AdvType.DIS:
         return "2d20kl1"
-    elif adv == 2:  # todo d20 support for elven advantage
+    elif adv == 2:
         return "3d20kh1"
     return "1d20"
 

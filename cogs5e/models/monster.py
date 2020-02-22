@@ -98,65 +98,6 @@ class Monster(StatBlock):
     @classmethod
     def from_data(cls, data):
         return cls.from_bestiary(data)
-        # print(f"Parsing {data['name']}")
-        _type = parse_type(data['type'])
-        alignment = parse_alignment(data['alignment'])
-        speed = parse_speed(data['speed'])
-        ac = data['ac']['ac']
-        armortype = data['ac'].get('armortype') or None
-        if not 'special' in data['hp']:
-            hp = data['hp']['average']
-            hitdice = data['hp']['formula']
-        else:
-            hp = 0
-            hitdice = data['hp']['special']
-        scores = BaseStats(0, data['str'] or 10, data['dex'] or 10, data['con'] or 10, data['int'] or 10,
-                           data['wis'] or 10, data['cha'] or 10)
-        if isinstance(data['cr'], dict):
-            cr = data['cr']['cr']
-        else:
-            cr = data['cr']
-
-        # resistances
-        vuln = parse_resists(data['vulnerable'], notated=False) if 'vulnerable' in data else []
-        resist = parse_resists(data['resist'], notated=False) if 'resist' in data else []
-        immune = parse_resists(data['immune'], notated=False) if 'immune' in data else []
-        resistances = Resistances.from_dict(dict(vuln=vuln, resist=resist, immune=immune))
-
-        display_resists = Resistances(*[[Resistance.from_dict(r) for r in parse_resists(data.get(rs))]
-                                        for rs in ('resist', 'immune', 'vulnerable')])
-
-        condition_immune = data.get('conditionImmune', []) if 'conditionImmune' in data else None
-
-        languages = data.get('languages', '').split(', ') if 'languages' in data else None
-
-        traits = [Trait(t['name'], t['text']) for t in data.get('trait', [])]
-        actions = [Trait(t['name'], t['text']) for t in data.get('action', [])]
-        legactions = [Trait(t['name'], t['text']) for t in data.get('legendary', [])]
-        reactions = [Trait(t['name'], t['text']) for t in data.get('reaction', [])]
-
-        skills = Skills.default(scores)
-        skills.update(data['skill'])
-
-        saves = Saves.default(scores)
-        saves.update(data['save'])
-
-        scores.prof_bonus = _calc_prof(scores, saves, skills)
-
-        source = data['source']
-        proper = bool(data.get('proper'))
-
-        attacks = AttackList.from_dict(data.get('attacks', []))
-        if 'spellbook' in data:
-            spellbook = MonsterSpellbook.from_dict(data['spellbook'])
-        else:
-            spellbook = None
-
-        return cls(data['name'], parsesize(data['size']), _type, alignment, ac, armortype, hp, hitdice,
-                   speed, scores, cr, xp_by_cr(cr), data['passive'], data.get('senses', ''),
-                   resistances, condition_immune, saves, skills, languages, traits,
-                   actions, reactions, legactions, 3, data.get('srd', False), source, attacks,
-                   spellcasting=spellbook, page=data.get('page'), proper=proper, display_resists=display_resists)
 
     @classmethod
     def from_bestiary(cls, data):

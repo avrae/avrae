@@ -97,6 +97,7 @@ class Monster(StatBlock):
 
     @classmethod
     def from_data(cls, data):
+        return cls.from_bestiary(data)
         # print(f"Parsing {data['name']}")
         _type = parse_type(data['type'])
         alignment = parse_alignment(data['alignment'])

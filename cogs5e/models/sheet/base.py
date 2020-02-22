@@ -290,10 +290,10 @@ class Saves:
 class Resistances:
     def __init__(self, resist=None, immune=None, vuln=None, neutral=None):
         """
-        :type resist: list[str or Resistance]
-        :type immune: list[str or Resistance]
-        :type vuln: list[str or Resistance]
-        :type neutral: list[str or Resistance]
+        :type resist: list[Resistance]
+        :type immune: list[Resistance]
+        :type vuln: list[Resistance]
+        :type neutral: list[Resistance]
         """
         if neutral is None:
             neutral = []

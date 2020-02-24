@@ -5,7 +5,7 @@ from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatE
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
 from cogs5e.models.monster import MonsterCastableSpellbook
 from cogs5e.models.sheet.attack import Attack, AttackList
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Resistance, Resistances, Saves, Skill, Skills
 from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from utils.argparser import argparse
@@ -601,29 +601,29 @@ class Combatant(StatBlock):
         self._private = new_privacy
 
     @property
-    def resistances(self):  # todo
-        checked = []
-        out = {}
-        for k in reversed(RESIST_TYPES):
-            out[k] = []
-            for _type in self.active_effects(k):
-                if _type not in checked:
-                    out[k].append(_type)
-                    checked.append(_type)
-        for k in reversed(RESIST_TYPES):
-            for _type in self._resistances[k]:
-                if _type not in checked:
-                    out[k].append(_type)
-                    checked.append(_type)
-        return Resistances.from_dict(out)
+    def resistances(self):
+        out = self._resistances.copy()
 
-    def set_resist(self, dmgtype, resisttype):
+        # add the resistances granted by effects to our resistances
+        for resist_type in reversed(RESIST_TYPES):
+            for res in self.active_effects(resist_type):  # for [str or dict (Resistance)] in [list]
+                resistance = Resistance.from_dict(res)
+                out[resist_type].append(resistance)
+
+        return out
+
+    def set_resist(self, dmgtype: str, resisttype: str):
         if resisttype not in RESIST_TYPES:
             raise ValueError("Resistance type is invalid")
+
         for rt in RESIST_TYPES:
-            if dmgtype in self._resistances[rt]:
-                self._resistances[rt].remove(dmgtype)
-        self._resistances[resisttype].append(dmgtype)
+            for resist in reversed(self._resistances[rt]):
+                if resist.dtype == dmgtype:
+                    self._resistances[rt].remove(resist)
+
+        if resisttype != 'neutral':
+            resistance = Resistance(dmgtype)
+            self._resistances[resisttype].append(resistance)
 
     @property
     def attacks(self):
@@ -797,15 +797,15 @@ class Combatant(StatBlock):
         return ' '.join(out)
 
     def get_resist_string(self, private: bool = False):
-        resistStr = ''
+        resist_str = ''
         if not self.is_private or private:
             if len(self.resistances.resist) > 0:
-                resistStr += "\n> Resistances: " + ', '.join(self.resistances['resist']).title()
+                resist_str += "\n> Resistances: " + ', '.join([str(r) for r in self.resistances.resist])
             if len(self.resistances.immune) > 0:
-                resistStr += "\n> Immunities: " + ', '.join(self.resistances['immune']).title()
+                resist_str += "\n> Immunities: " + ', '.join([str(r) for r in self.resistances.immune])
             if len(self.resistances.vuln) > 0:
-                resistStr += "\n> Vulnerabilities: " + ', '.join(self.resistances['vuln']).title()
-        return resistStr
+                resist_str += "\n> Vulnerabilities: " + ', '.join([str(r) for r in self.resistances.vuln])
+        return resist_str
 
     def on_remove(self):
         """
@@ -1030,6 +1030,7 @@ class CombatantGroup(Combatant):
             ctx, combat, name=name, controller_id=str(ctx.author.id), private=False, init=init, index=index)
         self._combatants = combatants
 
+    # noinspection PyMethodOverriding
     @classmethod
     def new(cls, combat, name, init, ctx=None):
         return cls(ctx, combat, [], name, init)
@@ -1171,6 +1172,7 @@ class CombatantGroup(Combatant):
         return len(self._combatants)
 
 
+# ==== effect helpers ====
 def parse_attack_arg(arg, name):
     data = arg.split('|')
     if not len(data) == 3:
@@ -1185,10 +1187,19 @@ def parse_attack_str(atk):
         return f"{atk['attackBonus']}|{atk['damage']}"
 
 
+def parse_resist_arg(arg, _):
+    return [Resistance.from_dict(r).to_dict() for r in arg]
+
+
+def parse_resist_str(resist_list):
+    return ', '.join([str(Resistance.from_dict(r)) for r in resist_list])
+
+
 class Effect:
     LIST_ARGS = ('resist', 'immune', 'vuln', 'neutral')
     SPECIAL_ARGS = {  # 2-tuple of effect, str
-        'attack': (parse_attack_arg, parse_attack_str)
+        'attack': (parse_attack_arg, parse_attack_str),
+        'resist': (parse_resist_arg, parse_resist_str)
     }
     VALID_ARGS = {'b': 'Attack Bonus', 'd': 'Damage Bonus', 'ac': 'AC', 'resist': 'Resistance', 'immune': 'Immunity',
                   'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus'}
@@ -1218,12 +1229,16 @@ class Effect:
                 effect_args = argparse(effect_args)
         effect_dict = {}
         for arg in effect_args:
-            if arg in cls.SPECIAL_ARGS:
-                effect_dict[arg] = cls.SPECIAL_ARGS[arg][0](effect_args.last(arg), name)
-            elif arg in cls.LIST_ARGS:
-                effect_dict[arg] = effect_args.get(arg, [])
+            arg_arg = None
+            if arg in cls.LIST_ARGS:
+                arg_arg = effect_args.get(arg, [])
             elif arg in cls.VALID_ARGS:
-                effect_dict[arg] = effect_args.last(arg)
+                arg_arg = effect_args.last(arg)
+
+            if arg in cls.SPECIAL_ARGS:
+                effect_dict[arg] = cls.SPECIAL_ARGS[arg][0](arg_arg, name)
+            elif arg_arg is not None:
+                effect_dict[arg] = arg_arg
         try:
             duration = int(duration)
         except (ValueError, TypeError):

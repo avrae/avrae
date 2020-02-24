@@ -108,7 +108,8 @@ class Monster(StatBlock):
         data['skills'] = Skills.from_dict(data['skills'])
         data['ability_scores'] = BaseStats.from_dict(data['ability_scores'])
         data['attacks'] = AttackList.from_dict(data['attacks'])
-        data['resistances'] = Resistances.from_dict(data['resistances'])
+        if 'resistances' in data:
+            data['resistances'] = Resistances.from_dict(data['resistances'])
         if 'display_resists' in data:
             data['display_resists'] = Resistances.from_dict(data['display_resists'])
         return cls(**data)

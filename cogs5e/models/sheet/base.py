@@ -403,6 +403,8 @@ class Resistance:
         return self.dtype in tokens and not (self.unless & tokens) and self.only.issubset(tokens)
 
     def __str__(self):
-        unlesses = ', '.join([f"non{u}" for u in self.unless])
-        onlys = ' '.join(self.only)
-        return f"{unlesses} {onlys} {self.dtype}".strip()
+        out = []
+        out.extend(f"non{u}" for u in self.unless)
+        out.extend(self.only)
+        out.append(self.dtype)
+        return ' '.join(out)

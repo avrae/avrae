@@ -93,6 +93,7 @@ def do_resistances(damage_expr, resistances, immunities, vulnerabilities, neutra
     :type resistances: list of cogs5e.models.sheet.base.Resistance
     :type immunities: list of cogs5e.models.sheet.base.Resistance
     :type vulnerabilities: list of cogs5e.models.sheet.base.Resistance
+    :param neutrals: A list of resistances that should be explicitly ignored.
     :type neutrals: list of cogs5e.models.sheet.base.Resistance
     """
 
@@ -102,6 +103,7 @@ def do_resistances(damage_expr, resistances, immunities, vulnerabilities, neutra
     # depth first visit expression nodes: if it has an annotation, add the appropriate binops and move to the next
     def do_visit(node):
         if node.annotation:
+            original_annotation = node.annotation
             ann = _resist_tokenize(node.annotation.lower())
 
             if any(n.applies_to(ann) for n in neutrals):  # neutral overrides all
@@ -110,7 +112,7 @@ def do_resistances(damage_expr, resistances, immunities, vulnerabilities, neutra
             if any(v.applies_to(ann) for v in vulnerabilities):
                 node = d20.BinOp(d20.Parenthetical(node), '*', d20.Literal(2))
 
-            if node.annotation.startswith('^') or node.annotation.endswith('^'):
+            if original_annotation.startswith('[^') or original_annotation.endswith('^]'):
                 # break here - don't handle resist/immune
                 return node
 
@@ -129,3 +131,21 @@ def do_resistances(damage_expr, resistances, immunities, vulnerabilities, neutra
         return None
 
     do_visit(damage_expr)
+
+
+if __name__ == '__main__':
+    from cogs5e.models.sheet.base import Resistance
+    import traceback
+
+    while True:
+        try:
+            result = d20.roll(input())
+            print(str(result))
+            do_resistances(result.expr,
+                           resistances=[Resistance('resist', ['magical']), Resistance('both')],
+                           immunities=[Resistance('immune'), Resistance('this', only=['magical'])],
+                           vulnerabilities=[Resistance('vuln'), Resistance('both')],
+                           neutrals=[Resistance('neutral')])
+            print(d20.MarkdownStringifier().stringify(result.expr))
+        except Exception as e:
+            traceback.print_exc()

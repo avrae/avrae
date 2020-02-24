@@ -1,3 +1,5 @@
+import re
+
 import d20
 
 
@@ -77,6 +79,11 @@ def get_roll_comment(expr):
     return result.comment or ''
 
 
+def _resist_tokenize(res_str):
+    """Extracts a set of tokens from a string (any consecutive chain of letters)."""
+    return set(m.group(0) for m in re.finditer(r'\w+', res_str))
+
+
 def do_resistances(damage_expr, resistances, immunities, vulnerabilities, neutrals):
     """
     Modifies a dice expression in place, inserting binary operations where necessary to handle resistances to given
@@ -89,28 +96,28 @@ def do_resistances(damage_expr, resistances, immunities, vulnerabilities, neutra
     :type neutrals: list of cogs5e.models.sheet.base.Resistance
     """
 
-    # todo
-
     # simplify damage types
     d20.utils.simplify_expr_annotations(damage_expr.roll, ambig_inherit='left')
 
     # depth first visit expression nodes: if it has an annotation, add the appropriate binops and move to the next
     def do_visit(node):
         if node.annotation:
-            ann = node.annotation.lower()
-            if any(n.lower() in ann for n in neutrals):  # neutral overrides all
+            ann = _resist_tokenize(node.annotation.lower())
+
+            if any(n.applies_to(ann) for n in neutrals):  # neutral overrides all
                 return node
 
-            if any(v.lower() in ann for v in vulnerabilities):
+            if any(v.applies_to(ann) for v in vulnerabilities):
                 node = d20.BinOp(d20.Parenthetical(node), '*', d20.Literal(2))
 
-            if ann.startswith('^') or ann.endswith('^'):  # break here - don't handle resist/immune
+            if node.annotation.startswith('^') or node.annotation.endswith('^'):
+                # break here - don't handle resist/immune
                 return node
 
-            if any(r.lower() in ann for r in resistances):
+            if any(r.applies_to(ann) for r in resistances):
                 node = d20.BinOp(d20.Parenthetical(node), '/', d20.Literal(2))
 
-            if any(im.lower() in ann for im in immunities):
+            if any(im.applies_to(ann) for im in immunities):
                 node = d20.BinOp(d20.Parenthetical(node), '*', d20.Literal(0))
 
             return node

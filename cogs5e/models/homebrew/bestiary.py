@@ -188,7 +188,7 @@ class Bestiary(CommonHomebrewMixin):
     async def add_server_subscriptions(self, ctx, serv_ids):
         """Subscribes a list of servers to this bestiary."""
         existing = await ctx.bot.mdb.bestiary_subscriptions.find(
-            {"type": "server_active", "subscriber_id": {"$in": serv_ids}}
+            {"type": "server_active", "subscriber_id": {"$in": serv_ids}, "object_id": self.id}
         ).to_list(None)
         existing = {e['subscriber_id'] for e in existing}
         sub_docs = [{"type": "server_active", "subscriber_id": serv_id,

@@ -4,7 +4,6 @@ import logging
 import random
 import traceback
 
-import d20
 import discord
 from d20 import roll
 from discord.ext import commands

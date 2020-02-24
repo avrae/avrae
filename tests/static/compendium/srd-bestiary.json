@@ -1,72 +1,173 @@
 [
   {
     "name": "Mage",
-    "size": "M",
-    "type": {
-      "type": "humanoid",
-      "tags": [
-        "any race"
-      ]
+    "size": "Medium",
+    "race": "humanoid (any race)",
+    "alignment": "any alignment",
+    "ac": 12,
+    "armortype": null,
+    "hp": 40,
+    "hitdice": "9d8",
+    "speed": "30 ft.",
+    "ability_scores": {
+      "prof_bonus": 3,
+      "strength": 9,
+      "dexterity": 14,
+      "constitution": 11,
+      "intelligence": 17,
+      "wisdom": 12,
+      "charisma": 11
     },
-    "source": "MM",
-    "alignment": [
-      "A"
-    ],
-    "ac": {
-      "ac": 12
-    },
-    "hp": {
-      "average": 40,
-      "formula": "9d8"
-    },
-    "speed": {
-      "walk": 30
-    },
-    "str": 9,
-    "dex": 14,
-    "con": 11,
-    "int": 17,
-    "wis": 12,
-    "cha": 11,
-    "save": {
-      "intelligenceSave": 6,
-      "wisdomSave": 4
-    },
-    "skill": {
-      "arcana": 6,
-      "history": 6
-    },
-    "passive": 11,
-    "languages": "any four languages",
     "cr": "6",
-    "action": [
-      {
-        "name": "Dagger",
-        "text": "Melee or Ranged Weapon Attack: +5 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d4 + 2) piercing damage."
+    "xp": 2300,
+    "passiveperc": 11,
+    "senses": "",
+    "resistances": {
+      "resist": [],
+      "immune": [],
+      "vuln": [],
+      "neutral": []
+    },
+    "condition_immune": [],
+    "saves": {
+      "strengthSave": {
+        "value": -1
+      },
+      "dexteritySave": {
+        "value": 2
+      },
+      "constitutionSave": {
+        "value": 0
+      },
+      "intelligenceSave": {
+        "value": 6,
+        "prof": 1
+      },
+      "wisdomSave": {
+        "value": 4,
+        "prof": 1
+      },
+      "charismaSave": {
+        "value": 0
       }
+    },
+    "skills": {
+      "acrobatics": {
+        "value": 2
+      },
+      "animalHandling": {
+        "value": 1
+      },
+      "arcana": {
+        "value": 6,
+        "prof": 1
+      },
+      "athletics": {
+        "value": -1
+      },
+      "deception": {
+        "value": 0
+      },
+      "history": {
+        "value": 6,
+        "prof": 1
+      },
+      "initiative": {
+        "value": 2
+      },
+      "insight": {
+        "value": 1
+      },
+      "intimidation": {
+        "value": 0
+      },
+      "investigation": {
+        "value": 3
+      },
+      "medicine": {
+        "value": 1
+      },
+      "nature": {
+        "value": 3
+      },
+      "perception": {
+        "value": 1
+      },
+      "performance": {
+        "value": 0
+      },
+      "persuasion": {
+        "value": 0
+      },
+      "religion": {
+        "value": 3
+      },
+      "sleightOfHand": {
+        "value": 2
+      },
+      "stealth": {
+        "value": 2
+      },
+      "survival": {
+        "value": 1
+      },
+      "strength": {
+        "value": -1
+      },
+      "dexterity": {
+        "value": 2
+      },
+      "constitution": {
+        "value": 0
+      },
+      "intelligence": {
+        "value": 3
+      },
+      "wisdom": {
+        "value": 1
+      },
+      "charisma": {
+        "value": 0
+      }
+    },
+    "languages": [
+      "any four languages"
     ],
-    "page": 347,
-    "srd": true,
-    "trait": [
+    "traits": [
       {
         "name": "Spellcasting",
-        "text": "The mage is a 9th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 14, +6 to hit with spell attacks). The mage has the following wizard spells prepared:\nCantrips (at will): fire bolt, light, mage hand, prestidigitation\n1st level (4 slots): detect magic, mage armor, magic missile, shield\n2nd level (3 slots): misty step, suggestion\n3rd level (3 slots): counterspell, fireball, fly\n4th level (3 slots): greater invisibility, ice storm\n5th level (1 slots): cone of cold"
+        "desc": "The mage is a 9th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 14, +6 to hit with spell attacks). The mage has the following wizard spells prepared:\nCantrips (at will): fire bolt, light, mage hand, prestidigitation\n1st level (4 slots): detect magic, mage armor, magic missile, shield\n2nd level (3 slots): misty step, suggestion\n3rd level (3 slots): counterspell, fireball, fly\n4th level (3 slots): greater invisibility, ice storm\n5th level (1 slots): cone of cold"
       }
     ],
+    "actions": [
+      {
+        "name": "Dagger",
+        "desc": "Melee or Ranged Weapon Attack: +5 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d4 + 2) piercing damage."
+      }
+    ],
+    "reactions": [],
+    "legactions": [],
+    "la_per_round": 3,
+    "srd": true,
+    "source": "MM",
     "attacks": [
       {
         "name": "Dagger",
         "automation": [
           {
             "type": "target",
+            "meta": [],
             "target": "each",
             "effects": [
               {
                 "type": "attack",
+                "meta": [],
                 "hit": [
                   {
                     "type": "damage",
-                    "damage": "1d4 + 2 [piercing]"
+                    "meta": [],
+                    "damage": "1d4 + 2 [piercing]",
+                    "overheal": false
                   }
                 ],
                 "miss": [],
@@ -76,12 +177,17 @@
           },
           {
             "type": "text",
+            "meta": [],
             "text": "*Melee or Ranged Weapon Attack:* +5 to hit, reach 5 ft. or range 20/60 ft., one target. *Hit:* 4 (1d4 + 2) piercing damage."
           }
         ],
+        "verb": null,
+        "proper": null,
         "_v": 2
       }
     ],
+    "proper": false,
+    "image_url": null,
     "spellbook": {
       "slots": {
         "1": 4,
@@ -176,80 +282,258 @@
       "caster_level": 9,
       "spell_mod": 3,
       "at_will": [],
-      "daily": {}
+      "daily": {},
+      "daily_max": {}
+    },
+    "display_resists": {
+      "resist": [],
+      "immune": [],
+      "vuln": [],
+      "neutral": []
     }
   },
   {
     "name": "Kobold",
-    "size": "S",
-    "type": {
-      "type": "humanoid",
-      "tags": [
-        "kobold"
-      ]
+    "size": "Small",
+    "race": "humanoid (kobold)",
+    "alignment": "lawful evil",
+    "ac": 12,
+    "armortype": null,
+    "hp": 5,
+    "hitdice": "2d6 - 2",
+    "speed": "30 ft.",
+    "ability_scores": {
+      "prof_bonus": 0,
+      "strength": 7,
+      "dexterity": 15,
+      "constitution": 9,
+      "intelligence": 8,
+      "wisdom": 7,
+      "charisma": 8
     },
-    "source": "MM",
-    "alignment": [
-      "L",
-      "E"
-    ],
-    "ac": {
-      "ac": 12
-    },
-    "hp": {
-      "average": 5,
-      "formula": "2d6 - 2"
-    },
-    "speed": {
-      "walk": 30
-    },
-    "str": 7,
-    "dex": 15,
-    "con": 9,
-    "int": 8,
-    "wis": 7,
-    "cha": 8,
-    "senses": "darkvision 60 ft.",
-    "passive": 8,
-    "languages": "Common, Draconic",
     "cr": "1/8",
-    "trait": [
+    "xp": 25,
+    "passiveperc": 8,
+    "senses": "darkvision 60 ft.",
+    "resistances": {
+      "resist": [],
+      "immune": [],
+      "vuln": [],
+      "neutral": []
+    },
+    "condition_immune": [],
+    "saves": {
+      "strengthSave": {
+        "value": -2
+      },
+      "dexteritySave": {
+        "value": 2
+      },
+      "constitutionSave": {
+        "value": -1
+      },
+      "intelligenceSave": {
+        "value": -1
+      },
+      "wisdomSave": {
+        "value": -2
+      },
+      "charismaSave": {
+        "value": -1
+      }
+    },
+    "skills": {
+      "acrobatics": {
+        "value": 2
+      },
+      "animalHandling": {
+        "value": -2
+      },
+      "arcana": {
+        "value": -1
+      },
+      "athletics": {
+        "value": -2
+      },
+      "deception": {
+        "value": -1
+      },
+      "history": {
+        "value": -1
+      },
+      "initiative": {
+        "value": 2
+      },
+      "insight": {
+        "value": -2
+      },
+      "intimidation": {
+        "value": -1
+      },
+      "investigation": {
+        "value": -1
+      },
+      "medicine": {
+        "value": -2
+      },
+      "nature": {
+        "value": -1
+      },
+      "perception": {
+        "value": -2
+      },
+      "performance": {
+        "value": -1
+      },
+      "persuasion": {
+        "value": -1
+      },
+      "religion": {
+        "value": -1
+      },
+      "sleightOfHand": {
+        "value": 2
+      },
+      "stealth": {
+        "value": 2
+      },
+      "survival": {
+        "value": -2
+      },
+      "strength": {
+        "value": -2
+      },
+      "dexterity": {
+        "value": 2
+      },
+      "constitution": {
+        "value": -1
+      },
+      "intelligence": {
+        "value": -1
+      },
+      "wisdom": {
+        "value": -2
+      },
+      "charisma": {
+        "value": -1
+      }
+    },
+    "languages": [
+      "Common",
+      "Draconic"
+    ],
+    "traits": [
       {
         "name": "Sunlight Sensitivity",
-        "text": "While in sunlight, the kobold has disadvantage on attack rolls, as well as on Wisdom (Perception) checks that rely on sight."
+        "desc": "While in sunlight, the kobold has disadvantage on attack rolls, as well as on Wisdom (Perception) checks that rely on sight."
       },
       {
         "name": "Pack Tactics",
-        "text": "The kobold has advantage on an attack roll against a creature if at least one of the kobold's allies is within 5 feet of the creature and the ally isn't incapacitated."
+        "desc": "The kobold has advantage on an attack roll against a creature if at least one of the kobold's allies is within 5 feet of the creature and the ally isn't incapacitated."
       }
     ],
-    "action": [
+    "actions": [
       {
         "name": "Dagger",
-        "text": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 4 (1d4 + 2) piercing damage."
+        "desc": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 4 (1d4 + 2) piercing damage."
       },
       {
         "name": "Sling",
-        "text": "Ranged Weapon Attack: +4 to hit, range 30/120 ft., one target. Hit: 4 (1d4 + 2) bludgeoning damage."
+        "desc": "Ranged Weapon Attack: +4 to hit, range 30/120 ft., one target. Hit: 4 (1d4 + 2) bludgeoning damage."
       }
     ],
-    "page": 195,
+    "reactions": [],
+    "legactions": [],
+    "la_per_round": 3,
     "srd": true,
-    "save": {},
-    "skill": {},
+    "source": "MM",
     "attacks": [
       {
         "name": "Dagger",
-        "attackBonus": "4",
-        "damage": "1d4 + 2[piercing]",
-        "details": "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 4 (1d4 + 2) piercing damage."
+        "automation": [
+          {
+            "type": "target",
+            "meta": [],
+            "target": "each",
+            "effects": [
+              {
+                "type": "attack",
+                "meta": [],
+                "hit": [
+                  {
+                    "type": "damage",
+                    "meta": [],
+                    "damage": "1d4 + 2 [piercing]",
+                    "overheal": false
+                  }
+                ],
+                "miss": [],
+                "attackBonus": "4"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "meta": [],
+            "text": "*Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 4 (1d4 + 2) piercing damage."
+          }
+        ],
+        "verb": null,
+        "proper": null,
+        "_v": 2
       },
       {
         "name": "Sling",
-        "attackBonus": "4",
-        "damage": "1d4 + 2[bludgeoning]",
-        "details": "Ranged Weapon Attack: +4 to hit, range 30/120 ft., one target. Hit: 4 (1d4 + 2) bludgeoning damage."
+        "automation": [
+          {
+            "type": "target",
+            "meta": [],
+            "target": "each",
+            "effects": [
+              {
+                "type": "attack",
+                "meta": [],
+                "hit": [
+                  {
+                    "type": "damage",
+                    "meta": [],
+                    "damage": "1d4 + 2 [bludgeoning]",
+                    "overheal": false
+                  }
+                ],
+                "miss": [],
+                "attackBonus": "4"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "meta": [],
+            "text": "*Ranged Weapon Attack:* +4 to hit, range 30/120 ft., one target. *Hit:* 4 (1d4 + 2) bludgeoning damage."
+          }
+        ],
+        "verb": null,
+        "proper": null,
+        "_v": 2
       }
-    ]
+    ],
+    "proper": false,
+    "image_url": null,
+    "spellbook": {
+      "slots": {},
+      "max_slots": {},
+      "spells": [],
+      "dc": null,
+      "sab": null,
+      "caster_level": 0,
+      "spell_mod": null
+    },
+    "display_resists": {
+      "resist": [],
+      "immune": [],
+      "vuln": [],
+      "neutral": []
+    }
   }
 ]

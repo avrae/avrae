@@ -1,3 +1,10 @@
+import re
+
+import d20
+
+from utils.constants import RESIST_TYPES
+
+
 class Resistances:
     def __init__(self, resist=None, immune=None, vuln=None, neutral=None):
         """
@@ -23,6 +30,15 @@ class Resistances:
     def from_dict(cls, d):
         return cls(**{k: [Resistance.from_dict(v) for v in vs] for k, vs in d.items()})
 
+    @classmethod
+    def from_args(cls, args, **kwargs):
+        return cls.from_dict({
+            'resist': args.get('resist', [], **kwargs),
+            'immune': args.get('immune', [], **kwargs),
+            'vuln': args.get('vuln', [], **kwargs),
+            'neutral': args.get('neutral', [], **kwargs)
+        })
+
     def to_dict(self):
         return {
             "resist": [t.to_dict() for t in self.resist],
@@ -35,6 +51,25 @@ class Resistances:
         return Resistances(self.resist.copy(), self.immune.copy(), self.vuln.copy(), self.neutral.copy())
 
     # ---------- main funcs ----------
+    def update(self, other, overwrite=True):
+        """
+        Updates this Resistances with the resistances of another.
+
+        :param overwrite: If a damage type is specified in the other, removes all occurances of that type in this one.
+        :type other: Resistances
+        """
+        to_remove = set(r.dtype for rt in RESIST_TYPES for r in other[rt])  # set of all damage types specified in other
+
+        for rt in RESIST_TYPES:
+            # remove all instances of damage types to remove from me
+            if overwrite:
+                for resist in reversed(self[rt]):
+                    if resist.dtype in to_remove:
+                        self[rt].remove(resist)
+
+            # and add the resistances from the other
+            self[rt].extend(other[rt])
+
     def __getitem__(self, item):
         if item == 'resist':
             return self.resist
@@ -119,3 +154,73 @@ class Resistance:
         out.extend(self.only)
         out.append(self.dtype)
         return ' '.join(out)
+
+
+def _resist_tokenize(res_str):
+    """Extracts a set of tokens from a string (any consecutive chain of letters)."""
+    return set(m.group(0) for m in re.finditer(r'\w+', res_str))
+
+
+def do_resistances(damage_expr, resistances):
+    """
+    Modifies a dice expression in place, inserting binary operations where necessary to handle resistances to given
+    damage types.
+
+    Note that any neutrals in the resistances will be explicitly ignored.
+
+    :type damage_expr: d20.Expression
+    :type resistances: Resistances
+    """
+
+    # simplify damage types
+    d20.utils.simplify_expr_annotations(damage_expr.roll, ambig_inherit='left')
+
+    # depth first visit expression nodes: if it has an annotation, add the appropriate binops and move to the next
+    def do_visit(node):
+        if node.annotation:
+            original_annotation = node.annotation
+            ann = _resist_tokenize(node.annotation.lower())
+
+            if any(n.applies_to(ann) for n in resistances.neutral):  # neutral overrides all
+                return node
+
+            if any(v.applies_to(ann) for v in resistances.vuln):
+                node = d20.BinOp(d20.Parenthetical(node), '*', d20.Literal(2))
+
+            if original_annotation.startswith('[^') or original_annotation.endswith('^]'):
+                # break here - don't handle resist/immune
+                return node
+
+            if any(r.applies_to(ann) for r in resistances.resist):
+                node = d20.BinOp(d20.Parenthetical(node), '/', d20.Literal(2))
+
+            if any(im.applies_to(ann) for im in resistances.immune):
+                node = d20.BinOp(d20.Parenthetical(node), '*', d20.Literal(0))
+
+            return node
+
+        for i, child in enumerate(node.children):
+            replacement = do_visit(child)
+            if replacement and replacement is not child:
+                node.set_child(i, replacement)
+        return None
+
+    do_visit(damage_expr)
+
+
+if __name__ == '__main__':
+    import traceback
+
+    resists = Resistances(resist=[Resistance('resist', ['magical']), Resistance('both')],
+                          immune=[Resistance('immune'), Resistance('this', only=['magical'])],
+                          vuln=[Resistance('vuln'), Resistance('both')],
+                          neutral=[Resistance('neutral')])
+
+    while True:
+        try:
+            result = d20.roll(input())
+            print(str(result))
+            do_resistances(result.expr, resists)
+            print(d20.MarkdownStringifier().stringify(result.expr))
+        except Exception as e:
+            traceback.print_exc()

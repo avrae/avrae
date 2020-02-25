@@ -9,8 +9,8 @@ from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
-from cogs5e.models.sheet.resistance import Resistance
-from utils.dice import RerollableStringifier, do_resistances
+from cogs5e.models.sheet.resistance import Resistances, do_resistances
+from utils.dice import RerollableStringifier
 
 log = logging.getLogger(__name__)
 
@@ -240,18 +240,6 @@ class AutomationTarget:
 
     def get_resists(self):
         return self.target.resistances
-
-    def get_resist(self):
-        return self.get_resists().resist
-
-    def get_immune(self):
-        return self.get_resists().immune
-
-    def get_vuln(self):
-        return self.get_resists().vuln
-
-    def get_neutral(self):
-        return self.get_resists().neutral
 
     def damage(self, autoctx, amount, allow_overheal=True):
         if not self.is_simple:
@@ -734,12 +722,9 @@ class Damage(Effect):
         # general arguments
         args = autoctx.args
         damage = self.damage
+        resistances = None
         d = args.join('d', '+', ephem=True)
         c = args.join('c', '+', ephem=True)
-        resist = args.get('resist', [], ephem=True)
-        immune = args.get('immune', [], ephem=True)
-        vuln = args.get('vuln', [], ephem=True)
-        neutral = args.get('neutral', [], ephem=True)
         crit = args.last('crit', None, bool, ephem=True)
         maxdmg = args.last('max', None, bool, ephem=True)
         mi = args.last('mi', None, int)
@@ -752,10 +737,8 @@ class Damage(Effect):
 
         # combat-specific arguments
         if not autoctx.target.is_simple:
-            resist = [Resistance.from_dict(r) for r in resist] or autoctx.target.get_resist()
-            immune = [Resistance.from_dict(r) for r in immune] or autoctx.target.get_immune()
-            vuln = [Resistance.from_dict(r) for r in vuln] or autoctx.target.get_vuln()
-            neutral = [Resistance.from_dict(r) for r in neutral] or autoctx.target.get_neutral()
+            resistances = autoctx.target.get_resists().copy()
+            resistances.update(Resistances.from_args(args, ephem=True))
 
         # check if we actually need to run this damage roll (not in combat and roll is redundant)
         if autoctx.target.is_simple and self.is_meta(autoctx, True):
@@ -809,7 +792,9 @@ class Damage(Effect):
             dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
         dmgroll = roll(dice_ast)
-        do_resistances(dmgroll.expr, resist, immune, vuln, neutral)
+
+        if resistances:
+            do_resistances(dmgroll.expr, resistances)
         result = d20.MarkdownStringifier().stringify(dmgroll.expr)
 
         # output

@@ -604,13 +604,7 @@ class Combatant(StatBlock):
     @property
     def resistances(self):
         out = self._resistances.copy()
-
-        # add the resistances granted by effects to our resistances
-        for resist_type in reversed(RESIST_TYPES):
-            for res in self.active_effects(resist_type):  # for [str or dict (Resistance)] in [list]
-                resistance = Resistance.from_dict(res)
-                out[resist_type].append(resistance)
-
+        out.update(Resistances.from_dict({k: self.active_effects(k) for k in RESIST_TYPES}), overwrite=False)
         return out
 
     def set_resist(self, dmgtype: str, resisttype: str):
@@ -629,7 +623,7 @@ class Combatant(StatBlock):
     @property
     def attacks(self):
         if 'attacks' not in self._cache:
-            # attacks granted by attacks are cached so that the same object is referenced in initTracker (#950)
+            # attacks granted by effects are cached so that the same object is referenced in initTracker (#950)
             self._cache['attacks'] = self._attacks + AttackList.from_dict(self.active_effects('attack'))
         return self._cache['attacks']
 

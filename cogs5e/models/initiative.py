@@ -5,7 +5,8 @@ from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatE
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
 from cogs5e.models.monster import MonsterCastableSpellbook
 from cogs5e.models.sheet.attack import Attack, AttackList
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistance, Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
+from cogs5e.models.sheet.resistance import Resistances, Resistance
 from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from utils.argparser import argparse

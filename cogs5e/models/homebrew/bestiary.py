@@ -11,7 +11,8 @@ from cogs5e.models.errors import ExternalImportError, NoActiveBrew
 from cogs5e.models.homebrew.mixins import CommonHomebrewMixin
 from cogs5e.models.monster import Monster, MonsterSpellbook, Trait
 from cogs5e.models.sheet.attack import AttackList
-from cogs5e.models.sheet.base import BaseStats, Saves, Skills, Resistances
+from cogs5e.models.sheet.base import BaseStats, Saves, Skills
+from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
 from utils.functions import search_and_select
 

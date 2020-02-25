@@ -90,11 +90,11 @@ def do_resistances(damage_expr, resistances, immunities, vulnerabilities, neutra
     damage types.
 
     :type damage_expr: d20.Expression
-    :type resistances: list of cogs5e.models.sheet.base.Resistance
-    :type immunities: list of cogs5e.models.sheet.base.Resistance
-    :type vulnerabilities: list of cogs5e.models.sheet.base.Resistance
+    :type resistances: list of cogs5e.models.sheet.resistance.Resistance
+    :type immunities: list of cogs5e.models.sheet.resistance.Resistance
+    :type vulnerabilities: list of cogs5e.models.sheet.resistance.Resistance
     :param neutrals: A list of resistances that should be explicitly ignored.
-    :type neutrals: list of cogs5e.models.sheet.base.Resistance
+    :type neutrals: list of cogs5e.models.sheet.resistance.Resistance
     """
 
     # simplify damage types
@@ -134,7 +134,7 @@ def do_resistances(damage_expr, resistances, immunities, vulnerabilities, neutra
 
 
 if __name__ == '__main__':
-    from cogs5e.models.sheet.base import Resistance
+    from cogs5e.models.sheet.resistance import Resistance
     import traceback
 
     while True:

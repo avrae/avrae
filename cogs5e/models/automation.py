@@ -9,6 +9,7 @@ from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
+from cogs5e.models.sheet.resistance import Resistance
 from utils.dice import RerollableStringifier, do_resistances
 
 log = logging.getLogger(__name__)
@@ -750,11 +751,11 @@ class Damage(Effect):
             critdice = autoctx.character.get_setting('critdice') or critdice
 
         # combat-specific arguments
-        if not autoctx.target.is_simple:  # todo handle type (get_resist returns list of Resistance)
-            resist = resist or autoctx.target.get_resist()
-            immune = immune or autoctx.target.get_immune()
-            vuln = vuln or autoctx.target.get_vuln()
-            neutral = neutral or autoctx.target.get_neutral()
+        if not autoctx.target.is_simple:
+            resist = [Resistance.from_dict(r) for r in resist] or autoctx.target.get_resist()
+            immune = [Resistance.from_dict(r) for r in immune] or autoctx.target.get_immune()
+            vuln = [Resistance.from_dict(r) for r in vuln] or autoctx.target.get_vuln()
+            neutral = [Resistance.from_dict(r) for r in neutral] or autoctx.target.get_neutral()
 
         # check if we actually need to run this damage roll (not in combat and roll is redundant)
         if autoctx.target.is_simple and self.is_meta(autoctx, True):

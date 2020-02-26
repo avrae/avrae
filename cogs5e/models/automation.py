@@ -757,13 +757,10 @@ class Damage(Effect):
         if self.is_meta(autoctx):
             d = None  # d was likely applied in the Roll effect already
 
+        # set up damage AST
         damage = autoctx.parse_annostr(damage)
         dice_ast = copy.copy(d20.parse(damage))
         dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
-
-        # crit
-        in_crit = autoctx.in_crit or crit
-        roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
 
         # -mi # (#527)
         if mi:
@@ -774,6 +771,9 @@ class Damage(Effect):
             d_ast = d20.parse(d)
             dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
 
+        # crit
+        in_crit = autoctx.in_crit or crit
+        roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
         if in_crit:
             dice_ast = d20.utils.tree_map(_crit_mapper, dice_ast)
             if critdice and not autoctx.is_spell:
@@ -791,10 +791,15 @@ class Damage(Effect):
         if maxdmg:
             dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
+        # evaluate damage
         dmgroll = roll(dice_ast)
 
+        # evaluate resistances
         if resistances:
-            do_resistances(dmgroll.expr, resistances)
+            always = {'magical'} if autoctx.is_spell else None
+            do_resistances(dmgroll.expr, resistances, always)
+
+        # generate output
         result = d20.MarkdownStringifier().stringify(dmgroll.expr)
 
         # output

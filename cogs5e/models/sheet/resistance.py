@@ -161,7 +161,7 @@ def _resist_tokenize(res_str):
     return set(m.group(0) for m in re.finditer(r'\w+', res_str))
 
 
-def do_resistances(damage_expr, resistances):
+def do_resistances(damage_expr, resistances, always=None):
     """
     Modifies a dice expression in place, inserting binary operations where necessary to handle resistances to given
     damage types.
@@ -170,7 +170,11 @@ def do_resistances(damage_expr, resistances):
 
     :type damage_expr: d20.Expression
     :type resistances: Resistances
+    :param always: If passed, damage is always this type in addition to whatever it's annotated as.
+    :type always: set[str]
     """
+    if always is None:
+        always = set()
 
     # simplify damage types
     d20.utils.simplify_expr_annotations(damage_expr.roll, ambig_inherit='left')
@@ -179,7 +183,7 @@ def do_resistances(damage_expr, resistances):
     def do_visit(node):
         if node.annotation:
             original_annotation = node.annotation
-            ann = _resist_tokenize(node.annotation.lower())
+            ann = _resist_tokenize(node.annotation.lower()) | always
 
             if any(n.applies_to(ann) for n in resistances.neutral):  # neutral overrides all
                 return node

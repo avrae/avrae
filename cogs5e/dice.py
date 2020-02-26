@@ -130,16 +130,38 @@ class Dice(commands.Cog):
         -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
         -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
 
-        adv/dis
-        -ac [target ac]
-        -b [to hit bonus]
-        -d [damage bonus]
-        -d# [applies damage to the first # hits]
-        -rr [times to reroll]
-        -t [target]
-        -phrase [flavor text]
-        crit (automatically crit)
-        -h (hides monster name, image, and rolled values)
+        *adv/dis* - Advantage or Disadvantage
+        *ea* - Elven Accuracy double advantage
+
+        -ac <target ac> - overrides target AC
+        *-b* <to hit bonus> - adds a bonus to hit
+        -criton <num> - a number to crit on if rolled on or above
+        *-d* <damage bonus> - adds a bonus to damage
+        *-c* <damage bonus on crit> - adds a bonus to crit damage
+        -rr <times> - number of times to roll the attack against each target
+        *-mi* <minimum> - minimum roll on each die
+
+        *-resist* <damage resistance>
+        *-immune* <damage immunity>
+        *-vuln* <damage vulnerability>
+        *-neutral* <damage type> - ignores this damage type in resistance calculations
+        -dtype <damage type> - replaces all damage types with this damage type
+        -dtype <old>new> - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
+
+        *hit* - automatically hits
+        *miss* - automatically misses
+        *crit* - automatically crits if hit
+        *max* - deals max damage
+        *magic* - makes the damage type magical
+
+        -h - hides name, rolled values, and monster details
+        -phrase <text> - adds flavour text
+        -title <title> - changes the result title *note: `[name]` and `[aname]` will be replaced automatically*
+        -thumb <url> - adds flavour image
+        -f "Field Title|Field Text" - see `!help embed`
+        <user snippet> - see `!help snippet`
+
+        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on.
         """
         if atk_name is None or atk_name == 'list':
             return await ctx.invoke(self.monster_atk_list, monster_name)

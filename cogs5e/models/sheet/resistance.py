@@ -157,11 +157,11 @@ class Resistance:
 
 
 def _resist_tokenize(res_str):
-    """Extracts a set of tokens from a string (any consecutive chain of letters)."""
-    return set(m.group(0) for m in re.finditer(r'\w+', res_str))
+    """Extracts a list of tokens from a string (any consecutive chain of letters)."""
+    return [m.group(0) for m in re.finditer(r'\w+', res_str)]
 
 
-def do_resistances(damage_expr, resistances, always=None):
+def do_resistances(damage_expr, resistances, always=None, transforms=None):
     """
     Modifies a dice expression in place, inserting binary operations where necessary to handle resistances to given
     damage types.
@@ -172,9 +172,13 @@ def do_resistances(damage_expr, resistances, always=None):
     :type resistances: Resistances
     :param always: If passed, damage is always this type in addition to whatever it's annotated as.
     :type always: set[str]
+    :param transforms: a dict representing damage type transforms. If None is a key, all damage types become that.
+    :type transforms: dict[str or None, str]
     """
     if always is None:
         always = set()
+    if transforms is None:
+        transforms = {}
 
     # simplify damage types
     d20.utils.simplify_expr_annotations(damage_expr.roll, ambig_inherit='left')
@@ -182,8 +186,17 @@ def do_resistances(damage_expr, resistances, always=None):
     # depth first visit expression nodes: if it has an annotation, add the appropriate binops and move to the next
     def do_visit(node):
         if node.annotation:
-            original_annotation = node.annotation
-            ann = _resist_tokenize(node.annotation.lower()) | always
+            # handle transforms
+            if None in transforms:
+                tokens = _resist_tokenize(transforms[None])
+            else:
+                tokens = []
+                for t in _resist_tokenize(node.annotation.lower()):
+                    tokens.extend(_resist_tokenize(transforms.get(t, t)))
+            original_annotation = node.annotation = f"[{' '.join(tokens)}]"
+
+            # handle tree modification
+            ann = set(tokens) | always
 
             if any(n.applies_to(ann) for n in resistances.neutral):  # neutral overrides all
                 return node

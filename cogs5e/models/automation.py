@@ -722,13 +722,14 @@ class Damage(Effect):
         # general arguments
         args = autoctx.args
         damage = self.damage
-        resistances = None
+        resistances = Resistances()
         d_arg = args.join('d', '+', ephem=True)
         c_arg = args.join('c', '+', ephem=True)
         crit_arg = args.last('crit', None, bool, ephem=True)
         max_arg = args.last('max', None, bool, ephem=True)
         magic_arg = args.last('magic', None, bool, ephem=True)
         mi_arg = args.last('mi', None, int)
+        dtype_args = args.get('dtype', [])
         critdice = args.last('critdice', 0, int)
         hide = args.last('h', type_=bool)
 
@@ -739,7 +740,7 @@ class Damage(Effect):
         # combat-specific arguments
         if not autoctx.target.is_simple:
             resistances = autoctx.target.get_resists().copy()
-            resistances.update(Resistances.from_args(args, ephem=True))
+        resistances.update(Resistances.from_args(args, ephem=True))
 
         # check if we actually need to run this damage roll (not in combat and roll is redundant)
         if autoctx.target.is_simple and self.is_meta(autoctx, True):
@@ -795,10 +796,20 @@ class Damage(Effect):
         # evaluate damage
         dmgroll = roll(dice_ast)
 
+        # magic arg (#853)
+        always = {'magical'} if (autoctx.is_spell or magic_arg) else None
+        # dtype transforms/overrides (#876)
+        transforms = {}
+        for dtype in dtype_args:
+            if '>' in dtype:
+                *froms, to = dtype.split('>')
+                for frm in froms:
+                    transforms[frm.strip()] = to.strip()
+            else:
+                transforms[None] = dtype
+
         # evaluate resistances
-        if resistances:
-            always = {'magical'} if (autoctx.is_spell or magic_arg) else None
-            do_resistances(dmgroll.expr, resistances, always)
+        do_resistances(dmgroll.expr, resistances, always, transforms)
 
         # generate output
         result = d20.MarkdownStringifier().stringify(dmgroll.expr)

@@ -723,11 +723,12 @@ class Damage(Effect):
         args = autoctx.args
         damage = self.damage
         resistances = None
-        d = args.join('d', '+', ephem=True)
-        c = args.join('c', '+', ephem=True)
-        crit = args.last('crit', None, bool, ephem=True)
-        maxdmg = args.last('max', None, bool, ephem=True)
-        mi = args.last('mi', None, int)
+        d_arg = args.join('d', '+', ephem=True)
+        c_arg = args.join('c', '+', ephem=True)
+        crit_arg = args.last('crit', None, bool, ephem=True)
+        max_arg = args.last('max', None, bool, ephem=True)
+        magic_arg = args.last('magic', None, bool, ephem=True)
+        mi_arg = args.last('mi', None, int)
         critdice = args.last('critdice', 0, int)
         hide = args.last('h', type_=bool)
 
@@ -748,14 +749,14 @@ class Damage(Effect):
         if autoctx.combatant:
             effect_d = '+'.join(autoctx.combatant.active_effects('d'))
             if effect_d:
-                if d:
-                    d = f"{d}+{effect_d}"
+                if d_arg:
+                    d_arg = f"{d_arg}+{effect_d}"
                 else:
-                    d = effect_d
+                    d_arg = effect_d
 
         # check if we actually need to care about the -d tag
         if self.is_meta(autoctx):
-            d = None  # d was likely applied in the Roll effect already
+            d_arg = None  # d was likely applied in the Roll effect already
 
         # set up damage AST
         damage = autoctx.parse_annostr(damage)
@@ -763,16 +764,16 @@ class Damage(Effect):
         dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
 
         # -mi # (#527)
-        if mi:
-            dice_ast = d20.utils.tree_map(_mi_mapper(mi), dice_ast)
+        if mi_arg:
+            dice_ast = d20.utils.tree_map(_mi_mapper(mi_arg), dice_ast)
 
         # -d #
-        if d:
-            d_ast = d20.parse(d)
+        if d_arg:
+            d_ast = d20.parse(d_arg)
             dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
 
         # crit
-        in_crit = autoctx.in_crit or crit
+        in_crit = autoctx.in_crit or crit_arg
         roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
         if in_crit:
             dice_ast = d20.utils.tree_map(_crit_mapper, dice_ast)
@@ -783,12 +784,12 @@ class Damage(Effect):
                     left.num += int(critdice)
 
         # -c #
-        if c and in_crit:
-            c_ast = d20.parse(c)
+        if c_arg and in_crit:
+            c_ast = d20.parse(c_arg)
             dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', c_ast.roll)
 
         # max
-        if maxdmg:
+        if max_arg:
             dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
         # evaluate damage
@@ -796,7 +797,7 @@ class Damage(Effect):
 
         # evaluate resistances
         if resistances:
-            always = {'magical'} if autoctx.is_spell else None
+            always = {'magical'} if (autoctx.is_spell or magic_arg) else None
             do_resistances(dmgroll.expr, resistances, always)
 
         # generate output

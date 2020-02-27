@@ -123,8 +123,20 @@ class Resistance:
     @classmethod
     def from_dict(cls, d):
         if isinstance(d, str):
-            return cls(d)
+            return cls.from_str(d)
         return cls(**d)
+
+    @classmethod
+    def from_str(cls, s):
+        tokens = _resist_tokenize(s)
+        unless = []
+        only = []
+        for t in tokens[:-1]:
+            if t.startswith('non'):
+                unless.append(t)
+            else:
+                only.append(t)
+        return cls(tokens[-1], unless=unless, only=only)
 
     def to_dict(self):
         out = {"dtype": self.dtype}

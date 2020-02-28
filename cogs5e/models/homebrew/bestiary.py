@@ -12,6 +12,7 @@ from cogs5e.models.homebrew.mixins import CommonHomebrewMixin
 from cogs5e.models.monster import Monster, MonsterSpellbook, Trait
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills
+from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
 from utils.functions import search_and_select
 
@@ -297,11 +298,14 @@ def _monster_factory(data):
     attacks = AttackList.from_dict(attacks)
     spellcasting = parse_critterdb_spellcasting(traits, ability_scores)
 
+    resistances = Resistances.from_dict(dict(vuln=data['stats']['damageVulnerabilities'],
+                                             resist=data['stats']['damageResistances'],
+                                             immune=data['stats']['damageImmunities']))
+
     return Monster(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
                    data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
                    ability_scores, cr, data['stats']['experiencePoints'], None,
-                   ', '.join(data['stats']['senses']), data['stats']['damageVulnerabilities'],
-                   data['stats']['damageResistances'], data['stats']['damageImmunities'],
+                   ', '.join(data['stats']['senses']), resistances,
                    data['stats']['conditionImmunities'], saves, skills,
                    data['stats']['languages'], traits, actions, reactions, legactions,
                    data['stats']['legendaryActionsPerRound'], True, 'homebrew', attacks,

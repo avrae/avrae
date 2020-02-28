@@ -22,5 +22,5 @@ DICECLOUD_USER = os.getenv('DICECLOUD_USER', 'avrae') if not TESTING else creden
 DICECLOUD_PASS = credentials.dicecloud_pass.encode() if not TESTING else credentials.test_dicecloud_pass.encode()
 DICECLOUD_API_KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
 GOOGLE_SERVICE_ACCOUNT = os.getenv('GOOGLE_SERVICE_ACCOUNT')  # optional - if not supplied, uses avrae-google.json
-RELOAD_INTERVAL = os.getenv('RELOAD_INTERVAL', '3600')  # compendium static data reload interval
+RELOAD_INTERVAL = os.getenv('RELOAD_INTERVAL', '0')  # compendium static data reload interval
 ECS_METADATA_ENDPT = os.getenv('ECS_CONTAINER_METADATA_URI')  # set by ECS

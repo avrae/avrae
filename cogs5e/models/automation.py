@@ -9,7 +9,8 @@ from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
-from utils.dice import RerollableStringifier, do_resistances
+from cogs5e.models.sheet.resistance import Resistances, do_resistances
+from utils.dice import RerollableStringifier
 
 log = logging.getLogger(__name__)
 
@@ -239,18 +240,6 @@ class AutomationTarget:
 
     def get_resists(self):
         return self.target.resistances
-
-    def get_resist(self):
-        return self.get_resists().resist
-
-    def get_immune(self):
-        return self.get_resists().immune
-
-    def get_vuln(self):
-        return self.get_resists().vuln
-
-    def get_neutral(self):
-        return self.get_resists().neutral
 
     def damage(self, autoctx, amount, allow_overheal=True):
         if not self.is_simple:
@@ -733,15 +722,14 @@ class Damage(Effect):
         # general arguments
         args = autoctx.args
         damage = self.damage
-        d = args.join('d', '+', ephem=True)
-        c = args.join('c', '+', ephem=True)
-        resist = args.get('resist', [], ephem=True)
-        immune = args.get('immune', [], ephem=True)
-        vuln = args.get('vuln', [], ephem=True)
-        neutral = args.get('neutral', [], ephem=True)
-        crit = args.last('crit', None, bool, ephem=True)
-        maxdmg = args.last('max', None, bool, ephem=True)
-        mi = args.last('mi', None, int)
+        resistances = Resistances()
+        d_arg = args.join('d', '+', ephem=True)
+        c_arg = args.join('c', '+', ephem=True)
+        crit_arg = args.last('crit', None, bool, ephem=True)
+        max_arg = args.last('max', None, bool, ephem=True)
+        magic_arg = args.last('magic', None, bool, ephem=True)
+        mi_arg = args.last('mi', None, int)
+        dtype_args = args.get('dtype', [])
         critdice = args.last('critdice', 0, int)
         hide = args.last('h', type_=bool)
 
@@ -751,10 +739,8 @@ class Damage(Effect):
 
         # combat-specific arguments
         if not autoctx.target.is_simple:
-            resist = resist or autoctx.target.get_resist()
-            immune = immune or autoctx.target.get_immune()
-            vuln = vuln or autoctx.target.get_vuln()
-            neutral = neutral or autoctx.target.get_neutral()
+            resistances = autoctx.target.get_resists().copy()
+        resistances.update(Resistances.from_args(args, ephem=True))
 
         # check if we actually need to run this damage roll (not in combat and roll is redundant)
         if autoctx.target.is_simple and self.is_meta(autoctx, True):
@@ -764,32 +750,32 @@ class Damage(Effect):
         if autoctx.combatant:
             effect_d = '+'.join(autoctx.combatant.active_effects('d'))
             if effect_d:
-                if d:
-                    d = f"{d}+{effect_d}"
+                if d_arg:
+                    d_arg = f"{d_arg}+{effect_d}"
                 else:
-                    d = effect_d
+                    d_arg = effect_d
 
         # check if we actually need to care about the -d tag
         if self.is_meta(autoctx):
-            d = None  # d was likely applied in the Roll effect already
+            d_arg = None  # d was likely applied in the Roll effect already
 
+        # set up damage AST
         damage = autoctx.parse_annostr(damage)
         dice_ast = copy.copy(d20.parse(damage))
         dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
 
-        # crit
-        in_crit = autoctx.in_crit or crit
-        roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
-
         # -mi # (#527)
-        if mi:
-            dice_ast = d20.utils.tree_map(_mi_mapper(mi), dice_ast)
+        if mi_arg:
+            dice_ast = d20.utils.tree_map(_mi_mapper(mi_arg), dice_ast)
 
         # -d #
-        if d:
-            d_ast = d20.parse(d)
+        if d_arg:
+            d_ast = d20.parse(d_arg)
             dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
 
+        # crit
+        in_crit = autoctx.in_crit or crit_arg
+        roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
         if in_crit:
             dice_ast = d20.utils.tree_map(_crit_mapper, dice_ast)
             if critdice and not autoctx.is_spell:
@@ -799,16 +785,33 @@ class Damage(Effect):
                     left.num += int(critdice)
 
         # -c #
-        if c and in_crit:
-            c_ast = d20.parse(c)
+        if c_arg and in_crit:
+            c_ast = d20.parse(c_arg)
             dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', c_ast.roll)
 
         # max
-        if maxdmg:
+        if max_arg:
             dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
+        # evaluate damage
         dmgroll = roll(dice_ast)
-        do_resistances(dmgroll.expr, resist, immune, vuln, neutral)
+
+        # magic arg (#853)
+        always = {'magical'} if (autoctx.is_spell or magic_arg) else None
+        # dtype transforms/overrides (#876)
+        transforms = {}
+        for dtype in dtype_args:
+            if '>' in dtype:
+                *froms, to = dtype.split('>')
+                for frm in froms:
+                    transforms[frm.strip()] = to.strip()
+            else:
+                transforms[None] = dtype
+
+        # evaluate resistances
+        do_resistances(dmgroll.expr, resistances, always, transforms)
+
+        # generate output
         result = d20.MarkdownStringifier().stringify(dmgroll.expr)
 
         # output

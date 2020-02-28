@@ -9,7 +9,8 @@ from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NoReset
 from cogs5e.models.sheet.attack import AttackList
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
+from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.player import CharOptions, CustomCounter, DeathSaves, ManualOverrides
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock

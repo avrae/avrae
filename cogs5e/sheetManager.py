@@ -67,37 +67,39 @@ class SheetManager(commands.Cog):
         -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
         -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
 
-        *adv/dis*
-        *ea* (Elven Accuracy double advantage)
+        *adv/dis* - Advantage or Disadvantage
+        *ea* - Elven Accuracy double advantage
         
-        -ac [target ac]
-        -t [target]
+        -ac <target ac> - overrides target AC
+        *-b* <to hit bonus> - adds a bonus to hit
+        -criton <num> - a number to crit on if rolled on or above
+        *-d* <damage bonus> - adds a bonus to damage
+        *-c* <damage bonus on crit> - adds a bonus to crit damage
+        -rr <times> - number of times to roll the attack against each target
+        *-mi* <minimum> - minimum roll on each die
         
-        *-b* [to hit bonus]
-        -criton [a number to crit on if rolled on or above]
-        *-d* [damage bonus]
-        *-c* [damage bonus on crit]
-        -rr [times to reroll]
-        *-mi* [minimum weapon dice roll]
+        *-resist* <damage resistance>
+        *-immune* <damage immunity>
+        *-vuln* <damage vulnerability>
+        *-neutral* <damage type> - ignores this damage type in resistance calculations
+        -dtype <damage type> - replaces all damage types with this damage type
+        -dtype <old>new> - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
         
-        *-resist* [damage resistance]
-        *-immune* [damage immunity]
-        *-vuln* [damage vulnerability]
-        *-neutral* [damage non-resistance]
-        
-        *hit* (automatically hits)
-        *miss* (automatically misses)
-        *crit* (automatically crit)
-        *max* (deals max damage)
+        *hit* - automatically hits
+        *miss* - automatically misses
+        *crit* - automatically crits if hit
+        *max* - deals max damage
+        *magic* - makes the damage type magical
 
-        -h (hides name and rolled values)
-        -phrase [flavor text]
-        -title [title] *note: [name] and [aname] will be replaced automatically*
-        -thumb [url]
-        -f "Field Title|Field Text" (see !embed)
-        [user snippet]
+        -h - hides name and rolled values
+        -phrase <text> - adds flavour text
+        -title <title> - changes the result title *note: `[name]` and `[aname]` will be replaced automatically*
+        -thumb <url> - adds flavour image
+        -f "Field Title|Field Text" - see `!help embed`
+        <user snippet> - see `!help snippet`
 
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on."""
+        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on.
+        """
         if atk_name is None:
             return await ctx.invoke(self.attack_list)
 

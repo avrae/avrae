@@ -65,11 +65,12 @@ class Compendium:
 
     async def reload_task(self, mdb=None):
         wait_for = int(config.RELOAD_INTERVAL)
+        await self.reload(mdb)
         if wait_for > 0:
             log.info("Reloading data every %d seconds", wait_for)
             while True:
-                await self.reload(mdb)
                 await asyncio.sleep(wait_for)
+                await self.reload(mdb)
 
     @newrelic.agent.function_trace()
     async def reload(self, mdb=None):

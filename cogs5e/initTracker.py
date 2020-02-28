@@ -111,7 +111,7 @@ class InitTracker(commands.Cog):
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type."""
         private = False
-        place = False
+        place = None
         controller = str(ctx.author.id)
         group = None
         hp = None
@@ -121,8 +121,17 @@ class InitTracker(commands.Cog):
 
         if args.last('h', type_=bool):
             private = True
-        if args.last('p', type_=bool):
-            place = True
+
+        if 'p' in args:
+            try:
+                place_arg = args.last('p')
+                if place_arg is True:
+                    place = modifier
+                else:
+                    place = int(place_arg)
+            except ValueError:
+                place = modifier
+
         if args.last('controller'):
             controller_name = args.last('controller')
             member = await commands.MemberConverter().convert(ctx, controller_name)
@@ -150,7 +159,7 @@ class InitTracker(commands.Cog):
             init = init_roll.total
             init_roll_skeleton = init_roll.result
         else:
-            init = modifier
+            init = place
             modifier = 0
             init_roll_skeleton = str(init)
 
@@ -1192,9 +1201,6 @@ class InitTracker(commands.Cog):
 
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
-        embeds.add_fields_from_args(embed, args.get('f'))
-        if 'thumb' in args:
-            embed.set_thumbnail(url=args.last('thumb'))
         await ctx.send(embed=embed)
         await combat.final()
 

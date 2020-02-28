@@ -185,11 +185,11 @@ class Monster(StatBlock):
             desc += f"**Skills:** {self.skills}\n"
         desc += f"**Senses:** {self.get_senses_str()}.\n"
         if self._displayed_resistances.vuln:
-            desc += f"**Vulnerabilities:** {', '.join(self._displayed_resistances.vuln)}\n"
+            desc += f"**Vulnerabilities:** {', '.join(str(r) for r in self._displayed_resistances.vuln)}\n"
         if self._displayed_resistances.resist:
-            desc += f"**Resistances:** {', '.join(self._displayed_resistances.resist)}\n"
+            desc += f"**Resistances:** {', '.join(str(r) for r in self._displayed_resistances.resist)}\n"
         if self._displayed_resistances.immune:
-            desc += f"**Damage Immunities:** {', '.join(self._displayed_resistances.immune)}\n"
+            desc += f"**Damage Immunities:** {', '.join(str(r) for r in self._displayed_resistances.immune)}\n"
         if self.condition_immune:
             desc += f"**Condition Immunities:** {', '.join(map(str, self.condition_immune))}\n"
         if self.languages:

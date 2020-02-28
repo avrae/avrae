@@ -132,8 +132,8 @@ class Resistance:
         unless = []
         only = []
         for t in tokens[:-1]:
-            if t.startswith('non'):
-                unless.append(t)
+            if t.startswith('non') and len(t) > 3:
+                unless.append(t[3:])
             else:
                 only.append(t)
         return cls(tokens[-1], unless=unless, only=only)
@@ -166,6 +166,9 @@ class Resistance:
         out.extend(self.only)
         out.append(self.dtype)
         return ' '.join(out)
+
+    def __repr__(self):
+        return f"<Resistance {repr(self.dtype)} unless={repr(self.unless)} only={repr(self.only)}>"
 
 
 def _resist_tokenize(res_str):

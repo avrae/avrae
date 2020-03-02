@@ -543,6 +543,9 @@ async def generate_token(img_url, color_override=None):
 
         out_bytes = BytesIO()
         img.save(out_bytes, "PNG")
+        template.close()
+        transparency_template.close()
+        img.close()
         out_bytes.seek(0)
         return out_bytes
 

@@ -309,6 +309,7 @@ class SheetManager(commands.Cog):
         embed = EmbedWithCharacter(char, image=False)
         embed.set_image(url="attachment://image.png")
         await ctx.send(file=file, embed=embed)
+        processed.close()
 
     @commands.command()
     async def sheet(self, ctx):

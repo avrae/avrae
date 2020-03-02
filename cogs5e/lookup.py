@@ -333,6 +333,7 @@ class Lookup(commands.Cog):
             file = discord.File(processed, filename="image.png")
             embed.set_image(url="attachment://image.png")
             await ctx.send(file=file, embed=embed)
+            processed.close()
 
     @commands.command()
     async def monster(self, ctx, *, name: str):

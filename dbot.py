@@ -183,6 +183,10 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.CommandOnCooldown):
         return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
 
+    elif isinstance(error, commands.MaxConcurrencyReached):
+        return await ctx.send(f"Only {error.number} instance{'s' if error.number > 1 else ''} of this command per "
+                              f"{error.per.name} can be running at a time.")
+
     elif isinstance(error, CommandInvokeError):
         original = error.original
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback

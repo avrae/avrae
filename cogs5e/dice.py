@@ -9,7 +9,6 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
-from cogs5e.models.embeds import add_fields_from_args
 from cogs5e.models.monster import Monster
 from cogsmisc.stats import Stats
 from utils.argparser import argparse
@@ -27,7 +26,7 @@ class Dice(commands.Cog):
     async def quick_roll(self, ctx, *, mod: str = '0'):
         """Quickly rolls a d20."""
         rollStr = '1d20+' + mod
-        await ctx.invoke(self.rollCmd, rollStr=rollStr)
+        await self.rollCmd(ctx, rollStr=rollStr)
 
     @commands.command(name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
@@ -147,7 +146,7 @@ class Dice(commands.Cog):
         -h (hides monster name, image, and rolled values)
         """
         if atk_name is None or atk_name == 'list':
-            return await ctx.invoke(self.monster_atk_list, monster_name)
+            return await self.monster_atk_list(ctx, monster_name)
 
         await try_delete(ctx.message)
 

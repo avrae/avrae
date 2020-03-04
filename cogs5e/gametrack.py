@@ -53,7 +53,7 @@ class GameTrack(commands.Cog):
     @game.command(name='spellbook', aliases=['sb'], hidden=True)
     async def game_spellbook(self, ctx):
         """**DEPRECATED** - use `!spellbook` instead."""
-        await ctx.invoke(self.bot.get_command('spellbook'))
+        await self.spellbook(ctx)
 
     @game.command(name='spellslot', aliases=['ss'])
     async def game_spellslot(self, ctx, level: int = None, value: str = None):
@@ -424,7 +424,7 @@ class GameTrack(commands.Cog):
         When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
         If modifier is not supplied, prints the value and metadata of the counter *name*."""
         if name is None:
-            return await ctx.invoke(self.bot.get_command("customcounter list"))
+            return await self.customcounter_summary(ctx)
         character: Character = await Character.from_ctx(ctx)
         counter = await character.select_consumable(ctx, name)
 

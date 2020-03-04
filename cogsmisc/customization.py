@@ -68,6 +68,7 @@ class Customization(commands.Cog):
 
     @commands.command()
     @commands.cooldown(1, 20, BucketType.user)
+    @commands.max_concurrency(1, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.
         Limited to 1 multiline every 20 seconds, with a max of 20 commands, due to abuse.
@@ -169,7 +170,7 @@ class Customization(commands.Cog):
         After an alias has been added, you can instead run the aliased command with !<alias_name>.
         If a user and a server have aliases with the same name, the user alias will take priority."""
         if alias_name is None:
-            return await ctx.invoke(self.bot.get_command("alias list"))
+            return await self.alias_list(ctx)
         if alias_name in self.bot.all_commands:
             return await ctx.send('There is already a built-in command with that name!')
 
@@ -236,7 +237,7 @@ class Customization(commands.Cog):
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
         If a user and a server have aliases with the same name, the user alias will take priority."""
         if alias_name is None:
-            return await ctx.invoke(self.bot.get_command("servalias list"))
+            return await self.servalias_list(ctx)
 
         server_aliases = await helpers.get_servaliases(ctx)
         if alias_name in self.bot.all_commands:
@@ -302,7 +303,7 @@ class Customization(commands.Cog):
         """Creates a snippet to use in attack macros.
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
-            return await ctx.invoke(self.bot.get_command("snippet list"))
+            return await self.snippet_list(ctx)
         user_snippets = await helpers.get_snippets(ctx)
 
         if snippet is None:
@@ -360,7 +361,7 @@ class Customization(commands.Cog):
         If a user and a server have snippets with the same name, the user snippet will take priority.
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
-            return await ctx.invoke(self.bot.get_command("servsnippet list"))
+            return await self.servsnippet_list(ctx)
         server_snippets = await helpers.get_servsnippets(ctx)
 
         if snippet is None:
@@ -441,7 +442,7 @@ class Customization(commands.Cog):
         """Commands to manage character variables for use in snippets and aliases.
         See the [aliasing guide](https://avrae.io/cheatsheets/aliasing) for more help."""
         if name is None:
-            return await ctx.invoke(self.bot.get_command("cvar list"))
+            return await self.list_cvar(ctx)
 
         character: Character = await Character.from_ctx(ctx)
 
@@ -503,7 +504,7 @@ class Customization(commands.Cog):
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
         See http://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
-            return await ctx.invoke(self.bot.get_command("uservar list"))
+            return await self.uvar_list(ctx)
 
         user_vars = await helpers.get_uvars(ctx)
 
@@ -554,7 +555,7 @@ class Customization(commands.Cog):
         Global variables must be accessed through scripting, with `get_gvar(gvar_id)`.
         See http://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
-            return await ctx.invoke(self.bot.get_command("globalvar list"))
+            return await self.gvar_list(ctx)
 
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:

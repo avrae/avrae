@@ -3,7 +3,6 @@ import re
 from math import ceil, floor
 
 import d20
-import simpleeval
 from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
@@ -11,9 +10,6 @@ from utils.dice import PersistentRollContext
 from . import MAX_ITER_LENGTH, SCRIPTING_RE, helpers
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS, _roll, _vroll
 from .legacy import LegacyRawCharacter
-
-if 'format_map' not in simpleeval.DISALLOW_METHODS:
-    simpleeval.DISALLOW_METHODS.append('format_map')
 
 
 class MathEvaluator(SimpleEval):

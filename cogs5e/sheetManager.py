@@ -101,7 +101,7 @@ class SheetManager(commands.Cog):
         An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on.
         """
         if atk_name is None:
-            return await ctx.invoke(self.attack_list)
+            return await self.attack_list(ctx)
 
         char: Character = await Character.from_ctx(ctx)
         args = await self.new_arg_stuff(args, ctx, char)
@@ -311,6 +311,7 @@ class SheetManager(commands.Cog):
         embed = EmbedWithCharacter(char, image=False)
         embed.set_image(url="attachment://image.png")
         await ctx.send(file=file, embed=embed)
+        processed.close()
 
     @commands.command()
     async def sheet(self, ctx):
@@ -378,7 +379,7 @@ class SheetManager(commands.Cog):
             return await ctx.send("OK, cancelling.")
 
     @commands.command()
-    @commands.cooldown(1, 15, BucketType.user)
+    @commands.max_concurrency(1, BucketType.user)
     async def update(self, ctx, *args):
         """Updates the current character sheet, preserving all settings.
         __Valid Arguments__
@@ -491,6 +492,7 @@ class SheetManager(commands.Cog):
         return True
 
     @commands.command()
+    @commands.max_concurrency(1, BucketType.user)
     async def dicecloud(self, ctx, url: str, *args):
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.
@@ -507,6 +509,7 @@ class SheetManager(commands.Cog):
         await self._load_sheet(ctx, parser, args, loading)
 
     @commands.command()
+    @commands.max_concurrency(1, BucketType.user)
     async def gsheet(self, ctx, url: str, *args):
         """Loads a character sheet from [GSheet v2.1](http://gsheet2.avrae.io) (auto) or [GSheet v1.4](http://gsheet.avrae.io) (manual), resetting all settings.
         The sheet must be shared with Avrae for this to work.
@@ -525,6 +528,7 @@ class SheetManager(commands.Cog):
         await self._load_sheet(ctx, parser, args, loading)
 
     @commands.command()
+    @commands.max_concurrency(1, BucketType.user)
     async def beyond(self, ctx, url: str, *args):
         """Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings."""
 

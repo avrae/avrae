@@ -2,7 +2,6 @@ import ast
 import re
 from math import ceil, floor
 
-import simpleeval
 from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
 
 from cogs5e.funcs.dice import roll
@@ -10,9 +9,6 @@ from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionR
 from . import MAX_ITER_LENGTH, SCRIPTING_RE, helpers
 from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
 from .legacy import LegacyRawCharacter
-
-if 'format_map' not in simpleeval.DISALLOW_METHODS:
-    simpleeval.DISALLOW_METHODS.append('format_map')
 
 
 class MathEvaluator(SimpleEval):

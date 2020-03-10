@@ -463,9 +463,12 @@ class DicecloudParser(SheetLoaderABC):
 def func_if(condition, t, f):
     return t if condition else f
 
+def larger(x, y):
+    return 1 if x > y else 0
+
 
 class DicecloudEvaluator(SimpleEval):
-    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round, 'func_if': func_if}
+    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round, 'func_if': func_if, 'larger': larger}
 
     def __init__(self, operators=None, functions=None, names=None):
         if not functions:

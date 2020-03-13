@@ -195,15 +195,15 @@ class AutomationContext:
 
     def parse_annostr(self, annostr, is_full_expression=False):
         if not is_full_expression:
-            return self.evaluator.parse(annostr, extra_names=self.metavars)
+            return self.evaluator.transformed_str(annostr, extra_names=self.metavars)
 
-        original_names = self.evaluator.names.copy()
-        self.evaluator.names.update(self.metavars)
+        original_names = self.evaluator.builtins.copy()
+        self.evaluator.builtins.update(self.metavars)
         try:
             out = self.evaluator.eval(annostr)
         except Exception as ex:
             raise EvaluationError(ex, annostr)
-        self.evaluator.names = original_names
+        self.evaluator.builtins = original_names
         return out
 
 
@@ -680,7 +680,7 @@ class Save(Effect):
         dc = caster.spellbook.dc
         if self.dc:
             try:
-                dc_override = evaluator.parse(self.dc)
+                dc_override = evaluator.transformed_str(self.dc)
                 dc = int(dc_override)
             except (TypeError, ValueError):
                 dc = 0
@@ -834,7 +834,7 @@ class Damage(Effect):
 
     def build_str(self, caster, evaluator):
         super(Damage, self).build_str(caster, evaluator)
-        damage = evaluator.parse(self.damage)
+        damage = evaluator.transformed_str(self.damage)
         return f"{damage} damage"
 
 
@@ -890,7 +890,7 @@ class TempHP(Effect):
 
     def build_str(self, caster, evaluator):
         super(TempHP, self).build_str(caster, evaluator)
-        amount = evaluator.parse(self.amount)
+        amount = evaluator.transformed_str(self.amount)
         return f"{amount} temp HP"
 
 
@@ -994,7 +994,7 @@ class Roll(Effect):
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)
-        evaluator.names[self.name] = self.dice
+        evaluator.builtins[self.name] = self.dice
         return ""
 
 

@@ -1,5 +1,4 @@
 import re
-import re
 import time
 from math import ceil, floor, sqrt
 
@@ -25,7 +24,7 @@ DEFAULT_BUILTINS = {
 }
 
 
-class MathEvaluator(draconic.SimpleInterpreter):  # todo this whole file
+class MathEvaluator(draconic.SimpleInterpreter):
     """Evaluator with basic math functions exposed."""
 
     @classmethod
@@ -37,8 +36,8 @@ class MathEvaluator(draconic.SimpleInterpreter):  # todo this whole file
         builtins = {**names, **DEFAULT_BUILTINS}
         return cls(builtins=builtins)
 
-    def parse(self, string):  # todo parse is reserved now
-        """Parses a dicecloud-formatted string (evaluating text in {})."""
+    def transformed_str(self, string):
+        """Transforms a dicecloud-formatted string (evaluating text in {})."""
         try:
             return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1))), string)
         except Exception as ex:
@@ -63,6 +62,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             get_raw=self.needs_char
         )
 
+        # char-agnostic globals
         self.builtins.update(
             set=self.set, exists=self.exists, combat=self.combat,
             get_gvar=self.get_gvar,
@@ -91,7 +91,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
     @classmethod
     async def new(cls, ctx):
-        inst = cls(ctx)
+        inst = cls(ctx, builtins=DEFAULT_BUILTINS)
         uvars = await helpers.get_uvars(ctx)
         inst.builtins.update(uvars)
         inst._cache['uvars'].update(uvars)
@@ -198,7 +198,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         def set_cvar(name, val: str):
             helpers.set_cvar(character, name, val)
-            self.names[name] = str(val)
+            self._names[name] = str(val)
             self.character_changed = True
 
         def set_cvar_nx(name, val: str):
@@ -249,7 +249,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :param name: The name to set.
         :param value: The value to set it to.
         """
-        self.names[name] = value
+        self._names[name] = value
 
     def exists(self, name):
         """
@@ -304,7 +304,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         if not name.isidentifier():
             raise InvalidArgument("Cvar contains invalid character.")
         self._cache['uvars'][name] = str(value)
-        self.names[name] = str(value)
+        self._names[name] = str(value)
         self.uvars_changed.add(name)
 
     def set_uvar_nx(self, name, value: str):
@@ -363,21 +363,19 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         return _roll(dice, roller=self._roller)
 
     # evaluation
-    def parse(self, string, double_curly=None, curly=None, ltgt=None):  # todo
+    def transformed_str(self, string):
         """Parses a scripting string (evaluating text in {{}})."""
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):
             try:
                 if match.group(1):  # {{}}
-                    double_func = double_curly or self.eval
-                    evalresult = double_func(match.group(1))
+                    evalresult = self.eval(match.group(1))
                 elif match.group(2):  # <>
                     if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
                         return match.group(0)
                     out = match.group(2)
-                    ltgt_func = ltgt or (lambda s: str(self.names.get(s, s)))
-                    evalresult = ltgt_func(out)
+                    evalresult = str(self.names.get(out, out))
                 elif match.group(3):  # {}
                     varstr = match.group(3)
 
@@ -391,8 +389,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                         except:
                             return '0'
 
-                    curly_func = curly or default_curly_func
-                    evalresult = curly_func(varstr)
+                    evalresult = default_curly_func(varstr)
                 else:
                     evalresult = None
             except Exception as ex:
@@ -415,12 +412,12 @@ class SpellEvaluator(MathEvaluator):
         builtins = {**names, **DEFAULT_BUILTINS}
         return cls(builtins=builtins)
 
-    def parse(self, string, extra_names=None):  # todo
+    def transformed_str(self, string, extra_names=None):
         """Parses a spell-formatted string (evaluating {{}} and replacing {} with rollstrings)."""
         original_names = None
         if extra_names:
-            original_names = self.names.copy()
-            self.names.update(extra_names)
+            original_names = self.builtins.copy()
+            self.builtins.update(extra_names)
 
         def evalrepl(match):
             try:
@@ -441,7 +438,7 @@ class SpellEvaluator(MathEvaluator):
         output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
         if original_names:
-            self.names = original_names
+            self.builtins = original_names
 
         return output
 

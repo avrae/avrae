@@ -1,14 +1,10 @@
-import ast
 import json
-import time
-from math import ceil, floor, sqrt
+import random
 
 import d20
-import simpleeval
-from simpleeval import IterableTooLong
+import draconic
 
 from cogs5e.models.errors import AvraeException
-from utils.argparser import argparse
 from utils.dice import RerollableStringifier
 from . import MAX_ITER_LENGTH
 
@@ -109,18 +105,18 @@ def _vroll(dice, multiply=1, add=0, roller=None):
 def safe_range(start, stop=None, step=None):
     if stop is None and step is None:
         if start > MAX_ITER_LENGTH:
-            raise IterableTooLong("This range is too large.")
+            raise draconic.IterableTooLong("This range is too large.")
         return list(range(start))
     elif stop is not None and step is None:
         if stop - start > MAX_ITER_LENGTH:
-            raise IterableTooLong("This range is too large.")
+            raise draconic.IterableTooLong("This range is too large.")
         return list(range(start, stop))
     elif stop is not None and step is not None:
         if (stop - start) / step > MAX_ITER_LENGTH:
-            raise IterableTooLong("This range is too large.")
+            raise draconic.IterableTooLong("This range is too large.")
         return list(range(start, stop, step))
     else:
-        raise ValueError("Invalid arguments passed to range()")
+        raise draconic.DraconicValueError("Invalid arguments passed to range()")
 
 
 # json
@@ -165,15 +161,10 @@ def typeof(inst):
     return type(inst).__name__
 
 
-DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
-DEFAULT_OPERATORS.pop(ast.Pow)
+# rand(), randint(x)
+def rand():
+    return random.random()
 
-DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
-DEFAULT_FUNCTIONS.update({
-    # builtins
-    'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
-    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
-    # ours
-    'roll': roll, 'vroll': vroll, 'load_json': load_json, 'dump_json': dump_json,
-    'err': err, 'typeof': typeof, 'argparse': argparse
-})
+
+def randint(top):
+    return random.randrange(top)

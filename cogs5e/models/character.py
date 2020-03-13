@@ -207,7 +207,7 @@ class Character(StatBlock):
         :returns string - the parsed string."""
         evaluator = await (await ScriptingEvaluator.new(ctx)).with_character(self)
 
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.parse, cstr)
+        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
         await evaluator.run_commits()
 
         return out
@@ -217,7 +217,7 @@ class Character(StatBlock):
         :param varstr - the expression to evaluate.
         :returns str - the resulting expression."""
         evaluator = MathEvaluator.with_character(self)
-        return evaluator.parse(varstr)
+        return evaluator.transformed_str(varstr)
 
     def evaluate_math(self, varstr):
         """Evaluates a cvar expression in a MathEvaluator.

@@ -94,14 +94,13 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
     @classmethod
     async def new(cls, ctx):
-        inst = cls(ctx, builtins=DEFAULT_BUILTINS)
         uvars = await helpers.get_uvars(ctx)
-        inst.builtins.update(uvars)
+        inst = cls(ctx, builtins=DEFAULT_BUILTINS, initial_names=uvars)
         inst._cache['uvars'].update(uvars)
         return inst
 
     async def with_character(self, character):
-        self.builtins.update(character.get_scope_locals())
+        self._names.update(character.get_scope_locals())
 
         self._cache['character'] = character
 

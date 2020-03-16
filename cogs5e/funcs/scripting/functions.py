@@ -5,7 +5,8 @@ import draconic
 
 from cogs5e.models.errors import AvraeException
 from utils.dice import RerollableStringifier
-from . import MAX_ITER_LENGTH
+
+MAX_ITER_LENGTH = 10000
 
 
 # vroll(), roll()

@@ -10,7 +10,7 @@ import draconic
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
-from . import SCRIPTING_RE, helpers
+from . import helpers
 from .functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
 from .legacy import LegacyRawCharacter
 
@@ -23,6 +23,14 @@ DEFAULT_BUILTINS = {
     # legacy from simpleeval
     'rand': rand, 'randint': randint
 }
+SCRIPTING_RE = re.compile(
+    r'(?<!\\)(?:'  # backslash-escape
+    r'{{(?P<drac1>.+?)}}'  # {{drac1}}
+    r'|(?<!{){(?P<roll>.+?)}'  # <roll>
+    r'|<drac2>(?P<drac2>(?:.|\n)+?)</drac2>'  # <drac2>drac2</drac2>
+    r'|<(?P<lookup>[^\s]+?)>'  # <lookup>
+    r')'
+)
 
 
 class MathEvaluator(draconic.SimpleInterpreter):
@@ -410,27 +418,25 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         def evalrepl(match):
             try:
-                if match.group(1):  # {{}}
-                    evalresult = self.eval(match.group(1))
-                elif match.group(2):  # <>
+                if match.group('lookup'):  # <>
                     if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
                         return match.group(0)
-                    out = match.group(2)
+                    out = match.group('lookup')
                     evalresult = str(self.names.get(out, out))
-                elif match.group(3):  # {}
-                    varstr = match.group(3)
-
-                    def default_curly_func(s):
-                        curlyout = ""
-                        for substr in re.split(ops, s):
-                            temp = substr.strip()
-                            curlyout += str(self.names.get(temp, temp)) + " "
-                        try:
-                            return str(self._limited_roll(curlyout))
-                        except:
-                            return '0'
-
-                    evalresult = default_curly_func(varstr)
+                elif match.group('roll'):  # {}
+                    varstr = match.group('roll')
+                    curlyout = ""
+                    for substr in re.split(ops, varstr):
+                        temp = substr.strip()
+                        curlyout += str(self.names.get(temp, temp)) + " "
+                    try:
+                        evalresult = str(self._limited_roll(curlyout))
+                    except:
+                        evalresult = '0'
+                elif match.group('drac1'):  # {{}}
+                    evalresult = self.eval(match.group('drac1'))
+                elif match.group('drac2'):  # <drac2>...</drac2>
+                    evalresult = self.execute(match.group('drac2').strip())
                 else:
                     evalresult = None
             except Exception as ex:
@@ -438,7 +444,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
             return str(evalresult) if evalresult is not None else ''
 
-        output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
+        output = re.sub(SCRIPTING_RE, evalrepl, string, re.MULTILINE)  # evaluate
 
         return output
 

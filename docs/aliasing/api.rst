@@ -298,7 +298,7 @@ Draconic Functions
 
 .. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.delete_uvar(name)
 
-.. autofunction:: cogs5e.funcs.scripting.functions.dump_json
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.dump_json
 
 .. autofunction:: cogs5e.funcs.scripting.functions.err
 
@@ -308,7 +308,7 @@ Draconic Functions
 
 .. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.get_gvar(address)
 
-.. autofunction:: cogs5e.funcs.scripting.functions.load_json
+.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.load_json
 
 .. function:: randint(x)
 

@@ -1,3 +1,5 @@
+import json
+import json.scanner
 import re
 import time
 from math import ceil, floor, sqrt
@@ -9,7 +11,7 @@ from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionR
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
 from . import SCRIPTING_RE, helpers
-from .functions import _roll, _vroll, dump_json, err, load_json, rand, randint, roll, safe_range, typeof, vroll
+from .functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
 from .legacy import LegacyRawCharacter
 
 DEFAULT_BUILTINS = {
@@ -17,8 +19,7 @@ DEFAULT_BUILTINS = {
     'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
     'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
     # ours
-    'roll': roll, 'vroll': vroll, 'load_json': load_json, 'dump_json': dump_json,
-    'err': err, 'typeof': typeof, 'argparse': argparse,
+    'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof,
     # legacy from simpleeval
     'rand': rand, 'randint': randint
 }
@@ -69,7 +70,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
             chanid=self.chanid, servid=self.servid,
-            get=self.get
+            get=self.get,
+            load_json=self.load_json, dump_json=self.dump_json,
+            argparse=argparse
         )
 
         # roll limiting
@@ -356,6 +359,45 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             return self.names[name]
         return default
 
+    # ==== json ====
+    def _json_decoder(self):
+        class MyDecoder(json.JSONDecoder):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.parse_array = self._parse_array
+                self.object_hook = self._object_hook
+                # use the python implementation rather than C, so this works
+                self.scan_once = json.scanner.py_make_scanner(self)
+
+            @staticmethod
+            def _parse_array(*args, **kwargs):
+                values, end = json.decoder.JSONArray(*args, **kwargs)
+                values = self._list(values)
+                return values, end
+
+            @staticmethod
+            def _object_hook(obj):
+                return self._dict(obj)
+
+        return MyDecoder
+
+    def _dump_json_default(self, obj):
+        if isinstance(obj, self._list):
+            return obj.data
+
+    def load_json(self, jsonstr):
+        """
+        Loads an object from a JSON string. See :func:`json.loads`.
+        """
+        return json.loads(jsonstr, cls=self._json_decoder())
+
+    def dump_json(self, obj):
+        """
+        Serializes an object to a JSON string. See :func:`json.dumps`.
+        """
+        return json.dumps(obj, default=self._dump_json_default)
+
+    # ==== roll limiters ====
     def _limited_vroll(self, dice, mul, add):
         return _vroll(dice, mul, add, roller=self._roller)
 

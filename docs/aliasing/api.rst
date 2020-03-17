@@ -9,43 +9,127 @@ For a list of built-in cvars, see the :ref:`cvar-table`.
 
 For a list of user-created aliases, plus help aliasing, join the `Avrae Discord <https://support.avrae.io>`_!
 
+Draconic
+--------
+The language used in Avrae aliases is a custom modified version of Python, called Draconic. In most cases,
+Draconic uses the same syntax and base types as Python - any exceptions will be documented here!
+
+As Draconic is meant to both be an operational and templating language, there are multiple ways to use Draconic
+inside your alias.
+
 .. _syntax-table:
 
-Syntax Table
-------------
-This table details the special syntax used in the Draconic language. Note that these syntaxes are only evaluated in
+Syntax
+------
+This section details the special syntax used in the Draconic language. Note that these syntaxes are only evaluated in
 an alias, the ``test`` command, or the ``tembed`` command.
 
-+------------------------+----------------------------------------------------------------------------------------+
-| Syntax                 | Description                                                                            |
-+========================+========================================================================================+
-| ``{CVAR/roll}``        | Evaluates the cvar/rolls the input.                                                    |
-+------------------------+----------------------------------------------------------------------------------------+
-| ``<CVAR>``             | Prints the value of the cvar.                                                          |
-+------------------------+----------------------------------------------------------------------------------------+
-| ``%1%``, ``%2%``, etc. | Replaced with the value of the nth argument passed to the alias.                       |
-+------------------------+----------------------------------------------------------------------------------------+
-| ``%*%``                | Replaced with the string following the alias.                                          |
-+------------------------+----------------------------------------------------------------------------------------+
-| ``&1&``, ``&2&``, etc. | Replaced with the raw value of the nth argument passed to the alias.                   |
-+------------------------+----------------------------------------------------------------------------------------+
-| ``&*&``                | Replaced with the escaped value of the string following the alias.                     |
-+------------------------+----------------------------------------------------------------------------------------+
-| ``&ARGS&``             | Replaced with a list of all arguments.                                                 |
-+------------------------+----------------------------------------------------------------------------------------+
-| ``{{code}}``           | Runs the statement as raw Python-like code. See below for a list of allowed functions. |
-+------------------------+----------------------------------------------------------------------------------------+
+Rolls
+^^^^^
+**Syntax**: ``{diceexpr}``
 
-.. _syntax-examples:
+**Description**: Rolls the expression inside the curly braces and is replaced by the result. If an error occurs,
+is replaced by ``0``. Variables are allowed inside the expression.
 
-Examples
-^^^^^^^^
+**Examples**
 
 >>> !test Rolling 1d20: {1d20}
 Rolling 1d20: 7
 
+>>> !test Strength check: {1d20 + strengthMod}
+Strength check: 21
+
+Values
+^^^^^^
+**Syntax**: ``<var>``
+
+**Description**: Replaced by the value of the variable, implicitly cast to ``str``.
+The variable can be a user variable, character variable, or a local variable set in a Draconic script.
+
+**Examples**
+
 >>> !test My strength modifier is: <strengthMod>
 My strength modifier is: 2
+
+Draconic Expressions
+^^^^^^^^^^^^^^^^^^^^
+**Syntax**: ``{{code}}``
+
+**Description**: Runs the Draconic code inside the braces and is replaced by the value the code evaluates to.
+If the code evaluates to ``None``, is removed from the output.
+
+See below for a list of builtin Draconic functions.
+
+**Examples**
+
+>>> !test 1 more than my strength score is {{strength + 1}}!
+1 more than my strength score is 15!
+
+>>> !test My roll was {{"greater than" if roll("1d20") > 10 else "less than"}} 10!
+My roll was less than 10!
+
+Draconic Blocks
+^^^^^^^^^^^^^^^
+**Syntax**
+
+.. code-block:: text
+
+    <drac2>
+    code
+    </drac2>
+
+**Description**: Runs the multi-line Draconic code between the delimiters. If a value is returned (via the ``return``
+keyword), is replaced by the returned value.
+
+**Examples**
+
+>>> !test <drac2>
+... out = []
+... for i in range(5):
+...   out.append(i * 2)
+...   if i == 2:
+...     break
+... return out
+... </drac2>
+[0, 2, 4]
+
+>>> !test <drac2>
+... out = []
+... for stat in ['strength', 'dexterity', 'constitution']:
+...   out.append(get(stat))
+... </drac2>
+... My STR, DEX, and CON scores are {{out}}!
+My STR, DEX, and CON scores are [12, 18, 14]!
+
+Argument Parsing
+^^^^^^^^^^^^^^^^
+Often times when writing aliases, you will need to access user input. These special strings will be replaced
+with user arguments (if applicable)!
+
+**Syntax**: ``%1%``, ``%2%``, etc.
+
+**Description**: Replaced with the Nth argument passed to the alias. If the argument contains spaces, the replacement
+will contain quotes around the argument.
+
+**Syntax**: ``%*%``
+
+**Description**: Replaced with the unmodified string following the alias.
+
+**Syntax**: ``&1&``, ``&2&``, etc.
+
+**Description**: Replaced with the Nth argument passed to the alias. If the argument contains spaces, the replacement
+will **not** contain quotes around the argument. Additionally, any quotes in the argument will be backslash-escaped.
+
+**Syntax**: ``&*&``
+
+**Description**: Replaced with the string following the alias. Any quotes will be backslash-escaped.
+
+**Syntax**: ``&ARGS&``
+
+**Description**: Replaced with a list representation of all arguments - usually you'll want to put this in Draconic
+code.
+
+**Examples**
 
 >>> !alias asdf echo %2% %1%
 >>> !asdf first "second arg"
@@ -66,12 +150,6 @@ second \"third word\" words
 >>> !alias asdf echo &ARGS&
 >>> !asdf first "second arg"
 ['first', 'second arg']
-
->>> !test {{strength_plus_one=strength+1}}1 more than my strength score is {{strength_plus_one}}!
-1 more than my strength score is 15!
-
->>> !test My roll was {{"greater than" if roll("1d20") > 10 else "less than"}} 10!
-My roll was less than 10!
 
 .. _cvar-table:
 
@@ -318,6 +396,8 @@ Draconic Functions
     :return: A random integer.
     :rtype: int
 
+.. autofunction:: cogs5e.funcs.scripting.functions.roll
+
 .. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.servid()
 
 .. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.set(name, value)
@@ -325,8 +405,6 @@ Draconic Functions
 .. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.set_uvar(name, value)
 
 .. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.set_uvar_nx(name, value)
-
-.. autofunction:: cogs5e.funcs.scripting.functions.simple_roll
 
 .. autofunction:: cogs5e.funcs.scripting.functions.typeof
 

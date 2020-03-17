@@ -68,7 +68,7 @@ class Bestiary(CommonHomebrewMixin):
             for _ in range(100):  # 100 pages max
                 log.info(f"Getting page {index} of {url}...")
                 async with session.get(
-                        f"http://critterdb.com/api/publishedbestiaries/{url}/creatures/{index}") as resp:
+                        f"https://critterdb.com:443/api/publishedbestiaries/{url}/creatures/{index}") as resp:
                     if not 199 < resp.status < 300:
                         raise ExternalImportError(
                             "Error importing bestiary: HTTP error. Are you sure the link is right?")
@@ -81,7 +81,7 @@ class Bestiary(CommonHomebrewMixin):
                         break
                     creatures.extend(raw_creatures)
                     index += 1
-            async with session.get(f"http://critterdb.com/api/publishedbestiaries/{url}") as resp:
+            async with session.get(f"https://critterdb.com:443/api/publishedbestiaries/{url}") as resp:
                 try:
                     raw = await resp.json()
                 except (ValueError, aiohttp.ContentTypeError):

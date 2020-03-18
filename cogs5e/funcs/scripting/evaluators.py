@@ -444,7 +444,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
             return str(evalresult) if evalresult is not None else ''
 
-        output = re.sub(SCRIPTING_RE, evalrepl, string, re.MULTILINE)  # evaluate
+        output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
         return output
 
@@ -468,11 +468,11 @@ class SpellEvaluator(MathEvaluator):
 
         def evalrepl(match):
             try:
-                if match.group(1):  # {{}}
-                    evalresult = self.eval(match.group(1))
-                elif match.group(3):  # {}
+                if match.group('drac1'):  # {{}}
+                    evalresult = self.eval(match.group('drac1'))
+                elif match.group('roll'):  # {}
                     try:
-                        evalresult = self.eval(match.group(3))
+                        evalresult = self.eval(match.group('roll'))
                     except:
                         evalresult = match.group(0)
                 else:

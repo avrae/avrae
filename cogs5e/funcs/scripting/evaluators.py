@@ -412,6 +412,10 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         return _roll(dice, roller=self._roller)
 
     # evaluation
+    def _preflight(self):
+        """We don't want limits to reset."""
+        pass
+
     def transformed_str(self, string):
         """Parses a scripting string (evaluating text in {{}})."""
         ops = r"([-+*/().<>=])"

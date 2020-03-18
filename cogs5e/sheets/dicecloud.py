@@ -475,6 +475,9 @@ class DicecloudEvaluator(SimpleInterpreter):
         expr = re.sub(r'if\s*\(', 'func_if(', expr)  # 0.5ms avg
         return super().eval(expr.strip())
 
+    def _preflight(self):
+        pass
+
     def _eval_name(self, node):
         lowernames = {k.lower(): v for k, v in self.names.items()}
         try:

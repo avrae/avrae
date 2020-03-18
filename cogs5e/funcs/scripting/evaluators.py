@@ -45,6 +45,10 @@ class MathEvaluator(draconic.SimpleInterpreter):
         builtins = {**names, **DEFAULT_BUILTINS}
         return cls(builtins=builtins)
 
+    # also disable per-eval limits, limit should be global
+    def _preflight(self):
+        pass
+
     def transformed_str(self, string):
         """Transforms a dicecloud-formatted string (evaluating text in {})."""
         try:

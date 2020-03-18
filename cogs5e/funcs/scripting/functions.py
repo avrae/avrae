@@ -1,4 +1,3 @@
-import json
 import random
 
 import d20
@@ -6,7 +5,8 @@ import draconic
 
 from cogs5e.models.errors import AvraeException
 from utils.dice import RerollableStringifier
-from . import MAX_ITER_LENGTH
+
+MAX_ITER_LENGTH = 10000
 
 
 # vroll(), roll()
@@ -117,21 +117,6 @@ def safe_range(start, stop=None, step=None):
         return list(range(start, stop, step))
     else:
         raise draconic.DraconicValueError("Invalid arguments passed to range()")
-
-
-# json
-def load_json(jsonstr):
-    """
-    Loads an object from a JSON string. See :func:`json.loads`.
-    """
-    return json.loads(jsonstr)
-
-
-def dump_json(obj):
-    """
-    Serializes an object to a JSON string. See :func:`json.dumps`.
-    """
-    return json.dumps(obj)
 
 
 # err()

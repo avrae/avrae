@@ -1,3 +1,5 @@
+import json
+import json.scanner
 import re
 import time
 from math import ceil, floor, sqrt
@@ -8,8 +10,8 @@ import draconic
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
-from . import SCRIPTING_RE, helpers
-from .functions import _roll, _vroll, dump_json, err, load_json, rand, randint, roll, safe_range, typeof, vroll
+from . import helpers
+from .functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
 from .legacy import LegacyRawCharacter
 
 DEFAULT_BUILTINS = {
@@ -17,11 +19,18 @@ DEFAULT_BUILTINS = {
     'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
     'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
     # ours
-    'roll': roll, 'vroll': vroll, 'load_json': load_json, 'dump_json': dump_json,
-    'err': err, 'typeof': typeof, 'argparse': argparse,
+    'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof,
     # legacy from simpleeval
     'rand': rand, 'randint': randint
 }
+SCRIPTING_RE = re.compile(
+    r'(?<!\\)(?:'  # backslash-escape
+    r'{{(?P<drac1>.+?)}}'  # {{drac1}}
+    r'|(?<!{){(?P<roll>.+?)}'  # <roll>
+    r'|<drac2>(?P<drac2>(?:.|\n)+?)</drac2>'  # <drac2>drac2</drac2>
+    r'|<(?P<lookup>[^\s]+?)>'  # <lookup>
+    r')'
+)
 
 
 class MathEvaluator(draconic.SimpleInterpreter):
@@ -69,7 +78,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
             chanid=self.chanid, servid=self.servid,
-            get=self.get
+            get=self.get,
+            load_json=self.load_json, dump_json=self.dump_json,
+            argparse=argparse
         )
 
         # roll limiting
@@ -91,14 +102,13 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
     @classmethod
     async def new(cls, ctx):
-        inst = cls(ctx, builtins=DEFAULT_BUILTINS)
         uvars = await helpers.get_uvars(ctx)
-        inst.builtins.update(uvars)
+        inst = cls(ctx, builtins=DEFAULT_BUILTINS, initial_names=uvars)
         inst._cache['uvars'].update(uvars)
         return inst
 
     async def with_character(self, character):
-        self.builtins.update(character.get_scope_locals())
+        self._names.update(character.get_scope_locals())
 
         self._cache['character'] = character
 
@@ -356,8 +366,47 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             return self.names[name]
         return default
 
-    def _limited_vroll(self, dice, mul, add):
-        return _vroll(dice, mul, add, roller=self._roller)
+    # ==== json ====
+    def _json_decoder(self):
+        class MyDecoder(json.JSONDecoder):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.parse_array = self._parse_array
+                self.object_hook = self._object_hook
+                # use the python implementation rather than C, so this works
+                self.scan_once = json.scanner.py_make_scanner(self)
+
+            @staticmethod
+            def _parse_array(*args, **kwargs):
+                values, end = json.decoder.JSONArray(*args, **kwargs)
+                values = self._list(values)
+                return values, end
+
+            @staticmethod
+            def _object_hook(obj):
+                return self._dict(obj)
+
+        return MyDecoder
+
+    def _dump_json_default(self, obj):
+        if isinstance(obj, self._list):
+            return obj.data
+
+    def load_json(self, jsonstr):
+        """
+        Loads an object from a JSON string. See :func:`json.loads`.
+        """
+        return json.loads(jsonstr, cls=self._json_decoder())
+
+    def dump_json(self, obj):
+        """
+        Serializes an object to a JSON string. See :func:`json.dumps`.
+        """
+        return json.dumps(obj, default=self._dump_json_default)
+
+    # ==== roll limiters ====
+    def _limited_vroll(self, dice, multiply=1, add=0):
+        return _vroll(dice, multiply, add, roller=self._roller)
 
     def _limited_roll(self, dice):
         return _roll(dice, roller=self._roller)
@@ -369,27 +418,25 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         def evalrepl(match):
             try:
-                if match.group(1):  # {{}}
-                    evalresult = self.eval(match.group(1))
-                elif match.group(2):  # <>
+                if match.group('lookup'):  # <>
                     if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
                         return match.group(0)
-                    out = match.group(2)
+                    out = match.group('lookup')
                     evalresult = str(self.names.get(out, out))
-                elif match.group(3):  # {}
-                    varstr = match.group(3)
-
-                    def default_curly_func(s):
-                        curlyout = ""
-                        for substr in re.split(ops, s):
-                            temp = substr.strip()
-                            curlyout += str(self.names.get(temp, temp)) + " "
-                        try:
-                            return str(self._limited_roll(curlyout))
-                        except:
-                            return '0'
-
-                    evalresult = default_curly_func(varstr)
+                elif match.group('roll'):  # {}
+                    varstr = match.group('roll')
+                    curlyout = ""
+                    for substr in re.split(ops, varstr):
+                        temp = substr.strip()
+                        curlyout += str(self.names.get(temp, temp)) + " "
+                    try:
+                        evalresult = str(self._limited_roll(curlyout))
+                    except:
+                        evalresult = '0'
+                elif match.group('drac1'):  # {{}}
+                    evalresult = self.eval(match.group('drac1'))
+                elif match.group('drac2'):  # <drac2>...</drac2>
+                    evalresult = self.execute(match.group('drac2').strip())
                 else:
                     evalresult = None
             except Exception as ex:
@@ -421,11 +468,11 @@ class SpellEvaluator(MathEvaluator):
 
         def evalrepl(match):
             try:
-                if match.group(1):  # {{}}
-                    evalresult = self.eval(match.group(1))
-                elif match.group(3):  # {}
+                if match.group('drac1'):  # {{}}
+                    evalresult = self.eval(match.group('drac1'))
+                elif match.group('roll'):  # {}
                     try:
-                        evalresult = self.eval(match.group(3))
+                        evalresult = self.eval(match.group('roll'))
                     except:
                         evalresult = match.group(0)
                 else:

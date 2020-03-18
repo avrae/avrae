@@ -617,7 +617,7 @@ class Combatant(StatBlock):
                     self._resistances[rt].remove(resist)
 
         if resisttype != 'neutral':
-            resistance = Resistance(dmgtype)
+            resistance = Resistance.from_str(dmgtype)
             self._resistances[resisttype].append(resistance)
 
     @property

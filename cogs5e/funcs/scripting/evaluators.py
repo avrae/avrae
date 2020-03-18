@@ -48,7 +48,7 @@ class MathEvaluator(draconic.SimpleInterpreter):
     def transformed_str(self, string):
         """Transforms a dicecloud-formatted string (evaluating text in {})."""
         try:
-            return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1))), string)
+            return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1).strip())), string)
         except Exception as ex:
             raise EvaluationError(ex, string)
 
@@ -438,7 +438,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                     except:
                         evalresult = '0'
                 elif match.group('drac1'):  # {{}}
-                    evalresult = self.eval(match.group('drac1'))
+                    evalresult = self.eval(match.group('drac1').strip())
                 elif match.group('drac2'):  # <drac2>...</drac2>
                     evalresult = self.execute(match.group('drac2').strip())
                 else:
@@ -473,10 +473,10 @@ class SpellEvaluator(MathEvaluator):
         def evalrepl(match):
             try:
                 if match.group('drac1'):  # {{}}
-                    evalresult = self.eval(match.group('drac1'))
+                    evalresult = self.eval(match.group('drac1').strip())
                 elif match.group('roll'):  # {}
                     try:
-                        evalresult = self.eval(match.group('roll'))
+                        evalresult = self.eval(match.group('roll').strip())
                     except:
                         evalresult = match.group(0)
                 else:

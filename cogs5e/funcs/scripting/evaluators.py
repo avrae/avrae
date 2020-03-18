@@ -405,8 +405,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         return json.dumps(obj, default=self._dump_json_default)
 
     # ==== roll limiters ====
-    def _limited_vroll(self, dice, mul, add):
-        return _vroll(dice, mul, add, roller=self._roller)
+    def _limited_vroll(self, dice, multiply=1, add=0):
+        return _vroll(dice, multiply, add, roller=self._roller)
 
     def _limited_roll(self, dice):
         return _roll(dice, roller=self._roller)

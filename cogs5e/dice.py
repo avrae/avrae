@@ -151,7 +151,7 @@ class Dice(commands.Cog):
         *miss* - automatically misses
         *crit* - automatically crits if hit
         *max* - deals max damage
-        *magic* - makes the damage type magical
+        *magical* - makes the damage type magical
 
         -h - hides name, rolled values, and monster details
         -phrase <text> - adds flavour text

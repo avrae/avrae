@@ -89,7 +89,7 @@ class SheetManager(commands.Cog):
         *miss* - automatically misses
         *crit* - automatically crits if hit
         *max* - deals max damage
-        *magic* - makes the damage type magical
+        *magical* - makes the damage type magical
 
         -h - hides name and rolled values
         -phrase <text> - adds flavour text

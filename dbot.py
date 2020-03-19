@@ -21,6 +21,7 @@ from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.funcs.lookupFuncs import compendium
+from cogs5e.funcs.scripting.helpers import handle_alias_exception
 from cogs5e.models.errors import AvraeException, EvaluationError
 from utils.help import help_command
 from utils.redisIO import RedisIO
@@ -190,15 +191,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, CommandInvokeError):
         original = error.original
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
-            e = original.original
-            if not isinstance(e, AvraeException):
-                tb = f"```py\nError when parsing expression {original.expression}:\n" \
-                     f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
-                try:
-                    await ctx.author.send(tb)
-                except Exception as e:
-                    log.info(f"Error sending traceback: {e}")
-            return await ctx.send(str(original))
+            return await handle_alias_exception(ctx, original)
 
         elif isinstance(original, AvraeException):
             return await ctx.send(str(original))

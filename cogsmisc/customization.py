@@ -8,6 +8,7 @@ import textwrap
 import traceback
 
 import discord
+import draconic
 from discord.ext import commands
 from discord.ext.commands import BucketType, UserInputError
 
@@ -115,15 +116,7 @@ class Customization(commands.Cog):
                     else:
                         message.content = await helpers.parse_no_char(message.content, ctx)
                 except EvaluationError as err:
-                    e = err.original
-                    if not isinstance(e, AvraeException):
-                        tb = ''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))
-                        try:
-                            await message.author.send(f"```py\nError when parsing expression {err.expression}:\n"
-                                                      f"{tb}\n```")
-                        except Exception:
-                            pass
-                    return await message.channel.send(err)
+                    return await helpers.handle_alias_exception(ctx, err)
                 except Exception as e:
                     return await message.channel.send(e)
                 await self.bot.process_commands(message)
@@ -411,7 +404,10 @@ class Customization(commands.Cog):
     async def test(self, ctx, *, teststr):
         """Parses `str` as if it were in an alias, for testing."""
         char = await Character.from_ctx(ctx)
-        parsed = await char.parse_cvars(teststr, ctx)
+        try:
+            parsed = await char.parse_cvars(teststr, ctx)
+        except EvaluationError as err:
+            return await helpers.handle_alias_exception(ctx, err)
         parsed = clean_content(parsed, ctx)
         await ctx.send(f"{ctx.author.display_name}: {parsed}")
 

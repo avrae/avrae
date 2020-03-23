@@ -552,7 +552,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 atkBonus = max(atkBonus, self.stat_from_id(2))  # allow using dex
                 dmgBonus = max(dmgBonus, self.stat_from_id(2))
 
-            if isProf:
+            if isProf and atkBonus is not None:
                 atkBonus += prof
 
             if dmgBonus:

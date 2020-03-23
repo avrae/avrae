@@ -790,6 +790,8 @@ class BeyondSheetParser(SheetLoaderABC):
             if not item['equipped']:
                 continue
             for modifier in item['definition']['grantedModifiers']:
+                if modifier['requiresAttunement'] and not item['isAttuned']:
+                    continue
                 yield modifier
 
     # ===== Specific helpers =====

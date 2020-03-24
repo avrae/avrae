@@ -268,9 +268,9 @@ class BeyondSheetParser(SheetLoaderABC):
             relevantprof = profs.get(skill, 0)
             relevantbonus = bonuses.get(skill, 0)
             relevantadv = _simplify_adv(advantages[skill])
-            if 'ability-checks' in profs:
+            if 'ability-checks' in profs and skill != 'initiative':
                 relevantprof = max(relevantprof, profs['ability-checks'])
-            if 'ability-checks' in bonuses:
+            if 'ability-checks' in bonuses and skill != 'initiative':
                 relevantbonus += bonuses['ability-checks']
             skills[skill] = Skill(
                 floor(stats.get_mod(SKILL_MAP[skill]) + (profBonus * relevantprof) + relevantbonus),

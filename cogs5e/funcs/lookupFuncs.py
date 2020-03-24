@@ -128,7 +128,7 @@ class Compendium:
         self.monster_mash = [Monster.from_data(m) for m in self.monsters]
         self.spells = [Spell.from_data(s) for s in self.srd_spells]
 
-        self.items = [i for i in self.srd_items if i.get('type') is not '$']
+        self.items = [i for i in self.srd_items if i.get('type') != '$']
 
         self.rfeats = self._load_rfeats()
         self.subclasses = self._load_subclasses()

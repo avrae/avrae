@@ -890,7 +890,7 @@ class InitTracker(commands.Cog):
         await combat.final()
 
     @init.command(name='re')
-    async def remove_effect(self, ctx, name: str, effect: str = ''):
+    async def remove_effect(self, ctx, name: str, effect: str = None):
         """Removes a status effect from a combatant or group. Removes all if effect is not passed."""
         combat = await Combat.from_ctx(ctx)
 
@@ -905,7 +905,7 @@ class InitTracker(commands.Cog):
         out = ""
 
         for combatant in targets:
-            if effect is '':
+            if effect is None:
                 combatant.remove_all_effects()
                 out += f"All effects removed from {combatant.name}.\n"
             else:

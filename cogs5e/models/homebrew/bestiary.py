@@ -6,7 +6,6 @@ from math import floor
 import aiohttp
 import html2text
 
-from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
 from cogs5e.models.homebrew.mixins import CommonHomebrewMixin
 from cogs5e.models.monster import Monster, MonsterSpellbook, Trait
@@ -362,6 +361,7 @@ def parse_critterdb_traits(data, key):
 
 
 def parse_critterdb_spellcasting(traits, base_stats):
+    from gamedata import compendium
     known_spells = []
     will_spells = []
     daily_spells = {}

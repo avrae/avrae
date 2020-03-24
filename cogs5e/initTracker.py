@@ -10,9 +10,8 @@ from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
+from gamedata.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
-from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException

@@ -1,7 +1,7 @@
 import discord
 import pytest
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata import compendium
 from tests.utils import ATTACK_PATTERN, D20_PATTERN, DAMAGE_PATTERN, TO_HIT_PATTERN, requires_data
 
 pytestmark = pytest.mark.asyncio

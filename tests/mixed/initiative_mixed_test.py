@@ -1,7 +1,7 @@
 import discord
 import pytest
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata import compendium
 from tests.conftest import end_init, start_init
 from tests.utils import ATTACK_PATTERN, DAMAGE_PATTERN, SAVE_PATTERN, active_character, active_combat
 

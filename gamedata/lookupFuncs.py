@@ -14,6 +14,7 @@ import newrelic.agent
 from cogs5e.models.background import Background
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew import Tome
+from cogs5e.models.homebrew.bestiary import Bestiary
 from cogs5e.models.monster import Monster
 from cogs5e.models.race import Race
 from cogs5e.models.spell import Spell
@@ -188,9 +189,6 @@ def get_homebrew_formatted_name(named):
 
 
 # ----- Monster stuff
-from cogs5e.models.homebrew.bestiary import Bestiary  # no circular imports here, nope
-
-
 async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, message=None, list_filter=None,
                               return_metadata=False, extra_choices=None, selectkey=None):
     """

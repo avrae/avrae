@@ -1,0 +1,1 @@
+from .lookupFuncs import compendium

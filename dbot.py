@@ -20,7 +20,7 @@ from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata import compendium
 from cogs5e.funcs.scripting.helpers import handle_alias_exception
 from cogs5e.models.errors import AvraeException, EvaluationError
 from utils.help import help_command

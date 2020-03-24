@@ -3,7 +3,7 @@ Simple lookup tests: look up every entry in test static data
 """
 import pytest
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata import compendium
 from tests.utils import requires_data
 
 pytestmark = pytest.mark.asyncio

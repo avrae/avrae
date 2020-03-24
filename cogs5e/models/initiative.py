@@ -982,8 +982,12 @@ class PlayerCombatant(Combatant):
 
     @property
     def attacks(self):
-        return super(PlayerCombatant, self).attacks + self.character.attacks
+        return super().attacks + self.character.attacks
 
+    def get_scope_locals(self):
+        return {**self.character.get_scope_locals(), **super().get_scope_locals()}
+
+    # ==== serialization ====
     @classmethod
     async def from_dict(cls, raw, ctx, combat):
         inst = super(PlayerCombatant, cls).from_dict(raw, ctx, combat)

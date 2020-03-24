@@ -538,48 +538,48 @@ class BeyondSheetParser(SheetLoaderABC):
             if atkIn['dice'] is None:
                 return []  # thanks DDB
             isProf = atkIn['isProficient']
-            atkBonus = None
+            atk_bonus = None
             dmgBonus = None
 
             dice_size = max(monk_scale(), atkIn['dice']['diceValue'])
             base_dice = f"{atkIn['dice']['diceCount']}d{dice_size}"
 
             if atkIn["abilityModifierStatId"]:
-                atkBonus = self.stat_from_id(atkIn['abilityModifierStatId'])
+                atk_bonus = self.stat_from_id(atkIn['abilityModifierStatId'])
                 dmgBonus = self.stat_from_id(atkIn['abilityModifierStatId'])
 
             if atkIn["isMartialArts"] and self.get_levels().get("Monk"):
-                atkBonus = max(atkBonus, self.stat_from_id(2))  # allow using dex
+                atk_bonus = max(atk_bonus, self.stat_from_id(2))  # allow using dex
                 dmgBonus = max(dmgBonus, self.stat_from_id(2))
 
-            if isProf and atkBonus is not None:
-                atkBonus += prof
+            if isProf and atk_bonus is not None:
+                atk_bonus += prof
 
             if dmgBonus:
                 damage = f"{base_dice}+{dmgBonus}[{parse_dmg_type(atkIn)}]"
             else:
                 damage = f"{base_dice}[{parse_dmg_type(atkIn)}]"
             attack = Attack.new(
-                atkIn['name'], atkBonus, damage,
+                atkIn['name'], atk_bonus, damage,
                 atkIn['snippet']
             )
             out.append(attack)
         elif atkType == 'customAction':
             isProf = atkIn['isProficient']
             dmgBonus = (atkIn['fixedValue'] or 0) + (atkIn['damageBonus'] or 0)
-            atkBonus = None
+            atk_bonus = None
             if atkIn['statId']:
-                atkBonus = self.stat_from_id(atkIn['statId']) + (prof if isProf else 0) + (atkIn['toHitBonus'] or 0)
+                atk_bonus = self.stat_from_id(atkIn['statId']) + (prof if isProf else 0) + (atkIn['toHitBonus'] or 0)
                 dmgBonus = (atkIn['fixedValue'] or 0) + self.stat_from_id(atkIn['statId']) + (atkIn['damageBonus'] or 0)
 
             if atkIn['attackSubtype'] == 3:  # natural weapons
-                if atkBonus is not None:
-                    atkBonus += self.get_stat('natural-attacks')
+                if atk_bonus is not None:
+                    atk_bonus += self.get_stat('natural-attacks')
                 dmgBonus += self.get_stat('natural-attacks-damage')
 
             damage = f"{atkIn['diceCount']}d{atkIn['diceType']}+{dmgBonus}[{parse_dmg_type(atkIn)}]"
             attack = Attack.new(
-                atkIn['name'], atkBonus, damage, atkIn['snippet']
+                atkIn['name'], atk_bonus, damage, atkIn['snippet']
             )
             out.append(attack)
         elif atkType == 'item':
@@ -631,11 +631,11 @@ class BeyondSheetParser(SheetLoaderABC):
             else:
                 damage = None
 
-            atkBonus = character_item_bonuses['attackBonusOverride'] or mod_bonus + toHitBonus
+            atk_bonus = character_item_bonuses['attackBonusOverride'] or mod_bonus + toHitBonus
             details = character_item_bonuses['note'] or html2text.html2text(itemdef['description'], bodywidth=0).strip()
             name = character_item_bonuses['name'] or itemdef['name']
             attack = Attack.new(
-                name, atkBonus, damage, details
+                name, atk_bonus, damage, details
             )
             out.append(attack)
 
@@ -644,26 +644,30 @@ class BeyondSheetParser(SheetLoaderABC):
                 damage = f"{versDmg}+{dmgBonus}[{damage_type}" \
                          f"{'^' if itemdef['magic'] or character_item_bonuses['isPact'] else ''}]"
                 attack = Attack.new(
-                    f"2-Handed {name}", atkBonus, damage, details
+                    f"2-Handed {name}", atk_bonus, damage, details
                 )
                 out.append(attack)
         elif atkType == 'unarmed':
             dice_size = monk_scale()
             ability_mod = self.stat_from_id(1) if not self.get_levels().get('Monk') else max(self.stat_from_id(1),
                                                                                              self.stat_from_id(2))
-            atkBonus = prof
+            character_item_bonuses = self.get_specific_item_bonuses(1)  # magic number: Unarmed Strike ID
             if dice_size:
                 dmg = f"1d{dice_size}+{ability_mod}"
             else:
                 dmg = 1 + ability_mod
 
-            atkBonus += self.get_stat('natural-attacks')
-            natural_bonus = self.get_stat('natural-attacks-damage')
-            if natural_bonus:
-                dmg = f"{dmg}+{natural_bonus}"
+            atk_bonus = character_item_bonuses['attackBonusOverride'] or \
+                        (prof + self.get_stat('natural-attacks') + character_item_bonuses['attackBonus'])
+            dmg_bonus = self.get_stat('natural-attacks-damage') + character_item_bonuses['damage']
+            if dmg_bonus:
+                dmg = f"{dmg}+{dmg_bonus}"
+
+            details = character_item_bonuses['note'] or None
+            name = character_item_bonuses['name'] or "Unarmed Strike"
 
             attack = Attack.new(
-                "Unarmed Strike", ability_mod + atkBonus, f"{dmg}[bludgeoning]"
+                name, ability_mod + atk_bonus, f"{dmg}[bludgeoning]", details
             )
             out.append(attack)
         return out

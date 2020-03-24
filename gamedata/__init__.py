@@ -1,1 +1,3 @@
-from .lookupFuncs import compendium
+from .compendium import Compendium
+
+compendium = Compendium()

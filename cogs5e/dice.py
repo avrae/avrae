@@ -7,7 +7,7 @@ from d20 import roll
 from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from gamedata.lookupFuncs import select_monster_full, select_spell_full
+from gamedata.lookuputils import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
 from cogs5e.models.monster import Monster

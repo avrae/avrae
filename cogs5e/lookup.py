@@ -9,7 +9,7 @@ import textwrap
 import discord
 from discord.ext import commands
 
-from gamedata.lookupFuncs import HOMEBREW_EMOJI, HOMEBREW_ICON, compendium, get_homebrew_formatted_name, \
+from gamedata.lookuputils import HOMEBREW_EMOJI, HOMEBREW_ICON, compendium, get_homebrew_formatted_name, \
     select_monster_full, select_spell_full
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, add_homebrew_footer, set_maybe_long_desc
 from cogs5e.models.errors import NoActiveBrew

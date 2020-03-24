@@ -14,7 +14,7 @@ from d20 import roll
 from discord.ext import commands
 
 from cogs5e.funcs import targetutils
-from gamedata.lookupFuncs import get_spell_choices, select_spell_full
+from gamedata.lookuputils import get_spell_choices, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter

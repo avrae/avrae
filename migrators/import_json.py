@@ -16,6 +16,7 @@ LOAD_FILES = {
     'srd-feats': [],
     'srd-items': [],
     'srd-races': [],
+    'srd-racefeats': [],
     'srd-spells': [],
     'srd-references': [],
 

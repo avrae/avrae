@@ -220,7 +220,7 @@ async def on_command_error(ctx, error):
         elif isinstance(original, HTTPException):
             if original.response.status == 400:
                 return await ctx.send(f"Error: Message is too long, malformed, or empty.\n{original.text}")
-            elif original.response.status == 500:
+            elif 499 < original.response.status < 600:
                 return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
 
         elif isinstance(original, OverflowError):

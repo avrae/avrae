@@ -5,22 +5,16 @@ import aiohttp
 import jwt
 from boto3.dynamodb.conditions import Key
 
-# todo set these in config
-# jwt
-AUDIENCE = 'avrae.io'
-ISSUER = 'dndbeyond.com'
-SECRET = 'my-secret'
-EXPIRY_SECONDS = 5 * 60
-
 # auth service
-AUTH_URL = 'https://postb.in/1585160084275-2945728471968'
-
+from utils.config import DDB_AUTH_AUDIENCE as AUDIENCE, \
+    DDB_AUTH_EXPIRY_SECONDS as EXPIRY_SECONDS, \
+    DDB_AUTH_ISSUER as ISSUER, \
+    DDB_AUTH_SECRET as SECRET, \
+    DDB_AUTH_SERVICE_URL as AUTH_URL
 # dynamo
 # env: AWS_ACCESS_KEY_ID
 # env: AWS_SECRET_ACCESS_KEY
-DYNAMO_REGION = 'us-east-1'
-DYNAMO_USER_TABLE = 'users-foobartest'
-DYNAMO_ENTITY_TABLE = 'licenses-foobartest'
+from utils.config import DYNAMO_ENTITY_TABLE, DYNAMO_REGION, DYNAMO_USER_TABLE
 
 
 class BeyondClient:

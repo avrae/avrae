@@ -60,7 +60,17 @@ You should set the `DICECLOUD_USER`, `DICECLOUD_PASS`, `DICECLOUD_TOKEN`, and `G
 #### Misc
 Env vars required to deploy to production:
 - `NUM_CLUSTERS` - equal to the number of ECS tasks running Avrae
-- `GIT_COMMIT_SHA` - should be set in Travis
+- `DDB_AUTH_SECRET` - JWT signing secret for DDB auth
+- `DDB_AUTH_AUDIENCE` - JWT audience (default `"avrae.io"`)
+- `DDB_AUTH_ISSUER` - JWT issuer (default `"dndbeyond.com"`)
+- `DDB_AUTH_EXPIRY_SECONDS` - JWT expiry (default 5m)
+- `DDB_AUTH_SERVICE_URL` - DDB Auth Service URL
+- `DYNAMO_REGION` - AWS region for Entitlements DB
+- `DYNAMO_USER_TABLE` - Table name for Entitlements user table
+- `DYNAMO_ENTITY_TABLE` - Table name for Entitlements entity table
+- `AWS_ACCESS_KEY_ID` - AWS Access Key to access Dynamo
+- `AWS_SECRET_ACCESS_KEY` - AWS Secret Access Key
 
-Optional env vars:
+Other env vars:
 - `NUM_SHARDS` - explicitly set the number of shards to run
+- `GIT_COMMIT_SHA` - should be set in Travis (required for prod)

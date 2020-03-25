@@ -16,15 +16,24 @@ from utils.config import DDB_AUTH_AUDIENCE as AUDIENCE, \
 # env: AWS_SECRET_ACCESS_KEY
 from utils.config import DYNAMO_ENTITY_TABLE, DYNAMO_REGION, DYNAMO_USER_TABLE
 
+# cache
+USER_ENTITLEMENT_TTL = 1 * 60
+ENTITY_ENTITLEMENT_TTL = 15 * 60
 
-class BeyondClient:
+
+class BeyondClientBase:  # for development - assumes no entitlements
+    async def get_entitlements(self, ctx, user_id, entity_type):
+        return set()
+
+
+class BeyondClient(BeyondClientBase):
     """
     Client to interface with DDB's Auth Service and Entitlements tables in DynamoDB.
     Asyncio-compatible.
 
     Most methods are private since local dev environments cannot connect to the DDB stack, and
-    public methods should return the most liberal permissions (i.e. user owns everything in db) possible without making
-    external connections in this scenario.
+    public methods should return the most conservative permissions (i.e. user owns nothing in db)
+    possible without making external connections in this scenario.
     """
 
     def __init__(self, loop):
@@ -41,6 +50,53 @@ class BeyondClient:
         self.ddb_user_table = self.dynamo.Table(DYNAMO_USER_TABLE)
         self.ddb_entity_table = self.dynamo.Table(DYNAMO_ENTITY_TABLE)
 
+    async def get_entitlements(self, ctx, user_id, entity_type):
+        """
+        Returns a set of entity IDs that the given user is allowed to access in the given context.
+
+        :type ctx: discord.ext.commands.Context
+        :type user_id: int
+        :type entity_type: str
+        :rtype: set[int]
+        """
+        user_entitlement_cache_key = f"entitlements.user.{user_id}"
+        entity_entitlement_cache_key = f"entitlements.entity.{entity_type}"
+
+        # get user entitlements from cache or DDB
+        cached_user_entitlements = await ctx.bot.rdb.jget(user_entitlement_cache_key)
+        if cached_user_entitlements is not None:
+            user_e10s = UserEntitlements.from_dict(cached_user_entitlements)
+        else:
+            user_claim = self._jwt_for_user(user_id)
+            token = await self._fetch_token(user_claim)
+            ddb_id = 1234  # todo parse out DDB user ID
+            user_e10s = await self._fetch_licenses(ddb_id)
+            # cache entitlements
+            await ctx.bot.rdb.jsetex(user_entitlement_cache_key,
+                                     user_e10s.to_dict(),
+                                     USER_ENTITLEMENT_TTL)
+
+        # get entity entitlements from cache or DDB
+        cached_entity_entitlements = await ctx.bot.rdb.jget(entity_entitlement_cache_key)
+        if cached_entity_entitlements is not None:
+            entity_e10s = [EntityEntitlements.from_dict(e) for e in cached_entity_entitlements]
+        else:
+            entity_e10s = await self._fetch_entities(entity_type)
+            # cache entitlements
+            await ctx.bot.rdb.jsetex(entity_entitlement_cache_key,
+                                     [e.to_dict() for e in entity_e10s],
+                                     ENTITY_ENTITLEMENT_TTL)
+
+        # calculate visible entities
+        accessible = set()
+        user_licenses = user_e10s.licenses
+        for entity in entity_e10s:
+            if entity.is_free or user_licenses & entity.license_ids:
+                accessible.add(entity.entity_id)
+
+        return accessible
+
+    # ---- auth ----
     @staticmethod
     def _jwt_for_user(user_id: int):
         """
@@ -88,14 +144,12 @@ class BeyondClient:
 
         :param int ddb_id: The DDB user ID.
         :return: The set of all license IDs the user is allowed to use.
-        :rtype: set[str]
+        :rtype: UserEntitlements
         """
         user_r = await self.ddb_user_table.get_item(Key={"ID": ddb_id})  # ints are automatically converted to N-type
         if 'Item' not in user_r:
-            return set()
-
-        user_entitlements = UserEntitlements.from_dict(user_r['Item'])
-        return user_entitlements.licenses
+            return UserEntitlements([], [])
+        return UserEntitlements.from_dict(user_r['Item'])
 
     async def _fetch_entities(self, etype: str):
         """
@@ -108,7 +162,7 @@ class BeyondClient:
         return [EntityEntitlements.from_dict(e)
                 async for e in self.query(self.ddb_entity_table, KeyConditionExpression=Key('EntityType').eq(etype))]
 
-    # helpers
+    # ---- helpers ----
     @staticmethod
     async def query(table, **kwargs):
         """An async generator that automatically handles query pagination."""
@@ -142,6 +196,12 @@ class UserEntitlements:
     def from_dict(cls, d):
         return cls(d['acquiredLicenseIDs'], [SharedLicense.from_dict(sl) for sl in d['sharedLicenses']])
 
+    def to_dict(self):
+        return {
+            "acquiredLicenseIDs": self.acquired_license_ids,
+            "sharedLicenses": [sl.to_dict() for sl in self.shared_licenses]
+        }
+
     @property
     def licenses(self):
         """
@@ -166,6 +226,12 @@ class SharedLicense:
     def from_dict(cls, d):
         return cls(d['campaignId'], d['licenseIDs'])
 
+    def to_dict(self):
+        return {
+            "campaignId": self.campaign_id,
+            "licenseIDs": self.license_ids
+        }
+
 
 class EntityEntitlements:
     __slots__ = ("entity_type", "entity_id", "is_free", "license_ids")
@@ -185,6 +251,14 @@ class EntityEntitlements:
     @classmethod
     def from_dict(cls, d):
         return cls(d['entityType'], d['entityId'], d['isFree'], d['licenseIDs'])
+
+    def to_dict(self):
+        return {
+            "entityType": self.entity_type,
+            "entityId": self.entity_id,
+            "isFree": self.is_free,
+            "licenseIDs": list(self.license_ids)
+        }
 
 
 class AuthException(Exception):

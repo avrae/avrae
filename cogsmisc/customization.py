@@ -5,17 +5,15 @@ Created on Jan 30, 2017
 """
 import asyncio
 import textwrap
-import traceback
 
 import discord
-import draconic
 from discord.ext import commands
 from discord.ext.commands import BucketType, UserInputError
 
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import AvraeException, EvaluationError, NoCharacter
+from cogs5e.models.errors import EvaluationError, NoCharacter
 from utils import checks
 from utils.argparser import argquote, argsplit
 from utils.functions import auth_and_chan, clean_content, confirm
@@ -637,6 +635,41 @@ class Customization(commands.Cog):
         await ctx.send('Your global variables:{}'.format(say_list[0]))
         for m in say_list[1:]:
             await ctx.send(m)
+
+    # FIXME: temporary commands to aid testers with lack of dashboard
+    @globalvar.command(name='import', hidden=True)
+    async def gvar_import(self, ctx, destination=None):
+        """Imports a gvar from a txt file. If an arg is passed, sets the destination gvar, otherwise creates."""
+        if not ctx.message.attachments:
+            return await ctx.send("You must upload a TXT file to import.")
+
+        attachment = ctx.message.attachments[0]
+        if attachment.size > 100000:
+            return await ctx.send("This file is too large.")
+
+        data = await attachment.read()
+        try:
+            value = data.decode('utf-8')
+        except:
+            return await ctx.send("Could not read this file. Are you sure it's a text file?")
+
+        if destination:
+            await helpers.update_gvar(ctx, destination, value)
+            await ctx.send(f'Global variable `{destination}` edited.')
+        else:
+            name = await helpers.create_gvar(ctx, value)
+            await ctx.send(f"Created global variable `{name}`.")
+
+    @globalvar.command(name='export', hidden=True)
+    async def gvar_export(self, ctx, address):
+        """Exports a gvar to a txt file."""
+        import io
+        gvar = await self.bot.mdb.gvars.find_one({"key": address})
+        if gvar is None:
+            return await ctx.send("This gvar does not exist.")
+        value = gvar['value']
+        out = io.StringIO(value)
+        await ctx.send(file=discord.File(out, f'{address}.txt'))
 
 
 def setup(bot):

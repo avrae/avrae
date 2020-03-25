@@ -21,8 +21,8 @@ USER_ENTITLEMENT_TTL = 1 * 60
 ENTITY_ENTITLEMENT_TTL = 15 * 60
 
 
-class BeyondClientBase:  # for development - assumes no entitlements
-    async def get_entitlements(self, ctx, user_id, entity_type):
+class BeyondClientBase:  # todo for development - assumes no entitlements
+    async def get_accessible_entities(self, ctx, user_id, entity_type):
         return set()
 
 
@@ -50,7 +50,7 @@ class BeyondClient(BeyondClientBase):
         self.ddb_user_table = self.dynamo.Table(DYNAMO_USER_TABLE)
         self.ddb_entity_table = self.dynamo.Table(DYNAMO_ENTITY_TABLE)
 
-    async def get_entitlements(self, ctx, user_id, entity_type):
+    async def get_accessible_entities(self, ctx, user_id, entity_type):
         """
         Returns a set of entity IDs that the given user is allowed to access in the given context.
 
@@ -59,33 +59,8 @@ class BeyondClient(BeyondClientBase):
         :type entity_type: str
         :rtype: set[int]
         """
-        user_entitlement_cache_key = f"entitlements.user.{user_id}"
-        entity_entitlement_cache_key = f"entitlements.entity.{entity_type}"
-
-        # get user entitlements from cache or DDB
-        cached_user_entitlements = await ctx.bot.rdb.jget(user_entitlement_cache_key)
-        if cached_user_entitlements is not None:
-            user_e10s = UserEntitlements.from_dict(cached_user_entitlements)
-        else:
-            user_claim = self._jwt_for_user(user_id)
-            token = await self._fetch_token(user_claim)
-            ddb_id = 1234  # todo parse out DDB user ID
-            user_e10s = await self._fetch_licenses(ddb_id)
-            # cache entitlements
-            await ctx.bot.rdb.jsetex(user_entitlement_cache_key,
-                                     user_e10s.to_dict(),
-                                     USER_ENTITLEMENT_TTL)
-
-        # get entity entitlements from cache or DDB
-        cached_entity_entitlements = await ctx.bot.rdb.jget(entity_entitlement_cache_key)
-        if cached_entity_entitlements is not None:
-            entity_e10s = [EntityEntitlements.from_dict(e) for e in cached_entity_entitlements]
-        else:
-            entity_e10s = await self._fetch_entities(entity_type)
-            # cache entitlements
-            await ctx.bot.rdb.jsetex(entity_entitlement_cache_key,
-                                     [e.to_dict() for e in entity_e10s],
-                                     ENTITY_ENTITLEMENT_TTL)
+        user_e10s = await self.get_user_entitlements(ctx, user_id)
+        entity_e10s = await self.get_entity_entitlements(ctx, entity_type)
 
         # calculate visible entities
         accessible = set()
@@ -96,7 +71,71 @@ class BeyondClient(BeyondClientBase):
 
         return accessible
 
-    # ---- auth ----
+    async def get_user_entitlements(self, ctx, user_id):
+        """
+        Gets a user's entitlements in the current context, from cache or by communicating with DDB.
+
+        :type ctx: discord.ext.commands.Context
+        :type user_id: int
+        :rtype: UserEntitlements
+        """
+        user_entitlement_cache_key = f"entitlements.user.{user_id}"
+        cached_user_entitlements = await ctx.bot.rdb.jget(user_entitlement_cache_key)
+        if cached_user_entitlements is not None:
+            return UserEntitlements.from_dict(cached_user_entitlements)
+
+        token = await self.get_user_token(ctx, user_id)
+        if token is None:
+            return UserEntitlements([], [])  # if the user has no DDB account, return an empty entitlements
+
+        ddb_id = 1234  # todo parse out DDB user ID
+        user_e10s = await self._fetch_licenses(ddb_id)
+        # cache entitlements
+        await ctx.bot.rdb.jsetex(user_entitlement_cache_key,
+                                 user_e10s.to_dict(),
+                                 USER_ENTITLEMENT_TTL)
+        return user_e10s
+
+    async def get_entity_entitlements(self, ctx, entity_type):
+        """
+        Gets the latest entity entitlements, from cache or by communicating with DDB.
+
+        :type ctx: discord.ext.commands.Context
+        :type entity_type: str
+        :rtype: list[EntityEntitlements]
+        """
+        entity_entitlement_cache_key = f"entitlements.entity.{entity_type}"
+        cached_entity_entitlements = await ctx.bot.rdb.jget(entity_entitlement_cache_key)
+        if cached_entity_entitlements is not None:
+            return [EntityEntitlements.from_dict(e) for e in cached_entity_entitlements]
+
+        entity_e10s = await self._fetch_entities(entity_type)
+        # cache entitlements
+        await ctx.bot.rdb.jsetex(entity_entitlement_cache_key,
+                                 [e.to_dict() for e in entity_e10s],
+                                 ENTITY_ENTITLEMENT_TTL)
+        return entity_e10s
+
+    async def get_user_token(self, ctx, user_id):
+        """
+        Gets a user's short term DDB token from the Auth Service or cache.
+        
+        :type ctx: discord.ext.commands.Context
+        :type user_id: int
+        :rtype: str
+        """
+        user_token_cache_key = f"entitlements.user.{user_id}.token"
+        cached_token = await ctx.bot.rdb.get(user_token_cache_key)
+        if cached_token is not None:
+            return cached_token
+        user_claim = self._jwt_for_user(user_id)
+        token, ttl = await self._fetch_token(user_claim)  # todo: double-check that ttl is in seconds
+        # cache token for ttl
+        if token is not None:
+            await ctx.bot.rdb.setex(user_token_cache_key, token, ttl)
+        return token
+
+    # ---- low-level auth ----
     @staticmethod
     def _jwt_for_user(user_id: int):
         """

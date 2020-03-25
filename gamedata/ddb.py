@@ -119,7 +119,7 @@ class BeyondClient(BeyondClientBase):
     async def get_user_token(self, ctx, user_id):
         """
         Gets a user's short term DDB token from the Auth Service or cache.
-        
+
         :type ctx: discord.ext.commands.Context
         :type user_id: int
         :rtype: str

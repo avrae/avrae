@@ -627,9 +627,8 @@ class BeyondSheetParser(SheetLoaderABC):
             damage_type = (item_specific_bonuses['replaceDamageType'] or itemdef['damageType'] or 'unknown').lower()
 
             if base_dice and is_melee and has_gwf and not is_one_handed:
-                base_dice += "ro<3"
-                                           
-                                           
+                base_dice += "ro<3"      
+
             if base_dice:
                 damage = f"{base_dice}+{dmgBonus}[{damage_type}" \
                          f"{'^' if itemdef['magic'] or character_item_bonuses['isPact'] else ''}]"

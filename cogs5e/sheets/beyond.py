@@ -602,6 +602,7 @@ class BeyondSheetParser(SheetLoaderABC):
             is_melee = not 'Range' in [p['name'] for p in item_properties]
             is_one_handed = not 'Two-Handed' in [p['name'] for p in item_properties]
             is_weapon = itemdef['filterType'] == 'Weapon'
+            has_gwf = "Great Weapon Fighting" in self._all_features
 
             if is_melee and is_one_handed:
                 dmgBonus += self.get_stat('one-handed-melee-attacks-damage')
@@ -625,6 +626,9 @@ class BeyondSheetParser(SheetLoaderABC):
 
             damage_type = (item_specific_bonuses['replaceDamageType'] or itemdef['damageType'] or 'unknown').lower()
 
+            if base_dice and is_melee and has_gwf and not is_one_handed:
+                base_dice += "ro<3"      
+
             if base_dice:
                 damage = f"{base_dice}+{dmgBonus}[{damage_type}" \
                          f"{'^' if itemdef['magic'] or character_item_bonuses['isPact'] else ''}]"
@@ -641,6 +645,8 @@ class BeyondSheetParser(SheetLoaderABC):
 
             if 'Versatile' in [p['name'] for p in item_properties]:
                 versDmg = next(p['notes'] for p in item_properties if p['name'] == 'Versatile')
+                if has_gwf:
+                    versDmg += "ro<3"
                 damage = f"{versDmg}+{dmgBonus}[{damage_type}" \
                          f"{'^' if itemdef['magic'] or character_item_bonuses['isPact'] else ''}]"
                 attack = Attack.new(

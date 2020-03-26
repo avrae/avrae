@@ -20,9 +20,10 @@ from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
-from gamedata import compendium
 from cogs5e.funcs.scripting.helpers import handle_alias_exception
 from cogs5e.models.errors import AvraeException, EvaluationError
+from gamedata import compendium
+from gamedata.ddb import BeyondClient, BeyondClientBase
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
@@ -66,11 +67,18 @@ class Avrae(commands.AutoShardedBot):
         self.muted = set()
         self.cluster_id = 0
 
+        # sentry
         if config.SENTRY_DSN is not None:
             release = None
             if config.GIT_COMMIT_SHA:
                 release = f"avrae-bot@{config.GIT_COMMIT_SHA}"
             sentry_sdk.init(dsn=config.SENTRY_DSN, environment=config.ENVIRONMENT.title(), release=release)
+
+        # ddb entitlements
+        if config.TESTING:
+            self.ddb = BeyondClientBase()
+        else:
+            self.ddb = BeyondClient(self.loop)
 
     async def setup_rdb(self):
         if config.TESTING:

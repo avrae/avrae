@@ -37,6 +37,10 @@ db.analytics_guild_activity.createIndex({"last_command_time": -1});
 analytics_command_activity:
 db.analytics_command_activity.createIndex({"name": 1}, {"unique": true});
 
+analytics_ddb_activity:
+db.analytics_ddb_activity.createIndex({"user_id": 1}, {"unique": true});
+db.analytics_ddb_activity.createIndex({"last_link_time": -1});
+
 analytics_nsrd_lookup:
 db.analytics_nsrd_lookup.createIndex({"type": 1});
 

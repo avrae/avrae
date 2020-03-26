@@ -5,6 +5,8 @@ import aiohttp
 import jwt
 from boto3.dynamodb.conditions import Key
 
+from cogsmisc.stats import Stats
+
 # auth service
 from utils.config import DDB_AUTH_AUDIENCE as AUDIENCE, \
     DDB_AUTH_EXPIRY_SECONDS as EXPIRY_SECONDS, \
@@ -21,9 +23,12 @@ USER_ENTITLEMENT_TTL = 1 * 60
 ENTITY_ENTITLEMENT_TTL = 15 * 60
 
 
-class BeyondClientBase:  # todo for development - assumes no entitlements
+class BeyondClientBase:  # for development - assumes no entitlements
     async def get_accessible_entities(self, ctx, user_id, entity_type):
         return set()
+
+    async def get_ddb_user(self, ctx, user_id):
+        return None
 
 
 class BeyondClient(BeyondClientBase):
@@ -46,21 +51,22 @@ class BeyondClient(BeyondClientBase):
     async def _initialize(self):
         """Initialize our async resources: aiohttp, aioboto3"""
         self.http = aiohttp.ClientSession()
-        self.dynamo = await aioboto3.resource('dynamodb', region_name=DYNAMO_REGION)
+        self.dynamo = aioboto3.resource('dynamodb', region_name=DYNAMO_REGION)
         self.ddb_user_table = self.dynamo.Table(DYNAMO_USER_TABLE)
         self.ddb_entity_table = self.dynamo.Table(DYNAMO_ENTITY_TABLE)
 
     async def get_accessible_entities(self, ctx, user_id, entity_type):
         """
         Returns a set of entity IDs that the given user is allowed to access in the given context.
+        Returns the set of all free entity IDs if the user has no DDB link.
 
         :type ctx: discord.ext.commands.Context
         :type user_id: int
         :type entity_type: str
         :rtype: set[int]
         """
-        user_e10s = await self.get_user_entitlements(ctx, user_id)
-        entity_e10s = await self.get_entity_entitlements(ctx, entity_type)
+        user_e10s = await self._get_user_entitlements(ctx, user_id)
+        entity_e10s = await self._get_entity_entitlements(ctx, entity_type)
 
         # calculate visible entities
         accessible = set()
@@ -71,7 +77,38 @@ class BeyondClient(BeyondClientBase):
 
         return accessible
 
-    async def get_user_entitlements(self, ctx, user_id):
+    async def get_ddb_user(self, ctx, user_id):
+        """
+        Gets a Discord user's DDB user, communicating with the Auth Service if necessary.
+        Returns None if the user has no DDB link.
+
+        :type ctx: discord.ext.commands.Context
+        :type user_id: int
+        :rtype: BeyondUser or None
+        """
+        user_cache_key = f"beyond.user.{user_id}"
+        unlinked_sentinel = {"unlinked": True}
+
+        cached_user = await ctx.bot.rdb.jget(user_cache_key)
+        if cached_user == unlinked_sentinel:
+            return None
+        elif cached_user is not None:
+            return BeyondUser.from_dict(cached_user)
+
+        user_claim = self._jwt_for_user(user_id)
+        token, ttl = await self._fetch_token(user_claim)
+
+        # cache unlinked if user is unlinked
+        if token is None:
+            await ctx.bot.rdb.setex(user_cache_key, unlinked_sentinel, USER_ENTITLEMENT_TTL)
+            return None
+
+        user = self._parse_jwt(token)
+        await ctx.bot.rdb.jsetex(user_cache_key, user.to_dict(), ttl)
+        await Stats.count_ddb_link(ctx, user_id, user)
+        return user
+
+    async def _get_user_entitlements(self, ctx, user_id):
         """
         Gets a user's entitlements in the current context, from cache or by communicating with DDB.
 
@@ -84,19 +121,18 @@ class BeyondClient(BeyondClientBase):
         if cached_user_entitlements is not None:
             return UserEntitlements.from_dict(cached_user_entitlements)
 
-        token = await self.get_user_token(ctx, user_id)
-        if token is None:
-            return UserEntitlements([], [])  # if the user has no DDB account, return an empty entitlements
-
-        ddb_id = 1234  # todo parse out DDB user ID
-        user_e10s = await self._fetch_licenses(ddb_id)
+        user = await self.get_ddb_user(ctx, user_id)
+        if user is None:
+            user_e10s = UserEntitlements([], [])  # if the user has no DDB account, return+cache an empty entitlements
+        else:
+            user_e10s = await self._fetch_user_entitlements(user.user_id)
         # cache entitlements
         await ctx.bot.rdb.jsetex(user_entitlement_cache_key,
                                  user_e10s.to_dict(),
                                  USER_ENTITLEMENT_TTL)
         return user_e10s
 
-    async def get_entity_entitlements(self, ctx, entity_type):
+    async def _get_entity_entitlements(self, ctx, entity_type):
         """
         Gets the latest entity entitlements, from cache or by communicating with DDB.
 
@@ -115,25 +151,6 @@ class BeyondClient(BeyondClientBase):
                                  [e.to_dict() for e in entity_e10s],
                                  ENTITY_ENTITLEMENT_TTL)
         return entity_e10s
-
-    async def get_user_token(self, ctx, user_id):
-        """
-        Gets a user's short term DDB token from the Auth Service or cache.
-
-        :type ctx: discord.ext.commands.Context
-        :type user_id: int
-        :rtype: str
-        """
-        user_token_cache_key = f"entitlements.user.{user_id}.token"
-        cached_token = await ctx.bot.rdb.get(user_token_cache_key)
-        if cached_token is not None:
-            return cached_token
-        user_claim = self._jwt_for_user(user_id)
-        token, ttl = await self._fetch_token(user_claim)  # todo: double-check that ttl is in seconds
-        # cache token for ttl
-        if token is not None:
-            await ctx.bot.rdb.setex(user_token_cache_key, token, ttl)
-        return token
 
     # ---- low-level auth ----
     @staticmethod
@@ -156,6 +173,24 @@ class BeyondClient(BeyondClientBase):
 
         return jwt.encode(jwt_body, SECRET, algorithm='HS256').decode()  # return as a str, not bytes
 
+    @staticmethod
+    def _parse_jwt(token: str):
+        """
+        Parses a JWT from the Auth Service into a DDB User.
+
+        :param str token: The JWT returned by the Auth Service.
+        :return: The DDB user represented by the JWT.
+        :rtype: BeyondUser
+        """
+        payload = jwt.decode(token, SECRET, algorithms=['HS256'], verify=True)
+        return BeyondUser(
+            token,
+            payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],
+            payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
+            payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
+            payload.get('http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriber')
+        )
+
     async def _fetch_token(self, claim: str):
         """
         Requests a short-term token from the DDB Auth Service given a Discord user claim in JWT form.
@@ -177,12 +212,11 @@ class BeyondClient(BeyondClientBase):
             raise AuthException("Timed out connecting to Auth Service")
         return data['token'], data.get('ttl')
 
-    async def _fetch_licenses(self, ddb_id: int):
+    async def _fetch_user_entitlements(self, ddb_id: int):
         """
-        Queries the entitlement tables to determine what licenses a DDB user can use.
+        Queries the entitlement tables to determine a DDB user's entitlements.
 
         :param int ddb_id: The DDB user ID.
-        :return: The set of all license IDs the user is allowed to use.
         :rtype: UserEntitlements
         """
         user_r = await self.ddb_user_table.get_item(Key={"ID": ddb_id})  # ints are automatically converted to N-type
@@ -192,7 +226,7 @@ class BeyondClient(BeyondClientBase):
 
     async def _fetch_entities(self, etype: str):
         """
-        Queries the entitlement tables to get all entities of a certain type.
+        Queries the entitlement tables to get all entity entitlements of a certain type.
 
         :param str etype: The type of entity to get.
         :return: A list of all entity entitlements for all entities of that type.
@@ -218,6 +252,30 @@ class BeyondClient(BeyondClientBase):
 
     async def close(self):
         await self.http.close()
+
+
+class BeyondUser:
+    def __init__(self, token, user_id, username, roles, subscriber=None, subscription_tier=None):
+        self.token = token
+        self.user_id = user_id
+        self.username = username
+        self.roles = roles
+        self.subscriber = subscriber
+        self.subscription_tier = subscription_tier
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+    def to_dict(self):
+        return {
+            "token": self.token,
+            "user_id": self.user_id,
+            "username": self.username,
+            "roles": self.roles,
+            "subscriber": self.subscriber,
+            "subscription_tier": self.subscription_tier
+        }
 
 
 class UserEntitlements:

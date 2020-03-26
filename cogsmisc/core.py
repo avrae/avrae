@@ -12,6 +12,7 @@ import discord
 import psutil
 from discord.ext import commands
 
+from cogs5e.models import embeds
 from cogsmisc.stats import Stats
 
 
@@ -98,6 +99,33 @@ class Core(commands.Cog):
         embed.add_field(name='About', value='Made with :heart: by zhu.exe#4211 and the D&D Beyond team\n'
                                             'Join the official development server [here](https://discord.gg/pQbd4s6)!',
                         inline=False)
+
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    async def ddb(self, ctx):
+        """Displays information about your D&D Beyond account."""
+        ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+        embed = embeds.EmbedWithAuthor(ctx)
+
+        if ddb_user is None:
+            embed.title = "No D&D Beyond account connected."
+            embed.description = \
+                "It looks like you don't have your Discord account connected to your D&D Beyond account!\n" \
+                "Linking your account means that you'll be able to use everything you own on " \
+                "D&D Beyond in Avrae for free - you can link your accounts " \
+                "[here](https://www.dndbeyond.com/account)."
+            embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
+                                  "link.")
+            return await ctx.send(embed=embed)
+
+        embed.title = f"Hello, {ddb_user.username}!"
+        # todo
+        embed.description = \
+            f"DEBUG:\n" \
+            f"User ID: {ddb_user.user_id}\n" \
+            f"Roles: {ddb_user.roles}\n" \
+            f"Subscriber: {ddb_user.subscriber}"
 
         await ctx.send(embed=embed)
 

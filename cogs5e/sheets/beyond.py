@@ -591,8 +591,13 @@ class BeyondSheetParser(SheetLoaderABC):
                                                        item_specific_bonuses['extraProperties']]
 
             isProf = self.get_prof(itemdef['type']) or character_item_bonuses['isPact']
-            mod_bonus = self.get_relevant_atkmod(itemdef, item_properties) if not character_item_bonuses[
-                'isHex'] else self.stat_from_id(6)
+        
+            mod_bonus = self.get_relevant_atkmod(itemdef, item_properties)
+            if character_item_bonuses['isHex']:
+                mod_bonus = self.stat_from_id(6)
+            if itemdef['magic'] and self.get_levels().get('Artificer') and "Battle Ready" in self._all_features:
+                mod_bonus = self.stat_from_id(4)
+        
             magic_bonus = item_specific_bonuses['magicBonus']
             item_dmg_bonus = self.get_stat(f"{itemdef['type'].lower()}-damage")
 

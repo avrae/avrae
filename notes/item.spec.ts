@@ -31,7 +31,8 @@ class Item extends DDBEntity {
     "image": "...",
     "source": "DMG",
     "page": 172,
-    "entity_id": ...
+    "entity_id": ...,
+    "url": ...
 },
 {
     "name": "Staff of the Magi",
@@ -41,7 +42,8 @@ class Item extends DDBEntity {
     "image": "...",
     "source": "DMG",
     "page": 203,
-    "entity_id": ...
+    "entity_id": ...,
+    "url": ...
 },
 {
     "name": "Longsword",
@@ -51,6 +53,7 @@ class Item extends DDBEntity {
     "image": "...",
     "source": "PHB",
     "page": 149,
-    "entity_id": ...
+    "entity_id": ...,
+    "url": ...
 }
  */

@@ -43,6 +43,7 @@ class Trait {
     ],
     "source": "PHB",
     "page": 127,
-    "entity_id": ...
+    "entity_id": ...,
+    "url": ...
 }
  */

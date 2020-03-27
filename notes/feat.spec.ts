@@ -21,6 +21,7 @@ class Feat extends DDBEntity {
     "ability": [],
     "source": "PHB",
     "page": 167,
-    "entity_id": ...
+    "entity_id": ...,
+    "url": ...
 }
  */

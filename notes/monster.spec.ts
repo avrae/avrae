@@ -4,6 +4,7 @@ import DDBEntity from './ddbentity.spec.ts';
 import {BaseStats, Saves, Skills, Spellbook, Attack} from './shared.spec.ts';
 
 class Monster extends DDBEntity {
+    // display:
     name: string;
     size: string;
     race: string;
@@ -14,24 +15,27 @@ class Monster extends DDBEntity {
     hitdice: string;
     speed: string;
     ability_scores: BaseStats;
-    cr: number;
-    xp: number;
-    passiveperc: number;
-    senses: string;
-    resistances: Resistances;  // may require augmentation
-    condition_immune: string[];
     saves: Saves;
     skills: Skills;
+    senses: string;
+    passiveperc: number;
+    display_resists: Resistances;  // used to display resistances cleanly
+    condition_immune: string[];
     languages: string[];
+    cr: number;
+    xp: number;
+
     traits: Feature[];
     actions: Feature[];
     reactions: Feature[];
     legactions: Feature[];
     la_per_round: number;
-    proper: boolean;
-    image_url: string;
-    spellbook: MonsterSpellbook;  // may require augmentation
-    display_resists: Resistances;
+
+    // augmented data:
+    proper: boolean;  // used to determine whether to put an "A" in front of monster name when making checks
+    image_url: string;  // token URL
+    spellbook: MonsterSpellbook;  // may require augmentation - used to cast spells in initiative
+    resistances: Resistances;  // may require augmentation
 
     attacks: Attack[];  // this field will require augmentation
 }

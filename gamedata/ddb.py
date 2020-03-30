@@ -164,7 +164,7 @@ class BeyondClient(BeyondClientBase):
         now = int(time.time())
 
         jwt_body = {
-            "discord_id": str(user_id),
+            "external_user_id": str(user_id),
             "iat": now,
             "exp": now + EXPIRY_SECONDS,
             "aud": AUDIENCE,

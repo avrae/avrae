@@ -3,4 +3,5 @@ class DDBEntity {
     page: number;
     entity_id: number;
     url: string;
+    is_free: boolean;
 }

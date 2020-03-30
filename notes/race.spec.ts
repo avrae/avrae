@@ -1,19 +1,17 @@
 // @ts-ignore
 import DDBEntity from './ddbentity.spec.ts';
 
-type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
-
 class Race extends DDBEntity {
     name: string;
     size: string;
     speed: string;
-    ability: { Ability: number };  // e.g. {'str': 1, 'dex': 2}
+    ability: string;
     traits: Trait[];
 }
 
 class Trait {
     name: string;
-    text: string; // Markdown-formatted
+    text: string;  // Markdown-formatted
 }
 
 // examples:
@@ -22,10 +20,7 @@ class Trait {
   "name": "Elf (High)",
   "size": "Medium",
   "speed": "30 ft.",
-  "ability": {
-    "dex": 2,
-    "int": 1
-  },
+  "ability": "Dexterity +2, Intelligence +1",
   "traits": [
     {
       "name": "Age",

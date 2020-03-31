@@ -27,3 +27,13 @@ class Sourced(abc.ABC):
         if self.page is None:
             return self.source
         return f"{self.source} {self.page}"  # e.g. "PHB 196"
+
+
+class Trait:
+    def __init__(self, name, text):
+        self.name = name
+        self.text = text
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(d['name'], d['text'])

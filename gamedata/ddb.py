@@ -113,6 +113,7 @@ class BeyondClient(BeyondClientBase):
         Gets a user's entitlements in the current context, from cache or by communicating with DDB.
 
         :type ctx: discord.ext.commands.Context
+        :param user_id: The Discord user ID.
         :type user_id: int
         :rtype: UserEntitlements
         """
@@ -276,6 +277,14 @@ class BeyondUser:
             "subscriber": self.subscriber,
             "subscription_tier": self.subscription_tier
         }
+
+    @property
+    def is_insider(self):
+        return 'Insider' in self.roles
+
+    @property
+    def is_staff(self):
+        return 'D&D Beyond Staff' in self.roles
 
 
 class UserEntitlements:

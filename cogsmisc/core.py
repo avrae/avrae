@@ -120,12 +120,17 @@ class Core(commands.Cog):
             return await ctx.send(embed=embed)
 
         embed.title = f"Hello, {ddb_user.username}!"
-        # todo
-        embed.description = \
-            f"DEBUG:\n" \
-            f"User ID: {ddb_user.user_id}\n" \
-            f"Roles: {ddb_user.roles}\n" \
-            f"Subscriber: {ddb_user.subscriber}"
+        embed.url = "https://www.dndbeyond.com/account"
+        desc = f"You're all set! Any books or individual purchases made on D&D Beyond should be available for you " \
+               f"to use on Avrae."
+        embed.description = desc
+
+        if ddb_user.is_staff:
+            embed.set_footer(
+                text="Official D&D Beyond Staff",
+                icon_url="https://media-waterdeep.cursecdn.com/avatars/thumbnails/104/378/32/32/636511944060210307.png")
+        elif ddb_user.is_insider:
+            embed.set_footer(text="Thanks for being a D&D Beyond Insider.")
 
         await ctx.send(embed=embed)
 

@@ -18,7 +18,7 @@ class Monster extends DDBEntity {
     saves: Saves;
     skills: Skills;
     senses: string;
-    passiveperc: number;
+    passiveperc?: number;
     display_resists: Resistances;  // used to display resistances cleanly
     condition_immune: string[];
     languages: string[];

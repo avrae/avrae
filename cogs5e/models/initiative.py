@@ -3,7 +3,7 @@ from d20 import roll
 
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
-from cogs5e.models.monster import MonsterCastableSpellbook
+from gamedata.monster import MonsterCastableSpellbook
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
 from cogs5e.models.sheet.resistance import Resistances, Resistance

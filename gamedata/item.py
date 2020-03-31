@@ -22,3 +22,8 @@ class Item(Sourced):
         return cls(d['name'], d['desc'], d['attunement'],
                    d.get('meta'), d.get('image'),
                    source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
+
+    @classmethod
+    def from_homebrew(cls, d, source):
+        return cls(d['name'], d['desc'], False, d.get('meta'), d.get('image'),
+                   source=source, homebrew=True)

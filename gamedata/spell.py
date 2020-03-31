@@ -11,15 +11,16 @@ from cogs5e.models.errors import AvraeException
 from cogs5e.models.initiative import Combatant, PlayerCombatant
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import verbose_stat
+from .shared import Sourced
 
 log = logging.getLogger(__name__)
 
 
-class Spell:
+class Spell(Sourced):
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
-                 description: str, classes=None, subclasses=None, ritual: bool = False, higherlevels: str = None,
-                 source: str = "homebrew", page: int = None, concentration: bool = False, automation: Automation = None,
-                 srd: bool = True, image: str = None):
+                 description: str, homebrew: bool, classes=None, subclasses=None, ritual: bool = False,
+                 higherlevels: str = None, concentration: bool = False, automation: Automation = None,
+                 image: str = None, **kwargs):
         if classes is None:
             classes = []
         if isinstance(classes, str):
@@ -28,6 +29,9 @@ class Spell:
             subclasses = []
         if isinstance(subclasses, str):
             subclasses = [cls.strip() for cls in subclasses.split(',') if cls.strip()]
+
+        super().__init__('spell', homebrew, **kwargs)
+
         self.name = name
         self.level = level
         self.school = school
@@ -40,33 +44,29 @@ class Spell:
         self.ritual = ritual
         self.description = description
         self.higherlevels = higherlevels
-        self.source = source
-        self.page = page
         self.concentration = concentration
         self.automation = automation
-        self.srd = srd
         self.image = image
 
         if self.concentration and 'Concentration' not in self.duration:
             self.duration = f"Concentration, up to {self.duration}"
 
     @classmethod
-    def from_data(cls, data):  # local JSON
-        data["range_"] = data.pop("range")  # ignore this
-        data["automation"] = Automation.from_data(data["automation"])
-        return cls(**data)
+    def from_data(cls, d):  # local JSON
+        automation = Automation.from_data(d["automation"])
+        return cls(
+            d['name'], d['level'], d['school'], d['casttime'], d['range'], d['components'], d['duration'],
+            d['description'],
+            homebrew=False, classes=d['classes'], subclasses=d['subclasses'], ritual=d['ritual'],
+            higherlevels=d['higherlevels'], concentration=d['concentration'], automation=automation,
+            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
 
     @classmethod
-    def from_dict(cls, raw):  # homebrew spells
-        raw['components'] = parse_components(raw['components'])
-        return cls.from_data(raw)
-
-    # def to_dict(self):  # for scripting - use from_data to reload if necessary
-    #     return {"name": self.name, "level": self.level, "school": self.school, "classes": self.classes,
-    #             "subclasses": self.subclasses, "time": self.time, "range": self.range,
-    #             "components": serialize_components(self.components), "duration": self.duration, "ritual": self.ritual,
-    #             "description": self.description, "higherlevels": self.higherlevels, "source": self.source,
-    #             "page": self.page, "concentration": self.concentration, "automation": self.automation, "srd": self.srd}
+    def from_homebrew(cls, data, source):  # homebrew spells
+        data['components'] = parse_homebrew_components(data['components'])
+        data["range_"] = data.pop("range")
+        data["automation"] = Automation.from_data(data["automation"])
+        return cls(homebrew=True, source=source, **data)
 
     def get_school(self):
         return {
@@ -283,7 +283,7 @@ class Spell:
         return {"embed": embed}
 
 
-def parse_components(components):
+def parse_homebrew_components(components):
     v = components.get('verbal')
     s = components.get('somatic')
     m = components.get('material')

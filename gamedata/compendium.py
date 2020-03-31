@@ -5,8 +5,8 @@ import os
 
 import newrelic.agent
 
-from cogs5e.models.monster import Monster
-from cogs5e.models.spell import Spell
+from gamedata.monster import Monster
+from gamedata.spell import Spell
 from gamedata.background import Background
 from gamedata.race import Race
 from utils import config

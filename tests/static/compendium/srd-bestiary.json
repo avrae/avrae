@@ -5,7 +5,7 @@
     "race": "humanoid (any race)",
     "alignment": "any alignment",
     "ac": 12,
-    "armortype": null,
+    "armortype": "15 with mage armor",
     "hp": 40,
     "hitdice": "9d8",
     "speed": "30 ft.",
@@ -148,8 +148,6 @@
     "reactions": [],
     "legactions": [],
     "la_per_round": 3,
-    "srd": true,
-    "source": "MM",
     "attacks": [
       {
         "name": "Dagger",
@@ -290,7 +288,12 @@
       "immune": [],
       "vuln": [],
       "neutral": []
-    }
+    },
+    "source": "MM",
+    "page": 1,
+    "entity_id": 1,
+    "url": "",
+    "is_free": true
   },
   {
     "name": "Kobold",
@@ -446,8 +449,6 @@
     "reactions": [],
     "legactions": [],
     "la_per_round": 3,
-    "srd": true,
-    "source": "MM",
     "attacks": [
       {
         "name": "Dagger",
@@ -534,6 +535,11 @@
       "immune": [],
       "vuln": [],
       "neutral": []
-    }
+    },
+    "source": "MM",
+    "page": 1,
+    "entity_id": 2,
+    "url": "",
+    "is_free": true
   }
 ]

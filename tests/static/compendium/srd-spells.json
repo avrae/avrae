@@ -2,7 +2,7 @@
   {
     "name": "Fire Bolt",
     "level": 0,
-    "school": "V",
+    "school": "Evocation",
     "casttime": "1 action",
     "range": "120 feet",
     "components": "V, S",
@@ -16,8 +16,6 @@
     "subclasses": [],
     "ritual": false,
     "higherlevels": null,
-    "source": "PHB",
-    "page": 242,
     "concentration": false,
     "automation": [
       {
@@ -42,12 +40,16 @@
         "text": "Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried."
       }
     ],
-    "srd": true
+    "source": "PHB",
+    "page": 1,
+    "entity_id": 1,
+    "url": "...",
+    "is_free": true
   },
   {
     "name": "Fireball",
     "level": 3,
-    "school": "V",
+    "school": "Evocation",
     "casttime": "1 action",
     "range": "150 feet",
     "components": "V, S, M (a tiny ball of bat guano and sulfur)",
@@ -63,8 +65,6 @@
     ],
     "ritual": false,
     "higherlevels": "When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd.",
-    "source": "PHB",
-    "page": 241,
     "concentration": false,
     "automation": [
       {
@@ -109,6 +109,10 @@
         "text": "Each creature in a 20-foot radius must make a Dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one."
       }
     ],
-    "srd": true
+    "source": "PHB",
+    "page": 241,
+    "entity_id": 2,
+    "url": "...",
+    "is_free": true
   }
 ]

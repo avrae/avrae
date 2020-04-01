@@ -1,22 +1,35 @@
 [
   {
+    "name": "Glamoured Studded Leather",
+    "meta": "*Light Armor, Rare, Major*\n13 lbs. --- AC 13 + DEX\n",
+    "desc": "While wearing this armor,...",
+    "attunement": false,
+    "image": "...",
+    "source": "DMG",
+    "page": 172,
+    "entity_id": 1,
+    "url": "..."
+  },
+  {
+    "name": "Staff of the Magi",
+    "meta": "*Staff, Legendary, Major*\n4 lbs.\n",
+    "desc": "...",
+    "attunement": "by a Sorcerer, Warlock, or Wizard",
+    "image": "...",
+    "source": "DMG",
+    "page": 203,
+    "entity_id": 2,
+    "url": "..."
+  },
+  {
     "name": "Longsword",
-    "type": "M",
-    "weapon": true,
-    "sword": true,
-    "weaponCategory": "Martial",
-    "rarity": "None",
-    "value": "15 gp",
-    "weight": "3",
-    "dmg1": "1d8",
-    "dmg2": "1d10",
-    "dmgType": "S",
-    "property": [
-      "V"
-    ],
+    "meta": "*Melee Weapon, Martial*\n15gp, 3 lbs. --- 1d8 slashing - versatile (1d10)\n",
+    "desc": "**Versatile**: This weapon can be used with one or two hands...",
+    "attunement": false,
+    "image": "...",
     "source": "PHB",
     "page": 149,
-    "srd": true,
-    "desc": ""
+    "entity_id": 3,
+    "url": "..."
   }
 ]

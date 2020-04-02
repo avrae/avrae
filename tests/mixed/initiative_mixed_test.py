@@ -202,7 +202,7 @@ async def test_monster_cast_consumption_II(avrae, dhttp):
     avrae.message("!init next")
     await dhttp.drain()
 
-    mage = next(m for m in compendium.monster_mash if m.name == "Mage")
+    mage = next(m for m in compendium.monsters if m.name == "Mage")
 
     avrae.message("!init cast fireball")
     await dhttp.drain()

@@ -31,7 +31,7 @@ class Core(commands.Cog):
         Usage: !avatar <USER>"""
         if user is None:
             user = ctx.message.author
-        if user.avatar_url is not "":
+        if user.avatar_url != "":
             await ctx.send(user.avatar_url)
         else:
             await ctx.send(user.display_name + " is using the default avatar.")

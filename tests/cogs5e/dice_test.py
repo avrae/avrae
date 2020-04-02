@@ -81,7 +81,7 @@ async def test_ms(avrae, dhttp):
 async def test_mcast(avrae, dhttp):
     dhttp.clear()
 
-    mage = next(m for m in compendium.monster_mash if m.name == "Mage")
+    mage = next(m for m in compendium.monsters if m.name == "Mage")
 
     avrae.message("!mcast mage fireball")
     await dhttp.receive_delete()

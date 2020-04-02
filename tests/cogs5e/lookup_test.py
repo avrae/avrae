@@ -30,7 +30,7 @@ async def test_racefeat(avrae, dhttp):
 
 @requires_data()
 async def test_race(avrae, dhttp):
-    for race in compendium.fancyraces:
+    for race in compendium.races:
         avrae.message(f"!race {race.name}")
         await dhttp.drain()
 
@@ -65,7 +65,7 @@ async def test_background(avrae, dhttp):
 
 @requires_data()
 async def test_monster(avrae, dhttp):
-    for monster in compendium.monster_mash:
+    for monster in compendium.monsters:
         avrae.message(f"!monster {monster.name}")
         await dhttp.drain()
 

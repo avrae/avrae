@@ -12,7 +12,7 @@ from gamedata.item import Item
 from gamedata.klass import Class, Subclass
 from gamedata.monster import Monster
 from gamedata.race import Race
-from gamedata.shared import Trait
+from gamedata.shared import SourcedTrait, Trait
 from gamedata.spell import Spell
 from utils import config
 
@@ -122,27 +122,25 @@ class Compendium:
                 copied.name = f"{cls.name}: {subcls.name}"
                 self.subclasses.append(copied)
 
-    def _load_classfeats(self):
-        # todo copy sourcing information
+    def _load_classfeats(self):  # todo?
         for cls in self.classes:
             for level in cls.levels:
                 for feature in level:
-                    copied = copy.copy(feature)
+                    copied = SourcedTrait.from_trait_and_sourced(feature, cls, 'classfeat')
                     copied.name = f"{cls.name}: {feature.name}"
                     self.cfeats.append(copied)
 
             for subcls in cls.subclasses:
                 for level in subcls.levels:
                     for feature in level:
-                        copied = copy.copy(feature)
+                        copied = SourcedTrait.from_trait_and_sourced(feature, subcls, 'classfeat')
                         copied.name = f"{cls.name}: {subcls.name}: {feature.name}"
                         self.cfeats.append(copied)
 
     def _load_racefeats(self):
-        # todo copy sourcing information
         for race in self.races:
             for feature in race.traits:
-                copied = copy.copy(feature)
+                copied = SourcedTrait.from_trait_and_sourced(feature, race, 'racefeat')
                 copied.name = f"{race.name}: {feature.name}"
                 self.rfeats.append(copied)
 

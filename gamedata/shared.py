@@ -37,3 +37,20 @@ class Trait:
     @classmethod
     def from_dict(cls, d):
         return cls(d['name'], d['text'])
+
+
+class SourcedTrait(Trait, Sourced):
+    def __init__(self, name, text, **kwargs):
+        Sourced.__init__(self, **kwargs)
+        Trait.__init__(self, name, text)
+
+    @classmethod
+    def from_trait_and_sourced(cls, trait, sourced, entity_type, homebrew=None):
+        if homebrew is None:
+            homebrew = sourced.homebrew
+        return cls(
+            trait.name, trait.text,
+            entity_type=entity_type, homebrew=homebrew,
+            source=sourced.source, entity_id=sourced.entity_id, page=sourced.page, url=sourced.url,
+            is_free=sourced.is_free
+        )

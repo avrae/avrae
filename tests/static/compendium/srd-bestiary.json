@@ -291,9 +291,9 @@
     },
     "source": "MM",
     "page": 1,
-    "entity_id": 1,
+    "id": 1,
     "url": "",
-    "is_free": true
+    "isFree": true
   },
   {
     "name": "Kobold",
@@ -538,8 +538,8 @@
     },
     "source": "MM",
     "page": 1,
-    "entity_id": 2,
+    "id": 2,
     "url": "",
-    "is_free": true
+    "isFree": true
   }
 ]

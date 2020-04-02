@@ -7,8 +7,9 @@
     "image": "...",
     "source": "DMG",
     "page": 172,
-    "entity_id": 1,
-    "url": "..."
+    "id": 1,
+    "url": "...",
+    "isFree": true
   },
   {
     "name": "Staff of the Magi",
@@ -18,8 +19,9 @@
     "image": "...",
     "source": "DMG",
     "page": 203,
-    "entity_id": 2,
-    "url": "..."
+    "id": 2,
+    "url": "...",
+    "isFree": true
   },
   {
     "name": "Longsword",
@@ -29,7 +31,8 @@
     "image": "...",
     "source": "PHB",
     "page": 149,
-    "entity_id": 3,
-    "url": "..."
+    "id": 3,
+    "url": "...",
+    "isFree": true
   }
 ]

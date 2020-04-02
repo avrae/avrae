@@ -52,8 +52,8 @@
     ],
     "source": "PHB",
     "page": 1,
-    "entity_id": 1,
+    "id": 1,
     "url": "...",
-    "is_free": true
+    "isFree": true
   }
 ]

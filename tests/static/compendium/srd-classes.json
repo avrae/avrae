@@ -304,6 +304,19 @@
           "2",
           "1",
           "1"
+        ],
+        [
+          "4",
+          "22",
+          "4",
+          "3",
+          "3",
+          "3",
+          "3",
+          "2",
+          "2",
+          "1",
+          "1"
         ]
       ]
     },
@@ -521,15 +534,15 @@
         ],
         "source": "PHB",
         "page": 1,
-        "entity_id": 2,
+        "id": 2,
         "url": "",
-        "is_free": true
+        "isFree": true
       }
     ],
     "source": "PHB",
     "page": 1,
-    "entity_id": 1,
+    "id": 1,
     "url": "",
-    "is_free": true
+    "isFree": true
   }
 ]

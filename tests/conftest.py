@@ -16,6 +16,11 @@ from discord import DiscordException, Embed
 from discord.ext import commands
 from discord.http import HTTPClient, Route
 
+# setup bot
+from dbot import bot
+
+pass  # here to prevent pycharm from moving around my imports >:C
+
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException
 from cogs5e.models.initiative import Combat
@@ -246,9 +251,6 @@ async def on_command_error(ctx, error):
         return
     pytest.fail(f"Command raised an error: {error}")
     raise error
-
-
-from dbot import bot  # runs all bot setup
 
 
 @pytest.fixture(scope="session")

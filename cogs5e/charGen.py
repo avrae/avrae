@@ -5,7 +5,7 @@ import random
 from d20 import roll
 from discord.ext import commands
 
-from gamedata import compendium
+from gamedata.compendium import compendium
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument
 from utils.functions import ABILITY_MAP, get_selection, parse_data_entry, search_and_select

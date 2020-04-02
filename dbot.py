@@ -22,7 +22,7 @@ from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.funcs.scripting.helpers import handle_alias_exception
 from cogs5e.models.errors import AvraeException, EvaluationError
-from gamedata import compendium
+from gamedata.compendium import compendium
 from gamedata.ddb import BeyondClient, BeyondClientBase
 from utils.help import help_command
 from utils.redisIO import RedisIO

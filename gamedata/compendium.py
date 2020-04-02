@@ -154,3 +154,6 @@ class Compendium:
             log.warning("File not found: {}".format(filepath))
         log.debug("Loaded {} things from file {}".format(len(data), filename))
         return data
+
+
+compendium = Compendium()

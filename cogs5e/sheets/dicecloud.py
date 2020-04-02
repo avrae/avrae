@@ -13,7 +13,7 @@ from math import ceil, floor
 from draconic import SimpleInterpreter
 
 import credentials
-from gamedata import compendium
+from gamedata.compendium import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import dicecloud_client
 from cogs5e.models.dicecloud.errors import DicecloudException

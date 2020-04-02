@@ -17,7 +17,7 @@ from gspread.exceptions import APIError
 from gspread.utils import a1_to_rowcol, fill_gaps
 from oauth2client.service_account import ServiceAccountCredentials
 
-from gamedata import compendium
+from gamedata.compendium import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList

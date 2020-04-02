@@ -12,7 +12,7 @@ from discord.errors import NotFound
 from discord.ext import commands
 
 import utils.redisIO as redis
-from gamedata import compendium
+from gamedata.compendium import compendium
 from utils import checks, config
 
 log = logging.getLogger(__name__)

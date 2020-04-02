@@ -42,9 +42,9 @@
     ],
     "source": "PHB",
     "page": 1,
-    "entity_id": 1,
+    "id": 1,
     "url": "...",
-    "is_free": true
+    "isFree": true
   },
   {
     "name": "Fireball",
@@ -111,8 +111,8 @@
     ],
     "source": "PHB",
     "page": 241,
-    "entity_id": 2,
+    "id": 2,
     "url": "...",
-    "is_free": true
+    "isFree": true
   }
 ]

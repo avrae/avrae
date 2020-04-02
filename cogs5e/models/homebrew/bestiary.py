@@ -12,6 +12,7 @@ from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
+from gamedata.compendium import compendium
 from gamedata.monster import Monster, MonsterSpellbook, Trait
 from utils.functions import search_and_select
 
@@ -360,7 +361,6 @@ def parse_critterdb_traits(data, key):
 
 
 def parse_critterdb_spellcasting(traits, base_stats):
-    from gamedata import compendium
     known_spells = []
     will_spells = []
     daily_spells = {}

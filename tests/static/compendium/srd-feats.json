@@ -6,7 +6,8 @@
     "ability": [],
     "source": "PHB",
     "page": 167,
-    "entity_id": 1,
-    "url": "..."
+    "id": 1,
+    "url": "...",
+    "isFree": true
   }
 ]

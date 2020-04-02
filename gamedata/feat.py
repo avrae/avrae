@@ -6,7 +6,7 @@ class Feat(Sourced):
         """
         :type name: str
         :type desc: str
-        :type prerequisite: str
+        :type prerequisite: str or None
         :type ability: list[str]
         """
         if ability is None:

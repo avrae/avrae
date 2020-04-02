@@ -3,7 +3,7 @@ import DDBEntity from './ddbentity.spec.ts';
 
 class Feat extends DDBEntity {
     name: string;
-    prerequisite: string;
+    prerequisite: string | null;
     desc: string;
     // e.g.
     // ['strength'] -> Increase your Strength score by 1, up to a maximum of 20.

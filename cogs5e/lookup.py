@@ -9,39 +9,13 @@ import textwrap
 import discord
 from discord.ext import commands
 
-from gamedata.lookuputils import HOMEBREW_EMOJI, HOMEBREW_ICON, compendium, get_homebrew_formatted_name, \
-    select_monster_full, select_spell_full
+from cogs5e.models import errors
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, add_homebrew_footer, set_maybe_long_desc
-from cogs5e.models.errors import NoActiveBrew
-from cogs5e.models.homebrew import Pack
 from cogsmisc.stats import Stats
+from gamedata.compendium import compendium
+from gamedata.lookuputils import HOMEBREW_EMOJI, HOMEBREW_ICON, select_monster_full, select_spell_full
 from utils import checks
 from utils.functions import ABILITY_MAP, generate_token, get_positivity, parse_data_entry, search_and_select
-
-CLASS_RESOURCE_MAP = {'slots': "Spell Slots",  # a weird one - see fighter
-                      'spellsknown': "Spells Known",
-                      'rages': "Rages", 'ragedamage': "Rage Damage",
-                      'martialarts': "Martial Arts", 'kipoints': "Ki", 'unarmoredmovement': "Unarmored Movement",
-                      'sorcerypoints': "Sorcery Points", 'sneakattack': "Sneak Attack",
-                      'invocationsknown': "Invocations Known", 'spellslots': "Spell Slots", 'slotlevel': "Slot Level",
-                      'talentsknown': "Talents Known", 'disciplinesknown': "Disciplines Known",
-                      'psipoints': "Psi Points", 'psilimit': "Psi Limit"}
-
-ITEM_TYPES = {"G": "Adventuring Gear", "SCF": "Spellcasting Focus", "AT": "Artisan Tool", "T": "Tool",
-              "GS": "Gaming Set", "INS": "Instrument", "A": "Ammunition", "M": "Melee Weapon", "R": "Ranged Weapon",
-              "LA": "Light Armor", "MA": "Medium Armor", "HA": "Heavy Armor", "S": "Shield", "W": "Wondrous Item",
-              "P": "Potion", "ST": "Staff", "RD": "Rod", "RG": "Ring", "WD": "Wand", "SC": "Scroll", "EXP": "Explosive",
-              "GUN": "Firearm", "SIMW": "Simple Weapon", "MARW": "Martial Weapon", "$": "Valuable Object",
-              'TAH': "Tack and Harness", 'TG': "Trade Goods", 'MNT': "Mount", 'VEH': "Vehicle", 'SHP': "Ship",
-              'GV': "Generic Variant", 'AF': "Futuristic", 'siege weapon': "Siege Weapon", 'generic': "Generic"}
-
-DMGTYPES = {"B": "bludgeoning", "P": "piercing", "S": "slashing", "N": "necrotic", "R": "radiant"}
-
-SIZES = {"T": "Tiny", "S": "Small", "M": "Medium", "L": "Large", "H": "Huge", "G": "Gargantuan"}
-
-PROPS = {"A": "ammunition", "LD": "loading", "L": "light", "F": "finesse", "T": "thrown", "H": "heavy", "R": "reach",
-         "2H": "two-handed", "V": "versatile", "S": "special", "RLD": "reload", "BF": "burst fire", "CREW": "Crew",
-         "PASS": "Passengers", "CARGO": "Cargo", "DMGT": "Damage Threshold", "SHPREP": "Ship Repairs"}
 
 LARGE_THRESHOLD = 200
 
@@ -52,12 +26,7 @@ class Lookup(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(aliases=['status'])
-    async def condition(self, ctx, *, name: str):
-        """Looks up a condition."""
-        # this is an invoke instead of an alias to make more sense in docs
-        await self.rule(ctx, name=f"Condition: {name}")
-
+    # ==== rules/references ====
     @staticmethod
     async def _show_reference_options(ctx, destination):
         embed = EmbedWithAuthor(ctx)
@@ -83,6 +52,12 @@ class Lookup(commands.Cog):
 
         embed.description = '\n'.join(actions)
         await destination.send(embed=embed)
+
+    @commands.command(aliases=['status'])
+    async def condition(self, ctx, *, name: str):
+        """Looks up a condition."""
+        # this is an invoke instead of an alias to make more sense in docs
+        await self.rule(ctx, name=f"Condition: {name}")
 
     @commands.command(aliases=['reference'])
     async def rule(self, ctx, *, name: str = None):
@@ -110,10 +85,11 @@ class Lookup(commands.Cog):
 
         await destination.send(embed=embed)
 
+    # ==== feats ====
     @commands.command()
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
-        choices = compendium.feats + compendium.nfeat_names
+        choices = compendium.feats
         result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='feat')
         if not result:
             return
@@ -130,10 +106,11 @@ class Lookup(commands.Cog):
         embed.set_footer(text=f"Feat | {result['source']} {result['page']}")
         await (await self._get_destination(ctx)).send(embed=embed)
 
+    # ==== races / racefeats ====
     @commands.command()
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
-        choices = compendium.rfeats + compendium.nrfeat_names
+        choices = compendium.rfeats
         result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='racefeat')
         if not result:
             return
@@ -147,7 +124,7 @@ class Lookup(commands.Cog):
     @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        choices = compendium.races + compendium.nrace_names
+        choices = compendium.races
         result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='race', is_obj=True)
         if not result:
             return
@@ -164,10 +141,11 @@ class Lookup(commands.Cog):
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
+    # ==== classes / classfeats ====
     @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        choices = compendium.cfeats + compendium.ncfeat_names
+        choices = compendium.cfeats
         result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='classfeat')
         if not result:
             return
@@ -184,7 +162,7 @@ class Lookup(commands.Cog):
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        choices = compendium.classes + compendium.nclass_names
+        choices = compendium.classes
         result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='class')
         if not result:
             return
@@ -252,7 +230,7 @@ class Lookup(commands.Cog):
     @commands.command()
     async def subclass(self, ctx, name: str):
         """Looks up a subclass."""
-        choices = compendium.subclasses + compendium.nsubclass_names
+        choices = compendium.subclasses
         result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='subclass')
         if not result:
             return
@@ -274,10 +252,11 @@ class Lookup(commands.Cog):
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
+    # ==== backgrounds ====
     @commands.command()
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
-        choices = compendium.backgrounds + compendium.nbackground_names
+        choices = compendium.backgrounds
         result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='background', is_obj=True)
         if not result:
             return
@@ -296,6 +275,7 @@ class Lookup(commands.Cog):
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
+    # ==== monsters ====
     @commands.command()
     async def token(self, ctx, *, name=None):
         """Shows a token for a monster or player. May not support all monsters."""
@@ -308,7 +288,7 @@ class Lookup(commands.Cog):
 
         monster, metadata = await select_monster_full(ctx, name, return_metadata=True)
 
-        metadata['homebrew'] = monster.source == 'homebrew'
+        metadata['homebrew'] = monster.homebrew
         await self.add_training_data("monster", name, monster.name, metadata=metadata)
 
         url = monster.get_image_url()
@@ -316,7 +296,7 @@ class Lookup(commands.Cog):
         embed.title = monster.name
         embed.description = f"{monster.size} monster."
 
-        if not monster.source == 'homebrew':
+        if not monster.homebrew:
             embed.set_image(url=url)
             embed.set_footer(text="This command may not support all monsters.")
 
@@ -361,10 +341,10 @@ class Lookup(commands.Cog):
         monster, metadata = await select_monster_full(ctx, name, return_metadata=True,
                                                       extra_choices=compendium.nmonster_names,
                                                       selectkey=self.nsrd_selectkey_obj)
-        metadata['homebrew'] = monster.source == 'homebrew'
+        metadata['homebrew'] = monster.homebrew
         await self.add_training_data("monster", name, monster.name, metadata=metadata, srd=monster.srd)
         if not (metadata['homebrew'] or monster.srd):
-            return await self._non_srd(ctx, monster, "monster")
+            return await self._unlicensed_result(ctx, monster, "monster")
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -471,7 +451,7 @@ class Lookup(commands.Cog):
             if monster.legactions:
                 embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster.legactions)))
 
-        if monster.source == 'homebrew':
+        if monster.homebrew:
             embed_queue[-1].set_footer(text="Homebrew content.", icon_url=HOMEBREW_ICON)
         else:
             embed_queue[-1].set_footer(text=f"Creature | {monster.source} {monster.page}")
@@ -484,16 +464,17 @@ class Lookup(commands.Cog):
             else:
                 await ctx.send(embed=embed)
 
+    # ==== spells ====
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
         spell, metadata = await select_spell_full(ctx, name, return_metadata=True,
                                                   extra_choices=compendium.nspell_names,
                                                   selectkey=self.nsrd_selectkey_obj)
-        metadata['homebrew'] = spell.source == 'homebrew'
+        metadata['homebrew'] = spell.homebrew
         await self.add_training_data("spell", name, spell.name, metadata=metadata, srd=spell.srd)
         if not (metadata['homebrew'] or spell.srd):
-            return await self._non_srd(ctx, spell, "spell")
+            return await self._unlicensed_result(ctx, spell, "spell")
 
         embed = EmbedWithAuthor(ctx)
         color = embed.colour
@@ -531,7 +512,7 @@ class Lookup(commands.Cog):
         if higher_levels:
             add_fields_from_long_text(embed_queue[-1], "At Higher Levels", higher_levels)
 
-        if spell.source == 'homebrew':
+        if spell.homebrew:
             embed_queue[-1].set_footer(text="Homebrew content.", icon_url=HOMEBREW_ICON)
         else:
             embed_queue[-1].set_footer(text=f"Spell | {spell.source} {spell.page}")
@@ -543,6 +524,7 @@ class Lookup(commands.Cog):
         for embed in embed_queue:
             await destination.send(embed=embed)
 
+    # ==== items ====
     @commands.command(name='item')
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
@@ -550,7 +532,7 @@ class Lookup(commands.Cog):
             pack = await Pack.from_ctx(ctx)
             custom_items = pack.get_search_formatted_items()
             pack_id = pack.id
-        except NoActiveBrew:
+        except errors.NoActiveBrew:
             custom_items = []
             pack_id = None
         choices = list(itertools.chain(compendium.items, custom_items))
@@ -566,7 +548,7 @@ class Lookup(commands.Cog):
         metadata['homebrew'] = result.get('source') == 'homebrew'
         await self.add_training_data("item", name, result['name'], metadata=metadata, srd=result['srd'])
         if not (metadata['homebrew'] or result['srd']):
-            return await self._non_srd(ctx, result, "item")
+            return await self._unlicensed_result(ctx, result, "item")
 
         embed = EmbedWithAuthor(ctx)
         item = result
@@ -664,6 +646,7 @@ class Lookup(commands.Cog):
         await Stats.increase_stat(ctx, "items_looked_up_life")
         await (await self._get_destination(ctx)).send(embed=embed)
 
+    # ==== server settings ====
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
@@ -717,8 +700,8 @@ class Lookup(commands.Cog):
             settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
         return settings or {}
 
-    async def add_training_data(self, lookup_type, query, result_name, metadata=None, srd=True):
-        data = {"type": lookup_type, "query": query, "result": result_name, "srd": srd}
+    async def add_training_data(self, lookup_type, query, result_name, metadata=None, srd=True, could_view=True):
+        data = {"type": lookup_type, "query": query, "result": result_name, "srd": srd, "could_view": could_view}
         if metadata:
             data['given_options'] = metadata.get('num_options', 1)
             data['chosen_index'] = metadata.get('chosen_index', 0)
@@ -730,27 +713,50 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         return ctx.author if pm else ctx.channel
 
-    async def _lookup_search(self, ctx, choices, query, key, search_type=None, is_obj=False):
-        if is_obj:
-            selectkey = self.nsrd_selectkey_obj
-        else:
-            selectkey = self.nsrd_selectkey
+    async def _lookup_search2(self, ctx, entities, query, entity_type):
+        """
+        :type ctx: discord.ext.commands.Context
+        :type entities: list[gamedata.shared.Sourced]
+        :type query: str
+        :type entity_type: str
+        :rtype: gamedata.shared.Sourced
+        :raises: RequiresLicense if an entity that requires a license is selected
+        """
+        # get licensed objects
+        available_ids = await self.bot.ddb.get_accessible_entities(ctx, ctx.author.id, entity_type)
+
+        # helper
+        def can_access(e):
+            return e.is_free \
+                   or available_ids is not None and e.entity_id in available_ids \
+                   or e.homebrew
+
+        # the selection display key
+        def selectkey(e):
+            if e.homebrew:
+                return f"{e.name} ({HOMEBREW_EMOJI})"
+            elif can_access(e):
+                return e.name
+            return f"{e.name}\\*"
 
         # get the object
-        result, metadata = await search_and_select(ctx, choices, query, key, return_metadata=True, selectkey=selectkey)
-        not_srd = (is_obj and not result.srd) or (not is_obj and not result['srd'])
+        result, metadata = await search_and_select(
+            ctx, entities, query, lambda e: e.name, return_metadata=True,
+            selectkey=selectkey)
 
         # log the query
-        if search_type is not None:
-            await self.add_training_data(search_type, query, key(result), metadata=metadata, srd=not not_srd)
+        await self.add_training_data(entity_type, query, result.name, metadata=metadata, srd=result.is_free,
+                                     could_view=can_access(result))
 
         # display error if not srd
-        if not_srd:
-            await self._non_srd(ctx, result, search_type)
-            return None
+        if not can_access(result):
+            raise RequiresLicense(f"insufficient license to view {result.name}", available_ids is not None)
         return result
 
-    async def _non_srd(self, ctx, result, search_type=None):
+    async def _unlicensed_result(self, ctx, result, search_type=None):
+        """
+        Logs a unlicensed search and displays a prompt.
+        """
         if search_type is not None:
             await self.bot.mdb.analytics_nsrd_lookup.update_one({"type": search_type, "name": result.name},
                                                                 {"$inc": {"num_lookups": 1}},
@@ -765,20 +771,6 @@ class Lookup(commands.Cog):
                             f"view the non-SRD content you own on D&D Beyond; stay tuned!"
         await ctx.send(embed=embed)
 
-    @staticmethod
-    def nsrd_selectkey_obj(named):
-        if named.source == 'NSRD':
-            return f"{named.name}*"
-        return get_homebrew_formatted_name(named)
-
-    @staticmethod
-    def nsrd_selectkey(named):
-        if named.get('source') == 'NSRD':
-            return f"{named['name']}*"
-        elif named.get('source') == 'homebrew':
-            return f"{named['name']} ({HOMEBREW_EMOJI})"
-        return named['name']
-
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         # This method automatically allows full monster lookup for new large servers.
@@ -791,6 +783,14 @@ class Lookup(commands.Cog):
             default_guild_settings = {"req_dm_monster": False}
             await self.bot.mdb.lookupsettings.update_one({"server": str(guild.id)}, {"$set": default_guild_settings},
                                                          upsert=True)
+
+
+class RequiresLicense(errors.AvraeException):
+    """This entity requires a license to view that you don't have."""
+
+    def __init__(self, msg, has_connected_ddb):
+        super().__init__(msg)
+        self.has_connected_ddb = has_connected_ddb
 
 
 def setup(bot):

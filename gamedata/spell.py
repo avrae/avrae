@@ -277,7 +277,7 @@ class Spell(Sourced):
 
         add_fields_from_args(embed, args.get('f'))
 
-        if self.source == 'homebrew':
+        if self.homebrew:
             add_homebrew_footer(embed)
 
         return {"embed": embed}

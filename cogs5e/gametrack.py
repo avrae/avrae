@@ -355,7 +355,7 @@ class GameTrack(commands.Cog):
                 flag_show_homebrew_help = True
             else:
                 spell = results
-                if spell.source == 'homebrew':
+                if spell.homebrew:
                     formatted = f"*{spell.name}*"
                     flag_show_homebrew_help = True
                 else:

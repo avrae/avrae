@@ -25,7 +25,7 @@ ENTITY_ENTITLEMENT_TTL = 15 * 60
 
 class BeyondClientBase:  # for development - assumes no entitlements
     async def get_accessible_entities(self, ctx, user_id, entity_type):
-        return set()
+        return None
 
     async def get_ddb_user(self, ctx, user_id):
         return None
@@ -57,15 +57,20 @@ class BeyondClient(BeyondClientBase):
 
     async def get_accessible_entities(self, ctx, user_id, entity_type):
         """
-        Returns a set of entity IDs that the given user is allowed to access in the given context.
-        Returns the set of all free entity IDs if the user has no DDB link.
+        Returns a set of entity IDs of the given entity type that the given user is allowed to access in the given
+        context.
+
+        Returns None if the user has no DDB link.
 
         :type ctx: discord.ext.commands.Context
         :type user_id: int
         :type entity_type: str
-        :rtype: set[int]
+        :rtype: set[int] or None
         """
         user_e10s = await self._get_user_entitlements(ctx, user_id)
+        if user_e10s is None:
+            return None
+
         entity_e10s = await self._get_entity_entitlements(ctx, entity_type)
 
         # calculate visible entities
@@ -112,6 +117,8 @@ class BeyondClient(BeyondClientBase):
         """
         Gets a user's entitlements in the current context, from cache or by communicating with DDB.
 
+        Returns None if the user has no DDB connection.
+
         :type ctx: discord.ext.commands.Context
         :param user_id: The Discord user ID.
         :type user_id: int
@@ -124,7 +131,7 @@ class BeyondClient(BeyondClientBase):
 
         user = await self.get_ddb_user(ctx, user_id)
         if user is None:
-            user_e10s = UserEntitlements([], [])  # if the user has no DDB account, return+cache an empty entitlements
+            return None
         else:
             user_e10s = await self._fetch_user_entitlements(user.user_id)
         # cache entitlements

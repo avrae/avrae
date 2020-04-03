@@ -221,7 +221,7 @@ class Monster(StatBlock, Sourced):
 
     def get_image_url(self):
         """Returns a monster's image URL."""
-        if not self.source == 'homebrew':
+        if not self.homebrew:
             return f"https://media.avrae.io/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
         else:
             return self.image_url or ''

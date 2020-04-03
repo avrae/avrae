@@ -147,7 +147,7 @@ class Lookup(commands.Cog):
     @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        choices = compendium.fancyraces + compendium.nrace_names
+        choices = compendium.races + compendium.nrace_names
         result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='race', is_obj=True)
         if not result:
             return

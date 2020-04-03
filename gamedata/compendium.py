@@ -126,21 +126,21 @@ class Compendium:
         for cls in self.classes:
             for level in cls.levels:
                 for feature in level:
-                    copied = SourcedTrait.from_trait_and_sourced(feature, cls, 'classfeat')
+                    copied = SourcedTrait.from_trait_and_sourced(feature, cls)
                     copied.name = f"{cls.name}: {feature.name}"
                     self.cfeats.append(copied)
 
             for subcls in cls.subclasses:
                 for level in subcls.levels:
                     for feature in level:
-                        copied = SourcedTrait.from_trait_and_sourced(feature, subcls, 'classfeat')
+                        copied = SourcedTrait.from_trait_and_sourced(feature, subcls)
                         copied.name = f"{cls.name}: {subcls.name}: {feature.name}"
                         self.cfeats.append(copied)
 
     def _load_racefeats(self):
         for race in self.races:
             for feature in race.traits:
-                copied = SourcedTrait.from_trait_and_sourced(feature, race, 'racefeat')
+                copied = SourcedTrait.from_trait_and_sourced(feature, race)
                 copied.name = f"{race.name}: {feature.name}"
                 self.rfeats.append(copied)
 

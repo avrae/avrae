@@ -98,7 +98,7 @@ class CharGenerator(commands.Cog):
             race_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for race.")
-        race = await search_and_select(ctx, compendium.fancyraces, race_response.content, lambda e: e.name)
+        race = await search_and_select(ctx, compendium.races, race_response.content, lambda e: e.name)
 
         await ctx.send(author.mention + " What class?")
         try:
@@ -140,7 +140,7 @@ class CharGenerator(commands.Cog):
         await ctx.author.send("**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
-        race = race or random.choice(compendium.fancyraces)
+        race = race or random.choice(compendium.races)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = race.name

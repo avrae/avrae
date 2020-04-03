@@ -11,7 +11,7 @@ from cogs5e.models.homebrew import Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
 from utils.functions import search_and_select
-from . import compendium
+from .compendium import compendium
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
 HOMEBREW_ICON = "https://avrae.io/assets/img/homebrew.png"
@@ -40,7 +40,7 @@ async def select_monster_full(ctx, name, cutoff=5, return_key=False, pm=False, m
     except NoActiveBrew:
         custom_monsters = []
         bestiary_id = None
-    choices = list(itertools.chain(compendium.monster_mash, custom_monsters))
+    choices = list(itertools.chain(compendium.monsters, custom_monsters))
     if ctx.guild:
         async for servbestiary in Bestiary.server_bestiaries(ctx):
             if servbestiary.id == bestiary_id:

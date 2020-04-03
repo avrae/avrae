@@ -45,7 +45,12 @@ class SourcedTrait(Trait, Sourced):
         Trait.__init__(self, name, text)
 
     @classmethod
-    def from_trait_and_sourced(cls, trait, sourced, entity_type, homebrew=None):
+    def from_trait_and_sourced(cls, trait, sourced, entity_type=None, homebrew=None):
+        if entity_type is None:
+            # copy the source parent's entity type
+            # even if this entity isn't of that kind, we need to use the parent's entity type
+            # in entitlements checks
+            entity_type = sourced.entity_type
         if homebrew is None:
             homebrew = sourced.homebrew
         return cls(

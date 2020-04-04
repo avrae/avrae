@@ -92,11 +92,12 @@ class Avrae(commands.AutoShardedBot):
 
     async def launch_shards(self):
         # set up my shard_ids
-        await clustering.coordinate_shards(self)
-        if self.shard_ids is not None:
-            log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
-        await super(Avrae, self).launch_shards()
-        log.info(f"Launched {len(self.shards)} shards!")
+        async with clustering.coordination_lock(self.rdb):
+            await clustering.coordinate_shards(self)
+            if self.shard_ids is not None:
+                log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
+            await super(Avrae, self).launch_shards()
+            log.info(f"Launched {len(self.shards)} shards!")
 
         if self.is_cluster_0:
             await self.rdb.incr('build_num')

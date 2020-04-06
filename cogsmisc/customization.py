@@ -166,9 +166,15 @@ class Customization(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     async def alias(self, ctx, alias_name=None, *, cmds=None):
-        """Adds an alias for a long command.
-        After an alias has been added, you can instead run the aliased command with !<alias_name>.
-        If a user and a server have aliases with the same name, the user alias will take priority."""
+        """
+        Creates a custom user command.
+        After an alias has been added, you can run the command with !<alias_name>.
+
+        If a user and a server have aliases with the same name, the user alias will take priority.
+        Note that aliases cannot call other aliases.
+
+        Check out the [Aliasing Basics](https://avrae.readthedocs.io/en/latest/aliasing/aliasing.html) and [Aliasing Documentation](https://avrae.readthedocs.io/en/latest/aliasing/api.html) for more information.
+        """
         if alias_name is None:
             return await self.alias_list(ctx)
         if alias_name in self.bot.all_commands:
@@ -300,7 +306,7 @@ class Customization(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     async def snippet(self, ctx, snipname=None, *, snippet=None):
-        """Creates a snippet to use in attack macros.
+        """Creates a snippet to use in attack commands.
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await self.snippet_list(ctx)

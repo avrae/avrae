@@ -83,15 +83,16 @@ class Homebrew(commands.Cog):
         `<avrae hidden>NAME|TOHITBONUS|DAMAGE</avrae>`"""
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
         # https://critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
-        if not 'critterdb.com' in url:
+        # https://critterdb.com:443/#/bestiary/view/5acfe382de482a4d0ed57b46
+        if not (match := re.match(r'https?://critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)',
+                                  url)):
             return await ctx.send("This is not a CritterDB link.")
-        if not 'publishedbestiary' in url:
-            return await ctx.send("This is not a public bestiary. Publish it to import!")
 
         loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")
-        bestiary_id = url.split('/view')[1].strip('/ \n')
+        bestiary_id = match.group(2)
+        is_published = bool(match.group(1))
 
-        bestiary = await Bestiary.from_critterdb(ctx, bestiary_id)
+        bestiary = await Bestiary.from_critterdb(ctx, bestiary_id, published=is_published)
 
         await bestiary.set_active(ctx)
         await bestiary.load_monsters(ctx)
@@ -117,7 +118,7 @@ class Homebrew(commands.Cog):
 
         old_server_subs = await active_bestiary.server_subscriptions(ctx)
         await active_bestiary.unsubscribe(ctx)
-        bestiary = await Bestiary.from_critterdb(ctx, active_bestiary.upstream)
+        bestiary = await Bestiary.from_critterdb(ctx, active_bestiary.upstream, active_bestiary.published)
 
         await bestiary.add_server_subscriptions(ctx, old_server_subs)
         await bestiary.set_active(ctx)

@@ -1,6 +1,6 @@
 # avrae org deps
 git+https://github.com/avrae/draconic@master
-d20==1.0.0
+d20==1.0.1
 
 # top-level deps
 aioboto3==7.0.0

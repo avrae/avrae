@@ -437,6 +437,18 @@ class InitTracker(commands.Cog):
     async def reroll(self, ctx):
         """Rerolls initiative for all combatants."""
         combat = await Combat.from_ctx(ctx)
+
+        # repost summary message
+        old_summary = await combat.get_summary_msg()
+        new_summary = await ctx.send(combat.get_summary())
+        Combat.message_cache[new_summary.id] = new_summary  # add to cache
+        combat.summary = new_summary.id
+        try:
+            await new_summary.pin()
+            await old_summary.unpin()
+        except:
+            pass
+
         new_order = combat.reroll_dynamic()
         await ctx.send(f"Rerolled initiative! New order:\n{new_order}")
         await combat.final()

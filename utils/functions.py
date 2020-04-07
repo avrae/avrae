@@ -17,6 +17,7 @@ from PIL import Image
 from fuzzywuzzy import fuzz, process
 
 from cogs5e.models.errors import ExternalImportError, NoSelectionElements, SelectionCancelled
+from utils.constants import SOURCE_MAP
 
 log = logging.getLogger(__name__)
 
@@ -554,3 +555,7 @@ def bubble_format(value: int, max_: int, fill_from_right=False):
     if fill_from_right:
         return f"{empty}{filled}"
     return f"{filled}{empty}"
+
+
+def long_source_name(source):
+    return SOURCE_MAP.get(source, source)

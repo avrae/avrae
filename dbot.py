@@ -21,9 +21,10 @@ from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
 from cogs5e.funcs.scripting.helpers import handle_alias_exception
-from cogs5e.models.errors import AvraeException, EvaluationError
+from cogs5e.models.errors import AvraeException, EvaluationError, RequiresLicense
 from gamedata.compendium import compendium
 from gamedata.ddb import BeyondClient, BeyondClientBase
+from gamedata.lookuputils import handle_required_license
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
@@ -201,6 +202,9 @@ async def on_command_error(ctx, error):
         original = error.original
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
             return await handle_alias_exception(ctx, original)
+
+        elif isinstance(original, RequiresLicense):
+            return await handle_required_license(ctx, original)
 
         elif isinstance(original, AvraeException):
             return await ctx.send(str(original))

@@ -6,11 +6,12 @@ Created on Jan 13, 2017
 import itertools
 import logging
 
+from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
-from utils.functions import search_and_select
+from utils.functions import long_source_name, search_and_select
 from .compendium import compendium
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
@@ -41,6 +42,47 @@ async def available(ctx, entities, entity_type, user_id=None):
     if available_ids is None:
         return [e for e in entities if e.is_free]
     return [e for e in entities if e.is_free or e.entity_id in available_ids]
+
+
+async def handle_required_license(ctx, err):
+    """
+    Logs a unlicensed search and displays a prompt.
+
+    :type ctx: discord.ext.commands.Context
+    :type err: cogs5e.models.errors.RequiresLicense
+    """
+    result = err.entity
+
+    await ctx.bot.mdb.analytics_nsrd_lookup.update_one({"type": result.entity_type, "name": result.name},
+                                                       {"$inc": {"num_lookups": 1}},
+                                                       upsert=True)
+
+    embed = EmbedWithAuthor(ctx)
+    if not err.has_connected_ddb:
+        embed.title = f"Connect your D&D Beyond account to view {result.name}!"
+        embed.url = "https://www.dndbeyond.com/account"
+        embed.description = \
+            "It looks like you don't have your Discord account connected to your D&D Beyond account!\n" \
+            "Linking your account means that you'll be able to use everything you own on " \
+            "D&D Beyond in Avrae for free - you can link your accounts " \
+            "[here](https://www.dndbeyond.com/account)."
+        embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
+                              "link.")
+    else:
+        if not result.url:
+            url = "https://www.dndbeyond.com/marketplace"
+        else:
+            url = result.url
+        embed.title = f"Purchase {result.name} on D&D Beyond to view it here!"
+        embed.description = \
+            f"To see and search this {result.entity_type}'s full details, unlock **{result.name}** by " \
+            f"purchasing {long_source_name(result.source)} on D&D Beyond.\n\n" \
+            f"[Go to Marketplace]({url})"
+        embed.url = url
+
+        embed.set_footer(text="Already purchased? It may take up to a minute for Avrae to recognize the "
+                              "purchase.")
+    await ctx.send(embed=embed)
 
 
 # ---- helper ----

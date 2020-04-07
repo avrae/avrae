@@ -9,6 +9,7 @@ import textwrap
 import discord
 from discord.ext import commands
 
+import gamedata
 from cogs5e.models import errors
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, add_homebrew_footer, set_maybe_long_desc
 from cogsmisc.stats import Stats
@@ -89,21 +90,14 @@ class Lookup(commands.Cog):
     @commands.command()
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
-        choices = compendium.feats
-        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='feat')
-        if not result:
-            return
+        result: gamedata.Feat = await self._lookup_search2(ctx, compendium.feats, name, 'feat')
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        if result['prerequisite']:
-            embed.add_field(name="Prerequisite", value=result['prerequisite'], inline=False)
-        if result['ability']:
-            embed.add_field(name="Ability Improvement",
-                            value=f"Increase your {result['ability']} score by 1, up to a maximum of 20.", inline=False)
-
-        add_fields_from_long_text(embed, "Description", result['desc'])
-        embed.set_footer(text=f"Feat | {result['source']} {result['page']}")
+        embed.title = result.name
+        if result.prerequisite:
+            embed.add_field(name="Prerequisite", value=result.prerequisite, inline=False)
+        add_fields_from_long_text(embed, "Description", result.desc)
+        embed.set_footer(text=f"Feat | {result.source_str()}")
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== races / racefeats ====
@@ -256,22 +250,19 @@ class Lookup(commands.Cog):
     @commands.command()
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
-        choices = compendium.backgrounds
-        result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='background', is_obj=True)
-        if not result:
-            return
+        result: gamedata.Background = await self._lookup_search2(ctx, compendium.backgrounds, name, 'background')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
-        embed.set_footer(text=f"Background | {result.source} {result.page}")
+        embed.set_footer(text=f"Background | {result.source_str()}")
 
         ignored_fields = ['suggested characteristics', 'personality trait', 'ideal', 'bond', 'flaw', 'specialty',
                           'harrowing event']
         for trait in result.traits:
-            if trait['name'].lower() in ignored_fields: continue
-            text = trait['text']
-            text = textwrap.shorten(text, width=1020, placeholder="...")
-            embed.add_field(name=trait['name'], value=text, inline=False)
+            if trait.name.lower() in ignored_fields:
+                continue
+            text = textwrap.shorten(trait.text, width=1020, placeholder="...")
+            embed.add_field(name=trait.name, value=text, inline=False)
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
@@ -722,6 +713,9 @@ class Lookup(commands.Cog):
         :rtype: gamedata.shared.Sourced
         :raises: RequiresLicense if an entity that requires a license is selected
         """
+        # this may take a while, so type
+        await ctx.trigger_typing()
+
         # get licensed objects
         available_ids = await self.bot.ddb.get_accessible_entities(ctx, ctx.author.id, entity_type)
 
@@ -750,27 +744,10 @@ class Lookup(commands.Cog):
 
         # display error if not srd
         if not can_access(result):
-            raise RequiresLicense(f"insufficient license to view {result.name}", available_ids is not None)
+            raise errors.RequiresLicense(result, available_ids is not None)
         return result
 
-    async def _unlicensed_result(self, ctx, result, search_type=None):
-        """
-        Logs a unlicensed search and displays a prompt.
-        """
-        if search_type is not None:
-            await self.bot.mdb.analytics_nsrd_lookup.update_one({"type": search_type, "name": result.name},
-                                                                {"$inc": {"num_lookups": 1}},
-                                                                upsert=True)
-
-        embed = EmbedWithAuthor(ctx)
-        embed.title = f"{result.name} is not available in the SRD!"
-        embed.description = f"Unfortunately, {result.name} is not available in the SRD (what Wizards of the Coast " \
-                            f"offers for free). You can see everything that is available in the SRD [here](" \
-                            f"http://dnd.wizards.com/articles/features/systems-reference-document-srd).\n\n" \
-                            f"In the near future, you will be able to connect your D&D Beyond account to Avrae to " \
-                            f"view the non-SRD content you own on D&D Beyond; stay tuned!"
-        await ctx.send(embed=embed)
-
+    # ==== various listeners ====
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         # This method automatically allows full monster lookup for new large servers.
@@ -783,14 +760,6 @@ class Lookup(commands.Cog):
             default_guild_settings = {"req_dm_monster": False}
             await self.bot.mdb.lookupsettings.update_one({"server": str(guild.id)}, {"$set": default_guild_settings},
                                                          upsert=True)
-
-
-class RequiresLicense(errors.AvraeException):
-    """This entity requires a license to view that you don't have."""
-
-    def __init__(self, msg, has_connected_ddb):
-        super().__init__(msg)
-        self.has_connected_ddb = has_connected_ddb
 
 
 def setup(bot):

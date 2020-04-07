@@ -1,4 +1,4 @@
-from .shared import Sourced, Trait
+from .shared import Sourced
 
 
 class Feat(Sourced):
@@ -20,6 +20,6 @@ class Feat(Sourced):
 
     @classmethod
     def from_data(cls, d):
-        return cls(d['name'], d['desc'],
+        return cls(d['name'], d['description'],
                    d.get('prerequisite'), d.get('ability'),
                    source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])

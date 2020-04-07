@@ -9,6 +9,9 @@ import motor.motor_asyncio
 
 LOAD_FILES = {
     'names': [],
+    'backgrounds': [],
+    'feats': [],
+
     'srd-backgrounds': [],
     'srd-bestiary': [],
     'srd-classfeats': [],

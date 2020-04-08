@@ -32,12 +32,6 @@ class Pack(HomebrewContainer):
         raw['items'] = [Item.from_homebrew(s, raw['name']) for s in raw['items']]
         return cls(**raw)
 
-    def get_search_formatted_items(self):
-        for i in self.items:
-            i['srd'] = True
-            i['source'] = 'homebrew'
-        return self.items
-
     # subscription helpers
     @staticmethod
     def sub_coll(ctx):

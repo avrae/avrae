@@ -20,11 +20,10 @@ from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.sheets.beyond import BeyondSheetParser
 from cogs5e.sheets.dicecloud import DicecloudParser
-from cogs5e.sheets.gsheet import GoogleSheet
+from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import auth_and_chan, get_positivity, list_get, try_delete
-from utils.functions import extract_gsheet_id_from_url, generate_token, search_and_select
+from utils.functions import auth_and_chan, generate_token, get_positivity, list_get, search_and_select, try_delete
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)

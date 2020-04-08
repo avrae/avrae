@@ -1,3 +1,4 @@
+from utils.functions import natural_join
 from .shared import Sourced, Trait
 
 
@@ -54,6 +55,14 @@ class ClassProficiencies:
         return cls(
             d['armor'], d['weapons'], d['tools'], d['skills'], d['num_skills']
         )
+
+    def __str__(self):
+        return f"You are proficient with the following items, " \
+               f"in addition to any proficiencies provided by your race or background.\n" \
+               f"Armor: {', '.join(self.armor) or 'None'}\n" \
+               f"Weapons: {', '.join(self.weapons) or 'None'}\n" \
+               f"Tools: {', '.join(self.tools) or 'None'}\n" \
+               f"Skills: Choose {self.num_skills} from {natural_join(self.skills, 'or')}"
 
 
 class ClassTable:

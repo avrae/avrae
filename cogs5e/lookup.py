@@ -14,9 +14,10 @@ from cogs5e.models import errors
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, add_homebrew_footer, set_maybe_long_desc
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
-from gamedata.lookuputils import HOMEBREW_EMOJI, HOMEBREW_ICON, select_monster_full, select_spell_full
+from gamedata.lookuputils import HOMEBREW_EMOJI, get_item_choices, get_monster_choices, get_spell_choices
+from gamedata.shared import SourcedTrait
 from utils import checks
-from utils.functions import ABILITY_MAP, generate_token, get_positivity, parse_data_entry, search_and_select
+from utils.functions import ABILITY_MAP, generate_token, get_positivity, search_and_select
 
 LARGE_THRESHOLD = 200
 
@@ -76,7 +77,7 @@ class Lookup(commands.Cog):
                 options.extend(actiontype['items'])
 
         result, metadata = await search_and_select(ctx, options, name, lambda e: e['fullName'], return_metadata=True)
-        await self.add_training_data("reference", name, result['fullName'], metadata=metadata)
+        await self._add_training_data("reference", name, result['fullName'], metadata=metadata)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result['fullName']
@@ -104,49 +105,41 @@ class Lookup(commands.Cog):
     @commands.command()
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
-        choices = compendium.rfeats
-        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='racefeat')
-        if not result:
-            return
+        result: SourcedTrait = await self._lookup_search2(ctx, compendium.rfeats, name, 'racefeat')  # todo
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        set_maybe_long_desc(embed, result['text'])
+        embed.title = result.name
+        set_maybe_long_desc(embed, result.text)
+        embed.set_footer(text=f"Race Feature | {result.source_str()}")
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        choices = compendium.races
-        result = await self._lookup_search(ctx, choices, name, lambda e: e.name, search_type='race', is_obj=True)
-        if not result:
-            return
+        result: gamedata.Race = await self._lookup_search2(ctx, compendium.races, name, 'race')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
-        embed.description = f"Source: {result.source}"
-        embed.add_field(name="Speed", value=result.get_speed_str())
+        embed.add_field(name="Speed", value=result.speed)
         embed.add_field(name="Size", value=result.size)
         if result.ability:
-            embed.add_field(name="Ability Bonuses", value=result.get_asi_str())
-        for t in result.get_traits():
-            add_fields_from_long_text(embed, t['name'], t['text'])
-
+            embed.add_field(name="Ability Bonuses", value=result.ability)
+        for t in result.traits:
+            add_fields_from_long_text(embed, t.name, t.text)
+        embed.set_footer(text=f"Race | {result.source_str()}")
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== classes / classfeats ====
     @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        choices = compendium.cfeats
-        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='classfeat')
-        if not result:
-            return
+        result: SourcedTrait = await self._lookup_search2(ctx, compendium.cfeats, name, 'classfeat')  # todo
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        set_maybe_long_desc(embed, result['text'])
+        embed.title = result.name
+        set_maybe_long_desc(embed, result.text)
+        embed.set_footer(text=f"Class Feature | {result.source_str()}")
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
@@ -156,38 +149,21 @@ class Lookup(commands.Cog):
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        choices = compendium.classes
-        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='class')
-        if not result:
-            return
+        result: gamedata.Class = await self._lookup_search2(ctx, compendium.classes, name, 'class')  # todo
 
         embed = EmbedWithAuthor(ctx)
         if level is None:
-            embed.title = result['name']
-            embed.add_field(name="Hit Die", value=f"1d{result['hd']['faces']}")
-            embed.add_field(name="Saving Throws", value=', '.join(ABILITY_MAP.get(p) for p in result['proficiency']))
+            embed.title = result.name
+            embed.add_field(name="Hit Die", value=result.hit_die)
+            embed.add_field(name="Saving Throws", value=', '.join(ABILITY_MAP.get(p) for p in result.saves))
 
             levels = []
-            starting_profs = f"You are proficient with the following items, " \
-                             f"in addition to any proficiencies provided by your race or background.\n" \
-                             f"Armor: {', '.join(result['startingProficiencies'].get('armor', ['None']))}\n" \
-                             f"Weapons: {', '.join(result['startingProficiencies'].get('weapons', ['None']))}\n" \
-                             f"Tools: {', '.join(result['startingProficiencies'].get('tools', ['None']))}\n" \
-                             f"Skills: Choose {result['startingProficiencies']['skills']['choose']} from " \
-                             f"{', '.join(result['startingProficiencies']['skills']['from'])}"
-
-            equip_choices = '\n'.join(f"• {i}" for i in result['startingEquipment']['default'])
-            gold_alt = f"Alternatively, you may start with {result['startingEquipment']['goldAlternative']} gp " \
-                       f"to buy your own equipment." if 'goldAlternative' in result['startingEquipment'] else ''
+            starting_profs = str(result.proficiencies)
             starting_items = f"You start with the following items, plus anything provided by your background.\n" \
-                             f"{equip_choices}\n" \
-                             f"{gold_alt}"
+                             f"{result.equipment}"
             for level in range(1, 21):
-                level_str = []
-                level_features = result['classFeatures'][level - 1]
-                for feature in level_features:
-                    level_str.append(feature.get('name'))
-                levels.append(', '.join(level_str))
+                level = result.levels[level - 1]
+                levels.append(', '.join([feature.name for feature in level]))
 
             embed.add_field(name="Starting Proficiencies", value=starting_profs, inline=False)
             embed.add_field(name="Starting Equipment", value=starting_items, inline=False)
@@ -199,48 +175,34 @@ class Lookup(commands.Cog):
 
             embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature.")
         else:
-            embed.title = f"{result['name']}, Level {level}"
+            embed.title = f"{result.name}, Level {level}"
 
-            level_resources = {}
-            level_features = result['classFeatures'][level - 1]
+            level_features = result.levels[level - 1]
 
-            for table in result.get('classTableGroups', []):
-                relevant_row = table['rows'][level - 1]
-                for i, col in enumerate(relevant_row):
-                    level_resources[table['colLabels'][i]] = parse_data_entry([col])
-
-            for res_name, res_value in level_resources.items():
-                if res_value != '0':
-                    embed.add_field(name=res_name, value=res_value)
+            for resource, value in zip(result.table.headers, result.table.levels[level - 1]):
+                if value != '0':
+                    embed.add_field(name=resource, value=value)
 
             for f in level_features:
-                text = parse_data_entry(f['entries'])
-                embed.add_field(name=f['name'], value=(text[:1019] + "...") if len(text) > 1023 else text, inline=False)
+                embed.add_field(name=f.name, value=textwrap.shorten(f.text, 1020, placeholder='...'), inline=False)
 
             embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
     @commands.command()
-    async def subclass(self, ctx, name: str):
+    async def subclass(self, ctx, *, name: str):
         """Looks up a subclass."""
-        choices = compendium.subclasses
-        result = await self._lookup_search(ctx, choices, name, lambda e: e['name'], search_type='subclass')
-        if not result:
-            return
+        result: gamedata.Subclass = await self._lookup_search2(ctx, compendium.subclasses, name, 'subclass')
 
         embed = EmbedWithAuthor(ctx)
-        embed.title = result['name']
-        embed.description = f"*Source: {result['source']}*"
+        embed.title = result.name
+        embed.description = f"*Source: {result.source_str()}*"
 
-        for level_features in result['subclassFeatures']:
-            for feature in level_features:
-                for entry in feature['entries']:
-                    if not isinstance(entry, dict): continue
-                    if not entry.get('type') == 'entries': continue
-                    text = parse_data_entry(entry['entries'])
-                    embed.add_field(name=entry['name'], value=(text[:1019] + "...") if len(text) > 1023 else text,
-                                    inline=False)
+        for level in result.levels:
+            for feature in level:
+                text = textwrap.shorten(feature.text, 1020, placeholder='...')
+                embed.add_field(name=feature.name, value=text, inline=False)
 
         embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
 
@@ -277,10 +239,9 @@ class Lookup(commands.Cog):
                 return await ctx.send("Error: SheetManager cog not loaded.")
             return await ctx.invoke(token_cmd)
 
-        monster, metadata = await select_monster_full(ctx, name, return_metadata=True)
-
-        metadata['homebrew'] = monster.homebrew
-        await self.add_training_data("monster", name, monster.name, metadata=metadata)
+        choices = await get_monster_choices(ctx, filter_by_license=False)
+        monster = await self._lookup_search2(ctx, choices, name, 'monster')
+        await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
         url = monster.get_image_url()
         embed = EmbedWithAuthor(ctx)
@@ -329,13 +290,8 @@ class Lookup(commands.Cog):
             name = name[:-3]
             visible = False
 
-        monster, metadata = await select_monster_full(ctx, name, return_metadata=True,
-                                                      extra_choices=compendium.nmonster_names,
-                                                      selectkey=self.nsrd_selectkey_obj)
-        metadata['homebrew'] = monster.homebrew
-        await self.add_training_data("monster", name, monster.name, metadata=metadata, srd=monster.srd)
-        if not (metadata['homebrew'] or monster.srd):
-            return await self._unlicensed_result(ctx, monster, "monster")
+        choices = await get_monster_choices(ctx, filter_by_license=False)
+        monster = await self._lookup_search2(ctx, choices, name, 'monster')
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -442,13 +398,12 @@ class Lookup(commands.Cog):
             if monster.legactions:
                 embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster.legactions)))
 
+        embed_queue[-1].set_footer(text=f"Creature | {monster.source_str()}")
         if monster.homebrew:
-            embed_queue[-1].set_footer(text="Homebrew content.", icon_url=HOMEBREW_ICON)
-        else:
-            embed_queue[-1].set_footer(text=f"Creature | {monster.source} {monster.page}")
+            add_homebrew_footer(embed_queue[-1])
 
         embed_queue[0].set_thumbnail(url=monster.get_image_url())
-
+        await Stats.increase_stat(ctx, "monsters_looked_up_life")
         for embed in embed_queue:
             if pm or (visible and pm_dm and req_dm_monster):
                 await ctx.author.send(embed=embed)
@@ -459,13 +414,8 @@ class Lookup(commands.Cog):
     @commands.command()
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
-        spell, metadata = await select_spell_full(ctx, name, return_metadata=True,
-                                                  extra_choices=compendium.nspell_names,
-                                                  selectkey=self.nsrd_selectkey_obj)
-        metadata['homebrew'] = spell.homebrew
-        await self.add_training_data("spell", name, spell.name, metadata=metadata, srd=spell.srd)
-        if not (metadata['homebrew'] or spell.srd):
-            return await self._unlicensed_result(ctx, spell, "spell")
+        choices = await get_spell_choices(ctx, filter_by_license=False)
+        spell = await self._lookup_search2(ctx, choices, name, 'spell')
 
         embed = EmbedWithAuthor(ctx)
         color = embed.colour
@@ -503,14 +453,14 @@ class Lookup(commands.Cog):
         if higher_levels:
             add_fields_from_long_text(embed_queue[-1], "At Higher Levels", higher_levels)
 
+        embed_queue[-1].set_footer(text=f"Spell | {spell.source_str()}")
         if spell.homebrew:
-            embed_queue[-1].set_footer(text="Homebrew content.", icon_url=HOMEBREW_ICON)
-        else:
-            embed_queue[-1].set_footer(text=f"Spell | {spell.source} {spell.page}")
+            add_homebrew_footer(embed_queue[-1])
 
         if spell.image:
             embed_queue[0].set_thumbnail(url=spell.image)
 
+        await Stats.increase_stat(ctx, "spells_looked_up_life")
         destination = await self._get_destination(ctx)
         for embed in embed_queue:
             await destination.send(embed=embed)
@@ -519,120 +469,26 @@ class Lookup(commands.Cog):
     @commands.command(name='item')
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
-        try:
-            pack = await Pack.from_ctx(ctx)
-            custom_items = pack.get_search_formatted_items()
-            pack_id = pack.id
-        except errors.NoActiveBrew:
-            custom_items = []
-            pack_id = None
-        choices = list(itertools.chain(compendium.items, custom_items))
-        if ctx.guild:
-            async for servpack in Pack.server_active(ctx):
-                if servpack.id != pack_id:
-                    choices.extend(servpack.get_search_formatted_items())
-
-        # #881 - display nSRD names
-        choices.extend(compendium.nitem_names)
-        result, metadata = await search_and_select(ctx, choices, name, lambda e: e['name'],
-                                                   selectkey=self.nsrd_selectkey, return_metadata=True)
-        metadata['homebrew'] = result.get('source') == 'homebrew'
-        await self.add_training_data("item", name, result['name'], metadata=metadata, srd=result['srd'])
-        if not (metadata['homebrew'] or result['srd']):
-            return await self._unlicensed_result(ctx, result, "item")
+        choices = await get_item_choices(ctx, filter_by_license=False)
+        item = await self._lookup_search2(ctx, choices, name, 'item')
 
         embed = EmbedWithAuthor(ctx)
-        item = result
 
-        name = item['name']
-        proptext = ""
+        embed.title = item.name
+        embed.description = item.meta
 
-        if not item.get('source') == 'homebrew':
-            damage = ''
-            extras = ''
-            properties = []
-
-            if 'type' in item:
-                type_ = ', '.join(
-                    i for i in ([ITEM_TYPES.get(t, 'n/a') for t in item['type'].split(',')] +
-                                ["Wondrous Item" if item.get('wondrous') else ''])
-                    if i)
-                for iType in item['type'].split(','):
-                    if iType in ('M', 'R', 'GUN'):
-                        damage = f"{item.get('dmg1', 'n/a')} {DMGTYPES.get(item.get('dmgType'), 'n/a')}" \
-                            if 'dmg1' in item and 'dmgType' in item else ''
-                        type_ += f', {item.get("weaponCategory")}'
-                    if iType == 'S': damage = f"AC +{item.get('ac', 'n/a')}"
-                    if iType == 'LA': damage = f"AC {item.get('ac', 'n/a')} + DEX"
-                    if iType == 'MA': damage = f"AC {item.get('ac', 'n/a')} + DEX (Max 2)"
-                    if iType == 'HA': damage = f"AC {item.get('ac', 'n/a')}"
-                    if iType == 'SHP':  # ships
-                        for p in ("CREW", "PASS", "CARGO", "DMGT", "SHPREP"):
-                            a = PROPS.get(p, 'n/a')
-                            proptext += f"**{a.title()}**: {compendium.itemprops[p]}\n"
-                        extras = f"Speed: {item.get('speed')}\nCarrying Capacity: {item.get('carryingcapacity')}\n" \
-                                 f"Crew {item.get('crew')}, AC {item.get('vehAc')}, HP {item.get('vehHp')}"
-                        if 'vehDmgThresh' in item:
-                            extras += f", Damage Threshold {item['vehDmgThresh']}"
-                    if iType == 'siege weapon':
-                        extras = f"Size: {SIZES.get(item.get('size'), 'Unknown')}\n" \
-                                 f"AC {item.get('ac')}, HP {item.get('hp')}\n" \
-                                 f"Immunities: {item.get('immune')}"
+        if item.attunement:
+            if item.attunement is True:  # can be truthy, but not true
+                embed.add_field(name="Attunement", value=f"Requires Attunement")
             else:
-                type_ = ', '.join(
-                    i for i in ("Wondrous Item" if item.get('wondrous') else '', item.get('technology')) if i)
-            rarity = str(item.get('rarity')).replace('None', '')
-            if 'tier' in item:
-                if rarity:
-                    rarity += f', {item["tier"]}'
-                else:
-                    rarity = item['tier']
-            type_and_rarity = type_ + (f", {rarity}" if rarity else '')
-            value = (item.get('value', 'n/a') + (', ' if 'weight' in item else '')) if 'value' in item else ''
-            weight = (item.get('weight', 'n/a') + (' lb.' if item.get('weight') == '1' else ' lbs.')) \
-                if 'weight' in item else ''
-            weight_and_value = value + weight
-            for prop in item.get('property', []):
-                if not prop: continue
-                a = b = prop
-                a = PROPS.get(a, 'n/a')
-                if b in compendium.itemprops:
-                    proptext += f"**{a.title()}**: {compendium.itemprops[b]}\n"
-                if b == 'V': a += " (" + item.get('dmg2', 'n/a') + ")"
-                if b in ('T', 'A'): a += " (" + item.get('range', 'n/a') + "ft.)"
-                if b == 'RLD': a += " (" + item.get('reload', 'n/a') + " shots)"
-                properties.append(a)
-            properties = ', '.join(properties)
-            damage_and_properties = f"{damage} - {properties}" if properties else damage
-            damage_and_properties = (' --- ' + damage_and_properties) if weight_and_value and damage_and_properties else \
-                damage_and_properties
+                embed.add_field(name="Attunement", value=f"Requires Attunement {item.attunement}", inline=False)
 
-            meta = f"*{type_and_rarity}*\n{weight_and_value}{damage_and_properties}\n{extras}"
-            text = item['desc']
-
-            if 'reqAttune' in item:
-                if item['reqAttune'] is True:  # can be truthy, but not true
-                    embed.add_field(name="Attunement", value=f"Requires Attunement")
-                else:
-                    embed.add_field(name="Attunement", value=f"Requires Attunement {item['reqAttune']}", inline=False)
-
-            embed.set_footer(text=f"Item | {item.get('source', 'Unknown')} {item.get('page', 'Unknown')}")
-        else:
-            meta = item['meta']
-            text = item['desc']
-            if 'image' in item:
-                embed.set_thumbnail(url=item['image'])
-            add_homebrew_footer(embed)
-
-        embed.title = name
-        embed.description = meta  # no need to render, has been prerendered
-
-        if proptext:
-            text = f"{text}\n{proptext}"
-        if len(text) > 5500:
-            text = text[:5500] + "..."
-
+        text = textwrap.shorten(item.desc, 5500, placeholder='...')
         add_fields_from_long_text(embed, "Description", text)
+
+        embed.set_footer(text=f"Item | {item.source_str()}")
+        if item.homebrew:
+            add_homebrew_footer(embed)
 
         await Stats.increase_stat(ctx, "items_looked_up_life")
         await (await self._get_destination(ctx)).send(embed=embed)
@@ -691,7 +547,7 @@ class Lookup(commands.Cog):
             settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
         return settings or {}
 
-    async def add_training_data(self, lookup_type, query, result_name, metadata=None, srd=True, could_view=True):
+    async def _add_training_data(self, lookup_type, query, result_name, metadata=None, srd=True, could_view=True):
         data = {"type": lookup_type, "query": query, "result": result_name, "srd": srd, "could_view": could_view}
         if metadata:
             data['given_options'] = metadata.get('num_options', 1)
@@ -739,8 +595,8 @@ class Lookup(commands.Cog):
             selectkey=selectkey)
 
         # log the query
-        await self.add_training_data(entity_type, query, result.name, metadata=metadata, srd=result.is_free,
-                                     could_view=can_access(result))
+        await self._add_training_data(entity_type, query, result.name, metadata=metadata, srd=result.is_free,
+                                      could_view=can_access(result))
 
         # display error if not srd
         if not can_access(result):

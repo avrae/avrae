@@ -149,7 +149,7 @@ class Lookup(commands.Cog):
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        result: gamedata.Class = await self._lookup_search2(ctx, compendium.classes, name, 'class')  # todo
+        result: gamedata.Class = await self._lookup_search2(ctx, compendium.classes, name, 'class')
 
         embed = EmbedWithAuthor(ctx)
         if level is None:

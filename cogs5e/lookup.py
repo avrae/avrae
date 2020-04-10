@@ -421,16 +421,20 @@ class Lookup(commands.Cog):
         color = embed.colour
 
         embed.title = spell.name
-        embed.description = f"*{spell.get_level()} {spell.get_school().lower()}. " \
+        school_level = f"{spell.get_level()} {spell.get_school().lower()}" if spell.level > 0 \
+            else f"{spell.get_school().lower()} cantrip"
+        embed.description = f"*{school_level}. " \
                             f"({', '.join(itertools.chain(spell.classes, spell.subclasses))})*"
         if spell.ritual:
             time = f"{spell.time} (ritual)"
         else:
             time = spell.time
-        embed.add_field(name="Casting Time", value=time)
-        embed.add_field(name="Range", value=spell.range)
-        embed.add_field(name="Components", value=spell.components)
-        embed.add_field(name="Duration", value=spell.duration)
+
+        meta = f"**Casting Time**: {time}\n" \
+               f"**Range**: {spell.range}" \
+               f"**Components**: {spell.components}" \
+               f"**Duration**: {spell.duration}"
+        embed.add_field(name="Meta", value=meta)
 
         text = spell.description
         higher_levels = spell.higherlevels

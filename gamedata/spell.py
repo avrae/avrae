@@ -84,12 +84,12 @@ class Spell(Sourced):
         if self.level == 0:
             return "cantrip"
         if self.level == 1:
-            return "1st level"
+            return "1st-level"
         if self.level == 2:
-            return "2nd level"
+            return "2nd-level"
         if self.level == 3:
-            return "3rd level"
-        return f"{self.level}th level"
+            return "3rd-level"
+        return f"{self.level}th-level"
 
     def get_combat_duration(self):
         match = re.match(r"(?:Concentration, up to )?(\d+) (\w+)", self.duration)

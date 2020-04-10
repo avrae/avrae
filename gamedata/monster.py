@@ -129,6 +129,8 @@ class Monster(StatBlock, Sourced):
             data['resistances'] = Resistances.from_dict(data['resistances'])
         if 'display_resists' in data:
             data['display_resists'] = Resistances.from_dict(data['display_resists'])
+        if 'source' in data:
+            del data['source']
         return cls(homebrew=True, source=source, **data)
 
     def to_dict(self):

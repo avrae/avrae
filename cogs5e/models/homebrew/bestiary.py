@@ -112,7 +112,7 @@ class Bestiary(CommonHomebrewMixin):
     async def load_monsters(self, ctx):
         if not self._monsters:
             bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": self.id}, projection=['monsters'])
-            self._monsters = [Monster.from_bestiary(m, bestiary['name']) for m in bestiary['monsters']]
+            self._monsters = [Monster.from_bestiary(m, self.name) for m in bestiary['monsters']]
         return self._monsters
 
     @property

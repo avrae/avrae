@@ -17,14 +17,14 @@ async def test_rule(avrae, dhttp):
 @requires_data()
 async def test_feat(avrae, dhttp):
     for feat in compendium.feats:
-        avrae.message(f"!feat {feat['name']}")
+        avrae.message(f"!feat {feat.name}")
         await dhttp.drain()
 
 
 @requires_data()
 async def test_racefeat(avrae, dhttp):
     for rfeat in compendium.rfeats:
-        avrae.message(f"!racefeat {rfeat['name']}")
+        avrae.message(f"!racefeat {rfeat.name}")
         await dhttp.drain()
 
 
@@ -38,21 +38,21 @@ async def test_race(avrae, dhttp):
 @requires_data()
 async def test_classfeat(avrae, dhttp):
     for cfeat in compendium.cfeats:
-        avrae.message(f"!classfeat {cfeat['name']}")
+        avrae.message(f"!classfeat {cfeat.name}")
         await dhttp.drain()
 
 
 @requires_data()
 async def test_class(avrae, dhttp):
     for klass in compendium.classes:
-        avrae.message(f"!class {klass['name']}")
+        avrae.message(f"!class {klass.name}")
         await dhttp.drain()
 
 
 @requires_data()
 async def test_subclass(avrae, dhttp):
     for subclass in compendium.subclasses:
-        avrae.message(f"!subclass {subclass['name']}")
+        avrae.message(f"!subclass {subclass.name}")
         await dhttp.drain()
 
 
@@ -80,5 +80,5 @@ async def test_spell(avrae, dhttp):
 @requires_data()
 async def test_item(avrae, dhttp):
     for item in compendium.items:
-        avrae.message(f"!item {item['name']}")
+        avrae.message(f"!item {item.name}")
         await dhttp.drain()

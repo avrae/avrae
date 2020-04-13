@@ -95,6 +95,7 @@ class Lookup(commands.Cog):
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
+        embed.url = result.url
         if result.prerequisite:
             embed.add_field(name="Prerequisite", value=result.prerequisite, inline=False)
         add_fields_from_long_text(embed, "Description", result.desc)
@@ -109,6 +110,7 @@ class Lookup(commands.Cog):
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
+        embed.url = result.url
         set_maybe_long_desc(embed, result.text)
         embed.set_footer(text=f"Race Feature | {result.source_str()}")
 
@@ -121,6 +123,7 @@ class Lookup(commands.Cog):
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
+        embed.url = result.url
         embed.add_field(name="Speed", value=result.speed)
         embed.add_field(name="Size", value=result.size)
         if result.ability:
@@ -138,6 +141,7 @@ class Lookup(commands.Cog):
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
+        embed.url = result.url
         set_maybe_long_desc(embed, result.text)
         embed.set_footer(text=f"Class Feature | {result.source_str()}")
 
@@ -152,6 +156,7 @@ class Lookup(commands.Cog):
         result: gamedata.Class = await self._lookup_search2(ctx, compendium.classes, name, 'class')
 
         embed = EmbedWithAuthor(ctx)
+        embed.url = result.url
         if level is None:
             embed.title = result.name
             embed.add_field(name="Hit Die", value=result.hit_die)
@@ -196,6 +201,7 @@ class Lookup(commands.Cog):
         result: gamedata.Subclass = await self._lookup_search2(ctx, compendium.subclasses, name, 'subclass')
 
         embed = EmbedWithAuthor(ctx)
+        embed.url = result.url
         embed.title = result.name
         embed.description = f"*Source: {result.source_str()}*"
 
@@ -215,6 +221,7 @@ class Lookup(commands.Cog):
         result: gamedata.Background = await self._lookup_search2(ctx, compendium.backgrounds, name, 'background')
 
         embed = EmbedWithAuthor(ctx)
+        embed.url = result.url
         embed.title = result.name
         embed.set_footer(text=f"Background | {result.source_str()}")
 
@@ -297,6 +304,7 @@ class Lookup(commands.Cog):
         color = embed_queue[-1].colour
 
         embed_queue[-1].title = monster.name
+        embed_queue[-1].url = monster.url
 
         def safe_append(title, desc):
             if len(desc) < 1024:
@@ -418,6 +426,7 @@ class Lookup(commands.Cog):
         spell = await self._lookup_search2(ctx, choices, name, 'spell')
 
         embed = EmbedWithAuthor(ctx)
+        embed.url = spell.url
         color = embed.colour
 
         embed.title = spell.name
@@ -479,6 +488,7 @@ class Lookup(commands.Cog):
         embed = EmbedWithAuthor(ctx)
 
         embed.title = item.name
+        embed.url = item.url
         embed.description = item.meta
 
         if item.attunement:

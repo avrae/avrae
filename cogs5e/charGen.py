@@ -15,19 +15,6 @@ from utils.functions import ABILITY_MAP, get_selection, search_and_select
 
 log = logging.getLogger(__name__)
 
-SKILL_MAP = {'acrobatics': 'acrobatics', 'animal handling': 'animalHandling', 'arcana': 'arcana',
-             'athletics': 'athletics', 'deception': 'deception', 'history': 'history', 'initiative': 'initiative',
-             'insight': 'insight', 'intimidation': 'intimidation', 'investigation': 'investigation',
-             'medicine': 'medicine', 'nature': 'nature', 'perception': 'perception', 'performance': 'performance',
-             'persuasion': 'persuasion', 'religion': 'religion', 'sleight of hand': 'sleightOfHand',
-             'stealth': 'stealth', 'survival': 'survival'}
-
-CLASS_RESOURCE_NAMES = {"Ki Points": "ki", "Rage Damage": "rageDamage", "Rages": "rages",
-                        "Sorcery Points": "sorceryPoints", "Superiority Dice": "superiorityDice",
-                        "1st": "level1SpellSlots", "2nd": "level2SpellSlots", "3rd": "level3SpellSlots",
-                        "4th": "level4SpellSlots", "5th": "level5SpellSlots", "6th": "level6SpellSlots",
-                        "7th": "level7SpellSlots", "8th": "level8SpellSlots", "9th": "level9SpellSlots"}
-
 
 class CharGenerator(commands.Cog):
     """Random character generator."""

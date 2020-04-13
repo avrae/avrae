@@ -241,7 +241,7 @@ async def get_link_shared_bestiary_creatures(url, session, api_base, sha256_hash
     async with session.get(f"{api_base}/{url}/creatures") as resp:
         if resp.status == 400:
             raise ExternalImportError(
-                "Error import bestiary: Cannot access bestiary. Please ensure link sharing is enabled!")
+                "Error importing bestiary: Cannot access bestiary. Please ensure link sharing is enabled!")
         elif not 199 < resp.status < 300:
             raise ExternalImportError(
                 "Error importing bestiary: HTTP error. Are you sure the link is right?")

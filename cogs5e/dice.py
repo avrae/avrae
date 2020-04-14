@@ -172,6 +172,7 @@ class Dice(commands.Cog):
 
     @monster_atk.command(name="list")
     async def monster_atk_list(self, ctx, monster_name):
+        """Lists a monster's attacks."""
         await try_delete(ctx.message)
 
         monster = await select_monster_full(ctx, monster_name)

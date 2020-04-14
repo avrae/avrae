@@ -7,7 +7,7 @@ from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
-from utils.functions import parse_resistances
+from utils.functions import maybe_mod, parse_resistances
 
 log = logging.getLogger(__name__)
 
@@ -657,7 +657,10 @@ class Save(Effect):
             except (TypeError, ValueError):
                 raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")
 
-        dc = autoctx.args.last('dc', type_=int) or dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
+        # dc hierarchy: arg > self.dc > spell cast override > spellbook dc
+        dc = dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
+        if 'dc' in autoctx.args:
+            dc = maybe_mod(autoctx.args.last('dc'), dc)
 
         if dc is None:
             raise NoSpellDC()

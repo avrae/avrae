@@ -296,7 +296,7 @@ class AutomationTarget:
 
 
 class Effect:
-    def __init__(self, type_, meta=None):
+    def __init__(self, type_, meta=None, **_):  # ignore bad kwargs
         self.type = type_
         if meta:
             meta = Effect.deserialize(meta)

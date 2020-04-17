@@ -22,7 +22,7 @@ class Monster extends DDBEntity {
     display_resists: Resistances;  // used to display resistances cleanly
     condition_immune: string[];
     languages: string[];
-    cr: number;
+    cr: string;
     xp: number;
 
     traits: Feature[];

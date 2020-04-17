@@ -196,7 +196,8 @@ class BeyondClient(BeyondClientBase):
             payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],
             payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
             payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
-            payload.get('http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriber')
+            payload.get('http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriber'),
+            payload.get('http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriptiontier')
         )
 
     async def _fetch_token(self, claim: str):

@@ -1,7 +1,7 @@
 class DDBEntity {
     source: string;
     page: number;
-    entity_id: number;
+    id: number;
     url: string;
-    is_free: boolean;
+    isFree: boolean;
 }

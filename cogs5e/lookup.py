@@ -440,8 +440,8 @@ class Lookup(commands.Cog):
             time = spell.time
 
         meta = f"**Casting Time**: {time}\n" \
-               f"**Range**: {spell.range}" \
-               f"**Components**: {spell.components}" \
+               f"**Range**: {spell.range}\n" \
+               f"**Components**: {spell.components}\n" \
                f"**Duration**: {spell.duration}"
         embed.add_field(name="Meta", value=meta)
 

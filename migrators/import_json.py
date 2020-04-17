@@ -11,16 +11,14 @@ LOAD_FILES = {
     'names': [],
     'backgrounds': [],
     'feats': [],
+    'spells': [],
 
-    'srd-backgrounds': [],
     'srd-bestiary': [],
     'srd-classfeats': [],
     'srd-classes': [],
-    'srd-feats': [],
     'srd-items': [],
     'srd-races': [],
     'srd-racefeats': [],
-    'srd-spells': [],
     'srd-references': [],
 
     'itemprops': {},

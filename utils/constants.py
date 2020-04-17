@@ -26,22 +26,24 @@ SKILL_MAP = {'acrobatics': 'dexterity', 'animalHandling': 'wisdom', 'arcana': 'i
              'intelligence': 'intelligence', 'wisdom': 'wisdom', 'charisma': 'charisma'}
 
 SOURCE_MAP = {
-    # sourcebooks
-    'BR': 'Basic Rules', 'PHB': "Player's Handbook", 'DMG': "Dungeon Master's Guide", 'MM': "Monster Manual",
-    'SCAG': "Sword Coast Adventurer's Guide", 'VGtM': "Volo's Guide to Monsters",
-    'XGtE': "Xanathar's Guide to Everything", 'TTP': "The Tortle Package", 'MToF': "Mordenkainen's Tome of Foes",
-    'WGtE': "Wayfarer's Guide to Ebberon", 'GGtR': "Guildmasters' Guide to Ravnica", 'AI': "Acquisitions Incorporated",
-    'ERftLW': "Ebberon: Rising from the Last War", 'SAC': "Sage Advice Compendium",
-    'MFFv1': "Mordenkainen's Fiendish Folio Volume 1", 'EGtW': "Explorer's Guide to Wildemount",
-    # adventures
-    'CoS': "Curse of Strahd", 'HotDQ': "Hoard of the Dragon Queen", 'LMoP': "Lost Mine of Phandelver",
-    'OotA': "Out of the Abyss", 'PotA': "Princes of the Apocalypse", 'RoT': "Rise of Tiamat",
-    'SKT': "Storm King's Thunder", 'TftYP': "Tales from the Yawning Portal", 'ToA': "Tomb of Annihilation",
-    'R': "Rrakkma", 'WDH': "Waterdeep Dragon Heist", 'WDotMM': "Waterdeep Dungeon of the Mad Mage",
-    'LLoK': "Lost Laboratory of Kwalish", 'DoIP': "Dragon of Icespire Peak", 'GoS': "Ghosts of Saltmarsh",
-    'HftT': "Hunt for the Thessalhydra", 'BGDiA': "Baldur's Gate: Descent into Avernus", 'SLW': "Storm Lord's Wrath",
-    'SDW': "Sleeping Dragon's Wake", 'DC': "Divine Contention", 'DDvRaM': "Dungeons & Dragons vs. Rick and Morty",
-    'LR': "Locathah Rising", 'IMR': "Infernal Machine Rebuild", 'FS': "Frozen Sick",
-    # other
-    'CR': "Critical Role", 'UA': "Unearthed Arcana", 'EE': "Elemental Evil", 'CoSCO': "Curse of Strahd"
+    'BR': 'Basic Rules', 'PHB': "Player's Handbook", 'DMG': "Dungeon Master's Guide",
+    'EE': "Elemental Evil Player's Companion", 'MM': 'Monster Manual', 'CoS': 'Curse of Strahd',
+    'HotDQ': 'Hoard of the Dragon Queen', 'LMoP': 'Lost Mine of Phandelver', 'OotA': 'Out of the Abyss',
+    'PotA': 'Princes of the Apocalypse', 'RoT': 'Rise of Tiamat', 'SKT': "Storm King's Thunder",
+    'SCAG': "Sword Coast Adventurer's Guide", 'TftYP': 'Tales from the Yawning Portal',
+    'VGtM': "Volo's Guide to Monsters", 'TSC': 'The Sunless Citadel', 'TFoF': 'The Forge of Fury',
+    'THSoT': 'The Hidden Shrine of Tamoachan', 'WPM': 'White Plume Mountain', 'DiT': 'Dead in Thay',
+    'AtG': 'Against the Giants', 'ToH': 'Tomb of Horrors', 'ToA': 'Tomb of Annihilation',
+    'CoSCO': 'Curse of Strahd: Character Options', 'XGtE': "Xanathar's Guide to Everything",
+    'TTP': 'The Tortle Package', 'UA': 'Unearthed Arcana', 'DDB': 'D&D Beyond', 'CR': 'Critical Role',
+    'TCS': "Tal'Dorei Campaign Setting", 'MToF': 'Mordenkainen’s Tome of Foes', 'DDIA-MORD': 'Rrakkma',
+    'WDH': 'Waterdeep Dragon Heist', 'WDotMM': 'Waterdeep Dungeon of the Mad Mage',
+    'WGtE': "Wayfinder's Guide to Eberron", 'GGtR': "Guildmasters' Guide to Ravnica", '_APT': 'Archived Playtest',
+    'LLoK': 'Lost Laboratory of Kwalish', 'DoIP': 'Dragon of Icespire Peak', 'TMR': 'Tactical Maps Reincarnated',
+    'GoS': 'Ghosts of Saltmarsh', 'AI': 'Acquisitions Incorporated', 'HftT': 'Hunt for the Thessalhydra',
+    'BGDiA': "Baldur's Gate: Descent into Avernus", 'ERftLW': 'Eberron: Rising from the Last War',
+    'SLW': 'Storm Lord’s Wrath', 'SDW': 'Sleeping Dragon’s Wake', 'DC': 'Divine Contention',
+    'SAC': 'Sage Advice Compendium', 'DDvRaM': 'Dungeons & Dragons vs. Rick and Morty', 'LR': 'Locathah Rising',
+    'IMR': 'Infernal Machine Rebuild', 'MFFV1': "Mordenkainen's Fiendish Folio Volume 1", 'SD': 'Sapphire Dragon',
+    'EGtW': "Explorer's Guide to Wildemount", 'OGA': 'One Grung Above'
 }

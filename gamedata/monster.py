@@ -46,7 +46,7 @@ class Monster(StatBlock, Sourced):
         if attacks is None:
             attacks = AttackList()
         if spellcasting is None:
-            spellcasting = Spellbook()
+            spellcasting = MonsterSpellbook()
         if passiveperc is None:
             passiveperc = 10 + skills.perception.value
 
@@ -65,7 +65,7 @@ class Monster(StatBlock, Sourced):
 
         Sourced.__init__(self, 'monster', homebrew, source=kwargs['source'],
                          entity_id=kwargs.get('id'), page=kwargs.get('page'), url=kwargs.get('url'),
-                         is_free=kwargs.get('isFree'))
+                         is_free=kwargs.get('is_free'))
         StatBlock.__init__(
             self,
             name=name, stats=ability_scores, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
@@ -105,7 +105,10 @@ class Monster(StatBlock, Sourced):
         legactions = [Trait(**t) for t in d['legactions']]
         resistances = Resistances.from_dict(d['resistances'])
         attacks = AttackList.from_dict(d['attacks'])
-        spellcasting = MonsterSpellbook.from_dict(d['spellbook'])
+        if d['spellbook'] is not None:
+            spellcasting = MonsterSpellbook.from_dict(d['spellbook'])
+        else:
+            spellcasting = None
         return cls(d['name'], d['size'], d['race'], d['alignment'], d['ac'], d['armortype'], d['hp'], d['hitdice'],
                    d['speed'], ability_scores, saves, skills, d['senses'], display_resists, d['condition_immune'],
                    d['languages'], d['cr'], d['xp'],

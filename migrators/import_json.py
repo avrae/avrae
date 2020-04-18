@@ -12,8 +12,8 @@ LOAD_FILES = {
     'backgrounds': [],
     'feats': [],
     'spells': [],
+    'monsters': [],
 
-    'srd-bestiary': [],
     'srd-classfeats': [],
     'srd-classes': [],
     'srd-items': [],

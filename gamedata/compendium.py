@@ -92,7 +92,7 @@ class Compendium:
 
         self.raw_classes = lookup.get('classes', [])
         self.raw_feats = lookup.get('feats', [])
-        self.raw_monsters = lookup.get('bestiary', [])
+        self.raw_monsters = lookup.get('monsters', [])
         self.raw_backgrounds = lookup.get('backgrounds', [])
         self.raw_items = lookup.get('items', [])
         self.raw_races = lookup.get('races', [])

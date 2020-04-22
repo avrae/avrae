@@ -12,11 +12,13 @@ from utils.config import DDB_AUTH_AUDIENCE as AUDIENCE, \
     DDB_AUTH_EXPIRY_SECONDS as EXPIRY_SECONDS, \
     DDB_AUTH_ISSUER as ISSUER, \
     DDB_AUTH_SECRET as SECRET, \
-    DDB_AUTH_SERVICE_URL as AUTH_URL
+    DDB_AUTH_SERVICE_URL as AUTH_BASE_URL
 # dynamo
 # env: AWS_ACCESS_KEY_ID
 # env: AWS_SECRET_ACCESS_KEY
 from utils.config import DYNAMO_ENTITY_TABLE, DYNAMO_REGION, DYNAMO_USER_TABLE
+
+AUTH_DISCORD = f"{AUTH_BASE_URL}/v1/discord-token"
 
 # cache
 USER_ENTITLEMENT_TTL = 1 * 60
@@ -210,7 +212,7 @@ class BeyondClient(BeyondClientBase):
         """
         body = {"Token": claim}
         try:
-            async with self.http.post(AUTH_URL, json=body) as resp:
+            async with self.http.post(AUTH_DISCORD, json=body) as resp:
                 if not 199 < resp.status < 300:
                     raise AuthException(f"Auth Service returned {resp.status}: {await resp.text()}")
                 try:

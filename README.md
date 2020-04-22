@@ -64,7 +64,7 @@ Env vars required to deploy to production:
 - `DDB_AUTH_AUDIENCE` - JWT audience (default `"avrae.io"`)
 - `DDB_AUTH_ISSUER` - JWT issuer (default `"dndbeyond.com"`)
 - `DDB_AUTH_EXPIRY_SECONDS` - JWT expiry (default 5m)
-- `DDB_AUTH_SERVICE_URL` - DDB Auth Service URL
+- `DDB_AUTH_SERVICE_URL` - DDB Auth Service base URL
 - `DYNAMO_REGION` - AWS region for Entitlements DB
 - `DYNAMO_USER_TABLE` - Table name for Entitlements user table
 - `DYNAMO_ENTITY_TABLE` - Table name for Entitlements entity table

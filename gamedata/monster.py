@@ -115,7 +115,7 @@ class Monster(StatBlock, Sourced):
                    traits, actions, reactions, legactions,
                    d['la_per_round'], d['passiveperc'],
                    # augmented
-                   resistances, attacks, d['proper'], spellcasting=spellcasting,
+                   resistances, attacks, d['proper'], d['image_url'], spellcasting=spellcasting,
                    # sourcing
                    source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
 
@@ -226,10 +226,7 @@ class Monster(StatBlock, Sourced):
 
     def get_image_url(self):
         """Returns a monster's image URL."""
-        if not self.homebrew:
-            return f"https://media.avrae.io/{parse.quote(self.source)}/{parse.quote(self.name)}.png"
-        else:
-            return self.image_url or ''
+        return self.image_url or ''
 
     # ---- setter overrides ----
     @property

@@ -13,10 +13,10 @@ LOAD_FILES = {
     'feats': [],
     'spells': [],
     'monsters': [],
+    'items': [],
 
     'srd-classfeats': [],
     'srd-classes': [],
-    'srd-items': [],
     'srd-races': [],
     'srd-racefeats': [],
     'srd-references': [],

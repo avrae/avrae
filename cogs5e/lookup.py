@@ -500,6 +500,9 @@ class Lookup(commands.Cog):
         text = textwrap.shorten(item.desc, 5500, placeholder='...')
         add_fields_from_long_text(embed, "Description", text)
 
+        if item.image:
+            embed.set_thumbnail(url=item.image)
+
         embed.set_footer(text=f"Item | {item.source_str()}")
         if item.homebrew:
             add_homebrew_footer(embed)

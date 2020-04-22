@@ -220,7 +220,7 @@ async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
     # personal pack
     try:
         pack = await Pack.from_ctx(ctx)
-        custom_items = pack.get_search_formatted_items()
+        custom_items = pack.items
         pack_id = pack.id
     except NoActiveBrew:
         custom_items = []

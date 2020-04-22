@@ -10,7 +10,7 @@ class Item(Sourced):
         :type meta: str or None
         :type image: str or None
         """
-        super().__init__('item', False, **kwargs)
+        super().__init__('item', **kwargs)
         self.name = name
         self.desc = desc
         self.attunement = attunement
@@ -21,7 +21,8 @@ class Item(Sourced):
     def from_data(cls, d):
         return cls(d['name'], d['desc'], d['attunement'],
                    d.get('meta'), d.get('image'),
-                   source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
+                   homebrew=False, source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'],
+                   is_free=d['isFree'])
 
     @classmethod
     def from_homebrew(cls, d, source):

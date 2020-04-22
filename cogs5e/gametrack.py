@@ -16,7 +16,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
-from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
+from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
 from utils.argparser import argparse
 from utils.functions import confirm, search, search_and_select, try_delete
@@ -542,6 +542,7 @@ class GameTrack(commands.Cog):
         -h - Hides rolled values.
         **__Save Spells__**
         -dc <Save DC> - Overrides the spell save DC.
+        -dc <+X/-X> - Modifies the DC by a certain amount.
         -save <Save type> - Overrides the spell save type.
         -d <damage> - Adds additional damage.
         pass - Target automatically succeeds save.

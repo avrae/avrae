@@ -1,6 +1,5 @@
 import itertools
 import logging
-from urllib import parse
 
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills

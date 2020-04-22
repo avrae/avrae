@@ -147,7 +147,7 @@ class Lookup(commands.Cog):
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
-    @commands.command(name='class')
+    @commands.command(name='class')  # todo
     async def _class(self, ctx, name: str, level: int = None):
         """Looks up a class, or all features of a certain level."""
         if level is not None and not 0 < level < 21:
@@ -195,7 +195,7 @@ class Lookup(commands.Cog):
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
-    @commands.command()
+    @commands.command()  # todo
     async def subclass(self, ctx, *, name: str):
         """Looks up a subclass."""
         result: gamedata.Subclass = await self._lookup_search2(ctx, compendium.subclasses, name, 'subclass')

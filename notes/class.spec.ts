@@ -5,22 +5,13 @@ type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
 class Class extends DDBEntity {
     name: string;
-    hit_die: string;
-    saves: Ability[];
-    proficiencies: ClassProficiencies;
+    hit_points: string;
+    proficiencies: string;
     equipment: string;
     table: ClassTable;
     // list of list of class features - e.g. levels[0] is a list of all granted class features at level 1
     levels: ClassFeature[][];
     subclasses: Subclass[];
-}
-
-class ClassProficiencies {
-    armor: string[];
-    weapons: string[];
-    tools: string[];
-    skills: string[];
-    num_skills: number;  // choose X from skills
 }
 
 class ClassTable {

@@ -14,15 +14,12 @@ LOAD_FILES = {
     'spells': [],
     'monsters': [],
     'items': [],
+    'classes': [],
 
-    'srd-classfeats': [],
-    'srd-classes': [],
     'srd-races': [],
     'srd-racefeats': [],
-    'srd-references': [],
 
-    'itemprops': {},
-    'nsrd-names': {},
+    'srd-references': []
 }
 
 

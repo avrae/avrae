@@ -236,9 +236,9 @@ class Lookup(commands.Cog):
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== monsters ====
-    @commands.command()
+    @commands.command(aliases=['monimage'])
     async def token(self, ctx, *, name=None):
-        """Shows a token for a monster or player. May not support all monsters."""
+        """Shows a monster's image."""
 
         if name is None:
             token_cmd = self.bot.get_command('playertoken')
@@ -255,24 +255,11 @@ class Lookup(commands.Cog):
         embed.title = monster.name
         embed.description = f"{monster.size} monster."
 
-        if not monster.homebrew:
-            embed.set_image(url=url)
-            embed.set_footer(text="This command may not support all monsters.")
+        if not url:
+            return await ctx.channel.send("This monster has no image.")
 
-            await ctx.send(embed=embed)
-        else:
-            if not url:
-                return await ctx.channel.send("This monster has no image.")
-
-            try:
-                processed = await generate_token(url)
-            except Exception as e:
-                return await ctx.channel.send(f"Error generating token: {e}")
-
-            file = discord.File(processed, filename="image.png")
-            embed.set_image(url="attachment://image.png")
-            await ctx.send(file=file, embed=embed)
-            processed.close()
+        embed.set_image(url=url)
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def monster(self, ctx, *, name: str):

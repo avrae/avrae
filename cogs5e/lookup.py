@@ -17,7 +17,7 @@ from gamedata.compendium import compendium
 from gamedata.lookuputils import HOMEBREW_EMOJI, get_item_choices, get_monster_choices, get_spell_choices
 from gamedata.shared import SourcedTrait
 from utils import checks
-from utils.functions import ABILITY_MAP, generate_token, get_positivity, search_and_select
+from utils.functions import get_positivity, search_and_select
 
 LARGE_THRESHOLD = 200
 
@@ -147,7 +147,7 @@ class Lookup(commands.Cog):
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
-    @commands.command(name='class')  # todo
+    @commands.command(name='class')
     async def _class(self, ctx, name: str, level: int = None):
         """Looks up a class, or all features of a certain level."""
         if level is not None and not 0 < level < 21:
@@ -159,19 +159,15 @@ class Lookup(commands.Cog):
         embed.url = result.url
         if level is None:
             embed.title = result.name
-            embed.add_field(name="Hit Die", value=result.hit_die)
-            embed.add_field(name="Saving Throws", value=', '.join(ABILITY_MAP.get(p) for p in result.saves))
+            embed.add_field(name="Hit Points", value=result.hit_points)
 
             levels = []
-            starting_profs = str(result.proficiencies)
-            starting_items = f"You start with the following items, plus anything provided by your background.\n" \
-                             f"{result.equipment}"
             for level in range(1, 21):
                 level = result.levels[level - 1]
                 levels.append(', '.join([feature.name for feature in level]))
 
-            embed.add_field(name="Starting Proficiencies", value=starting_profs, inline=False)
-            embed.add_field(name="Starting Equipment", value=starting_items, inline=False)
+            embed.add_field(name="Starting Proficiencies", value=result.proficiencies, inline=False)
+            embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
 
             level_features_str = ""
             for i, l in enumerate(levels):
@@ -195,7 +191,7 @@ class Lookup(commands.Cog):
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
-    @commands.command()  # todo
+    @commands.command()
     async def subclass(self, ctx, *, name: str):
         """Looks up a subclass."""
         result: gamedata.Subclass = await self._lookup_search2(ctx, compendium.subclasses, name, 'subclass')

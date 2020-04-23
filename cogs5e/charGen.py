@@ -11,7 +11,7 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument
 from gamedata.compendium import compendium
 from gamedata.lookuputils import available
-from utils.functions import ABILITY_MAP, get_selection, search_and_select
+from utils.functions import get_selection, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -157,20 +157,17 @@ class CharGenerator(commands.Cog):
         subclass = subclass or (random.choice(subclass_choices)
                                 if (subclass_choices := await available(ctx, _class.subclasses, 'subclass')) else None)
         embed = EmbedWithAuthor(ctx)
+
         embed.title = _class.name
-        embed.add_field(name="Hit Die", value=_class.hit_die)
-        embed.add_field(name="Saving Throws", value=', '.join(ABILITY_MAP.get(p) for p in _class.saves))
+        embed.add_field(name="Hit Points", value=_class.hit_points)
 
         levels = []
-        starting_profs = str(_class.proficiencies)
-        starting_items = f"You start with the following items, plus anything provided by your background.\n" \
-                         f"{_class.equipment}"
-        for l in range(1, 21):
-            lvl = _class.levels[l - 1]
-            levels.append(', '.join([feature.name for feature in lvl]))
+        for level in range(1, final_level + 1):
+            level = _class.levels[level - 1]
+            levels.append(', '.join([feature.name for feature in level]))
 
-        embed.add_field(name="Starting Proficiencies", value=starting_profs, inline=False)
-        embed.add_field(name="Starting Equipment", value=starting_items, inline=False)
+        embed.add_field(name="Starting Proficiencies", value=_class.proficiencies, inline=False)
+        embed.add_field(name="Starting Equipment", value=_class.equipment, inline=False)
 
         level_features_str = ""
         for i, l in enumerate(levels):

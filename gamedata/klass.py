@@ -1,14 +1,12 @@
-from utils.functions import natural_join
 from .shared import Sourced, Trait
 
 
 class Class(Sourced):
-    def __init__(self, name, hit_die, saves, proficiencies, equipment, table, levels, subclasses, **kwargs):
+    def __init__(self, name, hit_points, proficiencies, equipment, table, levels, subclasses, **kwargs):
         """
         :type name: str
-        :type hit_die: str
-        :type saves: list[str]
-        :type proficiencies: ClassProficiencies
+        :type hit_points: str
+        :type proficiencies: str
         :type equipment: str
         :type table: ClassTable
         :type levels: list[list[Trait]]
@@ -16,8 +14,7 @@ class Class(Sourced):
         """
         super().__init__('class', False, **kwargs)
         self.name = name
-        self.hit_die = hit_die
-        self.saves = saves
+        self.hit_points = hit_points
         self.proficiencies = proficiencies
         self.equipment = equipment
         self.table = table
@@ -29,40 +26,10 @@ class Class(Sourced):
         levels = [[Trait.from_dict(cf) for cf in lvl] for lvl in d['levels']]
         subclasses = [Subclass.from_data(s) for s in d['subclasses']]
         return cls(
-            d['name'], d['hit_die'], d['saves'], ClassProficiencies.from_data(d['proficiencies']), d['equipment'],
+            d['name'], d['hit_points'], d['proficiencies'], d['equipment'],
             ClassTable.from_data(d['table']), levels, subclasses,
             source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
         )
-
-
-class ClassProficiencies:
-    def __init__(self, armor, weapons, tools, skills, num_skills):
-        """
-        :type armor: list[str]
-        :type weapons: list[str]
-        :type tools: list[str]
-        :type skills: list[str]
-        :type num_skills: int
-        """
-        self.armor = armor
-        self.weapons = weapons
-        self.tools = tools
-        self.skills = skills
-        self.num_skills = num_skills
-
-    @classmethod
-    def from_data(cls, d):
-        return cls(
-            d['armor'], d['weapons'], d['tools'], d['skills'], d['num_skills']
-        )
-
-    def __str__(self):
-        return f"You are proficient with the following items, " \
-               f"in addition to any proficiencies provided by your race or background.\n" \
-               f"Armor: {', '.join(self.armor) or 'None'}\n" \
-               f"Weapons: {', '.join(self.weapons) or 'None'}\n" \
-               f"Tools: {', '.join(self.tools) or 'None'}\n" \
-               f"Skills: Choose {self.num_skills} from {natural_join(self.skills, 'or')}"
 
 
 class ClassTable:

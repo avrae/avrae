@@ -4,6 +4,7 @@ d20==1.0.1
 
 # top-level deps
 aioboto3==7.0.0
+launchdarkly-server-sdk==6.13.0
 pyjwt==1.7.1
 
 # other deps (needs to be organized)

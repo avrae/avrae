@@ -70,6 +70,7 @@ Env vars required to deploy to production:
 - `DYNAMO_ENTITY_TABLE` - Table name for Entitlements entity table
 - `AWS_ACCESS_KEY_ID` - AWS Access Key to access Dynamo
 - `AWS_SECRET_ACCESS_KEY` - AWS Secret Access Key
+- `LAUNCHDARKLY_SDK_KEY` - LaunchDarkly SDK Key
 
 Other env vars:
 - `NUM_SHARDS` - explicitly set the number of shards to run

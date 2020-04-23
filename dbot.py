@@ -25,6 +25,7 @@ from cogs5e.models.errors import AvraeException, EvaluationError, RequiresLicens
 from gamedata.compendium import compendium
 from gamedata.ddb import BeyondClient, BeyondClientBase
 from gamedata.lookuputils import handle_required_license
+from utils.aldclient import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
@@ -81,6 +82,9 @@ class Avrae(commands.AutoShardedBot):
         else:
             self.ddb = BeyondClient(self.loop)
 
+        # launchdarkly
+        self.ldclient = AsyncLaunchDarklyClient(sdk_key=config.LAUNCHDARKLY_SDK_KEY)
+
     async def setup_rdb(self):
         if config.TESTING:
             redis_url = self.credentials.test_redis_url
@@ -102,6 +106,11 @@ class Avrae(commands.AutoShardedBot):
 
         if self.is_cluster_0:
             await self.rdb.incr('build_num')
+
+    async def close(self):
+        await super().close()
+        await self.ddb.close()
+        self.ldclient.close()
 
     @property
     def is_cluster_0(self):

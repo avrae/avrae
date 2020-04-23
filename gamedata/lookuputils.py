@@ -59,15 +59,31 @@ async def handle_required_license(ctx, err):
 
     embed = EmbedWithAuthor(ctx)
     if not err.has_connected_ddb:
-        embed.title = f"Connect your D&D Beyond account to view {result.name}!"
-        embed.url = "https://www.dndbeyond.com/account"
-        embed.description = \
-            "It looks like you don't have your Discord account connected to your D&D Beyond account!\n" \
-            "Linking your account means that you'll be able to use everything you own on " \
-            "D&D Beyond in Avrae for free - you can link your accounts " \
-            "[here](https://www.dndbeyond.com/account)."
-        embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
-                              "link.")
+        # was the user blocked from nSRD by a feature flag?
+        ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+        if ddb_user is None:
+            blocked_by_ff = False
+        else:
+            blocked_by_ff = not (await ctx.bot.ldclient.variation("entitlements-enabled", ddb_user.to_ld_dict(), False))
+
+        if blocked_by_ff:
+            embed.title = f"{result.name} is not available in the SRD!"
+            embed.description = \
+                f"Unfortunately, {result.name} is not available in the SRD (what Wizards of the Coast offers for " \
+                f"free). You can see everything that is available in the SRD " \
+                f"[here](http://dnd.wizards.com/articles/features/systems-reference-document-srd).\n\n" \
+                f"In the near future, you will be able to connect your D&D Beyond account to Avrae to view the " \
+                f"non-SRD content you own on D&D Beyond; stay tuned!"
+        else:
+            embed.title = f"Connect your D&D Beyond account to view {result.name}!"
+            embed.url = "https://www.dndbeyond.com/account"
+            embed.description = \
+                "It looks like you don't have your Discord account connected to your D&D Beyond account!\n" \
+                "Linking your account means that you'll be able to use everything you own on " \
+                "D&D Beyond in Avrae for free - you can link your accounts " \
+                "[here](https://www.dndbeyond.com/account)."
+            embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
+                                  "link.")
     else:
         if not result.url:
             url = "https://www.dndbeyond.com/marketplace"

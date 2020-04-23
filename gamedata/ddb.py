@@ -32,6 +32,9 @@ class BeyondClientBase:  # for development - assumes no entitlements
     async def get_ddb_user(self, ctx, user_id):
         return None
 
+    async def close(self):
+        pass
+
 
 class BeyondClient(BeyondClientBase):
     """
@@ -132,6 +135,12 @@ class BeyondClient(BeyondClientBase):
             return UserEntitlements.from_dict(cached_user_entitlements)
 
         user = await self.get_ddb_user(ctx, user_id)
+
+        # feature flag: is this user allowed to use entitlements?
+        enabled_ff = await ctx.bot.ldclient.variation("entitlements-enabled", user.to_ld_dict(), False)
+        if not enabled_ff:
+            return None
+
         if user is None:
             return None
         else:
@@ -286,6 +295,13 @@ class BeyondUser:
             "roles": self.roles,
             "subscriber": self.subscriber,
             "subscription_tier": self.subscription_tier
+        }
+
+    def to_ld_dict(self):
+        """Returns a dict representing the DDB user in LaunchDarkly."""
+        return {
+            "key": self.user_id,
+            "name": self.username
         }
 
     @property

@@ -95,3 +95,25 @@ def can_edit_serverbrew():
         )
 
     return commands.check(predicate)
+
+
+def feature_flag(flag_name, use_ddb_user=False, default=False):
+    async def predicate(ctx):
+        if use_ddb_user:
+            ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+            if ddb_user is None:
+                user = {"key": str(ctx.author.id), "anonymous": True}
+            else:
+                user = ddb_user.to_ld_dict()
+        else:
+            user = {"key": str(ctx.author.id), "name": str(ctx.author)}
+
+        flag_on = await ctx.bot.ldclient.variation(flag_name, user, default)
+        if flag_on:
+            return True
+
+        raise commands.CheckFailure(
+            "This command is currently disabled. Check back later!"
+        )
+
+    return commands.check(predicate)

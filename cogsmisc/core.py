@@ -14,6 +14,7 @@ from discord.ext import commands
 
 from cogs5e.models import embeds
 from cogsmisc.stats import Stats
+from utils import checks
 
 
 class Core(commands.Cog):
@@ -103,6 +104,7 @@ class Core(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
+    @checks.feature_flag("entitlements-enabled", use_ddb_user=True)
     async def ddb(self, ctx):
         """Displays information about your D&D Beyond account."""
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)

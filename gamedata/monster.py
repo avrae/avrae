@@ -63,7 +63,7 @@ class Monster(StatBlock, Sourced):
             levels = None
 
         Sourced.__init__(self, 'monster', homebrew, source=kwargs['source'],
-                         entity_id=kwargs.get('id'), page=kwargs.get('page'), url=kwargs.get('url'),
+                         entity_id=kwargs.get('entity_id'), page=kwargs.get('page'), url=kwargs.get('url'),
                          is_free=kwargs.get('is_free'))
         StatBlock.__init__(
             self,

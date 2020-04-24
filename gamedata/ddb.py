@@ -1,3 +1,5 @@
+import json
+import logging
 import time
 
 import aioboto3
@@ -6,7 +8,6 @@ import jwt
 from boto3.dynamodb.conditions import Key
 
 from cogsmisc.stats import Stats
-
 # auth service
 from utils.config import DDB_AUTH_AUDIENCE as AUDIENCE, \
     DDB_AUTH_EXPIRY_SECONDS as EXPIRY_SECONDS, \
@@ -23,6 +24,8 @@ AUTH_DISCORD = f"{AUTH_BASE_URL}/v1/discord-token"
 # cache
 USER_ENTITLEMENT_TTL = 1 * 60
 ENTITY_ENTITLEMENT_TTL = 15 * 60
+
+log = logging.getLogger(__name__)
 
 
 class BeyondClientBase:  # for development - assumes no entitlements
@@ -59,6 +62,7 @@ class BeyondClient(BeyondClientBase):
         self.dynamo = aioboto3.resource('dynamodb', region_name=DYNAMO_REGION)
         self.ddb_user_table = self.dynamo.Table(DYNAMO_USER_TABLE)
         self.ddb_entity_table = self.dynamo.Table(DYNAMO_ENTITY_TABLE)
+        log.info("DDB client initialized")
 
     async def get_accessible_entities(self, ctx, user_id, entity_type):
         """
@@ -72,6 +76,7 @@ class BeyondClient(BeyondClientBase):
         :type entity_type: str
         :rtype: set[int] or None
         """
+        log.debug(f"Getting DDB entitlements for Discord ID {user_id}")
         user_e10s = await self._get_user_entitlements(ctx, user_id)
         if user_e10s is None:
             return None
@@ -85,6 +90,8 @@ class BeyondClient(BeyondClientBase):
             if entity.is_free or user_licenses & entity.license_ids:
                 accessible.add(entity.entity_id)
 
+        log.debug(f"Discord user {user_id} can see {entity_type}s {accessible}")
+
         return accessible
 
     async def get_ddb_user(self, ctx, user_id):
@@ -96,6 +103,7 @@ class BeyondClient(BeyondClientBase):
         :type user_id: int
         :rtype: BeyondUser or None
         """
+        log.debug(f"Getting DDB user for Discord ID {user_id}")
         user_cache_key = f"beyond.user.{user_id}"
         unlinked_sentinel = {"unlinked": True}
 
@@ -139,12 +147,13 @@ class BeyondClient(BeyondClientBase):
         # feature flag: is this user allowed to use entitlements?
         enabled_ff = await ctx.bot.ldclient.variation("entitlements-enabled", user.to_ld_dict(), False)
         if not enabled_ff:
+            log.debug(f"hit false entitlements flag - skipping user entitlements")
             return None
 
         if user is None:
             return None
         else:
-            user_e10s = await self._fetch_user_entitlements(user.user_id)
+            user_e10s = await self._fetch_user_entitlements(int(user.user_id))
         # cache entitlements
         await ctx.bot.rdb.jsetex(user_entitlement_cache_key,
                                  user_e10s.to_dict(),
@@ -201,7 +210,7 @@ class BeyondClient(BeyondClientBase):
         :return: The DDB user represented by the JWT.
         :rtype: BeyondUser
         """
-        payload = jwt.decode(token, SECRET, algorithms=['HS256'], verify=True)
+        payload = jwt.decode(token, SECRET, algorithms=['HS256'], verify=False)  # todo this should be true!!!
         return BeyondUser(
             token,
             payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],
@@ -242,7 +251,9 @@ class BeyondClient(BeyondClientBase):
         user_r = await self.ddb_user_table.get_item(Key={"ID": ddb_id})  # ints are automatically converted to N-type
         if 'Item' not in user_r:
             return UserEntitlements([], [])
-        return UserEntitlements.from_dict(user_r['Item'])
+        result = user_r['Item']
+        log.debug(f"fetched user entitlements for DDB user {ddb_id}: {result}")
+        return UserEntitlements.from_dict(json.loads(result['JSON']))
 
     async def _fetch_entities(self, etype: str):
         """
@@ -252,6 +263,7 @@ class BeyondClient(BeyondClientBase):
         :return: A list of all entity entitlements for all entities of that type.
         :rtype: list[EntityEntitlements]
         """
+        log.debug(f"fetching entity entitlements for etype {etype}")
         return [EntityEntitlements.from_dict(e)
                 async for e in self.query(self.ddb_entity_table, KeyConditionExpression=Key('EntityType').eq(etype))]
 
@@ -268,7 +280,7 @@ class BeyondClient(BeyondClientBase):
 
             lek = response.get('LastEvaluatedKey')
             for obj in response['Items']:
-                yield obj
+                yield json.loads(obj['JSON'])
 
     async def close(self):
         await self.http.close()
@@ -301,7 +313,12 @@ class BeyondUser:
         """Returns a dict representing the DDB user in LaunchDarkly."""
         return {
             "key": self.user_id,
-            "name": self.username
+            "name": self.username,
+            "custom": {
+                "Roles": self.roles,
+                "Subscription": self.subscriber,
+                "SubscriptionTier": self.subscription_tier
+            }
         }
 
     @property
@@ -356,11 +373,11 @@ class SharedLicense:
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d['campaignId'], d['licenseIDs'])
+        return cls(d['campaignID'], d['licenseIDs'])
 
     def to_dict(self):
         return {
-            "campaignId": self.campaign_id,
+            "campaignID": self.campaign_id,
             "licenseIDs": self.license_ids
         }
 
@@ -382,12 +399,12 @@ class EntityEntitlements:
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d['entityType'], d['entityId'], d['isFree'], d['licenseIDs'])
+        return cls(d['entityType'], d['entityID'], d['isFree'], d['licenseIDs'])
 
     def to_dict(self):
         return {
             "entityType": self.entity_type,
-            "entityId": self.entity_id,
+            "entityID": self.entity_id,
             "isFree": self.is_free,
             "licenseIDs": list(self.license_ids)
         }

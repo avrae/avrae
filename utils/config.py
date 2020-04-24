@@ -34,7 +34,7 @@ DICECLOUD_API_KEY = credentials.dicecloud_token if not TESTING else credentials.
 GOOGLE_SERVICE_ACCOUNT = os.getenv('GOOGLE_SERVICE_ACCOUNT')  # optional - if not supplied, uses avrae-google.json
 
 # ---- ddb auth ----
-# if environment is development, DDB auth is skipped
+# if environment is development, DDB auth is skipped unless auth service url is not null
 DDB_AUTH_SECRET = os.getenv('DDB_AUTH_SECRET')
 DDB_AUTH_AUDIENCE = os.getenv('DDB_AUTH_AUDIENCE', 'avrae.io')
 DDB_AUTH_ISSUER = os.getenv('DDB_AUTH_ISSUER', 'dndbeyond.com')

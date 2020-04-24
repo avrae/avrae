@@ -77,13 +77,13 @@ class Avrae(commands.AutoShardedBot):
             sentry_sdk.init(dsn=config.SENTRY_DSN, environment=config.ENVIRONMENT.title(), release=release)
 
         # ddb entitlements
-        if config.TESTING:
+        if config.TESTING and config.DDB_AUTH_SERVICE_URL is None:
             self.ddb = BeyondClientBase()
         else:
             self.ddb = BeyondClient(self.loop)
 
         # launchdarkly
-        self.ldclient = AsyncLaunchDarklyClient(sdk_key=config.LAUNCHDARKLY_SDK_KEY)
+        self.ldclient = AsyncLaunchDarklyClient(self.loop, sdk_key=config.LAUNCHDARKLY_SDK_KEY)
 
     async def setup_rdb(self):
         if config.TESTING:

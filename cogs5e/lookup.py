@@ -4,7 +4,6 @@ Created on Nov 29, 2016
 @author: andrew
 """
 import itertools
-import textwrap
 
 import discord
 from discord.ext import commands
@@ -17,7 +16,7 @@ from gamedata.compendium import compendium
 from gamedata.lookuputils import HOMEBREW_EMOJI, get_item_choices, get_monster_choices, get_spell_choices
 from gamedata.shared import SourcedTrait
 from utils import checks
-from utils.functions import get_positivity, search_and_select
+from utils.functions import get_positivity, search_and_select, trim_str
 
 LARGE_THRESHOLD = 200
 
@@ -137,7 +136,8 @@ class Lookup(commands.Cog):
     @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        result: SourcedTrait = await self._lookup_search2(ctx, compendium.cfeats, name, 'classfeat')  # todo
+        result: SourcedTrait = await self._lookup_search2(ctx, compendium.cfeats, name,
+                                                          entity_type='class', query_type='classfeat')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -185,7 +185,7 @@ class Lookup(commands.Cog):
                     embed.add_field(name=resource, value=value)
 
             for f in level_features:
-                embed.add_field(name=f.name, value=textwrap.shorten(f.text, 1020, placeholder='...'), inline=False)
+                embed.add_field(name=f.name, value=trim_str(f.text, 1024), inline=False)
 
             embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
 
@@ -194,7 +194,8 @@ class Lookup(commands.Cog):
     @commands.command()
     async def subclass(self, ctx, *, name: str):
         """Looks up a subclass."""
-        result: gamedata.Subclass = await self._lookup_search2(ctx, compendium.subclasses, name, 'subclass')
+        result: gamedata.Subclass = await self._lookup_search2(ctx, compendium.subclasses, name,
+                                                               entity_type='class', query_type='subclass')
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -203,7 +204,7 @@ class Lookup(commands.Cog):
 
         for level in result.levels:
             for feature in level:
-                text = textwrap.shorten(feature.text, 1020, placeholder='...')
+                text = trim_str(feature.text, 1024)
                 embed.add_field(name=feature.name, value=text, inline=False)
 
         embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
@@ -226,7 +227,7 @@ class Lookup(commands.Cog):
         for trait in result.traits:
             if trait.name.lower() in ignored_fields:
                 continue
-            text = textwrap.shorten(trait.text, width=1020, placeholder="...")
+            text = trim_str(trait.text, 1024)
             embed.add_field(name=trait.name, value=text, inline=False)
 
         await (await self._get_destination(ctx)).send(embed=embed)
@@ -466,7 +467,7 @@ class Lookup(commands.Cog):
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
         choices = await get_item_choices(ctx, filter_by_license=False)
-        item = await self._lookup_search2(ctx, choices, name, 'item')
+        item = await self._lookup_search2(ctx, choices, name, entity_type='magic-item', query_type='item')
 
         embed = EmbedWithAuthor(ctx)
 
@@ -480,7 +481,7 @@ class Lookup(commands.Cog):
             else:
                 embed.add_field(name="Attunement", value=f"Requires Attunement {item.attunement}", inline=False)
 
-        text = textwrap.shorten(item.desc, 5500, placeholder='...')
+        text = trim_str(item.desc, 5500)
         add_fields_from_long_text(embed, "Description", text)
 
         if item.image:
@@ -560,15 +561,19 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         return ctx.author if pm else ctx.channel
 
-    async def _lookup_search2(self, ctx, entities, query, entity_type):
+    async def _lookup_search2(self, ctx, entities, query, entity_type, query_type=None):
         """
         :type ctx: discord.ext.commands.Context
         :type entities: list[gamedata.shared.Sourced]
         :type query: str
-        :type entity_type: str
+        :param str entity_type: The entity type to search entitlements tables for.
+        :param str query_type: The type of the object being queried for (default entity type)
         :rtype: gamedata.shared.Sourced
         :raises: RequiresLicense if an entity that requires a license is selected
         """
+        if query_type is None:
+            query_type = entity_type
+
         # this may take a while, so type
         await ctx.trigger_typing()
 
@@ -595,7 +600,7 @@ class Lookup(commands.Cog):
             selectkey=selectkey)
 
         # log the query
-        await self._add_training_data(entity_type, query, result.name, metadata=metadata, srd=result.is_free,
+        await self._add_training_data(query_type, query, result.name, metadata=metadata, srd=result.is_free,
                                       could_view=can_access(result))
 
         # display error if not srd

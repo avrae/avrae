@@ -443,3 +443,10 @@ def natural_join(things, between: str):
         return f" {between} ".join(things)
     first_part = ", ".join(things[:-1])
     return f"{first_part}, {between} {things[-1]}"
+
+
+def trim_str(text, max_len):
+    """Trims a string to max_len."""
+    if len(text) < max_len:
+        return text
+    return f"{text[:max_len - 4]}..."

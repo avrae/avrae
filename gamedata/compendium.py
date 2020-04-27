@@ -12,7 +12,7 @@ from gamedata.item import Item
 from gamedata.klass import Class, Subclass
 from gamedata.monster import Monster
 from gamedata.race import Race
-from gamedata.shared import SourcedTrait, Trait
+from gamedata.shared import SourcedTrait
 from gamedata.spell import Spell
 from utils import config
 
@@ -34,14 +34,14 @@ class Compendium:
 
         # models
         self.backgrounds = []  # type: list[Background]
-        self.cfeats = []  # type: list[Trait]
+        self.cfeats = []  # type: list[SourcedTrait]
         self.classes = []  # type: list[Class]
         self.subclasses = []  # type: list[Subclass]
         self.races = []  # type: list[Race]
         self.feats = []  # type: list[Feat]
         self.items = []  # type: list[Item]
         self.monsters = []  # type: list[Monster]
-        self.rfeats = []  # type: list[Trait]
+        self.rfeats = []  # type: list[SourcedTrait]
         self.spells = []  # type: list[Spell]
 
         # blobs
@@ -122,22 +122,26 @@ class Compendium:
                 copied.name = f"{cls.name}: {subcls.name}"
                 self.subclasses.append(copied)
 
-    def _load_classfeats(self):  # todo?
+    def _load_classfeats(self):
+        """
+        Loads all class features as a list of SourcedTraits. Class feature entity IDs inherit the entity ID of their
+        parent class.
+        """
         for cls in self.classes:
             for level in cls.levels:
                 for feature in level:
-                    copied = SourcedTrait.from_trait_and_sourced(feature, cls)
+                    copied = SourcedTrait.from_trait_and_sourced(feature, cls, "classfeat")
                     copied.name = f"{cls.name}: {feature.name}"
                     self.cfeats.append(copied)
 
             for subcls in cls.subclasses:
                 for level in subcls.levels:
                     for feature in level:
-                        copied = SourcedTrait.from_trait_and_sourced(feature, subcls)
+                        copied = SourcedTrait.from_trait_and_sourced(feature, subcls, "classfeat")
                         copied.name = f"{cls.name}: {subcls.name}: {feature.name}"
                         self.cfeats.append(copied)
 
-    def _load_racefeats(self):
+    def _load_racefeats(self):  # todo
         for race in self.races:
             for feature in race.traits:
                 copied = SourcedTrait.from_trait_and_sourced(feature, race)

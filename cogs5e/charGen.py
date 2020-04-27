@@ -88,7 +88,7 @@ class CharGenerator(commands.Cog):
             race_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for race.")
-        race_choices = await available(ctx, compendium.races, 'race')
+        race_choices = await available(ctx, compendium.races, 'race')  # todo
         race = await search_and_select(ctx, race_choices, race_response.content, lambda e: e.name)
 
         await ctx.send(author.mention + " What class?")
@@ -99,7 +99,7 @@ class CharGenerator(commands.Cog):
         class_choices = await available(ctx, compendium.classes, 'class')
         _class = await search_and_select(ctx, class_choices, class_response.content, lambda e: e.name)
 
-        subclass_choices = await available(ctx, _class.subclasses, 'subclass')
+        subclass_choices = await available(ctx, _class.subclasses, 'class')
         if subclass_choices:
             await ctx.send(author.mention + " What subclass?")
             try:
@@ -134,7 +134,7 @@ class CharGenerator(commands.Cog):
         await ctx.author.send("**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
-        race = race or random.choice(await available(ctx, compendium.races, 'race'))
+        race = race or random.choice(await available(ctx, compendium.races, 'race'))  # todo
 
         embed = EmbedWithAuthor(ctx)
         embed.title = race.name
@@ -155,7 +155,7 @@ class CharGenerator(commands.Cog):
         # class
         _class = _class or random.choice(await available(ctx, compendium.classes, 'class'))
         subclass = subclass or (random.choice(subclass_choices)
-                                if (subclass_choices := await available(ctx, _class.subclasses, 'subclass')) else None)
+                                if (subclass_choices := await available(ctx, _class.subclasses, 'class')) else None)
         embed = EmbedWithAuthor(ctx)
 
         embed.title = _class.name

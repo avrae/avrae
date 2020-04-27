@@ -67,13 +67,24 @@ async def handle_required_license(ctx, err):
             blocked_by_ff = not (await ctx.bot.ldclient.variation("entitlements-enabled", ddb_user.to_ld_dict(), False))
 
         if blocked_by_ff:
-            embed.title = f"{result.name} is not available in the SRD!"
-            embed.description = \
-                f"Unfortunately, {result.name} is not available in the SRD (what Wizards of the Coast offers for " \
-                f"free). You can see everything that is available in the SRD " \
-                f"[here](http://dnd.wizards.com/articles/features/systems-reference-document-srd).\n\n" \
-                f"In the near future, you will be able to connect your D&D Beyond account to Avrae to view the " \
-                f"non-SRD content you own on D&D Beyond; stay tuned!"
+            # get the message from feature flag
+            # replacements:
+            # $entity_type$, $entity_name$, $source$, $long_source$
+            unavailable_title = await ctx.bot.ldclient.variation(
+                "entitlements-disabled-header", ddb_user.to_ld_dict(), f"{result.name} is not available")
+            unavailable_desc = await ctx.bot.ldclient.variation(
+                "entitlements-disabled-message", ddb_user.to_ld_dict(), f"{result.name} is currently unavailable")
+
+            embed.title = unavailable_title \
+                .replace('$entity_type$', result.entity_type) \
+                .replace('$entity_name$', result.name) \
+                .replace('$source$', result.source) \
+                .replace('$long_source$', long_source_name(result.source))
+            embed.description = unavailable_desc \
+                .replace('$entity_type$', result.entity_type) \
+                .replace('$entity_name$', result.name) \
+                .replace('$source$', result.source) \
+                .replace('$long_source$', long_source_name(result.source))
         else:
             embed.title = f"Connect your D&D Beyond account to view {result.name}!"
             embed.url = "https://www.dndbeyond.com/account"

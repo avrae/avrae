@@ -141,7 +141,7 @@
     "actions": [
       {
         "name": "Dagger",
-        "desc": "_Melee or _Ranged Weapon Attack:__ +5 to hit, reach 5 ft. or range 20/60 ft., one target. _Hit:_ 4 (1d4 + 2) piercing damage."
+        "desc": "_Melee or_Ranged Weapon Attack:__ +5 to hit, reach 5 ft. or range 20/60 ft., one target. _Hit:_ 4 (1d4 + 2) piercing damage."
       }
     ],
     "reactions": [],
@@ -487,5 +487,228 @@
     "id": 16939,
     "url": "https://www.dndbeyond.com/monsters/kobold",
     "isFree": true
+  },
+  {
+    "name": "Non-Free Kobold",
+    "size": "Small",
+    "race": "humanoid (kobold)",
+    "alignment": "lawful evil",
+    "ac": 12,
+    "armortype": "",
+    "hp": 5,
+    "hitdice": "2d6 + -2",
+    "speed": "30 ft.",
+    "ability_scores": {
+      "prof_bonus": 2,
+      "strength": 7,
+      "dexterity": 15,
+      "constitution": 9,
+      "intelligence": 8,
+      "wisdom": 7,
+      "charisma": 8
+    },
+    "saves": {
+      "strengthSave": {
+        "value": -2
+      },
+      "dexteritySave": {
+        "value": 2
+      },
+      "constitutionSave": {
+        "value": -1
+      },
+      "intelligenceSave": {
+        "value": -1
+      },
+      "wisdomSave": {
+        "value": -2
+      },
+      "charismaSave": {
+        "value": -1
+      }
+    },
+    "skills": {
+      "acrobatics": {
+        "value": 2
+      },
+      "animalHandling": {
+        "value": -2
+      },
+      "arcana": {
+        "value": -1
+      },
+      "athletics": {
+        "value": -2
+      },
+      "deception": {
+        "value": -1
+      },
+      "history": {
+        "value": -1
+      },
+      "initiative": {
+        "value": 2
+      },
+      "insight": {
+        "value": -2
+      },
+      "intimidation": {
+        "value": -1
+      },
+      "investigation": {
+        "value": -1
+      },
+      "medicine": {
+        "value": -2
+      },
+      "nature": {
+        "value": -1
+      },
+      "perception": {
+        "value": -2
+      },
+      "performance": {
+        "value": -1
+      },
+      "persuasion": {
+        "value": -1
+      },
+      "religion": {
+        "value": -1
+      },
+      "sleightOfHand": {
+        "value": 2
+      },
+      "stealth": {
+        "value": 2
+      },
+      "survival": {
+        "value": -2
+      },
+      "strength": {
+        "value": -2
+      },
+      "dexterity": {
+        "value": 2
+      },
+      "constitution": {
+        "value": -1
+      },
+      "intelligence": {
+        "value": -1
+      },
+      "wisdom": {
+        "value": -2
+      },
+      "charisma": {
+        "value": -1
+      }
+    },
+    "senses": "darkvision 60 ft.",
+    "passiveperc": 8,
+    "display_resists": {
+      "resist": [],
+      "immune": [],
+      "vuln": []
+    },
+    "condition_immune": [],
+    "languages": [
+      "Common",
+      "Draconic"
+    ],
+    "cr": "1/8",
+    "xp": 25,
+    "traits": [
+      {
+        "name": "Sunlight Sensitivity",
+        "desc": "While in sunlight, the kobold has disadvantage on attack rolls, as well as on Wisdom (Perception) checks that rely on sight."
+      },
+      {
+        "name": "Pack Tactics",
+        "desc": "The kobold has advantage on an attack roll against a creature if at least one of the kobold's allies is within 5 feet of the creature and the ally isn't incapacitated."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Dagger",
+        "desc": "_Melee Weapon Attack:_ +4 to hit, reach 5 ft., one target. _Hit:_ 4 (1d4 + 2) piercing damage."
+      },
+      {
+        "name": "Sling",
+        "desc": "_Ranged Weapon Attack:_ +4 to hit, range 30/120 ft., one target. _Hit:_ 4 (1d4 + 2) bludgeoning damage."
+      }
+    ],
+    "reactions": [],
+    "legactions": [],
+    "la_per_round": 0,
+    "image_url": "https://media-waterdeep.cursecdn.com/avatars/thumbnails/0/379/1000/1000/636252780450300625.jpeg",
+    "spellbook": null,
+    "resistances": {
+      "resist": [],
+      "immune": [],
+      "vuln": []
+    },
+    "attacks": [
+      {
+        "name": "Dagger",
+        "automation": [
+          {
+            "type": "target",
+            "target": "each",
+            "effects": [
+              {
+                "type": "attack",
+                "hit": [
+                  {
+                    "type": "damage",
+                    "damage": "1d4 + 2 [piercing]"
+                  }
+                ],
+                "miss": [],
+                "attackBonus": "4"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "*Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 4 (1d4 + 2) piercing damage."
+          }
+        ],
+        "_v": 2
+      },
+      {
+        "name": "Sling",
+        "automation": [
+          {
+            "type": "target",
+            "target": "each",
+            "effects": [
+              {
+                "type": "attack",
+                "hit": [
+                  {
+                    "type": "damage",
+                    "damage": "1d4 + 2 [bludgeoning]"
+                  }
+                ],
+                "miss": [],
+                "attackBonus": "4"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "*Ranged Weapon Attack:* +4 to hit, range 30/120 ft., one target. *Hit:* 4 (1d4 + 2) bludgeoning damage."
+          }
+        ],
+        "_v": 2
+      }
+    ],
+    "proper": false,
+    "source": "BR",
+    "page": 142,
+    "id": 16939,
+    "url": "https://www.dndbeyond.com/monsters/kobold",
+    "isFree": false
   }
 ]

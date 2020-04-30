@@ -199,6 +199,16 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "DELETE"
         assert request.url.endswith(f"/channels/{channel}/pins/{MESSAGE_ID}")
 
+    async def receive_typing(self, dm=False):
+        """
+        Assert that the bot sends typing.
+        """
+        request = await self.get_request()
+        channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
+
+        assert request.method == "POST"
+        assert request.url.endswith(f"/channels/{channel}/typing")
+
     def queue_empty(self):
         return self._request_check_queue.empty()
 

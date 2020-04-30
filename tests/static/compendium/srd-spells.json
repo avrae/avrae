@@ -116,5 +116,52 @@
     "id": 2102,
     "url": "https://www.dndbeyond.com/spells/fireball",
     "isFree": true
+  },
+  {
+    "name": "Non-Free Fire Bolt",
+    "level": 0,
+    "school": "Evocation",
+    "classes": [
+      "Sorcerer",
+      "Wizard",
+      "Artificer"
+    ],
+    "subclasses": [],
+    "casttime": "1 action",
+    "range": "120 feet",
+    "components": "V, S",
+    "duration": "Instantaneous",
+    "description": "You hurl a mote of fire at a creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried.\n\nThis spell's damage increases by 1d10 when you reach 5th level (2d10), 11th level (3d10), and 17th level (4d10).",
+    "ritual": false,
+    "higherlevels": null,
+    "concentration": false,
+    "automation": [
+      {
+        "type": "target",
+        "target": "each",
+        "effects": [
+          {
+            "type": "attack",
+            "hit": [
+              {
+                "type": "damage",
+                "damage": "1d10[fire]",
+                "cantripScale": true
+              }
+            ],
+            "miss": []
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage. A flammable object hit by this spell ignites if it isn't being worn or carried."
+      }
+    ],
+    "source": "BR",
+    "page": 242,
+    "id": 2103,
+    "url": "https://www.dndbeyond.com/spells/fire-bolt",
+    "isFree": false
   }
 ]

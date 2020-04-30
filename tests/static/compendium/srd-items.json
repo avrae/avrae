@@ -1,29 +1,5 @@
 [
   {
-    "name": "Glamoured Studded Leather",
-    "meta": "*Armor (studded leather), rare*",
-    "attunement": false,
-    "desc": "While wearing this armor, you gain a +1 bonus to AC. You can also use a bonus action to speak the armor's command word and cause the armor to assume the appearance of a normal set of clothing or some other kind of armor. You decide what it looks like, including color, style, and accessories, but the armor retains its normal bulk and weight. The illusory appearance lasts until you use this property again or remove the armor.",
-    "image": null,
-    "source": "BR",
-    "page": 172,
-    "id": 4645,
-    "url": "https://www.dndbeyond.com/magic-items/glamoured-studded-leather",
-    "isFree": true
-  },
-  {
-    "name": "Staff of the Magi",
-    "meta": "*Staff, legendary*",
-    "attunement": "by a Sorcerer, Warlock, or Wizard",
-    "desc": "This staff can be wielded as a magic quarterstaff that grants a +2 bonus to attack and damage rolls made with it. While you hold it, you gain a +2 bonus to spell attack rolls.\n\nThe staff has 50 charges for the following properties. It regains 4d6 + 2 expended charges daily at dawn. If you expend the last charge, roll a d20. On a 20, the staff regains 1d12 + 1 charges.\n\n**Spell Absorption.** While holding the staff, you have advantage on saving throws against spells. In addition, you can use your reaction when another creature casts a spell that targets only you. If you do, the staff absorbs the magic of the spell, canceling its effect and gaining a number of charges equal to the absorbed spell's level. However, if doing so brings the staff's total number of charges above 50, the staff explodes as if you activated its retributive strike (see below).\n\n**Spells.** While holding the staff, you can use an action to expend some of its charges to cast one of the following spells from it, using your spell save DC and spellcasting ability: ******conjure elemental** (7 charges), ******dispel magic** (3 charges), ******fireball** (7th-level version, 7 charges), ******flaming sphere** (2 charges), ******ice storm** (4 charges), ******invisibility** (2 charges), ******knock** (2 charges), ******lightning bolt** (7th-level version, 7 charges), ******passwall** (5 charges), ******plane shift** (7 charges), ******telekinesis** (5 charges), ******wall of fire** (4 charges), or ******web** (2 charges).\n\nYou can also use an action to cast one of the following spells from the staff without using any charges: ******arcane lock** , ******detect magic** , ******enlarge/reduce** , ******light** , ******mage hand** , or ******protection from evil and good**.\n\n**Retributive Strike.** You can use an action to break the staff over your knee or against a solid surface, performing a retributive strike. The staff is destroyed and releases its remaining magic in an explosion that expands to fill a 30-foot-radius sphere centered on it.\n\nYou have a 50 percent chance to instantly travel to a random plane of existence, avoiding the explosion. If you fail to avoid the effect, you take force damage equal to 16 \u00d7 the number of charges in the staff. Every other creature in the area must make a DC 17 Dexterity saving throw. On a failed save, a creature takes an amount of damage based on how far away it is from the point of origin, as shown in the following table. On a successful save, a creature takes half as much damage.  \n  \n\n\n ```\nDistance from Origin  | Damage                                 \n----------------------|----------------------------------------\n10 ft. away or closer | 8 x the number of charges in the staff \n11 to 20 ft. away     | 6 x the number of charges in the staff \n21 to 30 ft. away     | 4 x the number of charges in the staff \n\n\n```",
-    "image": "https://media-waterdeep.cursecdn.com/avatars/thumbnails/19/260/315/315/636382374556930595.jpeg",
-    "source": "BR",
-    "page": 203,
-    "id": 4767,
-    "url": "https://www.dndbeyond.com/magic-items/staff-of-the-magi",
-    "isFree": true
-  },
-  {
     "name": "Longsword",
     "meta": "*Weapon: Martial, Melee*\n15gp, 3 lbs. --- 1d8 slashing - versatile (1d10)",
     "attunement": false,
@@ -31,9 +7,22 @@
     "image": null,
     "source": "BR",
     "page": null,
-    "id": 4,
+    "id": -4,
     "url": "https://www.dndbeyond.com/equipment/longsword",
     "isFree": true,
+    "typeId": 1782728300
+  },
+  {
+    "name": "Non-Free Longsword",
+    "meta": "*Weapon: Martial, Melee*\n15gp, 3 lbs. --- 1d8 slashing - versatile (1d10)",
+    "attunement": false,
+    "desc": "Proficiency with a longsword allows you to add your proficiency bonus to the attack roll for any attack you make with it.\n\n**Versatile**: This weapon can be used with one or two hands. A damage value in parentheses appears with the property--the damage when the weapon is used with two hands to make a melee attack.",
+    "image": null,
+    "source": "BR",
+    "page": null,
+    "id": -4,
+    "url": "https://www.dndbeyond.com/equipment/longsword",
+    "isFree": false,
     "typeId": 1782728300
   }
 ]

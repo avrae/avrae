@@ -610,7 +610,7 @@ class Lookup(commands.Cog):
             selectkey=selectkey)
 
         # get the entity
-        entity = result[0]
+        entity, entity_type = result
 
         # log the query
         await self._add_training_data(query_type, query, entity.name, metadata=metadata, srd=entity.is_free,
@@ -618,7 +618,7 @@ class Lookup(commands.Cog):
 
         # display error if not srd
         if not can_access(result):
-            raise errors.RequiresLicense(entity, available_ids[result[1]] is not None)
+            raise errors.RequiresLicense(entity, available_ids[entity_type] is not None)
         return entity
 
     # ==== various listeners ====

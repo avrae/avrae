@@ -10,7 +10,7 @@ from cogs5e.models import embeds
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument
 from gamedata.compendium import compendium
-from gamedata.lookuputils import available
+from gamedata.lookuputils import available, get_race_choices
 from utils.functions import get_selection, search_and_select
 
 log = logging.getLogger(__name__)
@@ -88,7 +88,7 @@ class CharGenerator(commands.Cog):
             race_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
             raise InvalidArgument("Timed out waiting for race.")
-        race_choices = await available(ctx, compendium.races, 'race')  # todo
+        race_choices = await get_race_choices(ctx)
         race = await search_and_select(ctx, race_choices, race_response.content, lambda e: e.name)
 
         await ctx.send(author.mention + " What class?")
@@ -134,7 +134,7 @@ class CharGenerator(commands.Cog):
         await ctx.author.send("**Stats for {0}:** `{1}`".format(name, stats))
         # Race Gen
         #    Racial Features
-        race = race or random.choice(await available(ctx, compendium.races, 'race'))  # todo
+        race = race or random.choice(await get_race_choices(ctx))
 
         embed = EmbedWithAuthor(ctx)
         embed.title = race.name

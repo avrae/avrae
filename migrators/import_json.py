@@ -15,9 +15,8 @@ LOAD_FILES = {
     'monsters': [],
     'items': [],
     'classes': [],
-
-    'srd-races': [],
-    'srd-racefeats': [],
+    'races': [],
+    'subraces': [],
 
     'srd-references': []
 }

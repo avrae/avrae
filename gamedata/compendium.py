@@ -1,5 +1,6 @@
 import asyncio
 import copy
+import itertools
 import json
 import logging
 import os
@@ -30,18 +31,24 @@ class Compendium:
         self.raw_feats = []  # type: list[dict]
         self.raw_items = []  # type: list[dict]
         self.raw_races = []  # type: list[dict]
+        self.raw_subraces = []  # type: list[dict]
         self.raw_spells = []  # type: list[dict]
 
         # models
         self.backgrounds = []  # type: list[Background]
+
         self.cfeats = []  # type: list[SourcedTrait]
         self.classes = []  # type: list[Class]
         self.subclasses = []  # type: list[Subclass]
+
         self.races = []  # type: list[Race]
+        self.subraces = []  # type: list[Race]
+        self.rfeats = []  # type: list[SourcedTrait]
+        self.subrfeats = []  # type: list[SourcedTrait]
+
         self.feats = []  # type: list[Feat]
         self.items = []  # type: list[Item]
         self.monsters = []  # type: list[Monster]
-        self.rfeats = []  # type: list[SourcedTrait]
         self.spells = []  # type: list[Spell]
 
         # blobs
@@ -82,6 +89,7 @@ class Compendium:
         self.raw_backgrounds = self.read_json('srd-backgrounds.json', [])
         self.raw_items = self.read_json('srd-items.json', [])
         self.raw_races = self.read_json('srd-races.json', [])
+        self.raw_subraces = self.read_json('srd-subraces.json', [])
         self.raw_spells = self.read_json('srd-spells.json', [])
 
         self.names = self.read_json('names.json', [])
@@ -96,15 +104,18 @@ class Compendium:
         self.raw_backgrounds = lookup.get('backgrounds', [])
         self.raw_items = lookup.get('items', [])
         self.raw_races = lookup.get('races', [])
+        self.raw_subraces = lookup.get('subraces', [])
         self.raw_spells = lookup.get('spells', [])
 
         self.names = lookup.get('names', [])
         self.rule_references = lookup.get('srd-references', [])
 
+    # noinspection DuplicatedCode
     def load_common(self):
         self.backgrounds = [Background.from_data(b) for b in self.raw_backgrounds]
         self.classes = [Class.from_data(c) for c in self.raw_classes]
         self.races = [Race.from_data(r) for r in self.raw_races]
+        self.subraces = [Race.from_data(r) for r in self.raw_subraces]
         self.feats = [Feat.from_data(f) for f in self.raw_feats]
         self.items = [Item.from_data(i) for i in self.raw_items]
         self.monsters = [Monster.from_data(m) for m in self.raw_monsters]
@@ -141,10 +152,10 @@ class Compendium:
                         copied.name = f"{cls.name}: {subcls.name}: {feature.name}"
                         self.cfeats.append(copied)
 
-    def _load_racefeats(self):  # todo
-        for race in self.races:
+    def _load_racefeats(self):
+        for race in itertools.chain(self.races, self.subraces):
             for feature in race.traits:
-                copied = SourcedTrait.from_trait_and_sourced(feature, race)
+                copied = SourcedTrait.from_trait_and_sourced(feature, race, "racefeat")
                 copied.name = f"{race.name}: {feature.name}"
                 self.rfeats.append(copied)
 

@@ -90,7 +90,7 @@ class Lookup(commands.Cog):
     @commands.command()
     async def feat(self, ctx, *, name: str):
         """Looks up a feat."""
-        result: gamedata.Feat = await self._lookup_search2(ctx, compendium.feats, name, 'feat')
+        result: gamedata.Feat = await self._lookup_search3(ctx, {'feat': compendium.feats}, name)
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -105,7 +105,9 @@ class Lookup(commands.Cog):
     @commands.command()
     async def racefeat(self, ctx, *, name: str):
         """Looks up a racial feature."""
-        result: SourcedTrait = await self._lookup_search2(ctx, compendium.rfeats, name, 'racefeat')  # todo
+        result: SourcedTrait = await self._lookup_search3(ctx,
+                                                          {'race': compendium.rfeats, 'subrace': compendium.subrfeats},
+                                                          name, 'racefeat')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -118,15 +120,15 @@ class Lookup(commands.Cog):
     @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        result: gamedata.Race = await self._lookup_search2(ctx, compendium.races, name, 'race')
+        result: gamedata.Race = await self._lookup_search3(ctx,
+                                                           {'race': compendium.races, 'subrace': compendium.subraces},
+                                                           name, 'race')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
         embed.url = result.url
         embed.add_field(name="Speed", value=result.speed)
         embed.add_field(name="Size", value=result.size)
-        if result.ability:
-            embed.add_field(name="Ability Bonuses", value=result.ability)
         for t in result.traits:
             add_fields_from_long_text(embed, t.name, t.text)
         embed.set_footer(text=f"Race | {result.source_str()}")
@@ -136,8 +138,8 @@ class Lookup(commands.Cog):
     @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        result: SourcedTrait = await self._lookup_search2(ctx, compendium.cfeats, name,
-                                                          entity_type='class', query_type='classfeat')
+        result: SourcedTrait = await self._lookup_search3(ctx, {'class': compendium.cfeats}, name,
+                                                          query_type='classfeat')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -153,7 +155,7 @@ class Lookup(commands.Cog):
         if level is not None and not 0 < level < 21:
             return await ctx.send("Invalid level.")
 
-        result: gamedata.Class = await self._lookup_search2(ctx, compendium.classes, name, 'class')
+        result: gamedata.Class = await self._lookup_search3(ctx, {'class': compendium.classes}, name)
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -194,8 +196,8 @@ class Lookup(commands.Cog):
     @commands.command()
     async def subclass(self, ctx, *, name: str):
         """Looks up a subclass."""
-        result: gamedata.Subclass = await self._lookup_search2(ctx, compendium.subclasses, name,
-                                                               entity_type='class', query_type='subclass')
+        result: gamedata.Subclass = await self._lookup_search3(ctx, {'class': compendium.subclasses}, name,
+                                                               query_type='subclass')
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
@@ -215,18 +217,14 @@ class Lookup(commands.Cog):
     @commands.command()
     async def background(self, ctx, *, name: str):
         """Looks up a background."""
-        result: gamedata.Background = await self._lookup_search2(ctx, compendium.backgrounds, name, 'background')
+        result: gamedata.Background = await self._lookup_search3(ctx, {'background': compendium.backgrounds}, name)
 
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
         embed.title = result.name
         embed.set_footer(text=f"Background | {result.source_str()}")
 
-        ignored_fields = ['suggested characteristics', 'personality trait', 'ideal', 'bond', 'flaw', 'specialty',
-                          'harrowing event']
         for trait in result.traits:
-            if trait.name.lower() in ignored_fields:
-                continue
             text = trim_str(trait.text, 1024)
             embed.add_field(name=trait.name, value=text, inline=False)
 
@@ -244,7 +242,7 @@ class Lookup(commands.Cog):
             return await ctx.invoke(token_cmd)
 
         choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search2(ctx, choices, name, 'monster')
+        monster = await self._lookup_search3(ctx, {'monster': choices}, name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
         url = monster.get_image_url()
@@ -282,7 +280,7 @@ class Lookup(commands.Cog):
             visible = False
 
         choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search2(ctx, choices, name, 'monster')
+        monster = await self._lookup_search3(ctx, {'monster': choices}, name)
 
         embed_queue = [EmbedWithAuthor(ctx)]
         color = embed_queue[-1].colour
@@ -407,7 +405,7 @@ class Lookup(commands.Cog):
     async def spell(self, ctx, *, name: str):
         """Looks up a spell."""
         choices = await get_spell_choices(ctx, filter_by_license=False)
-        spell = await self._lookup_search2(ctx, choices, name, 'spell')
+        spell = await self._lookup_search3(ctx, {'spell': choices}, name)
 
         embed = EmbedWithAuthor(ctx)
         embed.url = spell.url
@@ -467,7 +465,7 @@ class Lookup(commands.Cog):
     async def item_lookup(self, ctx, *, name):
         """Looks up an item."""
         choices = await get_item_choices(ctx, filter_by_license=False)
-        item = await self._lookup_search2(ctx, choices, name, entity_type='magic-item', query_type='item')
+        item = await self._lookup_search3(ctx, {'magic-item': choices}, name, query_type='item')
 
         embed = EmbedWithAuthor(ctx)
 
@@ -561,52 +559,67 @@ class Lookup(commands.Cog):
         pm = guild_settings.get("pm_result", False)
         return ctx.author if pm else ctx.channel
 
-    async def _lookup_search2(self, ctx, entities, query, entity_type, query_type=None):
+    async def _lookup_search3(self, ctx, entities, query, query_type=None):
         """
         :type ctx: discord.ext.commands.Context
-        :type entities: list[gamedata.shared.Sourced]
+        :param entities: A dict mapping entitlements entity types to the entities themselves.
+        :type entities: dict[str, list[gamedata.shared.Sourced]]
         :type query: str
-        :param str entity_type: The entity type to search entitlements tables for.
-        :param str query_type: The type of the object being queried for (default entity type)
+        :param str query_type: The type of the object being queried for (default entity type if only one dict key)
         :rtype: gamedata.shared.Sourced
         :raises: RequiresLicense if an entity that requires a license is selected
         """
-        if query_type is None:
-            query_type = entity_type
+        # sanity checks
+        if len(entities) == 0:
+            raise ValueError("At least 1 entity type must be passed in")
+        if query_type is None and len(entities) != 1:
+            raise ValueError("Query type must be passed for multiple entity types")
+        elif query_type is None:
+            query_type = list(entities.keys())[0]
 
         # this may take a while, so type
         await ctx.trigger_typing()
 
-        # get licensed objects
-        available_ids = await self.bot.ddb.get_accessible_entities(ctx, ctx.author.id, entity_type)
+        # get licensed objects, mapped by entity type
+        available_ids = {k: await self.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k) for k in entities}
 
         # helper
         def can_access(e):
-            return e.is_free \
-                   or available_ids is not None and e.entity_id in available_ids \
-                   or e.homebrew
+            the_entity, the_etype = e
+            return the_entity.is_free \
+                   or available_ids[the_etype] is not None and the_entity.entity_id in available_ids[the_etype] \
+                   or the_entity.homebrew
 
         # the selection display key
         def selectkey(e):
-            if e.homebrew:
-                return f"{e.name} ({HOMEBREW_EMOJI})"
+            the_entity, _ = e
+            if the_entity.homebrew:
+                return f"{the_entity.name} ({HOMEBREW_EMOJI})"
             elif can_access(e):
-                return e.name
-            return f"{e.name}\\*"
+                return the_entity.name
+            return f"{the_entity.name}\\*"
 
         # get the object
+        choices = []
+        for etype, es in entities.items():
+            for entity in es:
+                choices.append((entity, etype))  # entity, entity type
+
         result, metadata = await search_and_select(
-            ctx, entities, query, lambda e: e.name, return_metadata=True,
+            ctx, choices, query, lambda e: e[0].name, return_metadata=True,
             selectkey=selectkey)
 
+        # get the entity
+        entity = result[0]
+
         # log the query
-        await self._add_training_data(query_type, query, result.name, metadata=metadata, srd=result.is_free,
+        await self._add_training_data(query_type, query, entity.name, metadata=metadata, srd=entity.is_free,
                                       could_view=can_access(result))
 
         # display error if not srd
         if not can_access(result):
-            raise errors.RequiresLicense(result, available_ids is not None)
-        return result
+            raise errors.RequiresLicense(entity, available_ids[result[1]] is not None)
+        return entity
 
     # ==== various listeners ====
     @commands.Cog.listener()

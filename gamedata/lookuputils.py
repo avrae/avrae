@@ -260,3 +260,36 @@ async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
             if servpack.id != pack_id:
                 choices.extend(servpack.get_search_formatted_items())
     return choices
+
+
+# ---- race stuff ----
+async def get_race_choices(ctx, filter_by_license=True):
+    """
+    Gets a list of races in the current context for the user to choose from.
+
+    :param ctx: The context.
+    :param filter_by_license: Whether to filter out entities the user cannot access.
+    """
+    if filter_by_license:
+        available_races = await available(ctx, compendium.races, 'race')
+        available_races.extend(await available(ctx, compendium.subraces, 'subrace'))
+    else:
+        available_races = compendium.races + compendium.subraces
+
+    return available_races
+
+
+async def get_rfeat_choices(ctx, filter_by_license=True):
+    """
+    Gets a list of racefeats in the current context for the user to choose from.
+
+    :param ctx: The context.
+    :param filter_by_license: Whether to filter out entities the user cannot access.
+    """
+    if filter_by_license:
+        available_rfeats = await available(ctx, compendium.rfeats, 'race')
+        available_rfeats.extend(await available(ctx, compendium.subrfeats, 'subrace'))
+    else:
+        available_rfeats = compendium.rfeats + compendium.subrfeats
+
+    return available_rfeats

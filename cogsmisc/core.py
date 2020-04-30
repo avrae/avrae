@@ -104,7 +104,6 @@ class Core(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    @checks.feature_flag("entitlements-enabled", use_ddb_user=True)
     async def ddb(self, ctx):
         """Displays information about your D&D Beyond account."""
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
@@ -123,8 +122,10 @@ class Core(commands.Cog):
 
         embed.title = f"Hello, {ddb_user.username}!"
         embed.url = "https://www.dndbeyond.com/account"
-        desc = f"You're all set! Any books or individual purchases made on D&D Beyond should be available for you " \
-               f"to use on Avrae."
+        default_desc = f"Thanks for linking your account! We'll reach out to you when the purchases you've made " \
+                       f"on D&D Beyond are available in Avrae."
+
+        desc = await self.bot.ldclient.variation("command.ddb.desc", ddb_user.to_ld_dict(), default_desc)
         embed.description = desc
 
         if ddb_user.is_staff:

@@ -237,7 +237,7 @@ async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
     :param homebrew: Whether to include homebrew entities.
     """
     if filter_by_license:
-        available_items = await available(ctx, compendium.items, 'item')
+        available_items = await available(ctx, compendium.items, 'magic-item')
     else:
         available_items = compendium.items
 

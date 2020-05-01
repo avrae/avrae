@@ -21,4 +21,7 @@ docker tag $imageName $awsAccountId.dkr.ecr.$ecrRegion.amazonaws.com/$ecrRepo:tr
 docker tag $imageName $awsAccountId.dkr.ecr.$ecrRegion.amazonaws.com/$ecrRepo:$environmentTag
 eval $(aws ecr get-login --region $ecrRegion --no-include-email)
 docker push $awsAccountId.dkr.ecr.$ecrRegion.amazonaws.com/$ecrRepo
-aws ecs update-service --cluster $clusterName-$clusterEnv --service $serviceName --force-new-deployment --region $ecsRegion
+
+if [[ $DO_RELEASE != 0 ]]; then
+    aws ecs update-service --cluster $clusterName-$clusterEnv --service $serviceName --force-new-deployment --region $ecsRegion
+fi

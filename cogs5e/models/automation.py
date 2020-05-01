@@ -11,6 +11,7 @@ from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgumen
 from cogs5e.models.initiative import Combatant, PlayerCombatant
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from utils.dice import RerollableStringifier
+from utils.functions import maybe_mod
 
 log = logging.getLogger(__name__)
 
@@ -269,7 +270,7 @@ class AutomationTarget:
 
 
 class Effect:
-    def __init__(self, type_, meta=None):
+    def __init__(self, type_, meta=None, **_):  # ignore bad kwargs
         self.type = type_
         if meta:
             meta = Effect.deserialize(meta)
@@ -628,7 +629,10 @@ class Save(Effect):
             except (TypeError, ValueError):
                 raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")
 
-        dc = autoctx.args.last('dc', type_=int) or dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
+        # dc hierarchy: arg > self.dc > spell cast override > spellbook dc
+        dc = dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
+        if 'dc' in autoctx.args:
+            dc = maybe_mod(autoctx.args.last('dc'), dc)
 
         if dc is None:
             raise NoSpellDC()

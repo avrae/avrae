@@ -12,7 +12,6 @@ from discord.ext.commands import NoPrivateMessage
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
-from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException
@@ -270,7 +269,8 @@ class InitTracker(commands.Cog):
 
     @init.command(name='join', aliases=['cadd', 'dcadd'])
     async def join(self, ctx, *, args: str = ''):
-        """Adds the current active character to combat. A character must be loaded through the SheetManager module first.
+        """
+        Adds the current active character to combat. A character must be loaded through the SheetManager module first.
         __Valid Arguments__ 
         adv/dis - Give advantage or disadvantage to the initiative roll.
         -b <condition bonus> - Adds a bonus to the combatants' Initiative roll.
@@ -278,8 +278,12 @@ class InitTracker(commands.Cog):
         -thumb <thumbnail URL> - Adds flavor image.
         -p <value> - Places combatant at the given value, instead of rolling.
         -h - Hides HP, AC, Resists, etc.
-        -group <group> - Adds the combatant to a group."""
+        -group <group> - Adds the combatant to a group.
+        [user snippet]
+        """
         char: Character = await Character.from_ctx(ctx)
+        args = await helpers.parse_snippets(args, ctx)
+        args = await char.parse_cvars(args, ctx)
         args = argparse(args)
 
         embed = EmbedWithCharacter(char, False)
@@ -438,6 +442,18 @@ class InitTracker(commands.Cog):
     async def reroll(self, ctx):
         """Rerolls initiative for all combatants."""
         combat = await Combat.from_ctx(ctx)
+
+        # repost summary message
+        old_summary = await combat.get_summary_msg()
+        new_summary = await ctx.send(combat.get_summary())
+        Combat.message_cache[new_summary.id] = new_summary  # add to cache
+        combat.summary = new_summary.id
+        try:
+            await new_summary.pin()
+            await old_summary.unpin()
+        except:
+            pass
+
         new_order = combat.reroll_dynamic()
         await ctx.send(f"Rerolled initiative! New order:\n{new_order}")
         await combat.final()

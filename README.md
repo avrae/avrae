@@ -60,7 +60,8 @@ You should set the `DICECLOUD_USER`, `DICECLOUD_PASS`, `DICECLOUD_TOKEN`, and `G
 #### Misc
 Env vars required to deploy to production:
 - `NUM_CLUSTERS` - equal to the number of ECS tasks running Avrae
-- `DDB_AUTH_SECRET` - JWT signing secret for DDB auth
+- `DDB_AUTH_SECRET` - JWT signing secret for DDB auth request
+- `DDB_AUTH_WATERDEEP_SECRET` - JWT signing secret for DDB auth response
 - `DDB_AUTH_AUDIENCE` - JWT audience (default `"avrae.io"`)
 - `DDB_AUTH_ISSUER` - JWT issuer (default `"dndbeyond.com"`)
 - `DDB_AUTH_EXPIRY_SECONDS` - JWT expiry (default 5m)

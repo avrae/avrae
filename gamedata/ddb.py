@@ -12,7 +12,8 @@ from cogsmisc.stats import Stats
 from utils.config import DDB_AUTH_AUDIENCE as AUDIENCE, \
     DDB_AUTH_EXPIRY_SECONDS as EXPIRY_SECONDS, \
     DDB_AUTH_ISSUER as ISSUER, \
-    DDB_AUTH_SECRET as SECRET, \
+    DDB_AUTH_SECRET as MY_SECRET, \
+    DDB_WATERDEEP_SECRET as WATERDEEP_SECRET, \
     DDB_AUTH_SERVICE_URL as AUTH_BASE_URL
 # dynamo
 # env: AWS_ACCESS_KEY_ID
@@ -199,7 +200,7 @@ class BeyondClient(BeyondClientBase):
             "iss": ISSUER
         }
 
-        return jwt.encode(jwt_body, SECRET, algorithm='HS256').decode()  # return as a str, not bytes
+        return jwt.encode(jwt_body, MY_SECRET, algorithm='HS256').decode()  # return as a str, not bytes
 
     @staticmethod
     def _parse_jwt(token: str):
@@ -210,7 +211,7 @@ class BeyondClient(BeyondClientBase):
         :return: The DDB user represented by the JWT.
         :rtype: BeyondUser
         """
-        payload = jwt.decode(token, SECRET, algorithms=['HS256'], verify=False)  # todo this should be true!!!
+        payload = jwt.decode(token, WATERDEEP_SECRET, algorithms=['HS256'], verify=True)
         return BeyondUser(
             token,
             payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],

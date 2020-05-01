@@ -36,6 +36,7 @@ GOOGLE_SERVICE_ACCOUNT = os.getenv('GOOGLE_SERVICE_ACCOUNT')  # optional - if no
 # ---- ddb auth ----
 # if environment is development, DDB auth is skipped unless auth service url is not null
 DDB_AUTH_SECRET = os.getenv('DDB_AUTH_SECRET')
+DDB_WATERDEEP_SECRET = os.getenv('DDB_AUTH_WATERDEEP_SECRET')
 DDB_AUTH_AUDIENCE = os.getenv('DDB_AUTH_AUDIENCE', 'avrae.io')
 DDB_AUTH_ISSUER = os.getenv('DDB_AUTH_ISSUER', 'dndbeyond.com')
 DDB_AUTH_EXPIRY_SECONDS = int(os.getenv('DDB_AUTH_EXPIRY_SECONDS', 5 * 60))

@@ -212,8 +212,7 @@ class BeyondClient(BeyondClientBase):
         :rtype: BeyondUser
         """
         payload = jwt.decode(token, WATERDEEP_SECRET, algorithms=['HS256'],
-                             issuer=ISSUER, audience=[ISSUER, AUDIENCE],
-                             verify=True)
+                             issuer=ISSUER, verify=True)
         return BeyondUser(
             token,
             payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],

@@ -211,7 +211,9 @@ class BeyondClient(BeyondClientBase):
         :return: The DDB user represented by the JWT.
         :rtype: BeyondUser
         """
-        payload = jwt.decode(token, WATERDEEP_SECRET, algorithms=['HS256'], verify=True)
+        payload = jwt.decode(token, WATERDEEP_SECRET, algorithms=['HS256'],
+                             issuer=ISSUER, audience=[ISSUER, AUDIENCE],
+                             verify=True)
         return BeyondUser(
             token,
             payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],

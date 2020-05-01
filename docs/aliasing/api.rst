@@ -773,6 +773,12 @@ SimpleCombatant
 
         :type: float
 
+    .. attribute:: resists
+
+        The combatant's resistances, immunities, and vulnerabilities.
+
+        :type: Resistances
+
     .. attribute:: temphp
 
         How many temporary hit points the combatant has.

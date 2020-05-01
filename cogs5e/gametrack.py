@@ -554,6 +554,7 @@ class GameTrack(commands.Cog):
         -h - Hides rolled values.
         **__Save Spells__**
         -dc <Save DC> - Overrides the spell save DC.
+        -dc <+X/-X> - Modifies the DC by a certain amount.
         -save <Save type> - Overrides the spell save type.
         -d <damage> - Adds additional damage.
         pass - Target automatically succeeds save.

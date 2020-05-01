@@ -122,6 +122,10 @@ class Combat:
     def summary(self):
         return self._summary
 
+    @summary.setter
+    def summary(self, new_summary: int):
+        self._summary = new_summary
+
     @property
     def dm(self):
         return self._dm

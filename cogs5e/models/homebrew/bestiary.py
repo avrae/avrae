@@ -24,13 +24,14 @@ BESTIARY_SCHEMA_VERSION = b'1'
 
 
 class Bestiary(CommonHomebrewMixin):
-    def __init__(self, _id, sha256: str, upstream: str,
+    def __init__(self, _id, sha256: str, upstream: str, published: bool,
                  name: str, monsters: list = None, desc: str = None,
                  **_):
         # metadata - should never change
         super().__init__(_id)
         self.sha256 = sha256
         self.upstream = upstream
+        self.published = published
 
         # content
         self.name = name
@@ -41,6 +42,8 @@ class Bestiary(CommonHomebrewMixin):
     def from_dict(cls, d):
         if 'monsters' in d:
             d['monsters'] = [Monster.from_bestiary(m, d['name']) for m in d['monsters']]
+        if 'published' not in d:  # versions prior to v1.5.11 don't have this tag, default to True
+            d['published'] = True
         return cls(**d)
 
     @classmethod
@@ -59,30 +62,19 @@ class Bestiary(CommonHomebrewMixin):
         return cls.from_dict(bestiary)
 
     @classmethod
-    async def from_critterdb(cls, ctx, url):
+    async def from_critterdb(cls, ctx, url, published=True):
         log.info(f"Getting bestiary ID {url}...")
-        index = 1
-        creatures = []
+        api_base = "https://critterdb.com:443/api/publishedbestiaries" if published \
+            else "https://critterdb.com:443/api/bestiaries"
         sha256_hash = hashlib.sha256()
         sha256_hash.update(BESTIARY_SCHEMA_VERSION)
         async with aiohttp.ClientSession() as session:
-            for _ in range(100):  # 100 pages max
-                log.info(f"Getting page {index} of {url}...")
-                async with session.get(
-                        f"https://critterdb.com:443/api/publishedbestiaries/{url}/creatures/{index}") as resp:
-                    if not 199 < resp.status < 300:
-                        raise ExternalImportError(
-                            "Error importing bestiary: HTTP error. Are you sure the link is right?")
-                    try:
-                        raw_creatures = await resp.json()
-                        sha256_hash.update(await resp.read())
-                    except (ValueError, aiohttp.ContentTypeError):
-                        raise ExternalImportError("Error importing bestiary: bad data. Are you sure the link is right?")
-                    if not raw_creatures:
-                        break
-                    creatures.extend(raw_creatures)
-                    index += 1
-            async with session.get(f"https://critterdb.com:443/api/publishedbestiaries/{url}") as resp:
+            if published:
+                creatures = await get_published_bestiary_creatures(url, session, api_base, sha256_hash)
+            else:
+                creatures = await get_link_shared_bestiary_creatures(url, session, api_base, sha256_hash)
+
+            async with session.get(f"{api_base}/{url}") as resp:
                 try:
                     raw = await resp.json()
                 except (ValueError, aiohttp.ContentTypeError):
@@ -104,7 +96,7 @@ class Bestiary(CommonHomebrewMixin):
             return existing_bestiary
 
         parsed_creatures = [_monster_factory(c, name) for c in creatures]
-        b = cls(None, sha256, url, name, parsed_creatures, desc)
+        b = cls(None, sha256, url, published, name, parsed_creatures, desc)
         await b.write_to_db(ctx)
         await b.subscribe(ctx)
         return b
@@ -127,7 +119,7 @@ class Bestiary(CommonHomebrewMixin):
         monsters = [m.to_dict() for m in self._monsters]
 
         data = {
-            "sha256": self.sha256, "upstream": self.upstream,
+            "sha256": self.sha256, "upstream": self.upstream, "published": self.published,
             "name": self.name, "desc": self.desc, "monsters": monsters
         }
 
@@ -225,6 +217,46 @@ async def select_bestiary(ctx, name):
     bestiary = await search_and_select(ctx, user_bestiaries, name, key=lambda b: b.name,
                                        selectkey=lambda b: f"{b.name} (`{b.upstream})`")
     return bestiary
+
+
+# critterdb HTTP helpers
+async def get_published_bestiary_creatures(url, session, api_base, sha256_hash):
+    creatures = []
+    index = 1
+    for _ in range(100):  # 100 pages max
+        log.info(f"Getting page {index} of {url}...")
+        async with session.get(f"{api_base}/{url}/creatures/{index}") as resp:
+            if not 199 < resp.status < 300:
+                raise ExternalImportError(
+                    "Error importing bestiary: HTTP error. Are you sure the link is right?")
+            raw_creatures = await parse_critterdb_response(resp, sha256_hash)
+            if not raw_creatures:
+                break
+            creatures.extend(raw_creatures)
+            index += 1
+    return creatures
+
+
+async def get_link_shared_bestiary_creatures(url, session, api_base, sha256_hash):
+    log.info(f"Getting link shared bestiary {url}...")
+    async with session.get(f"{api_base}/{url}/creatures") as resp:
+        if resp.status == 400:
+            raise ExternalImportError(
+                "Error importing bestiary: Cannot access bestiary. Please ensure link sharing is enabled!")
+        elif not 199 < resp.status < 300:
+            raise ExternalImportError(
+                "Error importing bestiary: HTTP error. Are you sure the link is right?")
+        creatures = await parse_critterdb_response(resp, sha256_hash)
+    return creatures
+
+
+async def parse_critterdb_response(resp, sha256_hash):
+    try:
+        raw_creatures = await resp.json()
+        sha256_hash.update(await resp.read())
+    except (ValueError, aiohttp.ContentTypeError):
+        raise ExternalImportError("Error importing bestiary: bad data. Are you sure the link is right?")
+    return raw_creatures
 
 
 # critterdb -> bestiary helpers

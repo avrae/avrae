@@ -138,19 +138,22 @@ class Compendium:
         Loads all class features as a list of SourcedTraits. Class feature entity IDs inherit the entity ID of their
         parent class.
         """
-        for cls in self.classes:
-            for level in cls.levels:
+        seen = set()
+
+        def handle_class(cls_or_sub):
+            for i, level in enumerate(cls_or_sub.levels):
                 for feature in level:
-                    copied = SourcedTrait.from_trait_and_sourced(feature, cls, "classfeat")
-                    copied.name = f"{cls.name}: {feature.name}"
+                    copied = SourcedTrait.from_trait_and_sourced(feature, cls_or_sub, "classfeat")
+                    copied.name = f"{cls_or_sub.name}: {feature.name}"
+                    if copied.name in seen:
+                        copied.name = f"{copied.name} (Level {i + 1})"
+                    seen.add(copied.name)
                     self.cfeats.append(copied)
 
+        for cls in self.classes:
+            handle_class(cls)
             for subcls in cls.subclasses:
-                for level in subcls.levels:
-                    for feature in level:
-                        copied = SourcedTrait.from_trait_and_sourced(feature, subcls, "classfeat")
-                        copied.name = f"{cls.name}: {subcls.name}: {feature.name}"
-                        self.cfeats.append(copied)
+                handle_class(subcls)
 
     def _load_racefeats(self):
         for race in itertools.chain(self.races, self.subraces):

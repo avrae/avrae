@@ -14,7 +14,6 @@ from discord.ext import commands
 
 from cogs5e.models import embeds
 from cogsmisc.stats import Stats
-from utils import checks
 
 
 class Core(commands.Cog):

@@ -7,11 +7,11 @@ from d20 import roll
 from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
-from cogs5e.models.monster import Monster
 from cogsmisc.stats import Stats
+from gamedata import Monster
+from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.dice import PersistentRollContext, VerboseMDStringifier
@@ -182,7 +182,7 @@ class Dice(commands.Cog):
         await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         embed.colour = random.randint(0, 0xffffff)
-        if monster.source == 'homebrew':
+        if monster.homebrew:
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
@@ -228,7 +228,7 @@ class Dice(commands.Cog):
 
         checkutils.run_check(skill_key, monster, args, embed)
 
-        if monster.source == 'homebrew':
+        if monster.homebrew:
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
@@ -260,7 +260,7 @@ class Dice(commands.Cog):
 
         checkutils.run_save(save_stat, monster, args, embed)
 
-        if monster.source == 'homebrew':
+        if monster.homebrew:
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
@@ -313,7 +313,7 @@ class Dice(commands.Cog):
         if not args.last('h', type_=bool) and 'thumb' not in args:
             embed.set_thumbnail(url=monster.get_image_url())
 
-        if monster.source == 'homebrew':
+        if monster.homebrew:
             embeds.add_homebrew_footer(embed)
 
         # save changes: combat state

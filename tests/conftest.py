@@ -16,6 +16,11 @@ from discord import DiscordException, Embed
 from discord.ext import commands
 from discord.http import HTTPClient, Route
 
+# setup bot
+from dbot import bot
+
+pass  # here to prevent pycharm from moving around my imports >:C
+
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException
 from cogs5e.models.initiative import Combat
@@ -194,6 +199,16 @@ class DiscordHTTPProxy(HTTPClient):
         assert request.method == "DELETE"
         assert request.url.endswith(f"/channels/{channel}/pins/{MESSAGE_ID}")
 
+    async def receive_typing(self, dm=False):
+        """
+        Assert that the bot sends typing.
+        """
+        request = await self.get_request()
+        channel = TEST_DMCHANNEL_ID if dm else TEST_CHANNEL_ID
+
+        assert request.method == "POST"
+        assert request.url.endswith(f"/channels/{channel}/typing")
+
     def queue_empty(self):
         return self._request_check_queue.empty()
 
@@ -246,9 +261,6 @@ async def on_command_error(ctx, error):
         return
     pytest.fail(f"Command raised an error: {error}")
     raise error
-
-
-from dbot import bot  # runs all bot setup
 
 
 @pytest.fixture(scope="session")

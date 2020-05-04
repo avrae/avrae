@@ -3,7 +3,7 @@ import os
 import discord
 import pytest
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata.compendium import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.initiative import Combat
 from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID

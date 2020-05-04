@@ -12,7 +12,9 @@ import discord
 import psutil
 from discord.ext import commands
 
+from cogs5e.models import embeds
 from cogsmisc.stats import Stats
+from utils import checks
 
 
 class Core(commands.Cog):
@@ -30,7 +32,7 @@ class Core(commands.Cog):
         Usage: !avatar <USER>"""
         if user is None:
             user = ctx.message.author
-        if user.avatar_url is not "":
+        if user.avatar_url != "":
             await ctx.send(user.avatar_url)
         else:
             await ctx.send(user.display_name + " is using the default avatar.")
@@ -98,6 +100,40 @@ class Core(commands.Cog):
         embed.add_field(name='About', value='Made with :heart: by zhu.exe#4211 and the D&D Beyond team\n'
                                             'Join the official development server [here](https://discord.gg/pQbd4s6)!',
                         inline=False)
+
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    async def ddb(self, ctx):
+        """Displays information about your D&D Beyond account."""
+        ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+        embed = embeds.EmbedWithAuthor(ctx)
+
+        if ddb_user is None:
+            embed.title = "No D&D Beyond account connected."
+            embed.description = \
+                "It looks like you don't have your Discord account connected to your D&D Beyond account!\n" \
+                "Linking your account means that you'll be able to use everything you own on " \
+                "D&D Beyond in Avrae for free - you can link your accounts " \
+                "[here](https://www.dndbeyond.com/account)."
+            embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
+                                  "link.")
+            return await ctx.send(embed=embed)
+
+        embed.title = f"Hello, {ddb_user.username}!"
+        embed.url = "https://www.dndbeyond.com/account"
+        default_desc = f"Thanks for linking your account! We'll reach out to you when the purchases you've made " \
+                       f"on D&D Beyond are available in Avrae."
+
+        desc = await self.bot.ldclient.variation("command.ddb.desc", ddb_user.to_ld_dict(), default_desc)
+        embed.description = desc
+
+        if ddb_user.is_staff:
+            embed.set_footer(
+                text="Official D&D Beyond Staff",
+                icon_url="https://media-waterdeep.cursecdn.com/avatars/thumbnails/104/378/32/32/636511944060210307.png")
+        elif ddb_user.is_insider:
+            embed.set_footer(text="Thanks for being a D&D Beyond Insider.")
 
         await ctx.send(embed=embed)
 

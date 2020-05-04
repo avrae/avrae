@@ -1,7 +1,7 @@
 import discord
 import pytest
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata.compendium import compendium
 from tests.utils import ATTACK_PATTERN, D20_PATTERN, DAMAGE_PATTERN, TO_HIT_PATTERN, requires_data
 
 pytestmark = pytest.mark.asyncio
@@ -81,7 +81,7 @@ async def test_ms(avrae, dhttp):
 async def test_mcast(avrae, dhttp):
     dhttp.clear()
 
-    mage = next(m for m in compendium.monster_mash if m.name == "Mage")
+    mage = next(m for m in compendium.monsters if m.name == "Mage")
 
     avrae.message("!mcast mage fireball")
     await dhttp.receive_delete()

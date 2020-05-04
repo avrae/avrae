@@ -12,7 +12,7 @@ from math import ceil, floor
 import aiohttp
 import html2text
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata.compendium import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
@@ -658,6 +658,7 @@ class BeyondSheetParser(SheetLoaderABC):
                 versDmg = next(p['notes'] for p in item_properties if p['name'] == 'Versatile')
                 if has_gwf:
                     versDmg += "ro<3"
+
                 damage = f"{versDmg} + {dmgBonus} [{damage_type}]"
                 attack = Attack.new(
                     f"2-Handed {name}", atk_bonus, damage, details

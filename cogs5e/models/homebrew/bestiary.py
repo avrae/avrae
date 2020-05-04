@@ -6,14 +6,14 @@ from math import floor
 import aiohttp
 import html2text
 
-from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
 from cogs5e.models.homebrew.mixins import CommonHomebrewMixin
-from cogs5e.models.monster import Monster, MonsterSpellbook, Trait
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
+from gamedata.compendium import compendium
+from gamedata.monster import Monster, MonsterSpellbook, Trait
 from utils.functions import search_and_select
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class Bestiary(CommonHomebrewMixin):
     @classmethod
     def from_dict(cls, d):
         if 'monsters' in d:
-            d['monsters'] = [Monster.from_bestiary(m) for m in d['monsters']]
+            d['monsters'] = [Monster.from_bestiary(m, d['name']) for m in d['monsters']]
         if 'published' not in d:  # versions prior to v1.5.11 don't have this tag, default to True
             d['published'] = True
         return cls(**d)
@@ -95,7 +95,7 @@ class Bestiary(CommonHomebrewMixin):
             await existing_bestiary.subscribe(ctx)
             return existing_bestiary
 
-        parsed_creatures = [_monster_factory(c) for c in creatures]
+        parsed_creatures = [_monster_factory(c, name) for c in creatures]
         b = cls(None, sha256, url, published, name, parsed_creatures, desc)
         await b.write_to_db(ctx)
         await b.subscribe(ctx)
@@ -104,7 +104,7 @@ class Bestiary(CommonHomebrewMixin):
     async def load_monsters(self, ctx):
         if not self._monsters:
             bestiary = await ctx.bot.mdb.bestiaries.find_one({"_id": self.id}, projection=['monsters'])
-            self._monsters = [Monster.from_bestiary(m) for m in bestiary['monsters']]
+            self._monsters = [Monster.from_bestiary(m, self.name) for m in bestiary['monsters']]
         return self._monsters
 
     @property
@@ -273,7 +273,7 @@ def spaced_to_camel(spaced):
     return re.sub(r"\s+(\w)", lambda m: m.group(1).upper(), spaced.lower())
 
 
-def _monster_factory(data):
+def _monster_factory(data, bestiary_name):
     ability_scores = BaseStats(data['stats']['proficiencyBonus'] or 0,
                                data['stats']['abilityScores']['strength'] or 10,
                                data['stats']['abilityScores']['dexterity'] or 10,
@@ -336,13 +336,12 @@ def _monster_factory(data):
 
     return Monster(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
                    data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
-                   ability_scores, cr, data['stats']['experiencePoints'], None,
-                   ', '.join(data['stats']['senses']), resistances,
-                   data['stats']['conditionImmunities'], saves, skills,
-                   data['stats']['languages'], traits, actions, reactions, legactions,
-                   data['stats']['legendaryActionsPerRound'], True, 'homebrew', attacks,
-                   data['flavor']['nameIsProper'], data['flavor']['imageUrl'],
-                   spellcasting=spellcasting)
+                   ability_scores, saves, skills, ', '.join(data['stats']['senses']), resistances,
+                   data['stats']['conditionImmunities'], data['stats']['languages'], cr,
+                   data['stats']['experiencePoints'],
+                   traits, actions, reactions, legactions, data['stats']['legendaryActionsPerRound'],
+                   resistances, attacks, data['flavor']['nameIsProper'], data['flavor']['imageUrl'],
+                   spellcasting=spellcasting, homebrew=True, source=bestiary_name)
 
 
 def parse_critterdb_traits(data, key):

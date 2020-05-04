@@ -1,7 +1,7 @@
 import discord
 import pytest
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata.compendium import compendium
 from tests.conftest import end_init, start_init
 from tests.utils import ATTACK_PATTERN, DAMAGE_PATTERN, SAVE_PATTERN, active_character, active_combat
 
@@ -202,7 +202,7 @@ async def test_monster_cast_consumption_II(avrae, dhttp):
     avrae.message("!init next")
     await dhttp.drain()
 
-    mage = next(m for m in compendium.monster_mash if m.name == "Mage")
+    mage = next(m for m in compendium.monsters if m.name == "Mage")
 
     avrae.message("!init cast fireball")
     await dhttp.drain()

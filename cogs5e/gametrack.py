@@ -14,7 +14,7 @@ from d20 import roll
 from discord.ext import commands
 
 from cogs5e.funcs import targetutils
-from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
+from gamedata.lookuputils import get_spell_choices, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
@@ -331,6 +331,8 @@ class GameTrack(commands.Cog):
     @commands.group(invoke_without_command=True, name='spellbook', aliases=['sb'])
     async def spellbook(self, ctx):
         """Commands to display a character's known spells and metadata."""
+        await ctx.trigger_typing()
+
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.description = f"{character.name} knows {len(character.spellbook.spells)} spells."
@@ -355,7 +357,7 @@ class GameTrack(commands.Cog):
                 flag_show_homebrew_help = True
             else:
                 spell = results
-                if spell.source == 'homebrew':
+                if spell.homebrew:
                     formatted = f"*{spell.name}*"
                     flag_show_homebrew_help = True
                 else:

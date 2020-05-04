@@ -145,16 +145,16 @@ class BeyondClient(BeyondClientBase):
 
         user = await self.get_ddb_user(ctx, user_id)
 
+        if user is None:
+            return None
+
         # feature flag: is this user allowed to use entitlements?
         enabled_ff = await ctx.bot.ldclient.variation("entitlements-enabled", user.to_ld_dict(), False)
         if not enabled_ff:
             log.debug(f"hit false entitlements flag - skipping user entitlements")
             return None
 
-        if user is None:
-            return None
-        else:
-            user_e10s = await self._fetch_user_entitlements(int(user.user_id))
+        user_e10s = await self._fetch_user_entitlements(int(user.user_id))
         # cache entitlements
         await ctx.bot.rdb.jsetex(user_entitlement_cache_key,
                                  user_e10s.to_dict(),

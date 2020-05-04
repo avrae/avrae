@@ -27,8 +27,8 @@ class Resistances:
         self.neutral = neutral
 
     @classmethod
-    def from_dict(cls, d):
-        return cls(**{k: [Resistance.from_dict(v) for v in vs] for k, vs in d.items()})
+    def from_dict(cls, d, smart=True):
+        return cls(**{k: [Resistance.from_dict(v, smart) for v in vs] for k, vs in d.items()})
 
     @classmethod
     def from_args(cls, args, **kwargs):
@@ -121,13 +121,16 @@ class Resistance:
         self.only = only
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, d, smart=True):
         if isinstance(d, str):
-            return cls.from_str(d)
+            return cls.from_str(d, smart)
         return cls(**d)
 
     @classmethod
-    def from_str(cls, s):
+    def from_str(cls, s, smart=True):
+        if not smart:
+            return cls(s)
+
         tokens = _resist_tokenize(s)
         unless = []
         only = []

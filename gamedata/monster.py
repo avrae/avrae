@@ -130,7 +130,7 @@ class Monster(StatBlock, Sourced):
         if 'resistances' in data:
             data['resistances'] = Resistances.from_dict(data['resistances'])
         if 'display_resists' in data:
-            data['display_resists'] = Resistances.from_dict(data['display_resists'])
+            data['display_resists'] = Resistances.from_dict(data['display_resists'], smart=False)
         else:
             data['display_resists'] = Resistances()
         if 'source' in data:

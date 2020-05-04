@@ -119,7 +119,7 @@ class BeyondClient(BeyondClientBase):
 
         # cache unlinked if user is unlinked
         if token is None:
-            await ctx.bot.rdb.setex(user_cache_key, unlinked_sentinel, USER_ENTITLEMENT_TTL)
+            await ctx.bot.rdb.jsetex(user_cache_key, unlinked_sentinel, USER_ENTITLEMENT_TTL)
             return None
 
         user = self._parse_jwt(token)
@@ -217,7 +217,7 @@ class BeyondClient(BeyondClientBase):
             token,
             payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'],
             payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
-            payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
+            payload.get('http://schemas.microsoft.com/ws/2008/06/identity/claims/role', []),
             payload.get('http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriber'),
             payload.get('http://schemas.dndbeyond.com/ws/2019/08/identity/claims/subscriptiontier')
         )

@@ -258,7 +258,7 @@ async def get_item_choices(ctx, filter_by_license=True, homebrew=True):
     if ctx.guild:
         async for servpack in Pack.server_active(ctx):
             if servpack.id != pack_id:
-                choices.extend(servpack.get_search_formatted_items())
+                choices.extend(servpack.items)
     return choices
 
 

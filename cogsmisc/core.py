@@ -103,7 +103,7 @@ class Core(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.group(invoke_without_command=True)
     async def ddb(self, ctx):
         """Displays information about your D&D Beyond account."""
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
@@ -136,6 +136,19 @@ class Core(commands.Cog):
             embed.set_footer(text="Thanks for being a D&D Beyond Insider.")
 
         await ctx.send(embed=embed)
+
+    @ddb.command(hidden=True, name='debug')
+    async def ddb_debug(self, ctx):
+        """Displays debug information about your D&D Beyond account."""
+        ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+        if ddb_user is None:
+            return await ctx.send("no account linked, no debug info")
+
+        await ctx.send(f"```\nD&D Beyond Username: {ddb_user.username}\n"
+                       f"User ID: {ddb_user.user_id}\n"
+                       f"Roles: {ddb_user.roles}\n"
+                       f"Subscriber: {ddb_user.subscriber}\n"
+                       f"Subscription Tier: {ddb_user.subscription_tier}\n```")
 
 
 def setup(bot):

@@ -97,7 +97,7 @@ class Monster(StatBlock, Sourced):
         ability_scores = BaseStats.from_dict(d['ability_scores'])
         saves = Saves.from_dict(d['saves'])
         skills = Skills.from_dict(d['skills'])
-        display_resists = Resistances.from_dict(d['display_resists'])
+        display_resists = Resistances.from_dict(d['display_resists'], smart=False)
         traits = [Trait(**t) for t in d['traits']]
         actions = [Trait(**t) for t in d['actions']]
         reactions = [Trait(**t) for t in d['reactions']]

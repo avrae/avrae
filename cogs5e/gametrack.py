@@ -331,6 +331,8 @@ class GameTrack(commands.Cog):
     @commands.group(invoke_without_command=True, name='spellbook', aliases=['sb'])
     async def spellbook(self, ctx):
         """Commands to display a character's known spells and metadata."""
+        await ctx.trigger_typing()
+
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.description = f"{character.name} knows {len(character.spellbook.spells)} spells."

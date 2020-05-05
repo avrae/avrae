@@ -3,7 +3,6 @@ import re
 
 import d20
 import discord
-from d20 import roll
 from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
@@ -63,7 +62,7 @@ class Dice(commands.Cog):
 
         rollStr, adv = self._string_search_adv(rollStr)
 
-        res = roll(rollStr, advantage=adv, allow_comments=True, stringifier=VerboseMDStringifier())
+        res = d20.roll(rollStr, advantage=adv, allow_comments=True, stringifier=VerboseMDStringifier())
         out = f"{ctx.author.mention}  :game_die:\n" \
               f"{str(res)}"
         if len(out) > 1999:

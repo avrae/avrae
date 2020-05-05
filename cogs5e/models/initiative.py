@@ -3,12 +3,12 @@ from d20 import roll
 
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
-from gamedata.monster import MonsterCastableSpellbook
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
-from cogs5e.models.sheet.resistance import Resistances, Resistance
+from cogs5e.models.sheet.resistance import Resistance, Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
+from gamedata.monster import MonsterCastableSpellbook
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
 from utils.functions import get_selection, maybe_mod
@@ -611,18 +611,18 @@ class Combatant(StatBlock):
         out.update(Resistances.from_dict({k: self.active_effects(k) for k in RESIST_TYPES}), overwrite=False)
         return out
 
-    def set_resist(self, dmgtype: str, resisttype: str):
-        if resisttype not in RESIST_TYPES:
+    def set_resist(self, damage_type: str, resist_type: str):
+        if resist_type not in RESIST_TYPES:
             raise ValueError("Resistance type is invalid")
 
         for rt in RESIST_TYPES:
             for resist in reversed(self._resistances[rt]):
-                if resist.dtype == dmgtype:
+                if resist.dtype == damage_type:
                     self._resistances[rt].remove(resist)
 
-        if resisttype != 'neutral':
-            resistance = Resistance.from_str(dmgtype)
-            self._resistances[resisttype].append(resistance)
+        if resist_type != 'neutral':
+            resistance = Resistance.from_str(damage_type)
+            self._resistances[resist_type].append(resistance)
 
     @property
     def attacks(self):

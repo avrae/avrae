@@ -10,7 +10,6 @@ import logging
 
 import d20
 import discord
-from d20 import roll
 from discord.ext import commands
 
 from cogs5e.funcs import targetutils
@@ -177,7 +176,7 @@ class GameTrack(commands.Cog):
         if hp is None:
             return await ctx.send(f"{character.name}: {character.hp_str()}")
 
-        hp_roll = roll(hp)
+        hp_roll = d20.roll(hp)
         character.modify_hp(hp_roll.total)
         await character.commit(ctx)
         if 'd' in hp:
@@ -205,7 +204,7 @@ class GameTrack(commands.Cog):
         """Sets the character's HP to a certain value."""
         character: Character = await Character.from_ctx(ctx)
         before = character.hp
-        hp_roll = roll(hp)
+        hp_roll = d20.roll(hp)
         character.hp = hp_roll.total
         await character.commit(ctx)
         await ctx.send(f"{character.name}: {character.hp_str()} ({character.hp - before:+})")
@@ -239,9 +238,9 @@ class GameTrack(commands.Cog):
         phrase = args.join('phrase', '\n')
 
         if b:
-            save_roll = roll(f"{d20_with_adv(adv)}+{b}")
+            save_roll = d20.roll(f"{d20_with_adv(adv)}+{b}")
         else:
-            save_roll = roll(d20_with_adv(adv))
+            save_roll = d20.roll(d20_with_adv(adv))
 
         embed = discord.Embed()
         embed.title = args.last('title', '') \

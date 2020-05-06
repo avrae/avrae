@@ -899,16 +899,18 @@ class TempHP(Effect):
 
 
 class IEffect(Effect):
-    def __init__(self, name: str, duration: int, effects: str, end: bool = False, **kwargs):
+    def __init__(self, name: str, duration: int, effects: str, end: bool = False, conc: bool = False, **kwargs):
         super(IEffect, self).__init__("ieffect", **kwargs)
         self.name = name
         self.duration = duration
         self.effects = effects
         self.tick_on_end = end
+        self.concentration = conc
 
     def to_dict(self):
         out = super(IEffect, self).to_dict()
-        out.update({"name": self.name, "duration": self.duration, "effects": self.effects, "end": self.tick_on_end})
+        out.update({"name": self.name, "duration": self.duration, "effects": self.effects, "end": self.tick_on_end,
+                    "conc": self.concentration})
         return out
 
     def run(self, autoctx):
@@ -924,14 +926,20 @@ class IEffect(Effect):
         duration = autoctx.args.last('dur', duration, int)
         if isinstance(autoctx.target.target, Combatant):
             effect = initiative.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
-                                           duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end)
+                                           duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
+                                           concentration=self.concentration)
             if autoctx.conc_effect:
+                if autoctx.conc_effect.combatant is autoctx.target.target and self.concentration:
+                    raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
                 effect.set_parent(autoctx.conc_effect)
-            autoctx.target.target.add_effect(effect)
+            effect_result = autoctx.target.target.add_effect(effect)
+            autoctx.queue(f"**Effect**: {str(effect)}")
+            if conc_conflict := effect_result['conc_conflict']:
+                autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
         else:
             effect = initiative.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects),
-                                           tick_on_end=self.tick_on_end)
-        autoctx.queue(f"**Effect**: {str(effect)}")
+                                           tick_on_end=self.tick_on_end, concentration=self.concentration)
+            autoctx.queue(f"**Effect**: {str(effect)}")
 
     def build_str(self, caster, evaluator):
         super(IEffect, self).build_str(caster, evaluator)

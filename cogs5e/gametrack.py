@@ -16,7 +16,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
-from cogs5e.models.embeds import EmbedWithCharacter, add_fields_from_args
+from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
 from utils.argparser import argparse
 from utils.functions import confirm, search, search_and_select, try_delete
@@ -51,7 +51,7 @@ class GameTrack(commands.Cog):
     @game.command(name='spellbook', aliases=['sb'], hidden=True)
     async def game_spellbook(self, ctx):
         """**DEPRECATED** - use `!spellbook` instead."""
-        await ctx.invoke(self.bot.get_command('spellbook'))
+        await self.spellbook(ctx)
 
     @game.command(name='spellslot', aliases=['ss'])
     async def game_spellslot(self, ctx, level: int = None, value: str = None):
@@ -371,11 +371,24 @@ class GameTrack(commands.Cog):
         await ctx.send(embed=embed)
 
     @spellbook.command(name='add')
-    async def spellbook_add(self, ctx, *, spell_name):
-        """Adds a spell to the spellbook override."""
+    async def spellbook_add(self, ctx, spell_name, *args):
+        """
+        Adds a spell to the spellbook override.
+
+        __Valid Arguments__
+        *Note: These arguments do not support calculations.*
+        -dc <dc> - When cast, this spell always uses this DC.
+        -b <sab> - When cast, this spell always uses this spell attack bonus.
+        -mod <mod> - When cast, this spell always uses this as the value of its casting stat (usually for healing spells).
+        """
         spell = await select_spell_full(ctx, spell_name)
         character: Character = await Character.from_ctx(ctx)
-        character.add_known_spell(spell)
+        args = argparse(args)
+
+        dc = args.last('dc', type_=int)
+        sab = args.last('b', type_=int)
+        mod = args.last('mod', type_=int)
+        character.add_known_spell(spell, dc, sab, mod)
         await character.commit(ctx)
         await ctx.send(f"{spell.name} added to known spell list!")
 
@@ -399,7 +412,7 @@ class GameTrack(commands.Cog):
         When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
         If modifier is not supplied, prints the value and metadata of the counter *name*."""
         if name is None:
-            return await ctx.invoke(self.bot.get_command("customcounter list"))
+            return await self.customcounter_summary(ctx)
         character: Character = await Character.from_ctx(ctx)
         counter = await character.select_consumable(ctx, name)
 
@@ -529,6 +542,7 @@ class GameTrack(commands.Cog):
         -h - Hides rolled values.
         **__Save Spells__**
         -dc <Save DC> - Overrides the spell save DC.
+        -dc <+X/-X> - Modifies the DC by a certain amount.
         -save <Save type> - Overrides the spell save type.
         -d <damage> - Adds additional damage.
         pass - Target automatically succeeds save.
@@ -562,11 +576,8 @@ class GameTrack(commands.Cog):
 
         embed = result['embed']
         embed.colour = char.get_color()
-        embed.set_thumbnail(url=char.image)
-
-        add_fields_from_args(embed, args.get('f'))
-        if 'thumb' in args:
-            embed.set_thumbnail(url=args.last('thumb'))
+        if 'thumb' not in args:
+            embed.set_thumbnail(url=char.image)
 
         # save changes: combat state, spell slot usage
         await char.commit(ctx)

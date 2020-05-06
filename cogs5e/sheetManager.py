@@ -99,7 +99,7 @@ class SheetManager(commands.Cog):
 
         An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on."""
         if atk_name is None:
-            return await ctx.invoke(self.attack_list)
+            return await self.attack_list(ctx)
 
         char: Character = await Character.from_ctx(ctx)
         args = await self.new_arg_stuff(args, ctx, char)
@@ -167,7 +167,7 @@ class SheetManager(commands.Cog):
         *-b [conditional bonus]*
         -phrase [flavor text]
         -title [title] *note: [name] and [sname] will be replaced automatically*
-        -image [image URL]
+        -thumb [thumbnail URL]
         -dc [dc] (does not apply to Death Saves)
         -rr [iterations] (does not apply to Death Saves)
 
@@ -185,13 +185,8 @@ class SheetManager(commands.Cog):
 
         args = await self.new_arg_stuff(args, ctx, char)
 
-        # halfling luck
-        args['ro'] = char.get_setting('reroll')
-
+        checkutils.update_csetting_args(char, args)
         checkutils.run_save(skill, char, args, embed)
-
-        if args.last('image') is not None:
-            embed.set_thumbnail(url=args.last('image'))
 
         # send
         await ctx.send(embed=embed)
@@ -205,6 +200,7 @@ class SheetManager(commands.Cog):
         *-b [conditional bonus]*
         -phrase [flavor text]
         -title [title] *note: [name] and [cname] will be replaced automatically*
+        -thumb [thumbnail URL]
         -dc [dc]
         -mc [minimum roll]
         -rr [iterations]
@@ -220,17 +216,8 @@ class SheetManager(commands.Cog):
 
         args = await self.new_arg_stuff(args, ctx, char)
 
-        # reliable talent (#654)
-        rt = char.get_setting('talent', 0) and skill.prof >= 1
-        args['mc'] = args.get('mc') or 10 * rt
-
-        # halfling luck
-        args['ro'] = char.get_setting('reroll')
-
+        checkutils.update_csetting_args(char, args, skill)
         checkutils.run_check(skill_key, char, args, embed)
-
-        if args.last('image') is not None:
-            embed.set_thumbnail(url=args.last('image'))
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -322,6 +309,7 @@ class SheetManager(commands.Cog):
         embed = EmbedWithCharacter(char, image=False)
         embed.set_image(url="attachment://image.png")
         await ctx.send(file=file, embed=embed)
+        processed.close()
 
     @commands.command()
     async def sheet(self, ctx):
@@ -389,7 +377,7 @@ class SheetManager(commands.Cog):
             return await ctx.send("OK, cancelling.")
 
     @commands.command()
-    @commands.cooldown(1, 15, BucketType.user)
+    @commands.max_concurrency(1, BucketType.user)
     async def update(self, ctx, *args):
         """Updates the current character sheet, preserving all settings.
         __Valid Arguments__
@@ -485,70 +473,6 @@ class SheetManager(commands.Cog):
         await char.commit(ctx)
         await ctx.send('\n'.join(out))
 
-    @commands.group(invoke_without_command=True)
-    async def cvar(self, ctx, name: str = None, *, value=None):
-        """Commands to manage character variables for use in snippets and aliases.
-        See the [aliasing guide](https://avrae.io/cheatsheets/aliasing) for more help."""
-        if name is None:
-            return await ctx.invoke(self.bot.get_command("cvar list"))
-
-        character: Character = await Character.from_ctx(ctx)
-
-        if value is None:  # display value
-            cvar = character.get_scope_locals().get(name)
-            if cvar is None:
-                return await ctx.send("This cvar is not defined.")
-            return await ctx.send(f'**{name}**: ```\n{cvar}\n```')
-
-        if not name.isidentifier():
-            return await ctx.send("Cvar names must be identifiers "
-                                  "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
-        if name in character.get_scope_locals(True):
-            return await ctx.send("This variable is already built in!")
-
-        character.set_cvar(name, value)
-        await character.commit(ctx)
-        await ctx.send('Character variable `{}` set to: `{}`'.format(name, value))
-
-    @cvar.command(name='remove', aliases=['delete'])
-    async def remove_cvar(self, ctx, name):
-        """Deletes a cvar from the currently active character."""
-        char: Character = await Character.from_ctx(ctx)
-        if name not in char.cvars:
-            return await ctx.send('Character variable not found.')
-
-        del char.cvars[name]
-
-        await char.commit(ctx)
-        await ctx.send('Character variable {} removed.'.format(name))
-
-    @cvar.command(name='deleteall', aliases=['removeall'])
-    async def cvar_deleteall(self, ctx):
-        """Deletes ALL character variables for the active character."""
-        char: Character = await Character.from_ctx(ctx)
-
-        await ctx.send(f"This will delete **ALL** of your character variables for {char.name}. "
-                       "Are you *absolutely sure* you want to continue?\n"
-                       "Type `Yes, I am sure` to confirm.")
-        try:
-            reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
-        except asyncio.TimeoutError:
-            reply = None
-        if (not reply) or (not reply.content == "Yes, I am sure"):
-            return await ctx.send("Unconfirmed. Aborting.")
-
-        char.cvars = {}
-
-        await char.commit(ctx)
-        return await ctx.send(f"OK. I have deleted all of {char.name}'s cvars.")
-
-    @cvar.command(name='list')
-    async def list_cvar(self, ctx):
-        """Lists all cvars for the currently active character."""
-        character: Character = await Character.from_ctx(ctx)
-        await ctx.send('{}\'s character variables:\n{}'.format(character.name,
-                                                               ', '.join(sorted(character.cvars.keys()))))
-
     async def _confirm_overwrite(self, ctx, _id):
         """Prompts the user if command would overwrite another character.
         Returns True to overwrite, False or None otherwise."""
@@ -566,6 +490,7 @@ class SheetManager(commands.Cog):
         return True
 
     @commands.command()
+    @commands.max_concurrency(1, BucketType.user)
     async def dicecloud(self, ctx, url: str, *args):
         """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.
@@ -582,8 +507,9 @@ class SheetManager(commands.Cog):
         await self._load_sheet(ctx, parser, args, loading)
 
     @commands.command()
+    @commands.max_concurrency(1, BucketType.user)
     async def gsheet(self, ctx, url: str, *args):
-        """Loads a character sheet from [GSheet v2.0](http://gsheet2.avrae.io) (auto) or [GSheet v1.4](http://gsheet.avrae.io) (manual), resetting all settings.
+        """Loads a character sheet from [GSheet v2.1](http://gsheet2.avrae.io) (auto) or [GSheet v1.4](http://gsheet.avrae.io) (manual), resetting all settings.
         The sheet must be shared with Avrae for this to work.
         Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
 
@@ -600,6 +526,7 @@ class SheetManager(commands.Cog):
         await self._load_sheet(ctx, parser, args, loading)
 
     @commands.command()
+    @commands.max_concurrency(1, BucketType.user)
     async def beyond(self, ctx, url: str, *args):
         """Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings."""
 

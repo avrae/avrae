@@ -171,6 +171,16 @@ class ParsedArguments:
         """
         return connector.join(self.get(arg, ephem=ephem)) or default
 
+    def ignore(self, arg):
+        """
+        Removes any instances of an argument from the result in all contexts (ephemeral included).
+
+        :param arg: The argument to ignore.
+        """
+        del self[arg]
+        for context in self._contexts.values():
+            del context[arg]
+
     # ephemeral setup
     def _parse_ephemeral(self, argdict):
         for key in argdict:
@@ -271,6 +281,16 @@ class ParsedArguments:
             evals = [EphemeralValue(int(num), val) for val in value]
             self._ephemeral[arg].extend(evals)
             self._original_ephemeral[arg].extend(evals.copy())
+
+    def __delitem__(self, arg):
+        """
+        Removes any instances of an argument from the result in the current context (ephemeral included).
+
+        :param arg: The argument to ignore.
+        """
+        for container in (self._parsed, self._original_parsed, self._ephemeral, self._original_ephemeral):
+            if arg in container:
+                del container[arg]
 
     def __iter__(self):
         return iter(self._parsed.keys())

@@ -52,6 +52,13 @@ class Core(commands.Cog):
             "You can invite Avrae to your server here:\n"
             "<https://invite.avrae.io>")
 
+    @commands.command()
+    async def changelog(self, ctx):
+        """Prints a link to the official changelog."""
+        await ctx.send("You can check out the latest patch notes at "
+                       "https://github.com/avrae/avrae/releases/latest, and a list of all releases at "
+                       "<https://github.com/avrae/avrae/releases>!")
+
     @commands.command(aliases=['stats', 'info'])
     async def about(self, ctx):
         """Information about the bot."""
@@ -61,7 +68,9 @@ class Core(commands.Cog):
         for k in statKeys:
             stats[k] = await Stats.get_statistic(ctx, k)
 
-        embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.')
+        embed = discord.Embed(description='Avrae, a bot to streamline D&D 5e online.\n'
+                                          'Check out the latest release notes '
+                                          '[here](https://github.com/avrae/avrae/releases/latest).')
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://invite.avrae.io"
         embed.colour = 0x7289da

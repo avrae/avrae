@@ -38,9 +38,7 @@ async def coordinate_shards(bot):
     elif config.ECS_METADATA_ENDPT is None:  # we aren't running on ECS
         return
 
-    async with _coordination_lock(bot.rdb):
-        log.info("Acquired lock, coordinating shards!")
-        await _coordinate_shards(bot)
+    await _coordinate_shards(bot)
 
 
 async def _coordinate_shards(bot):
@@ -146,7 +144,7 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
 
 # lock: don't race when coordinating clusters
 @asynccontextmanager
-async def _coordination_lock(rdb):
+async def coordination_lock(rdb):
     cluster_lock_key = f"clusters.{config.GIT_COMMIT_SHA}.lock:{config.NUM_CLUSTERS}"
     i = 0
     while not await rdb.setnx(cluster_lock_key, "lockme"):
@@ -154,7 +152,9 @@ async def _coordination_lock(rdb):
         i += 1
         log.info(f"Waiting for lock... ({i}s)")
 
+    log.info("Acquired lock, coordinating shards!")
     try:
         yield
     finally:
         await rdb.delete(cluster_lock_key)
+        log.info("Coordination complete, releasing lock.")

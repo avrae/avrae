@@ -17,4 +17,5 @@ deploy:
   - provider: script
     script: bash scripts/deploy.sh nightly
     on:
-      branch: master
+      all_branches: true
+      condition: $TRAVIS_BRANCH =~ ^(master|nightly)$

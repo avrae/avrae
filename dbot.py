@@ -83,11 +83,12 @@ class Avrae(commands.AutoShardedBot):
 
     async def launch_shards(self):
         # set up my shard_ids
-        await clustering.coordinate_shards(self)
-        if self.shard_ids is not None:
-            log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
-        await super(Avrae, self).launch_shards()
-        log.info(f"Launched {len(self.shards)} shards!")
+        async with clustering.coordination_lock(self.rdb):
+            await clustering.coordinate_shards(self)
+            if self.shard_ids is not None:
+                log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
+            await super(Avrae, self).launch_shards()
+            log.info(f"Launched {len(self.shards)} shards!")
 
         if self.is_cluster_0:
             await self.rdb.incr('build_num')
@@ -183,6 +184,10 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.CommandOnCooldown):
         return await ctx.send("This command is on cooldown for {:.1f} seconds.".format(error.retry_after))
 
+    elif isinstance(error, commands.MaxConcurrencyReached):
+        return await ctx.send(f"Only {error.number} instance{'s' if error.number > 1 else ''} of this command per "
+                              f"{error.per.name} can be running at a time.")
+
     elif isinstance(error, CommandInvokeError):
         original = error.original
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
@@ -220,7 +225,7 @@ async def on_command_error(ctx, error):
         elif isinstance(original, HTTPException):
             if original.response.status == 400:
                 return await ctx.send(f"Error: Message is too long, malformed, or empty.\n{original.text}")
-            elif original.response.status == 500:
+            elif 499 < original.response.status < 600:
                 return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
 
         elif isinstance(original, OverflowError):

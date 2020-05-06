@@ -9,7 +9,6 @@ from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
-from cogs5e.models.embeds import add_fields_from_args
 from cogs5e.models.monster import Monster
 from cogsmisc.stats import Stats
 from utils.argparser import argparse
@@ -27,7 +26,7 @@ class Dice(commands.Cog):
     async def quick_roll(self, ctx, *, mod: str = '0'):
         """Quickly rolls a d20."""
         rollStr = '1d20+' + mod
-        await ctx.invoke(self.rollCmd, rollStr=rollStr)
+        await self.rollCmd(ctx, rollStr=rollStr)
 
     @commands.command(name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
@@ -147,7 +146,7 @@ class Dice(commands.Cog):
         -h (hides monster name, image, and rolled values)
         """
         if atk_name is None or atk_name == 'list':
-            return await ctx.invoke(self.monster_atk_list, monster_name)
+            return await self.monster_atk_list(ctx, monster_name)
 
         await try_delete(ctx.message)
 
@@ -173,6 +172,7 @@ class Dice(commands.Cog):
 
     @monster_atk.command(name="list")
     async def monster_atk_list(self, ctx, monster_name):
+        """Lists a monster's attacks."""
         await try_delete(ctx.message)
 
         monster = await select_monster_full(ctx, monster_name)
@@ -187,6 +187,7 @@ class Dice(commands.Cog):
         *-b [conditional bonus]*
         -phrase [flavor text]
         -title [title] *note: [name] and [cname] will be replaced automatically*
+        -thumb [thumbnail URL]
         -dc [dc]
         -rr [iterations]
         str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
@@ -205,12 +206,10 @@ class Dice(commands.Cog):
         args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
 
-        checkutils.run_check(skill_key, monster, args, embed)
-
-        if args.last('image') is not None:
-            embed.set_thumbnail(url=args.last('image'))
-        elif not args.last('h', type_=bool):
+        if not args.last('h', type_=bool):
             embed.set_thumbnail(url=monster.get_image_url())
+
+        checkutils.run_check(skill_key, monster, args, embed)
 
         if monster.source == 'homebrew':
             embeds.add_homebrew_footer(embed)
@@ -226,6 +225,7 @@ class Dice(commands.Cog):
         -b [conditional bonus]
         -phrase [flavor text]
         -title [title] *note: [name] and [cname] will be replaced automatically*
+        -thumb [thumbnail URL]
         -dc [dc]
         -rr [iterations]
         -h (hides name and image of monster)"""
@@ -238,12 +238,10 @@ class Dice(commands.Cog):
         args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
 
-        checkutils.run_save(save_stat, monster, args, embed)
-
-        if args.last('image') is not None:
-            embed.set_thumbnail(url=args.last('image'))
-        elif not args.last('h', type_=bool):
+        if not args.last('h', type_=bool):
             embed.set_thumbnail(url=monster.get_image_url())
+
+        checkutils.run_save(save_stat, monster, args, embed)
 
         if monster.source == 'homebrew':
             embeds.add_homebrew_footer(embed)
@@ -295,11 +293,7 @@ class Dice(commands.Cog):
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff)
 
-        add_fields_from_args(embed, args.get('f'))
-
-        if args.last('thumb') is not None:
-            embed.set_thumbnail(url=args.last('thumb'))
-        elif not args.last('h', type_=bool):
+        if not args.last('h', type_=bool) and 'thumb' not in args:
             embed.set_thumbnail(url=monster.get_image_url())
 
         if monster.source == 'homebrew':

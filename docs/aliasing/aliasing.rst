@@ -1,10 +1,12 @@
 Aliasing Basics
 ======================
 
-Avrae has vast potential for making long commands simple.  It allows you to create and maintain commands. These commands can be used personally or shared with other users on a server.  Let's take a look at some of the basics of automation that you can start using in your server.
+Avrae has vast potential for making long commands simple.  It allows you to create and maintain commands.
+These commands can be used personally or shared with other users on a server.  Let's take a look at some of the
+basics of automation that you can start using in your server.
 
 .. note::
-  If you have experience with JSON and API's and are looking for more advanced documentation, head on over to the `Aliasing API Page <aliasing/api.html>`_.
+  If you have experience with JSON and APIs and are looking for more advanced documentation, head on over to the `Aliasing API Page <aliasing/api.html>`_.
 
 Command Types
 ------------------------
@@ -30,6 +32,9 @@ to run code before running an Avrae command, or to write your own custom command
     - Cover (3/4, Half, etc)
     - Barbarian Rage (Damage)
     - Bardic Inspiration
+
+.. note::
+  In order to prevent infinite loops, aliases cannot call other aliases.
 
 Command Levels
 ------------------------

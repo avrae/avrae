@@ -6,7 +6,7 @@ import discord
 from cogs5e.models import initiative
 from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor, add_homebrew_footer
+from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args, add_homebrew_footer
 from cogs5e.models.errors import AvraeException
 from cogs5e.models.initiative import Combatant, PlayerCombatant
 from utils.constants import STAT_ABBREVIATIONS
@@ -250,6 +250,10 @@ class Spell:
                                       ab_override=ab_override, dc_override=dc_override, spell_override=spell_override,
                                       title=title)
         else:
+            phrase = args.join('phrase', '\n')
+            if phrase:
+                embed.description = f"*{phrase}*"
+
             text = self.description
             if len(text) > 1020:
                 text = f"{text[:1020]}..."
@@ -266,8 +270,12 @@ class Spell:
             embed.add_field(name="Concentration",
                             value=f"Dropped {conflicts} due to concentration.")
 
-        if self.image:
+        if 'thumb' in args:
+            embed.set_thumbnail(url=args.last('thumb'))
+        elif self.image:
             embed.set_thumbnail(url=self.image)
+
+        add_fields_from_args(embed, args.get('f'))
 
         if self.source == 'homebrew':
             add_homebrew_footer(embed)

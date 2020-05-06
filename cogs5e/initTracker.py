@@ -8,11 +8,10 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
-from cogs5e.funcs import attackutils, targetutils
+from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.funcs.dice import roll
 from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
-from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException
@@ -110,7 +109,7 @@ class InitTracker(commands.Cog):
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type."""
         private = False
-        place = False
+        place = None
         controller = str(ctx.author.id)
         group = None
         hp = None
@@ -120,8 +119,17 @@ class InitTracker(commands.Cog):
 
         if args.last('h', type_=bool):
             private = True
-        if args.last('p', type_=bool):
-            place = True
+
+        if 'p' in args:
+            try:
+                place_arg = args.last('p')
+                if place_arg is True:
+                    place = modifier
+                else:
+                    place = int(place_arg)
+            except ValueError:
+                place = modifier
+
         if args.last('controller'):
             controller_name = args.last('controller')
             member = await commands.MemberConverter().convert(ctx, controller_name)
@@ -149,7 +157,7 @@ class InitTracker(commands.Cog):
             init = init_roll.total
             init_roll_skeleton = init_roll.skeleton
         else:
-            init = modifier
+            init = place
             modifier = 0
             init_roll_skeleton = str(init)
 
@@ -260,36 +268,34 @@ class InitTracker(commands.Cog):
 
     @init.command(name='join', aliases=['cadd', 'dcadd'])
     async def join(self, ctx, *, args: str = ''):
-        """Adds the current active character to combat. A character must be loaded through the SheetManager module first.
+        """
+        Adds the current active character to combat. A character must be loaded through the SheetManager module first.
         __Valid Arguments__ 
         adv/dis - Give advantage or disadvantage to the initiative roll.
         -b <condition bonus> - Adds a bonus to the combatants' Initiative roll.
         -phrase <phrase> - Adds flavor text.
+        -thumb <thumbnail URL> - Adds flavor image.
         -p <value> - Places combatant at the given value, instead of rolling.
         -h - Hides HP, AC, Resists, etc.
-        -group <group> - Adds the combatant to a group."""
+        -group <group> - Adds the combatant to a group.
+        [user snippet]
+        """
         char: Character = await Character.from_ctx(ctx)
+        args = await helpers.parse_snippets(args, ctx)
+        args = await char.parse_cvars(args, ctx)
+        args = argparse(args)
 
         embed = EmbedWithCharacter(char, False)
-        embed.colour = char.get_color()
 
-        args = argparse(args)
-        adv = args.adv(boolwise=True)
-        b = args.join('b', '+') or None
         p = args.last('p', type_=int)
-        phrase = args.join('phrase', '\n') or None
         group = args.last('group')
-        init_skill = char.skills.initiative
 
         if p is None:
-            roll_str = init_skill.d20(base_adv=adv)
-            if b:
-                roll_str = f"{roll_str}+{b}"
-            check_roll = roll(roll_str, inline=True)
-
-            embed.title = '{} makes an Initiative check!'.format(char.name)
-            embed.description = check_roll.skeleton + ('\n*' + phrase + '*' if phrase is not None else '')
-            init = check_roll.total
+            args.ignore('rr')
+            args.ignore('dc')
+            checkutils.update_csetting_args(char, args, char.skills.initiative)
+            totals = checkutils.run_check('initiative', char, args, embed)
+            init = totals[-1]
         else:
             init = p
             embed.title = "{} already rolled initiative!".format(char.name)
@@ -300,11 +306,11 @@ class InitTracker(commands.Cog):
 
         combat = await Combat.from_ctx(ctx)
 
-        me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
-
         if combat.get_combatant(char.name) is not None:
             await ctx.send("Combatant already exists.")
             return
+
+        me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
 
         if group is None:
             combat.add_combatant(me)
@@ -316,7 +322,6 @@ class InitTracker(commands.Cog):
 
         await combat.final()
         await ctx.send(embed=embed)
-        await char.commit(ctx)
 
     @init.command(name="next", aliases=['n'])
     async def nextInit(self, ctx):
@@ -436,6 +441,18 @@ class InitTracker(commands.Cog):
     async def reroll(self, ctx):
         """Rerolls initiative for all combatants."""
         combat = await Combat.from_ctx(ctx)
+
+        # repost summary message
+        old_summary = await combat.get_summary_msg()
+        new_summary = await ctx.send(combat.get_summary())
+        Combat.message_cache[new_summary.id] = new_summary  # add to cache
+        combat.summary = new_summary.id
+        try:
+            await new_summary.pin()
+            await old_summary.unpin()
+        except:
+            pass
+
         new_order = combat.reroll_dynamic()
         await ctx.send(f"Rerolled initiative! New order:\n{new_order}")
         await combat.final()
@@ -590,17 +607,21 @@ class InitTracker(commands.Cog):
 
         @option()
         async def group(combatant):
-            if combatant is combat.current_combatant:
-                return "\u274c You cannot change a combatant's group on their own turn."
+            current = combat.current_combatant
+            was_current = combatant is current or \
+                          (isinstance(current, CombatantGroup) and combatant in current and len(current) == 1)
             group_name = args.last('group')
+            combat.remove_combatant(combatant, ignore_remove_hook=True)
             if group_name.lower() == 'none':
-                combat.remove_combatant(combatant)
                 combat.add_combatant(combatant)
+                if was_current:
+                    combat.goto_turn(combatant, True)
                 return f"\u2705 {combatant.name} removed from all groups."
             else:
-                combat.remove_combatant(combatant)
                 c_group = combat.get_group(group_name, create=combatant.init)
                 c_group.add_combatant(combatant)
+                if was_current:
+                    combat.goto_turn(combatant, True)
                 return f"\u2705 {combatant.name} added to group {c_group.name}."
 
         @option(pass_group=True)
@@ -999,24 +1020,29 @@ class InitTracker(commands.Cog):
             target_name = atk_name
             atk_name = raw_args[0]
 
-        # attack selection
-        attacks = combatant.attacks
-        if 'custom' in args:
-            attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
-        else:
-            try:
-                attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name,
-                                                 message="Select your attack.")
-            except SelectionException:
-                return await ctx.send("Attack not found.")
+        # attack selection/caster handling
+        try:
+            if isinstance(combatant, CombatantGroup):
+                if 'custom' in args:  # group, custom
+                    caster = combatant.get_combatants()[0]
+                    attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                else:  # group, noncustom
+                    choices = []  # list of (name, caster, attack)
+                    for com in combatant.get_combatants():
+                        for atk in com.attacks:
+                            choices.append((f"{atk.name} ({com.name})", com, atk))
 
-        # caster handling
-        caster = combatant
-        if isinstance(combatant, CombatantGroup):
-            if 'custom' not in args:
-                caster = next(c for c in combatant.get_combatants() if attack in c.attacks)
+                    _, caster, attack = await search_and_select(ctx, choices, atk_name, lambda choice: choice[0],
+                                                                message="Select your attack.")
             else:
-                caster = combatant.get_combatants()[0]
+                caster = combatant
+                if 'custom' in args:  # single, custom
+                    attack = Attack.new(name=atk_name, bonus_calc='0', damage_calc='0')
+                else:  # single, noncustom
+                    attack = await search_and_select(ctx, combatant.attacks, atk_name, lambda a: a.name,
+                                                     message="Select your attack.")
+        except SelectionException:
+            return await ctx.send("Attack not found.")
 
         # target handling
         if 't' not in args and target_name is not None:
@@ -1145,9 +1171,6 @@ class InitTracker(commands.Cog):
 
         embed = result['embed']
         embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
-        embeds.add_fields_from_args(embed, args.get('f'))
-        if 'thumb' in args:
-            embed.set_thumbnail(url=args.last('thumb'))
         await ctx.send(embed=embed)
         await combat.final()
 

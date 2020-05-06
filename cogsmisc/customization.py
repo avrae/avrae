@@ -6,7 +6,6 @@ Created on Jan 30, 2017
 import asyncio
 import textwrap
 import traceback
-import uuid
 
 import discord
 from discord.ext import commands
@@ -69,6 +68,7 @@ class Customization(commands.Cog):
 
     @commands.command()
     @commands.cooldown(1, 20, BucketType.user)
+    @commands.max_concurrency(1, BucketType.user)
     async def multiline(self, ctx, *, cmds: str):
         """Runs each line as a separate command, with a 1 second delay between commands.
         Limited to 1 multiline every 20 seconds, with a max of 20 commands, due to abuse.
@@ -166,11 +166,17 @@ class Customization(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     async def alias(self, ctx, alias_name=None, *, cmds=None):
-        """Adds an alias for a long command.
-        After an alias has been added, you can instead run the aliased command with !<alias_name>.
-        If a user and a server have aliases with the same name, the user alias will take priority."""
+        """
+        Creates a custom user command.
+        After an alias has been added, you can run the command with !<alias_name>.
+
+        If a user and a server have aliases with the same name, the user alias will take priority.
+        Note that aliases cannot call other aliases.
+
+        Check out the [Aliasing Basics](https://avrae.readthedocs.io/en/latest/aliasing/aliasing.html) and [Aliasing Documentation](https://avrae.readthedocs.io/en/latest/aliasing/api.html) for more information.
+        """
         if alias_name is None:
-            return await ctx.invoke(self.bot.get_command("alias list"))
+            return await self.alias_list(ctx)
         if alias_name in self.bot.all_commands:
             return await ctx.send('There is already a built-in command with that name!')
 
@@ -190,8 +196,7 @@ class Customization(commands.Cog):
                                                f'<https://avrae.io/dashboard/aliases>'
             return await ctx.send(out)
 
-        await self.bot.mdb.aliases.update_one({"owner": str(ctx.author.id), "name": alias_name},
-                                              {"$set": {"commands": cmds.lstrip('!')}}, True)
+        await helpers.create_alias(ctx, alias_name, cmds.lstrip("!"))
 
         out = f'Alias `{ctx.prefix}{alias_name}` added.' \
               f'```py\n{ctx.prefix}alias {alias_name} {cmds.lstrip("!")}\n```'
@@ -238,7 +243,7 @@ class Customization(commands.Cog):
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
         If a user and a server have aliases with the same name, the user alias will take priority."""
         if alias_name is None:
-            return await ctx.invoke(self.bot.get_command("servalias list"))
+            return await self.servalias_list(ctx)
 
         server_aliases = await helpers.get_servaliases(ctx)
         if alias_name in self.bot.all_commands:
@@ -260,8 +265,7 @@ class Customization(commands.Cog):
                                   "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                                   "is required.")
 
-        await self.bot.mdb.servaliases.update_one({"server": str(ctx.guild.id), "name": alias_name},
-                                                  {"$set": {"commands": cmds.lstrip('!')}}, True)
+        await helpers.create_servalias(ctx, alias_name, cmds.lstrip("!"))
 
         out = f'Server alias `{ctx.prefix}{alias_name}` added.' \
               f'```py\n{ctx.prefix}alias {alias_name} {cmds.lstrip("!")}\n```'
@@ -302,15 +306,15 @@ class Customization(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     async def snippet(self, ctx, snipname=None, *, snippet=None):
-        """Creates a snippet to use in attack macros.
+        """Creates a snippet to use in attack commands.
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
-            return await ctx.invoke(self.bot.get_command("snippet list"))
+            return await self.snippet_list(ctx)
         user_snippets = await helpers.get_snippets(ctx)
 
         if snippet is None:
             out = f'**{snipname}**:```py\n' \
-                  f'{ctx.prefix}snippet {snipname} {user_snippets.get(snipname, "Not defined.")}'\
+                  f'{ctx.prefix}snippet {snipname} {user_snippets.get(snipname, "Not defined.")}' \
                   f'\n```'
             out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
                                                f'Command output too long to display.\n' \
@@ -318,9 +322,7 @@ class Customization(commands.Cog):
                                                f'<https://avrae.io/dashboard/aliases>'
             return await ctx.send(out)
 
-        if len(snipname) < 2: return await ctx.send("Snippets must be at least 2 characters long!")
-        await self.bot.mdb.snippets.update_one({"owner": str(ctx.author.id), "name": snipname},
-                                               {"$set": {"snippet": snippet}}, True)
+        await helpers.create_snippet(ctx, snipname, snippet)
 
         out = f'Snippet {snipname} added.```py\n' \
               f'{ctx.prefix}snippet {snipname} {snippet}\n```'
@@ -365,8 +367,7 @@ class Customization(commands.Cog):
         If a user and a server have snippets with the same name, the user snippet will take priority.
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
-            return await ctx.invoke(self.bot.get_command("servsnippet list"))
-        server_id = str(ctx.guild.id)
+            return await self.servsnippet_list(ctx)
         server_snippets = await helpers.get_servsnippets(ctx)
 
         if snippet is None:
@@ -377,20 +378,19 @@ class Customization(commands.Cog):
                                                f'Command output too long to display.'
             return await ctx.send(out)
 
-        if self.can_edit_servaliases(ctx):
-            if len(snipname) < 2: return await ctx.send("Snippets must be at least 2 characters long!")
-            await self.bot.mdb.servsnippets.update_one({"server": server_id, "name": snipname},
-                                                       {"$set": {"snippet": snippet}}, True)
-            out = f'Server snippet {snipname} added.```py\n' \
-                           f'{ctx.prefix}snippet {snipname} {snippet}' \
-                           f'\n```'
-            out = out if len(out) <= 2000 else f'Server snippet {snipname} added.\n' \
-                                               f'Command output too long to display.'
-            await ctx.send(out)
-        else:
+        if not self.can_edit_servaliases(ctx):
             return await ctx.send("You do not have permission to edit server snippets. Either __Administrator__ "
                                   "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                                   "is required.")
+
+        await helpers.create_servsnippet(ctx, snipname, snippet)
+
+        out = f'Server snippet {snipname} added.```py\n' \
+              f'{ctx.prefix}snippet {snipname} {snippet}' \
+              f'\n```'
+        out = out if len(out) <= 2000 else f'Server snippet {snipname} added.\n' \
+                                           f'Command output too long to display.'
+        await ctx.send(out)
 
     @servsnippet.command(name='list')
     @commands.guild_only()
@@ -443,6 +443,65 @@ class Customization(commands.Cog):
         else:
             return await ctx.invoke(embed_command, args=parsed)
 
+    @commands.group(invoke_without_command=True)
+    async def cvar(self, ctx, name: str = None, *, value=None):
+        """Commands to manage character variables for use in snippets and aliases.
+        See the [aliasing guide](https://avrae.io/cheatsheets/aliasing) for more help."""
+        if name is None:
+            return await self.list_cvar(ctx)
+
+        character: Character = await Character.from_ctx(ctx)
+
+        if value is None:  # display value
+            cvar = character.get_scope_locals().get(name)
+            if cvar is None:
+                return await ctx.send("This cvar is not defined.")
+            return await ctx.send(f'**{name}**: ```\n{cvar}\n```')
+
+        helpers.set_cvar(character, name, value)
+
+        await character.commit(ctx)
+        await ctx.send('Character variable `{}` set to: `{}`'.format(name, value))
+
+    @cvar.command(name='remove', aliases=['delete'])
+    async def remove_cvar(self, ctx, name):
+        """Deletes a cvar from the currently active character."""
+        char: Character = await Character.from_ctx(ctx)
+        if name not in char.cvars:
+            return await ctx.send('Character variable not found.')
+
+        del char.cvars[name]
+
+        await char.commit(ctx)
+        await ctx.send('Character variable {} removed.'.format(name))
+
+    @cvar.command(name='deleteall', aliases=['removeall'])
+    async def cvar_deleteall(self, ctx):
+        """Deletes ALL character variables for the active character."""
+        char: Character = await Character.from_ctx(ctx)
+
+        await ctx.send(f"This will delete **ALL** of your character variables for {char.name}. "
+                       "Are you *absolutely sure* you want to continue?\n"
+                       "Type `Yes, I am sure` to confirm.")
+        try:
+            reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
+        except asyncio.TimeoutError:
+            reply = None
+        if (not reply) or (not reply.content == "Yes, I am sure"):
+            return await ctx.send("Unconfirmed. Aborting.")
+
+        char.cvars = {}
+
+        await char.commit(ctx)
+        return await ctx.send(f"OK. I have deleted all of {char.name}'s cvars.")
+
+    @cvar.command(name='list')
+    async def list_cvar(self, ctx):
+        """Lists all cvars for the currently active character."""
+        character: Character = await Character.from_ctx(ctx)
+        await ctx.send('{}\'s character variables:\n{}'.format(character.name,
+                                                               ', '.join(sorted(character.cvars.keys()))))
+
     @commands.group(invoke_without_command=True, aliases=['uvar'])
     async def uservar(self, ctx, name=None, *, value=None):
         """
@@ -451,7 +510,7 @@ class Customization(commands.Cog):
         Arguments surrounded with `{{}}` will be evaluated as a custom script.
         See http://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
-            return await ctx.invoke(self.bot.get_command("uservar list"))
+            return await self.uvar_list(ctx)
 
         user_vars = await helpers.get_uvars(ctx)
 
@@ -502,7 +561,7 @@ class Customization(commands.Cog):
         Global variables must be accessed through scripting, with `get_gvar(gvar_id)`.
         See http://avrae.io/cheatsheets/aliasing for more help."""
         if name is None:
-            return await ctx.invoke(self.bot.get_command("globalvar list"))
+            return await self.gvar_list(ctx)
 
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
@@ -518,22 +577,13 @@ class Customization(commands.Cog):
     async def gvar_create(self, ctx, *, value):
         """Creates a global variable.
         A name will be randomly assigned upon creation."""
-        name = str(uuid.uuid4())
-        data = {'key': name, 'owner': str(ctx.author.id), 'owner_name': str(ctx.author), 'value': value,
-                'editors': []}
-        await self.bot.mdb.gvars.insert_one(data)
+        name = await helpers.create_gvar(ctx, value)
         await ctx.send(f"Created global variable `{name}`.")
 
     @globalvar.command(name='edit')
     async def gvar_edit(self, ctx, name, *, value):
         """Edits a global variable."""
-        gvar = await self.bot.mdb.gvars.find_one({"key": name})
-        if gvar is None:
-            return await ctx.send("Global variable not found.")
-        elif gvar['owner'] != str(ctx.author.id) and not str(ctx.author.id) in gvar.get('editors', []):
-            return await ctx.send("You are not allowed to edit this variable.")
-        else:
-            await self.bot.mdb.gvars.update_one({"key": name}, {"$set": {"value": value}})
+        await helpers.update_gvar(ctx, name, value)
         await ctx.send(f'Global variable `{name}` edited.')
 
     @globalvar.command(name='editor')

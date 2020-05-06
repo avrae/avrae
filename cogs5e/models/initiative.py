@@ -4,7 +4,7 @@ from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
     InvalidArgument, NoCharacter, NoCombatants, RequiresContext
 from cogs5e.models.monster import MonsterCastableSpellbook
-from cogs5e.models.sheet.attack import AttackList
+from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
 from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
@@ -120,6 +120,10 @@ class Combat:
     @property
     def summary(self):
         return self._summary
+
+    @summary.setter
+    def summary(self, new_summary: int):
+        self._summary = new_summary
 
     @property
     def dm(self):
@@ -627,8 +631,10 @@ class Combatant(StatBlock):
 
     @property
     def attacks(self):
-        attacks = self._attacks + AttackList.from_dict(self.active_effects('attack'))
-        return attacks
+        if 'attacks' not in self._cache:
+            # attacks granted by attacks are cached so that the same object is referenced in initTracker (#950)
+            self._cache['attacks'] = self._attacks + AttackList.from_dict(self.active_effects('attack'))
+        return self._cache['attacks']
 
     @property
     def index(self):
@@ -665,8 +671,7 @@ class Combatant(StatBlock):
             conc_conflict = self.remove_all_effects(lambda e: e.concentration)
 
         # invalidate cache
-        if 'parsed_effects' in self._cache:
-            del self._cache['parsed_effects']
+        self._invalidate_effect_cache()
 
         self._effects.append(effect)
         return {"conc_conflict": conc_conflict}
@@ -693,13 +698,12 @@ class Combatant(StatBlock):
     def remove_effect(self, effect):
         try:
             self._effects.remove(effect)
-            # invalidate cache
-            if 'parsed_effects' in self._cache:
-                del self._cache['parsed_effects']
         except ValueError:
             # this should be safe
             # the only case where this occurs is if a parent removes an effect while it's trying to remove itself
             pass
+        # invalidate cache
+        self._invalidate_effect_cache()
 
     def remove_all_effects(self, _filter=None):
         if _filter is None:
@@ -724,6 +728,12 @@ class Combatant(StatBlock):
         if key:
             return self._cache['parsed_effects'].get(key, [])
         return self._cache['parsed_effects']
+
+    def _invalidate_effect_cache(self):
+        if 'parsed_effects' in self._cache:
+            del self._cache['parsed_effects']
+        if 'attacks' in self._cache:
+            del self._cache['attacks']
 
     def is_concentrating(self):
         return any(e.concentration for e in self.get_effects())
@@ -892,7 +902,7 @@ class PlayerCombatant(Combatant):
     async def from_character(cls, character, ctx, combat, controller_id, init, private):
         inst = cls(ctx, combat, character.name, controller_id, private, init,
                    # statblock copies
-                   resistances=character.resistances,
+                   resistances=character.resistances.copy(),
                    # character specific
                    character_id=character.upstream, character_owner=character.owner)
         inst._character = character
@@ -960,7 +970,7 @@ class PlayerCombatant(Combatant):
         return self.character.set_hp(new_hp)
 
     def modify_hp(self, value, ignore_temp=False, overflow=True):
-        self.character.modify_hp(value, ignore_temp, overflow)
+        self.character.modify_hp(value, ignore_temp, overflow=overflow)
         return self.hp_str()
 
     def reset_hp(self):
@@ -976,8 +986,12 @@ class PlayerCombatant(Combatant):
 
     @property
     def attacks(self):
-        return super(PlayerCombatant, self).attacks + self.character.attacks
+        return super().attacks + self.character.attacks
 
+    def get_scope_locals(self):
+        return {**self.character.get_scope_locals(), **super().get_scope_locals()}
+
+    # ==== serialization ====
     @classmethod
     async def from_dict(cls, raw, ctx, combat):
         inst = super(PlayerCombatant, cls).from_dict(raw, ctx, combat)
@@ -1062,8 +1076,15 @@ class CombatantGroup(Combatant):
     @property
     def attacks(self):
         a = AttackList()
+        seen = set()
         for c in self.get_combatants():
-            a.extend(atk for atk in c.attacks if atk not in a)
+            for atk in c.attacks:
+                if atk in seen:
+                    continue
+                seen.add(atk)
+                atk_copy = Attack.copy(atk)
+                atk_copy.name = f"{atk.name} ({c.name})"
+                a.append(atk_copy)
         return a
 
     def get_combatants(self):
@@ -1072,6 +1093,7 @@ class CombatantGroup(Combatant):
     def add_combatant(self, combatant):
         self._combatants.append(combatant)
         combatant.group = self.name
+        combatant.init = self.init
 
     def remove_combatant(self, combatant):
         self._combatants.remove(combatant)
@@ -1149,6 +1171,12 @@ class CombatantGroup(Combatant):
 
     def __str__(self):
         return f"{self.name} ({len(self.get_combatants())} combatants)"
+
+    def __contains__(self, item):
+        return item in self._combatants
+
+    def __len__(self):
+        return len(self._combatants)
 
 
 def parse_attack_arg(arg, name):

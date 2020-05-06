@@ -56,7 +56,7 @@ class Lookup(commands.Cog):
     async def condition(self, ctx, *, name: str):
         """Looks up a condition."""
         # this is an invoke instead of an alias to make more sense in docs
-        await ctx.invoke(self.rule, name=f"Condition: {name}")
+        await self.rule(ctx, name=f"Condition: {name}")
 
     @staticmethod
     async def _show_reference_options(ctx, destination):
@@ -333,6 +333,7 @@ class Lookup(commands.Cog):
             file = discord.File(processed, filename="image.png")
             embed.set_image(url="attachment://image.png")
             await ctx.send(file=file, embed=embed)
+            processed.close()
 
     @commands.command()
     async def monster(self, ctx, *, name: str):

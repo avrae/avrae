@@ -1,5 +1,6 @@
 from cogs5e.models.sheet.attack import AttackList
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
+from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook
 from utils.constants import STAT_NAMES
 
@@ -130,7 +131,7 @@ class StatBlock:
     def hp_str(self):
         out = f"{self.hp}/{self.max_hp}"
         if self.temp_hp:
-            out += f' (+{self.temp_hp} temp)'
+            out += f' ({self.temp_hp} temp)'
         return out
 
     def modify_hp(self, value, ignore_temp=False, overflow=True):

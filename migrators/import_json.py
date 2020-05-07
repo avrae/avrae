@@ -9,18 +9,16 @@ import motor.motor_asyncio
 
 LOAD_FILES = {
     'names': [],
-    'srd-backgrounds': [],
-    'srd-bestiary': [],
-    'srd-classfeats': [],
-    'srd-classes': [],
-    'srd-feats': [],
-    'srd-items': [],
-    'srd-races': [],
-    'srd-spells': [],
-    'srd-references': [],
+    'backgrounds': [],
+    'feats': [],
+    'spells': [],
+    'monsters': [],
+    'items': [],
+    'classes': [],
+    'races': [],
+    'subraces': [],
 
-    'itemprops': {},
-    'nsrd-names': {},
+    'srd-references': []
 }
 
 

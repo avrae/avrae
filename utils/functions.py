@@ -16,20 +16,10 @@ import numpy
 from PIL import Image
 from fuzzywuzzy import fuzz, process
 
-from cogs5e.models.errors import ExternalImportError, NoSelectionElements, SelectionCancelled
+from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
+from utils.constants import SOURCE_MAP
 
 log = logging.getLogger(__name__)
-
-
-def discord_trim(string):
-    result = []
-    trimLen = 0
-    lastLen = 0
-    while trimLen <= len(string):
-        trimLen += 1999
-        result.append(string[lastLen:trimLen])
-        lastLen += 1999
-    return result
 
 
 def list_get(index, default, l):
@@ -180,93 +170,6 @@ def camel_to_title(string):
     return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', string).title()
 
 
-# noinspection PyTypeChecker
-def parse_resistances(damage, resistances, immunities, vulnerabilities, neutral=None):
-    if neutral is None:
-        neutral = []
-    # clean resists and whatnot
-    resistances = [r for r in resistances if r]
-    immunities = [r for r in immunities if r]
-    vulnerabilities = [r for r in vulnerabilities if r]
-    neutral = [r for r in neutral if r]
-
-    damage = damage.strip("*/")
-
-    # PEMDAS time!
-    # split into groups
-    groups = re.split(r"(\(.*\)|[+\-])", damage)
-    groups = [g.strip() for g in groups if g.strip()]
-
-    # P
-    for i, group in enumerate(groups):
-        paren = re.match(r"\((.*)\)", group)
-        if paren:
-            groups[i] = f"({parse_resistances(paren.group(1), resistances, immunities, vulnerabilities, neutral)})"
-
-    # MD
-    # we shouldn't really change the resists on these, so just group them
-    for i, group in enumerate(groups.copy()):
-        if group.startswith('*') or group.startswith('/'):
-            groups[i - 1] += groups.pop(i)
-
-    # AS
-    # we kind of already did this, so...
-    # on to the resist parsing!
-
-    # split groups into (group, annotation)
-    # ignore parens, since they're already done (in theory)
-    for i, group in enumerate(groups):
-        anno_match = re.search(r"\[(.*)\]", group)
-        if anno_match and not '(' in group:
-            groups[i] = (group.replace(anno_match.group(0), "").strip(), anno_match.group(1))
-        else:
-            groups[i] = (group, None)
-
-    # for use in next part
-    def on_anno(unk, annotation):
-        if not annotation:
-            return unk
-        ann = annotation.lower()
-        if any(n.lower() in ann for n in neutral):  # neutral overrides all
-            return f"{unk}[{annotation}]"
-        if any(v.lower() in ann for v in vulnerabilities):
-            unk = f"({unk})*2"
-        if not (annotation.startswith('^') or annotation.endswith('^')):  # ignore resist, immune
-            if any(r.lower() in ann for r in resistances):
-                unk = f"({unk})/2"
-            if any(im.lower() in ann for im in immunities):
-                unk = f"({unk})*0"
-        return f"{unk}[{annotation}]"
-
-    # iterate over group, anno pairs
-    # if it's a parenthetical, clear unknown and skip
-    # if it has no annotation and (unknown is not empty or it's not an op), add the group to a running unknown string
-    # if it has an annotation, assume all unknowns are part of that annotation and apply correct multiplier
-    # if we've reached the end, assume all unknowns were part of the last annotation and apply correct multiplier
-    out = ""
-    unknown = ""
-    last_annotation = ""
-    for group, anno in groups:
-        if '(' in group:
-            out += unknown
-            out += group
-            unknown = ""
-        elif not anno and (unknown or not ('+' in group or '-' in group)):
-            unknown += group
-        elif anno:
-            last_annotation = anno
-            unknown += group
-            out += on_anno(unknown, anno)
-            unknown = ""
-        else:  # generally, ops after parens, just pass it along
-            out += group
-    if unknown:
-        out += on_anno(unknown, last_annotation)
-
-    # test string: (3d6[vuln]+(1d4 +1d6[resist]))/2+1d6[vuln]+3d6[resist]/2
-    return out
-
-
 def paginate(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
     return [i for i in zip_longest(*args, fillvalue=fillvalue) if i is not None]
@@ -357,118 +260,6 @@ ABILITY_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
 
 def verbose_stat(stat):
     return ABILITY_MAP[stat.lower()]
-
-
-def parse_data_entry(text, md_breaks=False):
-    """Parses a list or string from... data.
-    :returns str - The final text."""
-    if not isinstance(text, list):
-        return parse_data_formatting(str(text))
-
-    out = []
-    join_str = '\n' if not md_breaks else '  \n'
-
-    for entry in text:
-        if not isinstance(entry, dict):
-            out.append(str(entry))
-        elif isinstance(entry, dict):
-            if not 'type' in entry and 'title' in entry:
-                out.append(f"**{entry['title']}**: {parse_data_entry(entry['text'])}")
-            elif not 'type' in entry and 'istable' in entry:  # only for races
-                temp = f"**{entry['caption']}**\n" if 'caption' in entry else ''
-                temp += ' - '.join(f"**{cl}**" for cl in entry['thead']) + '\n'
-                for row in entry['tbody']:
-                    temp += ' - '.join(f"{col}" for col in row) + '\n'
-                out.append(temp.strip())
-            elif not 'type' in entry:
-                out.append((f"**{entry['name']}**: " if 'name' in entry else '') +
-                           parse_data_entry(entry['entries']))
-            elif entry['type'] == 'entries':
-                out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
-                    entry['entries']))  # oh gods here we goooooooo
-            elif entry['type'] == 'item':
-                out.append((f"**{entry['name']}**: " if 'name' in entry else '') + parse_data_entry(
-                    entry['entry']))  # oh gods here we goooooooo
-            elif entry['type'] == 'options':
-                pass  # parsed separately in classfeat
-            elif entry['type'] == 'list':
-                out.append('\n'.join(f"- {parse_data_entry([t])}" for t in entry['items']))
-            elif entry['type'] == 'table':
-                temp = f"**{entry['caption']}**\n" if 'caption' in entry else ''
-                temp += ' - '.join(f"**{cl}**" for cl in entry['colLabels']) + '\n'
-                for row in entry['rows']:
-                    temp += ' - '.join(f"{col}" for col in row) + '\n'
-                out.append(temp.strip())
-            elif entry['type'] == 'invocation':
-                pass  # this is only found in options
-            elif entry['type'] == 'abilityAttackMod':
-                out.append(f"`{entry['name']} Attack Bonus = "
-                           f"{' or '.join(ABILITY_MAP.get(a) for a in entry['attributes'])}"
-                           f" modifier + Proficiency Bonus`")
-            elif entry['type'] == 'abilityDc':
-                out.append(f"`{entry['name']} Save DC = 8 + "
-                           f"{' or '.join(ABILITY_MAP.get(a) for a in entry['attributes'])}"
-                           f" modifier + Proficiency Bonus`")
-            elif entry['type'] == 'bonus':
-                out.append("{:+}".format(entry['value']))
-            elif entry['type'] == 'dice':
-                if 'toRoll' in entry:
-                    out.append(' + '.join(f"{d['number']}d{d['faces']}" for d in entry['toRoll']))
-                else:
-                    out.append(f"{entry['number']}d{entry['faces']}")
-            elif entry['type'] == 'bonusSpeed':
-                out.append(f"{entry['value']} feet")
-            else:
-                log.warning(f"Missing data entry type parse: {entry}")
-        else:
-            log.warning(f"Unknown data entry: {entry}")
-
-    return parse_data_formatting(join_str.join(out))
-
-
-FORMATTING = {'bold': '**', 'italic': '*', 'b': '**', 'i': '*'}
-PARSING = {
-    'creature': lambda e: e.split('|')[-1],
-    'item': lambda e: e.split('|')[0],
-    'filter': lambda e: e.split('|')[0],
-    'condition': lambda e: e,
-    'spell': lambda e: e.split('|')[0]
-}
-
-
-def parse_data_formatting(text):
-    """Parses a {@format } string."""
-    exp = re.compile(r'{@(\w+) (.+?)}')
-
-    def sub(match):
-        if match.group(1) in PARSING:
-            f = PARSING.get(match.group(1), lambda e: e)
-            return f(match.group(2))
-        else:
-            f = FORMATTING.get(match.group(1), '')
-            if not match.group(1) in FORMATTING:
-                log.warning(f"Unknown tag: {match.group(1)}")
-            return f"{f}{match.group(2)}{f}"
-
-    while exp.search(text):
-        text = exp.sub(sub, text)
-    return text
-
-
-URL_KEY_V1_RE = re.compile(r'key=([^&#]+)')
-URL_KEY_V2_RE = re.compile(r'/spreadsheets/d/([a-zA-Z0-9-_]+)')
-
-
-def extract_gsheet_id_from_url(url):
-    m2 = URL_KEY_V2_RE.search(url)
-    if m2:
-        return m2.group(1)
-
-    m1 = URL_KEY_V1_RE.search(url)
-    if m1:
-        return m1.group(1)
-
-    raise ExternalImportError("This is not a valid Google Sheets link.")
 
 
 async def confirm(ctx, message, delete_msgs=False):
@@ -641,3 +432,21 @@ def bubble_format(value: int, max_: int, fill_from_right=False):
     if fill_from_right:
         return f"{empty}{filled}"
     return f"{filled}{empty}"
+
+
+def long_source_name(source):
+    return SOURCE_MAP.get(source, source)
+
+
+def natural_join(things, between: str):
+    if len(things) < 3:
+        return f" {between} ".join(things)
+    first_part = ", ".join(things[:-1])
+    return f"{first_part}, {between} {things[-1]}"
+
+
+def trim_str(text, max_len):
+    """Trims a string to max_len."""
+    if len(text) < max_len:
+        return text
+    return f"{text[:max_len - 4]}..."

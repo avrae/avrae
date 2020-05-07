@@ -1,7 +1,10 @@
 import asyncio
+import traceback
 import uuid
 
-from cogs5e.models.errors import InvalidArgument, NotAllowed
+import draconic
+
+from cogs5e.models.errors import AvraeException, InvalidArgument, NotAllowed
 from utils.argparser import argquote, argsplit
 
 # constants
@@ -188,6 +191,30 @@ async def parse_no_char(cstr, ctx):
     """
     from .evaluators import ScriptingEvaluator
     evaluator = await ScriptingEvaluator.new(ctx)
-    out = await asyncio.get_event_loop().run_in_executor(None, evaluator.parse, cstr)
+    out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
     await evaluator.run_commits()
     return out
+
+
+async def handle_alias_exception(ctx, err):
+    e = err.original
+    location = ''
+    if isinstance(e, AvraeException):
+        return await ctx.channel.send(err)
+    elif isinstance(e, draconic.InvalidExpression):
+        try:
+            location = f" on line {e.node.lineno}, col {e.node.col_offset}"
+        except AttributeError:
+            pass
+    elif isinstance(e, draconic.DraconicSyntaxError):
+        location = f" on line {e.lineno}, col {e.offset}"
+    tb = ''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))
+    try:
+        await ctx.author.send(
+            f"```py\n"
+            f"Error{location} when parsing expression {err.expression}:\n"
+            f"{tb}\n"
+            f"```")
+    except:
+        pass
+    return await ctx.channel.send(err)

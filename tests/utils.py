@@ -3,7 +3,7 @@ import os
 import discord
 import pytest
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata.compendium import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.initiative import Combat
 from tests.setup import DEFAULT_USER_ID, TEST_CHANNEL_ID
@@ -41,7 +41,7 @@ DAMAGE_PATTERN = rf"((\*\*Damage( \(CRIT!\))?:?\*\*:? {DICE_PATTERN})|(\*\*Miss!
 ATTACK_PATTERN = rf"{TO_HIT_PATTERN}\n{DAMAGE_PATTERN}"
 
 # save: d20, success or failure
-SAVE_PATTERN = rf"\*\*\w+ Save:\*\* {D20_PATTERN}; (Failure|Success)!"
+SAVE_PATTERN = rf"\*\*\w+ Save:?\*\*:? {D20_PATTERN}; (Failure|Success)!"
 
 # save spell: saving throw and damage on two lines
 SAVE_SPELL_PATTERN = rf"{SAVE_PATTERN}\n{DAMAGE_PATTERN}"

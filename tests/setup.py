@@ -79,7 +79,8 @@ RESPONSES = {
     f"PUT /channels/*/pins/{MESSAGE_ID}": lambda _: None,
     f"DELETE /channels/*/pins/{MESSAGE_ID}": lambda _: None,
     f"PUT /channels/*/messages/{MESSAGE_ID}/reactions/*/@me": lambda _: None,
-    f"GET /channels/*/messages/{MESSAGE_ID}": message_response
+    f"GET /channels/*/messages/{MESSAGE_ID}": message_response,
+    f"POST /channels/*/typing": lambda _: None,
 }
 
 # initialization
@@ -91,7 +92,7 @@ DUMMY_READY = {
         0,
         1
     ],
-    'session_id': '6f1d1da3e7e480582376e423574335fd',
+    'session_id': 'foobar',
     'relationships': [],
     'private_channels': [],
     'presences': [],

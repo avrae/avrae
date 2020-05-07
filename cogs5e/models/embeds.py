@@ -92,6 +92,9 @@ def add_fields_from_long_text(embed, field_name, text):
     :param embed: The embed to add the fields to.
     :param str text: The text of the fields to add. Will append to existing fields.
     :param str field_name: The name of the first field to add.
+    :returns int: The number of fields added.
     """
-    for field in get_long_field_args(text, field_name):
+    fields = get_long_field_args(text, field_name)
+    for field in fields:
         embed.add_field(**field)
+    return len(fields)

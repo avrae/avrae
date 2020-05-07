@@ -1,4 +1,5 @@
-from cogs5e.funcs.dice import roll
+from d20 import roll
+
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS
@@ -119,7 +120,7 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
             roll_str = f"{roll_str}+{b}"
 
         # roll
-        result = roll(roll_str, inline=True)
+        result = roll(roll_str)
         if dc and result.total >= dc:
             num_successes += 1
 
@@ -127,9 +128,9 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
 
         # output
         if iterations > 1:
-            embed.add_field(name=rr_format.format(str(i + 1)), value=result.skeleton)
+            embed.add_field(name=rr_format.format(str(i + 1)), value=result.result)
         else:
-            desc_out.append(result.skeleton)
+            desc_out.append(result.result)
 
     # phrase
     if phrase:

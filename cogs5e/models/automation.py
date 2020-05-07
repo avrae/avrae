@@ -1,13 +1,17 @@
+import copy
 import logging
-import re
 
-from cogs5e.funcs.dice import SingleDiceGroup, roll
+import d20
+from d20 import roll
+
 from cogs5e.funcs.scripting.evaluators import SpellEvaluator
 from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.initiative import Combatant, PlayerCombatant
-from utils.functions import maybe_mod, parse_resistances
+from cogs5e.models.sheet.resistance import Resistances, do_resistances
+from utils.dice import RerollableStringifier
+from utils.functions import maybe_mod
 
 log = logging.getLogger(__name__)
 
@@ -192,34 +196,16 @@ class AutomationContext:
 
     def parse_annostr(self, annostr, is_full_expression=False):
         if not is_full_expression:
-            return self.evaluator.parse(annostr, extra_names=self.metavars)
+            return self.evaluator.transformed_str(annostr, extra_names=self.metavars)
 
-        original_names = self.evaluator.names.copy()
-        self.evaluator.names.update(self.metavars)
+        original_names = self.evaluator.builtins.copy()
+        self.evaluator.builtins.update(self.metavars)
         try:
             out = self.evaluator.eval(annostr)
         except Exception as ex:
             raise EvaluationError(ex, annostr)
-        self.evaluator.names = original_names
+        self.evaluator.builtins = original_names
         return out
-
-    def cantrip_scale(self, damage_dice):
-        if not self.is_spell:
-            return damage_dice
-
-        def scale(matchobj):
-            level = self.caster.spellbook.caster_level
-            if level < 5:
-                levelDice = "1"
-            elif level < 11:
-                levelDice = "2"
-            elif level < 17:
-                levelDice = "3"
-            else:
-                levelDice = "4"
-            return levelDice + 'd' + matchobj.group(2)
-
-        return re.sub(r'(\d+)d(\d+)', scale, damage_dice)
 
 
 class AutomationTarget:
@@ -255,18 +241,6 @@ class AutomationTarget:
 
     def get_resists(self):
         return self.target.resistances
-
-    def get_resist(self):
-        return self.get_resists().resist
-
-    def get_immune(self):
-        return self.get_resists().immune
-
-    def get_vuln(self):
-        return self.get_resists().vuln
-
-    def get_neutral(self):
-        return self.get_resists().neutral
 
     def damage(self, autoctx, amount, allow_overheal=True):
         if not self.is_simple:
@@ -523,22 +497,20 @@ class Attack(Effect):
                 to_hit_message = f'To Hit (AC {ac})'
 
             if b:
-                toHit = roll(f"{formatted_d20}+{attack_bonus}+{b}", rollFor=to_hit_message, inline=True,
-                             show_blurbs=False)
+                to_hit_roll = roll(f"{formatted_d20}+{attack_bonus}+{b}")
             else:
-                toHit = roll(f"{formatted_d20}+{attack_bonus}", rollFor=to_hit_message, inline=True, show_blurbs=False)
+                to_hit_roll = roll(f"{formatted_d20}+{attack_bonus}")
 
             # crit processing
-            try:
-                d20_value = next(p for p in toHit.raw_dice.parts if
-                                 isinstance(p, SingleDiceGroup) and p.max_value == 20).get_total()
-            except (StopIteration, AttributeError):
-                d20_value = 0
+            left = to_hit_roll.expr
+            while left.children:
+                left = left.children[0]
+            d20_value = left.total
 
             if d20_value >= criton:
                 itercrit = 1
             else:
-                itercrit = toHit.crit
+                itercrit = to_hit_roll.crit
 
             # -ac #
             target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
@@ -546,12 +518,12 @@ class Attack(Effect):
                 ac = ac or autoctx.target.ac
 
             if itercrit == 0 and ac:
-                if toHit.total < ac:
+                if to_hit_roll.total < ac:
                     itercrit = 2  # miss!
 
             # output
             if not hide:  # not hidden
-                autoctx.queue(toHit.result)
+                autoctx.queue(f"**{to_hit_message}**: {to_hit_roll.result}")
             elif target_has_ac:  # hidden
                 if itercrit == 2:
                     hit_type = 'MISS'
@@ -560,10 +532,10 @@ class Attack(Effect):
                 else:
                     hit_type = 'HIT'
                 autoctx.queue(f"**To Hit**: {formatted_d20}... = `{hit_type}`")
-                autoctx.add_pm(str(autoctx.ctx.author.id), toHit.result)
+                autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
             else:  # hidden, no ac
-                autoctx.queue(f"**To Hit**: {formatted_d20}... = `{toHit.total}`")
-                autoctx.add_pm(str(autoctx.ctx.author.id), toHit.result)
+                autoctx.queue(f"**To Hit**: {formatted_d20}... = `{to_hit_roll.total}`")
+                autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
 
             if itercrit == 2:
                 damage += self.on_miss(autoctx)
@@ -682,13 +654,14 @@ class Save(Effect):
                 autoctx.queue(f"**{save_blurb}:** Automatic failure!")
             else:
                 saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
-                save_roll = roll(saveroll, rollFor=save_blurb, inline=True, show_blurbs=False)
+                save_roll = roll(saveroll)
                 is_success = save_roll.total >= dc
                 success_str = ("; Success!" if is_success else "; Failure!")
+                out = f"**{save_blurb}**: {save_roll.result}{success_str}"
                 if not hide:
-                    autoctx.queue(f"{save_roll.result}{success_str}")
+                    autoctx.queue(out)
                 else:
-                    autoctx.add_pm(str(autoctx.ctx.author.id), f"{save_roll.result}{success_str}")
+                    autoctx.add_pm(str(autoctx.ctx.author.id), out)
                     autoctx.queue(f"**{save_blurb}**: 1d20...{success_str}")
         else:
             autoctx.meta_queue('{} Save'.format(save_skill[:3].upper()))
@@ -711,7 +684,7 @@ class Save(Effect):
         dc = caster.spellbook.dc
         if self.dc:
             try:
-                dc_override = evaluator.parse(self.dc)
+                dc_override = evaluator.transformed_str(self.dc)
                 dc = int(dc_override)
             except (TypeError, ValueError):
                 dc = 0
@@ -753,15 +726,14 @@ class Damage(Effect):
         # general arguments
         args = autoctx.args
         damage = self.damage
-        d = args.join('d', '+', ephem=True)
-        c = args.join('c', '+', ephem=True)
-        resist = args.get('resist', [], ephem=True)
-        immune = args.get('immune', [], ephem=True)
-        vuln = args.get('vuln', [], ephem=True)
-        neutral = args.get('neutral', [], ephem=True)
-        crit = args.last('crit', None, bool, ephem=True)
-        maxdmg = args.last('max', None, bool, ephem=True)
-        mi = args.last('mi', None, int)
+        resistances = Resistances()
+        d_arg = args.join('d', '+', ephem=True)
+        c_arg = args.join('c', '+', ephem=True)
+        crit_arg = args.last('crit', None, bool, ephem=True)
+        max_arg = args.last('max', None, bool, ephem=True)
+        magic_arg = args.last('magical', None, bool, ephem=True)
+        mi_arg = args.last('mi', None, int)
+        dtype_args = args.get('dtype', [])
         critdice = args.last('critdice', 0, int)
         hide = args.last('h', type_=bool)
 
@@ -771,10 +743,8 @@ class Damage(Effect):
 
         # combat-specific arguments
         if not autoctx.target.is_simple:
-            resist = resist or autoctx.target.get_resist()
-            immune = immune or autoctx.target.get_immune()
-            vuln = vuln or autoctx.target.get_vuln()
-            neutral = neutral or autoctx.target.get_neutral()
+            resistances = autoctx.target.get_resists().copy()
+        resistances.update(Resistances.from_args(args, ephem=True))
 
         # check if we actually need to run this damage roll (not in combat and roll is redundant)
         if autoctx.target.is_simple and self.is_meta(autoctx, True):
@@ -784,75 +754,82 @@ class Damage(Effect):
         if autoctx.combatant:
             effect_d = '+'.join(autoctx.combatant.active_effects('d'))
             if effect_d:
-                if d:
-                    d = f"{d}+{effect_d}"
+                if d_arg:
+                    d_arg = f"{d_arg}+{effect_d}"
                 else:
-                    d = effect_d
+                    d_arg = effect_d
 
         # check if we actually need to care about the -d tag
         if self.is_meta(autoctx):
-            d = None  # d was likely applied in the Roll effect already
+            d_arg = None  # d was likely applied in the Roll effect already
 
+        # set up damage AST
         damage = autoctx.parse_annostr(damage)
-
-        if autoctx.is_spell:
-            if self.cantripScale:
-                damage = autoctx.cantrip_scale(damage)
-
-            if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
-                higher = self.higher.get(str(autoctx.get_cast_level()))
-                if higher:
-                    damage = f"{damage}+{higher}"
-
-        # crit
-        in_crit = autoctx.in_crit or crit
-        roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
-
-        def parsecrit(damage_dice, wep=False):
-            if in_crit:
-                def critSub(matchobj):
-                    extracritdice = critdice if (critdice and wep) else 0
-                    return f"{int(matchobj.group(1)) * 2 + extracritdice}d{matchobj.group(2)}"
-
-                damage_dice = re.sub(r'(\d+)d(\d+)', critSub, damage_dice)
-            return damage_dice
+        dice_ast = copy.copy(d20.parse(damage))
+        dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
 
         # -mi # (#527)
-        if mi:
-            damage = re.sub(r'(\d+d\d+)', rf'\1mi{mi}', damage)
+        if mi_arg:
+            dice_ast = d20.utils.tree_map(_mi_mapper(mi_arg), dice_ast)
 
         # -d #
-        if d:
-            damage = parsecrit(damage, wep=not autoctx.is_spell) + '+' + parsecrit(d)
-        else:
-            damage = parsecrit(damage, wep=not autoctx.is_spell)
+        if d_arg:
+            d_ast = d20.parse(d_arg)
+            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
+
+        # crit
+        in_crit = autoctx.in_crit or crit_arg
+        roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
+        if in_crit:
+            dice_ast = d20.utils.tree_map(_crit_mapper, dice_ast)
+            if critdice and not autoctx.is_spell:
+                # add X critdice to the leftmost node if it's dice
+                left = d20.utils.leftmost(dice_ast)
+                if isinstance(left, d20.ast.Dice):
+                    left.num += int(critdice)
 
         # -c #
-        if c and in_crit:
-            damage = f"{damage}+{c}"
+        if c_arg and in_crit:
+            c_ast = d20.parse(c_arg)
+            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', c_ast.roll)
 
         # max
-        if maxdmg:
-            def maxSub(matchobj):
-                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+        if max_arg:
+            dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
-            damage = re.sub(r'(\d+)d(\d+)', maxSub, damage)
+        # evaluate damage
+        dmgroll = roll(dice_ast)
 
-        damage = parse_resistances(damage, resist, immune, vuln, neutral)
+        # magic arg (#853)
+        always = {'magical'} if (autoctx.is_spell or magic_arg) else None
+        # dtype transforms/overrides (#876)
+        transforms = {}
+        for dtype in dtype_args:
+            if '>' in dtype:
+                *froms, to = dtype.split('>')
+                for frm in froms:
+                    transforms[frm.strip()] = to.strip()
+            else:
+                transforms[None] = dtype
 
-        dmgroll = roll(damage, rollFor=roll_for, inline=True, show_blurbs=False)
+        # evaluate resistances
+        do_resistances(dmgroll.expr, resistances, always, transforms)
+
+        # generate output
+        result = d20.MarkdownStringifier().stringify(dmgroll.expr)
 
         # output
         if not hide:
-            autoctx.queue(dmgroll.result)
+            autoctx.queue(f"**{roll_for}**: {result}")
         else:
-            autoctx.queue(f"**{roll_for}**: {dmgroll.consolidated()} = `{dmgroll.total}`")
-            autoctx.add_pm(str(autoctx.ctx.author.id), dmgroll.result)
+            d20.utils.simplify_expr(dmgroll.expr)
+            autoctx.queue(f"**{roll_for}**: {d20.MarkdownStringifier().stringify(dmgroll.expr)}")
+            autoctx.add_pm(str(autoctx.ctx.author.id), f"**{roll_for}**: {result}")
 
         autoctx.target.damage(autoctx, dmgroll.total, allow_overheal=self.overheal)
 
         # return metadata for scripting
-        return {'damage': dmgroll.result, 'total': dmgroll.total, 'roll': dmgroll}
+        return {'damage': f"**{roll_for}**: {result}", 'total': dmgroll.total, 'roll': dmgroll}
 
     def is_meta(self, autoctx, strict=False):
         if not strict:
@@ -861,7 +838,7 @@ class Damage(Effect):
 
     def build_str(self, caster, evaluator):
         super(Damage, self).build_str(caster, evaluator)
-        damage = evaluator.parse(self.damage)
+        damage = evaluator.transformed_str(self.damage)
         return f"{damage} damage"
 
 
@@ -892,26 +869,14 @@ class TempHP(Effect):
             return
 
         amount = autoctx.parse_annostr(amount)
-
-        if autoctx.is_spell:
-            if self.cantripScale:
-                amount = autoctx.cantrip_scale(amount)
-
-            if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
-                higher = self.higher.get(str(autoctx.get_cast_level()))
-                if higher:
-                    amount = f"{amount}+{higher}"
-
-        roll_for = "THP"
+        dice_ast = copy.copy(d20.parse(amount))
+        dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
 
         if maxdmg:
-            def maxSub(matchobj):
-                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+            dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
-            amount = re.sub(r'(\d+)d(\d+)', maxSub, amount)
-
-        dmgroll = roll(amount, rollFor=roll_for, inline=True, show_blurbs=False)
-        autoctx.queue(dmgroll.result)
+        dmgroll = roll(dice_ast)
+        autoctx.queue(f"**THP**: {dmgroll.result}")
 
         if autoctx.target.combatant:
             autoctx.target.combatant.temp_hp = max(dmgroll.total, 0)
@@ -929,21 +894,23 @@ class TempHP(Effect):
 
     def build_str(self, caster, evaluator):
         super(TempHP, self).build_str(caster, evaluator)
-        amount = evaluator.parse(self.amount)
+        amount = evaluator.transformed_str(self.amount)
         return f"{amount} temp HP"
 
 
 class IEffect(Effect):
-    def __init__(self, name: str, duration: int, effects: str, end: bool = False, **kwargs):
+    def __init__(self, name: str, duration: int, effects: str, end: bool = False, conc: bool = False, **kwargs):
         super(IEffect, self).__init__("ieffect", **kwargs)
         self.name = name
         self.duration = duration
         self.effects = effects
         self.tick_on_end = end
+        self.concentration = conc
 
     def to_dict(self):
         out = super(IEffect, self).to_dict()
-        out.update({"name": self.name, "duration": self.duration, "effects": self.effects, "end": self.tick_on_end})
+        out.update({"name": self.name, "duration": self.duration, "effects": self.effects, "end": self.tick_on_end,
+                    "conc": self.concentration})
         return out
 
     def run(self, autoctx):
@@ -959,14 +926,20 @@ class IEffect(Effect):
         duration = autoctx.args.last('dur', duration, int)
         if isinstance(autoctx.target.target, Combatant):
             effect = initiative.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
-                                           duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end)
+                                           duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
+                                           concentration=self.concentration)
             if autoctx.conc_effect:
+                if autoctx.conc_effect.combatant is autoctx.target.target and self.concentration:
+                    raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
                 effect.set_parent(autoctx.conc_effect)
-            autoctx.target.target.add_effect(effect)
+            effect_result = autoctx.target.target.add_effect(effect)
+            autoctx.queue(f"**Effect**: {str(effect)}")
+            if conc_conflict := effect_result['conc_conflict']:
+                autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
         else:
             effect = initiative.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects),
-                                           tick_on_end=self.tick_on_end)
-        autoctx.queue(f"**Effect**: {str(effect)}")
+                                           tick_on_end=self.tick_on_end, concentration=self.concentration)
+            autoctx.queue(f"**Effect**: {str(effect)}")
 
     def build_str(self, caster, evaluator):
         super(IEffect, self).build_str(caster, evaluator)
@@ -1009,43 +982,31 @@ class Roll(Effect):
                 else:
                     d = effect_d
 
-        dice = self.dice
-
-        if autoctx.is_spell:
-            if self.cantripScale:
-                dice = autoctx.cantrip_scale(dice)
-
-            if self.higher and not autoctx.get_cast_level() == autoctx.spell.level:
-                higher = self.higher.get(str(autoctx.get_cast_level()))
-                if higher:
-                    dice = f"{dice}+{higher}"
+        dice_ast = copy.copy(d20.parse(self.dice))
+        dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
 
         if not self.hidden:
             # -mi # (#527)
             if mi:
-                dice = re.sub(r'(\d+d\d+)', rf'\1mi{mi}', dice)
+                dice_ast = d20.utils.tree_map(_mi_mapper(mi), dice_ast)
 
             if d:
-                dice = f"{dice}+{d}"
+                d_ast = d20.parse(d)
+                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
 
-        if maxdmg:
-            def maxSub(matchobj):
-                return f"{matchobj.group(1)}d{matchobj.group(2)}mi{matchobj.group(2)}"
+            if maxdmg:
+                dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
 
-            dice = re.sub(r'(\d+)d(\d+)', maxSub, dice)
-
-        rolled = roll(dice, rollFor=self.name.title(), inline=True, show_blurbs=False)
+        rolled = roll(dice_ast)
         if not self.hidden:
-            autoctx.meta_queue(rolled.result)
+            autoctx.meta_queue(f"**{self.name.title()}**: {rolled.result}")
 
-        if not rolled.raw_dice:
-            raise InvalidArgument(f"Invalid roll in meta roll: {rolled.result}")
-
-        autoctx.metavars[self.name] = rolled.consolidated()
+        d20.utils.simplify_expr(rolled.expr)
+        autoctx.metavars[self.name] = RerollableStringifier().stringify(rolled.expr.roll)
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)
-        evaluator.names[self.name] = self.dice
+        evaluator.builtins[self.name] = self.dice
         return ""
 
 
@@ -1090,6 +1051,65 @@ EFFECT_MAP = {
 }
 
 
+# ==== helpers ====
+def _upcast_scaled_dice(effect, autoctx, dice_ast):
+    """Scales the dice of the cast to its appropriate amount (handling cantrip scaling and higher level addition)."""
+    if autoctx.is_spell:
+        if effect.cantripScale:
+            level = autoctx.caster.spellbook.caster_level
+            if level < 5:
+                level_dice = 1
+            elif level < 11:
+                level_dice = 2
+            elif level < 17:
+                level_dice = 3
+            else:
+                level_dice = 4
+
+            def mapper(node):
+                if isinstance(node, d20.ast.Dice):
+                    node.num = level_dice
+                return node
+
+            dice_ast = d20.utils.tree_map(mapper, dice_ast)
+
+        if effect.higher and not autoctx.get_cast_level() == autoctx.spell.level:
+            higher = effect.higher.get(str(autoctx.get_cast_level()))
+            if higher:
+                higher_ast = d20.parse(higher)
+                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', higher_ast.roll)
+
+    return dice_ast
+
+
+def _mi_mapper(minimum):
+    """Returns a function that maps Dice AST objects to OperatedDice with miX attached."""
+
+    def mapper(node):
+        if isinstance(node, d20.ast.Dice):
+            miX = d20.ast.SetOperator('mi', [d20.ast.SetSelector(None, int(minimum))])
+            return d20.ast.OperatedDice(node, miX)
+        return node
+
+    return mapper
+
+
+def _max_mapper(node):
+    """A function that maps Dice AST objects to OperatedDice that set their values to their maximum."""
+    if isinstance(node, d20.ast.Dice):
+        miX = d20.ast.SetOperator('mi', [d20.ast.SetSelector(None, node.size)])
+        return d20.ast.OperatedDice(node, miX)
+    return node
+
+
+def _crit_mapper(node):
+    """A function that doubles the number of dice for each Dice AST node."""
+    if isinstance(node, d20.ast.Dice):
+        node.num *= 2
+    return node
+
+
+# ==== exceptions ====
 class AutomationException(AvraeException):
     pass
 

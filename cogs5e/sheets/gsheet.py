@@ -8,7 +8,6 @@ import asyncio
 import datetime
 import json
 import logging
-import os
 import re
 from contextlib import contextmanager
 
@@ -18,17 +17,18 @@ from gspread.exceptions import APIError
 from gspread.utils import a1_to_rowcol, fill_gaps
 from oauth2client.service_account import ServiceAccountCredentials
 
-from cogs5e.funcs.dice import get_roll_comment
-from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
+from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from cogs5e.sheets.errors import MissingAttribute
+from gamedata.compendium import compendium
 from utils import config
 from utils.constants import DAMAGE_TYPES
+from utils.dice import get_roll_comment
 from utils.functions import search
 
 log = logging.getLogger(__name__)
@@ -59,6 +59,21 @@ RESIST_COLS = (('resist', 'T'),  # T69:T79, 1.4/2.x
                ('immune', 'AB'),  # AB69:AB79, 2.1 only
                ('vuln', 'AI'))  # AI69:AI79, 2.1 only
 SCOPES = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+
+URL_KEY_V1_RE = re.compile(r'key=([^&#]+)')
+URL_KEY_V2_RE = re.compile(r'/spreadsheets/d/([a-zA-Z0-9-_]+)')
+
+
+def extract_gsheet_id_from_url(url):
+    m2 = URL_KEY_V2_RE.search(url)
+    if m2:
+        return m2.group(1)
+
+    m1 = URL_KEY_V1_RE.search(url)
+    if m1:
+        return m1.group(1)
+
+    raise ExternalImportError("This is not a valid Google Sheets link.")
 
 
 def letter2num(letters, zbase=True):

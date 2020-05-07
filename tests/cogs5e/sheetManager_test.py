@@ -44,7 +44,8 @@ class TestBasicSheetCommands:
     async def test_remove_portrait(self, avrae, dhttp):
         pass
 
-    async def test_playertoken(self, avrae, dhttp):  # todo figure out how to handle files/formdata
+    async def test_playertoken(self, avrae, dhttp):
+        # avrae.message("!token")  # will error until formdata handler added
         pass
 
     async def test_sheet(self, avrae, dhttp):

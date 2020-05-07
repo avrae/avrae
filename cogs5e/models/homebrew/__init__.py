@@ -1,4 +1,4 @@
-from cogs5e.models.spell import Spell
+from gamedata import Item, Spell
 from .base import HomebrewContainer
 
 
@@ -9,7 +9,7 @@ class Tome(HomebrewContainer):
 
     @classmethod
     def from_dict(cls, raw):
-        raw['spells'] = list(map(Spell.from_dict, raw['spells']))
+        raw['spells'] = [Spell.from_homebrew(s, raw['name']) for s in raw['spells']]
         return cls(**raw)
 
     # subscription helpers
@@ -27,11 +27,10 @@ class Pack(HomebrewContainer):
         super().__init__(*args, **kwargs)
         self.items = items
 
-    def get_search_formatted_items(self):
-        for i in self.items:
-            i['srd'] = True
-            i['source'] = 'homebrew'
-        return self.items
+    @classmethod
+    def from_dict(cls, raw):
+        raw['items'] = [Item.from_homebrew(s, raw['name']) for s in raw['items']]
+        return cls(**raw)
 
     # subscription helpers
     @staticmethod

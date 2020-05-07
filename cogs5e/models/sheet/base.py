@@ -1,4 +1,4 @@
-from utils.constants import SAVE_NAMES, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES, SKILL_MAP
+from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_ABBREVIATIONS, STAT_NAMES
 from utils.functions import camel_to_title, verbose_stat
 
 
@@ -95,7 +95,14 @@ class Skill:
         return cls(**d)
 
     def to_dict(self):
-        return {"value": self.value, "prof": self.prof, "bonus": self.bonus, "adv": self.adv}
+        out = {"value": self.value}
+        if self.prof != 0:
+            out['prof'] = self.prof
+        if self.bonus != 0:
+            out['bonus'] = self.bonus
+        if self.adv is not None:
+            out['adv'] = self.adv
+        return out
 
     # ---------- main funcs ----------
     def d20(self, base_adv=None, reroll: int = None, min_val: int = None, mod_override=None):
@@ -278,52 +285,3 @@ class Saves:
     def __iter__(self):
         for key, value in self.saves.items():
             yield key, value
-
-
-class Resistances:
-    def __init__(self, resist=None, immune=None, vuln=None, neutral=None):
-        if neutral is None:
-            neutral = []
-        if vuln is None:
-            vuln = []
-        if immune is None:
-            immune = []
-        if resist is None:
-            resist = []
-        self.resist = resist
-        self.immune = immune
-        self.vuln = vuln
-        self.neutral = neutral
-
-    @classmethod
-    def from_dict(cls, d):
-        return cls(**d)
-
-    def to_dict(self):
-        return {"resist": self.resist, "immune": self.immune, "vuln": self.vuln, "neutral": self.neutral}
-
-    def copy(self):
-        return Resistances(self.resist.copy(), self.immune.copy(), self.vuln.copy(), self.neutral.copy())
-
-    # ---------- main funcs ----------
-    def __getitem__(self, item):
-        if item == 'resist':
-            return self.resist
-        elif item == 'vuln':
-            return self.vuln
-        elif item == 'immune':
-            return self.immune
-        elif item == 'neutral':
-            return self.neutral
-        else:
-            raise ValueError(f"{item} is not a resistance type.")
-
-    def __str__(self):
-        out = []
-        if self.resist:
-            out.append(f"**Resistances**: {', '.join(self.resist).title()}")
-        if self.immune:
-            out.append(f"**Immunities**: {', '.join(self.immune).title()}")
-        if self.vuln:
-            out.append(f"**Vulnerabilities**: {', '.join(self.vuln).title()}")
-        return '\n'.join(out)

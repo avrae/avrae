@@ -12,13 +12,14 @@ from math import ceil, floor
 import aiohttp
 import html2text
 
-from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
+from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
+from gamedata.compendium import compendium
 from utils.constants import SAVE_NAMES, SKILL_MAP, SKILL_NAMES
 from utils.functions import search
 
@@ -630,13 +631,18 @@ class BeyondSheetParser(SheetLoaderABC):
                     base_dice = f"{itemdef['damage']['diceCount']}d{dice_size}"
 
             damage_type = (item_specific_bonuses['replaceDamageType'] or itemdef['damageType'] or 'unknown').lower()
+            if itemdef['magic'] or character_item_bonuses['isPact']:
+                damage_type = f"magical {damage_type}"
+            if character_item_bonuses['isAdamantine']:
+                damage_type = f"adamantine {damage_type}"
+            if character_item_bonuses['isSilver']:
+                damage_type = f"silvered {damage_type}"
 
             if base_dice and is_melee and has_gwf and not is_one_handed:
                 base_dice += "ro<3"      
 
             if base_dice:
-                damage = f"{base_dice}+{dmgBonus}[{damage_type}" \
-                         f"{'^' if itemdef['magic'] or character_item_bonuses['isPact'] else ''}]"
+                damage = f"{base_dice} + {dmgBonus} [{damage_type}]"
             else:
                 damage = None
 
@@ -652,8 +658,8 @@ class BeyondSheetParser(SheetLoaderABC):
                 versDmg = next(p['notes'] for p in item_properties if p['name'] == 'Versatile')
                 if has_gwf:
                     versDmg += "ro<3"
-                damage = f"{versDmg}+{dmgBonus}[{damage_type}" \
-                         f"{'^' if itemdef['magic'] or character_item_bonuses['isPact'] else ''}]"
+
+                damage = f"{versDmg} + {dmgBonus} [{damage_type}]"
                 attack = Attack.new(
                     f"2-Handed {name}", atk_bonus, damage, details
                 )
@@ -773,7 +779,9 @@ class BeyondSheetParser(SheetLoaderABC):
             'isPact': False,
             'isHex': False,
             'name': None,
-            'note': None
+            'note': None,
+            'isSilver': False,
+            'isAdamantine': False
         }
         for val in self.character_data['characterValues']:
             if not val['valueId'] == itemId: continue
@@ -787,6 +795,10 @@ class BeyondSheetParser(SheetLoaderABC):
                 out['attackBonus'] += val['value']
             elif val['typeId'] == 13:  # to hit override
                 out['attackBonusOverride'] = max(val['value'], out['attackBonusOverride'])
+            elif val['typeId'] == 20:  # silver
+                out['isSilver'] = True
+            elif val['typeId'] == 21:  # adamantine
+                out['isAdamantine'] = True
             elif val['typeId'] == 28:  # pact weapon
                 out['isPact'] = True
             elif val['typeId'] == 29:  # hex weapon

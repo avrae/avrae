@@ -782,7 +782,7 @@ class Combatant(StatBlock):
         if self.ac is not None and not self.is_private:
             out.append('AC {}'.format(self.ac))
         for e in self.get_effects():
-            out.append('{} [{} rds]'.format(e.name, e.remaining if not e.remaining < 0 else '∞'))
+            out.append(e.get_short_str())
         if self.notes:
             out.append(self.notes)
         if out:
@@ -1275,19 +1275,46 @@ class Effect:
     def concentration(self):
         return self._concentration
 
+    # --- stringification ---
     def __str__(self):
-        desc = self.name
-        if 0 <= self.remaining <= 1:
-            if self.ticks_on_end:
-                desc += " [until end of turn]"
-            else:
-                desc += " [until start of next turn]"
-        elif self.remaining >= 0:  # ...an effect could have 0 duration
-            desc += f" [{self.remaining} rounds]"
-        desc += self.get_parenthetical()
+        out = [self.name]
+        if duration := self.duration_str():
+            out.append(duration)
+        out.append(self.get_parenthetical())
         if self.concentration:
-            desc += " <C>"
-        return desc
+            out.append("<C>")
+        return ' '.join(out)
+
+    def get_short_str(self):
+        """Gets a short string describing the effect (for display in init summary)"""
+        return f'{self.name} {self.duration_str()}'.strip()
+
+    def duration_str(self):
+        """Gets a string describing this effect's duration."""
+        if self.remaining < 0:
+            return ''
+        elif 0 <= self.remaining <= 1:  # effect ends on next tick
+            if self.ticks_on_end:
+                return "[until end of turn]"
+            else:
+                return "[until start of next turn]"
+        elif self.remaining > 5_256_000:  # years
+            divisor, unit = 5256000, "year"
+        elif self.remaining > 438_000:  # months
+            divisor, unit = 438000, "month"
+        elif self.remaining > 100_800:  # weeks
+            divisor, unit = 100800, "week"
+        elif self.remaining > 14_400:  # days
+            divisor, unit = 14400, "day"
+        elif self.remaining > 600:  # hours
+            divisor, unit = 600, "hour"
+        elif self.remaining > 10:  # minutes
+            divisor, unit = 10, "minute"
+        else:  # rounds
+            divisor, unit = 1, "round"
+
+        rounded = round(self.remaining / divisor, 1) if divisor > 1 else self.remaining
+        return f"[{rounded} {unit}s]"
 
     def get_parenthetical(self):
         """Gets the descriptive text inside parentheses."""
@@ -1297,7 +1324,7 @@ class Effect:
         if self.parent:
             text.append(f"Parent: {self.parent['effect']}")  # name of parent effect
         if text:
-            return f" ({'; '.join(text)})"
+            return f"({'; '.join(text)})"
         return ""
 
     def get_effect_str(self):
@@ -1311,6 +1338,7 @@ class Effect:
                 out.append(f"{self.VALID_ARGS.get(k)}: {v}")
         return '; '.join(out)
 
+    # --- hooks ---
     def on_turn(self, num_turns=1):
         """
         Reduces the turn counter if applicable, and removes itself if at 0.

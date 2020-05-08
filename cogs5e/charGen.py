@@ -60,7 +60,7 @@ class CharGenerator(commands.Cog):
         embed.description = random.choice(table['choices'])
         await ctx.send(embed=embed)
 
-    @commands.command(name='charref')
+    @commands.command(name='charref', hidden=True)
     async def charref(self, ctx, level):
         """Gives you reference stats for a 5e character."""
         try:
@@ -140,8 +140,6 @@ class CharGenerator(commands.Cog):
         embed.title = race.name
         embed.add_field(name="Speed", value=race.speed)
         embed.add_field(name="Size", value=race.size)
-        if race.ability:
-            embed.add_field(name="Ability Bonuses", value=race.ability)
         for t in race.traits:
             embeds.add_fields_from_long_text(embed, t.name, t.text)
         embed.set_footer(text=f"Race | {race.source_str()}")

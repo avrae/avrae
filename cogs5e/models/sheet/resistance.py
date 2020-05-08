@@ -215,7 +215,6 @@ def do_resistances(damage_expr, resistances, always=None, transforms=None):
                 for t in _resist_tokenize(node.annotation.lower()):
                     tokens.extend(_resist_tokenize(transforms.get(t, t)))
             original_annotation = node.annotation
-            original_node = node
             node.annotation = f"[{' '.join(tokens)}]"
 
             # handle tree modification
@@ -228,7 +227,7 @@ def do_resistances(damage_expr, resistances, always=None, transforms=None):
                 node = d20.BinOp(d20.Parenthetical(node), '*', d20.Literal(2))
 
             if original_annotation.startswith('[^') or original_annotation.endswith('^]'):
-                node.annotation = f"{original_node.annotation[:-1]}^]"
+                node.annotation = original_annotation
                 # break here - don't handle resist/immune
                 return node
 

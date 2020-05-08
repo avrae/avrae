@@ -21,9 +21,9 @@ class LegacyRawCharacter:
             "armor": self.character.ac,
             "hp": self.character.max_hp,
 
-            "immune": self.character.resistances.immune,
-            "resist": self.character.resistances.resist,
-            "vuln": self.character.resistances.vuln,
+            "immune": [str(r) for r in self.character.resistances.immune],
+            "resist": [str(r) for r in self.character.resistances.resist],
+            "vuln": [str(r) for r in self.character.resistances.vuln],
 
             "background": self.character.background,
             "race": self.character.race,

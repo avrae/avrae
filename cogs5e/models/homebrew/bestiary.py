@@ -334,13 +334,18 @@ def _monster_factory(data, bestiary_name):
                                              resist=data['stats']['damageResistances'],
                                              immune=data['stats']['damageImmunities']))
 
-    return Monster(data['name'], data['stats']['size'], data['stats']['race'], data['stats']['alignment'],
-                   data['stats']['armorClass'], data['stats']['armorType'], hp, hitdice, data['stats']['speed'],
-                   ability_scores, saves, skills, ', '.join(data['stats']['senses']), resistances,
-                   data['stats']['conditionImmunities'], data['stats']['languages'], cr,
-                   data['stats']['experiencePoints'],
-                   traits, actions, reactions, legactions, data['stats']['legendaryActionsPerRound'],
-                   resistances, attacks, data['flavor']['nameIsProper'], data['flavor']['imageUrl'],
+    return Monster(name=data['name'], size=data['stats']['size'], race=data['stats']['race'],
+                   alignment=data['stats']['alignment'],
+                   ac=data['stats']['armorClass'], armortype=data['stats']['armorType'], hp=hp, hitdice=hitdice,
+                   speed=data['stats']['speed'],
+                   ability_scores=ability_scores, saves=saves, skills=skills, senses=', '.join(data['stats']['senses']),
+                   resistances=resistances,
+                   display_resists=resistances,
+                   condition_immune=data['stats']['conditionImmunities'], languages=data['stats']['languages'], cr=cr,
+                   xp=data['stats']['experiencePoints'],
+                   traits=traits, actions=actions, reactions=reactions, legactions=legactions,
+                   la_per_round=data['stats']['legendaryActionsPerRound'],
+                   attacks=attacks, proper=data['flavor']['nameIsProper'], image_url=data['flavor']['imageUrl'],
                    spellcasting=spellcasting, homebrew=True, source=bestiary_name)
 
 

@@ -6,7 +6,7 @@ These commands can be used personally or shared with other users on a server.  L
 basics of automation that you can start using in your server.
 
 .. note::
-  If you have experience with JSON and APIs and are looking for more advanced documentation, head on over to the `Aliasing API Page <aliasing/api.html>`_.
+  If you have experience with JSON and APIs and are looking for more advanced documentation, head on over to the `Aliasing API Page <api.html>`_.
 
 Command Types
 ------------------------

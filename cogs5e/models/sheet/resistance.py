@@ -132,6 +132,9 @@ class Resistance:
             return cls(s)
 
         tokens = _resist_tokenize(s)
+        if not tokens:  # weird edge case of resistance of only punctuation
+            return cls(s)
+
         unless = []
         only = []
         for t in tokens[:-1]:

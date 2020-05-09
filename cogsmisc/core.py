@@ -102,9 +102,9 @@ class Core(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.group(invoke_without_command=True)
+    @commands.command()
     async def ddb(self, ctx):
-        """Displays information about your D&D Beyond account."""
+        """Displays information about your D&D Beyond account link."""
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         embed = embeds.EmbedWithAuthor(ctx)
 
@@ -136,7 +136,7 @@ class Core(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @ddb.command(hidden=True, name='debug')
+    @commands.command(hidden=True, name='ddb-debug')
     async def ddb_debug(self, ctx):
         """Displays debug information about your D&D Beyond account."""
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)

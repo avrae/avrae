@@ -41,7 +41,7 @@ You will need to run a Redis instance to serve as a high-performance cache. Down
 ###### MongoDB
 You will also need to run a MongoDB instance to serve as Avrae's database.
 ###### Avrae
-To actually run Avrae, you need Python version >= 3.6.0 < 3.7.
+To actually run Avrae, you need Python version >= 3.8.0.
 First, install the dependencies with `pip install -r requirements.txt`.
 
 - If running Avrae in unsharded mode (**recommended for testing**), run `python dbot.py test`.

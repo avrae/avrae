@@ -74,8 +74,9 @@ def _roll(dice, roller=None):
     if roller is None:
         roller = d20.Roller()
 
-    result = roller.roll(dice)
-    if result is None:
+    try:
+        result = roller.roll(dice)
+    except d20.RollError:
         return 0
     return result.total
 

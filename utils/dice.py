@@ -73,5 +73,5 @@ def d20_with_adv(adv):
 
 def get_roll_comment(expr):
     """Gets the dice and comment from a roll expression."""
-    result = d20.parse(expr)
+    result = d20.parse(expr, allow_comments=True)
     return str(result.roll), (result.comment or '')

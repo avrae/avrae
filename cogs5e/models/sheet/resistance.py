@@ -132,6 +132,9 @@ class Resistance:
             return cls(s)
 
         tokens = _resist_tokenize(s)
+        if not tokens:  # weird edge case of resistance of only punctuation
+            return cls(s)
+
         unless = []
         only = []
         for t in tokens[:-1]:
@@ -224,7 +227,7 @@ def do_resistances(damage_expr, resistances, always=None, transforms=None):
                 node = d20.BinOp(d20.Parenthetical(node), '*', d20.Literal(2))
 
             if original_annotation.startswith('[^') or original_annotation.endswith('^]'):
-                node.annotation = f"{node.annotation[:-1]}^]"
+                node.annotation = original_annotation
                 # break here - don't handle resist/immune
                 return node
 

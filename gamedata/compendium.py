@@ -127,6 +127,7 @@ class Compendium:
         self._load_racefeats()
 
     def _load_subclasses(self):
+        self.subclasses = []
         for cls in self.classes:
             for subcls in cls.subclasses:
                 copied = copy.copy(subcls)
@@ -138,6 +139,7 @@ class Compendium:
         Loads all class features as a list of SourcedTraits. Class feature entity IDs inherit the entity ID of their
         parent class.
         """
+        self.cfeats = []
         seen = set()
 
         def handle_class(cls_or_sub):
@@ -156,6 +158,7 @@ class Compendium:
                 handle_class(subcls)
 
     def _load_racefeats(self):
+        self.rfeats = []
         for race in itertools.chain(self.races, self.subraces):
             for feature in race.traits:
                 copied = SourcedTrait.from_trait_and_sourced(feature, race, "racefeat")

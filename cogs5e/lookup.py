@@ -307,36 +307,30 @@ class Lookup(commands.Cog):
         if visible:
             embed_queue[-1].description = monster.get_meta()
             if monster.traits:
-                trait = ""
-                for a in monster.traits:
-                    trait += f"**{a.name}:** {a.desc}\n"
+                trait = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.traits)
                 if trait:
                     safe_append("Special Abilities", trait)
             if monster.actions:
-                action = ""
-                for a in monster.actions:
-                    action += f"**{a.name}:** {a.desc}\n"
+                action = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.actions)
                 if action:
                     safe_append("Actions", action)
             if monster.reactions:
-                reaction = ""
-                for a in monster.reactions:
-                    reaction += f"**{a.name}:** {a.desc}\n"
+                reaction = '\n\n'.join(f"**{a.name}:** {a.desc}" for a in monster.reactions)
                 if reaction:
                     safe_append("Reactions", reaction)
             if monster.legactions:
                 proper_name = f'The {monster.name}' if not monster.proper else monster.name
-                legendary = f"{proper_name} can take {monster.la_per_round} legendary actions, choosing from " \
-                            f"the options below. Only one legendary action can be used at a time and only at the " \
-                            f"end of another creature's turn. {proper_name} regains spent legendary actions at " \
-                            f"the start of its turn.\n"
+                legendary = [f"{proper_name} can take {monster.la_per_round} legendary actions, choosing from "
+                             f"the options below. Only one legendary action can be used at a time and only at the "
+                             f"end of another creature's turn. {proper_name} regains spent legendary actions at "
+                             f"the start of its turn."]
                 for a in monster.legactions:
                     if a.name:
-                        legendary += f"**{a.name}:** {a.desc}\n"
+                        legendary.append(f"**{a.name}:** {a.desc}")
                     else:
-                        legendary += f"{a.desc}\n"
+                        legendary.append(a.desc)
                 if legendary:
-                    safe_append("Legendary Actions", legendary)
+                    safe_append("Legendary Actions", '\n\n'.join(legendary))
 
         else:
             hp = monster.hp

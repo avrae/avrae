@@ -215,7 +215,8 @@ def do_resistances(damage_expr, resistances, always=None, transforms=None):
                 for t in _resist_tokenize(node.annotation.lower()):
                     tokens.extend(_resist_tokenize(transforms.get(t, t)))
             original_annotation = node.annotation
-            node.annotation = f"[{' '.join(tokens)}]"
+            dtype = f"{' '.join(always)} {' '.join(tokens)}".strip()
+            node.annotation = f"[{dtype}]"
 
             # handle tree modification
             ann = set(tokens) | always

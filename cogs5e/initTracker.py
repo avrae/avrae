@@ -950,7 +950,7 @@ class InitTracker(commands.Cog):
         *-d <damage>* - Adds additional damage.
         *-c <damage>* - Adds additional damage for when the attack crits, not doubled.
         -rr <value> - How many attacks to make at the target.
-        *-mi <value>* - Minimum value on the attack roll.
+        *-mi <value>* - Minimum value of each die on the damage roll.
 
         *-resist <damage type>* - Gives the target resistance to the given damage type.
         *-immune <damage type>* - Gives the target immunity to the given damage type.

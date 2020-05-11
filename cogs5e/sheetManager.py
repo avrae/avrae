@@ -75,7 +75,7 @@ class SheetManager(commands.Cog):
         *-d* <damage bonus> - adds a bonus to damage
         *-c* <damage bonus on crit> - adds a bonus to crit damage
         -rr <times> - number of times to roll the attack against each target
-        *-mi* <minimum> - minimum roll on each die
+        *-mi <value>* - minimum value of each die on the damage roll
         
         *-resist* <damage resistance>
         *-immune* <damage immunity>

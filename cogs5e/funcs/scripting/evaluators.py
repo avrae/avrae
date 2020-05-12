@@ -1,11 +1,11 @@
 import json
-import json.scanner
 import re
 import time
 from math import ceil, floor, sqrt
 
 import d20
 import draconic
+import json.scanner
 
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
 from utils.argparser import argparse
@@ -263,6 +263,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :param name: The name to set.
         :param value: The value to set it to.
         """
+        if name in self.builtins:
+            raise ValueError(f"{name} is already builtin (no shadow assignments).")
         self._names[name] = value
 
     def exists(self, name):

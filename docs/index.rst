@@ -17,6 +17,7 @@ Welcome to Avrae's documentation!
    :maxdepth: 3
    :caption: Contents:
 
+   ddb
    aliasing/aliasing
    aliasing/aliasing_tut
    aliasing/api

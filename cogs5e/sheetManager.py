@@ -166,11 +166,13 @@ class SheetManager(commands.Cog):
         __Valid Arguments__
         *adv/dis*
         *-b [conditional bonus]*
+        -dc [dc] (does not apply to Death Saves)
+        -rr [iterations] (does not apply to Death Saves)
+
         -phrase [flavor text]
         -title [title] *note: [name] and [sname] will be replaced automatically*
         -thumb [thumbnail URL]
-        -dc [dc] (does not apply to Death Saves)
-        -rr [iterations] (does not apply to Death Saves)
+        -f "Field Title|Field Text" - see `!help embed`
 
         An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one save.
         """
@@ -199,13 +201,15 @@ class SheetManager(commands.Cog):
         __Valid Arguments__
         *adv/dis*
         *-b [conditional bonus]*
-        -phrase [flavor text]
-        -title [title] *note: [name] and [cname] will be replaced automatically*
-        -thumb [thumbnail URL]
         -dc [dc]
         -mc [minimum roll]
         -rr [iterations]
         str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
+
+        -phrase [flavor text]
+        -title [title] *note: [name] and [cname] will be replaced automatically*
+        -thumb [thumbnail URL]
+        -f "Field Title|Field Text" - see `!help embed`
 
         An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one check.
         """

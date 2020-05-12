@@ -41,7 +41,7 @@ You will need to run a Redis instance to serve as a high-performance cache. Down
 ###### MongoDB
 You will also need to run a MongoDB instance to serve as Avrae's database.
 ###### Avrae
-To actually run Avrae, you need Python version >= 3.6.0 < 3.7.
+To actually run Avrae, you need Python version >= 3.8.0.
 First, install the dependencies with `pip install -r requirements.txt`.
 
 - If running Avrae in unsharded mode (**recommended for testing**), run `python dbot.py test`.
@@ -60,7 +60,19 @@ You should set the `DICECLOUD_USER`, `DICECLOUD_PASS`, `DICECLOUD_TOKEN`, and `G
 #### Misc
 Env vars required to deploy to production:
 - `NUM_CLUSTERS` - equal to the number of ECS tasks running Avrae
-- `GIT_COMMIT_SHA` - should be set in Travis
+- `DDB_AUTH_SECRET` - JWT signing secret for DDB auth request
+- `DDB_AUTH_WATERDEEP_SECRET` - JWT signing secret for DDB auth response
+- `DDB_AUTH_AUDIENCE` - JWT audience (default `"avrae.io"`)
+- `DDB_AUTH_ISSUER` - JWT issuer (default `"dndbeyond.com"`)
+- `DDB_AUTH_EXPIRY_SECONDS` - JWT expiry (default 5m)
+- `DDB_AUTH_SERVICE_URL` - DDB Auth Service base URL
+- `DYNAMO_REGION` - AWS region for Entitlements DB
+- `DYNAMO_USER_TABLE` - Table name for Entitlements user table
+- `DYNAMO_ENTITY_TABLE` - Table name for Entitlements entity table
+- `AWS_ACCESS_KEY_ID` - AWS Access Key to access Dynamo
+- `AWS_SECRET_ACCESS_KEY` - AWS Secret Access Key
+- `LAUNCHDARKLY_SDK_KEY` - LaunchDarkly SDK Key
 
-Optional env vars:
+Other env vars:
 - `NUM_SHARDS` - explicitly set the number of shards to run
+- `GIT_COMMIT_SHA` - should be set in Travis (required for prod)

@@ -9,7 +9,8 @@ from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NoReset
 from cogs5e.models.sheet.attack import AttackList
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
+from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.player import CharOptions, CustomCounter, DeathSaves, ManualOverrides
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock
@@ -26,7 +27,6 @@ class Character(StatBlock):
     # this makes sure that multiple calls to Character.from_ctx() in the same invocation or two simultaneous ones
     # retrieve/modify the same Character state
     # caches based on (owner, upstream)
-    # FIXME: May lead to weird conditions if scaling to multiple clusters
     _cache = cachetools.TTLCache(maxsize=50, ttl=5)
 
     def __init__(self, owner: str, upstream: str, active: bool, sheet_type: str, import_version: int,
@@ -207,7 +207,7 @@ class Character(StatBlock):
         :returns string - the parsed string."""
         evaluator = await (await ScriptingEvaluator.new(ctx)).with_character(self)
 
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.parse, cstr)
+        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
         await evaluator.run_commits()
 
         return out
@@ -217,7 +217,7 @@ class Character(StatBlock):
         :param varstr - the expression to evaluate.
         :returns str - the resulting expression."""
         evaluator = MathEvaluator.with_character(self)
-        return evaluator.parse(varstr)
+        return evaluator.transformed_str(varstr)
 
     def evaluate_math(self, varstr):
         """Evaluates a cvar expression in a MathEvaluator.

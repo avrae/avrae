@@ -22,9 +22,7 @@ async def test_charref(avrae, dhttp):
 
     await dhttp.receive_message("Generating character, please wait...", regex=False)
     await dhttp.receive_message(r"\*\*Stats for \w+:\*\* `\[(\d{1,2}, ){5}\d{1,2}\]`", dm=True)
-    for _ in range(5):
-        await dhttp.receive_message(embed=discord.Embed(), dm=True)
-    await dhttp.receive_edit()
+    await dhttp.drain()
 
 
 @requires_data()
@@ -37,9 +35,7 @@ async def test_randchar(avrae, dhttp):
     avrae.message("!randchar 1")
     await dhttp.receive_message("Generating character, please wait...", regex=False)
     await dhttp.receive_message(r"\*\*Stats for \w+:\*\* `\[(\d{1,2}, ){5}\d{1,2}\]`", dm=True)
-    for _ in range(5):
-        await dhttp.receive_message(embed=discord.Embed(), dm=True)
-    await dhttp.receive_edit()
+    await dhttp.drain()
 
 
 @requires_data()

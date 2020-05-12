@@ -149,3 +149,12 @@ class NoCombatants(CombatException):
 
     def __init__(self):
         super().__init__("There are no combatants.")
+
+
+class RequiresLicense(AvraeException):
+    """This entity requires a license to view that you don't have."""
+
+    def __init__(self, entity, has_connected_ddb):
+        super().__init__(f"insufficient license to view {entity.name}")
+        self.entity = entity
+        self.has_connected_ddb = has_connected_ddb

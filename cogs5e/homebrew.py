@@ -192,7 +192,7 @@ class Homebrew(commands.Cog):
         embed.description = pack.desc
         if pack.image:
             embed.set_thumbnail(url=pack.image)
-        itemnames = "\n".join(i['name'] for i in pack.items)
+        itemnames = "\n".join(i.name for i in pack.items)
         if len(itemnames) < 1020:
             embed.add_field(name="Items", value=itemnames)
         else:

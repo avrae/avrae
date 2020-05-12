@@ -1,41 +1,26 @@
-import ast
-import json
-import re
-import time
-from math import ceil, floor, sqrt
+import random
 
-import simpleeval
-from simpleeval import IterableTooLong
+import d20
+import draconic
 
-from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import AvraeException
-from utils.argparser import argparse
-from . import MAX_ITER_LENGTH
+from utils.dice import RerollableStringifier
+
+MAX_ITER_LENGTH = 10000
 
 
-# roll()
-def simple_roll(dice):
-    """
-    Rolls dice and returns the total.
-
-    .. note::
-        This function's true signature is ``roll(dice)``.
-
-    :param str dice: The dice to roll.
-    :return: The roll's total, or 0 if an error was encountered.
-    :rtype: int
-    """
-    return roll(dice).total
-
-
-# vroll()
+# vroll(), roll()
 class SimpleRollResult:
-    def __init__(self, dice, total, full, raw, roll_obj):
-        self.dice = dice.strip()
-        self.total = total
-        self.full = full.strip()
-        self.raw = raw
-        self._roll = roll_obj
+    def __init__(self, result):
+        """
+        :type result: d20.RollResult
+        """
+        self.dice = d20.MarkdownStringifier().stringify(result.expr.roll)
+        self.total = result.total
+        self.full = str(result)
+        self.result = result
+        self.raw = result.expr
+        self._roll = result
 
     def __str__(self):
         """
@@ -47,6 +32,8 @@ class SimpleRollResult:
         """
         Gets the most simplified version of the roll string. Consolidates totals and damage types together.
 
+        Note that this modifies the result expression in place!
+
         >>> result = vroll("3d6[fire]+1d4[cold]")
         >>> str(result)
         '3d6 (3, 3, 2) [fire] + 1d4 (2) [cold] = `10`'
@@ -55,7 +42,8 @@ class SimpleRollResult:
 
         :rtype: str
         """
-        return self._roll.consolidated()
+        d20.utils.simplify_expr(self._roll.expr, ambig_inherit='left')
+        return RerollableStringifier().stringify(self._roll.expr.roll)
 
 
 def vroll(dice, multiply=1, add=0):
@@ -68,50 +56,68 @@ def vroll(dice, multiply=1, add=0):
     :return: The result of the roll.
     :rtype: :class:`~cogs5e.funcs.scripting.functions.SimpleRollResult`
     """
-    if multiply != 1 or add != 0:
-        def subDice(matchobj):
-            return str((int(matchobj.group(1)) * multiply) + add) + 'd' + matchobj.group(2)
+    return _vroll(dice, multiply, add)
 
-        dice = re.sub(r'(\d+)d(\d+)', subDice, dice)
-    rolled = roll(dice, inline=True)
+
+def roll(dice):
+    """
+    Rolls dice and returns the total.
+
+    :param str dice: The dice to roll.
+    :return: The roll's total, or 0 if an error was encountered.
+    :rtype: int
+    """
+    return _roll(dice)
+
+
+def _roll(dice, roller=None):
+    if roller is None:
+        roller = d20.Roller()
+
     try:
-        return SimpleRollResult(rolled.rolled, rolled.total, rolled.skeleton,
-                                [part.to_dict() for part in rolled.raw_dice.parts], rolled)
-    except AttributeError:
+        result = roller.roll(dice)
+    except d20.RollError:
+        return 0
+    return result.total
+
+
+def _vroll(dice, multiply=1, add=0, roller=None):
+    if roller is None:
+        roller = d20.Roller()
+
+    dice_ast = roller.parse(dice)
+
+    if multiply != 1 or add != 0:
+        def mapper(node):
+            if isinstance(node, d20.ast.Dice):
+                node.num = (node.num * multiply) + add
+            return node
+
+        dice_ast = d20.utils.tree_map(mapper, dice_ast)
+
+    try:
+        rolled = roller.roll(dice_ast)
+    except d20.RollError:
         return None
+    return SimpleRollResult(rolled)
 
 
 # range()
 def safe_range(start, stop=None, step=None):
     if stop is None and step is None:
         if start > MAX_ITER_LENGTH:
-            raise IterableTooLong("This range is too large.")
+            raise draconic.IterableTooLong("This range is too large.")
         return list(range(start))
     elif stop is not None and step is None:
         if stop - start > MAX_ITER_LENGTH:
-            raise IterableTooLong("This range is too large.")
+            raise draconic.IterableTooLong("This range is too large.")
         return list(range(start, stop))
     elif stop is not None and step is not None:
         if (stop - start) / step > MAX_ITER_LENGTH:
-            raise IterableTooLong("This range is too large.")
+            raise draconic.IterableTooLong("This range is too large.")
         return list(range(start, stop, step))
     else:
-        raise ValueError("Invalid arguments passed to range()")
-
-
-# json
-def load_json(jsonstr):
-    """
-    Loads an object from a JSON string. See :func:`json.loads`.
-    """
-    return json.loads(jsonstr)
-
-
-def dump_json(obj):
-    """
-    Serializes an object to a JSON string. See :func:`json.dumps`.
-    """
-    return json.dumps(obj)
+        raise draconic.DraconicValueError("Invalid arguments passed to range()")
 
 
 # err()
@@ -141,15 +147,10 @@ def typeof(inst):
     return type(inst).__name__
 
 
-DEFAULT_OPERATORS = simpleeval.DEFAULT_OPERATORS.copy()
-DEFAULT_OPERATORS.pop(ast.Pow)
+# rand(), randint(x)
+def rand():
+    return random.random()
 
-DEFAULT_FUNCTIONS = simpleeval.DEFAULT_FUNCTIONS.copy()
-DEFAULT_FUNCTIONS.update({
-    # builtins
-    'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
-    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
-    # ours
-    'roll': simple_roll, 'vroll': vroll, 'load_json': load_json, 'dump_json': dump_json,
-    'err': err, 'typeof': typeof, 'argparse': argparse
-})
+
+def randint(top):
+    return random.randrange(top)

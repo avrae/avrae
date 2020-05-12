@@ -177,6 +177,19 @@ class Stats(commands.Cog):
         cluster_servers = await bot.rdb.get_whole_dict(GUILD_RDB_KEY)
         return sum(int(v) for v in cluster_servers.values())
 
+    @staticmethod
+    async def count_ddb_link(ctx, user_id, ddb_user):
+        await ctx.bot.mdb.analytics_ddb_activity.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {"ddb_id": ddb_user.user_id},
+                "$inc": {"link_usage": 1},
+                "$currentDate": {"last_link_time": True},
+                "$setOnInsert": {"first_link_time": datetime.datetime.utcnow()}
+            },
+            upsert=True
+        )
+
 
 def setup(bot):
     bot.add_cog(Stats(bot))

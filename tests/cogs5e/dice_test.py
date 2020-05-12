@@ -1,7 +1,7 @@
 import discord
 import pytest
 
-from cogs5e.funcs.lookupFuncs import compendium
+from gamedata.compendium import compendium
 from tests.utils import ATTACK_PATTERN, D20_PATTERN, DAMAGE_PATTERN, TO_HIT_PATTERN, requires_data
 
 pytestmark = pytest.mark.asyncio
@@ -35,13 +35,13 @@ async def test_ma(avrae, dhttp):
     await dhttp.receive_delete()
     atk_embed = discord.Embed(title=r"(\w+ ?){2,3} attacks with a Dagger!")
     atk_embed.add_field(name="Meta", inline=False, value=ATTACK_PATTERN)
-    atk_embed.add_field(name="Effect", inline=False, value=r"Melee Weapon Attack:.+")
+    atk_embed.add_field(name="Effect", inline=False, value=r"\*Melee Weapon Attack:.+")
     await dhttp.receive_message(embed=atk_embed)
 
     avrae.message("!ma kobold dagger -h")
     await dhttp.receive_delete()
     await dhttp.receive_message(f"An unknown creature attacks with a Dagger!\n"
-                                f"{TO_HIT_PATTERN}\n({DAMAGE_PATTERN}\n)?Melee Weapon Attack:.+", dm=True)
+                                f"{TO_HIT_PATTERN}\n({DAMAGE_PATTERN}\n)?\*Melee Weapon Attack:.+", dm=True)
     atk_embed = discord.Embed(title="An unknown creature attacks with a Dagger!")
     atk_embed.add_field(name="Meta", inline=False, value=ATTACK_PATTERN)
     await dhttp.receive_message(embed=atk_embed)
@@ -81,7 +81,7 @@ async def test_ms(avrae, dhttp):
 async def test_mcast(avrae, dhttp):
     dhttp.clear()
 
-    mage = next(m for m in compendium.monster_mash if m.name == "Mage")
+    mage = next(m for m in compendium.monsters if m.name == "Mage")
 
     avrae.message("!mcast mage fireball")
     await dhttp.receive_delete()

@@ -10,17 +10,18 @@ import logging
 import re
 from math import ceil, floor
 
-from simpleeval import FunctionNotDefined, NameNotDefined, SimpleEval
+from draconic import SimpleInterpreter
 
 import credentials
-from cogs5e.funcs.lookupFuncs import compendium
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import dicecloud_client
 from cogs5e.models.dicecloud.errors import DicecloudException
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
-from cogs5e.models.sheet.base import BaseStats, Levels, Resistances, Saves, Skill, Skills
+from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
+from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
+from gamedata.compendium import compendium
 from utils import config
 from utils.constants import DAMAGE_TYPES, SAVE_NAMES, SKILL_MAP, SKILL_NAMES, STAT_NAMES
 from utils.functions import search
@@ -463,42 +464,37 @@ class DicecloudParser(SheetLoaderABC):
 def func_if(condition, t, f):
     return t if condition else f
 
+
 def larger(x, y):
     return 1 if x > y else 0
 
 
-class DicecloudEvaluator(SimpleEval):
-    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round, 'func_if': func_if, 'larger': larger}
+class DicecloudEvaluator(SimpleInterpreter):
+    DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round, 'func_if': func_if,
+                         'larger': larger}
 
-    def __init__(self, operators=None, functions=None, names=None):
-        if not functions:
-            functions = self.DEFAULT_FUNCTIONS
-        super(DicecloudEvaluator, self).__init__(operators, functions, names)
-        self.names = {}
+    def __init__(self):
+        super(DicecloudEvaluator, self).__init__(builtins=self.DEFAULT_FUNCTIONS)
 
     def eval(self, expr):
         expr = re.sub(r'if\s*\(', 'func_if(', expr)  # 0.5ms avg
-        return super().eval(expr)
+        return super().eval(expr.strip())
+
+    def _preflight(self):
+        pass
 
     def _eval_name(self, node):
         lowernames = {k.lower(): v for k, v in self.names.items()}
         try:
             return lowernames[node.id.lower()]
         except KeyError:
-            if node.id in self.functions:
-                return self.functions[node.id]
-        raise NameNotDefined(node.id, self.expr)
+            return super()._eval_name(node)
 
     def _eval_call(self, node):
-        if isinstance(node.func, ast.Attribute):
-            func = self._eval(node.func)
-        elif isinstance(node.func, ast.Num):
+        if isinstance(node.func, ast.Num):
             func = lambda n: n * self._eval(node.func)
         else:
-            try:
-                func = self.functions[node.func.id]
-            except KeyError:
-                raise FunctionNotDefined(node.func.id, self.expr)
+            func = self._eval(node.func)
 
         return func(
             *(self._eval(a) for a in node.args),

@@ -11,18 +11,16 @@ class BaseStats {
 class Skill {
     // value = base_skill + (prof * prof_bonus) + bonus
     value: number; // the final calculated bonus
-    prof: 0 | 0.5 | 1 | 2;  // none, joat, prof, expertise
-    bonus: number; // misc bonuses
-    adv: null | true | false; // none, adv, dis
+    prof?: 0 | 0.5 | 1 | 2;  // none, joat, prof, expertise, default 0
+    bonus?: number; // misc bonuses, default 0
+    adv?: null | true | false; // none, adv, dis, default none
 }
 
 class Attack {
     name: string;
-    bonus: number; // to-hit bonus, can be null
-    damage: string; // damage dice string, can be null
-    details: string; // text to output (attack description)
-    bonus_calc: string; // the bonus calculation (usually for user-added attacks)
-    damage_calc: string; // the damage calculation (usually for user-added attacks)
+    automation: object[];  // see https://avrae.readthedocs.io/en/latest/automation_ref.html
+    verb: string;
+    proper: boolean;
 }
 
 class Spellbook {
@@ -41,4 +39,41 @@ class SpellbookSpell {
     level: null; // not implemented: the spell level
     dc: null; // not implemented: the spell's explicit DC
     sab: null // not implemented: the spell's explicit SAB
+}
+
+class Saves {
+    strengthSave: Skill;
+    dexteritySave: Skill;
+    constitutionSave: Skill;
+    intelligenceSave: Skill;
+    wisdomSave: Skill;
+    charismaSave: Skill;
+}
+
+class Skills {
+    acrobatics: Skill;
+    animalHandling: Skill;
+    arcana: Skill;
+    athletics: Skill;
+    deception: Skill;
+    history: Skill;
+    initiative: Skill;
+    insight: Skill;
+    intimidation: Skill;
+    investigation: Skill;
+    medicine: Skill;
+    nature: Skill;
+    perception: Skill;
+    performance: Skill;
+    persuasion: Skill;
+    religion: Skill;
+    sleightOfHand: Skill;
+    stealth: Skill;
+    survival: Skill;
+    strength: Skill;
+    dexterity: Skill;
+    constitution: Skill;
+    intelligence: Skill;
+    wisdom: Skill;
+    charisma: Skill;
 }

@@ -32,13 +32,7 @@ import itertools
 import json
 import sys
 
-from discord.ext.commands import Bot, Group
-
-COGS = (
-    "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
-    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization", "cogsmisc.core",
-    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl"
-)
+from discord.ext.commands import Group
 
 sys.path.append('..')
 
@@ -139,12 +133,7 @@ def parse_module(module, commands):
 
 
 def main(out='commands.json'):
-    bot = Bot('!')
-    for cog in COGS:
-        try:
-            bot.load_extension(cog)
-        except Exception as e:
-            print(e)
+    from dbot import bot
     modules = []
 
     # helpers

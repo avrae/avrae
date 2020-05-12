@@ -1,66 +1,69 @@
-import ast
+import json
+import json.scanner
 import re
-from math import ceil, floor
+import time
+from math import ceil, floor, sqrt
 
-from simpleeval import DEFAULT_NAMES, EvalWithCompoundTypes, IterableTooLong, SimpleEval
+import d20
+import draconic
 
-from cogs5e.funcs.dice import roll
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
-from . import MAX_ITER_LENGTH, SCRIPTING_RE, helpers
-from .functions import DEFAULT_FUNCTIONS, DEFAULT_OPERATORS
+from utils.argparser import argparse
+from utils.dice import PersistentRollContext
+from . import helpers
+from .functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
 from .legacy import LegacyRawCharacter
 
+DEFAULT_BUILTINS = {
+    # builtins
+    'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min,
+    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
+    # ours
+    'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof,
+    # legacy from simpleeval
+    'rand': rand, 'randint': randint
+}
+SCRIPTING_RE = re.compile(
+    r'(?<!\\)(?:'  # backslash-escape
+    r'{{(?P<drac1>.+?)}}'  # {{drac1}}
+    r'|(?<!{){(?P<roll>.+?)}'  # <roll>
+    r'|<drac2>(?P<drac2>(?:.|\n)+?)</drac2>'  # <drac2>drac2</drac2>
+    r'|<(?P<lookup>[^\s]+?)>'  # <lookup>
+    r')'
+)
 
-class MathEvaluator(SimpleEval):
+
+class MathEvaluator(draconic.SimpleInterpreter):
     """Evaluator with basic math functions exposed."""
-    MATH_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round}
-
-    def __init__(self, operators=None, functions=None, names=None):
-        if operators is None:
-            operators = DEFAULT_OPERATORS.copy()
-        if functions is None:
-            functions = DEFAULT_FUNCTIONS.copy()
-        if names is None:
-            names = DEFAULT_NAMES.copy()
-        super(MathEvaluator, self).__init__(operators, functions, names)
 
     @classmethod
     def with_character(cls, character, spell_override=None):
         names = character.get_scope_locals()
         if spell_override is not None:
             names['spell'] = spell_override
-        return cls(names=names)
 
-    def parse(self, string):
-        """Parses a dicecloud-formatted string (evaluating text in {})."""
+        builtins = {**names, **DEFAULT_BUILTINS}
+        return cls(builtins=builtins)
+
+    # also disable per-eval limits, limit should be global
+    def _preflight(self):
+        pass
+
+    def transformed_str(self, string):
+        """Transforms a dicecloud-formatted string (evaluating text in {})."""
         try:
-            return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1))), string)
+            return re.sub(r'(?<!\\){(.+?)}', lambda m: str(self.eval(m.group(1).strip())), string)
         except Exception as ex:
             raise EvaluationError(ex, string)
 
 
-class ScriptingEvaluator(EvalWithCompoundTypes):
+class ScriptingEvaluator(draconic.DraconicInterpreter):
     """Evaluator with compound types, comprehensions, and assignments exposed."""
 
-    def __init__(self, ctx, operators=None, functions=None, names=None):
-        if operators is None:
-            operators = DEFAULT_OPERATORS.copy()
-        if functions is None:
-            functions = DEFAULT_FUNCTIONS.copy()
-        if names is None:
-            names = DEFAULT_NAMES.copy()
-        super(ScriptingEvaluator, self).__init__(operators, functions, names)
+    def __init__(self, ctx, *args, **kwargs):
+        super(ScriptingEvaluator, self).__init__(*args, **kwargs)
 
-        self.nodes.update({
-            ast.JoinedStr: self._eval_joinedstr,  # f-string
-            ast.FormattedValue: self._eval_formattedvalue,  # things in f-strings
-            ast.ListComp: self._eval_listcomp,
-            ast.SetComp: self._eval_setcomp,
-            ast.DictComp: self._eval_dictcomp,
-            ast.comprehension: self._eval_comprehension
-        })
-
-        self.functions.update(  # character-only functions
+        self.builtins.update(  # character-only functions
             get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
             get_cc_min=self.needs_char, mod_cc=self.needs_char,
             cc_exists=self.needs_char, create_cc_nx=self.needs_char, create_cc=self.needs_char,
@@ -72,22 +75,25 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             get_raw=self.needs_char
         )
 
-        self.functions.update(
+        # char-agnostic globals
+        self.builtins.update(
             set=self.set, exists=self.exists, combat=self.combat,
             get_gvar=self.get_gvar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
             chanid=self.chanid, servid=self.servid,
-            get=self.get
+            get=self.get,
+            load_json=self.load_json, dump_json=self.dump_json,
+            argparse=argparse
         )
 
-        self.assign_nodes = {
-            ast.Name: self._assign_name,
-            ast.Tuple: self._assign_tuple,
-            ast.Subscript: self._assign_subscript
-        }
+        # roll limiting
+        self._roller = d20.Roller(context=PersistentRollContext(max_rolls=1_000, max_total_rolls=10_000))
+        self.builtins.update(
+            vroll=self._limited_vroll,
+            roll=self._limited_roll
+        )
 
-        self._loops = 0
         self._cache = {
             "gvars": {},
             "uvars": {}
@@ -100,14 +106,13 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
     @classmethod
     async def new(cls, ctx):
-        inst = cls(ctx)
         uvars = await helpers.get_uvars(ctx)
-        inst.names.update(uvars)
+        inst = cls(ctx, builtins=DEFAULT_BUILTINS, initial_names=uvars)
         inst._cache['uvars'].update(uvars)
         return inst
 
     async def with_character(self, character):
-        self.names.update(character.get_scope_locals())
+        self._names.update(character.get_scope_locals())
 
         self._cache['character'] = character
 
@@ -207,7 +212,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
         def set_cvar(name, val: str):
             helpers.set_cvar(character, name, val)
-            self.names[name] = str(val)
+            self._names[name] = str(val)
             self.character_changed = True
 
         def set_cvar_nx(name, val: str):
@@ -222,7 +227,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         def get_raw():
             return LegacyRawCharacter(character).to_dict()
 
-        self.functions.update(
+        self.builtins.update(
             combat=combat,
             get_cc=get_cc, set_cc=set_cc, get_cc_max=get_cc_max, get_cc_min=get_cc_min, mod_cc=mod_cc,
             delete_cc=delete_cc, cc_exists=cc_exists, create_cc_nx=create_cc_nx, create_cc=create_cc, cc_str=cc_str,
@@ -248,7 +253,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
     def needs_char(self, *args, **kwargs):
         raise FunctionRequiresCharacter()  # no. bad.
 
-    def set(self, name, value):
+    def set(self, name, value):  # todo
         """
         Sets the value of a name in the current scripting context.
 
@@ -258,7 +263,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         :param name: The name to set.
         :param value: The value to set it to.
         """
-        self.names[name] = value
+        self._names[name] = value
 
     def exists(self, name):
         """
@@ -313,7 +318,7 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
         if not name.isidentifier():
             raise InvalidArgument("Cvar contains invalid character.")
         self._cache['uvars'][name] = str(value)
-        self.names[name] = str(value)
+        self._names[name] = str(value)
         self.uvars_changed.add(name)
 
     def set_uvar_nx(self, name, value: str):
@@ -365,34 +370,81 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
             return self.names[name]
         return default
 
+    # ==== json ====
+    def _json_decoder(self):
+        class MyDecoder(json.JSONDecoder):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.parse_array = self._parse_array
+                self.object_hook = self._object_hook
+                # use the python implementation rather than C, so this works
+                self.scan_once = json.scanner.py_make_scanner(self)
+
+            @staticmethod
+            def _parse_array(*args, **kwargs):
+                values, end = json.decoder.JSONArray(*args, **kwargs)
+                values = self._list(values)
+                return values, end
+
+            @staticmethod
+            def _object_hook(obj):
+                return self._dict(obj)
+
+        return MyDecoder
+
+    def _dump_json_default(self, obj):
+        if isinstance(obj, self._list):
+            return obj.data
+
+    def load_json(self, jsonstr):
+        """
+        Loads an object from a JSON string. See :func:`json.loads`.
+        """
+        return json.loads(jsonstr, cls=self._json_decoder())
+
+    def dump_json(self, obj):
+        """
+        Serializes an object to a JSON string. See :func:`json.dumps`.
+        """
+        return json.dumps(obj, default=self._dump_json_default)
+
+    # ==== roll limiters ====
+    def _limited_vroll(self, dice, multiply=1, add=0):
+        return _vroll(dice, multiply, add, roller=self._roller)
+
+    def _limited_roll(self, dice):
+        return _roll(dice, roller=self._roller)
+
     # evaluation
-    def parse(self, string, double_curly=None, curly=None, ltgt=None):
+    def _preflight(self):
+        """We don't want limits to reset."""
+        pass
+
+    def transformed_str(self, string):
         """Parses a scripting string (evaluating text in {{}})."""
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):
             try:
-                if match.group(1):  # {{}}
-                    double_func = double_curly or self.eval
-                    evalresult = double_func(match.group(1))
-                elif match.group(2):  # <>
+                if match.group('lookup'):  # <>
                     if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
                         return match.group(0)
-                    out = match.group(2)
-                    ltgt_func = ltgt or (lambda s: str(self.names.get(s, s)))
-                    evalresult = ltgt_func(out)
-                elif match.group(3):  # {}
-                    varstr = match.group(3)
-
-                    def default_curly_func(s):
-                        curlyout = ""
-                        for substr in re.split(ops, s):
-                            temp = substr.strip()
-                            curlyout += str(self.names.get(temp, temp)) + " "
-                        return str(roll(curlyout).total)
-
-                    curly_func = curly or default_curly_func
-                    evalresult = curly_func(varstr)
+                    out = match.group('lookup')
+                    evalresult = str(self.names.get(out, out))
+                elif match.group('roll'):  # {}
+                    varstr = match.group('roll')
+                    curlyout = ""
+                    for substr in re.split(ops, varstr):
+                        temp = substr.strip()
+                        curlyout += str(self.names.get(temp, temp)) + " "
+                    try:
+                        evalresult = str(self._limited_roll(curlyout))
+                    except:
+                        evalresult = '0'
+                elif match.group('drac1'):  # {{}}
+                    evalresult = self.eval(match.group('drac1').strip())
+                elif match.group('drac2'):  # <drac2>...</drac2>
+                    evalresult = self.execute(match.group('drac2').strip())
                 else:
                     evalresult = None
             except Exception as ex:
@@ -404,102 +456,6 @@ class ScriptingEvaluator(EvalWithCompoundTypes):
 
         return output
 
-    def eval(self, expr):  # allow for ast.Assign to set names
-        """ evaluate an expression, using the operators, functions and
-            names previously set up. """
-
-        # set a copy of the expression aside, so we can give nice errors...
-
-        self.expr = expr
-
-        # and evaluate:
-        expression = ast.parse(expr.strip()).body[0]
-        if isinstance(expression, ast.Expr):
-            return self._eval(expression.value)
-        elif isinstance(expression, ast.Assign):
-            return self._eval_assign(expression)
-        else:
-            raise TypeError("Unknown ast body type")
-
-    # private magic
-    def _eval_assign(self, node):
-        names = node.targets[0]
-        values = node.value
-        self._assign(names, values)
-
-    def _assign(self, names, values, eval_values=True):
-        try:
-            handler = self.assign_nodes[type(names)]
-        except KeyError:
-            raise TypeError(f"Assignment to {type(names).__name__} is not allowed")
-        return handler(names, values, eval_values)
-
-    def _assign_name(self, name, value, eval_value=True):
-        if not isinstance(self.names, dict):
-            raise TypeError("cannot set name: incorrect name type")
-        else:
-            if eval_value:
-                value = self._eval(value)
-            self.names[name.id] = value
-
-    def _assign_tuple(self, names, values, eval_values=True):
-        if not all(isinstance(n, ast.Name) for n in names.elts):
-            raise TypeError("Assigning to multiple non-names via unpack is not allowed")
-        names = [n.id for n in names.elts]  # turn ast into str
-        if not isinstance(values, ast.Tuple):
-            raise ValueError(f"unequal unpack: {len(names)} names, 1 value")
-        if eval_values:
-            values = [self._eval(n) for n in values.elts]  # get what we actually want to assign
-        else:
-            values = values.elts
-        if not len(values) == len(names):
-            raise ValueError(f"unequal unpack: {len(names)} names, {len(values)} values")
-        else:
-            if not isinstance(self.names, dict):
-                raise TypeError("cannot set name: incorrect name type")
-            else:
-                for name, value in zip(names, values):
-                    self.names[name] = value  # and assign it
-
-    def _assign_subscript(self, name, value, eval_value=True):
-        if eval_value:
-            value = self._eval(value)
-
-        container = self._eval(name.value)
-        key = self._eval(name.slice)
-        container[key] = value
-        self._assign(name.value, container, eval_values=False)
-
-    def _eval_joinedstr(self, node):
-        return ''.join(str(self._eval(n)) for n in node.values)
-
-    def _eval_formattedvalue(self, node):
-        if node.format_spec:
-            fmt = "{:" + self._eval(node.format_spec) + "}"
-            return fmt.format(self._eval(node.value))
-        else:
-            return self._eval(node.value)
-
-    def _eval_listcomp(self, node):
-        return list(self._eval(node.elt) for generator in node.generators for _ in self._eval(generator))
-
-    def _eval_setcomp(self, node):
-        return set(self._eval(node.elt) for generator in node.generators for _ in self._eval(generator))
-
-    def _eval_dictcomp(self, node):
-        return {self._eval(node.key): self._eval(node.value) for generator in node.generators for _ in
-                self._eval(generator)}
-
-    def _eval_comprehension(self, node):
-        iterable = self._eval(node.iter)
-        if len(iterable) + self._loops > MAX_ITER_LENGTH:
-            raise IterableTooLong("Execution limit exceeded: too many loops.")
-        self._loops += len(iterable)
-        for item in iterable:
-            self._assign(node.target, item, False)
-            if all(self._eval(stmt) for stmt in node.ifs):
-                yield item
-
 
 class SpellEvaluator(MathEvaluator):
     @classmethod
@@ -507,22 +463,24 @@ class SpellEvaluator(MathEvaluator):
         names = caster.get_scope_locals()
         if spell_override is not None:
             names['spell'] = spell_override
-        return cls(names=names)
 
-    def parse(self, string, extra_names=None):
+        builtins = {**names, **DEFAULT_BUILTINS}
+        return cls(builtins=builtins)
+
+    def transformed_str(self, string, extra_names=None):
         """Parses a spell-formatted string (evaluating {{}} and replacing {} with rollstrings)."""
         original_names = None
         if extra_names:
-            original_names = self.names.copy()
-            self.names.update(extra_names)
+            original_names = self.builtins.copy()
+            self.builtins.update(extra_names)
 
         def evalrepl(match):
             try:
-                if match.group(1):  # {{}}
-                    evalresult = self.eval(match.group(1))
-                elif match.group(3):  # {}
+                if match.group('drac1'):  # {{}}
+                    evalresult = self.eval(match.group('drac1').strip())
+                elif match.group('roll'):  # {}
                     try:
-                        evalresult = self.eval(match.group(3))
+                        evalresult = self.eval(match.group('roll').strip())
                     except:
                         evalresult = match.group(0)
                 else:
@@ -535,7 +493,7 @@ class SpellEvaluator(MathEvaluator):
         output = re.sub(SCRIPTING_RE, evalrepl, string)  # evaluate
 
         if original_names:
-            self.names = original_names
+            self.builtins = original_names
 
         return output
 

@@ -9,18 +9,16 @@ import motor.motor_asyncio
 
 LOAD_FILES = {
     'names': [],
-    'srd-backgrounds': [],
-    'srd-bestiary': [],
-    'srd-classfeats': [],
-    'srd-classes': [],
-    'srd-feats': [],
-    'srd-items': [],
-    'srd-races': [],
-    'srd-spells': [],
-    'srd-references': [],
+    'backgrounds': [],
+    'feats': [],
+    'spells': [],
+    'monsters': [],
+    'items': [],
+    'classes': [],
+    'races': [],
+    'subraces': [],
 
-    'itemprops': {},
-    'nsrd-names': {},
+    'srd-references': []
 }
 
 
@@ -36,9 +34,9 @@ async def run(mdb):
             continue
 
         print(f'Inserting {len(data)} items for {basename}...', end=' ', flush=True)
-        result = await mdb.static_data.update_one(
+        result = await mdb.static_data.replace_one(
             {'key': basename},
-            {'$set': {'object': data}},
+            {'key': basename, 'object': data},
             upsert=True
         )
         print(result.upserted_id)

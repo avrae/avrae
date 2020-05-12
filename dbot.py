@@ -1,7 +1,6 @@
 import asyncio
 import faulthandler
 import logging
-import os
 import sys
 import traceback
 
@@ -12,6 +11,7 @@ utils.newrelic.hook_all()
 from utils import clustering, config
 
 import aioredis
+import d20
 import discord
 import motor.motor_asyncio
 import sentry_sdk
@@ -20,8 +20,12 @@ from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
-from cogs5e.funcs.lookupFuncs import compendium
-from cogs5e.models.errors import AvraeException, EvaluationError
+from cogs5e.funcs.scripting.helpers import handle_alias_exception
+from cogs5e.models.errors import AvraeException, EvaluationError, RequiresLicense
+from gamedata.compendium import compendium
+from gamedata.ddb import BeyondClient, BeyondClientBase
+from gamedata.lookuputils import handle_required_license
+from utils.aldclient import AsyncLaunchDarklyClient
 from utils.help import help_command
 from utils.redisIO import RedisIO
 
@@ -65,11 +69,21 @@ class Avrae(commands.AutoShardedBot):
         self.muted = set()
         self.cluster_id = 0
 
+        # sentry
         if config.SENTRY_DSN is not None:
             release = None
             if config.GIT_COMMIT_SHA:
                 release = f"avrae-bot@{config.GIT_COMMIT_SHA}"
             sentry_sdk.init(dsn=config.SENTRY_DSN, environment=config.ENVIRONMENT.title(), release=release)
+
+        # ddb entitlements
+        if config.TESTING and config.DDB_AUTH_SERVICE_URL is None:
+            self.ddb = BeyondClientBase()
+        else:
+            self.ddb = BeyondClient(self.loop)
+
+        # launchdarkly
+        self.ldclient = AsyncLaunchDarklyClient(self.loop, sdk_key=config.LAUNCHDARKLY_SDK_KEY)
 
     async def setup_rdb(self):
         if config.TESTING:
@@ -92,6 +106,11 @@ class Avrae(commands.AutoShardedBot):
 
         if self.is_cluster_0:
             await self.rdb.incr('build_num')
+
+    async def close(self):
+        await super().close()
+        await self.ddb.close()
+        self.ldclient.close()
 
     @property
     def is_cluster_0(self):
@@ -191,18 +210,16 @@ async def on_command_error(ctx, error):
     elif isinstance(error, CommandInvokeError):
         original = error.original
         if isinstance(original, EvaluationError):  # PM an alias author tiny traceback
-            e = original.original
-            if not isinstance(e, AvraeException):
-                tb = f"```py\nError when parsing expression {original.expression}:\n" \
-                     f"{''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))}\n```"
-                try:
-                    await ctx.author.send(tb)
-                except Exception as e:
-                    log.info(f"Error sending traceback: {e}")
-            return await ctx.send(str(original))
+            return await handle_alias_exception(ctx, original)
+
+        elif isinstance(original, RequiresLicense):
+            return await handle_required_license(ctx, original)
 
         elif isinstance(original, AvraeException):
             return await ctx.send(str(original))
+
+        elif isinstance(original, d20.RollError):
+            return await ctx.send(f"Error in roll: {original}")
 
         elif isinstance(original, Forbidden):
             try:

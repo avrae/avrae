@@ -8,17 +8,18 @@ Most of this module was coded 5 miles in the air. (Aug 8, 2017)
 import collections
 import logging
 
+import d20
 import discord
 from discord.ext import commands
 
 from cogs5e.funcs import targetutils
-from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import get_spell_choices, select_spell_full
+from gamedata.lookuputils import get_spell_choices, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
 from utils.argparser import argparse
+from utils.dice import d20_with_adv
 from utils.functions import confirm, search, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
@@ -167,37 +168,46 @@ class GameTrack(commands.Cog):
         -h - Hides the character summary output."""
         await self._rest(ctx, 'short', *args)
 
-    @game.command(name='hp')
-    async def game_hp(self, ctx, operator='', *, hp=''):
-        """Modifies the HP of a the current active character. Synchronizes live with Dicecloud.
-        If operator is not passed, assumes `mod`.
-        Operators: `mod`, `set`."""
+    @game.group(name='hp', invoke_without_command=True)
+    async def game_hp(self, ctx, *, hp: str = None):
+        """Modifies the HP of a the current active character."""
         character: Character = await Character.from_ctx(ctx)
 
-        if not operator == '':
-            hp_roll = roll(hp, inline=True, show_blurbs=False)
+        if hp is None:
+            return await ctx.send(f"{character.name}: {character.hp_str()}")
 
-            if 'mod' in operator.lower():
-                character.modify_hp(hp_roll.total)
-            elif 'set' in operator.lower():
-                character.hp = hp_roll.total
-            elif 'max' in operator.lower() and not hp:
-                character.hp = character.max_hp
-            elif hp == '':
-                hp_roll = roll(operator, inline=True, show_blurbs=False)
-                hp = operator
-                character.modify_hp(hp_roll.total)
-            else:
-                await ctx.send("Incorrect operator. Use mod or set.")
-                return
-
-            await character.commit(ctx)
-            out = "{}: {}".format(character.name, character.hp_str())
-            if 'd' in hp: out += '\n' + hp_roll.skeleton
+        hp_roll = d20.roll(hp)
+        character.modify_hp(hp_roll.total)
+        await character.commit(ctx)
+        if 'd' in hp:
+            delta = hp_roll.result
         else:
-            out = "{}: {}".format(character.name, character.hp_str())
+            delta = f"{hp_roll.total:+}"
+        await ctx.send(f"{character.name}: {character.hp_str()} ({delta})")
 
-        await ctx.send(out)
+    @game_hp.command(name='max')
+    async def game_hp_max(self, ctx):
+        """Sets the character's HP to their maximum."""
+        character: Character = await Character.from_ctx(ctx)
+        before = character.hp
+        character.hp = character.max_hp
+        await character.commit(ctx)
+        await ctx.send(f"{character.name}: {character.hp_str()} ({character.hp - before:+})")
+
+    @game_hp.command(name='mod', hidden=True)
+    async def game_hp_mod(self, ctx, *, hp):
+        """Modifies the character's current HP."""
+        await ctx.invoke(self.game_hp, hp=hp)
+
+    @game_hp.command(name='set')
+    async def game_hp_set(self, ctx, *, hp):
+        """Sets the character's HP to a certain value."""
+        character: Character = await Character.from_ctx(ctx)
+        before = character.hp
+        hp_roll = d20.roll(hp)
+        character.hp = hp_roll.total
+        await character.commit(ctx)
+        await ctx.send(f"{character.name}: {character.hp_str()} ({character.hp - before:+})")
 
     @game.command(name='thp')
     async def game_thp(self, ctx, thp: int = None):
@@ -213,7 +223,7 @@ class GameTrack(commands.Cog):
 
             await character.commit(ctx)
 
-        out = "{}: {}".format(character.name, character.hp_str())
+        out = f"{character.name}: {character.hp_str()}"
         await ctx.send(out)
 
     @game.group(name='deathsave', aliases=['ds'], invoke_without_command=True)
@@ -228,28 +238,28 @@ class GameTrack(commands.Cog):
         phrase = args.join('phrase', '\n')
 
         if b:
-            save_roll = roll('1d20+' + b, adv=adv, inline=True)
+            save_roll = d20.roll(f"{d20_with_adv(adv)}+{b}")
         else:
-            save_roll = roll('1d20', adv=adv, inline=True)
+            save_roll = d20.roll(d20_with_adv(adv))
 
         embed = discord.Embed()
         embed.title = args.last('title', '') \
-                          .replace('[charname]', character.name) \
+                          .replace('[name]', character.name) \
                           .replace('[sname]', 'Death') \
-                      or '{} makes {}!'.format(character.name, "a Death Save")
+                      or f'{character.name} makes a Death Save!'
         embed.colour = character.get_color()
 
         death_phrase = ''
-        if save_roll.crit == 1:
+        if save_roll.crit == d20.CritType.CRIT:
             character.hp = 1
-        elif save_roll.crit == 2:
+        elif save_roll.crit == d20.CritType.FAIL:
             character.death_saves.fail(2)
         elif save_roll.total >= 10:
             character.death_saves.succeed()
         else:
             character.death_saves.fail()
 
-        if save_roll.crit == 1:
+        if save_roll.crit == d20.CritType.CRIT:
             death_phrase = f"{character.name} is UP with 1 HP!"
         elif character.death_saves.is_dead():
             death_phrase = f"{character.name} is DEAD!"
@@ -257,8 +267,9 @@ class GameTrack(commands.Cog):
             death_phrase = f"{character.name} is STABLE!"
 
         await character.commit(ctx)
-        embed.description = save_roll.skeleton + ('\n*' + phrase + '*' if phrase else '')
-        if death_phrase: embed.set_footer(text=death_phrase)
+        embed.description = save_roll.result + (f'\n*{phrase}*' if phrase else '')
+        if death_phrase:
+            embed.set_footer(text=death_phrase)
 
         embed.add_field(name="Death Saves", value=str(character.death_saves))
 
@@ -319,6 +330,8 @@ class GameTrack(commands.Cog):
     @commands.group(invoke_without_command=True, name='spellbook', aliases=['sb'])
     async def spellbook(self, ctx):
         """Commands to display a character's known spells and metadata."""
+        await ctx.trigger_typing()
+
         character: Character = await Character.from_ctx(ctx)
         embed = EmbedWithCharacter(character)
         embed.description = f"{character.name} knows {len(character.spellbook.spells)} spells."
@@ -343,7 +356,7 @@ class GameTrack(commands.Cog):
                 flag_show_homebrew_help = True
             else:
                 spell = results
-                if spell.source == 'homebrew':
+                if spell.homebrew:
                     formatted = f"*{spell.name}*"
                     flag_show_homebrew_help = True
                 else:

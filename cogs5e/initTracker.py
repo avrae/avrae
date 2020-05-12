@@ -5,19 +5,20 @@ import random
 import traceback
 
 import discord
+from d20 import roll
 from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
+from gamedata.lookuputils import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
-from cogs5e.models.sheet.base import Resistances, Skill
+from cogs5e.models.sheet.base import Skill
+from cogs5e.models.sheet.resistance import Resistances
 from cogsmisc.stats import Stats
 from utils.argparser import argparse, argsplit
 from utils.functions import confirm, search_and_select, try_delete
@@ -153,9 +154,9 @@ class InitTracker(commands.Cog):
             return
 
         if not place:
-            init_roll = roll(f"1d20+{modifier}", inline=True)
+            init_roll = roll(f"1d20+{modifier}")
             init = init_roll.total
-            init_roll_skeleton = init_roll.skeleton
+            init_roll_skeleton = init_roll.result
         else:
             init = place
             modifier = 0
@@ -233,9 +234,9 @@ class InitTracker(commands.Cog):
                 check_roll = None  # to make things happy
                 if p is None:
                     if b:
-                        check_roll = roll(f'{init_skill.d20(base_adv=adv)}+{b}', inline=True)
+                        check_roll = roll(f'{init_skill.d20(base_adv=adv)}+{b}')
                     else:
-                        check_roll = roll(init_skill.d20(base_adv=adv), inline=True)
+                        check_roll = roll(init_skill.d20(base_adv=adv))
                     init = check_roll.total
                 else:
                     init = int(p)
@@ -243,15 +244,15 @@ class InitTracker(commands.Cog):
 
                 rolled_hp = None
                 if rollhp:
-                    rolled_hp = roll(monster.hitdice, inline=True)
-                    to_pm += f"{name} began with {rolled_hp.skeleton} HP.\n"
+                    rolled_hp = roll(monster.hitdice)
+                    to_pm += f"{name} began with {rolled_hp.result} HP.\n"
                     rolled_hp = max(rolled_hp.total, 1)
 
                 me = MonsterCombatant.from_monster(monster, ctx, combat, name, controller, init, private,
                                                    hp=hp or rolled_hp, ac=ac)
                 if group is None:
                     combat.add_combatant(me)
-                    out += f"{name} was added to combat with initiative {check_roll.skeleton if p is None else p}.\n"
+                    out += f"{name} was added to combat with initiative {check_roll.result if p is None else p}.\n"
                 else:
                     grp = combat.get_group(group, create=init)
                     grp.add_combatant(me)
@@ -716,53 +717,98 @@ class InitTracker(commands.Cog):
         else:
             await ctx.send("```markdown\n" + status + "```")
 
-    @init.command()
-    async def hp(self, ctx, name: str, operator: str, *, hp: str = ''):
-        """Modifies the HP of a combatant.
-        Usage: !init hp <NAME> <mod/set/max> <HP>
-        If no operator is supplied, mod is assumed.
-        If max is given with no number, resets combatant to max hp."""
+    @staticmethod
+    async def _send_hp_result(ctx, combatant, delta=None):
+        deltaend = f" ({delta})" if delta else ""
+
+        if combatant.is_private:
+            await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
+            try:
+                controller = ctx.guild.get_member(int(combatant.controller))
+                await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)}{deltaend}")
+            except:
+                pass
+        else:
+            await ctx.send(f"{combatant.name}: {combatant.hp_str()}{deltaend}")
+
+    @init.group(invoke_without_command=True)
+    async def hp(self, ctx, name: str, *, hp: str = None):
+        """Modifies the HP of a combatant."""
         combat = await Combat.from_ctx(ctx)
         combatant = await combat.select_combatant(name)
         if combatant is None:
-            await ctx.send("Combatant not found.")
+            return await ctx.send("Combatant not found.")
+
+        if hp is None:
+            await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
+            if combatant.is_private:
+                try:
+                    controller = ctx.guild.get_member(int(combatant.controller))
+                    await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)}")
+                except:
+                    pass
             return
 
-        hp_roll = roll(hp, inline=True, show_blurbs=False)
+        # i hp NAME mod X does not call i hp mod NAME X - handle this
+        if hp.startswith('mod '):
+            return await ctx.invoke(self.init_hp_mod, name=name, hp=hp[4:])
+        elif hp.startswith('set '):
+            return await ctx.invoke(self.init_hp_set, name=name, hp=hp[4:])
+        elif hp.startswith('max ') or hp == 'max':
+            return await ctx.invoke(self.init_hp_max, name=name, hp=hp[3:].strip())
 
-        if 'mod' in operator.lower():
-            if combatant.hp is None:
-                combatant.set_hp(0)
-            combatant.modify_hp(hp_roll.total)
-        elif 'set' in operator.lower():
-            combatant.set_hp(hp_roll.total)
-        elif 'max' in operator.lower():
-            if hp == '':
-                combatant.set_hp(combatant.max_hp)
-            elif hp_roll.total < 1:
-                return await ctx.send("You can't have a negative max HP!")
-            else:
-                combatant.max_hp = hp_roll.total
-        elif hp == '':
-            hp_roll = roll(operator, inline=True, show_blurbs=False)
-            if combatant.hp is None:
-                combatant.set_hp(0)
-            combatant.modify_hp(hp_roll.total)
+        hp_roll = roll(hp)
+        if combatant.hp is None:
+            combatant.set_hp(0)
+        combatant.modify_hp(hp_roll.total)
+        await combat.final()
+        if 'd' in hp:
+            delta = hp_roll.result
         else:
-            await ctx.send("Incorrect operator. Use mod, set, or max.")
-            return
+            delta = f"{hp_roll.total:+}"
 
-        out = "{}: {}".format(combatant.name, combatant.hp_str())
-        if 'd' in hp: out += '\n' + hp_roll.skeleton
+        await self._send_hp_result(ctx, combatant, delta)
+
+    @hp.command(name='max')
+    async def init_hp_max(self, ctx, name, *, hp: str = None):
+        """Sets a combatant's max HP, or sets HP to max if no max is given."""
+        combat = await Combat.from_ctx(ctx)
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            return await ctx.send("Combatant not found.")
+
+        delta = None
+        if not hp:
+            before = combatant.hp or 0
+            combatant.set_hp(combatant.max_hp)
+            delta = f"{combatant.hp - before:+}"
+        else:
+            hp_roll = roll(hp)
+            if hp_roll.total < 1:
+                return await ctx.send("You can't have a negative max HP!")
+            combatant.max_hp = hp_roll.total
 
         await combat.final()
-        await ctx.send(out)
-        if combatant.is_private:
-            try:
-                controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send("{}'s HP: {}".format(combatant.name, combatant.hp_str(True)))
-            except:
-                pass
+        await self._send_hp_result(ctx, combatant, delta)
+
+    @hp.command(name='mod', hidden=True)
+    async def init_hp_mod(self, ctx, name, *, hp):
+        """Modifies a combatant's current HP."""
+        await ctx.invoke(self.hp, name=name, hp=hp)
+
+    @hp.command(name='set')
+    async def init_hp_set(self, ctx, name, *, hp):
+        """Sets a combatant's HP to a certain value."""
+        combat = await Combat.from_ctx(ctx)
+        combatant = await combat.select_combatant(name)
+        if combatant is None:
+            return await ctx.send("Combatant not found.")
+
+        before = combatant.hp or 0
+        hp_roll = roll(hp)
+        combatant.set_hp(hp_roll.total)
+        await combat.final()
+        await self._send_hp_result(ctx, combatant, f"{combatant.hp - before:+}")
 
     @init.command()
     async def thp(self, ctx, name: str, *, thp: int):
@@ -860,7 +906,7 @@ class InitTracker(commands.Cog):
         await combat.final()
 
     @init.command(name='re')
-    async def remove_effect(self, ctx, name: str, effect: str = ''):
+    async def remove_effect(self, ctx, name: str, effect: str = None):
         """Removes a status effect from a combatant or group. Removes all if effect is not passed."""
         combat = await Combat.from_ctx(ctx)
 
@@ -875,7 +921,7 @@ class InitTracker(commands.Cog):
         out = ""
 
         for combatant in targets:
-            if effect is '':
+            if effect is None:
                 combatant.remove_all_effects()
                 out += f"All effects removed from {combatant.name}.\n"
             else:

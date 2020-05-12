@@ -1,18 +1,19 @@
 import random
 import re
 
+import d20
 import discord
 from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.dice import roll
-from cogs5e.funcs.lookupFuncs import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models import embeds
-from cogs5e.models.monster import Monster
 from cogsmisc.stats import Stats
+from gamedata import Monster
+from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
+from utils.dice import PersistentRollContext, VerboseMDStringifier
 from utils.functions import search_and_select, try_delete
 
 
@@ -50,81 +51,74 @@ class Dice(commands.Cog):
         e (explode dice of value)
         ra (reroll and add)
         __Supported Selectors__
+        X (literal X)
         lX (lowest X)
         hX (highest X)
-        >X/<X (greater than or less than X)"""
+        >X (greater than X)
+        <X (less than X)"""
 
         if rollStr == '0/0':  # easter eggs
             return await ctx.send("What do you expect me to do, destroy the universe?")
 
-        adv = 0
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollStr) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', rollStr) is not None else -1
-            rollStr = re.sub('(adv|dis)(\s+|$)', '', rollStr)
-        res = roll(rollStr, adv=adv)
-        out = res.result
+        rollStr, adv = self._string_search_adv(rollStr)
+
+        res = d20.roll(rollStr, advantage=adv, allow_comments=True, stringifier=VerboseMDStringifier())
+        out = f"{ctx.author.mention}  :game_die:\n" \
+              f"{str(res)}"
+        if len(out) > 1999:
+            out = f"{ctx.author.mention}  :game_die:\n" \
+                  f"{str(res)[:100]}...\n" \
+                  f"**Total:** {res.total}"
+
         await try_delete(ctx.message)
-        outStr = ctx.author.mention + '  :game_die:\n' + out
-        if len(outStr) > 1999:
-            await ctx.send(
-                ctx.author.mention + '  :game_die:\n[Output truncated due to length]\n**Result:** ' + str(
-                    res.plain))
-        else:
-            await ctx.send(outStr)
+        await ctx.send(out)
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.command(name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations: int, rollStr, *, args=''):
         """Rolls dice in xdy format a given number of times.
         Usage: !rr <iterations> <xdy> [args]"""
-        if iterations < 1 or iterations > 100:
-            return await ctx.send("Too many or too few iterations.")
-        adv = 0
-        out = []
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', args) is not None else -1
-            args = re.sub('(adv|dis)(\s+|$)', '', args)
-        for _ in range(iterations):
-            res = roll(rollStr, adv=adv, rollFor=args, inline=True)
-            out.append(res)
-        outStr = "Rolling {} iterations...\n".format(iterations)
-        outStr += '\n'.join([o.skeleton for o in out])
-        if len(outStr) < 1500:
-            outStr += '\n{} total.'.format(sum(o.total for o in out))
-        else:
-            outStr = "Rolling {} iterations...\n[Output truncated due to length]\n".format(iterations) + \
-                     '{} total.'.format(sum(o.total for o in out))
-        await try_delete(ctx.message)
-        await ctx.send(ctx.author.mention + '\n' + outStr)
-        await Stats.increase_stat(ctx, "dice_rolled_life")
+        await self._roll_many(ctx, iterations, rollStr, None, args)
 
     @commands.command(name='iterroll', aliases=['rrr'])
     async def rrr(self, ctx, iterations: int, rollStr, dc: int = 0, *, args=''):
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
+        await self._roll_many(ctx, iterations, rollStr, dc, args)
+
+    async def _roll_many(self, ctx, iterations, rollStr, dc, args):
         if iterations < 1 or iterations > 100:
             return await ctx.send("Too many or too few iterations.")
-        adv = 0
-        out = []
+        results = []
         successes = 0
-        if re.search('(^|\s+)(adv|dis)(\s+|$)', args) is not None:
-            adv = 1 if re.search('(^|\s+)adv(\s+|$)', args) is not None else -1
-            args = re.sub('(adv|dis)(\s+|$)', '', args)
-        for r in range(iterations):
-            res = roll(rollStr, adv=adv, rollFor=args, inline=True)
-            if res.plain >= dc:
+        args, adv = self._string_search_adv(args)
+        ast = d20.parse(rollStr)
+        roller = d20.Roller(context=PersistentRollContext())
+
+        for _ in range(iterations):
+            res = roller.roll(ast, advantage=adv)
+            if dc is not None and res.total >= dc:
                 successes += 1
-            out.append(res)
-        outStr = "Rolling {} iterations, DC {}...\n".format(iterations, dc)
-        outStr += '\n'.join([o.skeleton for o in out])
-        if len(outStr) < 1500:
-            outStr += '\n{} successes.'.format(str(successes))
+            results.append(res)
+
+        if dc is None:
+            header = f"Rolling {iterations} iterations..."
+            footer = f"{sum(o.total for o in results)} total."
         else:
-            outStr = "Rolling {} iterations, DC {}...\n[Output truncated due to length]\n".format(iterations,
-                                                                                                  dc) + '{} successes.'.format(
-                str(successes))
+            header = f"Rolling {iterations} iterations, DC {dc}..."
+            footer = f"{successes} successes, {sum(o.total for o in results)} total."
+
+        result_strs = '\n'.join([str(o) for o in results])
+
+        out = f"{header}\n{result_strs}\n{footer}"
+
+        if len(out) > 1500:
+            one_result = str(results[0])[:100]
+            one_result = f"{one_result}..." if len(one_result) > 100 else one_result
+            out = f"{header}\n{one_result}\n{footer}"
+
         await try_delete(ctx.message)
-        await ctx.send(ctx.author.mention + '\n' + outStr)
+        await ctx.send(f"{ctx.author.mention}\n{out}")
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)
@@ -134,16 +128,38 @@ class Dice(commands.Cog):
         -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
         -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
 
-        adv/dis
-        -ac [target ac]
-        -b [to hit bonus]
-        -d [damage bonus]
-        -d# [applies damage to the first # hits]
-        -rr [times to reroll]
-        -t [target]
-        -phrase [flavor text]
-        crit (automatically crit)
-        -h (hides monster name, image, and rolled values)
+        *adv/dis* - Advantage or Disadvantage
+        *ea* - Elven Accuracy double advantage
+
+        -ac <target ac> - overrides target AC
+        *-b* <to hit bonus> - adds a bonus to hit
+        -criton <num> - a number to crit on if rolled on or above
+        *-d* <damage bonus> - adds a bonus to damage
+        *-c* <damage bonus on crit> - adds a bonus to crit damage
+        -rr <times> - number of times to roll the attack against each target
+        *-mi* <minimum> - minimum roll on each die
+
+        *-resist* <damage resistance>
+        *-immune* <damage immunity>
+        *-vuln* <damage vulnerability>
+        *-neutral* <damage type> - ignores this damage type in resistance calculations
+        -dtype <damage type> - replaces all damage types with this damage type
+        -dtype <old>new> - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
+
+        *hit* - automatically hits
+        *miss* - automatically misses
+        *crit* - automatically crits if hit
+        *max* - deals max damage
+        *magical* - makes the damage type magical
+
+        -h - hides name, rolled values, and monster details
+        -phrase <text> - adds flavour text
+        -title <title> - changes the result title *note: `[name]` and `[aname]` will be replaced automatically*
+        -thumb <url> - adds flavour image
+        -f "Field Title|Field Text" - see `!help embed`
+        <user snippet> - see `!help snippet`
+
+        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on.
         """
         if atk_name is None or atk_name == 'list':
             return await self.monster_atk_list(ctx, monster_name)
@@ -165,7 +181,7 @@ class Dice(commands.Cog):
         await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         embed.colour = random.randint(0, 0xffffff)
-        if monster.source == 'homebrew':
+        if monster.homebrew:
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
@@ -211,7 +227,7 @@ class Dice(commands.Cog):
 
         checkutils.run_check(skill_key, monster, args, embed)
 
-        if monster.source == 'homebrew':
+        if monster.homebrew:
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
@@ -243,7 +259,7 @@ class Dice(commands.Cog):
 
         checkutils.run_save(save_stat, monster, args, embed)
 
-        if monster.source == 'homebrew':
+        if monster.homebrew:
             embeds.add_homebrew_footer(embed)
 
         await ctx.send(embed=embed)
@@ -296,13 +312,21 @@ class Dice(commands.Cog):
         if not args.last('h', type_=bool) and 'thumb' not in args:
             embed.set_thumbnail(url=monster.get_image_url())
 
-        if monster.source == 'homebrew':
+        if monster.homebrew:
             embeds.add_homebrew_footer(embed)
 
         # save changes: combat state
         if combat:
             await combat.final()
         await ctx.send(embed=embed)
+
+    @staticmethod
+    def _string_search_adv(rollstr):
+        adv = d20.AdvType.NONE
+        if re.search('(^|\s+)(adv|dis)(\s+|$)', rollstr) is not None:
+            adv = d20.AdvType.ADV if re.search('(^|\s+)adv(\s+|$)', rollstr) is not None else d20.AdvType.DIS
+            rollstr = re.sub('(adv|dis)(\s+|$)', '', rollstr)
+        return rollstr, adv
 
 
 def setup(bot):

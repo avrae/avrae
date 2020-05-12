@@ -1,22 +1,28 @@
 [
   {
     "name": "Longsword",
-    "type": "M",
-    "weapon": true,
-    "sword": true,
-    "weaponCategory": "Martial",
-    "rarity": "None",
-    "value": "15 gp",
-    "weight": "3",
-    "dmg1": "1d8",
-    "dmg2": "1d10",
-    "dmgType": "S",
-    "property": [
-      "V"
-    ],
-    "source": "PHB",
-    "page": 149,
-    "srd": true,
-    "desc": ""
+    "meta": "*Weapon: Martial, Melee*\n15gp, 3 lbs. --- 1d8 slashing - versatile (1d10)",
+    "attunement": false,
+    "desc": "Proficiency with a longsword allows you to add your proficiency bonus to the attack roll for any attack you make with it.\n\n**Versatile**: This weapon can be used with one or two hands. A damage value in parentheses appears with the property--the damage when the weapon is used with two hands to make a melee attack.",
+    "image": null,
+    "source": "BR",
+    "page": null,
+    "id": -4,
+    "url": "https://www.dndbeyond.com/equipment/longsword",
+    "isFree": true,
+    "typeId": 1782728300
+  },
+  {
+    "name": "Non-Free Longsword",
+    "meta": "*Weapon: Martial, Melee*\n15gp, 3 lbs. --- 1d8 slashing - versatile (1d10)",
+    "attunement": false,
+    "desc": "Proficiency with a longsword allows you to add your proficiency bonus to the attack roll for any attack you make with it.\n\n**Versatile**: This weapon can be used with one or two hands. A damage value in parentheses appears with the property--the damage when the weapon is used with two hands to make a melee attack.",
+    "image": null,
+    "source": "BR",
+    "page": null,
+    "id": -4,
+    "url": "https://www.dndbeyond.com/equipment/longsword",
+    "isFree": false,
+    "typeId": 1782728300
   }
 ]

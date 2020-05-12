@@ -98,5 +98,48 @@ class TestYourStandardInitiative:
             await dhttp.drain()
             assert (await active_combat(avrae)).get_combatant(combatant).hp < 100
 
+    async def test_resistances(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1"):
+            avrae.message(f"!i opt \"{combatant}\" -resist foobar")
+            await dhttp.drain()
+            resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
+            assert 'foobar' in [r.dtype for r in resistances.resist]
+            assert 'foobar' not in [r.dtype for r in resistances.immune]
+            assert 'foobar' not in [r.dtype for r in resistances.vuln]
+
+            avrae.message(f"!i opt \"{combatant}\" -vuln foobar")
+            await dhttp.drain()
+            resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
+            assert 'foobar' in [r.dtype for r in resistances.vuln]
+            assert 'foobar' not in [r.dtype for r in resistances.resist]
+
+            avrae.message(f"!i opt \"{combatant}\" -neutral foobar")
+            await dhttp.drain()
+            resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
+            assert 'foobar' not in [r.dtype for r in resistances.vuln]
+
+    async def test_resistance_effects(self, avrae, dhttp):
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1"):
+            avrae.message(f"!i opt \"{combatant}\" -resist foobar")  # start with a known resistance
+            await dhttp.drain()
+
+            avrae.message(f"!i effect \"{combatant}\" test -resist foobar")
+            await dhttp.drain()
+            resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
+            assert 'foobar' in [r.dtype for r in resistances.resist]
+            assert 'foobar' not in [r.dtype for r in resistances.immune]
+            assert 'foobar' not in [r.dtype for r in resistances.vuln]
+
+            avrae.message(f"!i effect \"{combatant}\" test2 -vuln foobar")  # effects can stack
+            await dhttp.drain()
+            resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
+            assert 'foobar' in [r.dtype for r in resistances.vuln]
+            assert 'foobar' in [r.dtype for r in resistances.resist]
+
+            avrae.message(f"!i re \"{combatant}\"")
+            await dhttp.drain()
+
     async def test_standard_init_teardown(self, avrae, dhttp):
         await end_init(avrae, dhttp)

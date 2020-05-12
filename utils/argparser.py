@@ -54,7 +54,7 @@ def argparse(args, character=None, splitter=argsplit):
     if character:
         from cogs5e.funcs.scripting.evaluators import MathEvaluator
         evaluator = MathEvaluator.with_character(character)
-        args = [evaluator.parse(a) for a in args]
+        args = [evaluator.transformed_str(a) for a in args]
 
     parsed = collections.defaultdict(lambda: [])
     index = 0

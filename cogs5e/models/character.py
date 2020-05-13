@@ -7,11 +7,11 @@ import cachetools
 from cogs5e.funcs.scripting.evaluators import MathEvaluator, ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument, NoCharacter, NoReset
+from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharacter, NoReset
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
-from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.player import CharOptions, CustomCounter, DeathSaves, ManualOverrides
+from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.models.sheet.statblock import DESERIALIZE_MAP as _DESER, StatBlock
 from cogs5e.sheets.abc import SHEET_VERSION
@@ -251,11 +251,14 @@ class Character(StatBlock):
     async def commit(self, ctx):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
-        await ctx.bot.mdb.characters.update_one(
-            {"owner": self._owner, "upstream": self._upstream},
-            {"$set": data},
-            upsert=True
-        )
+        try:
+            await ctx.bot.mdb.characters.update_one(
+                {"owner": self._owner, "upstream": self._upstream},
+                {"$set": data},
+                upsert=True
+            )
+        except OverflowError:
+            raise ExternalImportError("A number on the character sheet is too large to store.")
 
     async def set_active(self, ctx):
         """Sets the character as active."""

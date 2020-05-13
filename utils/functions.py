@@ -17,7 +17,7 @@ from PIL import Image
 from fuzzywuzzy import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
-from utils.constants import SOURCE_MAP
+from utils import constants
 
 log = logging.getLogger(__name__)
 
@@ -435,7 +435,11 @@ def bubble_format(value: int, max_: int, fill_from_right=False):
 
 
 def long_source_name(source):
-    return SOURCE_MAP.get(source, source)
+    return constants.SOURCE_MAP.get(source, source)
+
+
+def source_slug(source):
+    return constants.SOURCE_SLUG_MAP.get(source)
 
 
 def natural_join(things, between: str):

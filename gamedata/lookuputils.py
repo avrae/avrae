@@ -96,16 +96,12 @@ async def handle_required_license(ctx, err):
             embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
                                   "link.")
     else:
-        if not result.url:
-            url = "https://www.dndbeyond.com/marketplace"
-        else:
-            url = result.url
         embed.title = f"Purchase {result.name} on D&D Beyond to view it here!"
         embed.description = \
             f"To see and search this {result.entity_type}'s full details, unlock **{result.name}** by " \
             f"purchasing {long_source_name(result.source)} on D&D Beyond.\n\n" \
-            f"[Go to Marketplace]({url})"
-        embed.url = url
+            f"[Go to Marketplace]({result.marketplace_url})"
+        embed.url = result.marketplace_url
 
         embed.set_footer(text="Already purchased? It may take up to a minute for Avrae to recognize the "
                               "purchase.")

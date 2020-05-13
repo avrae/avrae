@@ -1,5 +1,7 @@
 import abc
 
+from utils.functions import source_slug
+
 
 class Sourced(abc.ABC):
     """A base class for entities with a source."""
@@ -20,13 +22,27 @@ class Sourced(abc.ABC):
         self.source = source
         self.entity_id = entity_id
         self.page = page
-        self.url = url
+        self._url = url
         self.is_free = is_free or homebrew
 
     def source_str(self):
         if self.page is None:
             return self.source
         return f"{self.source} {self.page}"  # e.g. "PHB 196"
+
+    @property
+    def url(self):
+        """Returns the reference URL for this sourced object."""
+        return f"{self._url}?utm_source=avrae&utm_medium=reference"
+
+    @property
+    def marketplace_url(self):
+        """Returns the marketplace URL for this sourced object."""
+        if self._url:
+            return f"{self._url}?utm_source=avrae&utm_medium=marketplacelink"
+        elif slug := source_slug(self.source):
+            return f"https://www.dndbeyond.com/marketplace/sources/{slug}?utm_source=avrae&utm_medium=marketplacelink"
+        return f"https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
 
 
 class Trait:
@@ -56,6 +72,6 @@ class SourcedTrait(Trait, Sourced):
         return cls(
             trait.name, trait.text,
             entity_type=entity_type, homebrew=homebrew,
-            source=sourced.source, entity_id=sourced.entity_id, page=sourced.page, url=sourced.url,
+            source=sourced.source, entity_id=sourced.entity_id, page=sourced.page, url=sourced._url,
             is_free=sourced.is_free
         )

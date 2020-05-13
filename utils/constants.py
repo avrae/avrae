@@ -45,5 +45,30 @@ SOURCE_MAP = {
     'SLW': 'Storm Lord’s Wrath', 'SDW': 'Sleeping Dragon’s Wake', 'DC': 'Divine Contention',
     'SAC': 'Sage Advice Compendium', 'DDvRaM': 'Dungeons & Dragons vs. Rick and Morty', 'LR': 'Locathah Rising',
     'IMR': 'Infernal Machine Rebuild', 'MFFV1': "Mordenkainen's Fiendish Folio Volume 1", 'SD': 'Sapphire Dragon',
-    'EGtW': "Explorer's Guide to Wildemount", 'OGA': 'One Grung Above'
+    'EGtW': "Explorer's Guide to Wildemount", 'OGA': 'One Grung Above', 'MOoT': 'Mythic Odysseys of Theros',
+    'WA': 'Frozen Sick', 'TSCF': 'The Sunless Citadel (Free)', 'TFoFF': 'The Forge of Fury (Free)'
+}
+
+SOURCE_SLUG_MAP = {
+    'BR': 'basic-rules', 'PHB': 'players-handbook', 'DMG': 'dungeon-masters-guide',
+    'EE': 'elemental-evil-players-companion', 'MM': 'monster-manual', 'CoS': 'curse-of-strahd',
+    'HotDQ': 'hoard-of-the-dragon-queen', 'LMoP': 'lost-mine-of-phandelver', 'OotA': 'out-of-the-abyss',
+    'PotA': 'princes-of-the-apocalypse', 'RoT': 'rise-of-tiamat', 'SKT': 'storm-kings-thunder',
+    'SCAG': 'sword-coast-adventurers-guide', 'TftYP': 'tales-from-the-yawning-portal',
+    'VGtM': 'volos-guide-to-monsters', 'TSC': 'the-sunless-citadel', 'TFoF': 'the-forge-of-fury',
+    'THSoT': 'the-hidden-shrine-of-tamoachan', 'WPM': 'white-plume-mountain', 'DiT': 'dead-in-thay',
+    'AtG': 'against-the-giants', 'ToH': 'tomb-of-horrors', 'ToA': 'tomb-of-annihilation',
+    'CoSCO': 'curse-of-strahd-character-options', 'XGtE': 'xanathars-guide-to-everything', 'TTP': 'the-tortle-package',
+    'UA': 'unearthed-arcana', 'DDB': 'dnd-beyond', 'CR': 'critical-role', 'TCS': 'taldorei-campaign-setting',
+    'MToF': 'mordenkainens-tome-of-foes', 'DDIA-MORD': 'rrakkma', 'WDH': 'waterdeep-dragon-heist',
+    'WDotMM': 'waterdeep-dungeon-of-the-mad-mage', 'WGtE': 'wayfinders-guide-to-eberron',
+    'GGtR': 'guildmasters-guide-to-ravnica', '_APT': 'archived-playtest', 'LLoK': 'lost-laboratory-of-kwalish',
+    'DoIP': 'dragon-of-icespire-peak', 'TMR': 'tactical-maps-reincarnated', 'GoS': 'ghosts-of-saltmarsh',
+    'AI': 'acquisitions-incorporated', 'HftT': 'hunt-for-the-thessalhydra',
+    'BGDiA': 'baldurs-gate-descent-into-avernus', 'ERftLW': 'eberron-rising-from-the-last-war',
+    'SLW': 'storm-lords-wrath', 'SDW': 'sleeping-dragons-wake', 'DC': 'divine-contention',
+    'SAC': 'sage-advice-compendium', 'DDvRaM': 'dungeons-dragons-vs-rick-and-morty', 'LR': 'locathah-rising',
+    'IMR': 'infernal-machine-rebuild', 'MFFV1': 'mordenkainens-fiendish-folio-volume-1', 'SD': 'sapphire-dragon',
+    'EGtW': 'explorers-guide-to-wildemount', 'OGA': 'one-grung-above', 'MOoT': 'mythic-odysseys-of-theros',
+    'WA': 'frozen-sick', 'TSCF': 'the-sunless-citadel-free', 'TFoFF': 'the-forge-of-fury-free'
 }

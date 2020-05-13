@@ -3,12 +3,12 @@ import re
 
 import discord
 
+import cogs5e.models.initiative as init
 from cogs5e.models import initiative
 from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args, add_homebrew_footer
 from cogs5e.models.errors import AvraeException
-from cogs5e.models.initiative import Combatant, PlayerCombatant
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import verbose_stat
 from .shared import Sourced
@@ -197,7 +197,7 @@ class Spell(Sourced):
 
         # character setup
         character = None
-        if isinstance(caster, PlayerCombatant):
+        if isinstance(caster, init.PlayerCombatant):
             character = caster.character
         elif isinstance(caster, Character):
             character = caster
@@ -238,7 +238,7 @@ class Spell(Sourced):
         noconc = args.last("noconc", type_=bool)
         conc_conflict = None
         conc_effect = None
-        if all((self.concentration, isinstance(caster, Combatant), combat, not noconc)):
+        if all((self.concentration, isinstance(caster, init.Combatant), combat, not noconc)):
             duration = args.last('dur', self.get_combat_duration(), int)
             conc_effect = initiative.Effect.new(combat, caster, self.name, duration, "", True)
             effect_result = caster.add_effect(conc_effect)

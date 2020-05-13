@@ -245,9 +245,6 @@ async def on_command_error(ctx, error):
             elif 499 < original.response.status < 600:
                 return await ctx.send("Error: Internal server error on Discord's end. Please try again.")
 
-        elif isinstance(original, OverflowError):
-            return await ctx.send(f"Error: A number is too large for me to store.")
-
     # send error to sentry.io
     if isinstance(error, CommandInvokeError):
         bot.log_exception(error.original, ctx)

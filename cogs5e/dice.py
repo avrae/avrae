@@ -75,24 +75,27 @@ class Dice(commands.Cog):
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.command(name='multiroll', aliases=['rr'])
-    async def rr(self, ctx, iterations: int, rollStr, *, args=''):
+    async def rr(self, ctx, iterations: int, *, rollStr):
         """Rolls dice in xdy format a given number of times.
-        Usage: !rr <iterations> <xdy> [args]"""
-        await self._roll_many(ctx, iterations, rollStr, None, args)
+        Usage: !rr <iterations> <dice>"""
+        rollStr, adv = self._string_search_adv(rollStr)
+        await self._roll_many(ctx, iterations, rollStr, adv=adv)
 
     @commands.command(name='iterroll', aliases=['rrr'])
-    async def rrr(self, ctx, iterations: int, rollStr, dc: int = 0, *, args=''):
+    async def rrr(self, ctx, iterations: int, rollStr, dc: int = None, *, args=''):
         """Rolls dice in xdy format, given a set dc.
         Usage: !rrr <iterations> <xdy> <DC> [args]"""
-        await self._roll_many(ctx, iterations, rollStr, dc, args)
+        _, adv = self._string_search_adv(args)
+        await self._roll_many(ctx, iterations, rollStr, dc, adv)
 
-    async def _roll_many(self, ctx, iterations, rollStr, dc, args):
+    async def _roll_many(self, ctx, iterations, roll_str, dc=None, adv=None):
         if iterations < 1 or iterations > 100:
             return await ctx.send("Too many or too few iterations.")
+        if adv is None:
+            adv = d20.AdvType.NONE
         results = []
         successes = 0
-        args, adv = self._string_search_adv(args)
-        ast = d20.parse(rollStr)
+        ast = d20.parse(roll_str)
         roller = d20.Roller(context=PersistentRollContext())
 
         for _ in range(iterations):
@@ -137,7 +140,7 @@ class Dice(commands.Cog):
         *-d* <damage bonus> - adds a bonus to damage
         *-c* <damage bonus on crit> - adds a bonus to crit damage
         -rr <times> - number of times to roll the attack against each target
-        *-mi* <minimum> - minimum roll on each die
+        *-mi <value>* - minimum value of each die on the damage roll
 
         *-resist* <damage resistance>
         *-immune* <damage immunity>

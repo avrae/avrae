@@ -100,7 +100,7 @@ class InitTracker(commands.Cog):
         If you are adding monsters to combat, you can use !init madd instead.
         
         __Valid Arguments__
-        -h - Hides HP, AC, Resists, etc.
+        -h - Hides HP, AC, resistances, and attack list.
         -p - Places combatant at the given modifier, instead of rolling
         -controller <controller> - Pings a different person on turn.
         -group <group> - Adds the combatant to a group.
@@ -108,7 +108,9 @@ class InitTracker(commands.Cog):
         -ac <ac> - Sets the combatant' AC. Default: None.
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.
-        -vuln <damage type> - Gives the combatant vulnerability to the given damage type."""
+        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
+        adv/dis - Rolls the initiative check with advantage/disadvantage.
+        """
         private = False
         place = None
         controller = str(ctx.author.id)
@@ -117,6 +119,7 @@ class InitTracker(commands.Cog):
         ac = None
         resists = {}
         args = argparse(args)
+        adv = args.adv(boolwise=True)
 
         if args.last('h', type_=bool):
             private = True
@@ -128,7 +131,7 @@ class InitTracker(commands.Cog):
                     place = modifier
                 else:
                     place = int(place_arg)
-            except ValueError:
+            except (ValueError, TypeError):
                 place = modifier
 
         if args.last('controller'):
@@ -154,16 +157,17 @@ class InitTracker(commands.Cog):
             return
 
         if not place:
-            init_roll = roll(f"1d20+{modifier}")
+            init_skill = Skill(modifier, adv=adv)
+            init_roll = roll(init_skill.d20())
             init = init_roll.total
             init_roll_skeleton = init_roll.result
         else:
+            init_skill = Skill(0, adv=adv)
             init = place
-            modifier = 0
             init_roll_skeleton = str(init)
 
-        me = Combatant.new(name, controller, init, Skill(modifier), hp, ac, private, Resistances.from_dict(resists),
-                           ctx, combat)
+        me = Combatant.new(name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx,
+                           combat)
 
         if group is None:
             combat.add_combatant(me)
@@ -950,7 +954,7 @@ class InitTracker(commands.Cog):
         *-d <damage>* - Adds additional damage.
         *-c <damage>* - Adds additional damage for when the attack crits, not doubled.
         -rr <value> - How many attacks to make at the target.
-        *-mi <value>* - Minimum value on the attack roll.
+        *-mi <value>* - Minimum value of each die on the damage roll.
 
         *-resist <damage type>* - Gives the target resistance to the given damage type.
         *-immune <damage type>* - Gives the target immunity to the given damage type.

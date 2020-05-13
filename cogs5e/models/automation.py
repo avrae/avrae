@@ -4,11 +4,11 @@ import logging
 import d20
 from d20 import roll
 
+import cogs5e.models.initiative as init
 from cogs5e.funcs.scripting.evaluators import SpellEvaluator
 from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
-from cogs5e.models.initiative import Combatant, PlayerCombatant
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from utils.dice import RerollableStringifier
 from utils.functions import maybe_mod
@@ -128,7 +128,7 @@ class AutomationContext:
         self.pm_queue = {}
 
         self.character = None
-        if isinstance(caster, PlayerCombatant):
+        if isinstance(caster, init.PlayerCombatant):
             self.character = caster.character
         elif isinstance(caster, Character):
             self.character = caster
@@ -136,7 +136,7 @@ class AutomationContext:
         self.evaluator = SpellEvaluator.with_caster(caster, spell_override=spell_override)
 
         self.combatant = None
-        if isinstance(caster, Combatant):
+        if isinstance(caster, init.Combatant):
             self.combatant = caster
 
     def queue(self, text):
@@ -229,7 +229,7 @@ class AutomationTarget:
         save_obj = self.target.saves.get(save)
 
         # combatant
-        if isinstance(self.target, Combatant):
+        if isinstance(self.target, init.Combatant):
             sb = self.target.active_effects('sb')
 
         saveroll = save_obj.d20(base_adv=adv)
@@ -247,7 +247,7 @@ class AutomationTarget:
             result = self.target.modify_hp(-amount, overflow=allow_overheal)
             autoctx.footer_queue(f"{self.target.name}: {result}")
 
-            if isinstance(self.target, Combatant):
+            if isinstance(self.target, init.Combatant):
                 if self.target.is_private:
                     autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
 
@@ -256,13 +256,13 @@ class AutomationTarget:
 
     @property
     def combatant(self):
-        if isinstance(self.target, Combatant):
+        if isinstance(self.target, init.Combatant):
             return self.target
         return None
 
     @property
     def character(self):
-        if isinstance(self.target, PlayerCombatant):
+        if isinstance(self.target, init.PlayerCombatant):
             return self.target.character
         elif isinstance(self.target, Character):
             return self.target
@@ -924,7 +924,7 @@ class IEffect(Effect):
             duration = self.duration
 
         duration = autoctx.args.last('dur', duration, int)
-        if isinstance(autoctx.target.target, Combatant):
+        if isinstance(autoctx.target.target, init.Combatant):
             effect = initiative.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
                                            duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
                                            concentration=self.concentration)

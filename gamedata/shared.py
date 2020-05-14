@@ -33,7 +33,9 @@ class Sourced(abc.ABC):
     @property
     def url(self):
         """Returns the reference URL for this sourced object."""
-        return f"{self._url}?utm_source=avrae&utm_medium=reference"
+        if self._url:
+            return f"{self._url}?utm_source=avrae&utm_medium=reference"
+        return None
 
     @property
     def marketplace_url(self):

@@ -412,7 +412,7 @@ class SheetManager(commands.Cog):
             return await ctx.send(f"Error: Unknown sheet type {sheet_type}.")
 
         try:
-            character = await parser.load_character(str(ctx.author.id), args)
+            character = await parser.load_character(ctx, args)
         except ExternalImportError as eep:
             return await loading.edit(content=f"Error loading character: {eep}")
         except Exception as eep:
@@ -550,7 +550,7 @@ class SheetManager(commands.Cog):
     @staticmethod
     async def _load_sheet(ctx, parser, args, loading):
         try:
-            character = await parser.load_character(str(ctx.author.id), argparse(args))
+            character = await parser.load_character(ctx, argparse(args))
         except ExternalImportError as eep:
             return await loading.edit(content=f"Error loading character: {eep}")
         except Exception as eep:

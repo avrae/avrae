@@ -3,7 +3,7 @@ class SheetLoaderABC:
         self.url = url
         self.character_data = None
 
-    async def load_character(self, owner_id: str, args):
+    async def load_character(self, ctx, args):
         raise NotImplemented
 
 # gsheet

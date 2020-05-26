@@ -46,12 +46,13 @@ class DicecloudParser(SheetLoaderABC):
         self.evaluator = DicecloudEvaluator()
         self._cache = {}
 
-    async def load_character(self, owner_id: str, args):
+    async def load_character(self, ctx, args):
         """
         Downloads and parses the character data, returning a fully-formed Character object.
         :raises ExternalImportError if something went wrong during the import that we can expect
         :raises Exception if something weirder happened
         """
+        owner_id = str(ctx.author.id)
         try:
             await self.get_character()
         except DicecloudException as e:

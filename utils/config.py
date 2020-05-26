@@ -26,12 +26,15 @@ DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
 # NEW_RELIC_LICENSE_KEY = os.getenv('NEW_RELIC_LICENSE_KEY')  # commented - set in newrelic.py because of import order
 
-# ---- 3pp auth ----
+# ---- character sheets ----
 NO_DICECLOUD = os.environ.get("NO_DICECLOUD", False)
 DICECLOUD_USER = os.getenv('DICECLOUD_USER', 'avrae') if not TESTING else credentials.test_dicecloud_user
 DICECLOUD_PASS = credentials.dicecloud_pass.encode() if not TESTING else credentials.test_dicecloud_pass.encode()
 DICECLOUD_API_KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
+
 GOOGLE_SERVICE_ACCOUNT = os.getenv('GOOGLE_SERVICE_ACCOUNT')  # optional - if not supplied, uses avrae-google.json
+
+DDB_CHAR_COMPUTATION_ENDPT = os.getenv('CHARACTER_COMPUTATION_ENDPOINT')  # if not set, DDB import disabled locally
 
 # ---- ddb auth ----
 # if environment is development, DDB auth is skipped unless auth service url is not null

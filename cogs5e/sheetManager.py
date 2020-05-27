@@ -497,10 +497,12 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def dicecloud(self, ctx, url: str, *args):
-        """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
+        """
+        Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.
         __Valid Arguments__
-        `-cc` - Will automatically create custom counters for class resources and features."""
+        `-nocc` - Do not automatically create custom counters for class resources and features.
+        """
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
 
@@ -533,7 +535,11 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def beyond(self, ctx, url: str, *args):
-        """Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings."""
+        """
+        Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings.
+        __Valid Arguments__
+        `-nocc` - Do not automatically create custom counters for limited use features.
+        """
 
         loading = await ctx.send('Loading character data from Beyond...')
         url = re.search(r"/characters/(\d+)", url)

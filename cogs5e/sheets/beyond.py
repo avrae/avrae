@@ -9,16 +9,17 @@ import re
 import aiohttp
 import html2text
 
+from cogs5e.models import automation
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skill, Skills
+from cogs5e.models.sheet.player import CustomCounter
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
 from gamedata.compendium import compendium
 from utils import config, constants
-from cogs5e.models import automation
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,9 @@ SKILL_MAP = {
     '3': 'acrobatics', '11': 'animalHandling', '6': 'arcana', '2': 'athletics', '16': 'deception', '7': 'history',
     '12': 'insight', '17': 'intimidation', '8': 'investigation', '13': 'medicine', '9': 'nature', '14': 'perception',
     '18': 'performance', '19': 'persuasion', '10': 'religion', '4': 'sleightOfHand', '5': 'stealth', '15': 'survival'
+}
+RESET_MAP = {
+    1: 'short', 2: 'long', 3: 'long'
 }
 
 
@@ -68,12 +72,15 @@ class BeyondSheetParser(SheetLoaderABC):
         options = {}
         overrides = {}
         death_saves = {}
+
         consumables = []
+        if not args.last('nocc'):
+            consumables = self._get_custom_counters()
 
         spellbook = self._get_spellbook()
-        live = None
-        race = self.get_race()
-        background = self.get_background()
+        live = None  # todo
+        race = self._get_race()
+        background = self._get_background()
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
@@ -235,10 +242,25 @@ class BeyondSheetParser(SheetLoaderABC):
 
         return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod)
 
-    def get_race(self):
+    def _get_custom_counters(self):
+        out = []
+
+        for cons in self.character_data['consumables']:
+            live_id = f"{cons['id']}-{cons['typeId']}"
+            display_type = 'bubble' if cons['max'] < 7 else None
+            reset = RESET_MAP.get(cons['reset'], 'long')
+
+            out.append(
+                CustomCounter(None, cons['name'], cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
+                              display_type=display_type, live_id=live_id)
+            )
+
+        return [cc.to_dict() for cc in out]
+
+    def _get_race(self):
         return self.character_data['race']
 
-    def get_background(self):
+    def _get_background(self):
         return self.character_data['background']
 
     # ==== helpers ====

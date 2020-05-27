@@ -84,7 +84,7 @@ class DicecloudParser(SheetLoaderABC):
         death_saves = {}
 
         consumables = []
-        if args.last('cc'):
+        if not args.last('nocc'):
             consumables = self.get_custom_counters()
 
         spellbook = self.get_spellbook()

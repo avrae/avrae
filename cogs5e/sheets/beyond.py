@@ -24,6 +24,7 @@ from utils import config, constants
 log = logging.getLogger(__name__)
 
 ENDPOINT = config.DDB_CHAR_COMPUTATION_ENDPT
+DDB_URL_RE = re.compile(r"(?:https?://)?(?:www\.dndbeyond\.com|ddb\.ac)(?:/profile/.+)?/characters/(\d+)/?")
 SKILL_MAP = {
     '3': 'acrobatics', '11': 'animalHandling', '6': 'arcana', '2': 'athletics', '16': 'deception', '7': 'history',
     '12': 'insight', '17': 'intimidation', '8': 'investigation', '13': 'medicine', '9': 'nature', '14': 'perception',

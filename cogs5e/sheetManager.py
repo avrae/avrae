@@ -5,7 +5,6 @@ Created on Jan 19, 2017
 """
 import asyncio
 import logging
-import re
 import traceback
 
 import discord
@@ -18,7 +17,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack
-from cogs5e.sheets.beyond import BeyondSheetParser
+from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from utils.argparser import argparse
@@ -542,7 +541,7 @@ class SheetManager(commands.Cog):
         """
 
         loading = await ctx.send('Loading character data from Beyond...')
-        url = re.search(r"/characters/(\d+)", url)
+        url = DDB_URL_RE.match(url)
         if url is None:
             return await loading.edit(content="This is not a D&D Beyond link.")
         url = url.group(1)

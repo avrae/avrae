@@ -141,7 +141,7 @@ class StatBlock:
             self.temp_hp += value
             value += min(thp, -value)  # how much did the THP absorb?
 
-        if self._hp is None:
+        if self.hp is None:
             return f"Dealt {-value} damage!"
 
         if overflow:

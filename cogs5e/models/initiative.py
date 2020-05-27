@@ -964,10 +964,6 @@ class PlayerCombatant(Combatant):
     def set_hp(self, new_hp):
         return self.character.set_hp(new_hp)
 
-    def modify_hp(self, value, ignore_temp=False, overflow=True):
-        self.character.modify_hp(value, ignore_temp, overflow=overflow)
-        return self.hp_str()
-
     def reset_hp(self):
         return self.character.reset_hp()
 

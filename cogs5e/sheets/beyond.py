@@ -31,7 +31,7 @@ SKILL_MAP = {
     '18': 'performance', '19': 'persuasion', '10': 'religion', '4': 'sleightOfHand', '5': 'stealth', '15': 'survival'
 }
 RESET_MAP = {
-    1: 'short', 2: 'long', 3: 'long'
+    1: 'short', 2: 'long', 3: 'long', 4: 'none'
 }
 
 

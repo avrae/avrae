@@ -5,7 +5,6 @@ Created on Jan 19, 2017
 """
 import asyncio
 import logging
-import re
 import traceback
 
 import discord
@@ -18,7 +17,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
 from cogs5e.models.sheet.attack import Attack
-from cogs5e.sheets.beyond import BeyondSheetParser
+from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from utils.argparser import argparse
@@ -412,7 +411,7 @@ class SheetManager(commands.Cog):
             return await ctx.send(f"Error: Unknown sheet type {sheet_type}.")
 
         try:
-            character = await parser.load_character(str(ctx.author.id), args)
+            character = await parser.load_character(ctx, args)
         except ExternalImportError as eep:
             return await loading.edit(content=f"Error loading character: {eep}")
         except Exception as eep:
@@ -497,10 +496,12 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def dicecloud(self, ctx, url: str, *args):
-        """Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
+        """
+        Loads a character sheet from [Dicecloud](https://dicecloud.com/), resetting all settings.
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.
         __Valid Arguments__
-        `-cc` - Will automatically create custom counters for class resources and features."""
+        `-nocc` - Do not automatically create custom counters for class resources and features.
+        """
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
 
@@ -533,10 +534,14 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def beyond(self, ctx, url: str, *args):
-        """Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings."""
+        """
+        Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings.
+        __Valid Arguments__
+        `-nocc` - Do not automatically create custom counters for limited use features.
+        """
 
         loading = await ctx.send('Loading character data from Beyond...')
-        url = re.search(r"/characters/(\d+)", url)
+        url = DDB_URL_RE.match(url)
         if url is None:
             return await loading.edit(content="This is not a D&D Beyond link.")
         url = url.group(1)
@@ -550,7 +555,7 @@ class SheetManager(commands.Cog):
     @staticmethod
     async def _load_sheet(ctx, parser, args, loading):
         try:
-            character = await parser.load_character(str(ctx.author.id), argparse(args))
+            character = await parser.load_character(ctx, argparse(args))
         except ExternalImportError as eep:
             return await loading.edit(content=f"Error loading character: {eep}")
         except Exception as eep:

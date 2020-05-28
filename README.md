@@ -72,6 +72,7 @@ Env vars required to deploy to production:
 - `AWS_ACCESS_KEY_ID` - AWS Access Key to access Dynamo
 - `AWS_SECRET_ACCESS_KEY` - AWS Secret Access Key
 - `LAUNCHDARKLY_SDK_KEY` - LaunchDarkly SDK Key
+- `CHARACTER_COMPUTATION_ENDPOINT` - HTTP endpoint for DDB character computation call
 
 Other env vars:
 - `NUM_SHARDS` - explicitly set the number of shards to run

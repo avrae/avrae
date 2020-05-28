@@ -251,10 +251,11 @@ class BeyondSheetParser(SheetLoaderABC):
             display_type = 'bubble' if cons['max'] < 7 else None
             reset = RESET_MAP.get(cons['reset'], 'long')
 
-            out.append(
-                CustomCounter(None, cons['name'], cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
-                              display_type=display_type, live_id=live_id)
-            )
+            if cons['max']:  # don't make counters with a range of 0 - 0
+                out.append(
+                    CustomCounter(None, cons['name'], cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
+                                  display_type=display_type, live_id=live_id)
+                )
 
         return [cc.to_dict() for cc in out]
 

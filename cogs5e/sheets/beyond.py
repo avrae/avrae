@@ -295,4 +295,4 @@ class BeyondSheetParser(SheetLoaderABC):
 
             return Attack(attack['name'], automation.Automation(effects))
         else:
-            return Attack.new(attack['name'], attack['toHit'], attack['damage'], desc)
+            return Attack.new(attack['name'], attack['toHit'], attack['damage'] or '0', desc)

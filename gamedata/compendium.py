@@ -1,6 +1,5 @@
 import asyncio
 import copy
-import itertools
 import json
 import logging
 import os
@@ -159,11 +158,19 @@ class Compendium:
 
     def _load_racefeats(self):
         self.rfeats = []
-        for race in itertools.chain(self.races, self.subraces):
+        self.subrfeats = []
+
+        def handle_race(race):
             for feature in race.traits:
                 copied = SourcedTrait.from_trait_and_sourced(feature, race, "racefeat")
                 copied.name = f"{race.name}: {feature.name}"
-                self.rfeats.append(copied)
+                yield copied
+
+        for base_race in self.races:
+            self.rfeats.extend(rf for rf in handle_race(base_race))
+
+        for subrace in self.subraces:
+            self.subrfeats.extend(rf for rf in handle_race(subrace))
 
     def read_json(self, filename, default):
         data = default

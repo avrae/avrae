@@ -142,18 +142,23 @@ class Compendium:
         seen = set()
 
         def handle_class(cls_or_sub):
-            for i, level in enumerate(cls_or_sub.levels):
+            for i, level in enumerate(cls_or_sub['levels']):
                 for feature in level:
-                    copied = SourcedTrait.from_trait_and_sourced(feature, cls_or_sub, "classfeat")
-                    copied.name = f"{cls_or_sub.name}: {feature.name}"
+                    copied = SourcedTrait.from_trait_and_sourced_dicts(feature, cls_or_sub, "classfeat")
+                    copied.name = f"{cls_or_sub['name']}: {feature['name']}"
                     if copied.name in seen:
                         copied.name = f"{copied.name} (Level {i + 1})"
                     seen.add(copied.name)
                     self.cfeats.append(copied)
 
-        for cls in self.classes:
+            for feature in cls_or_sub['class_feature_options']:
+                copied = SourcedTrait.from_trait_and_sourced_dicts(feature, cls_or_sub, "classfeat")
+                copied.name = f"{cls_or_sub['name']}: {feature['name']}"
+                self.cfeats.append(copied)
+
+        for cls in self.raw_classes:
             handle_class(cls)
-            for subcls in cls.subclasses:
+            for subcls in cls['subclasses']:
                 handle_class(subcls)
 
     def _load_racefeats(self):

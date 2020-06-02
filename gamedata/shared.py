@@ -77,3 +77,13 @@ class SourcedTrait(Trait, Sourced):
             source=sourced.source, entity_id=sourced.entity_id, page=sourced.page, url=sourced._url,
             is_free=sourced.is_free
         )
+
+    @classmethod
+    def from_trait_and_sourced_dicts(cls, trait, sourced, entity_type, homebrew=False):
+        return cls(
+            trait['name'], trait['text'],
+            entity_type=entity_type, homebrew=homebrew,
+            source=trait.get('source', sourced['source']), entity_id=trait.get('id', sourced['id']),
+            page=trait.get('page', sourced['page']), url=trait.get('url', sourced['url']),
+            is_free=trait.get('isFree', sourced['isFree'])
+        )

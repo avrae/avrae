@@ -426,6 +426,9 @@ def maybe_mod(val: str, base=0):
 
 def bubble_format(value: int, max_: int, fill_from_right=False):
     """Returns a bubble string to represent a counter's value."""
+    if max_ > 100:
+        return f"{value}/{max_}"
+
     used = max_ - value
     filled = '\u25c9' * value
     empty = '\u3007' * used

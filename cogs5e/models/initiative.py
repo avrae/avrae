@@ -1041,6 +1041,8 @@ class CombatantGroup(Combatant):
     @name.setter
     def name(self, new_name):
         self._name = new_name
+        for combatant in self._combatants:
+            combatant.group = self.name
 
     def get_name(self):
         return self.name

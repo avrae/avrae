@@ -22,6 +22,7 @@ class MixinBase(abc.ABC):
 
 class SubscriberMixin(MixinBase, abc.ABC):
     """A mixin that offers subscription support."""
+
     async def is_subscribed(self, ctx):
         """Returns whether the contextual author is subscribed to this object."""
         return (await self.sub_coll(ctx).find_one(
@@ -42,7 +43,7 @@ class SubscriberMixin(MixinBase, abc.ABC):
             raise NotAllowed("You are not subscribed to this.")
 
         await self.sub_coll(ctx).delete_many(
-            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id}
+            {"subscriber_id": ctx.author.id, "object_id": self.id}  # unsubscribe, unactive, uneditor
         )
 
     async def num_subscribers(self, ctx):

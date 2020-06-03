@@ -120,7 +120,7 @@ class SimpleCombatant:
         :param int mod: The amount of HP to add.
         :param bool overheal: Whether to allow exceeding max HP.
         """
-        self._combatant.modify_hp(mod, overheal)
+        self._combatant.modify_hp(mod, overflow=overheal)
 
     def hp_str(self):
         """

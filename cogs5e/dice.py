@@ -95,7 +95,7 @@ class Dice(commands.Cog):
             adv = d20.AdvType.NONE
         results = []
         successes = 0
-        ast = d20.parse(roll_str)
+        ast = d20.parse(roll_str, allow_comments=True)
         roller = d20.Roller(context=PersistentRollContext())
 
         for _ in range(iterations):
@@ -110,6 +110,9 @@ class Dice(commands.Cog):
         else:
             header = f"Rolling {iterations} iterations, DC {dc}..."
             footer = f"{successes} successes, {sum(o.total for o in results)} total."
+
+        if ast.comment:
+            header = f"{ast.comment}: {header}"
 
         result_strs = '\n'.join([str(o) for o in results])
 

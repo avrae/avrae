@@ -260,10 +260,10 @@ A normal attack:
       {
         "type": "target",
         "target": "each",
-        "attackBonus": "{dexterityMod + proficiencyBonus}",
         "effects": [
           {
             "type": "attack",
+            "attackBonus": "{dexterityMod + proficiencyBonus}",
             "hit": [
               {
                 "type": "damage",

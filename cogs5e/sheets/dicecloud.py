@@ -10,7 +10,7 @@ import logging
 import re
 from math import ceil, floor
 
-from draconic import SimpleInterpreter
+import draconic
 
 import credentials
 from cogs5e.models.character import Character
@@ -317,18 +317,21 @@ class DicecloudParser(SheetLoaderABC):
         for f in self.character_data.get('features', []):
             if not f.get('enabled'): continue
             if f.get('removed'): continue
-            if not 'uses' in f: continue
+            if not ('uses' in f and f['uses']): continue
             reset = None
             desc = f.get('description', '').lower()
             if 'short rest' in desc or 'short or long rest' in desc:
                 reset = 'short'
             elif 'long rest' in desc:
                 reset = 'long'
-            initial_value = self.evaluator.eval(f['uses'])
-            display_type = 'bubble' if initial_value < 6 else None
+            try:
+                initial_value = self.evaluator.eval(f['uses'])
+            except draconic.InvalidExpression:
+                continue  # skip on error
+            display_type = 'bubble' if initial_value < 7 else None
             co = {
                 "name": f['name'],
-                "value": initial_value, "minv": '0', "maxv": f['uses'],
+                "value": initial_value, "minv": '0', "maxv": str(initial_value),
                 "reset": reset,
                 "display_type": display_type, "live_id": f['_id']
             }
@@ -470,7 +473,7 @@ def larger(x, y):
     return 1 if x > y else 0
 
 
-class DicecloudEvaluator(SimpleInterpreter):
+class DicecloudEvaluator(draconic.SimpleInterpreter):
     DEFAULT_FUNCTIONS = {'ceil': ceil, 'floor': floor, 'max': max, 'min': min, 'round': round, 'func_if': func_if,
                          'larger': larger}
 

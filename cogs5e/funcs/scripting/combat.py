@@ -120,7 +120,7 @@ class SimpleCombatant:
         :param int mod: The amount of HP to add.
         :param bool overheal: Whether to allow exceeding max HP.
         """
-        self._combatant.modify_hp(mod, overheal)
+        self._combatant.modify_hp(mod, overflow=overheal)
 
     def hp_str(self):
         """
@@ -143,7 +143,7 @@ class SimpleCombatant:
             raise InvalidSaveType
 
         sb = self._combatant.active_effects('sb')
-        saveroll = save.d20(base_adv=0 if adv is None else 1 if adv else -1)
+        saveroll = save.d20(base_adv=adv)
         if sb:
             saveroll = f'{saveroll}+{"+".join(sb)}'
 

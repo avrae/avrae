@@ -29,7 +29,8 @@ async def maybe_combat(ctx, caster, args, allow_groups=True):
     # get caster as Combatant if caster in combat
     if isinstance(caster, Character):
         caster = next(
-            (c for c in combat.get_combatants() if getattr(c, 'character_id', None) == caster.upstream),
+            (c for c in combat.get_combatants() if getattr(c, 'character_id', None) == caster.upstream
+             and getattr(c, 'character_owner', None) == caster.owner),
             caster
         )
     return caster, targets, combat

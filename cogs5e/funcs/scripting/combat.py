@@ -84,19 +84,11 @@ class SimpleCombatant:
         self._hidden = hidestats and self._combatant.is_private
         self.type = "combatant"
 
-        self.ac = self._combatant.ac
-        if self._combatant.hp is not None:
-            self.hp = self._combatant.hp
-        else:
-            self.hp = None
-        self.maxhp = self._combatant.max_hp
         self.initmod = int(self._combatant.init_skill)
-        self.temphp = self._combatant.temp_hp
         self.resists = self._combatant.resistances
         self.attacks = self._combatant.attacks.to_dict()
         self.init = self._combatant.init
         self.name = self._combatant.name
-        self.note = self._combatant.notes
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
         # deprecated
         if self._combatant.hp is not None and self._combatant.max_hp:
@@ -104,6 +96,26 @@ class SimpleCombatant:
         else:
             self.ratio = 0
         self.level = self._combatant.spellbook.caster_level
+
+    @property
+    def ac(self):
+        return self._combatant.ac
+
+    @property
+    def hp(self):
+        return self._combatant.hp
+
+    @property
+    def temphp(self):
+        return self._combatant.temp_hp
+
+    @property
+    def maxhp(self):
+        return self._combatant.max_hp
+
+    @property
+    def note(self):
+        return self._combatant.notes
 
     def set_hp(self, newhp: int):
         """
@@ -146,7 +158,6 @@ class SimpleCombatant:
         saveroll = save.d20(base_adv=adv)
         if sb:
             saveroll = f'{saveroll}+{"+".join(sb)}'
-
 
         save_roll = roll(saveroll)
         return SimpleRollResult(save_roll)

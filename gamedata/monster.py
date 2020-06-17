@@ -384,9 +384,17 @@ class MonsterSpellbook(Spellbook):
         return  # monster singletons should not have mutable slots
 
     def can_cast(self, spell, level) -> bool:
+        # slot
         has_slot = self.get_slots(level) > 0
-        is_at_will = spell.name in self.at_will
-        is_daily = spell.name in self.daily and self.daily[spell.name] > 0
+
+        # at will
+        is_at_will = spell.name.lower() in [s.lower() for s in self.at_will]
+
+        # daily
+        daily_key = next((k for k in self.daily if spell.name.lower() == k.lower()), None)
+        is_daily = daily_key is not None and self.daily[daily_key] > 0
+
+        # check
         return spell.name in self and (has_slot or is_daily or is_at_will)
 
 
@@ -401,9 +409,9 @@ class MonsterCastableSpellbook(MonsterSpellbook):
         return cls.from_dict(new)
 
     def cast(self, spell, level):
-        if spell.name in self.at_will:
+        if spell.name.lower() in [s.lower() for s in self.at_will]:
             return
-        elif spell.name in self.daily:
-            self.daily[spell.name] -= 1
+        elif (daily_key := next((k for k in self.daily if spell.name.lower() == k.lower()), None)) is not None:
+            self.daily[daily_key] -= 1
         else:
             self.use_slot(level)

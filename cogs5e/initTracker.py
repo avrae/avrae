@@ -857,7 +857,7 @@ class InitTracker(commands.Cog):
         __Attacks__
         -b <bonus> - Adds a bonus to hit.
         -d <damage> - Adds additional damage.
-        -attack <"[hit]|[damage]|[description]"> - Adds an attack to the combatant. The effect name will be the name of the attack. No [hit] will autohit (e.g., -attack "|1d6<fire>|")
+        -attack <"[hit]|[damage]|[description]"> - Adds an attack to the combatant. The effect name will be the name of the attack. No [hit] will autohit (e.g., -attack "|1d6[fire]|")
         __Resists__
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.

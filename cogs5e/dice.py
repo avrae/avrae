@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.scripting import helpers
+from aliasing import helpers
 from cogs5e.models import embeds
 from cogsmisc.stats import Stats
 from gamedata import Monster

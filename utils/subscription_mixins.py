@@ -106,6 +106,10 @@ class GuildActiveMixin(MixinBase, abc.ABC):
         await self.sub_coll(ctx).delete_many(
             {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id})
 
+    async def num_server_active(self, ctx):
+        """Returns the number of guilds that have this object active."""
+        return await self.sub_coll(ctx).count_documents({"type": "server_active", "object_id": self.id})
+
     @classmethod
     async def guild_active_ids(cls, ctx):
         """Returns a async iterator of ObjectIds representing the objects active in the contextual server."""

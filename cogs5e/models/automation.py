@@ -5,7 +5,7 @@ import d20
 from d20 import roll
 
 import cogs5e.models.initiative as init
-from cogs5e.funcs.scripting.evaluators import SpellEvaluator
+from aliasing.evaluators import SpellEvaluator
 from cogs5e.models import embeds, initiative
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType

@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType, UserInputError
 
-from cogs5e.funcs.scripting import helpers
+from aliasing import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import EvaluationError, NoCharacter

@@ -7,12 +7,12 @@ import d20
 import draconic
 import json.scanner
 
+from aliasing import helpers
+from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
+from aliasing.api.legacy import LegacyRawCharacter
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
-from . import helpers
-from .functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
-from .legacy import LegacyRawCharacter
 
 DEFAULT_BUILTINS = {
     # builtins

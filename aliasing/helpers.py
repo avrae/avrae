@@ -189,7 +189,7 @@ async def parse_no_char(cstr, ctx):
     :return: The parsed string.
     :rtype: str
     """
-    from .evaluators import ScriptingEvaluator
+    from aliasing.evaluators import ScriptingEvaluator
     evaluator = await ScriptingEvaluator.new(ctx)
     out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
     await evaluator.run_commits()

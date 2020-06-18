@@ -4,7 +4,7 @@ import random
 
 import cachetools
 
-from cogs5e.funcs.scripting.evaluators import MathEvaluator, ScriptingEvaluator
+from aliasing.evaluators import MathEvaluator, ScriptingEvaluator
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharacter, NoReset

@@ -11,7 +11,7 @@ from discord.ext.commands import NoPrivateMessage
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from gamedata.lookuputils import select_monster_full, select_spell_full
-from cogs5e.funcs.scripting import helpers
+from aliasing import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, SelectionException

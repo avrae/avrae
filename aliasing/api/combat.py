@@ -1,6 +1,6 @@
 from d20 import roll
 
-from cogs5e.funcs.scripting.functions import SimpleRollResult
+from aliasing.api.functions import SimpleRollResult
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
 from cogs5e.models.sheet.statblock import StatBlock

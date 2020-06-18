@@ -811,6 +811,12 @@ class Damage(Effect):
                     transforms[frm.strip()] = to.strip()
             else:
                 transforms[None] = dtype
+        # display damage transforms (#1103)
+        if None in transforms:
+            autoctx.meta_queue(f"**Damage Type**: {transforms[None]}")
+        elif transforms:
+            for frm in transforms:
+                autoctx.meta_queue(f"**Damage Change**: {frm} > {transforms[frm]}")
 
         # evaluate resistances
         do_resistances(dmgroll.expr, resistances, always, transforms)

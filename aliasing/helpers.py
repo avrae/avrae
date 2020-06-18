@@ -4,6 +4,7 @@ import uuid
 
 import draconic
 
+from aliasing.personal import Servsnippet, Snippet
 from cogs5e.models.errors import AvraeException, InvalidArgument, NotAllowed
 from utils.argparser import argquote, argsplit
 
@@ -86,79 +87,7 @@ async def update_gvar(ctx, gid, value):
     await ctx.bot.mdb.gvars.update_one({"key": gid}, {"$set": {"value": value}})
 
 
-# aliases
-async def create_alias(ctx, alias_name, commands):
-    commands = str(commands)
-    if len(commands) > ALIAS_SIZE_LIMIT:
-        raise InvalidArgument(f"Aliases must be shorter than {ALIAS_SIZE_LIMIT} characters.")
-    await ctx.bot.mdb.aliases.update_one({"owner": str(ctx.author.id), "name": alias_name},
-                                         {"$set": {"commands": commands}}, True)
-
-
-async def get_aliases(ctx):
-    aliases = {}
-    async for alias in ctx.bot.mdb.aliases.find({"owner": str(ctx.author.id)}):
-        aliases[alias['name']] = alias['commands']
-    return aliases
-
-
-async def create_servalias(ctx, alias_name, commands):
-    commands = str(commands)
-    if len(commands) > ALIAS_SIZE_LIMIT:
-        raise InvalidArgument(f"Aliases must be shorter than {ALIAS_SIZE_LIMIT} characters.")
-    await ctx.bot.mdb.servaliases.update_one({"server": str(ctx.guild.id), "name": alias_name},
-                                             {"$set": {"commands": commands.lstrip('!')}}, True)
-
-
-async def get_servaliases(ctx):
-    servaliases = {}
-    async for servalias in ctx.bot.mdb.servaliases.find({"server": str(ctx.guild.id)}):
-        servaliases[servalias['name']] = servalias['commands']
-    return servaliases
-
-
 # snippets
-async def create_snippet(ctx, snipname, snippet):
-    snippet = str(snippet)
-    if len(snippet) > SNIPPET_SIZE_LIMIT:
-        raise InvalidArgument(f"Snippets must be shorter than {SNIPPET_SIZE_LIMIT} characters.")
-    elif len(snipname) < 2:
-        raise InvalidArgument("Snippet names must be at least 2 characters long.")
-    elif ' ' in snipname:
-        raise InvalidArgument("Snippet names cannot contain spaces.")
-
-    await ctx.bot.mdb.snippets.update_one({"owner": str(ctx.author.id), "name": snipname},
-                                          {"$set": {"snippet": snippet}}, True)
-
-
-async def get_snippets(ctx):
-    snippets = {}
-    async for snippet in ctx.bot.mdb.snippets.find({"owner": str(ctx.author.id)}):
-        snippets[snippet['name']] = snippet['snippet']
-    return snippets
-
-
-async def create_servsnippet(ctx, snipname, snippet):
-    snippet = str(snippet)
-    if len(snippet) > SNIPPET_SIZE_LIMIT:
-        raise InvalidArgument(f"Snippets must be shorter than {SNIPPET_SIZE_LIMIT} characters.")
-    elif len(snipname) < 2:
-        raise InvalidArgument("Snippet names must be at least 2 characters long.")
-    elif ' ' in snipname:
-        raise InvalidArgument("Snippet names cannot contain spaces.")
-
-    await ctx.bot.mdb.servsnippets.update_one({"server": str(ctx.guild.id), "name": snipname},
-                                              {"$set": {"snippet": snippet}}, True)
-
-
-async def get_servsnippets(ctx):
-    servsnippets = {}
-    if ctx.guild:
-        async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": str(ctx.guild.id)}):
-            servsnippets[servsnippet['name']] = servsnippet['snippet']
-    return servsnippets
-
-
 async def parse_snippets(args, ctx) -> str:
     """
     Parses user and server snippets.
@@ -170,8 +99,8 @@ async def parse_snippets(args, ctx) -> str:
         args = argsplit(args)
     if not isinstance(args, list):
         args = list(args)
-    snippets = await get_servsnippets(ctx)
-    snippets.update(await get_snippets(ctx))
+    snippets = await Servsnippet.get_ctx_map(ctx)
+    snippets.update(await Snippet.get_ctx_map(ctx))
     for index, arg in enumerate(args):  # parse snippets
         snippet_value = snippets.get(arg)
         if snippet_value:

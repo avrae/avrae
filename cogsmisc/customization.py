@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType, UserInputError
 
-from aliasing import helpers
+from aliasing import helpers, personal
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import EvaluationError, NoCharacter
@@ -174,7 +174,7 @@ class Customization(commands.Cog):
         if ' ' in alias_name or not alias_name:
             return await ctx.send('Invalid alias name.')
 
-        user_aliases = await helpers.get_aliases(ctx)
+        user_aliases = await personal.Alias.get_ctx_map(ctx)
         if cmds is None:
             alias = user_aliases.get(alias_name)
             if alias is None:
@@ -187,7 +187,8 @@ class Customization(commands.Cog):
                                                f'<https://avrae.io/dashboard/aliases>'
             return await ctx.send(out)
 
-        await helpers.create_alias(ctx, alias_name, cmds.lstrip("!"))
+        alias = personal.Alias.new(alias_name, cmds.lstrip("!"), str(ctx.author.id))
+        await alias.commit(self.bot.mdb)
 
         out = f'Alias `{ctx.prefix}{alias_name}` added.' \
               f'```py\n{ctx.prefix}alias {alias_name} {cmds.lstrip("!")}\n```'
@@ -201,7 +202,7 @@ class Customization(commands.Cog):
     @alias.command(name='list')
     async def alias_list(self, ctx):
         """Lists all user aliases."""
-        user_aliases = await helpers.get_aliases(ctx)
+        user_aliases = await personal.Alias.get_ctx_map(ctx)
         aliases = list(user_aliases.keys())
         sorted_aliases = sorted(aliases)
         return await ctx.send('Your aliases:\n{}'.format(', '.join(sorted_aliases)))
@@ -236,7 +237,7 @@ class Customization(commands.Cog):
         if alias_name is None:
             return await self.servalias_list(ctx)
 
-        server_aliases = await helpers.get_servaliases(ctx)
+        server_aliases = await personal.Servalias.get_ctx_map(ctx)
         if alias_name in self.bot.all_commands:
             return await ctx.send('There is already a built-in command with that name!')
 
@@ -256,7 +257,8 @@ class Customization(commands.Cog):
                                   "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                                   "is required.")
 
-        await helpers.create_servalias(ctx, alias_name, cmds.lstrip("!"))
+        alias = personal.Servalias.new(alias_name, cmds.lstrip("!"), str(ctx.guild.id))
+        await alias.commit(self.bot.mdb)
 
         out = f'Server alias `{ctx.prefix}{alias_name}` added.' \
               f'```py\n{ctx.prefix}alias {alias_name} {cmds.lstrip("!")}\n```'
@@ -268,7 +270,7 @@ class Customization(commands.Cog):
     @commands.guild_only()
     async def servalias_list(self, ctx):
         """Lists all server aliases."""
-        server_aliases = await helpers.get_servaliases(ctx)
+        server_aliases = await personal.Servalias.get_ctx_map(ctx)
         aliases = list(server_aliases.keys())
         sorted_aliases = sorted(aliases)
         return await ctx.send('This server\'s aliases:\n{}'.format(', '.join(sorted_aliases)))
@@ -301,7 +303,7 @@ class Customization(commands.Cog):
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await self.snippet_list(ctx)
-        user_snippets = await helpers.get_snippets(ctx)
+        user_snippets = await personal.Snippet.get_ctx_map(ctx)
 
         if snippet is None:
             out = f'**{snipname}**:```py\n' \
@@ -313,7 +315,8 @@ class Customization(commands.Cog):
                                                f'<https://avrae.io/dashboard/aliases>'
             return await ctx.send(out)
 
-        await helpers.create_snippet(ctx, snipname, snippet)
+        snippet = personal.Snippet.new(snipname, snippet, str(ctx.author.id))
+        await snippet.commit(self.bot.mdb)
 
         out = f'Snippet {snipname} added.```py\n' \
               f'{ctx.prefix}snippet {snipname} {snippet}\n```'
@@ -326,7 +329,7 @@ class Customization(commands.Cog):
     @snippet.command(name='list')
     async def snippet_list(self, ctx):
         """Lists your user snippets."""
-        user_snippets = await helpers.get_snippets(ctx)
+        user_snippets = await personal.Snippet.get_ctx_map(ctx)
         await ctx.send('Your snippets:\n{}'.format(', '.join(sorted([name for name in user_snippets.keys()]))))
 
     @snippet.command(name='delete', aliases=['remove'])
@@ -359,7 +362,7 @@ class Customization(commands.Cog):
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await self.servsnippet_list(ctx)
-        server_snippets = await helpers.get_servsnippets(ctx)
+        server_snippets = await personal.Servsnippet.get_ctx_map(ctx)
 
         if snippet is None:
             out = f'**{snipname}**:```py\n' \
@@ -374,7 +377,8 @@ class Customization(commands.Cog):
                                   "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
                                   "is required.")
 
-        await helpers.create_servsnippet(ctx, snipname, snippet)
+        snippet = personal.Servsnippet.new(snipname, snippet, str(ctx.guild.id))
+        await snippet.commit(self.bot.mdb)
 
         out = f'Server snippet {snipname} added.```py\n' \
               f'{ctx.prefix}snippet {snipname} {snippet}' \
@@ -387,7 +391,7 @@ class Customization(commands.Cog):
     @commands.guild_only()
     async def servsnippet_list(self, ctx):
         """Lists this server's snippets."""
-        server_snippets = await helpers.get_servsnippets(ctx)
+        server_snippets = await personal.Servsnippet.get_ctx_map(ctx)
         await ctx.send(
             'This server\'s snippets:\n{}'.format(', '.join(sorted([name for name in server_snippets.keys()]))))
 

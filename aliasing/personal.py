@@ -7,48 +7,85 @@ from aliasing.constants import ALIAS_SIZE_LIMIT, SNIPPET_SIZE_LIMIT
 from cogs5e.models.errors import InvalidArgument
 
 
-# ==== aliases ====
-class _AliasBase(abc.ABC):
-    def __init__(self, name, commands):
+class _CustomizationBase(abc.ABC):
+    def __init__(self, name, code, owner):
         self.name = name
-        self.commands = commands
-
-    @staticmethod
-    def _checks(commands):
-        if len(commands) > ALIAS_SIZE_LIMIT:
-            raise InvalidArgument(f"Aliases must be shorter than {ALIAS_SIZE_LIMIT} characters.")
-
-
-class Alias(_AliasBase):
-    def __init__(self, name, commands, owner):
-        super().__init__(name, commands)
+        self.code = code
         self.owner = owner
 
     @classmethod
-    def new(cls, name, commands, owner):
+    def new(cls, name, code, owner):
         """
-        Creates a new alias.
+        Creates a new customization.
 
-        :param name: The name of the alias.
+        :param name: The name of the customization.
         :type name: str
-        :param commands: The commands that name is an alias of.
-        :type commands: str
-        :param owner: The owner of the alias. Must be str.
+        :param code: The commands that name is an alias of.
+        :type code: str
+        :param owner: The owner of the customization (user/guild). Must be str.
         :type owner: str
         """
-        commands = str(commands)
-        cls._checks(commands)
-        return cls(name, commands, str(owner))
+        code = str(code)
+        cls._checks(name, code)
+        return cls(name, code, str(owner))
 
     async def commit(self, mdb):
         """
-        Writes the alias to MongoDB, creating it if necessary.
+        Writes the customization to MongoDB, creating it if necessary.
 
         :param mdb: The database.
         :type mdb: motor.motor_asyncio.AsyncIOMotorDatabase
         """
+        raise NotImplementedError
+
+    @staticmethod
+    async def get_ctx_map(ctx):
+        """
+        Returns a dict mapping {name: command} for all customizations in scope.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    async def get_code_for(name, ctx):
+        """
+        Returns the code for the customization named *name* in *ctx*, or None if not applicable.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def _checks(name, code):
+        """
+        Runs creation limit checks.
+
+        :raises InvalidArgument: If any check fails.
+        """
+        raise NotImplementedError
+
+
+class _AliasBase(_CustomizationBase, abc.ABC):
+    @staticmethod
+    def _checks(name, code):
+        if len(code) > ALIAS_SIZE_LIMIT:
+            raise InvalidArgument(f"Aliases must be shorter than {ALIAS_SIZE_LIMIT} characters.")
+        if ' ' in name:
+            raise InvalidArgument("Alias names cannot contain spaces.")
+
+
+class _SnippetBase(_CustomizationBase, abc.ABC):
+    @staticmethod
+    def _checks(name, code):
+        if len(code) > SNIPPET_SIZE_LIMIT:
+            raise InvalidArgument(f"Snippets must be shorter than {SNIPPET_SIZE_LIMIT} characters.")
+        if len(name) < 2:
+            raise InvalidArgument("Snippet names must be at least 2 characters long.")
+        if ' ' in name:
+            raise InvalidArgument("Snippet names cannot contain spaces.")
+
+
+class Alias(_AliasBase):
+    async def commit(self, mdb):
         await mdb.aliases.update_one({"owner": self.owner, "name": self.name},
-                                     {"$set": {"commands": self.commands}}, upsert=True)
+                                     {"$set": {"commands": self.code}}, upsert=True)
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -57,37 +94,20 @@ class Alias(_AliasBase):
             aliases[alias['name']] = alias['commands']
         return aliases
 
+    @staticmethod
+    async def get_code_for(name, ctx):
+        doc = await ctx.bot.mdb.aliases.find_one(
+            {"owner": str(ctx.author.id), "name": name},
+            ['commands'])
+        if doc:
+            return doc['commands']
+        return None
+
 
 class Servalias(_AliasBase):
-    def __init__(self, name, commands, server):
-        super().__init__(name, commands)
-        self.server = server
-
-    @classmethod
-    def new(cls, name, commands, server):
-        """
-        Creates a new server alias.
-
-        :param name: The name of the alias.
-        :type name: str
-        :param commands: The commands that name is an alias of.
-        :type commands: str
-        :param server: The owner of the alias. Must be str.
-        :type server: str
-        """
-        commands = str(commands)
-        cls._checks(commands)
-        return cls(name, commands, str(server))
-
     async def commit(self, mdb):
-        """
-        Writes the server alias to MongoDB, creating it if necessary.
-
-        :param mdb: The database.
-        :type mdb: motor.motor_asyncio.AsyncIOMotorDatabase
-        """
-        await mdb.servaliases.update_one({"server": self.server, "name": self.name},
-                                         {"$set": {"commands": self.commands}}, upsert=True)
+        await mdb.servaliases.update_one({"server": self.owner, "name": self.name},
+                                         {"$set": {"commands": self.code}}, upsert=True)
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -96,53 +116,22 @@ class Servalias(_AliasBase):
             servaliases[servalias['name']] = servalias['commands']
         return servaliases
 
-
-# ==== snippets ====
-class _SnippetBase(abc.ABC):
-    def __init__(self, name, snippet):
-        self.name = name
-        self.snippet = snippet
-
     @staticmethod
-    def _checks(name, snippet):
-        if len(snippet) > SNIPPET_SIZE_LIMIT:
-            raise InvalidArgument(f"Snippets must be shorter than {SNIPPET_SIZE_LIMIT} characters.")
-        if len(name) < 2:
-            raise InvalidArgument("Snippet names must be at least 2 characters long.")
-        if ' ' in name:
-            raise InvalidArgument("Snippet names cannot contain spaces.")
+    async def get_code_for(name, ctx):
+        if ctx.guild is None:
+            return None
+        doc = await ctx.bot.mdb.servaliases.find_one(
+            {"server": str(ctx.guild.id), "name": name},
+            ['commands'])
+        if doc:
+            return doc['commands']
+        return None
 
 
 class Snippet(_SnippetBase):
-    def __init__(self, name, snippet, owner):
-        super().__init__(name, snippet)
-        self.owner = owner
-
-    @classmethod
-    def new(cls, name, snippet, owner):
-        """
-        Creates a new snippet.
-
-        :param name: The name of the snippet.
-        :type name: str
-        :param snippet: The arguments the snippet is a shortcut of.
-        :type snippet: str
-        :param owner: The owner of the snippet. Must be str.
-        :type owner: str
-        """
-        snippet = str(snippet)
-        cls._checks(name, snippet)
-        return cls(name, snippet, str(owner))
-
     async def commit(self, mdb):
-        """
-        Writes the snippet to MongoDB, creating it if necessary.
-
-        :param mdb: The database.
-        :type mdb: motor.motor_asyncio.AsyncIOMotorDatabase
-        """
         await mdb.snippets.update_one({"owner": self.owner, "name": self.name},
-                                      {"$set": {"snippet": self.snippet}}, upsert=True)
+                                      {"$set": {"snippet": self.code}}, upsert=True)
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -151,37 +140,15 @@ class Snippet(_SnippetBase):
             snippets[snippet['name']] = snippet['snippet']
         return snippets
 
+    @staticmethod
+    async def get_code_for(name, ctx):
+        pass  # todo
+
 
 class Servsnippet(_SnippetBase):
-    def __init__(self, name, snippet, server):
-        super().__init__(name, snippet)
-        self.server = server
-
-    @classmethod
-    def new(cls, name, snippet, server):
-        """
-        Creates a new server snippet.
-
-        :param name: The name of the snippet.
-        :type name: str
-        :param snippet: The arguments the snippet is a shortcut of.
-        :type snippet: str
-        :param server: The owner of the snippet. Must be str.
-        :type server: str
-        """
-        snippet = str(snippet)
-        cls._checks(name, snippet)
-        return cls(name, snippet, str(server))
-
     async def commit(self, mdb):
-        """
-        Writes the snippet to MongoDB, creating it if necessary.
-
-        :param mdb: The database.
-        :type mdb: motor.motor_asyncio.AsyncIOMotorDatabase
-        """
-        await mdb.servsnippets.update_one({"server": self.server, "name": self.name},
-                                          {"$set": {"snippet": self.snippet}}, upsert=True)
+        await mdb.servsnippets.update_one({"server": self.owner, "name": self.name},
+                                          {"$set": {"snippet": self.code}}, upsert=True)
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -190,3 +157,7 @@ class Servsnippet(_SnippetBase):
             async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": str(ctx.guild.id)}):
                 servsnippets[servsnippet['name']] = servsnippet['snippet']
         return servsnippets
+
+    @staticmethod
+    async def get_code_for(name, ctx):
+        pass  # todo

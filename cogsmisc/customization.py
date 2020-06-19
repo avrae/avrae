@@ -8,14 +8,13 @@ import textwrap
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import BucketType, UserInputError
+from discord.ext.commands import BucketType
 
 from aliasing import helpers, personal
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import EvaluationError, NoCharacter
+from cogs5e.models.errors import EvaluationError
 from utils import checks
-from utils.argparser import argquote, argsplit
 from utils.functions import auth_and_chan, clean_content, confirm
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
@@ -32,12 +31,6 @@ class Customization(commands.Cog):
         if self.bot.is_cluster_0:
             cmds = list(self.bot.all_commands.keys())
             await self.bot.rdb.jset('default_commands', cmds)
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.id in self.bot.muted:
-            return
-        await self.handle_aliases(message)
 
     @commands.command()
     @commands.guild_only()
@@ -82,78 +75,6 @@ class Customization(commands.Cog):
             ctx.message.content = c
             await self.bot.process_commands(ctx.message)
             await asyncio.sleep(1)
-
-    async def handle_aliases(self, message):
-        prefix = await self.bot.get_server_prefix(message)
-        if message.content.startswith(prefix):
-            alias = message.content[len(prefix):].split(' ')[0]
-            if message.guild:
-                command = (await self.bot.mdb.aliases.find_one({"owner": str(message.author.id), "name": alias},
-                                                               ['commands'])) or \
-                          (await self.bot.mdb.servaliases.find_one({"server": str(message.guild.id), "name": alias},
-                                                                   ['commands']))
-            else:
-                command = await self.bot.mdb.aliases.find_one({"owner": str(message.author.id), "name": alias},
-                                                              ['commands'])
-            if command:
-                command = command['commands']
-                try:
-                    message.content = await self.handle_alias_arguments(command, message)
-                except UserInputError as e:
-                    return await message.channel.send(f"Invalid input: {e}")
-                ctx = await self.bot.get_context(message)
-                char = None
-                try:
-                    char = await Character.from_ctx(ctx)
-                except NoCharacter:
-                    pass
-
-                try:
-                    if char:
-                        message.content = await char.parse_cvars(message.content, ctx)
-                    else:
-                        message.content = await helpers.parse_no_char(message.content, ctx)
-                except EvaluationError as err:
-                    return await helpers.handle_alias_exception(ctx, err)
-                except Exception as e:
-                    return await message.channel.send(e)
-                await self.bot.process_commands(message)
-
-    async def handle_alias_arguments(self, command, message):
-        """Takes an alias name, alias value, and message and handles percent-encoded args.
-        Returns: string"""
-        prefix = await self.bot.get_server_prefix(message)
-        rawargs = " ".join(message.content[len(prefix):].split(' ')[1:])
-        args = argsplit(rawargs)
-        tempargs = args[:]
-        new_command = command
-        if '%*%' in command:
-            new_command = new_command.replace('%*%', argquote(rawargs))
-            tempargs = []
-        if '&*&' in command:
-            new_command = new_command.replace('&*&', rawargs.replace("\"", "\\\""))
-            tempargs = []
-        if '&ARGS&' in command:
-            new_command = new_command.replace('&ARGS&', str(args))
-            tempargs = []
-        for index, value in enumerate(args):
-            key = '%{}%'.format(index + 1)
-            to_remove = False
-            if key in command:
-                new_command = new_command.replace(key, argquote(value))
-                to_remove = True
-            key = '&{}&'.format(index + 1)
-            if key in command:
-                new_command = new_command.replace(key, value.replace("\"", "\\\""))
-                to_remove = True
-            if to_remove:
-                try:
-                    tempargs.remove(value)
-                except ValueError:
-                    pass
-
-        quoted_args = ' '.join(map(argquote, tempargs))
-        return f"{prefix}{new_command} {quoted_args}".strip()
 
     @commands.group(invoke_without_command=True)
     async def alias(self, ctx, alias_name=None, *, cmds=None):
@@ -646,7 +567,7 @@ class Customization(commands.Cog):
         for m in say_list[1:]:
             await ctx.send(m)
 
-    # FIXME: temporary commands to aid testers with lack of dashboard
+    # temporary commands to aid testers with lack of dashboard
     # @globalvar.command(name='import', hidden=True)
     # async def gvar_import(self, ctx, destination=None):
     #     """Imports a gvar from a txt file. If an arg is passed, sets the destination gvar, otherwise creates."""

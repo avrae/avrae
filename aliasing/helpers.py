@@ -4,10 +4,81 @@ import uuid
 
 import draconic
 
+import cogs5e.models.character as character_model
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
-from aliasing.personal import Servsnippet, Snippet
-from cogs5e.models.errors import AvraeException, InvalidArgument, NotAllowed
+from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
+from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, NoCharacter, NotAllowed
 from utils.argparser import argquote, argsplit
+
+
+async def handle_aliases(ctx):
+    # ctx.prefix: the invoking prefix
+    # ctx.invoked_with: the first word
+    alias = ctx.invoked_with
+
+    # personal alias/servalias
+    command_code = (await Alias.get_code_for(alias, ctx)) or (await Servalias.get_code_for(alias, ctx))
+
+    if not command_code:
+        return
+
+    command_code = await handle_alias_arguments(command_code, ctx)
+    char = None
+    try:
+        char = await character_model.Character.from_ctx(ctx)
+    except NoCharacter:
+        pass
+
+    try:
+        if char:
+            ctx.message.content = await char.parse_cvars(command_code, ctx)
+        else:
+            ctx.message.content = await parse_no_char(command_code, ctx)
+    except EvaluationError as err:
+        return await handle_alias_exception(ctx, err)
+    except Exception as e:
+        return await ctx.send(e)
+
+    # send it back around to be reprocessed
+    await ctx.bot.process_commands(ctx.message)
+
+
+async def handle_alias_arguments(command, ctx):
+    """Takes an alias name, alias value, and message and handles percent-encoded args.
+    Returns: string"""
+    prefix = ctx.prefix
+    rawargs = ctx.view.read_rest()
+
+    args = argsplit(rawargs)
+    tempargs = args[:]
+    new_command = command
+    if '%*%' in command:
+        new_command = new_command.replace('%*%', argquote(rawargs))
+        tempargs = []
+    if '&*&' in command:
+        new_command = new_command.replace('&*&', rawargs.replace("\"", "\\\""))
+        tempargs = []
+    if '&ARGS&' in command:
+        new_command = new_command.replace('&ARGS&', str(args))
+        tempargs = []
+    for index, value in enumerate(args):
+        key = '%{}%'.format(index + 1)
+        to_remove = False
+        if key in command:
+            new_command = new_command.replace(key, argquote(value))
+            to_remove = True
+        key = '&{}&'.format(index + 1)
+        if key in command:
+            new_command = new_command.replace(key, value.replace("\"", "\\\""))
+            to_remove = True
+        if to_remove:
+            try:
+                tempargs.remove(value)
+            except ValueError:
+                pass
+
+    quoted_args = ' '.join(map(argquote, tempargs))
+    return f"{prefix}{new_command} {quoted_args}".strip()
 
 
 # cvars

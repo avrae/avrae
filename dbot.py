@@ -20,7 +20,7 @@ from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
-from aliasing.helpers import handle_alias_exception
+from aliasing.helpers import handle_alias_exception, handle_aliases
 from cogs5e.models.errors import AvraeException, EvaluationError, RequiresLicense
 from gamedata.compendium import compendium
 from gamedata.ddb import BeyondClient, BeyondClientBase
@@ -264,7 +264,16 @@ async def on_command_error(ctx, error):
 async def on_message(message):
     if message.author.id in bot.muted:
         return
-    await bot.process_commands(message)
+
+    # we override the default command processing to handle aliases
+    if message.author.bot:
+        return
+
+    ctx = await bot.get_context(message)
+    if ctx.command is not None:  # builtins first
+        await bot.invoke(ctx)
+    elif ctx.invoked_with:  # then aliases if there is some word (and not just the prefix)
+        await handle_aliases(ctx)
 
 
 @bot.event

@@ -427,30 +427,35 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):
-            try:
-                if match.group('lookup'):  # <>
-                    if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
-                        return match.group(0)
-                    out = match.group('lookup')
-                    evalresult = str(self.names.get(out, out))
-                elif match.group('roll'):  # {}
-                    varstr = match.group('roll')
-                    curlyout = ""
-                    for substr in re.split(ops, varstr):
-                        temp = substr.strip()
-                        curlyout += str(self.names.get(temp, temp)) + " "
-                    try:
-                        evalresult = str(self._limited_roll(curlyout))
-                    except:
-                        evalresult = '0'
-                elif match.group('drac1'):  # {{}}
-                    evalresult = self.eval(match.group('drac1').strip())
-                elif match.group('drac2'):  # <drac2>...</drac2>
-                    evalresult = self.execute(match.group('drac2').strip())
-                else:
-                    evalresult = None
-            except Exception as ex:
-                raise EvaluationError(ex, match.group(0))
+            if match.group('lookup'):  # <>
+                if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
+                    return match.group(0)
+                out = match.group('lookup')
+                evalresult = str(self.names.get(out, out))
+            elif match.group('roll'):  # {}
+                varstr = match.group('roll')
+                curlyout = ""
+                for substr in re.split(ops, varstr):
+                    temp = substr.strip()
+                    curlyout += str(self.names.get(temp, temp)) + " "
+                try:
+                    evalresult = str(self._limited_roll(curlyout))
+                except:
+                    evalresult = '0'
+            elif match.group('drac1'):  # {{}}
+                expr = match.group('drac1').strip()
+                try:
+                    evalresult = self.eval(expr)
+                except Exception as ex:
+                    raise EvaluationError(ex, expr)
+            elif match.group('drac2'):  # <drac2>...</drac2>
+                expr = match.group('drac2').strip()
+                try:
+                    evalresult = self.execute(expr)
+                except Exception as ex:
+                    raise EvaluationError(ex, expr)
+            else:
+                evalresult = None
 
             return str(evalresult) if evalresult is not None else ''
 

@@ -86,6 +86,7 @@ class Stats(commands.Cog):
 
     async def command_activity(self, ctx):
         await self.increase_stat(ctx, "commands_used_life")
+        # log command lifetime stat
         await self.bot.mdb.analytics_command_activity.update_one(
             {"name": ctx.command.qualified_name},
             {
@@ -93,6 +94,16 @@ class Stats(commands.Cog):
                 "$currentDate": {"last_invoked_time": True}
             },
             upsert=True
+        )
+        # log event
+        guild_id = 0 if ctx.guild is None else ctx.guild.id
+        await self.bot.mdb.analytics_command_events.insert_one(
+            {
+                "timestamp": datetime.datetime.utcnow(),
+                "command_name": ctx.command.qualified_name,
+                "user_id": ctx.author.id,
+                "guild_id": guild_id
+            }
         )
 
     async def update_hourly(self):

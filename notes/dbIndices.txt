@@ -37,6 +37,12 @@ db.analytics_guild_activity.createIndex({"last_command_time": -1});
 analytics_command_activity:
 db.analytics_command_activity.createIndex({"name": 1}, {"unique": true});
 
+analytics_command_events:
+db.analytics_command_events.createIndex({"timestamp": -1});
+db.analytics_command_events.createIndex({"command_name": 1});
+db.analytics_command_events.createIndex({"user_id": 1});
+db.analytics_command_events.createIndex({"guild_id": 1});
+
 analytics_ddb_activity:
 db.analytics_ddb_activity.createIndex({"user_id": 1}, {"unique": true});
 db.analytics_ddb_activity.createIndex({"last_link_time": -1});

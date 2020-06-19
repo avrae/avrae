@@ -186,9 +186,11 @@ class SheetManager(commands.Cog):
         embed = EmbedWithCharacter(char, name=False)
 
         args = await self.new_arg_stuff(args, ctx, char)
-
         checkutils.update_csetting_args(char, args)
-        checkutils.run_save(skill, char, args, embed)
+
+        caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
+
+        checkutils.run_save(skill, caster, args, embed)
 
         # send
         await ctx.send(embed=embed)

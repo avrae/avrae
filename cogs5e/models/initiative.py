@@ -843,14 +843,19 @@ class MonsterCombatant(Combatant):
         monster_name = monster.name
         hp = int(monster.hp) if not hp else int(hp)
         ac = int(monster.ac) if not ac else int(ac)
+
+        # copy spellbook
         spellbook = None
         if monster.spellbook is not None:
-            spellbook = MonsterCastableSpellbook.copy(monster.spellbook)  # make copy
+            spellbook = MonsterCastableSpellbook.copy(monster.spellbook)
+
+        # copy resistances (#1134)
+        resistances = monster.resistances.copy()
 
         return cls(ctx, combat, name, controller_id, private, init,
                    # statblock info
                    stats=monster.stats, levels=monster.levels, attacks=monster.attacks,
-                   skills=monster.skills, saves=monster.saves, resistances=monster.resistances,
+                   skills=monster.skills, saves=monster.saves, resistances=resistances,
                    spellbook=spellbook, ac=ac, max_hp=hp,
                    # monster specific
                    monster_name=monster_name)

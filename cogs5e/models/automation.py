@@ -6,7 +6,7 @@ from d20 import roll
 
 import cogs5e.models.initiative as init
 from cogs5e.funcs.scripting.evaluators import SpellEvaluator
-from cogs5e.models import embeds, initiative
+from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
@@ -811,6 +811,12 @@ class Damage(Effect):
                     transforms[frm.strip()] = to.strip()
             else:
                 transforms[None] = dtype
+        # display damage transforms (#1103)
+        if None in transforms:
+            autoctx.meta_queue(f"**Damage Type**: {transforms[None]}")
+        elif transforms:
+            for frm in transforms:
+                autoctx.meta_queue(f"**Damage Change**: {frm} > {transforms[frm]}")
 
         # evaluate resistances
         do_resistances(dmgroll.expr, resistances, always, transforms)
@@ -925,9 +931,9 @@ class IEffect(Effect):
 
         duration = autoctx.args.last('dur', duration, int)
         if isinstance(autoctx.target.target, init.Combatant):
-            effect = initiative.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
-                                           duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
-                                           concentration=self.concentration)
+            effect = init.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
+                                     duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
+                                     concentration=self.concentration)
             if autoctx.conc_effect:
                 if autoctx.conc_effect.combatant is autoctx.target.target and self.concentration:
                     raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
@@ -937,8 +943,8 @@ class IEffect(Effect):
             if conc_conflict := effect_result['conc_conflict']:
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
         else:
-            effect = initiative.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects),
-                                           tick_on_end=self.tick_on_end, concentration=self.concentration)
+            effect = init.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects),
+                                     tick_on_end=self.tick_on_end, concentration=self.concentration)
             autoctx.queue(f"**Effect**: {str(effect)}")
 
     def build_str(self, caster, evaluator):

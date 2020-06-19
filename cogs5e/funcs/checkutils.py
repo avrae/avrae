@@ -1,5 +1,6 @@
 from d20 import roll
 
+import cogs5e.models.initiative as init
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS
@@ -61,6 +62,8 @@ def run_save(save_key, caster, args, embed):
     """
     Runs a caster's saving throw, building on an existing embed and handling most arguments.
 
+    Also handles save bonuses from ieffects if caster is a combatant.
+
     :type save_key: str
     :type caster: cogs5e.models.sheet.statblock.StatBlock
     :type args: utils.argparser.ParsedArguments
@@ -83,6 +86,10 @@ def run_save(save_key, caster, args, embed):
         embed.title = f"An unknown creature makes {a_or_an(save_name)}!"
     else:
         embed.title = f'{caster.get_title_name()} makes {a_or_an(save_name)}!'
+
+    # ieffect -sb
+    if isinstance(caster, init.Combatant):
+        args['b'] = args.get('b') + caster.active_effects('sb')
 
     return _run_common(save, args, embed, rr_format="Save {}")
 

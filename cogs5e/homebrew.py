@@ -78,9 +78,15 @@ class Homebrew(commands.Cog):
 
     @bestiary.command(name='import')
     async def bestiary_import(self, ctx, url):
-        """Imports a published bestiary from [CritterDB](https://critterdb.com/).
+        """
+        Imports a bestiary from [CritterDB](https://critterdb.com/).
+
+        To share a bestiary with Avrae, enable Link Sharing in the sharing menu of your bestiary!
+
         If your attacks don't seem to be importing properly, you can add a hidden line to the description to set it:
-        `<avrae hidden>NAME|TOHITBONUS|DAMAGE</avrae>`"""
+        `<avrae hidden>NAME|TOHITBONUS|DAMAGE</avrae>`
+        """
+
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
         # https://critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
         # https://critterdb.com:443/#/bestiary/view/5acfe382de482a4d0ed57b46

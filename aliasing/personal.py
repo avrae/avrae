@@ -3,7 +3,7 @@ Personal aliases and snippets. Unrelated to the workshop.
 """
 import abc
 
-from aliasing.helpers import ALIAS_SIZE_LIMIT, SNIPPET_SIZE_LIMIT
+from aliasing.constants import ALIAS_SIZE_LIMIT, SNIPPET_SIZE_LIMIT
 from cogs5e.models.errors import InvalidArgument
 
 

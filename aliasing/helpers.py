@@ -4,16 +4,10 @@ import uuid
 
 import draconic
 
+from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from aliasing.personal import Servsnippet, Snippet
 from cogs5e.models.errors import AvraeException, InvalidArgument, NotAllowed
 from utils.argparser import argquote, argsplit
-
-# constants
-GVAR_SIZE_LIMIT = 100_000
-UVAR_SIZE_LIMIT = 10_000
-CVAR_SIZE_LIMIT = 10_000
-ALIAS_SIZE_LIMIT = 10_000
-SNIPPET_SIZE_LIMIT = 2_000
 
 
 # cvars

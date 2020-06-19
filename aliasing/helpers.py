@@ -208,7 +208,8 @@ async def handle_alias_exception(ctx, err):
             f"```py\n"
             f"Error{location} when parsing expression {err.expression}:\n"
             f"{tb}\n"
-            f"```")
+            f"```"
+            f"This is an issue in a user-created command; do *not* report this on the official bug tracker.")
     except:
         pass
     return await ctx.channel.send(err)

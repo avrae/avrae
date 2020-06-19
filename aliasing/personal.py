@@ -142,7 +142,12 @@ class Snippet(_SnippetBase):
 
     @staticmethod
     async def get_code_for(name, ctx):
-        pass  # todo
+        doc = await ctx.bot.mdb.snippets.find_one(
+            {"owner": str(ctx.author.id), "name": name},
+            ['snippet'])
+        if doc:
+            return doc['snippet']
+        return None
 
 
 class Servsnippet(_SnippetBase):
@@ -160,4 +165,11 @@ class Servsnippet(_SnippetBase):
 
     @staticmethod
     async def get_code_for(name, ctx):
-        pass  # todo
+        if ctx.guild is None:
+            return None
+        doc = await ctx.bot.mdb.servsnippets.find_one(
+            {"server": str(ctx.guild.id), "name": name},
+            ['snippet'])
+        if doc:
+            return doc['snippet']
+        return None

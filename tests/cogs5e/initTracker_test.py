@@ -1,6 +1,7 @@
 import discord
 import pytest
 
+from gamedata.compendium import compendium
 from tests.conftest import end_init, start_init
 from tests.utils import D20_PATTERN, active_character, active_combat
 
@@ -142,4 +143,41 @@ class TestYourStandardInitiative:
             await dhttp.drain()
 
     async def test_standard_init_teardown(self, avrae, dhttp):
+        await end_init(avrae, dhttp)
+
+
+@pytest.mark.usefixtures("init_fixture", "character")
+class TestInitiativeStatBlockCopying:
+    async def test_init_begin(self, avrae, dhttp):
+        await start_init(avrae, dhttp)
+
+    async def test_character_copies(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init join")
+        await dhttp.drain()
+
+        character = await active_character(avrae)
+        combatant = (await active_combat(avrae)).get_combatant(character.name)
+
+        assert combatant.resistances is not character.resistances
+        assert combatant.spellbook is character.spellbook
+        assert combatant.stats is character.stats
+        assert combatant.skills is character.skills
+        assert combatant.saves is character.saves
+
+    async def test_monster_copies(self, avrae, dhttp):
+        dhttp.clear()
+        avrae.message("!init madd kobold")
+        await dhttp.drain()
+
+        kobold = next(m for m in compendium.monsters if m.name == "Kobold")
+        combatant = (await active_combat(avrae)).get_combatant("KO1")
+
+        assert combatant.resistances is not kobold.resistances
+        assert combatant.spellbook is not kobold.spellbook
+        assert combatant.stats is kobold.stats
+        assert combatant.skills is kobold.skills
+        assert combatant.saves is kobold.saves
+
+    async def test_init_end(self, avrae, dhttp):
         await end_init(avrae, dhttp)

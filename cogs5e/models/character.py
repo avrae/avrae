@@ -412,11 +412,12 @@ class Character(StatBlock):
 
     def get_sheet_embed(self):
         embed = EmbedWithCharacter(self)
+        # noinspection PyListCreation
+        # this could be a list literal, but it's more readable this way
         desc_details = []
 
         # race/class (e.g. Tiefling Bard/Warlock)
-        classes = '/'.join(f"{cls} {lvl}" for cls, lvl in self.levels)
-        desc_details.append(f"{self.race} {classes}")
+        desc_details.append(f"{self.race} {str(self.levels)}")
 
         # prof bonus
         desc_details.append(f"**Proficiency Bonus**: {self.stats.prof_bonus:+}")

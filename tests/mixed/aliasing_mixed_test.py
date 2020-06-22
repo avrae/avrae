@@ -116,8 +116,8 @@ async def test_servalias(avrae, dhttp):
 
 
 async def test_alias_vs_servalias(avrae, dhttp):
-    avrae.message("!alias foobar this is foobar")
-    avrae.message("!servalias foobar this is server foobar")
+    avrae.message("!alias foobar echo this is foobar")
+    avrae.message("!servalias foobar echo this is server foobar")
     await dhttp.drain()
 
     avrae.message("!foobar")

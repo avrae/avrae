@@ -7,6 +7,8 @@ import d20
 import draconic
 import json.scanner
 
+import aliasing.api.combat as combat_api
+import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
 from aliasing.api.legacy import LegacyRawCharacter
@@ -26,7 +28,7 @@ DEFAULT_BUILTINS = {
 SCRIPTING_RE = re.compile(
     r'(?<!\\)(?:'  # backslash-escape
     r'{{(?P<drac1>.+?)}}'  # {{drac1}}
-    r'|(?<!{){(?P<roll>.+?)}'  # <roll>
+    r'|(?<!{){(?P<roll>.+?)}'  # {roll}
     r'|<drac2>(?P<drac2>(?:.|\n)+?)</drac2>'  # <drac2>drac2</drac2>
     r'|<(?P<lookup>[^\s]+?)>'  # <lookup>
     r')'
@@ -117,6 +119,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         self._cache['character'] = character
 
         # define character-specific functions
+        # fixme deprecated
 
         # helpers
         def _get_consumable(name):
@@ -156,8 +159,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                          dispType: str = None):
             if not cc_exists(name):
-                from cogs5e.models.sheet.player import CustomCounter
-                new_consumable = CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
+                new_consumable = player_api.CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
                 character.consumables.append(new_consumable)
                 self.character_changed = True
 
@@ -281,9 +283,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleCombat`
         """
-        from .api.combat import SimpleCombat
         if 'combat' not in self._cache:
-            self._cache['combat'] = SimpleCombat.from_ctx(self.ctx)
+            self._cache['combat'] = combat_api.SimpleCombat.from_ctx(self.ctx)
         self.combat_changed = True
         return self._cache['combat']
 

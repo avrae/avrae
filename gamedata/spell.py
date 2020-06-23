@@ -3,10 +3,10 @@ import re
 
 import discord
 
+import cogs5e.models.character as character_api
 import cogs5e.models.initiative as init
 from cogs5e.models import initiative
 from cogs5e.models.automation import Automation
-from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args, add_homebrew_footer
 from cogs5e.models.errors import AvraeException
 from utils.constants import STAT_ABBREVIATIONS
@@ -199,7 +199,7 @@ class Spell(Sourced):
         character = None
         if isinstance(caster, init.PlayerCombatant):
             character = caster.character
-        elif isinstance(caster, Character):
+        elif isinstance(caster, character_api.Character):
             character = caster
 
         # base stat stuff

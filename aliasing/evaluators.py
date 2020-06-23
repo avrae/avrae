@@ -292,7 +292,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
     def character(self):
         """
-        Returns the character active if one is. Otherwise, raises a FunctionRequiresCharacter error.
+        Returns the active character if one is. Otherwise, raises a :exc:`FunctionRequiresCharacter` error.
 
         :rtype: :class:`~aliasing.api.character.AliasCharacter`
         """
@@ -361,6 +361,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Returns the ID of the active Discord channel.
 
+        .. deprecated:: 2.1.0
+            Use ``ctx.channel.id`` instead.
+
         :rtype: str
         """
         return str(self.ctx.channel.id)
@@ -368,6 +371,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     def servid(self):
         """
         Returns the ID of the active Discord guild, or None if in DMs.
+
+        .. deprecated:: 2.1.0
+            Use ``ctx.guild.id`` instead.
 
         :rtype: str
         """

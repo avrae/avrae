@@ -4,7 +4,7 @@ import random
 
 import cachetools
 
-from aliasing.evaluators import MathEvaluator, ScriptingEvaluator
+import aliasing.evaluators
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharacter, NoReset
@@ -205,7 +205,7 @@ class Character(StatBlock):
         :param ctx: The Context the cvar is parsed in.
         :param cstr: The string to parse.
         :returns string - the parsed string."""
-        evaluator = await (await ScriptingEvaluator.new(ctx)).with_character(self)
+        evaluator = await (await aliasing.evaluators.ScriptingEvaluator.new(ctx)).with_character(self)
 
         out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
         await evaluator.run_commits()
@@ -216,7 +216,7 @@ class Character(StatBlock):
         """Parsed a cvar expression in a MathEvaluator, similar to Dicecloud parsing.
         :param varstr - the expression to evaluate.
         :returns str - the resulting expression."""
-        evaluator = MathEvaluator.with_character(self)
+        evaluator = aliasing.evaluators.MathEvaluator.with_character(self)
         return evaluator.transformed_str(varstr)
 
     def evaluate_math(self, varstr):
@@ -224,7 +224,7 @@ class Character(StatBlock):
         :param varstr - the expression to evaluate.
         :returns int - the value of the expression."""
         varstr = str(varstr).strip('<>{}')
-        evaluator = MathEvaluator.with_character(self)
+        evaluator = aliasing.evaluators.MathEvaluator.with_character(self)
 
         try:
             return int(evaluator.eval(varstr))

@@ -281,7 +281,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleCombat`
         """
-        from .combat import SimpleCombat
+        from .api.combat import SimpleCombat
         if 'combat' not in self._cache:
             self._cache['combat'] = SimpleCombat.from_ctx(self.ctx)
         self.combat_changed = True

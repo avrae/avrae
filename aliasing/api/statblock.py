@@ -34,8 +34,10 @@ class AliasStatBlock:
         return self._levels
 
     @property
-    def attacks(self):  # todo
-        return
+    def attacks(self):
+        if self._attacks is None:
+            self._attacks = AliasAttackList(self._statblock.attacks, self._statblock)
+        return self._attacks
 
     @property
     def skills(self):
@@ -76,6 +78,9 @@ class AliasStatBlock:
         if self._spellbook is None:
             self._spellbook = AliasSpellbook(self._statblock.spellbook)
         return self._spellbook
+
+    def __repr__(self):
+        return f"<AliasStatBlock name={self.name}>"
 
 
 class AliasBaseStats:
@@ -154,6 +159,58 @@ class AliasLevels:
         return str(self._levels)
 
 
+class AliasAttackList:
+    def __init__(self, attack_list, parent_statblock):
+        """
+        :type attack_list: cogs5e.models.sheet.attack.AttackList
+        :type parent_statblock: cogs5e.models.sheet.statblock.StatBlock
+        """
+        self._attack_list = attack_list
+        self._parent_statblock = parent_statblock
+
+    def __str__(self):
+        return self._attack_list.build_str(self._parent_statblock)
+
+    def __iter__(self):
+        for atk in self._attack_list:
+            yield AliasAttack(atk, self._parent_statblock)
+
+    def __getitem__(self, item):
+        return AliasAttack(self._attack_list[item], self._parent_statblock)
+
+    def __len__(self):
+        return len(self._attack_list)
+
+
+class AliasAttack:
+    def __init__(self, attack, parent_statblock):
+        """
+        :type attack: cogs5e.models.sheet.attack.Attack
+        :type parent_statblock: cogs5e.models.sheet.statblock.StatBlock
+        """
+        self._attack = attack
+        self._parent_statblock = parent_statblock
+
+    @property
+    def name(self):
+        return self._attack.name
+
+    @property
+    def verb(self):
+        return self._attack.verb
+
+    @property
+    def proper(self):
+        return self._attack.proper
+
+    @property
+    def raw(self):  # since we don't expose Automation models (yet)
+        return self._attack.to_dict()
+
+    def __str__(self):
+        return self._attack.build_str(self._parent_statblock)
+
+
 class AliasSkill:
     def __init__(self, skill):
         """
@@ -193,7 +250,7 @@ class AliasSkill:
         return int(self._skill)
 
     def __repr__(self):
-        return f"<Skill {self.value:+} prof={self.prof} bonus={self.bonus} adv={self.adv}>"
+        return f"<AliasSkill {self.value:+} prof={self.prof} bonus={self.bonus} adv={self.adv}>"
 
 
 class AliasSkills:
@@ -223,7 +280,7 @@ class AliasSkills:
 class AliasSaves:
     def __init__(self, saves):
         """
-        :type skills: cogs5e.models.sheet.base.Saves
+        :type saves: cogs5e.models.sheet.base.Saves
         """
         self._saves = saves
 
@@ -254,7 +311,7 @@ class AliasResistances:
 
     @property
     def resist(self):
-        return self._resistances.resist  # todo?
+        return self._resistances.resist
 
     @property
     def vuln(self):
@@ -272,5 +329,79 @@ class AliasResistances:
         return str(self._resistances)
 
 
-class AliasSpellbook:  # todo
-    pass
+class AliasSpellbook:
+    def __init__(self, spellbook):
+        """
+        :type spellbook: cogs5e.models.sheet.spellcasting.Spellbook
+        """
+        self._spellbook = spellbook
+
+    @property
+    def dc(self):
+        return self._spellbook.dc
+
+    @property
+    def sab(self):
+        return self._spellbook.sab
+
+    @property
+    def caster_level(self):
+        return self._spellbook.caster_level
+
+    @property
+    def spell_mod(self):
+        return self._spellbook.spell_mod
+
+    def slots_str(self, level):
+        """
+        :param int level: The level of spell slot to return.
+        :returns str: A string representing the caster's remaining spell slots.
+        """
+        return self._spellbook.slots_str(int(level))
+
+    def get_max_slots(self, level):
+        """
+        Gets the maximum number of level *level* spell slots available.
+
+        :param int level: The spell level [1..9].
+        :returns int: The maximum number of spell slots.
+        """
+        return self._spellbook.get_max_slots(int(level))
+
+    def get_slots(self, level):
+        """
+        Gets the remaining number of slots of a given level. Always returns 1 if level is 0.
+
+        :param int level: The spell level to get the remaining slots of.
+        :returns int: The number of slots remaining.
+        """
+        return self._spellbook.get_slots(int(level))
+
+    def set_slots(self, level, value):
+        """
+        Sets the remaining number of spell slots of a given level.
+
+        :param int level: The spell level to set [1..9].
+        :param int value: The remaining number of slots.
+        """
+        return self._spellbook.set_slots(int(level), int(value))
+
+    def use_slot(self, level):
+        """
+        Uses one spell slot of a given level. Equivalent to ``set_slots(level, get_slots(level) - 1)``.
+
+        :param int level: The level of spell slot to use.
+        """
+        return self._spellbook.use_slot(int(level))
+
+    def reset_slots(self):
+        """
+        Resets the number of remaining spell slots of all levels to the max.
+        """
+        return self._spellbook.reset_slots()
+
+    def __contains__(self, item):
+        return item in self._spellbook
+
+    def __repr__(self):
+        return "<AliasSpellbook object>"

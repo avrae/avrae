@@ -79,6 +79,23 @@ class AliasStatBlock:
             self._spellbook = AliasSpellbook(self._statblock.spellbook)
         return self._spellbook
 
+    # ---- hp ----
+    def set_hp(self, new_hp):
+        return self._statblock.set_hp(int(new_hp))
+
+    def modify_hp(self, amount, ignore_temp=False, overflow=True):
+        return self._statblock.modify_hp(int(amount), ignore_temp, overflow)
+
+    def hp_str(self):
+        return self._statblock.hp_str()
+
+    def reset_hp(self):
+        return self._statblock.reset_hp()
+
+    def set_temp_hp(self, new_temp):
+        self._statblock.temp_hp = int(new_temp)
+
+    # ---- __dunder__ ----
     def __repr__(self):
         return f"<AliasStatBlock name={self.name}>"
 

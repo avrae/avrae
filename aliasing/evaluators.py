@@ -65,7 +65,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     def __init__(self, ctx, *args, **kwargs):
         super(ScriptingEvaluator, self).__init__(*args, **kwargs)
 
-        self.builtins.update(  # character-only functions
+        self.builtins.update(  # fixme character-only functions, all deprecated now
             get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
             get_cc_min=self.needs_char, mod_cc=self.needs_char,
             cc_exists=self.needs_char, create_cc_nx=self.needs_char, create_cc=self.needs_char,
@@ -83,7 +83,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             get_gvar=self.get_gvar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
-            chanid=self.chanid, servid=self.servid,
+            chanid=self.chanid, servid=self.servid,  # fixme deprecated
             get=self.get,
             load_json=self.load_json, dump_json=self.dump_json,
             argparse=argparse

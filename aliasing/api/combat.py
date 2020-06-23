@@ -1,6 +1,7 @@
 from d20 import roll
 
 from aliasing.api.functions import SimpleRollResult
+from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
 from cogs5e.models.sheet.statblock import StatBlock
@@ -26,6 +27,7 @@ class SimpleCombat:
                 self.current = SimpleCombatant(current)
         else:
             self.current = None
+        self.name = self._combat.options.get('name')
 
     @classmethod
     def from_ctx(cls, ctx):
@@ -78,67 +80,23 @@ class SimpleCombat:
         return str(self._combat)
 
 
-class SimpleCombatant:
+class SimpleCombatant(AliasStatBlock):
     def __init__(self, combatant: Combatant, hidestats=True):
+        super().__init__(combatant)
         self._combatant = combatant
         self._hidden = hidestats and self._combatant.is_private
         self.type = "combatant"
 
         self.initmod = int(self._combatant.init_skill)
-        self.resists = self._combatant.resistances
-        self.attacks = self._combatant.attacks.to_dict()
         self.init = self._combatant.init
-        self.name = self._combatant.name
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
-        # deprecated
-        if self._combatant.hp is not None and self._combatant.max_hp:
-            self.ratio = self._combatant.hp / self._combatant.max_hp
-        else:
-            self.ratio = 0
-        self.level = self._combatant.spellbook.caster_level
-
-    @property
-    def ac(self):
-        return self._combatant.ac
-
-    @property
-    def hp(self):
-        return self._combatant.hp
-
-    @property
-    def temphp(self):
-        return self._combatant.temp_hp
-
-    @property
-    def maxhp(self):
-        return self._combatant.max_hp
+        # deprecated drac 2.1
+        self.resists = self.resistances  # use .resistances instead
+        self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
 
     @property
     def note(self):
         return self._combatant.notes
-
-    def set_hp(self, newhp: int):
-        """
-        Sets a combatant's remaining hit points to a new value.
-
-        :param int newhp: The new HP.
-        """
-        self._combatant.set_hp(int(newhp))
-
-    def mod_hp(self, mod: int, overheal: bool = False):
-        """
-        Modifies a combatant's remaining hit points by a value.
-
-        :param int mod: The amount of HP to add.
-        :param bool overheal: Whether to allow exceeding max HP.
-        """
-        self._combatant.modify_hp(mod, overflow=overheal)
-
-    def hp_str(self):
-        """
-        Gets a string describing a combatant's HP.
-        """
-        return self._combatant.hp_str()
 
     def save(self, ability: str, adv: bool = None):
         """
@@ -161,21 +119,6 @@ class SimpleCombatant:
 
         save_roll = roll(saveroll)
         return SimpleRollResult(save_roll)
-
-    def wouldhit(self, to_hit: int):
-        """
-        .. deprecated:: 1.1.5
-            Use ``to_hit >= combatant.ac`` instead.
-
-        Checks if a roll would hit this combatant.
-
-        :param int to_hit: The rolled total.
-        :return: Whether the total would hit.
-        :rtype: bool
-        """
-        if self._combatant.ac:
-            return to_hit >= self._combatant.ac
-        return None
 
     def damage(self, dice_str, crit=False, d=None, c=None, critdice=0, overheal=False):
         """
@@ -233,16 +176,6 @@ class SimpleCombatant:
         if not isinstance(maxhp, int) and maxhp is not None:
             raise ValueError("Max HP must be an integer or None.")
         self._combatant.max_hp = maxhp
-
-    def set_thp(self, thp: int):
-        """
-        Sets the combatant's temp HP.
-
-        :param int thp: The new temp HP.
-        """
-        if not isinstance(thp, int):
-            raise ValueError("Temp HP must be an integer.")
-        self._combatant.temp_hp = thp
 
     def set_init(self, init: int):
         """
@@ -321,6 +254,47 @@ class SimpleCombatant:
 
     def __str__(self):
         return str(self._combatant)
+
+    # === deprecated ===
+    @property
+    def temphp(self):  # deprecated - use temp_hp instead
+        return self.temp_hp
+
+    @property
+    def maxhp(self):  # deprecated - use max_hp instead
+        return self.max_hp
+
+    def mod_hp(self, mod: int, overheal: bool = False):  # deprecated - use modify_hp instead
+        """
+        Modifies a combatant's remaining hit points by a value.
+
+        :param int mod: The amount of HP to add.
+        :param bool overheal: Whether to allow exceeding max HP.
+        """
+        self.modify_hp(mod, overflow=overheal)
+
+    def set_thp(self, thp: int):  # deprecated - use set_temp_hp
+        """
+        Sets the combatant's temp HP.
+
+        :param int thp: The new temp HP.
+        """
+        self.set_temp_hp(thp)
+
+    def wouldhit(self, to_hit: int):
+        """
+        .. deprecated:: 1.1.5
+            Use ``to_hit >= combatant.ac`` instead.
+
+        Checks if a roll would hit this combatant.
+
+        :param int to_hit: The rolled total.
+        :return: Whether the total would hit.
+        :rtype: bool
+        """
+        if self._combatant.ac:
+            return to_hit >= self._combatant.ac
+        return None
 
 
 class SimpleGroup:

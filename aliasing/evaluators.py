@@ -10,6 +10,8 @@ import json.scanner
 import aliasing.api.combat as combat_api
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
+from aliasing.api.character import AliasCharacter
+from aliasing.api.context import AliasContext
 from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
 from aliasing.api.legacy import LegacyRawCharacter
 from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
@@ -79,14 +81,14 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         # char-agnostic globals
         self.builtins.update(
-            set=self.set, exists=self.exists, combat=self.combat,
+            set=self.set, exists=self.exists, get=self.get,
+            combat=self.combat, character=self.character,
             get_gvar=self.get_gvar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
-            chanid=self.chanid, servid=self.servid,  # fixme deprecated
-            get=self.get,
+            chanid=self.chanid, servid=self.servid,  # fixme deprecated - use ctx instead
             load_json=self.load_json, dump_json=self.dump_json,
-            argparse=argparse
+            argparse=argparse, ctx=AliasContext(ctx)
         )
 
         # roll limiting
@@ -116,7 +118,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     async def with_character(self, character):
         self._names.update(character.get_scope_locals())
 
-        self._cache['character'] = character
+        self._cache['character'] = AliasCharacter(character, self)
 
         # define character-specific functions
         # fixme deprecated
@@ -245,7 +247,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
     async def run_commits(self):
         if self.character_changed and 'character' in self._cache:
-            await self._cache['character'].commit(self.ctx)
+            await self._cache['character'].func_commit(self.ctx)
         if self.combat_changed and 'combat' in self._cache and self._cache['combat']:
             await self._cache['combat'].func_commit()
         if self.uvars_changed and 'uvars' in self._cache and self._cache['uvars']:
@@ -281,12 +283,23 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Returns the combat active in the channel if one is. Otherwise, returns ``None``.
 
-        :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleCombat`
+        :rtype: :class:`~aliasing.api.combat.SimpleCombat`
         """
         if 'combat' not in self._cache:
             self._cache['combat'] = combat_api.SimpleCombat.from_ctx(self.ctx)
         self.combat_changed = True
         return self._cache['combat']
+
+    def character(self):
+        """
+        Returns the character active if one is. Otherwise, raises a FunctionRequiresCharacter error.
+
+        :rtype: :class:`~aliasing.api.character.AliasCharacter`
+        """
+        if 'character' not in self._cache:
+            raise FunctionRequiresCharacter()
+        self.character_changed = True
+        return self._cache['character']
 
     def uvar_exists(self, name):
         """

@@ -138,3 +138,14 @@ class TestCharacterAliases:
         await dhttp.receive_message(f".+: {character.stats.get_mod('cha')} {character.stats.prof_bonus} "
                                     f"{character.stats.get_mod('cha') + character.stats.prof_bonus}\n"
                                     f"{character.get_title_name()} [0-9a-f]+")
+
+    async def test_echo_attributes_new(self, avrae, dhttp):
+        character = await active_character(avrae)
+        avrae.message("!alias foobar echo {{c=character()}} {{c.stats.charisma}} {{c.stats.prof_bonus}} "
+                      "{{c.stats.charisma+c.stats.prof_bonus}}")
+        await dhttp.receive_message()
+
+        avrae.message("!foobar")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(f".+: {character.stats.charisma} {character.stats.prof_bonus} "
+                                    f"{character.stats.charisma + character.stats.prof_bonus}")

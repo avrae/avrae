@@ -156,10 +156,21 @@ class Resistance:
         return Resistance(self.dtype, self.unless.copy(), self.only.copy())
 
     # ---------- main funcs ----------
+    def applies_to_str(self, dtype):
+        """
+        Returns whether or not this resistance is applicable to a damage type.
+
+        :param dtype: The damage type to test.
+        :type dtype: str
+        :rtype: bool
+        """
+        return self.applies_to(set(t.lower() for t in _resist_tokenize(dtype)))
+
     def applies_to(self, tokens):
         """
         Note that tokens should be a set of lowercase strings.
 
+        :param tokens: A set of strings to test against.
         :type tokens: set[str]
         :rtype: bool
         """

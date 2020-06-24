@@ -736,6 +736,139 @@ Draconic's syntax is very similar to Python. Other Python features supported in 
 * `Assignments <https://docs.python.org/3/reference/simple_stmts.html#assignment-statements>`_ (``a = 15``)
 * `List Comprehensions <https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions>`_
 
+Initiative Models
+-----------------
+
+SimpleCombat
+^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.combat.SimpleCombat()
+    :members:
+
+    .. attribute:: combatants
+
+        A list of all :class:`~aliasing.api.combat.SimpleCombatant` in combat.
+
+    .. attribute:: current
+
+        The :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
+        representing the combatant whose turn it is.
+
+    .. attribute:: me
+
+        The :class:`~aliasing.api.combat.SimpleCombatant` representing the active character in combat, or ``None``
+        if the character is not in the combat.
+
+    .. attribute:: round_num
+
+        An :class:`int` representing the round number of the combat.
+
+    .. attribute:: turn_num
+
+        An :class:`int` representing the initiative score of the current turn.
+
+SimpleCombatant
+^^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.combat.SimpleCombatant(AliasStatBlock)
+    :inherited-members:
+    :members:
+
+    .. attribute:: effects
+
+        A list of :class:`~aliasing.api.combat.SimpleEffect` active on the combatant.
+
+        :type: list of :class:`~aliasing.api.combat.SimpleEffect`
+
+    .. attribute:: init
+
+        What the combatant rolled for initiative.
+
+        :type: int
+
+    .. attribute:: initmod
+
+        An int representing the combatant's initiative modifier.
+
+        :type: int
+
+    .. attribute:: level
+
+        .. deprecated:: 2.1.0
+            Use ``SimpleCombatant.levels.total_level`` or ``SimpleCombatant.spellbook.caster_level`` instead.
+
+        The combatant's spellcaster level. ``0`` if the combatant is not a player or spellcaster.
+
+        :type: int
+
+    .. attribute:: resists
+
+        .. deprecated:: 2.1.0
+            Use ``SimpleCombatant.resistances`` instead.
+
+        The combatant's resistances, immunities, and vulnerabilities.
+
+        :type: :class:`~aliasing.api.statblock.AliasResistances`
+
+    .. attribute:: type
+
+        The type of the object (``"combatant"``), to determine whether this is a group or not.
+
+        :type: str
+
+
+SimpleGroup
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.combat.SimpleGroup()
+    :members:
+
+    .. attribute:: combatants
+
+        A list of all :class:`~aliasing.api.combat.SimpleCombatant` in this group.
+
+    .. attribute:: type
+
+        The type of the object (``"group"``), to determine whether this is a group or not.
+
+        :type: str
+
+SimpleEffect
+^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.combat.SimpleEffect()
+    :members:
+
+    .. attribute:: conc
+
+        Whether the effect requires concentration.
+
+        :type: bool
+
+    .. attribute:: duration
+
+        The initial duration of the effect, in rounds (``-1`` = infinite).
+
+        :type: int
+
+    .. attribute:: effect
+
+        The applied effect of the object.
+
+        :type: dict
+
+    .. attribute:: name
+
+        The name of the effect.
+
+        :type: str
+
+    .. attribute:: remaining
+
+        The remaining duration of the effect, in rounds.
+
+        :type: int
+
 SimpleRollResult
 ----------------
 
@@ -775,182 +908,213 @@ SimpleRollResult
 
     .. automethod:: __str__
 
-SimpleCombat
-------------
-
-.. autoclass:: aliasing.api.combat.SimpleCombat()
-    :members:
-
-    .. attribute:: combatants
-
-        A list of all :class:`~aliasing.api.combat.SimpleCombatant` in combat.
-
-    .. attribute:: current
-
-        The :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
-        representing the combatant whose turn it is.
-
-    .. attribute:: me
-
-        The :class:`~aliasing.api.combat.SimpleCombatant` representing the active character in combat, or ``None``
-        if the character is not in the combat.
-
-    .. attribute:: round_num
-
-        An :class:`int` representing the round number of the combat.
-
-    .. attribute:: turn_num
-
-        An :class:`int` representing the initiative score of the current turn.
-
-SimpleCombatant
----------------
-
-.. autoclass:: aliasing.api.combat.SimpleCombatant()
-    :members:
-
-    .. attribute:: ac
-
-        The combatant's armor class. ``None`` if not set.
-
-        :type: Optional[int]
-
-    .. attribute:: attacks
-
-        A list of the combatant's attacks.
-
-        :type: list of dict
-
-    .. attribute:: effects
-
-        A list of :class:`~aliasing.api.combat.SimpleEffect` active on the combatant.
-
-        :type: list of :class:`~aliasing.api.combat.SimpleEffect`
-
-    .. attribute:: hp
-
-        The combatant's current hit points. ``None`` if not set.
-
-        :type: Optional[int]
-
-    .. attribute:: init
-
-        What the combatant rolled for initiative.
-
-        :type: int
-
-    .. attribute:: initmod
-
-        An int representing the combatant's initiative modifier.
-
-        :type: int
-
-    .. attribute:: level
-
-        The combatant's spellcaster level. ``0`` if the combatant is not a player or spellcaster.
-
-        :type: int
-
-    .. attribute:: maxhp
-
-        The combatant's maximum hit points. ``None`` if not set.
-
-        :type: Optional[int]
-
-    .. attribute:: name
-
-        The combatant's name.
-
-        :type: str
-
-    .. attribute:: note
-
-        The note on the combatant. Can be ``None``.
-
-        :type: Optional[str]
-
-    .. attribute:: ratio
-
-        .. deprecated:: 1.1.5
-            Use ``combatant.hp / combatant.maxhp`` instead.
-
-        The percentage of health the combatant has remaining (0.0 = 0%, 1.0 = 100%).
-
-        :type: float
-
-    .. attribute:: resists
-
-        The combatant's resistances, immunities, and vulnerabilities.
-
-        :type: Resistances
-
-    .. attribute:: temphp
-
-        How many temporary hit points the combatant has.
-
-        :type: int
-
-    .. attribute:: type
-
-        The type of the object (``"combatant"``), to determine whether this is a group or not.
-
-        :type: str
-
-
-SimpleGroup
------------
-
-.. autoclass:: aliasing.api.combat.SimpleGroup()
-    :members:
-
-    .. attribute:: combatants
-
-        A list of all :class:`~aliasing.api.combat.SimpleCombatant` in this group.
-
-    .. attribute:: type
-
-        The type of the object (``"group"``), to determine whether this is a group or not.
-
-        :type: str
-
-SimpleEffect
-------------
-
-.. autoclass:: aliasing.api.combat.SimpleEffect()
-    :members:
-
-    .. attribute:: conc
-
-        Whether the effect requires concentration.
-
-        :type: bool
-
-    .. attribute:: duration
-
-        The initial duration of the effect, in rounds (``-1`` = infinite).
-
-        :type: int
-
-    .. attribute:: effect
-
-        The applied effect of the object.
-
-        :type: dict
-
-    .. attribute:: name
-
-        The name of the effect.
-
-        :type: str
-
-    .. attribute:: remaining
-
-        The remaining duration of the effect, in rounds.
-
-        :type: int
-
 ParsedArguments
 ---------------
 
 .. autoclass:: utils.argparser.ParsedArguments()
     :members:
+
+Context Models
+--------------
+
+AliasContext
+^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasContext()
+    :members:
+
+AliasGuild
+^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasGuild()
+    :members:
+
+AliasChannel
+^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasChannel()
+    :members:
+
+AliasAuthor
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasAuthor()
+    :members:
+
+AliasCharacter
+--------------
+
+.. autoclass:: aliasing.api.character.AliasCharacter(AliasStatBlock)
+    :members:
+    :inherited-members:
+
+StatBlock Models
+----------------
+
+AliasStatBlock
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasStatBlock()
+    :members:
+
+AliasBaseStats
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasBaseStats()
+    :members:
+
+AliasLevels
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasLevels()
+    :members:
+
+    .. attribute:: for (cls, level) in AliasLevels:
+
+        Iterates over pairs of class names and the number of levels in that class.
+
+        :type: Iterable[tuple[str, int]]
+
+AliasAttackList
+^^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasAttackList()
+    :members:
+
+    .. attribute:: str(AliasAttackList)
+
+        Returns a string representation of all attacks in this attack list.
+
+        :type: str
+
+    .. attribute:: len(AliasAttackList)
+
+        Returns the number of attacks in this attack list.
+
+        :type: int
+
+    .. attribute:: for attack in AliasAttackList:
+
+        Iterates over attacks in this attack list.
+
+        :type: Iterable[:class:`~aliasing.api.statblock.AliasAttack`]
+
+    .. attribute:: AliasAttackList[i]
+
+        Gets the *i*-th indexed attack.
+
+        :type: :class:`~aliasing.api.statblock.AliasAttack`
+
+
+AliasAttack
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasAttack()
+    :members:
+
+    .. attribute:: str(AliasAttack)
+
+        Returns a string representation of this attack.
+
+        :type: str
+
+AliasSkill
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasSkill()
+    :members:
+
+AliasSkills
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasSkills()
+
+    .. attribute:: for (skill_name, skill) in AliasSkills:
+
+        Iterates over pairs of skill names and corresponding skills.
+
+        :type: Iterable[tuple[str, :class:`~aliasing.api.statblock.AliasSkill`]]
+
+    .. attribute:: acrobatics
+        animalHandling
+        arcana
+        athletics
+        deception
+        history
+        initiative
+        insight
+        intimidation
+        investigation
+        medicine
+        nature
+        perception
+        performance
+        persuasion
+        religion
+        sleightOfHand
+        stealth
+        survival
+        strength
+        dexterity
+        constitution
+        intelligence
+        wisdom
+        charisma
+
+        The skill modifier for the given skill.
+
+        :type: :class:`~aliasing.api.statblock.AliasSkill`
+
+AliasSaves
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasSaves()
+    :members:
+
+    .. attribute:: for (save_name, skill) in AliasSaves:
+
+        Iterates over pairs of save names and corresponding save.
+
+        :type: Iterable[tuple[str, :class:`~aliasing.api.statblock.AliasSkill`]]
+
+AliasResistances
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasResistances()
+    :members:
+
+Resistance
+^^^^^^^^^^
+
+.. autoclass:: cogs5e.models.sheet.resistance.Resistance()
+    :members:
+
+    .. attribute:: dtype
+
+        The damage type.
+
+        :type: str
+
+    .. attribute:: unless
+
+        A set of tokens that if present, this resistance will not apply.
+
+        :type: set[str]
+
+    .. attribute:: only
+
+        A set of tokens that unless present, this resistance will not apply.
+
+        :type: set[str]
+
+AliasSpellbook
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasSpellbook()
+    :members:
+
+    .. attribute:: spell in AliasSpellbook
+
+        Returns whether the spell named *spell* (str) is known.
+
+        :type: bool

@@ -40,11 +40,11 @@ class SimpleCombat:
     # public methods
     def get_combatant(self, name):
         """
-        Gets a :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
+        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
 
         :param str name: The name of the combatant to get.
         :return: The combatant.
-        :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant`
+        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
         combatant = self._combat.get_combatant(name, False)
         if combatant:
@@ -53,11 +53,11 @@ class SimpleCombat:
 
     def get_group(self, name):
         """
-        Gets a :class:`~cogs5e.funcs.scripting.combat.SimpleGroup`, fuzzy searching (partial match) on name.
+        Gets a :class:`~aliasing.api.combat.SimpleGroup`, fuzzy searching (partial match) on name.
 
         :param str name: The name of the group to get.
         :return: The group.
-        :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleGroup`
+        :rtype: :class:`~aliasing.api.combat.SimpleGroup`
         """
         group = self._combat.get_group(name, strict=False)
         if group:
@@ -81,6 +81,9 @@ class SimpleCombat:
 
 
 class SimpleCombatant(AliasStatBlock):
+    """
+    Represents a combatant in combat.
+    """
     def __init__(self, combatant: Combatant, hidestats=True):
         super().__init__(combatant)
         self._combatant = combatant
@@ -96,6 +99,11 @@ class SimpleCombatant(AliasStatBlock):
 
     @property
     def note(self):
+        """
+        The note on the combatant. ``None`` if not set.
+
+        :rtype: str or None
+        """
         return self._combatant.notes
 
     def save(self, ability: str, adv: bool = None):
@@ -105,7 +113,7 @@ class SimpleCombatant(AliasStatBlock):
         :param str ability: The type of save ("str", "dexterity", etc).
         :param bool adv: Whether to roll the save with advantage. Rolls with advantage if ``True``, disadvantage if ``False``, or normally if ``None``.
         :returns: A SimpleRollResult describing the rolled save.
-        :rtype: :class:`~cogs5e.funcs.scripting.functions.SimpleRollResult`
+        :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
         """
         try:
             save = self._combatant.saves.get(ability)
@@ -213,7 +221,7 @@ class SimpleCombatant(AliasStatBlock):
 
         :param str name: The name of the effect to get.
         :return: The effect.
-        :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleEffect`
+        :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """
         effect = self._combatant.get_effect(name, False)
         if effect:
@@ -230,7 +238,7 @@ class SimpleCombatant(AliasStatBlock):
         :param int duration: The duration of the effect, in rounds.
         :param bool concentration: Whether the effect requires concentration.
         :param parent: The parent of the effect.
-        :type parent: :class:`~cogs5e.funcs.scripting.combat.SimpleEffect`
+        :type parent: :class:`~aliasing.api.combat.SimpleEffect`
         :param bool end: Whether the effect ticks on the end of turn.
         """
         existing = self._combatant.get_effect(name, True)
@@ -258,14 +266,33 @@ class SimpleCombatant(AliasStatBlock):
     # === deprecated ===
     @property
     def temphp(self):  # deprecated - use temp_hp instead
+        """
+        .. deprecated:: 2.1.0
+            Use ``SimpleCombatant.temp_hp`` instead.
+
+        How many temporary hit points the combatant has.
+
+        :rtype: int
+        """
         return self.temp_hp
 
     @property
     def maxhp(self):  # deprecated - use max_hp instead
+        """
+        .. deprecated:: 2.1.0
+            Use ``SimpleCombatant.max_hp`` instead.
+
+        The combatant's maximum hit points. ``None`` if not set.
+
+        :rtype: Optional[int]
+        """
         return self.max_hp
 
     def mod_hp(self, mod: int, overheal: bool = False):  # deprecated - use modify_hp instead
         """
+        .. deprecated:: 2.1.0
+            Use ``SimpleCombatant.modify_hp()`` instead.
+
         Modifies a combatant's remaining hit points by a value.
 
         :param int mod: The amount of HP to add.
@@ -275,6 +302,9 @@ class SimpleCombatant(AliasStatBlock):
 
     def set_thp(self, thp: int):  # deprecated - use set_temp_hp
         """
+        .. deprecated:: 2.1.0
+            Use ``SimpleCombatant.set_temp_hp()`` instead.
+
         Sets the combatant's temp HP.
 
         :param int thp: The new temp HP.
@@ -305,11 +335,11 @@ class SimpleGroup:
 
     def get_combatant(self, name):
         """
-        Gets a :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
+        Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
 
         :param str name: The name of the combatant to get.
         :return: The combatant.
-        :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant`
+        :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
         combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
         if combatant:
@@ -338,6 +368,6 @@ class SimpleEffect:
         Sets the parent effect of this effect.
 
         :param parent: The parent.
-        :type parent: :class:`~cogs5e.funcs.scripting.combat.SimpleEffect`
+        :type parent: :class:`~aliasing.api.combat.SimpleEffect`
         """
         self._effect.set_parent(parent._effect)

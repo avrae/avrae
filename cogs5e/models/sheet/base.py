@@ -141,6 +141,9 @@ class Skill:
     def __int__(self):
         return self.value
 
+    def __repr__(self):
+        return f"<Skill value={self.value} prof={self.prof} bonus={self.bonus} adv={self.adv}>"
+
 
 class Skills:
     def __init__(self, skills):

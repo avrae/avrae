@@ -2,6 +2,8 @@ class AliasContext:
     """
     Used to expose some information about the context, like the guild name, channel name, author name, and
     current prefix to alias authors.
+
+    You can access this in an alias by using the ``ctx`` local.
     """
 
     def __init__(self, ctx):
@@ -15,22 +17,48 @@ class AliasContext:
 
     @property
     def guild(self):
+        """
+        The discord guild (server) the alias was run in, or None if the alias was run in DMs.
+
+        :rtype: :class:`~aliasing.api.context.AliasGuild` or None
+        """
         return self._guild
 
     @property
     def channel(self):
+        """
+        The channel the alias was run in.
+
+        :rtype: :class:`~aliasing.api.context.AliasChannel`
+        """
         return self._channel
 
     @property
     def author(self):
+        """
+        The user that ran the alias.
+
+        :rtype: :class:`~aliasing.api.context.AliasAuthor`
+        """
         return self._author
 
     @property
     def prefix(self):
+        """
+        The prefix used to run the alias.
+
+        :rtype: str
+        """
         return self._prefix
+
+    def __repr__(self):
+        return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix}>"
 
 
 class AliasGuild:
+    """
+    Represents the Discord guild (server) an alias was invoked in.
+    """
     def __init__(self, guild):
         """
         :type guild: discord.Guild
@@ -40,10 +68,20 @@ class AliasGuild:
 
     @property
     def name(self):
+        """
+        The name of the guild.
+
+        :rtype: str
+        """
         return self._name
 
     @property
     def id(self):
+        """
+        The ID of the guild.
+
+        :rtype: int
+        """
         return self._id
 
     def __str__(self):
@@ -51,6 +89,9 @@ class AliasGuild:
 
 
 class AliasChannel:
+    """
+    Represents the Discord channel an alias was invoked in.
+    """
     def __init__(self, channel):
         """
         :type channel: discord.TextChannel
@@ -61,14 +102,29 @@ class AliasChannel:
 
     @property
     def name(self):
+        """
+        The name of the channel, not including the preceding hash (#).
+
+        :rtype: str
+        """
         return self._name
 
     @property
     def id(self):
+        """
+        The ID of the channel.
+
+        :rtype: int
+        """
         return self._id
 
     @property
     def topic(self):
+        """
+        The channel topic.
+
+        :rtype: str
+        """
         return self._topic
 
     def __str__(self):
@@ -76,6 +132,9 @@ class AliasChannel:
 
 
 class AliasAuthor:
+    """
+    Represents the Discord user who invoked an alias.
+    """
     def __init__(self, author):
         """
         :type author: discord.User
@@ -87,18 +146,38 @@ class AliasAuthor:
 
     @property
     def name(self):
+        """
+        The user's username (not including the discriminator).
+
+        :rtype: str
+        """
         return self._name
 
     @property
     def id(self):
+        """
+        The user's ID.
+
+        :rtype: int
+        """
         return self._id
 
     @property
     def discriminator(self):
+        """
+        The user's discriminator (number after the hash).
+
+        :rtype: str
+        """
         return self._discriminator
 
     @property
     def display_name(self):
+        """
+        The user's display name - nickname if applicable, otherwise same as their name.
+
+        :rtype: str
+        """
         return self._display_name
 
     def __str__(self):

@@ -39,6 +39,10 @@
     GOOGLE_SERVICE_ACCOUNT=e
     DBL_TOKEN=f
     
+    # set these to these literal values
+    MONGO_URL=mongodb://root:topsecret@mongo:27017
+    REDIS_URL=redis://redis:6379/0
+    
     # Only required if using New Relic integration
     NEW_RELIC_CONFIG_FILE=newrelic.ini
     NEW_RELIC_ENVIRONMENT=development

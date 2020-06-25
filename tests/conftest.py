@@ -278,7 +278,7 @@ async def avrae(dhttp):
     bot._connection.http = dhttp
 
     bot.state = "run"
-    await bot.login(bot.credentials.token)  # handled by our http proxy
+    await bot.login(config.TOKEN)  # handled by our http proxy
 
     # we never do initialize the websocket - we just replay discord's login sequence
     # to initialize a "channel" to send testing messages to

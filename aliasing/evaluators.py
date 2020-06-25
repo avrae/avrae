@@ -7,10 +7,10 @@ import d20
 import draconic
 import json.scanner
 
+import aliasing.api.character as character_api
 import aliasing.api.combat as combat_api
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
-from aliasing.api.character import AliasCharacter
 from aliasing.api.context import AliasContext
 from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
 from aliasing.api.legacy import LegacyRawCharacter
@@ -118,7 +118,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     async def with_character(self, character):
         self._names.update(character.get_scope_locals())
 
-        self._cache['character'] = AliasCharacter(character, self)
+        self._cache['character'] = character_api.AliasCharacter(character, self)
 
         # define character-specific functions
         # fixme deprecated

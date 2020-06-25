@@ -15,7 +15,7 @@ OWNER_ID = int(os.getenv('DISCORD_OWNER_USER_ID', 0))
 # ---- mongo/redis ----
 MONGO_URL = os.getenv('MONGO_URL', "mongodb://localhost:27017")
 MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
-REDIS_URL = os.getenv('REDIS_URL', '127.0.0.1')
+REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 REDIS_DB_NUM = int(os.getenv('REDIS_DB_NUM', 0))
 
 # ---- user ----

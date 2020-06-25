@@ -13,7 +13,7 @@ from discord.ext.commands import BucketType
 from aliasing import helpers, personal
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
-from cogs5e.models.errors import EvaluationError
+from aliasing.errors import EvaluationError
 from utils import checks
 from utils.functions import auth_and_chan, clean_content, confirm
 

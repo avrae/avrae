@@ -7,7 +7,8 @@ import draconic
 import cogs5e.models.character as character_model
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
-from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, NoCharacter, NotAllowed
+from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
+from aliasing.errors import EvaluationError
 from utils.argparser import argquote, argsplit
 
 

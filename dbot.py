@@ -21,7 +21,8 @@ from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
 from aliasing.helpers import handle_alias_exception, handle_aliases
-from cogs5e.models.errors import AvraeException, EvaluationError, RequiresLicense
+from cogs5e.models.errors import AvraeException, RequiresLicense
+from aliasing.errors import EvaluationError
 from gamedata.compendium import compendium
 from gamedata.ddb import BeyondClient, BeyondClientBase
 from gamedata.lookuputils import handle_required_license

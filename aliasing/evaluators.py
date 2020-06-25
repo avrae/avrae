@@ -14,7 +14,8 @@ from aliasing import helpers
 from aliasing.api.context import AliasContext
 from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
 from aliasing.api.legacy import LegacyRawCharacter
-from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
+from cogs5e.models.errors import ConsumableException, InvalidArgument
+from aliasing.errors import EvaluationError, FunctionRequiresCharacter
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
 

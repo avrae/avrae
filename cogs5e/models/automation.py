@@ -8,7 +8,8 @@ import aliasing.evaluators
 import cogs5e.models.character as character_api
 import cogs5e.models.initiative as init
 from cogs5e.models import embeds
-from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
+from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType
+from aliasing.errors import EvaluationError
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from utils.dice import RerollableStringifier
 from utils.functions import maybe_mod

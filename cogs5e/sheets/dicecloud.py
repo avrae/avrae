@@ -12,7 +12,6 @@ from math import ceil, floor
 
 import draconic
 
-import credentials
 from cogs5e.models.character import Character
 from cogs5e.models.dicecloud.client import dicecloud_client
 from cogs5e.models.dicecloud.errors import DicecloudException
@@ -35,7 +34,7 @@ CLASS_RESOURCE_NAMES = {"expertiseDice": "Expertise Dice", "ki": "Ki", "rages": 
 CLASS_RESOURCE_RESETS = {"expertiseDice": 'short', "ki": 'short', "rages": 'long',
                          "sorceryPoints": 'long', "superiorityDice": 'short'}
 API_BASE = "https://dicecloud.com/character/"
-KEY = credentials.dicecloud_token if not config.TESTING else credentials.test_dicecloud_token
+KEY = config.DICECLOUD_API_KEY
 
 
 class DicecloudParser(SheetLoaderABC):

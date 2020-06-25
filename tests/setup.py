@@ -4,7 +4,7 @@ for automated testing.
 """
 import datetime
 
-import credentials
+from utils import config
 
 TEST_CHANNEL_ID = 314159265358979323  # pi
 TEST_DMCHANNEL_ID = 271828182845904523  # e
@@ -12,7 +12,7 @@ TEST_GUILD_ID = 112358132235579214  # fib
 MESSAGE_ID = "123456789012345678"
 DEFAULT_USER_ID = "111111111111111112"
 OWNER_USER = {
-    "id": str(credentials.owner_id),
+    "id": str(config.OWNER_ID),
     "username": "zhu.exe",
     "discriminator": "4211",
     "avatar": None

@@ -2,7 +2,7 @@ import os
 import sys
 
 # ==== bot config constants / env vars ====
-TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
+TOKEN = os.environ.get('DISCORD_BOT_TOKEN', '')
 TESTING = os.environ.get("TESTING") or 'test' in sys.argv
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
 GIT_COMMIT_SHA = os.getenv('GIT_COMMIT_SHA')

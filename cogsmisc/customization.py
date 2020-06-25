@@ -95,18 +95,8 @@ class Customization(commands.Cog):
         if ' ' in alias_name or not alias_name:
             return await ctx.send('Invalid alias name.')
 
-        user_aliases = await personal.Alias.get_ctx_map(ctx)
         if cmds is None:
-            alias = user_aliases.get(alias_name)
-            if alias is None:
-                alias = 'Not defined.'
-            else:
-                alias = f'{ctx.prefix}alias {alias_name} {alias}'
-            out = f'**{alias_name}**: ```py\n{alias}\n```'
-            out = out if len(out) <= 2000 else f'**{alias_name}**:\nCommand output too long to display.\n' \
-                                               f'You can view your personal aliases (and more) on the dashboard.\n' \
-                                               f'<https://avrae.io/dashboard/aliases>'
-            return await ctx.send(out)
+            return await self._view_alias(ctx, alias_name)
 
         alias = personal.Alias.new(alias_name, cmds.lstrip("!"), str(ctx.author.id))
         await alias.commit(self.bot.mdb)
@@ -120,21 +110,49 @@ class Customization(commands.Cog):
                                            f'<https://avrae.io/dashboard/aliases>'
         await ctx.send(out)
 
+    @staticmethod
+    async def _view_alias(ctx, alias_name):  # todo view workshop alias
+        alias = await personal.Alias.get_named(alias_name, ctx)
+        if alias is None:
+            alias = 'Not defined.'
+        else:
+            alias = f'{ctx.prefix}alias {alias_name} {alias}'
+        out = f'**{alias_name}**: ```py\n{alias}\n```'
+        out = out if len(out) <= 2000 else f'**{alias_name}**:\nCommand output too long to display.\n' \
+                                           f'You can view your personal aliases (and more) on the dashboard.\n' \
+                                           f'<https://avrae.io/dashboard/aliases>'
+        return await ctx.send(out)
+
     @alias.command(name='list')
     async def alias_list(self, ctx):
         """Lists all user aliases."""
+        embed = EmbedWithAuthor(ctx)
+
         user_aliases = await personal.Alias.get_ctx_map(ctx)
-        aliases = list(user_aliases.keys())
-        sorted_aliases = sorted(aliases)
-        return await ctx.send('Your aliases:\n{}'.format(', '.join(sorted_aliases)))
+        user_alias_names = list(user_aliases.keys())
+        if user_alias_names:
+            embed.add_field(name="Your Aliases", value=', '.join(sorted(user_alias_names)))
+
+        workshop_alias_names = []  # todo
+        if workshop_alias_names:
+            embed.add_field(name="Workshop Aliases", value=', '.join(sorted(workshop_alias_names)))
+
+        if not (user_alias_names or workshop_alias_names):
+            # todo get link
+            embed.description = "You have no aliases. Check out the [Alias Workshop] to get some, " \
+                                "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!"
+
+        return await ctx.send(embed=embed)
 
     @alias.command(name='delete', aliases=['remove'])
     async def alias_delete(self, ctx, alias_name):
         """Deletes a user alias."""
-        result = await self.bot.mdb.aliases.delete_one({"owner": str(ctx.author.id), "name": alias_name})
-        if not result.deleted_count:
-            return await ctx.send('Alias not found.')
-        await ctx.send('Alias {} removed.'.format(alias_name))
+        alias = await personal.Alias.get_named(alias_name, ctx)
+        if alias is None:
+            return await ctx.send('Alias not found. If this is a workshop alias, you can unsubscribe on the Avrae '
+                                  'dashboard.')  # todo link
+        await alias.delete(ctx.bot.mdb)
+        await ctx.send(f'Alias {alias_name} removed.')
 
     @alias.command(name='deleteall', aliases=['removeall'])
     async def alias_deleteall(self, ctx):
@@ -149,6 +167,7 @@ class Customization(commands.Cog):
         await self.bot.mdb.aliases.delete_many({"owner": str(ctx.author.id)})
         return await ctx.send("OK. I have deleted all your aliases.")
 
+    # todo workshopify stuff below here
     @commands.group(invoke_without_command=True, aliases=['serveralias'])
     @commands.guild_only()
     async def servalias(self, ctx, alias_name=None, *, cmds=None):

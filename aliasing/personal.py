@@ -38,6 +38,12 @@ class _CustomizationBase(abc.ABC):
         """
         raise NotImplementedError
 
+    async def delete(self, mdb):
+        """
+        Deletes this customization from the database.
+        """
+        raise NotImplementedError
+
     @staticmethod
     async def get_ctx_map(ctx):
         """
@@ -45,12 +51,22 @@ class _CustomizationBase(abc.ABC):
         """
         raise NotImplementedError
 
-    @staticmethod
-    async def get_code_for(name, ctx):
+    @classmethod
+    async def get_named(cls, name, ctx):
+        """
+        Returns the customization named *name* in *ctx*, or None if not applicable.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    async def get_code_for(cls, name, ctx):
         """
         Returns the code for the customization named *name* in *ctx*, or None if not applicable.
         """
-        raise NotImplementedError
+        cust = await cls.get_named(name, ctx)
+        if not cust:
+            return None
+        return cust.code
 
     @staticmethod
     def _checks(name, code):
@@ -87,6 +103,9 @@ class Alias(_AliasBase):
         await mdb.aliases.update_one({"owner": self.owner, "name": self.name},
                                      {"$set": {"commands": self.code}}, upsert=True)
 
+    async def delete(self, mdb):
+        await mdb.aliases.delete_one({"owner": self.owner, "name": self.name})
+
     @staticmethod
     async def get_ctx_map(ctx):
         aliases = {}
@@ -94,13 +113,11 @@ class Alias(_AliasBase):
             aliases[alias['name']] = alias['commands']
         return aliases
 
-    @staticmethod
-    async def get_code_for(name, ctx):
-        doc = await ctx.bot.mdb.aliases.find_one(
-            {"owner": str(ctx.author.id), "name": name},
-            ['commands'])
+    @classmethod
+    async def get_named(cls, name, ctx):
+        doc = await ctx.bot.mdb.aliases.find_one({"owner": str(ctx.author.id), "name": name})
         if doc:
-            return doc['commands']
+            return cls(doc['name'], doc['commands'], doc['owner'])
         return None
 
 
@@ -116,15 +133,11 @@ class Servalias(_AliasBase):
             servaliases[servalias['name']] = servalias['commands']
         return servaliases
 
-    @staticmethod
-    async def get_code_for(name, ctx):
-        if ctx.guild is None:
-            return None
-        doc = await ctx.bot.mdb.servaliases.find_one(
-            {"server": str(ctx.guild.id), "name": name},
-            ['commands'])
+    @classmethod
+    async def get_named(cls, name, ctx):
+        doc = await ctx.bot.mdb.servaliases.find_one({"server": str(ctx.guild.id), "name": name})
         if doc:
-            return doc['commands']
+            return cls(doc['name'], doc['commands'], doc['server'])
         return None
 
 
@@ -140,13 +153,11 @@ class Snippet(_SnippetBase):
             snippets[snippet['name']] = snippet['snippet']
         return snippets
 
-    @staticmethod
-    async def get_code_for(name, ctx):
-        doc = await ctx.bot.mdb.snippets.find_one(
-            {"owner": str(ctx.author.id), "name": name},
-            ['snippet'])
+    @classmethod
+    async def get_named(cls, name, ctx):
+        doc = await ctx.bot.mdb.snippets.find_one({"owner": str(ctx.author.id), "name": name})
         if doc:
-            return doc['snippet']
+            return cls(doc['name'], doc['snippet'], doc['owner'])
         return None
 
 
@@ -163,13 +174,9 @@ class Servsnippet(_SnippetBase):
                 servsnippets[servsnippet['name']] = servsnippet['snippet']
         return servsnippets
 
-    @staticmethod
-    async def get_code_for(name, ctx):
-        if ctx.guild is None:
-            return None
-        doc = await ctx.bot.mdb.servsnippets.find_one(
-            {"server": str(ctx.guild.id), "name": name},
-            ['snippet'])
+    @classmethod
+    async def get_named(cls, name, ctx):
+        doc = await ctx.bot.mdb.servsnippets.find_one({"server": str(ctx.guild.id), "name": name})
         if doc:
-            return doc['snippet']
+            return cls(doc['name'], doc['snippet'], doc['server'])
         return None

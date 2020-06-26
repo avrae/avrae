@@ -126,6 +126,9 @@ class Servalias(_AliasBase):
         await mdb.servaliases.update_one({"server": self.owner, "name": self.name},
                                          {"$set": {"commands": self.code}}, upsert=True)
 
+    async def delete(self, mdb):
+        await mdb.servaliases.delete_one({"server": self.owner, "name": self.name})
+
     @staticmethod
     async def get_ctx_map(ctx):
         servaliases = {}
@@ -146,6 +149,9 @@ class Snippet(_SnippetBase):
         await mdb.snippets.update_one({"owner": self.owner, "name": self.name},
                                       {"$set": {"snippet": self.code}}, upsert=True)
 
+    async def delete(self, mdb):
+        await mdb.snippets.delete_one({"owner": self.owner, "name": self.name})
+
     @staticmethod
     async def get_ctx_map(ctx):
         snippets = {}
@@ -165,6 +171,9 @@ class Servsnippet(_SnippetBase):
     async def commit(self, mdb):
         await mdb.servsnippets.update_one({"server": self.owner, "name": self.name},
                                           {"$set": {"snippet": self.code}}, upsert=True)
+
+    async def delete(self, mdb):
+        await mdb.servsnippets.delete_one({"owner": self.owner, "name": self.name})
 
     @staticmethod
     async def get_ctx_map(ctx):

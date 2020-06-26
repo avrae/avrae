@@ -5,12 +5,13 @@ Created on Jan 30, 2017
 """
 import asyncio
 import textwrap
+from collections import Counter
 
 import discord
 from discord.ext import commands
 from discord.ext.commands import BucketType
 
-from aliasing import helpers, personal
+from aliasing import helpers, personal, workshop
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from aliasing.errors import EvaluationError
@@ -128,16 +129,24 @@ class Customization(commands.Cog):
         """Lists all user aliases."""
         embed = EmbedWithAuthor(ctx)
 
+        has_at_least_1_alias = False
+
         user_aliases = await personal.Alias.get_ctx_map(ctx)
         user_alias_names = list(user_aliases.keys())
         if user_alias_names:
-            embed.add_field(name="Your Aliases", value=', '.join(sorted(user_alias_names)))
+            has_at_least_1_alias = True
+            embed.add_field(name="Your Aliases", value=', '.join(sorted(user_alias_names)), inline=False)
 
-        workshop_alias_names = []  # todo
-        if workshop_alias_names:
-            embed.add_field(name="Workshop Aliases", value=', '.join(sorted(workshop_alias_names)))
+        async for subscription_doc in workshop.WorkshopCollection.my_subs(ctx):
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            if bindings := subscription_doc['alias_bindings']:
+                has_at_least_1_alias = True
+                embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
+                                inline=False)
+            else:
+                embed.add_field(name=the_collection.name, value="This collection has no aliases.", inline=False)
 
-        if not (user_alias_names or workshop_alias_names):
+        if not has_at_least_1_alias:
             # todo get link
             embed.description = "You have no aliases. Check out the [Alias Workshop] to get some, " \
                                 "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!"
@@ -167,7 +176,50 @@ class Customization(commands.Cog):
         await self.bot.mdb.aliases.delete_many({"owner": str(ctx.author.id)})
         return await ctx.send("OK. I have deleted all your aliases.")
 
+    @alias.command(name='subscribe', aliases=['sub'])
+    async def alias_subscribe(self, ctx, alias_id):
+        # todo url stuff
+        the_collection = await workshop.WorkshopCollection.from_id(ctx, alias_id)
+        await the_collection.subscribe(ctx)
+        await ctx.send('ok')
+
+    @alias.command(name='autofix', hidden=True)
+    async def alias_autofix(self, ctx):
+        """Ensures that all personal and subscribed workshop aliases have unique names."""
+        name_indices = Counter()
+        for name in await personal.Alias.get_ctx_map(ctx):
+            name_indices[name] += 1
+
+        renamed = []
+
+        async for subscription_doc in workshop.WorkshopCollection.my_subs(ctx):
+            doc_changed = False
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+
+            for binding in subscription_doc['alias_bindings']:
+                old_name = binding['name']
+                if new_index := name_indices[old_name]:
+                    new_name = f"{binding['name']}-{new_index}"
+                    # do rename
+                    binding['name'] = new_name
+                    renamed.append(
+                        f"`{ctx.prefix}{old_name}` ({the_collection.name}) is now `{ctx.prefix}{new_name}`")
+                    doc_changed = True
+                name_indices[old_name] += 1
+
+            if doc_changed:  # write the new subscription object to the db
+                await the_collection.update_alias_bindings(ctx, subscription_doc)
+
+        the_renamed = '\n'.join(renamed)
+        await ctx.send(f"Renamed {len(renamed)} aliases!\n{the_renamed}")
+
+    @alias.command(name='rename')
+    async def alias_rename(self, ctx, old_name, new_name):
+        """Renames a personal or subscribed workshop alias to a new name."""
+        # todo
+
     # todo workshopify stuff below here
+    # todo also make stuff below here better oop
     @commands.group(invoke_without_command=True, aliases=['serveralias'])
     @commands.guild_only()
     async def servalias(self, ctx, alias_name=None, *, cmds=None):

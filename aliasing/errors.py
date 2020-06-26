@@ -31,3 +31,8 @@ class CollectableNotFound(AvraeException):
 
     def __init__(self, msg=None):
         super().__init__(msg or "The specified object was not found.")
+
+
+class AliasNameConflict(AvraeException):
+    """Unable to run command because two aliases share the same name."""
+    pass

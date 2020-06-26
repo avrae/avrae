@@ -4,6 +4,7 @@ import enum
 from bson import ObjectId
 
 from aliasing.errors import CollectableNotFound, CollectionNotFound
+from cogs5e.models.errors import NotAllowed
 from utils.subscription_mixins import EditorMixin, GuildActiveMixin, SubscriberMixin
 
 
@@ -97,7 +98,7 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         if not isinstance(_id, ObjectId):
             _id = ObjectId(_id)
 
-        raw = await ctx.mdb.workshop_collections.find_one({"_id": _id})
+        raw = await ctx.bot.mdb.workshop_collections.find_one({"_id": _id})
         if raw is None:
             raise CollectionNotFound()
 
@@ -110,7 +111,7 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
     @classmethod
     async def user_owned_ids(cls, ctx):
         """Returns an async iterator of ObjectIds of objects the contextual user owns."""
-        async for obj in ctx.mdb.workshop_collections.find({"owner": ctx.author.id}, ['_id']):
+        async for obj in ctx.bot.mdb.workshop_collections.find({"owner": ctx.author.id}, ['_id']):
             yield obj['_id']
 
     def is_owned_by(self, user):
@@ -119,18 +120,8 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         return self.owner == user.id
 
     @classmethod
-    async def user_visible(cls, ctx):
+    async def user_subscribed(cls, ctx):
         """Returns an async iterator of WorkshopCollections that the user has subscribed to."""
-        async for coll_id in cls.user_owned_ids(ctx):
-            try:
-                yield await cls.from_id(ctx, coll_id)
-            except CollectionNotFound:
-                continue
-        async for coll_id in cls.my_editable_ids(ctx):
-            try:
-                yield await cls.from_id(ctx, coll_id)
-            except CollectionNotFound:
-                continue
         async for coll_id in cls.my_sub_ids(ctx):
             try:
                 yield await cls.from_id(ctx, coll_id)
@@ -138,22 +129,84 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
                 continue
 
     @classmethod
-    async def server_active(cls, ctx):
+    async def server_subscribed(cls, ctx):
         """Returns an async generator of WorkshopCollections that the server has subscribed to."""
-        async for tome_id in cls.guild_active_ids(ctx):
+        async for coll_id in cls.guild_active_ids(ctx):
             try:
-                yield await cls.from_id(ctx, tome_id)
+                yield await cls.from_id(ctx, coll_id)
             except CollectionNotFound:
                 continue
 
+    async def _generate_default_alias_bindings(self, ctx):
+        """Returns a list of {name: str, id: ObjectId} bindings based on the default names of aliases in the collection."""
+        if self._aliases is None:
+            await self.load_aliases(ctx)
+        return [{"name": alias.name, "id": alias.id} for alias in self._aliases]
+
+    async def _generate_default_snippet_bindings(self, ctx):
+        """Returns a list of {name: str, id: ObjectId} bindings based on the default names of snippets in the collection."""
+        if self._snippets is None:
+            await self.load_snippets(ctx)
+        return [{"name": snippet.name, "id": snippet.id} for snippet in self._snippets]
+
+    # implementations
     @staticmethod
     def sub_coll(ctx):
         return ctx.bot.mdb.workshop_subscriptions
 
+    async def subscribe(self, ctx):
+        """Adds the contextual author as a subscriber, with default name bindings."""
+        if await self.is_subscribed(ctx):
+            raise NotAllowed("You are already subscribed to this.")
+        if self.publish_state == PublicationState.PRIVATE and not self.is_owned_by(ctx.author):
+            raise NotAllowed("This collection is private.")
+
+        # generate default bindings
+        alias_bindings = await self._generate_default_alias_bindings(ctx)
+        snippet_bindings = await self._generate_default_snippet_bindings(ctx)
+
+        await self.sub_coll(ctx).insert_one(
+            {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id,
+             "alias_bindings": alias_bindings, "snippet_bindings": snippet_bindings}
+        )
+
+    async def set_server_active(self, ctx):
+        """Sets the object as active for the contextual guild, with default name bindings."""
+        if await self.is_server_active(ctx):
+            raise NotAllowed("This collection is already installed on this server.")
+        if self.publish_state == PublicationState.PRIVATE and not self.is_owned_by(ctx.author):
+            raise NotAllowed("This collection is private.")
+
+        # generate default bindings
+        alias_bindings = await self._generate_default_alias_bindings(ctx)
+        snippet_bindings = await self._generate_default_snippet_bindings(ctx)
+
+        await self.sub_coll(ctx).insert_one(
+            {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id,
+             "alias_bindings": alias_bindings, "snippet_bindings": snippet_bindings}
+        )
+
+    async def update_alias_bindings(self, ctx, subscription_doc):
+        """Updates the alias bindings for a given subscription (given the entire subscription document)."""
+        await self.sub_coll(ctx).update_one(
+            {"type": subscription_doc['type'], "subscriber_id": subscription_doc['subscriber_id'],
+             "object_id": self.id},
+            {"$set": {"alias_bindings": subscription_doc['alias_bindings']}}
+        )
+
+    async def update_snippet_bindings(self, ctx, subscription_doc):
+        """Updates the snippet bindings for a given subscription (given the entire subscription document)."""
+        await self.sub_coll(ctx).update_one(
+            {"type": subscription_doc['type'], "subscriber_id": subscription_doc['subscriber_id'],
+             "object_id": self.id},
+            {"$set": {"snippet_bindings": subscription_doc['snippet_bindings']}}
+        )
+
 
 class WorkshopCollectableObject(abc.ABC):
     def __init__(self, _id, name,
-                 code, versions, docs, collection):
+                 code, versions, docs, collection_id,
+                 collection=None):
         """
         :param _id: The MongoDB ID of this object.
         :type _id: bson.ObjectId
@@ -165,6 +218,8 @@ class WorkshopCollectableObject(abc.ABC):
         :type versions: list[CodeVersion]
         :param docs: The help docs of this object.
         :type docs: str
+        :param collection_id: The ID of the top-level Collection this object is a member of.
+        :type collection_id: ObjectId
         :param collection: The top-level Collection this object is a member of.
         :type collection: WorkshopCollection
         """
@@ -173,23 +228,41 @@ class WorkshopCollectableObject(abc.ABC):
         self.code = code
         self.versions = versions
         self.docs = docs
-        self.collection = collection
+        self._collection = collection
+        # lazy-load collection
+        self._collection_id = collection_id
+
+    @property
+    def collection(self):
+        if self._collection is None:
+            raise AttributeError("Collection is not loaded - run load_collection() first")
+        return self._collection
+
+    async def load_collection(self, ctx):
+        self._collection = await WorkshopCollection.from_id(ctx, self._collection_id)
 
 
 class WorkshopAlias(WorkshopCollectableObject):
-    def __init__(self, _id, name, code, versions, docs, collection,
-                 subcommand_ids, parent):
+    def __init__(self, _id, name, code, versions, docs, collection_id, subcommand_ids, parent_id,
+                 collection=None, parent=None):
         """
         :param subcommand_ids: The alias IDs that are a child of this alias.
         :type subcommand_ids: list[ObjectId]
         :param parent: The alias that is a parent of this alias, if applicable.
         :type parent: WorkshopAlias or None
         """
-        super().__init__(_id, name, code, versions, docs, collection)
+        super().__init__(_id, name, code, versions, docs, collection_id=collection_id, collection=collection)
         self._subcommands = None
-        self.parent = parent
-        # lazy-load subcommands
+        self._parent = parent
+        # lazy-load subcommands, collection, parent
         self._subcommand_ids = subcommand_ids
+        self._parent_id = parent_id
+
+    @property
+    def parent(self):
+        if self._parent is None:
+            raise AttributeError("Parent is not loaded yet - run load_parent() first")
+        return self._parent
 
     @property
     def subcommands(self):
@@ -197,39 +270,42 @@ class WorkshopAlias(WorkshopCollectableObject):
             raise AttributeError("Subcommands are not loaded yet - run load_subcommands() first")
         return self._subcommands
 
+    async def load_parent(self, ctx):
+        self._parent = await WorkshopAlias.from_id(ctx, self._parent_id, collection=self._collection)
+
     async def load_subcommands(self, ctx):
         self._subcommands = []
         for subcommand_id in self._subcommand_ids:
             self._subcommands.append(
-                await WorkshopAlias.from_id(ctx, subcommand_id, collection=self.collection, parent=self))
+                await WorkshopAlias.from_id(ctx, subcommand_id, collection=self._collection, parent=self))
 
     # constructors
     @classmethod
-    async def from_id(cls, ctx, _id, collection, parent):
+    async def from_id(cls, ctx, _id, collection=None, parent=None):
         if not isinstance(_id, ObjectId):
             _id = ObjectId(_id)
 
-        raw = await ctx.mdb.workshop_aliases.find_one({"_id": _id})
+        raw = await ctx.bot.mdb.workshop_aliases.find_one({"_id": _id})
         if raw is None:
             raise CollectableNotFound()
 
         versions = [CodeVersion.from_dict(cv) for cv in raw['versions']]
-        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], collection,
-                   raw['subcommand_ids'], parent)
+        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], raw['collection_id'],
+                   raw['subcommand_ids'], raw['parent_id'], collection, parent)
 
 
 class WorkshopSnippet(WorkshopCollectableObject):
     @classmethod
-    async def from_id(cls, ctx, _id, collection):
+    async def from_id(cls, ctx, _id, collection=None):
         if not isinstance(_id, ObjectId):
             _id = ObjectId(_id)
 
-        raw = await ctx.mdb.workshop_snippets.find_one({"_id": _id})
+        raw = await ctx.bot.mdb.workshop_snippets.find_one({"_id": _id})
         if raw is None:
             raise CollectableNotFound()
 
         versions = [CodeVersion.from_dict(cv) for cv in raw['versions']]
-        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], collection)
+        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], raw['collection_id'], collection)
 
 
 class CodeVersion:
@@ -262,10 +338,10 @@ class CodeVersion:
 #
 # test_alias = {
 #     '_id': ObjectId(), 'name': 'wsalias', 'code': 'echo This is wsalias!', 'versions': [],
-#     'docs': "This is a test alias", 'subcommand_ids': []
+#     'docs': "This is a test alias", 'subcommand_ids': [], 'collection_id': ObjectId(), 'parent_id': None
 # }
 #
 # test_snippet = {
 #     '_id': ObjectId(), 'name': 'wssnippet', 'code': '-phrase "This is wssnippet!"', 'versions': [],
-#     'docs': "This is a test snippet"
+#     'docs': "This is a test snippet", 'collection_id': ObjectId()
 # }

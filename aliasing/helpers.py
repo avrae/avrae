@@ -6,9 +6,10 @@ import draconic
 
 import cogs5e.models.character as character_model
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
+from aliasing.errors import AliasNameConflict, EvaluationError
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
+from aliasing.workshop import WorkshopAlias, WorkshopCollection
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
-from aliasing.errors import EvaluationError
 from utils.argparser import argquote, argsplit
 
 
@@ -18,12 +19,18 @@ async def handle_aliases(ctx):
     alias = ctx.invoked_with
 
     # personal alias/servalias
-    command_code = (await Alias.get_code_for(alias, ctx)) or (await Servalias.get_code_for(alias, ctx))
+    try:
+        the_alias = (await get_personal_alias_named(ctx, alias)) or (await get_server_alias_named(ctx, alias))
+    except AliasNameConflict as anc:
+        return await ctx.send(str(anc))
 
-    if not command_code:
+    if not the_alias:
         return
 
-    command_code = await handle_alias_arguments(command_code, ctx)
+    # todo workshop alias subcommands
+    # todo analytics
+
+    command_code = await handle_alias_arguments(the_alias.code, ctx)
     char = None
     try:
         char = await character_model.Character.from_ctx(ctx)
@@ -80,6 +87,74 @@ async def handle_alias_arguments(command, ctx):
 
     quoted_args = ' '.join(map(argquote, tempargs))
     return f"{prefix}{new_command} {quoted_args}".strip()
+
+
+# getters
+async def get_personal_alias_named(ctx, name):
+    personal_alias = await Alias.get_named(name, ctx)
+    # get list of subscription object ids
+    subscribed_alias_ids = []
+    async for subscription_doc in WorkshopCollection.my_subs(ctx):
+        for binding in subscription_doc['alias_bindings']:
+            if binding['name'] == name:
+                subscribed_alias_ids.append(binding['id'])
+
+    # if only personal, return personal (or none)
+    if not subscribed_alias_ids:
+        return personal_alias
+    # conflicting name errors
+    if personal_alias is not None and subscribed_alias_ids:
+        raise AliasNameConflict(
+            f"I found both a personal alias and {len(subscribed_alias_ids)} workshop alias(es) "
+            f"named {ctx.prefix}{name}. Use `{ctx.prefix}alias autofix` to automatically assign "
+            f"all conflicting aliases unique names, or `{ctx.prefix}alias rename {name} <new name>` "
+            f"to manually rename it.")
+    if len(subscribed_alias_ids) > 1:
+        raise AliasNameConflict(
+            f"I found {len(subscribed_alias_ids)} workshop aliases "
+            f"named {ctx.prefix}{name}. Use `{ctx.prefix}alias autofix` to automatically assign "
+            f"all conflicting aliases unique names, or `{ctx.prefix}alias rename {name} <new name>` "
+            f"to manually rename it.")
+    # otherwise return the subscribed
+    return await WorkshopAlias.from_id(ctx, subscribed_alias_ids[0])
+
+
+async def get_server_alias_named(ctx, name):
+    personal_alias = await Servalias.get_named(name, ctx)
+    # get list of subscription object ids
+    subscribed_alias_ids = []
+    async for subscription_doc in WorkshopCollection.guild_active_subs(ctx):
+        for binding in subscription_doc['alias_bindings']:
+            if binding['name'] == name:
+                subscribed_alias_ids.append(binding['id'])
+
+    # if only personal, return personal (or none)
+    if not subscribed_alias_ids:
+        return personal_alias
+    # conflicting name errors
+    if personal_alias is not None and subscribed_alias_ids:
+        raise AliasNameConflict(
+            f"I found both a server alias and {len(subscribed_alias_ids)} workshop server alias(es) "
+            f"named {ctx.prefix}{name}. Use `{ctx.prefix}servalias autofix` to automatically assign "
+            f"all conflicting aliases unique names, or `{ctx.prefix}servalias rename {name} <new name>` "
+            f"to manually rename it.")
+    if len(subscribed_alias_ids) > 1:
+        raise AliasNameConflict(
+            f"I found {len(subscribed_alias_ids)} workshop aliases "
+            f"named {ctx.prefix}{name}. Use `{ctx.prefix}servalias autofix` to automatically assign "
+            f"all conflicting server aliases unique names, or `{ctx.prefix}servalias rename {name} <new name>` "
+            f"to manually rename it.")
+    # otherwise return the subscribed
+    return await WorkshopAlias.from_id(ctx, subscribed_alias_ids[0])
+
+
+# todo
+async def get_personal_snippet_named(ctx, name):
+    pass
+
+
+async def get_server_snippet_named(ctx, name):
+    pass
 
 
 # cvars
@@ -176,6 +251,7 @@ async def parse_snippets(args, ctx) -> str:
     return " ".join(args)
 
 
+# transformer
 async def parse_no_char(cstr, ctx):
     """
     Parses cvars and whatnot without an active character.
@@ -191,6 +267,7 @@ async def parse_no_char(cstr, ctx):
     return out
 
 
+# handler
 async def handle_alias_exception(ctx, err):
     e = err.original
     location = f"when parsing expression {err.expression}"

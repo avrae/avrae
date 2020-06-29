@@ -171,6 +171,17 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
             {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id,
              "alias_bindings": alias_bindings, "snippet_bindings": snippet_bindings}
         )
+        await ctx.bot.mdb.workshop_collections.update_one(
+            {"_id": self.id},
+            {"$inc": {"num_subscribers": 1}}
+        )
+
+    async def unsubscribe(self, ctx):
+        await super().unsubscribe(ctx)
+        await ctx.bot.mdb.workshop_collections.update_one(
+            {"_id": self.id},
+            {"$inc": {"num_subscribers": -1}}
+        )
 
     async def set_server_active(self, ctx):
         """Sets the object as active for the contextual guild, with default name bindings."""
@@ -187,9 +198,22 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
             {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id,
              "alias_bindings": alias_bindings, "snippet_bindings": snippet_bindings}
         )
+        await ctx.bot.mdb.workshop_collections.update_one(
+            {"_id": self.id},
+            {"$inc": {"num_guild_subscribers": 1}}
+        )
+
+    async def unset_server_active(self, ctx):
+        await super().unset_server_active(ctx)
+        await ctx.bot.mdb.workshop_collections.update_one(
+            {"_id": self.id},
+            {"$inc": {"num_guild_subscribers": -1}}
+        )
 
     async def update_alias_bindings(self, ctx, subscription_doc):
         """Updates the alias bindings for a given subscription (given the entire subscription document)."""
+        # sanity check: ensure all aliases are in the bindings and there is no binding to anything deleted
+        # todo
         await self.sub_coll(ctx).update_one(
             {"type": subscription_doc['type'], "subscriber_id": subscription_doc['subscriber_id'],
              "object_id": self.id},

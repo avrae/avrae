@@ -167,7 +167,7 @@ class Customization(commands.Cog):
         alias = await personal.Alias.get_named(alias_name, ctx)
         if alias is None:
             return await ctx.send('Alias not found. If this is a workshop alias, you can unsubscribe on the Avrae '
-                                  'Dashboard.')  # todo link
+                                  'Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions>.')
         await alias.delete(ctx.bot.mdb)
         await ctx.send(f'Alias {alias_name} removed.')
 

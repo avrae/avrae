@@ -50,6 +50,11 @@ db.analytics_ddb_activity.createIndex({"last_link_time": -1});
 analytics_nsrd_lookup:
 db.analytics_nsrd_lookup.createIndex({"type": 1});
 
+analytics_alias_events:
+db.analytics_alias_events.createIndex({"object_id": 1});
+db.analytics_alias_events.createIndex({"type": 1});
+db.analytics_alias_events.createIndex({"timestamp": -1});
+
 random_stats:
 db.random_stats.createIndex({"key": 1}, {"unique": true});
 

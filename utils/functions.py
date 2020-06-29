@@ -179,8 +179,9 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
     If delete is True, will delete the selection message and the response.
     If length of choices is 1, will return the only choice unless force_select is True.
-    :raises NoSelectionElements if len(choices) is 0.
-    :raises SelectionCancelled if selection is cancelled."""
+
+    :raises NoSelectionElements: if len(choices) is 0.
+    :raises SelectionCancelled: if selection is cancelled."""
     if len(choices) == 0:
         raise NoSelectionElements()
     elif len(choices) == 1 and not force_select:
@@ -457,3 +458,36 @@ def trim_str(text, max_len):
     if len(text) < max_len:
         return text
     return f"{text[:max_len - 4]}..."
+
+
+async def user_from_id(ctx, the_id):
+    """
+    Gets a :class:`discord.User` given their user id in the context. Returns member if context has data.
+
+    :type ctx: discord.ext.commands.Context
+    :type the_id: int
+    :rtype: discord.User
+    """
+    if ctx.guild:  # try and get memebr
+        member = ctx.guild.get_member(the_id)
+        if member is not None:
+            return member
+
+    # try and see if user is in bot cache
+    user = ctx.bot.get_user(the_id)
+    if user is not None:
+        return user
+
+    # fetch the user from the Discord API
+    try:
+        fetched_user = await ctx.bot.fetch_user(the_id)
+    except discord.NotFound:
+        return None
+    # we know this user now!
+    await ctx.bot.mdb.update_one(
+        {"id": str(fetched_user.id)},
+        {"$set": {'username': fetched_user.name, 'discriminator': fetched_user.discriminator,
+                  'avatar': fetched_user.avatar, 'bot': fetched_user.bot}},
+        upsert=True
+    )
+    return fetched_user

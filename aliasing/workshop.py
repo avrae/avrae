@@ -86,11 +86,13 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         self._aliases = []
         for alias_id in self._alias_ids:
             self._aliases.append(await WorkshopAlias.from_id(ctx, alias_id, collection=self, parent=None))
+        return self._aliases
 
     async def load_snippets(self, ctx):
         self._snippets = []
         for snippet_id in self._snippet_ids:
             self._snippets.append(await WorkshopSnippet.from_id(ctx, snippet_id, collection=self))
+        return self._snippets
 
     # constructors
     @classmethod
@@ -240,6 +242,7 @@ class WorkshopCollectableObject(abc.ABC):
 
     async def load_collection(self, ctx):
         self._collection = await WorkshopCollection.from_id(ctx, self._collection_id)
+        return self._collection
 
 
 class WorkshopAlias(WorkshopCollectableObject):
@@ -272,12 +275,14 @@ class WorkshopAlias(WorkshopCollectableObject):
 
     async def load_parent(self, ctx):
         self._parent = await WorkshopAlias.from_id(ctx, self._parent_id, collection=self._collection)
+        return self._parent
 
     async def load_subcommands(self, ctx):
         self._subcommands = []
         for subcommand_id in self._subcommand_ids:
             self._subcommands.append(
                 await WorkshopAlias.from_id(ctx, subcommand_id, collection=self._collection, parent=self))
+        return self._subcommands
 
     # constructors
     @classmethod

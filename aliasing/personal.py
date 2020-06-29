@@ -26,7 +26,7 @@ class _CustomizationBase(abc.ABC):
         :type owner: str
         """
         code = str(code)
-        cls._checks(name, code)
+        cls.precreate_checks(name, code)
         return cls(name, code, str(owner))
 
     async def commit(self, mdb):
@@ -35,6 +35,12 @@ class _CustomizationBase(abc.ABC):
 
         :param mdb: The database.
         :type mdb: motor.motor_asyncio.AsyncIOMotorDatabase
+        """
+        raise NotImplementedError
+
+    async def rename(self, mdb, new_name):
+        """
+        Renames this customization, deleting the old binding and creating the new binding (db-touching).
         """
         raise NotImplementedError
 
@@ -69,7 +75,7 @@ class _CustomizationBase(abc.ABC):
         return cust.code
 
     @staticmethod
-    def _checks(name, code):
+    def precreate_checks(name, code):
         """
         Runs creation limit checks.
 
@@ -80,7 +86,7 @@ class _CustomizationBase(abc.ABC):
 
 class _AliasBase(_CustomizationBase, abc.ABC):
     @staticmethod
-    def _checks(name, code):
+    def precreate_checks(name, code):
         if len(code) > ALIAS_SIZE_LIMIT:
             raise InvalidArgument(f"Aliases must be shorter than {ALIAS_SIZE_LIMIT} characters.")
         if ' ' in name:
@@ -89,7 +95,7 @@ class _AliasBase(_CustomizationBase, abc.ABC):
 
 class _SnippetBase(_CustomizationBase, abc.ABC):
     @staticmethod
-    def _checks(name, code):
+    def precreate_checks(name, code):
         if len(code) > SNIPPET_SIZE_LIMIT:
             raise InvalidArgument(f"Snippets must be shorter than {SNIPPET_SIZE_LIMIT} characters.")
         if len(name) < 2:
@@ -102,6 +108,11 @@ class Alias(_AliasBase):
     async def commit(self, mdb):
         await mdb.aliases.update_one({"owner": self.owner, "name": self.name},
                                      {"$set": {"commands": self.code}}, upsert=True)
+
+    async def rename(self, mdb, new_name):
+        await mdb.aliases.update_one({"owner": self.owner, "name": self.name},
+                                     {"$set": {"name": new_name}})
+        self.name = new_name
 
     async def delete(self, mdb):
         await mdb.aliases.delete_one({"owner": self.owner, "name": self.name})
@@ -126,6 +137,11 @@ class Servalias(_AliasBase):
         await mdb.servaliases.update_one({"server": self.owner, "name": self.name},
                                          {"$set": {"commands": self.code}}, upsert=True)
 
+    async def rename(self, mdb, new_name):
+        await mdb.servaliases.update_one({"server": self.owner, "name": self.name},
+                                         {"$set": {"name": new_name}})
+        self.name = new_name
+
     async def delete(self, mdb):
         await mdb.servaliases.delete_one({"server": self.owner, "name": self.name})
 
@@ -149,6 +165,11 @@ class Snippet(_SnippetBase):
         await mdb.snippets.update_one({"owner": self.owner, "name": self.name},
                                       {"$set": {"snippet": self.code}}, upsert=True)
 
+    async def rename(self, mdb, new_name):
+        await mdb.snippets.update_one({"owner": self.owner, "name": self.name},
+                                      {"$set": {"name": new_name}})
+        self.name = new_name
+
     async def delete(self, mdb):
         await mdb.snippets.delete_one({"owner": self.owner, "name": self.name})
 
@@ -171,6 +192,11 @@ class Servsnippet(_SnippetBase):
     async def commit(self, mdb):
         await mdb.servsnippets.update_one({"server": self.owner, "name": self.name},
                                           {"$set": {"snippet": self.code}}, upsert=True)
+
+    async def rename(self, mdb, new_name):
+        await mdb.servsnippets.update_one({"server": self.owner, "name": self.name},
+                                          {"$set": {"name": new_name}})
+        self.name = new_name
 
     async def delete(self, mdb):
         await mdb.servsnippets.delete_one({"owner": self.owner, "name": self.name})

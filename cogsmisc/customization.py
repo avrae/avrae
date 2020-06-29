@@ -12,11 +12,11 @@ from discord.ext import commands
 from discord.ext.commands import BucketType
 
 from aliasing import helpers, personal, workshop
+from aliasing.errors import EvaluationError
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
-from aliasing.errors import EvaluationError
 from utils import checks
-from utils.functions import auth_and_chan, clean_content, confirm
+from utils.functions import auth_and_chan, clean_content, confirm, get_selection, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
@@ -112,17 +112,25 @@ class Customization(commands.Cog):
         await ctx.send(out)
 
     @staticmethod
-    async def _view_alias(ctx, alias_name):  # todo view workshop alias
-        alias = await personal.Alias.get_named(alias_name, ctx)
+    async def _view_alias(ctx, alias_name):
+        alias = await helpers.get_personal_alias_named(ctx, alias_name)
         if alias is None:
-            alias = 'Not defined.'
+            return await ctx.send(f"No alias named {alias_name} found.")
+        elif isinstance(alias, personal.Alias):  # personal alias
+            out = f'**{alias_name}**: ```py\n{ctx.prefix}alias {alias.name} {alias.code}\n```'
+            out = out if len(out) <= 2000 else f'**{alias.name}**:\nCommand output too long to display.\n' \
+                                               f'You can view your personal aliases (and more) on the dashboard.\n' \
+                                               f'<https://avrae.io/dashboard/aliases>'
+            return await ctx.send(out)
         else:
-            alias = f'{ctx.prefix}alias {alias_name} {alias}'
-        out = f'**{alias_name}**: ```py\n{alias}\n```'
-        out = out if len(out) <= 2000 else f'**{alias_name}**:\nCommand output too long to display.\n' \
-                                           f'You can view your personal aliases (and more) on the dashboard.\n' \
-                                           f'<https://avrae.io/dashboard/aliases>'
-        return await ctx.send(out)
+            embed = EmbedWithAuthor(ctx)
+            the_collection = await alias.load_collection(ctx)
+            owner = await user_from_id(ctx, the_collection.owner)
+            embed.title = f"{ctx.prefix}{alias_name}"
+            embed.description = f"From {the_collection.name} by {owner}.\n" \
+                                f"[View on Workshop](https://avrae.io/workshop/{the_collection.id})"
+            embed.add_field(name="Help", value=alias.docs or "No documentation.")
+            return await ctx.send(embed=embed)
 
     @alias.command(name='list')
     async def alias_list(self, ctx):
@@ -147,8 +155,8 @@ class Customization(commands.Cog):
                 embed.add_field(name=the_collection.name, value="This collection has no aliases.", inline=False)
 
         if not has_at_least_1_alias:
-            # todo get link
-            embed.description = "You have no aliases. Check out the [Alias Workshop] to get some, " \
+            embed.description = "You have no aliases. Check out the [Alias Workshop]" \
+                                "(https://avrae.io/dashboard/workshop) to get some, " \
                                 "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!"
 
         return await ctx.send(embed=embed)
@@ -159,14 +167,15 @@ class Customization(commands.Cog):
         alias = await personal.Alias.get_named(alias_name, ctx)
         if alias is None:
             return await ctx.send('Alias not found. If this is a workshop alias, you can unsubscribe on the Avrae '
-                                  'dashboard.')  # todo link
+                                  'Dashboard.')  # todo link
         await alias.delete(ctx.bot.mdb)
         await ctx.send(f'Alias {alias_name} removed.')
 
     @alias.command(name='deleteall', aliases=['removeall'])
     async def alias_deleteall(self, ctx):
         """Deletes ALL user aliases."""
-        await ctx.send("This will delete **ALL** of your user aliases. "
+        await ctx.send("This will delete **ALL** of your personal user aliases "
+                       "(it will not affect workshop subscriptions). "
                        "Are you *absolutely sure* you want to continue?\n"
                        "Type `Yes, I am sure` to confirm.")
         reply = await self.bot.wait_for('message', timeout=30, check=auth_and_chan(ctx))
@@ -216,7 +225,38 @@ class Customization(commands.Cog):
     @alias.command(name='rename')
     async def alias_rename(self, ctx, old_name, new_name):
         """Renames a personal or subscribed workshop alias to a new name."""
-        # todo
+
+        personal.Alias.precreate_checks(new_name, '')
+
+        # list of (name, (alias or sub doc, collection or None))
+        choices = []
+        if personal_alias := await personal.Alias.get_named(old_name, ctx):
+            choices.append((f"{ctx.prefix}{old_name} (Personal alias)",
+                            (personal_alias, None)))
+
+        # get list of (subscription object ids, subscription doc)
+        async for subscription_doc in workshop.WorkshopCollection.my_subs(ctx):
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            for binding in subscription_doc['alias_bindings']:
+                if binding['name'] == old_name:
+                    choices.append((f"{ctx.prefix}{old_name} ({the_collection.name})",
+                                    (subscription_doc, the_collection)))
+
+        old_alias, collection = await get_selection(ctx, choices)
+
+        if isinstance(old_alias, personal.Alias):
+            if await personal.Alias.get_named(new_name, ctx):
+                return await ctx.send(f"You already have a personal alias named {new_name}.")
+            await old_alias.rename(ctx.bot.mdb, new_name)
+            return await ctx.send(f"Okay, renamed the personal alias {old_name} to {new_name}.")
+        else:  # old_alias is actually a subscription doc
+            sub_doc = old_alias
+            for binding in sub_doc['alias_bindings']:
+                if binding['name'] == old_name:
+                    binding['name'] = new_name
+
+            await collection.update_alias_bindings(ctx, sub_doc)
+            return await ctx.send(f"Okay, the workshop alias that was bound to {old_name} is now bound to {new_name}.")
 
     # todo workshopify stuff below here
     # todo also make stuff below here better oop

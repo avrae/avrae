@@ -6,7 +6,7 @@ import draconic
 
 import cogs5e.models.character as character_model
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
-from aliasing.errors import AliasNameConflict, EvaluationError
+from aliasing.errors import AliasNameConflict, CollectableNotFound, EvaluationError
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
 from aliasing.workshop import WorkshopAlias, WorkshopCollection
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
@@ -32,7 +32,19 @@ async def handle_aliases(ctx):
     if not the_alias:
         return
 
-    # todo workshop alias subcommands
+    # workshop alias subcommands
+    if isinstance(the_alias, WorkshopAlias):
+        # loop into subcommands
+        while the_alias:
+            ctx.view.skip_ws()
+            next_word = ctx.view.get_word()
+            if not next_word:
+                break
+            try:
+                the_alias = await the_alias.get_subalias_named(ctx, next_word)
+            except CollectableNotFound:
+                ctx.view.undo()
+                break
 
     # analytics
     await the_alias.log_invocation(ctx, server_invoker)

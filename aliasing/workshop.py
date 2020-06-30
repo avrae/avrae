@@ -348,6 +348,12 @@ class WorkshopAlias(WorkshopCollectableObject):
 
     # constructors
     @classmethod
+    def from_dict(cls, raw, collection=None, parent=None):
+        versions = [CodeVersion.from_dict(cv) for cv in raw['versions']]
+        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], raw['collection_id'],
+                   raw['subcommand_ids'], raw['parent_id'], collection, parent)
+
+    @classmethod
     async def from_id(cls, ctx, _id, collection=None, parent=None):
         if not isinstance(_id, ObjectId):
             _id = ObjectId(_id)
@@ -355,10 +361,7 @@ class WorkshopAlias(WorkshopCollectableObject):
         raw = await ctx.bot.mdb.workshop_aliases.find_one({"_id": _id})
         if raw is None:
             raise CollectableNotFound()
-
-        versions = [CodeVersion.from_dict(cv) for cv in raw['versions']]
-        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], raw['collection_id'],
-                   raw['subcommand_ids'], raw['parent_id'], collection, parent)
+        return cls.from_dict(raw, collection, parent)
 
     # helpers
     async def log_invocation(self, ctx, is_server):
@@ -366,6 +369,14 @@ class WorkshopAlias(WorkshopCollectableObject):
         await ctx.bot.mdb.analytics_alias_events.insert_one(
             {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
         )
+
+    async def get_subalias_named(self, ctx, name):
+        alias = await ctx.bot.mdb.workshop_aliases.find_one(
+            {"parent_id": self.id, "name": name}
+        )
+        if alias is None:
+            raise CollectableNotFound()
+        return WorkshopAlias.from_dict(alias, collection=self._collection, parent=self)
 
 
 class WorkshopSnippet(WorkshopCollectableObject):

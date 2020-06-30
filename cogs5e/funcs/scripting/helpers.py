@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import traceback
 import uuid
 
@@ -134,7 +135,7 @@ async def create_snippet(ctx, snipname, snippet):
 async def get_snippets(ctx):
     snippets = {}
     async for snippet in ctx.bot.mdb.snippets.find({"owner": str(ctx.author.id)}):
-        snippets[snippet['name']] = snippet['snippet']
+        snippets[snippet['name']] = snippet
     return snippets
 
 
@@ -155,7 +156,7 @@ async def get_servsnippets(ctx):
     servsnippets = {}
     if ctx.guild:
         async for servsnippet in ctx.bot.mdb.servsnippets.find({"server": str(ctx.guild.id)}):
-            servsnippets[servsnippet['name']] = servsnippet['snippet']
+            servsnippets[servsnippet['name']] = servsnippet
     return servsnippets
 
 
@@ -170,10 +171,24 @@ async def parse_snippets(args, ctx) -> str:
         args = argsplit(args)
     if not isinstance(args, list):
         args = list(args)
-    snippets = await get_servsnippets(ctx)
-    snippets.update(await get_snippets(ctx))
+    servsnippets = await get_servsnippets(ctx)
+    snippets = await get_snippets(ctx)
     for index, arg in enumerate(args):  # parse snippets
-        snippet_value = snippets.get(arg)
+        snippet = snippets.get(arg)
+        snippet_value = None
+        if snippet:
+            await ctx.bot.mdb.analytics_alias_events.insert_one(
+                {"type": "snippet", "object_id": snippet['_id'], "timestamp": datetime.datetime.utcnow()}
+            )
+            snippet_value = snippet['snippet']
+        else:
+            snippet = servsnippets.get(arg)
+            if snippet:
+                await ctx.bot.mdb.analytics_alias_events.insert_one(
+                    {"type": "servsnippet", "object_id": snippet['_id'], "timestamp": datetime.datetime.utcnow()}
+                )
+                snippet_value = snippet['snippet']
+
         if snippet_value:
             args[index] = snippet_value
         elif ' ' in arg:

@@ -4,6 +4,7 @@ Created on Jan 30, 2017
 @author: andrew
 """
 import asyncio
+import datetime
 import textwrap
 
 import discord
@@ -87,16 +88,22 @@ class Customization(commands.Cog):
         prefix = await self.bot.get_server_prefix(message)
         if message.content.startswith(prefix):
             alias = message.content[len(prefix):].split(' ')[0]
+            execution_type = "alias"
             if message.guild:
-                command = (await self.bot.mdb.aliases.find_one({"owner": str(message.author.id), "name": alias},
-                                                               ['commands'])) or \
-                          (await self.bot.mdb.servaliases.find_one({"server": str(message.guild.id), "name": alias},
-                                                                   ['commands']))
+                the_alias = await self.bot.mdb.aliases.find_one({"owner": str(message.author.id), "name": alias})
+                if the_alias is None:
+                    the_alias = await self.bot.mdb.servaliases.find_one(
+                        {"server": str(message.guild.id), "name": alias})
+                    execution_type = "servalias"
             else:
-                command = await self.bot.mdb.aliases.find_one({"owner": str(message.author.id), "name": alias},
-                                                              ['commands'])
-            if command:
-                command = command['commands']
+                the_alias = await self.bot.mdb.aliases.find_one({"owner": str(message.author.id), "name": alias})
+
+            if the_alias:
+                await self.bot.mdb.analytics_alias_events.insert_one(
+                    {"type": execution_type, "object_id": the_alias['_id'], "timestamp": datetime.datetime.utcnow()}
+                )
+
+                command = the_alias['commands']
                 try:
                     message.content = await self.handle_alias_arguments(command, message)
                 except UserInputError as e:
@@ -301,11 +308,16 @@ class Customization(commands.Cog):
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await self.snippet_list(ctx)
-        user_snippets = await helpers.get_snippets(ctx)
 
         if snippet is None:
+            user_snippets = await helpers.get_snippets(ctx)
+            the_snippet = user_snippets.get(snipname)
+
+            if the_snippet is None:
+                return await ctx.send(f"No snippet named {snipname} found.")
+
             out = f'**{snipname}**:```py\n' \
-                  f'{ctx.prefix}snippet {snipname} {user_snippets.get(snipname, "Not defined.")}' \
+                  f'{ctx.prefix}snippet {snipname} {the_snippet["snippet"]}' \
                   f'\n```'
             out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
                                                f'Command output too long to display.\n' \
@@ -359,11 +371,16 @@ class Customization(commands.Cog):
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await self.servsnippet_list(ctx)
-        server_snippets = await helpers.get_servsnippets(ctx)
 
         if snippet is None:
+            server_snippets = await helpers.get_servsnippets(ctx)
+            the_snippet = server_snippets.get(snipname)
+
+            if the_snippet is None:
+                return await ctx.send(f"No server snippet named {snipname} found.")
+
             out = f'**{snipname}**:```py\n' \
-                  f'{ctx.prefix}snippet {snipname} {server_snippets.get(snipname, "Not defined.")}' \
+                  f'{ctx.prefix}snippet {snipname} {the_snippet["snippet"]}' \
                   f'\n```'
             out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
                                                f'Command output too long to display.'

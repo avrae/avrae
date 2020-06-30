@@ -2,13 +2,15 @@
 Personal aliases and snippets. Unrelated to the workshop.
 """
 import abc
+import datetime
 
 from aliasing.constants import ALIAS_SIZE_LIMIT, SNIPPET_SIZE_LIMIT
 from cogs5e.models.errors import InvalidArgument
 
 
 class _CustomizationBase(abc.ABC):
-    def __init__(self, name, code, owner):
+    def __init__(self, _id, name, code, owner):
+        self.id = _id
         self.name = name
         self.code = code
         self.owner = owner
@@ -27,7 +29,7 @@ class _CustomizationBase(abc.ABC):
         """
         code = str(code)
         cls.precreate_checks(name, code)
-        return cls(name, code, str(owner))
+        return cls(None, name, code, str(owner))
 
     async def commit(self, mdb):
         """
@@ -47,6 +49,12 @@ class _CustomizationBase(abc.ABC):
     async def delete(self, mdb):
         """
         Deletes this customization from the database.
+        """
+        raise NotImplementedError
+
+    async def log_invocation(self, ctx, _):
+        """
+        Logs an invocation of this customization.
         """
         raise NotImplementedError
 
@@ -106,8 +114,10 @@ class _SnippetBase(_CustomizationBase, abc.ABC):
 
 class Alias(_AliasBase):
     async def commit(self, mdb):
-        await mdb.aliases.update_one({"owner": self.owner, "name": self.name},
-                                     {"$set": {"commands": self.code}}, upsert=True)
+        result = await mdb.aliases.update_one({"owner": self.owner, "name": self.name},
+                                              {"$set": {"commands": self.code}}, upsert=True)
+        if result.upserted_id:
+            self.id = result.upserted_id
 
     async def rename(self, mdb, new_name):
         await mdb.aliases.update_one({"owner": self.owner, "name": self.name},
@@ -116,6 +126,11 @@ class Alias(_AliasBase):
 
     async def delete(self, mdb):
         await mdb.aliases.delete_one({"owner": self.owner, "name": self.name})
+
+    async def log_invocation(self, ctx, _):
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": "alias", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+        )
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -128,14 +143,16 @@ class Alias(_AliasBase):
     async def get_named(cls, name, ctx):
         doc = await ctx.bot.mdb.aliases.find_one({"owner": str(ctx.author.id), "name": name})
         if doc:
-            return cls(doc['name'], doc['commands'], doc['owner'])
+            return cls(doc['_id'], doc['name'], doc['commands'], doc['owner'])
         return None
 
 
 class Servalias(_AliasBase):
     async def commit(self, mdb):
-        await mdb.servaliases.update_one({"server": self.owner, "name": self.name},
-                                         {"$set": {"commands": self.code}}, upsert=True)
+        result = await mdb.servaliases.update_one({"server": self.owner, "name": self.name},
+                                                  {"$set": {"commands": self.code}}, upsert=True)
+        if result.upserted_id:
+            self.id = result.upserted_id
 
     async def rename(self, mdb, new_name):
         await mdb.servaliases.update_one({"server": self.owner, "name": self.name},
@@ -144,6 +161,11 @@ class Servalias(_AliasBase):
 
     async def delete(self, mdb):
         await mdb.servaliases.delete_one({"server": self.owner, "name": self.name})
+
+    async def log_invocation(self, ctx, _):
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": "servalias", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+        )
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -156,14 +178,16 @@ class Servalias(_AliasBase):
     async def get_named(cls, name, ctx):
         doc = await ctx.bot.mdb.servaliases.find_one({"server": str(ctx.guild.id), "name": name})
         if doc:
-            return cls(doc['name'], doc['commands'], doc['server'])
+            return cls(doc['_id'], doc['name'], doc['commands'], doc['server'])
         return None
 
 
 class Snippet(_SnippetBase):
     async def commit(self, mdb):
-        await mdb.snippets.update_one({"owner": self.owner, "name": self.name},
-                                      {"$set": {"snippet": self.code}}, upsert=True)
+        result = await mdb.snippets.update_one({"owner": self.owner, "name": self.name},
+                                               {"$set": {"snippet": self.code}}, upsert=True)
+        if result.upserted_id:
+            self.id = result.upserted_id
 
     async def rename(self, mdb, new_name):
         await mdb.snippets.update_one({"owner": self.owner, "name": self.name},
@@ -172,6 +196,11 @@ class Snippet(_SnippetBase):
 
     async def delete(self, mdb):
         await mdb.snippets.delete_one({"owner": self.owner, "name": self.name})
+
+    async def log_invocation(self, ctx, _):
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": "snippet", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+        )
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -184,14 +213,16 @@ class Snippet(_SnippetBase):
     async def get_named(cls, name, ctx):
         doc = await ctx.bot.mdb.snippets.find_one({"owner": str(ctx.author.id), "name": name})
         if doc:
-            return cls(doc['name'], doc['snippet'], doc['owner'])
+            return cls(doc['_id'], doc['name'], doc['snippet'], doc['owner'])
         return None
 
 
 class Servsnippet(_SnippetBase):
     async def commit(self, mdb):
-        await mdb.servsnippets.update_one({"server": self.owner, "name": self.name},
-                                          {"$set": {"snippet": self.code}}, upsert=True)
+        result = await mdb.servsnippets.update_one({"server": self.owner, "name": self.name},
+                                                   {"$set": {"snippet": self.code}}, upsert=True)
+        if result.upserted_id:
+            self.id = result.upserted_id
 
     async def rename(self, mdb, new_name):
         await mdb.servsnippets.update_one({"server": self.owner, "name": self.name},
@@ -200,6 +231,11 @@ class Servsnippet(_SnippetBase):
 
     async def delete(self, mdb):
         await mdb.servsnippets.delete_one({"owner": self.owner, "name": self.name})
+
+    async def log_invocation(self, ctx, _):
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": "servsnippet", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+        )
 
     @staticmethod
     async def get_ctx_map(ctx):
@@ -213,5 +249,5 @@ class Servsnippet(_SnippetBase):
     async def get_named(cls, name, ctx):
         doc = await ctx.bot.mdb.servsnippets.find_one({"server": str(ctx.guild.id), "name": name})
         if doc:
-            return cls(doc['name'], doc['snippet'], doc['server'])
+            return cls(doc['_id'], doc['name'], doc['snippet'], doc['server'])
         return None

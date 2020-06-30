@@ -1,4 +1,5 @@
 import abc
+import datetime
 import enum
 
 from bson import ObjectId
@@ -167,20 +168,32 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         alias_bindings = await self._generate_default_alias_bindings(ctx)
         snippet_bindings = await self._generate_default_snippet_bindings(ctx)
 
+        # insert subscription
         await self.sub_coll(ctx).insert_one(
             {"type": "subscribe", "subscriber_id": ctx.author.id, "object_id": self.id,
              "alias_bindings": alias_bindings, "snippet_bindings": snippet_bindings}
         )
+        # increase subscription count
         await ctx.bot.mdb.workshop_collections.update_one(
             {"_id": self.id},
             {"$inc": {"num_subscribers": 1}}
         )
+        # log subscribe event
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": "subscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+        )
 
     async def unsubscribe(self, ctx):
+        # remove sub doc
         await super().unsubscribe(ctx)
+        # decr sub count
         await ctx.bot.mdb.workshop_collections.update_one(
             {"_id": self.id},
             {"$inc": {"num_subscribers": -1}}
+        )
+        # log unsub event
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": "unsubscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
         )
 
     async def set_server_active(self, ctx):
@@ -194,38 +207,63 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         alias_bindings = await self._generate_default_alias_bindings(ctx)
         snippet_bindings = await self._generate_default_snippet_bindings(ctx)
 
+        # insert sub doc
         await self.sub_coll(ctx).insert_one(
             {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id,
              "alias_bindings": alias_bindings, "snippet_bindings": snippet_bindings}
         )
+        # incr sub count
         await ctx.bot.mdb.workshop_collections.update_one(
             {"_id": self.id},
             {"$inc": {"num_guild_subscribers": 1}}
         )
+        # log sub event
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": "server_subscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+        )
 
     async def unset_server_active(self, ctx):
+        # remove sub doc
         await super().unset_server_active(ctx)
+        # decr sub count
         await ctx.bot.mdb.workshop_collections.update_one(
             {"_id": self.id},
             {"$inc": {"num_guild_subscribers": -1}}
         )
+        # log unsub event
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": "server_unsubscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+        )
+
+    async def _bindings_sanity_check(self, ctx, the_ids, the_bindings, binding_cls):
+        # sanity check: ensure all aliases are in the bindings
+        binding_ids = {b['id'] for b in the_bindings}
+        missing_ids = set(the_ids).difference(binding_ids)
+        for missing in missing_ids:
+            obj = await binding_cls.from_id(ctx, missing, collection=self)
+            the_bindings.append({"name": obj.name, "id": obj.id})
+
+        # sanity check: ensure there is no binding to anything deleted
+        return [b for b in the_bindings if b['id'] in the_ids]
 
     async def update_alias_bindings(self, ctx, subscription_doc):
         """Updates the alias bindings for a given subscription (given the entire subscription document)."""
-        # sanity check: ensure all aliases are in the bindings and there is no binding to anything deleted
-        # todo
+        the_bindings = await self._bindings_sanity_check(
+            ctx, self._alias_ids, subscription_doc['alias_bindings'], WorkshopAlias)
+
         await self.sub_coll(ctx).update_one(
-            {"type": subscription_doc['type'], "subscriber_id": subscription_doc['subscriber_id'],
-             "object_id": self.id},
-            {"$set": {"alias_bindings": subscription_doc['alias_bindings']}}
+            {"_id": subscription_doc['_id']},
+            {"$set": {"alias_bindings": the_bindings}}
         )
 
     async def update_snippet_bindings(self, ctx, subscription_doc):
         """Updates the snippet bindings for a given subscription (given the entire subscription document)."""
+        the_bindings = await self._bindings_sanity_check(
+            ctx, self._snippet_ids, subscription_doc['snippet_bindings'], WorkshopSnippet)
+
         await self.sub_coll(ctx).update_one(
-            {"type": subscription_doc['type'], "subscriber_id": subscription_doc['subscriber_id'],
-             "object_id": self.id},
-            {"$set": {"snippet_bindings": subscription_doc['snippet_bindings']}}
+            {"_id": subscription_doc['_id']},
+            {"$set": {"snippet_bindings": the_bindings}}
         )
 
 
@@ -322,6 +360,13 @@ class WorkshopAlias(WorkshopCollectableObject):
         return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], raw['collection_id'],
                    raw['subcommand_ids'], raw['parent_id'], collection, parent)
 
+    # helpers
+    async def log_invocation(self, ctx, is_server):
+        inv_type = 'workshop_alias' if not is_server else 'workshop_servalias'
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+        )
+
 
 class WorkshopSnippet(WorkshopCollectableObject):
     @classmethod
@@ -335,6 +380,13 @@ class WorkshopSnippet(WorkshopCollectableObject):
 
         versions = [CodeVersion.from_dict(cv) for cv in raw['versions']]
         return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], raw['collection_id'], collection)
+
+    # helpers
+    async def log_invocation(self, ctx, is_server):
+        inv_type = 'workshop_snippet' if not is_server else 'workshop_servsnippet'
+        await ctx.bot.mdb.analytics_alias_events.insert_one(
+            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+        )
 
 
 class CodeVersion:

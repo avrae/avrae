@@ -18,9 +18,14 @@ async def handle_aliases(ctx):
     # ctx.invoked_with: the first word
     alias = ctx.invoked_with
 
+    server_invoker = False
+
     # personal alias/servalias
     try:
-        the_alias = (await get_personal_alias_named(ctx, alias)) or (await get_server_alias_named(ctx, alias))
+        the_alias = await get_personal_alias_named(ctx, alias)
+        if the_alias is None:
+            the_alias = await get_server_alias_named(ctx, alias)
+            server_invoker = True
     except AliasNameConflict as anc:
         return await ctx.send(str(anc))
 
@@ -28,7 +33,9 @@ async def handle_aliases(ctx):
         return
 
     # todo workshop alias subcommands
-    # todo analytics
+
+    # analytics
+    await the_alias.log_invocation(ctx, server_invoker)
 
     command_code = await handle_alias_arguments(the_alias.code, ctx)
     char = None

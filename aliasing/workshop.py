@@ -301,6 +301,10 @@ class WorkshopCollectableObject(abc.ABC):
         self._collection_id = collection_id
 
     @property
+    def short_docs(self):
+        return self.docs.split('\n')[0]
+
+    @property
     def collection(self):
         if self._collection is None:
             raise AttributeError("Collection is not loaded - run load_collection() first")

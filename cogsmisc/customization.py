@@ -88,7 +88,13 @@ class Customization(commands.Cog):
         embed.title = f"{ctx.prefix}{bound_name}"
         embed.description = f"From {the_collection.name} by {owner}.\n" \
                             f"[View on Workshop]({the_collection.url})"
-        embed.add_field(name="Help", value=alias.docs or "No documentation.")  # todo subcommands?
+        embed.add_field(name="Help", value=alias.docs or "No documentation.", inline=False)
+
+        await alias.load_subcommands(ctx)
+        if alias.subcommands:
+            subcommands = "\n".join(f"**{sc.name}** - {sc.short_docs}" for sc in alias.subcommands)
+            embed.add_field(name="Subcommands", value=subcommands, inline=False)
+
         return await ctx.send(embed=embed)
 
     async def _workshop_subscribe(self, ctx, url, is_server):

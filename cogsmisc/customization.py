@@ -4,6 +4,7 @@ Created on Jan 30, 2017
 @author: andrew
 """
 import asyncio
+import re
 import textwrap
 from collections import Counter
 
@@ -77,6 +78,148 @@ class Customization(commands.Cog):
             await self.bot.process_commands(ctx.message)
             await asyncio.sleep(1)
 
+    # ==== workshop helpers ====
+    @staticmethod
+    async def _workshop_view_alias_embed(ctx, alias, bound_name):
+        """Common helper to view an alias from a workshop collection (!alias NAME/!servalias NAME)"""
+        embed = EmbedWithAuthor(ctx)
+        the_collection = await alias.load_collection(ctx)
+        owner = await user_from_id(ctx, the_collection.owner)
+        embed.title = f"{ctx.prefix}{bound_name}"
+        embed.description = f"From {the_collection.name} by {owner}.\n" \
+                            f"[View on Workshop]({the_collection.url})"
+        embed.add_field(name="Help", value=alias.docs or "No documentation.")  # todo subcommands?
+        return await ctx.send(embed=embed)
+
+    async def _workshop_subscribe(self, ctx, url, is_server):
+        coll_match = re.match(r'(?:https?://)?avrae\.io/dashboard/workshop/([0-9a-f]{24})(?:$|/)', url)
+        if coll_match is None:
+            return await ctx.send("This is not an Alias Workshop link.")
+
+        if is_server and not self.can_edit_servaliases(ctx):
+            return await ctx.send("You do not have permission to edit server subscriptions. Either __Administrator__ "
+                                  "Discord permissions or a role called \"Server Aliaser\" is required.")
+
+        collection_id = coll_match.group(1)
+        the_collection = await workshop.WorkshopCollection.from_id(ctx, collection_id)
+        # private and duplicate logic handled here, also loads aliases/snippets
+        if is_server:
+            await the_collection.set_server_active(ctx)
+        else:
+            await the_collection.subscribe(ctx)
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = f"Subscribed to {the_collection.name}"
+        embed.url = the_collection.url
+        embed.description = the_collection.description
+        if the_collection.aliases:
+            embed.add_field(name="Server Aliases" if is_server else "Aliases",
+                            value=", ".join(sorted(a.name for a in the_collection.aliases)))
+        if the_collection.snippets:
+            embed.add_field(name="Server Snippets" if is_server else "Snippets",
+                            value=", ".join(sorted(a.name for a in the_collection.snippets)))
+        await ctx.send(embed=embed)
+
+    @staticmethod
+    async def _workshop_autofix(ctx, personal_cls, workshop_sub_meth, is_alias):
+        binding_key = 'alias_bindings' if is_alias else 'snippet_bindings'
+
+        name_indices = Counter()
+        for name in await personal_cls.get_ctx_map(ctx):
+            name_indices[name] += 1
+
+        renamed = []
+
+        async for subscription_doc in workshop_sub_meth(ctx):
+            doc_changed = False
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+
+            for binding in subscription_doc[binding_key]:
+                old_name = binding['name']
+                if new_index := name_indices[old_name]:
+                    new_name = f"{binding['name']}-{new_index}"
+                    # do rename
+                    binding['name'] = new_name
+                    renamed.append(
+                        f"`{old_name}` ({the_collection.name}) is now `{new_name}`")
+                    doc_changed = True
+                name_indices[old_name] += 1
+
+            if doc_changed:  # write the new subscription object to the db
+                update_meth = the_collection.update_alias_bindings if is_alias \
+                    else the_collection.update_snippet_bindings
+                await update_meth(ctx, subscription_doc)
+
+        return renamed
+
+    @staticmethod
+    async def _common_list(ctx, personal_cls, workshop_sub_meth, obj_name_pl, is_alias):
+        binding_key = 'alias_bindings' if is_alias else 'snippet_bindings'
+        embed = EmbedWithAuthor(ctx)
+
+        has_at_least_1_alias = False
+
+        user_aliases = await personal_cls.get_ctx_map(ctx)
+        user_alias_names = list(user_aliases.keys())
+        if user_alias_names:
+            has_at_least_1_alias = True
+            embed.add_field(name=f"Your {obj_name_pl.title()}", value=', '.join(sorted(user_alias_names)), inline=False)
+
+        async for subscription_doc in workshop_sub_meth(ctx):
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            if bindings := subscription_doc[binding_key]:
+                has_at_least_1_alias = True
+                embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
+                                inline=False)
+            else:
+                embed.add_field(name=the_collection.name, value=f"This collection has no {obj_name_pl}.", inline=False)
+
+        if not has_at_least_1_alias:
+            embed.description = f"You have no {obj_name_pl}. Check out the [Alias Workshop]" \
+                                "(https://avrae.io/dashboard/workshop) to get some, " \
+                                "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!"
+
+        return await ctx.send(embed=embed)
+
+    @staticmethod
+    async def _common_rename(ctx, old_name, new_name, personal_cls, workshop_sub_meth, obj_name, is_alias):
+        binding_key = 'alias_bindings' if is_alias else 'snippet_bindings'
+
+        personal_cls.precreate_checks(new_name, '')
+
+        # list of (name, (alias or sub doc, collection or None))
+        choices = []
+        if personal_obj := await personal_cls.get_named(old_name, ctx):
+            choices.append((f"{old_name} ({obj_name})",
+                            (personal_obj, None)))
+
+        # get list of (subscription object ids, subscription doc)
+        async for subscription_doc in workshop_sub_meth(ctx):
+            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            for binding in subscription_doc[binding_key]:
+                if binding['name'] == old_name:
+                    choices.append((f"{old_name} ({the_collection.name})",
+                                    (subscription_doc, the_collection)))
+
+        old_obj, collection = await get_selection(ctx, choices)
+
+        if isinstance(old_obj, personal_cls):
+            if await personal_cls.get_named(new_name, ctx):
+                return await ctx.send(f"You already have a {obj_name} named {new_name}.")
+            await old_obj.rename(ctx.bot.mdb, new_name)
+            return await ctx.send(f"Okay, renamed the {obj_name} {old_name} to {new_name}.")
+        else:  # old_obj is actually a subscription doc
+            sub_doc = old_obj
+            for binding in sub_doc[binding_key]:
+                if binding['name'] == old_name:
+                    binding['name'] = new_name
+
+            update_meth = collection.update_alias_bindings if is_alias else collection.update_snippet_bindings
+            await update_meth(ctx, sub_doc)
+            return await ctx.send(
+                f"Okay, the workshop {obj_name} that was bound to {old_name} is now bound to {new_name}.")
+
+    # ==== aliases ====
     @commands.group(invoke_without_command=True)
     async def alias(self, ctx, alias_name=None, *, cmds=None):
         """
@@ -111,8 +254,7 @@ class Customization(commands.Cog):
                                            f'<https://avrae.io/dashboard/aliases>'
         await ctx.send(out)
 
-    @staticmethod
-    async def _view_alias(ctx, alias_name):
+    async def _view_alias(self, ctx, alias_name):
         alias = await helpers.get_personal_alias_named(ctx, alias_name)
         if alias is None:
             return await ctx.send(f"No alias named {alias_name} found.")
@@ -123,43 +265,15 @@ class Customization(commands.Cog):
                                                f'<https://avrae.io/dashboard/aliases>'
             return await ctx.send(out)
         else:
-            embed = EmbedWithAuthor(ctx)
-            the_collection = await alias.load_collection(ctx)
-            owner = await user_from_id(ctx, the_collection.owner)
-            embed.title = f"{ctx.prefix}{alias_name}"
-            embed.description = f"From {the_collection.name} by {owner}.\n" \
-                                f"[View on Workshop](https://avrae.io/workshop/{the_collection.id})"
-            embed.add_field(name="Help", value=alias.docs or "No documentation.")
-            return await ctx.send(embed=embed)
+            await self._workshop_view_alias_embed(ctx, alias, alias_name)
 
     @alias.command(name='list')
     async def alias_list(self, ctx):
         """Lists all user aliases."""
-        embed = EmbedWithAuthor(ctx)
-
-        has_at_least_1_alias = False
-
-        user_aliases = await personal.Alias.get_ctx_map(ctx)
-        user_alias_names = list(user_aliases.keys())
-        if user_alias_names:
-            has_at_least_1_alias = True
-            embed.add_field(name="Your Aliases", value=', '.join(sorted(user_alias_names)), inline=False)
-
-        async for subscription_doc in workshop.WorkshopCollection.my_subs(ctx):
-            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
-            if bindings := subscription_doc['alias_bindings']:
-                has_at_least_1_alias = True
-                embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
-                                inline=False)
-            else:
-                embed.add_field(name=the_collection.name, value="This collection has no aliases.", inline=False)
-
-        if not has_at_least_1_alias:
-            embed.description = "You have no aliases. Check out the [Alias Workshop]" \
-                                "(https://avrae.io/dashboard/workshop) to get some, " \
-                                "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!"
-
-        return await ctx.send(embed=embed)
+        await self._common_list(ctx,
+                                personal_cls=personal.Alias,
+                                workshop_sub_meth=workshop.WorkshopCollection.my_subs,
+                                obj_name_pl="aliases", is_alias=True)
 
     @alias.command(name='delete', aliases=['remove'])
     async def alias_delete(self, ctx, alias_name):
@@ -186,80 +300,27 @@ class Customization(commands.Cog):
         return await ctx.send("OK. I have deleted all your aliases.")
 
     @alias.command(name='subscribe', aliases=['sub'])
-    async def alias_subscribe(self, ctx, alias_id):
-        # todo url stuff
-        the_collection = await workshop.WorkshopCollection.from_id(ctx, alias_id)
-        await the_collection.subscribe(ctx)
-        await ctx.send('ok')
+    async def alias_subscribe(self, ctx, url):
+        """Subscribes to all aliases and snippets in a workshop collection."""
+        await self._workshop_subscribe(ctx, url, is_server=False)
 
     @alias.command(name='autofix', hidden=True)
     async def alias_autofix(self, ctx):
         """Ensures that all personal and subscribed workshop aliases have unique names."""
-        name_indices = Counter()
-        for name in await personal.Alias.get_ctx_map(ctx):
-            name_indices[name] += 1
-
-        renamed = []
-
-        async for subscription_doc in workshop.WorkshopCollection.my_subs(ctx):
-            doc_changed = False
-            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
-
-            for binding in subscription_doc['alias_bindings']:
-                old_name = binding['name']
-                if new_index := name_indices[old_name]:
-                    new_name = f"{binding['name']}-{new_index}"
-                    # do rename
-                    binding['name'] = new_name
-                    renamed.append(
-                        f"`{ctx.prefix}{old_name}` ({the_collection.name}) is now `{ctx.prefix}{new_name}`")
-                    doc_changed = True
-                name_indices[old_name] += 1
-
-            if doc_changed:  # write the new subscription object to the db
-                await the_collection.update_alias_bindings(ctx, subscription_doc)
-
+        renamed = await self._workshop_autofix(ctx, personal_cls=personal.Alias,
+                                               workshop_sub_meth=workshop.WorkshopCollection.my_subs,
+                                               is_alias=True)
         the_renamed = '\n'.join(renamed)
         await ctx.send(f"Renamed {len(renamed)} aliases!\n{the_renamed}")
 
     @alias.command(name='rename')
     async def alias_rename(self, ctx, old_name, new_name):
         """Renames a personal or subscribed workshop alias to a new name."""
+        await self._common_rename(ctx, old_name, new_name,
+                                  personal_cls=personal.Alias,
+                                  workshop_sub_meth=workshop.WorkshopCollection.my_subs,
+                                  obj_name="alias", is_alias=True)
 
-        personal.Alias.precreate_checks(new_name, '')
-
-        # list of (name, (alias or sub doc, collection or None))
-        choices = []
-        if personal_alias := await personal.Alias.get_named(old_name, ctx):
-            choices.append((f"{ctx.prefix}{old_name} (Personal alias)",
-                            (personal_alias, None)))
-
-        # get list of (subscription object ids, subscription doc)
-        async for subscription_doc in workshop.WorkshopCollection.my_subs(ctx):
-            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
-            for binding in subscription_doc['alias_bindings']:
-                if binding['name'] == old_name:
-                    choices.append((f"{ctx.prefix}{old_name} ({the_collection.name})",
-                                    (subscription_doc, the_collection)))
-
-        old_alias, collection = await get_selection(ctx, choices)
-
-        if isinstance(old_alias, personal.Alias):
-            if await personal.Alias.get_named(new_name, ctx):
-                return await ctx.send(f"You already have a personal alias named {new_name}.")
-            await old_alias.rename(ctx.bot.mdb, new_name)
-            return await ctx.send(f"Okay, renamed the personal alias {old_name} to {new_name}.")
-        else:  # old_alias is actually a subscription doc
-            sub_doc = old_alias
-            for binding in sub_doc['alias_bindings']:
-                if binding['name'] == old_name:
-                    binding['name'] = new_name
-
-            await collection.update_alias_bindings(ctx, sub_doc)
-            return await ctx.send(f"Okay, the workshop alias that was bound to {old_name} is now bound to {new_name}.")
-
-    # todo workshopify stuff below here
-    # todo also make stuff below here better oop
     @commands.group(invoke_without_command=True, aliases=['serveralias'])
     @commands.guild_only()
     async def servalias(self, ctx, alias_name=None, *, cmds=None):
@@ -268,21 +329,14 @@ class Customization(commands.Cog):
         If a user and a server have aliases with the same name, the user alias will take priority."""
         if alias_name is None:
             return await self.servalias_list(ctx)
-
-        server_aliases = await personal.Servalias.get_ctx_map(ctx)
         if alias_name in self.bot.all_commands:
             return await ctx.send('There is already a built-in command with that name!')
 
+        if ' ' in alias_name or not alias_name:
+            return await ctx.send('Invalid alias name.')
+
         if cmds is None:
-            alias = server_aliases.get(alias_name)
-            if alias is None:
-                alias = 'Not defined.'
-            else:
-                alias = f'{ctx.prefix}alias {alias_name} {alias}'
-            out = f'**{alias_name}**: ```py\n{alias}\n```'
-            out = out if len(out) <= 2000 else f'Servalias `{ctx.prefix}{alias_name}`.\n' \
-                                               f'Command output too long to display.'
-            return await ctx.send(out)
+            return await self._view_servalias(ctx, alias_name)
 
         if not self.can_edit_servaliases(ctx):
             return await ctx.send("You do not have permission to edit server aliases. Either __Administrator__ "
@@ -293,19 +347,31 @@ class Customization(commands.Cog):
         await alias.commit(self.bot.mdb)
 
         out = f'Server alias `{ctx.prefix}{alias_name}` added.' \
-              f'```py\n{ctx.prefix}alias {alias_name} {cmds.lstrip("!")}\n```'
-        out = out if len(out) <= 2000 else f'Servalias `{ctx.prefix}{alias_name}` added.\n' \
+              f'```py\n{ctx.prefix}servalias {alias_name} {cmds.lstrip("!")}\n```'
+
+        out = out if len(out) <= 2000 else f'Server alias `{ctx.prefix}{alias_name}` added.\n' \
                                            f'Command output too long to display.'
         await ctx.send(out)
+
+    async def _view_servalias(self, ctx, alias_name):
+        alias = await helpers.get_server_alias_named(ctx, alias_name)
+        if alias is None:
+            return await ctx.send(f"No server alias named {alias_name} found.")
+        elif isinstance(alias, personal.Servalias):  # personal alias
+            out = f'**{alias_name}**: ```py\n{ctx.prefix}servalias {alias.name} {alias.code}\n```'
+            out = out if len(out) <= 2000 else f'**{alias.name}**:\nCommand output too long to display.'
+            return await ctx.send(out)
+        else:
+            await self._workshop_view_alias_embed(ctx, alias, alias_name)
 
     @servalias.command(name='list')
     @commands.guild_only()
     async def servalias_list(self, ctx):
         """Lists all server aliases."""
-        server_aliases = await personal.Servalias.get_ctx_map(ctx)
-        aliases = list(server_aliases.keys())
-        sorted_aliases = sorted(aliases)
-        return await ctx.send('This server\'s aliases:\n{}'.format(', '.join(sorted_aliases)))
+        await self._common_list(ctx,
+                                personal_cls=personal.Servalias,
+                                workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
+                                obj_name_pl="server aliases", is_alias=True)
 
     @servalias.command(name='delete', aliases=['remove'])
     @commands.guild_only()
@@ -315,10 +381,45 @@ class Customization(commands.Cog):
         if not self.can_edit_servaliases(ctx):
             return await ctx.send("You do not have permission to edit server aliases. Either __Administrator__ "
                                   "Discord permissions or a role called \"Server Aliaser\" is required.")
-        result = await self.bot.mdb.servaliases.delete_one({"server": str(ctx.guild.id), "name": alias_name})
-        if not result.deleted_count:
-            return await ctx.send('Server alias not found.')
-        await ctx.send('Server alias {} removed.'.format(alias_name))
+
+        alias = await personal.Servalias.get_named(alias_name, ctx)
+        if alias is None:
+            return await ctx.send(
+                'Server alias not found. If this is a workshop alias, you can unsubscribe on the Avrae '
+                'Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions>.')
+        await alias.delete(ctx.bot.mdb)
+        await ctx.send(f'Server alias {alias_name} removed.')
+
+    @servalias.command(name='subscribe', aliases=['sub'])
+    async def servalias_subscribe(self, ctx, url):
+        """Subscribes to all aliases and snippets in a workshop collection."""
+        await self._workshop_subscribe(ctx, url, is_server=True)
+
+    @servalias.command(name='autofix', hidden=True)
+    async def servalias_autofix(self, ctx):
+        """Ensures that all server and subscribed workshop aliases have unique names."""
+        if not self.can_edit_servaliases(ctx):
+            return await ctx.send("You do not have permission to edit server aliases. Either __Administrator__ "
+                                  "Discord permissions or a role called \"Server Aliaser\" is required.")
+
+        rename_msgs = await self._workshop_autofix(ctx, personal_cls=personal.Servalias,
+                                                   workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
+                                                   is_alias=True)
+
+        the_renamed = '\n'.join(rename_msgs)
+        await ctx.send(f"Renamed {len(rename_msgs)} server aliases!\n{the_renamed}")
+
+    @servalias.command(name='rename')
+    async def servalias_rename(self, ctx, old_name, new_name):
+        """Renames a server or subscribed workshop alias to a new name."""
+        if not self.can_edit_servaliases(ctx):
+            return await ctx.send("You do not have permission to edit server aliases. Either __Administrator__ "
+                                  "Discord permissions or a role called \"Server Aliaser\" is required.")
+
+        await self._common_rename(ctx, old_name, new_name,
+                                  personal_cls=personal.Servalias,
+                                  workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
+                                  obj_name="server alias", is_alias=True)
 
     @staticmethod
     def can_edit_servaliases(ctx):
@@ -329,6 +430,7 @@ class Customization(commands.Cog):
                any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles) or \
                checks.author_is_owner(ctx)
 
+    # todo workshopify stuff below here
     @commands.group(invoke_without_command=True)
     async def snippet(self, ctx, snipname=None, *, snippet=None):
         """Creates a snippet to use in attack commands.

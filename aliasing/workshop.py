@@ -72,6 +72,10 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         self._snippet_ids = snippet_ids
 
     @property
+    def url(self):
+        return f"https://avrae.io/dashboard/workshop/{self.id}"
+
+    @property
     def aliases(self):
         if self._aliases is None:
             raise AttributeError("Aliases are not loaded yet - run load_aliases() first")

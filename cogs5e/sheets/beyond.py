@@ -252,7 +252,7 @@ class BeyondSheetParser(SheetLoaderABC):
             reset = RESET_MAP.get(cons['reset'], 'long')
             name = cons['name'].replace('\u2019', "'")
 
-            if cons['max']:  # don't make counters with a range of 0 - 0
+            if cons['max'] and name:  # don't make counters with a range of 0 - 0, or blank named counters
                 out.append(
                     CustomCounter(None, name, cons['value'], minv='0', maxv=str(cons['max']), reset=reset,
                                   display_type=display_type, live_id=live_id)

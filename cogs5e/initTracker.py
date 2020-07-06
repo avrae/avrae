@@ -458,9 +458,21 @@ class InitTracker(commands.Cog):
         await combat.final()
 
     @init.command(name="reroll", aliases=['shuffle'])
-    async def reroll(self, ctx):
-        """Rerolls initiative for all combatants."""
+    async def reroll(self, ctx, *args):
+        """
+        Rerolls initiative for all combatants, and starts a new round of combat.
+        __Valid Arguments__
+        -restart - Resets the round counter (effectively restarting initiative).
+        """
         combat = await Combat.from_ctx(ctx)
+        a = argparse(args)
+
+        new_order = combat.reroll_dynamic()
+        await ctx.send(f"Rerolled initiative! New order:\n{new_order}")
+
+        # -restart (#1053)
+        if a.last('restart'):
+            combat.round_num = 0
 
         # repost summary message
         old_summary = await combat.get_summary_msg()
@@ -473,8 +485,7 @@ class InitTracker(commands.Cog):
         except:
             pass
 
-        new_order = combat.reroll_dynamic()
-        await ctx.send(f"Rerolled initiative! New order:\n{new_order}")
+
         await combat.final()
 
     @init.command(name="meta", aliases=['metaset'])

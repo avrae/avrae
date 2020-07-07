@@ -485,7 +485,6 @@ class InitTracker(commands.Cog):
         except:
             pass
 
-
         await combat.final()
 
     @init.command(name="meta", aliases=['metaset'])
@@ -841,7 +840,7 @@ class InitTracker(commands.Cog):
         await self._send_hp_result(ctx, combatant, f"{combatant.hp - before:+}")
 
     @init.command()
-    async def thp(self, ctx, name: str, *, thp: int):
+    async def thp(self, ctx, name: str, *, thp: str):
         """Modifies the temporary HP of a combatant.
         Usage: !init thp <NAME> <HP>
         Sets the combatants' THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP)."""
@@ -851,22 +850,27 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant not found.")
             return
 
-        if thp >= 0:
-            combatant.temp_hp = thp
-        else:
-            if combatant.temp_hp:
-                combatant.temp_hp += thp
-            else:
-                return await ctx.send("Combatant has no temp hp.")
+        thp_roll = roll(thp)
+        value = thp_roll.total
 
-        out = "{}: {}".format(combatant.name, combatant.hp_str())
-        await ctx.send(out)
+        if value >= 0:
+            combatant.temp_hp = value
+        else:
+            combatant.temp_hp += value
+
+        delta = ""
+        if 'd' in thp:
+            delta = f"({thp_roll.result})"
+
         if combatant.is_private:
+            await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
             try:
                 controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send("{}'s HP: {}".format(combatant.name, combatant.hp_str(True)))
+                await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)} {delta}")
             except:
                 pass
+        else:
+            await ctx.send(f"{combatant.name}: {combatant.hp_str()} {delta}")
         await combat.final()
 
     @init.command()

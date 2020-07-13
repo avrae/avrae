@@ -105,6 +105,7 @@ class InitTracker(commands.Cog):
         -controller <controller> - Pings a different person on turn.
         -group <group> - Adds the combatant to a group.
         -hp <hp> - Sets starting HP. Default: None.
+        -thp <thp> - Sets starting THP. Default: 0.
         -ac <ac> - Sets the combatant' AC. Default: None.
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.
@@ -120,6 +121,8 @@ class InitTracker(commands.Cog):
         resists = {}
         args = argparse(args)
         adv = args.adv(boolwise=True)
+
+        thp = args.last('thp', type_=int)
 
         if args.last('h', type_=bool):
             private = True
@@ -169,6 +172,10 @@ class InitTracker(commands.Cog):
         me = Combatant.new(name, controller, init, init_skill, hp, ac, private, Resistances.from_dict(resists), ctx,
                            combat)
 
+        # -thp (#1142)
+        if thp and thp > 0:
+            me.temp_hp = thp
+
         if group is None:
             combat.add_combatant(me)
             await ctx.send(f"{name} was added to combat with initiative {init_roll_skeleton}.")
@@ -192,6 +199,7 @@ class InitTracker(commands.Cog):
         -group <group> - Adds the combatant to a group.
         -rollhp - Rolls the monsters HP, instead of using the default value.
         -hp <hp> - Sets starting HP.
+        -thp <thp> - Sets starting THP.
         -ac <ac> - Sets the combatant's starting AC."""
 
         monster = await select_monster_full(ctx, monster_name, pm=True)
@@ -205,6 +213,7 @@ class InitTracker(commands.Cog):
         p = args.last('p', type_=int)
         rollhp = args.last('rollhp', False, bool)
         hp = args.last('hp', type_=int)
+        thp = args.last('thp', type_=int)
         ac = args.last('ac', type_=int)
         n = args.last('n', 1, int)
         name_template = args.last('name', monster.name[:2].upper() + '#')
@@ -246,6 +255,7 @@ class InitTracker(commands.Cog):
                     init = int(p)
                 controller = str(ctx.author.id)
 
+                # -hp
                 rolled_hp = None
                 if rollhp:
                     rolled_hp = roll(monster.hitdice)
@@ -254,6 +264,11 @@ class InitTracker(commands.Cog):
 
                 me = MonsterCombatant.from_monster(monster, ctx, combat, name, controller, init, private,
                                                    hp=hp or rolled_hp, ac=ac)
+
+                # -thp (#1142)
+                if thp and thp > 0:
+                    me.temp_hp = thp
+
                 if group is None:
                     combat.add_combatant(me)
                     out += f"{name} was added to combat with initiative {check_roll.result if p is None else p}.\n"
@@ -443,9 +458,21 @@ class InitTracker(commands.Cog):
         await combat.final()
 
     @init.command(name="reroll", aliases=['shuffle'])
-    async def reroll(self, ctx):
-        """Rerolls initiative for all combatants."""
+    async def reroll(self, ctx, *args):
+        """
+        Rerolls initiative for all combatants, and starts a new round of combat.
+        __Valid Arguments__
+        -restart - Resets the round counter (effectively restarting initiative).
+        """
         combat = await Combat.from_ctx(ctx)
+        a = argparse(args)
+
+        new_order = combat.reroll_dynamic()
+        await ctx.send(f"Rerolled initiative! New order:\n{new_order}")
+
+        # -restart (#1053)
+        if a.last('restart'):
+            combat.round_num = 0
 
         # repost summary message
         old_summary = await combat.get_summary_msg()
@@ -458,8 +485,6 @@ class InitTracker(commands.Cog):
         except:
             pass
 
-        new_order = combat.reroll_dynamic()
-        await ctx.send(f"Rerolled initiative! New order:\n{new_order}")
         await combat.final()
 
     @init.command(name="meta", aliases=['metaset'])
@@ -815,7 +840,7 @@ class InitTracker(commands.Cog):
         await self._send_hp_result(ctx, combatant, f"{combatant.hp - before:+}")
 
     @init.command()
-    async def thp(self, ctx, name: str, *, thp: int):
+    async def thp(self, ctx, name: str, *, thp: str):
         """Modifies the temporary HP of a combatant.
         Usage: !init thp <NAME> <HP>
         Sets the combatants' THP if hp is positive, modifies it otherwise (i.e. `!i thp Avrae 5` would set Avrae's THP to 5 but `!i thp Avrae -2` would remove 2 THP)."""
@@ -825,22 +850,27 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant not found.")
             return
 
-        if thp >= 0:
-            combatant.temp_hp = thp
-        else:
-            if combatant.temp_hp:
-                combatant.temp_hp += thp
-            else:
-                return await ctx.send("Combatant has no temp hp.")
+        thp_roll = roll(thp)
+        value = thp_roll.total
 
-        out = "{}: {}".format(combatant.name, combatant.hp_str())
-        await ctx.send(out)
+        if value >= 0:
+            combatant.temp_hp = value
+        else:
+            combatant.temp_hp += value
+
+        delta = ""
+        if 'd' in thp:
+            delta = f"({thp_roll.result})"
+
         if combatant.is_private:
+            await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
             try:
                 controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send("{}'s HP: {}".format(combatant.name, combatant.hp_str(True)))
+                await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)} {delta}")
             except:
                 pass
+        else:
+            await ctx.send(f"{combatant.name}: {combatant.hp_str()} {delta}")
         await combat.final()
 
     @init.command()

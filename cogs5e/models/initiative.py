@@ -138,9 +138,13 @@ class Combat:
     def options(self, value):
         self._options = value
 
-    @property  # private write
+    @property
     def round_num(self):
         return self._round
+
+    @round_num.setter
+    def round_num(self, value):
+        self._round = value
 
     @property  # private write
     def turn_num(self):
@@ -256,6 +260,10 @@ class Combat:
             c.init = init_roll.total
             rolls[c.name] = init_roll
         self.sort_combatants()
+
+        # reset current turn
+        self._turn = 0
+        self._current_index = None
 
         order = []
         for combatant_name, init_roll in sorted(rolls.items(), key=lambda r: r[1].total, reverse=True):

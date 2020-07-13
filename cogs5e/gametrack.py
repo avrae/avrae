@@ -210,20 +210,28 @@ class GameTrack(commands.Cog):
         await ctx.send(f"{character.name}: {character.hp_str()} ({character.hp - before:+})")
 
     @game.command(name='thp')
-    async def game_thp(self, ctx, thp: int = None):
+    async def game_thp(self, ctx, *, thp: str = None):
         """Modifies the temp HP of a the current active character.
         If positive, assumes set; if negative, assumes mod."""
         character: Character = await Character.from_ctx(ctx)
 
         if thp is not None:
-            if thp >= 0:
-                character.temp_hp = thp
+            thp_roll = d20.roll(thp)
+            value = thp_roll.total
+
+            if value >= 0:
+                character.temp_hp = value
             else:
-                character.temp_hp += thp
+                character.temp_hp += value
 
             await character.commit(ctx)
 
-        out = f"{character.name}: {character.hp_str()}"
+            delta = ""
+            if 'd' in thp:
+                delta = f"({thp_roll.result})"
+            out = f"{character.name}: {character.hp_str()} {delta}"
+        else:
+            out = f"{character.name}: {character.hp_str()}"
         await ctx.send(out)
 
     @game.group(name='deathsave', aliases=['ds'], invoke_without_command=True)

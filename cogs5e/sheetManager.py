@@ -388,7 +388,7 @@ class SheetManager(commands.Cog):
         """Updates the current character sheet, preserving all settings.
         __Valid Arguments__
         `-v` - Shows character sheet after update is complete.
-        `-cc` - Updates custom counters from Dicecloud."""
+        `-nocc` - Do not automatically create or update custom counters for class resources and features."""
         old_character: Character = await Character.from_ctx(ctx)
         url = old_character.upstream
         args = argparse(args)

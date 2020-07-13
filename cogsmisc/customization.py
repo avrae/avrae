@@ -16,6 +16,7 @@ from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
+from cogs5e.models.errors import NoCharacter
 from utils import checks
 from utils.functions import auth_and_chan, clean_content, confirm, get_selection, user_from_id
 
@@ -443,11 +444,15 @@ class Customization(commands.Cog):
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await self.snippet_list(ctx)
-        user_snippets = await personal.Snippet.get_ctx_map(ctx)
 
         if snippet is None:
+            user_snippets = await personal.Snippet.get_ctx_map(ctx)
+            the_snippet = user_snippets.get(snipname)
+            if the_snippet is None:
+                return await ctx.send(f"No snippet named {snipname} found.")
+
             out = f'**{snipname}**:```py\n' \
-                  f'{ctx.prefix}snippet {snipname} {user_snippets.get(snipname, "Not defined.")}' \
+                  f'{ctx.prefix}snippet {snipname} {the_snippet["snippet"]}' \
                   f'\n```'
             out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
                                                f'Command output too long to display.\n' \
@@ -502,11 +507,16 @@ class Customization(commands.Cog):
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
         if snipname is None:
             return await self.servsnippet_list(ctx)
-        server_snippets = await personal.Servsnippet.get_ctx_map(ctx)
 
         if snippet is None:
+            server_snippets = await personal.Servsnippet.get_ctx_map(ctx)
+            the_snippet = server_snippets.get(snipname)
+
+            if the_snippet is None:
+                return await ctx.send(f"No server snippet named {snipname} found.")
+
             out = f'**{snipname}**:```py\n' \
-                  f'{ctx.prefix}snippet {snipname} {server_snippets.get(snipname, "Not defined.")}' \
+                  f'{ctx.prefix}snippet {snipname} {the_snippet["snippet"]}' \
                   f'\n```'
             out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
                                                f'Command output too long to display.'
@@ -551,9 +561,14 @@ class Customization(commands.Cog):
     @commands.command()
     async def test(self, ctx, *, teststr):
         """Parses `str` as if it were in an alias, for testing."""
-        char = await Character.from_ctx(ctx)
         try:
-            parsed = await char.parse_cvars(teststr, ctx)
+            char = await Character.from_ctx(ctx)
+            transformer = char.parse_cvars
+        except NoCharacter:
+            transformer = helpers.parse_no_char
+
+        try:
+            parsed = await transformer(teststr, ctx)
         except EvaluationError as err:
             return await helpers.handle_alias_exception(ctx, err)
         parsed = clean_content(parsed, ctx)
@@ -571,9 +586,16 @@ class Customization(commands.Cog):
         -color [hex color]
         -t [timeout (0..600)]
         """
+        try:
+            char = await Character.from_ctx(ctx)
+            transformer = char.parse_cvars
+        except NoCharacter:
+            transformer = helpers.parse_no_char
 
-        char = await Character.from_ctx(ctx)
-        parsed = await char.parse_cvars(teststr, ctx)
+        try:
+            parsed = await transformer(teststr, ctx)
+        except EvaluationError as err:
+            return await helpers.handle_alias_exception(ctx, err)
 
         embed_command = self.bot.get_command('embed')
         if embed_command is None:

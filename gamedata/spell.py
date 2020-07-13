@@ -10,7 +10,7 @@ from cogs5e.models.automation import Automation
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args, add_homebrew_footer
 from cogs5e.models.errors import AvraeException
 from utils.constants import STAT_ABBREVIATIONS
-from utils.functions import verbose_stat
+from utils.functions import trim_str, verbose_stat
 from .shared import Sourced
 
 log = logging.getLogger(__name__)
@@ -254,12 +254,10 @@ class Spell(Sourced):
             if phrase:
                 embed.description = f"*{phrase}*"
 
-            text = self.description
-            if len(text) > 1020:
-                text = f"{text[:1020]}..."
+            text = trim_str(self.description, 1024)
             embed.add_field(name="Description", value=text, inline=False)
             if l != self.level and self.higherlevels:
-                embed.add_field(name="At Higher Levels", value=self.higherlevels, inline=False)
+                embed.add_field(name="At Higher Levels", value=trim_str(self.higherlevels, 1024), inline=False)
             embed.set_footer(text="No spell automation found.")
 
         if l > 0 and not i:

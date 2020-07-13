@@ -1107,7 +1107,7 @@ def _max_mapper(node):
 def _crit_mapper(node):
     """A function that doubles the number of dice for each Dice AST node."""
     if isinstance(node, d20.ast.Dice):
-        node.num *= 2
+        return d20.ast.Dice(node.num * 2, node.size)
     return node
 
 

@@ -727,7 +727,7 @@ class Damage(Effect):
         args = autoctx.args
         damage = self.damage
         resistances = Resistances()
-        d_arg = args.join('d', '+', ephem=True)
+        d_args = args.get('d', [], ephem=True)
         c_arg = args.join('c', '+', ephem=True)
         crit_arg = args.last('crit', None, bool, ephem=True)
         max_arg = args.last('max', None, bool, ephem=True)
@@ -752,16 +752,11 @@ class Damage(Effect):
 
         # add on combatant damage effects (#224)
         if autoctx.combatant:
-            effect_d = '+'.join(autoctx.combatant.active_effects('d'))
-            if effect_d:
-                if d_arg:
-                    d_arg = f"{d_arg}+{effect_d}"
-                else:
-                    d_arg = effect_d
+            d_args.extend(autoctx.combatant.active_effects('d'))
 
         # check if we actually need to care about the -d tag
         if self.is_meta(autoctx):
-            d_arg = None  # d was likely applied in the Roll effect already
+            d_args = []  # d was likely applied in the Roll effect already
 
         # set up damage AST
         damage = autoctx.parse_annostr(damage)
@@ -773,7 +768,7 @@ class Damage(Effect):
             dice_ast = d20.utils.tree_map(_mi_mapper(mi_arg), dice_ast)
 
         # -d #
-        if d_arg:
+        for d_arg in d_args:
             d_ast = d20.parse(d_arg)
             dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
 

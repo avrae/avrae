@@ -728,7 +728,7 @@ class Damage(Effect):
         damage = self.damage
         resistances = Resistances()
         d_args = args.get('d', [], ephem=True)
-        c_arg = args.join('c', '+', ephem=True)
+        c_args = args.get('c', [], ephem=True)
         crit_arg = args.last('crit', None, bool, ephem=True)
         max_arg = args.last('max', None, bool, ephem=True)
         magic_arg = args.last('magical', None, bool, ephem=True)
@@ -784,9 +784,10 @@ class Damage(Effect):
                     left.num += int(critdice)
 
         # -c #
-        if c_arg and in_crit:
-            c_ast = d20.parse(c_arg)
-            dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', c_ast.roll)
+        if in_crit:
+            for c_arg in c_args:
+                c_ast = d20.parse(c_arg)
+                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', c_ast.roll)
 
         # max
         if max_arg:

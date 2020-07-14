@@ -74,7 +74,7 @@ async def handle_alias_arguments(command, ctx):
     """Takes an alias name, alias value, and message and handles percent-encoded args.
     Returns: string"""
     prefix = ctx.prefix
-    rawargs = ctx.view.read_rest()
+    rawargs = ctx.view.read_rest().strip()
 
     args = argsplit(rawargs)
     tempargs = args[:]
@@ -109,8 +109,8 @@ async def handle_alias_arguments(command, ctx):
 
 
 # getters
-async def _get_collectable_named(ctx, name, personal_cls, workshop_cls, workshop_sub_meth, is_alias,
-                                 obj_name, obj_name_pl, obj_command_name):
+async def get_collectable_named(ctx, name, personal_cls, workshop_cls, workshop_sub_meth, is_alias,
+                                obj_name, obj_name_pl, obj_command_name):
     binding_key = 'alias_bindings' if is_alias else 'snippet_bindings'
 
     personal_obj = await personal_cls.get_named(name, ctx)
@@ -142,7 +142,7 @@ async def _get_collectable_named(ctx, name, personal_cls, workshop_cls, workshop
 
 
 async def get_personal_alias_named(ctx, name):
-    return await _get_collectable_named(
+    return await get_collectable_named(
         ctx, name,
         personal_cls=Alias, workshop_cls=WorkshopAlias, workshop_sub_meth=WorkshopCollection.my_subs, is_alias=True,
         obj_name="alias", obj_name_pl="aliases", obj_command_name="alias"
@@ -150,7 +150,7 @@ async def get_personal_alias_named(ctx, name):
 
 
 async def get_server_alias_named(ctx, name):
-    return await _get_collectable_named(
+    return await get_collectable_named(
         ctx, name,
         personal_cls=Servalias, workshop_cls=WorkshopAlias, workshop_sub_meth=WorkshopCollection.guild_active_subs,
         is_alias=True,
@@ -159,7 +159,7 @@ async def get_server_alias_named(ctx, name):
 
 
 async def get_personal_snippet_named(ctx, name):
-    return await _get_collectable_named(
+    return await get_collectable_named(
         ctx, name,
         personal_cls=Snippet, workshop_cls=WorkshopSnippet, workshop_sub_meth=WorkshopCollection.my_subs,
         is_alias=False,
@@ -168,7 +168,7 @@ async def get_personal_snippet_named(ctx, name):
 
 
 async def get_server_snippet_named(ctx, name):
-    return await _get_collectable_named(
+    return await get_collectable_named(
         ctx, name,
         personal_cls=Servsnippet, workshop_cls=WorkshopSnippet, workshop_sub_meth=WorkshopCollection.guild_active_subs,
         is_alias=False,

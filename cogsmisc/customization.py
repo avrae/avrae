@@ -81,21 +81,30 @@ class Customization(commands.Cog):
 
     # ==== workshop helpers ====
     @staticmethod
-    async def _workshop_view_alias_embed(ctx, alias, bound_name):
-        """Common helper to view an alias from a workshop collection (!alias NAME/!servalias NAME)"""
+    async def _workshop_view_common_embed(ctx, collectable: workshop.WorkshopCollectableObject, bound_name):
         embed = EmbedWithAuthor(ctx)
-        the_collection = await alias.load_collection(ctx)
+        the_collection = await collectable.load_collection(ctx)
         owner = await user_from_id(ctx, the_collection.owner)
         embed.title = f"{ctx.prefix}{bound_name}"
         embed.description = f"From {the_collection.name} by {owner}.\n" \
                             f"[View on Workshop]({the_collection.url})"
-        embed.add_field(name="Help", value=alias.docs or "No documentation.", inline=False)
+        embed.add_field(name="Help", value=collectable.docs or "No documentation.", inline=False)
+        return embed
+
+    async def _workshop_view_alias_embed(self, ctx, alias, bound_name):
+        """Common helper to view an alias from a workshop collection (!alias NAME/!servalias NAME)"""
+        embed = await self._workshop_view_common_embed(ctx, alias, bound_name)
 
         await alias.load_subcommands(ctx)
         if alias.subcommands:
             subcommands = "\n".join(f"**{sc.name}** - {sc.short_docs}" for sc in alias.subcommands)
             embed.add_field(name="Subcommands", value=subcommands, inline=False)
 
+        return await ctx.send(embed=embed)
+
+    async def _workshop_view_snippet_embed(self, ctx, snippet, bound_name):
+        """Common helper to view an snippet from a workshop collection (!alias NAME/!servalias NAME)"""
+        embed = await self._workshop_view_common_embed(ctx, snippet, bound_name)
         return await ctx.send(embed=embed)
 
     async def _workshop_subscribe(self, ctx, url, is_server):
@@ -365,7 +374,7 @@ class Customization(commands.Cog):
         if alias is None:
             return await ctx.send(f"No server alias named {alias_name} found.")
         elif isinstance(alias, personal.Servalias):  # personal alias
-            out = f'**{alias_name}**: ```py\n{ctx.prefix}servalias {alias.name} {alias.code}\n```'
+            out = f'**{alias_name}**: ```py\n{ctx.prefix}alias {alias.name} {alias.code}\n```'
             out = out if len(out) <= 2000 else f'**{alias.name}**:\nCommand output too long to display.'
             return await ctx.send(out)
         else:
@@ -437,7 +446,6 @@ class Customization(commands.Cog):
                any(r.name.lower() in ALIASER_ROLES for r in ctx.author.roles) or \
                checks.author_is_owner(ctx)
 
-    # todo workshopify stuff below here
     @commands.group(invoke_without_command=True)
     async def snippet(self, ctx, snipname=None, *, snippet=None):
         """Creates a snippet to use in attack commands.
@@ -446,19 +454,7 @@ class Customization(commands.Cog):
             return await self.snippet_list(ctx)
 
         if snippet is None:
-            user_snippets = await personal.Snippet.get_ctx_map(ctx)
-            the_snippet = user_snippets.get(snipname)
-            if the_snippet is None:
-                return await ctx.send(f"No snippet named {snipname} found.")
-
-            out = f'**{snipname}**:```py\n' \
-                  f'{ctx.prefix}snippet {snipname} {the_snippet["snippet"]}' \
-                  f'\n```'
-            out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
-                                               f'Command output too long to display.\n' \
-                                               f'You can view your personal snippets (and more) on the dashboard.\n' \
-                                               f'<https://avrae.io/dashboard/aliases>'
-            return await ctx.send(out)
+            return await self._view_snippet(ctx, snipname)
 
         snippet = personal.Snippet.new(snipname, snippet, str(ctx.author.id))
         await snippet.commit(self.bot.mdb)
@@ -471,19 +467,36 @@ class Customization(commands.Cog):
                                            f'<https://avrae.io/dashboard/aliases>'
         await ctx.send(out)
 
+    async def _view_snippet(self, ctx, snippet_name):
+        snippet = await helpers.get_personal_snippet_named(ctx, snippet_name)
+        if snippet is None:
+            return await ctx.send(f"No snippet named {snippet_name} found.")
+        elif isinstance(snippet, personal.Snippet):  # personal snippet
+            out = f'**{snippet_name}**: ```py\n{ctx.prefix}snippet {snippet.name} {snippet.code}\n```'
+            out = out if len(out) <= 2000 else f'**{snippet.name}**:\nCommand output too long to display.\n' \
+                                               f'You can view your personal snippets (and more) on the dashboard.\n' \
+                                               f'<https://avrae.io/dashboard/aliases>'
+            return await ctx.send(out)
+        else:
+            await self._workshop_view_snippet_embed(ctx, snippet, snippet_name)
+
     @snippet.command(name='list')
     async def snippet_list(self, ctx):
-        """Lists your user snippets."""
-        user_snippets = await personal.Snippet.get_ctx_map(ctx)
-        await ctx.send('Your snippets:\n{}'.format(', '.join(sorted([name for name in user_snippets.keys()]))))
+        """Lists all user snippets."""
+        await self._common_list(ctx,
+                                personal_cls=personal.Snippet,
+                                workshop_sub_meth=workshop.WorkshopCollection.my_subs,
+                                obj_name_pl="snippets", is_alias=False)
 
     @snippet.command(name='delete', aliases=['remove'])
     async def snippet_delete(self, ctx, snippet_name):
         """Deletes a snippet."""
-        result = await self.bot.mdb.snippets.delete_one({"owner": str(ctx.author.id), "name": snippet_name})
-        if not result.deleted_count:
-            return await ctx.send('Snippet not found.')
-        await ctx.send('Shortcut {} removed.'.format(snippet_name))
+        the_snippet = await personal.Snippet.get_named(snippet_name, ctx)
+        if the_snippet is None:
+            return await ctx.send('Snippet not found. If this is a workshop snippet, you can unsubscribe on the Avrae '
+                                  'Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions>.')
+        await the_snippet.delete(ctx.bot.mdb)
+        await ctx.send(f'Snippet {snippet_name} removed.')
 
     @snippet.command(name='deleteall', aliases=['removeall'])
     async def snippet_deleteall(self, ctx):
@@ -498,10 +511,33 @@ class Customization(commands.Cog):
         await self.bot.mdb.snippets.delete_many({"owner": str(ctx.author.id)})
         return await ctx.send("OK. I have deleted all your snippets.")
 
+    @snippet.command(name='subscribe', aliases=['sub'])
+    async def snippet_subscribe(self, ctx, url):
+        """Subscribes to all aliases and snippets in a workshop collection."""
+        await self._workshop_subscribe(ctx, url, is_server=False)
+
+    @snippet.command(name='autofix', hidden=True)
+    async def snippet_autofix(self, ctx):
+        """Ensures that all personal and subscribed workshop snippets have unique names."""
+        renamed = await self._workshop_autofix(ctx, personal_cls=personal.Snippet,
+                                               workshop_sub_meth=workshop.WorkshopCollection.my_subs,
+                                               is_alias=False)
+        the_renamed = '\n'.join(renamed)
+        await ctx.send(f"Renamed {len(renamed)} snippets!\n{the_renamed}")
+
+    @snippet.command(name='rename')
+    async def snippet_rename(self, ctx, old_name, new_name):
+        """Renames a personal or subscribed workshop snippet to a new name."""
+        await self._common_rename(ctx, old_name, new_name,
+                                  personal_cls=personal.Snippet,
+                                  workshop_sub_meth=workshop.WorkshopCollection.my_subs,
+                                  obj_name="snippet", is_alias=False)
+
+    # todo workshopify stuff below here
     @commands.group(invoke_without_command=True)
     @commands.guild_only()
     async def servsnippet(self, ctx, snipname=None, *, snippet=None):
-        """Creates a snippet to use in attack macros for the entire server.
+        """Creates a snippet that the entire server can use.
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
         If a user and a server have snippets with the same name, the user snippet will take priority.
         Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*."""
@@ -509,18 +545,7 @@ class Customization(commands.Cog):
             return await self.servsnippet_list(ctx)
 
         if snippet is None:
-            server_snippets = await personal.Servsnippet.get_ctx_map(ctx)
-            the_snippet = server_snippets.get(snipname)
-
-            if the_snippet is None:
-                return await ctx.send(f"No server snippet named {snipname} found.")
-
-            out = f'**{snipname}**:```py\n' \
-                  f'{ctx.prefix}snippet {snipname} {the_snippet["snippet"]}' \
-                  f'\n```'
-            out = out if len(out) <= 2000 else f'**{snipname}**:\n' \
-                                               f'Command output too long to display.'
-            return await ctx.send(out)
+            return await self._view_servsnippet(ctx, snipname)
 
         if not self.can_edit_servaliases(ctx):
             return await ctx.send("You do not have permission to edit server snippets. Either __Administrator__ "
@@ -537,13 +562,25 @@ class Customization(commands.Cog):
                                            f'Command output too long to display.'
         await ctx.send(out)
 
+    async def _view_servsnippet(self, ctx, snippet_name):
+        snippet = await helpers.get_server_snippet_named(ctx, snippet_name)
+        if snippet is None:
+            return await ctx.send(f"No server snippet named {snippet_name} found.")
+        elif isinstance(snippet, personal.Servsnippet):  # personal alias
+            out = f'**{snippet_name}**: ```py\n{ctx.prefix}snippet {snippet.name} {snippet.code}\n```'
+            out = out if len(out) <= 2000 else f'**{snippet.name}**:\nCommand output too long to display.'
+            return await ctx.send(out)
+        else:
+            await self._workshop_view_snippet_embed(ctx, snippet, snippet_name)
+
     @servsnippet.command(name='list')
     @commands.guild_only()
     async def servsnippet_list(self, ctx):
         """Lists this server's snippets."""
-        server_snippets = await personal.Servsnippet.get_ctx_map(ctx)
-        await ctx.send(
-            'This server\'s snippets:\n{}'.format(', '.join(sorted([name for name in server_snippets.keys()]))))
+        await self._common_list(ctx,
+                                personal_cls=personal.Servsnippet,
+                                workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
+                                obj_name_pl="server snippets", is_alias=False)
 
     @servsnippet.command(name='delete', aliases=['remove'])
     @commands.guild_only()
@@ -553,10 +590,45 @@ class Customization(commands.Cog):
         if not self.can_edit_servaliases(ctx):
             return await ctx.send("You do not have permission to edit server snippets. Either __Administrator__ "
                                   "Discord permissions or a role called \"Server Aliaser\" is required.")
-        result = await self.bot.mdb.servsnippets.delete_one({"server": str(ctx.guild.id), "name": snippet_name})
-        if not result.deleted_count:
-            return await ctx.send('Snippet not found.')
-        await ctx.send('Server snippet {} removed.'.format(snippet_name))
+
+        the_snippet = await personal.Servsnippet.get_named(snippet_name, ctx)
+        if the_snippet is None:
+            return await ctx.send(
+                'Server snippet not found. If this is a workshop snippet, you can unsubscribe on the Avrae '
+                'Dashboard at <https://avrae.io/dashboard/workshop/my-subscriptions>.')
+        await the_snippet.delete(ctx.bot.mdb)
+        await ctx.send(f'Server snippet {snippet_name} removed.')
+
+    @servsnippet.command(name='subscribe', aliases=['sub'])
+    async def servsnippet_subscribe(self, ctx, url):
+        """Subscribes to all aliases and snippets in a workshop collection."""
+        await self._workshop_subscribe(ctx, url, is_server=True)
+
+    @servsnippet.command(name='autofix', hidden=True)
+    async def servsnippet_autofix(self, ctx):
+        """Ensures that all server and subscribed workshop snippets have unique names."""
+        if not self.can_edit_servaliases(ctx):
+            return await ctx.send("You do not have permission to edit server snippets. Either __Administrator__ "
+                                  "Discord permissions or a role called \"Server Aliaser\" is required.")
+
+        rename_msgs = await self._workshop_autofix(ctx, personal_cls=personal.Servsnippet,
+                                                   workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
+                                                   is_alias=False)
+
+        the_renamed = '\n'.join(rename_msgs)
+        await ctx.send(f"Renamed {len(rename_msgs)} server snippets!\n{the_renamed}")
+
+    @servsnippet.command(name='rename')
+    async def servsnippet_rename(self, ctx, old_name, new_name):
+        """Renames a server or subscribed workshop alias to a new name."""
+        if not self.can_edit_servaliases(ctx):
+            return await ctx.send("You do not have permission to edit server snippets. Either __Administrator__ "
+                                  "Discord permissions or a role called \"Server Aliaser\" is required.")
+
+        await self._common_rename(ctx, old_name, new_name,
+                                  personal_cls=personal.Servsnippet,
+                                  workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
+                                  obj_name="server snippet", is_alias=False)
 
     @commands.command()
     async def test(self, ctx, *, teststr):

@@ -8,7 +8,7 @@ import cogs5e.models.character as character_model
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, EvaluationError
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
-from aliasing.workshop import WorkshopAlias, WorkshopCollection
+from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
 from utils.argparser import argquote, argsplit
 
@@ -109,71 +109,71 @@ async def handle_alias_arguments(command, ctx):
 
 
 # getters
-async def get_personal_alias_named(ctx, name):
-    personal_alias = await Alias.get_named(name, ctx)
+async def _get_collectable_named(ctx, name, personal_cls, workshop_cls, workshop_sub_meth, is_alias,
+                                 obj_name, obj_name_pl, obj_command_name):
+    binding_key = 'alias_bindings' if is_alias else 'snippet_bindings'
+
+    personal_obj = await personal_cls.get_named(name, ctx)
     # get list of subscription object ids
-    subscribed_alias_ids = []
-    async for subscription_doc in WorkshopCollection.my_subs(ctx):
-        for binding in subscription_doc['alias_bindings']:
+    subscribed_obj_ids = []
+    async for subscription_doc in workshop_sub_meth(ctx):
+        for binding in subscription_doc[binding_key]:
             if binding['name'] == name:
-                subscribed_alias_ids.append(binding['id'])
+                subscribed_obj_ids.append(binding['id'])
 
     # if only personal, return personal (or none)
-    if not subscribed_alias_ids:
-        return personal_alias
+    if not subscribed_obj_ids:
+        return personal_obj
     # conflicting name errors
-    if personal_alias is not None and subscribed_alias_ids:
+    if personal_obj is not None and subscribed_obj_ids:
         raise AliasNameConflict(
-            f"I found both a personal alias and {len(subscribed_alias_ids)} workshop alias(es) "
-            f"named {ctx.prefix}{name}. Use `{ctx.prefix}alias autofix` to automatically assign "
-            f"all conflicting aliases unique names, or `{ctx.prefix}alias rename {name} <new name>` "
+            f"I found both a personal {obj_name} and {len(subscribed_obj_ids)} workshop {obj_name}(es) "
+            f"named {ctx.prefix}{name}. Use `{ctx.prefix}{obj_command_name} autofix` to automatically assign "
+            f"all conflicting {obj_name_pl} unique names, or `{ctx.prefix}{obj_command_name} rename {name} <new name>` "
             f"to manually rename it.")
-    if len(subscribed_alias_ids) > 1:
+    if len(subscribed_obj_ids) > 1:
         raise AliasNameConflict(
-            f"I found {len(subscribed_alias_ids)} workshop aliases "
-            f"named {ctx.prefix}{name}. Use `{ctx.prefix}alias autofix` to automatically assign "
-            f"all conflicting aliases unique names, or `{ctx.prefix}alias rename {name} <new name>` "
+            f"I found {len(subscribed_obj_ids)} workshop {obj_name_pl} "
+            f"named {ctx.prefix}{name}. Use `{ctx.prefix}{obj_command_name} autofix` to automatically assign "
+            f"all conflicting {obj_name_pl} unique names, or `{ctx.prefix}{obj_command_name} rename {name} <new name>` "
             f"to manually rename it.")
     # otherwise return the subscribed
-    return await WorkshopAlias.from_id(ctx, subscribed_alias_ids[0])
+    return await workshop_cls.from_id(ctx, subscribed_obj_ids[0])
+
+
+async def get_personal_alias_named(ctx, name):
+    return await _get_collectable_named(
+        ctx, name,
+        personal_cls=Alias, workshop_cls=WorkshopAlias, workshop_sub_meth=WorkshopCollection.my_subs, is_alias=True,
+        obj_name="alias", obj_name_pl="aliases", obj_command_name="alias"
+    )
 
 
 async def get_server_alias_named(ctx, name):
-    personal_alias = await Servalias.get_named(name, ctx)
-    # get list of subscription object ids
-    subscribed_alias_ids = []
-    async for subscription_doc in WorkshopCollection.guild_active_subs(ctx):
-        for binding in subscription_doc['alias_bindings']:
-            if binding['name'] == name:
-                subscribed_alias_ids.append(binding['id'])
-
-    # if only personal, return personal (or none)
-    if not subscribed_alias_ids:
-        return personal_alias
-    # conflicting name errors
-    if personal_alias is not None and subscribed_alias_ids:
-        raise AliasNameConflict(
-            f"I found both a server alias and {len(subscribed_alias_ids)} workshop server alias(es) "
-            f"named {ctx.prefix}{name}. Use `{ctx.prefix}servalias autofix` to automatically assign "
-            f"all conflicting aliases unique names, or `{ctx.prefix}servalias rename {name} <new name>` "
-            f"to manually rename it.")
-    if len(subscribed_alias_ids) > 1:
-        raise AliasNameConflict(
-            f"I found {len(subscribed_alias_ids)} workshop aliases "
-            f"named {ctx.prefix}{name}. Use `{ctx.prefix}servalias autofix` to automatically assign "
-            f"all conflicting server aliases unique names, or `{ctx.prefix}servalias rename {name} <new name>` "
-            f"to manually rename it.")
-    # otherwise return the subscribed
-    return await WorkshopAlias.from_id(ctx, subscribed_alias_ids[0])
+    return await _get_collectable_named(
+        ctx, name,
+        personal_cls=Servalias, workshop_cls=WorkshopAlias, workshop_sub_meth=WorkshopCollection.guild_active_subs,
+        is_alias=True,
+        obj_name="server alias", obj_name_pl="server aliases", obj_command_name="servalias"
+    )
 
 
-# todo
 async def get_personal_snippet_named(ctx, name):
-    pass
+    return await _get_collectable_named(
+        ctx, name,
+        personal_cls=Snippet, workshop_cls=WorkshopSnippet, workshop_sub_meth=WorkshopCollection.my_subs,
+        is_alias=False,
+        obj_name="snippet", obj_name_pl="snippets", obj_command_name="snippet"
+    )
 
 
 async def get_server_snippet_named(ctx, name):
-    pass
+    return await _get_collectable_named(
+        ctx, name,
+        personal_cls=Servsnippet, workshop_cls=WorkshopSnippet, workshop_sub_meth=WorkshopCollection.guild_active_subs,
+        is_alias=False,
+        obj_name="server snippet", obj_name_pl="server snippets", obj_command_name="servsnippet"
+    )
 
 
 # cvars

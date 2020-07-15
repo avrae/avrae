@@ -256,16 +256,25 @@ async def parse_snippets(args, ctx) -> str:
     :param ctx: The Context.
     :return: The string, with snippets replaced.
     """
+    # make args a list of str
     if isinstance(args, str):
         args = argsplit(args)
     if not isinstance(args, list):
         args = list(args)
-    snippets = await Servsnippet.get_ctx_map(ctx)
-    snippets.update(await Snippet.get_ctx_map(ctx))
+
     for index, arg in enumerate(args):  # parse snippets
-        snippet_value = snippets.get(arg)
-        if snippet_value:
-            args[index] = snippet_value
+        server_invoker = False
+
+        # personal snippet/servsnippet
+        the_snippet = await get_personal_snippet_named(ctx, arg)
+        if the_snippet is None:
+            the_snippet = await get_server_snippet_named(ctx, arg)
+            server_invoker = True
+
+        if the_snippet:
+            args[index] = the_snippet.code
+            # analytics
+            await the_snippet.log_invocation(ctx, server_invoker)
         elif ' ' in arg:
             args[index] = argquote(arg)
     return " ".join(args)

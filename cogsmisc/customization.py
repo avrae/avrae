@@ -462,12 +462,12 @@ class Customization(commands.Cog):
         """Parses `str` as if it were in an alias, for testing."""
         try:
             char = await Character.from_ctx(ctx)
-            transformer = char.parse_cvars
+            transformer = helpers.parse_with_character(ctx, char, teststr)
         except NoCharacter:
-            transformer = helpers.parse_no_char
+            transformer = helpers.parse_no_char(ctx, teststr)
 
         try:
-            parsed = await transformer(teststr, ctx)
+            parsed = await transformer
         except EvaluationError as err:
             return await helpers.handle_alias_exception(ctx, err)
         parsed = clean_content(parsed, ctx)
@@ -487,12 +487,12 @@ class Customization(commands.Cog):
         """
         try:
             char = await Character.from_ctx(ctx)
-            transformer = char.parse_cvars
+            transformer = helpers.parse_with_character(ctx, char, teststr)
         except NoCharacter:
-            transformer = helpers.parse_no_char
+            transformer = helpers.parse_no_char(ctx, teststr)
 
         try:
-            parsed = await transformer(teststr, ctx)
+            parsed = await transformer
         except EvaluationError as err:
             return await helpers.handle_alias_exception(ctx, err)
 

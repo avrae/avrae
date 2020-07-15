@@ -54,7 +54,7 @@ class SheetManager(commands.Cog):
     @staticmethod
     async def new_arg_stuff(args, ctx, character):
         args = await helpers.parse_snippets(args, ctx)
-        args = await character.parse_cvars(args, ctx)
+        args = await helpers.parse_with_character(ctx, character, args)
         args = argparse(args)
         return args
 

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 import time
@@ -14,8 +15,8 @@ from aliasing import helpers
 from aliasing.api.context import AliasContext
 from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
 from aliasing.api.legacy import LegacyRawCharacter
-from cogs5e.models.errors import ConsumableException, InvalidArgument
 from aliasing.errors import EvaluationError, FunctionRequiresCharacter
+from cogs5e.models.errors import ConsumableException, InvalidArgument
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
 
@@ -116,8 +117,12 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         inst._cache['uvars'].update(uvars)
         return inst
 
-    async def with_character(self, character):
-        self._names.update(character.get_scope_locals())
+    def with_statblock(self, statblock):
+        self._names.update(statblock.get_scope_locals())
+        return self
+
+    def with_character(self, character):
+        self.with_statblock(character)
 
         self._cache['character'] = character_api.AliasCharacter(character, self)
 

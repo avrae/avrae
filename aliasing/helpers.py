@@ -5,6 +5,7 @@ import uuid
 import draconic
 
 import cogs5e.models.character as character_model
+from aliasing import evaluators
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, EvaluationError
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
@@ -60,7 +61,7 @@ async def handle_aliases(ctx):
         if char:
             ctx.message.content = await char.parse_cvars(command_code, ctx)
         else:
-            ctx.message.content = await parse_no_char(command_code, ctx)
+            ctx.message.content = await parse_no_char(ctx, command_code)
     except EvaluationError as err:
         return await handle_alias_exception(ctx, err)
     except Exception as e:
@@ -270,8 +271,22 @@ async def parse_snippets(args, ctx) -> str:
     return " ".join(args)
 
 
-# transformer
-async def parse_no_char(cstr, ctx):
+# transformers
+async def parse_with_character(ctx, character, string):
+    evaluator = (await evaluators.ScriptingEvaluator.new(ctx)).with_character(character)
+    out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
+    await evaluator.run_commits()
+    return out
+
+
+async def parse_with_statblock(ctx, statblock, string):
+    evaluator = (await evaluators.ScriptingEvaluator.new(ctx)).with_statblock(statblock)
+    out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
+    await evaluator.run_commits()
+    return out
+
+
+async def parse_no_char(ctx, cstr):
     """
     Parses cvars and whatnot without an active character.
     :param cstr: The string to parse.
@@ -279,8 +294,7 @@ async def parse_no_char(cstr, ctx):
     :return: The parsed string.
     :rtype: str
     """
-    from aliasing.evaluators import ScriptingEvaluator
-    evaluator = await ScriptingEvaluator.new(ctx)
+    evaluator = await evaluators.ScriptingEvaluator.new(ctx)
     out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
     await evaluator.run_commits()
     return out
@@ -308,7 +322,7 @@ async def handle_alias_exception(ctx, err):
     if locinfo:
         line, col = locinfo
         the_line = err.expression.split('\n')[line - 1]
-        point_to_error = f"{the_line}\n{' ' * (col)}^\n"
+        point_to_error = f"{the_line}\n{' ' * col}^\n"
 
     if isinstance(e, draconic.AnnotatedException):
         e = e.original

@@ -200,25 +200,6 @@ class Character(StatBlock):
         self.options.set(setting, None)
 
     # ---------- SCRIPTING ----------
-    async def parse_cvars(self, cstr, ctx):
-        """Parses cvars.
-        :param ctx: The Context the cvar is parsed in.
-        :param cstr: The string to parse.
-        :returns string - the parsed string."""
-        evaluator = await (await aliasing.evaluators.ScriptingEvaluator.new(ctx)).with_character(self)
-
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
-        await evaluator.run_commits()
-
-        return out
-
-    def parse_math(self, varstr):
-        """Parsed a cvar expression in a MathEvaluator, similar to Dicecloud parsing.
-        :param varstr - the expression to evaluate.
-        :returns str - the resulting expression."""
-        evaluator = aliasing.evaluators.MathEvaluator.with_character(self)
-        return evaluator.transformed_str(varstr)
-
     def evaluate_math(self, varstr):
         """Evaluates a cvar expression in a MathEvaluator.
         :param varstr - the expression to evaluate.

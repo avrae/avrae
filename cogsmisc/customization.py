@@ -10,7 +10,7 @@ from collections import Counter
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import BucketType
+from discord.ext.commands import BucketType, NoPrivateMessage
 
 from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
@@ -78,6 +78,10 @@ class CollectableManagementGroup(commands.Group):
     # and Group.copy() tries to reregister commands
     def copy(self):
         return commands.Command.copy(self)
+
+    def command(self, *args, **kwargs):
+        kwargs.setdefault('checks', self.checks)  # inherit all checks of parent command
+        return super().command(*args, **kwargs)
 
     # noinspection PyUnusedLocal
     # d.py passes the cog in as the first argument (which is weird for this custom case)
@@ -302,6 +306,12 @@ async def _servsnippet_before_edit(ctx, _=None):
                          "is required.")
 
 
+def guild_only_check(ctx):
+    if ctx.guild is None:
+        raise NoPrivateMessage()
+    return True
+
+
 class Customization(commands.Cog):
     """Commands to help streamline using the bot."""
 
@@ -393,21 +403,21 @@ class Customization(commands.Cog):
         return await ctx.send("OK. I have deleted all your aliases.")
 
     # decorator weirdness
-    servalias = commands.guild_only()(
-        CollectableManagementGroup(
-            personal_cls=personal.Servalias,
-            workshop_cls=workshop.WorkshopAlias,
-            workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
-            is_alias=True,
-            is_server=True,
-            before_edit_check=_servalias_before_edit,
-            name='servalias',
-            invoke_without_command=True,
-            help="""
-            Adds an alias that the entire server can use.
-            Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
-            If a user and a server have aliases with the same name, the user alias will take priority.
-            """)
+    servalias = CollectableManagementGroup(
+        personal_cls=personal.Servalias,
+        workshop_cls=workshop.WorkshopAlias,
+        workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
+        is_alias=True,
+        is_server=True,
+        before_edit_check=_servalias_before_edit,
+        name='servalias',
+        invoke_without_command=True,
+        help="""
+        Adds an alias that the entire server can use.
+        Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
+        If a user and a server have aliases with the same name, the user alias will take priority.
+        """,
+        checks=[guild_only_check]
     )
 
     snippet = CollectableManagementGroup(
@@ -440,21 +450,21 @@ class Customization(commands.Cog):
         await self.bot.mdb.snippets.delete_many({"owner": str(ctx.author.id)})
         return await ctx.send("OK. I have deleted all your snippets.")
 
-    servsnippet = commands.guild_only()(
-        CollectableManagementGroup(
-            personal_cls=personal.Servsnippet,
-            workshop_cls=workshop.WorkshopSnippet,
-            workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
-            is_alias=False,
-            is_server=True,
-            before_edit_check=_servsnippet_before_edit,
-            name='servsnippet',
-            invoke_without_command=True,
-            help="""
-            Creates a snippet that the entire server can use.
-            Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
-            If a user and a server have snippets with the same name, the user snippet will take priority.
-            """)
+    servsnippet = CollectableManagementGroup(
+        personal_cls=personal.Servsnippet,
+        workshop_cls=workshop.WorkshopSnippet,
+        workshop_sub_meth=workshop.WorkshopCollection.guild_active_subs,
+        is_alias=False,
+        is_server=True,
+        before_edit_check=_servsnippet_before_edit,
+        name='servsnippet',
+        invoke_without_command=True,
+        help="""
+        Creates a snippet that the entire server can use.
+        Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
+        If a user and a server have snippets with the same name, the user snippet will take priority.
+        """,
+        checks=[guild_only_check]
     )
 
     @commands.command()

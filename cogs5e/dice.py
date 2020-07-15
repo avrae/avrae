@@ -177,6 +177,7 @@ class Dice(commands.Cog):
 
         attack = await search_and_select(ctx, attacks, atk_name, lambda a: a.name)
         args = await helpers.parse_snippets(args, ctx)
+        args = await helpers.parse_with_statblock(ctx, monster, args)
         args = argparse(args)
 
         embed = discord.Embed()
@@ -226,6 +227,7 @@ class Dice(commands.Cog):
         embed.colour = random.randint(0, 0xffffff)
 
         args = await helpers.parse_snippets(args, ctx)
+        args = await helpers.parse_with_statblock(ctx, monster, args)
         args = argparse(args)
 
         if not args.last('h', type_=bool):
@@ -258,6 +260,7 @@ class Dice(commands.Cog):
         embed.colour = random.randint(0, 0xffffff)
 
         args = await helpers.parse_snippets(args, ctx)
+        args = await helpers.parse_with_statblock(ctx, monster, args)
         args = argparse(args)
 
         if not args.last('h', type_=bool):
@@ -301,6 +304,7 @@ class Dice(commands.Cog):
         monster: Monster = await select_monster_full(ctx, monster_name)
 
         args = await helpers.parse_snippets(args, ctx)
+        args = await helpers.parse_with_statblock(ctx, monster, args)
         args = argparse(args)
 
         if not args.last('i', type_=bool):

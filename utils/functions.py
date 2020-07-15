@@ -468,26 +468,40 @@ async def user_from_id(ctx, the_id):
     :type the_id: int
     :rtype: discord.User
     """
-    if ctx.guild:  # try and get memebr
+
+    async def update_known_user(the_user):
+        await ctx.bot.mdb.users.update_one(
+            {"id": str(the_user.id)},
+            {"$set": {'username': the_user.name, 'discriminator': the_user.discriminator,
+                      'avatar': the_user.avatar, 'bot': the_user.bot}},
+            upsert=True
+        )
+
+    if ctx.guild:  # try and get member
         member = ctx.guild.get_member(the_id)
         if member is not None:
+            await update_known_user(member)
             return member
 
     # try and see if user is in bot cache
     user = ctx.bot.get_user(the_id)
     if user is not None:
+        await update_known_user(user)
         return user
+
+    # or maybe the user is in our known user db
+    user_doc = await ctx.bot.mdb.users.find_one({"id": str(the_id)})
+    if user_doc is not None:
+        # noinspection PyProtectedMember
+        # technically we're not supposed to create User objects like this
+        # but it *should* be fine
+        return discord.User(state=ctx.bot._connection, data=user_doc)
 
     # fetch the user from the Discord API
     try:
         fetched_user = await ctx.bot.fetch_user(the_id)
     except discord.NotFound:
         return None
-    # we know this user now!
-    await ctx.bot.mdb.update_one(
-        {"id": str(fetched_user.id)},
-        {"$set": {'username': fetched_user.name, 'discriminator': fetched_user.discriminator,
-                  'avatar': fetched_user.avatar, 'bot': fetched_user.bot}},
-        upsert=True
-    )
+
+    await update_known_user(fetched_user)
     return fetched_user

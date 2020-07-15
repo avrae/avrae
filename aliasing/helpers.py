@@ -59,7 +59,7 @@ async def handle_aliases(ctx):
 
     try:
         if char:
-            ctx.message.content = await char.parse_cvars(command_code, ctx)
+            ctx.message.content = await parse_with_character(ctx, char, command_code)
         else:
             ctx.message.content = await parse_no_char(ctx, command_code)
     except EvaluationError as err:

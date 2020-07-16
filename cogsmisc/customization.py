@@ -42,7 +42,6 @@ class Customization(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
     async def prefix(self, ctx, prefix: str = None):
         """Sets the bot's prefix for this server.
 
@@ -54,6 +53,10 @@ class Customization(commands.Cog):
         if prefix is None:
             current_prefix = await self.bot.get_server_prefix(ctx.message)
             return await ctx.send(f"My current prefix is: `{current_prefix}`")
+
+        if not checks._role_or_permissions(ctx, lambda r: r.name.lower() == 'bot admin', manage_guild=True):
+            return await ctx.send("You do not have permissions to change the guild prefix.")
+
         # insert into cache
         self.bot.prefixes[guild_id] = prefix
 

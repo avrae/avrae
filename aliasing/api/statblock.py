@@ -192,6 +192,7 @@ class AliasBaseStats:
     """
     Represents a statblock's 6 base ability scores and proficiency bonus.
     """
+
     def __init__(self, stats):
         """
         :type stats: cogs5e.models.sheet.base.BaseStats
@@ -280,6 +281,7 @@ class AliasLevels:
     """
     Represents a statblock's class levels.
     """
+
     def __init__(self, levels):
         """
         :type levels: cogs5e.models.sheet.base.Levels
@@ -316,6 +318,7 @@ class AliasAttackList:
     """
     A container of a statblock's attacks.
     """
+
     def __init__(self, attack_list, parent_statblock):
         """
         :type attack_list: cogs5e.models.sheet.attack.AttackList
@@ -342,6 +345,7 @@ class AliasAttack:
     """
     An attack.
     """
+
     def __init__(self, attack, parent_statblock):
         """
         :type attack: cogs5e.models.sheet.attack.Attack
@@ -394,6 +398,7 @@ class AliasSkill:
     """
     A skill modifier.
     """
+
     def __init__(self, skill):
         """
         :type skill: cogs5e.models.sheet.base.Skill
@@ -459,6 +464,7 @@ class AliasSkills:
     """
     An object holding the skill modifiers for all skills.
     """
+
     def __init__(self, skills):
         """
         :type skills: cogs5e.models.sheet.base.Skills
@@ -486,6 +492,7 @@ class AliasSaves:
     """
     An objecting holding the modifiers of all saves.
     """
+
     def __init__(self, saves):
         """
         :type saves: cogs5e.models.sheet.base.Saves
@@ -514,6 +521,7 @@ class AliasResistances:
     """
     A statblock's resistances, immunities, vulnerabilities, and explicit neural damage types.
     """
+
     def __init__(self, resistances):
         """
         :type resistances: cogs5e.models.sheet.resistance.Resistances
@@ -564,6 +572,7 @@ class AliasSpellbook:
     """
     A statblock's spellcasting information.
     """
+
     def __init__(self, spellbook):
         """
         :type spellbook: cogs5e.models.sheet.spellcasting.Spellbook
@@ -654,8 +663,48 @@ class AliasSpellbook:
         """
         return self._spellbook.reset_slots()
 
+    def remaining_casts_of(self, spell, level):
+        """
+        Gets a string representing the remaining casts of a given spell at a given level.
+
+        :param str spell: The name of the spell (case-sensitive).
+        :param int level: The level the spell is being cast at.
+        :rtype: str
+        """
+        the_spell = _SpellProxy(str(spell), int(level))
+        return self._spellbook.remaining_casts_of(the_spell, int(level))
+
+    def cast(self, spell, level):
+        """
+        Uses all resources to cast a given spell at a given level.
+
+        :param str spell: The name of the spell.
+        :param int level: The level the spell is being cast at.
+        """
+        the_spell = _SpellProxy(str(spell), int(level))
+        return self._spellbook.cast(the_spell, int(level))
+
+    def can_cast(self, spell, level):
+        """
+        Returns whether or not the given spell can currently be cast at the given level.
+
+        :param str spell: The name of the spell.
+        :param int level: The level the spell is being cast at.
+        :rtype: bool
+        """
+        the_spell = _SpellProxy(str(spell), int(level))
+        return self._spellbook.can_cast(the_spell, int(level))
+
     def __contains__(self, item):
         return item in self._spellbook
 
     def __repr__(self):
         return "<AliasSpellbook object>"
+
+
+class _SpellProxy:
+    """Duck-typed spell to pass to spellbook."""
+
+    def __init__(self, name, level):
+        self.name = name
+        self.level = level

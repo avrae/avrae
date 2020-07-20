@@ -46,6 +46,9 @@ class Sourced(abc.ABC):
             return f"https://www.dndbeyond.com/marketplace/sources/{slug}?utm_source=avrae&utm_medium=marketplacelink"
         return f"https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
 
+    def __repr__(self):
+        return f"<{type(self).__name__} entity_id={self.entity_id} entity_type={self.entity_type} {self._url}>"
+
 
 class Trait:
     def __init__(self, name, text):

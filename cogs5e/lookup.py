@@ -13,7 +13,7 @@ from cogs5e.models import errors
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, add_homebrew_footer, set_maybe_long_desc
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
-from gamedata.lookuputils import HOMEBREW_EMOJI, get_item_choices, get_monster_choices, get_spell_choices
+from gamedata.lookuputils import HOMEBREW_EMOJI, can_access, get_item_choices, get_monster_choices, get_spell_choices
 from gamedata.shared import SourcedTrait
 from utils import checks
 from utils.functions import get_positivity, search_and_select, trim_str
@@ -577,19 +577,12 @@ class Lookup(commands.Cog):
         # get licensed objects, mapped by entity type
         available_ids = {k: await self.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k) for k in entities}
 
-        # helper
-        def can_access(e):
-            the_entity, the_etype = e
-            return the_entity.is_free \
-                   or available_ids[the_etype] is not None and the_entity.entity_id in available_ids[the_etype] \
-                   or the_entity.homebrew
-
         # the selection display key
         def selectkey(e):
-            the_entity, _ = e
+            the_entity, the_etype = e
             if the_entity.homebrew:
                 return f"{the_entity.name} ({HOMEBREW_EMOJI})"
-            elif can_access(e):
+            elif can_access(the_etype, available_ids[the_etype]):
                 return the_entity.name
             return f"{the_entity.name}\\*"
 
@@ -608,10 +601,10 @@ class Lookup(commands.Cog):
 
         # log the query
         await self._add_training_data(query_type, query, entity.name, metadata=metadata, srd=entity.is_free,
-                                      could_view=can_access(result))
+                                      could_view=can_access(entity, available_ids[entity_type]))
 
         # display error if not srd
-        if not can_access(result):
+        if not can_access(entity, available_ids[entity_type]):
             raise errors.RequiresLicense(entity, available_ids[entity_type] is not None)
         return entity
 

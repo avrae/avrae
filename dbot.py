@@ -20,9 +20,9 @@ from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
-from aliasing.helpers import handle_alias_exception, handle_aliases
+from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
 from cogs5e.models.errors import AvraeException, RequiresLicense
-from aliasing.errors import EvaluationError
+from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from gamedata.compendium import compendium
 from gamedata.ddb import BeyondClient, BeyondClientBase
 from gamedata.lookuputils import handle_required_license
@@ -130,6 +130,7 @@ class Avrae(commands.AutoShardedBot):
                     scope.set_tag("guild.name", str(context.guild))
             sentry_sdk.capture_exception(exception)
 
+
 desc = '''
 Avrae, a D&D 5e utility bot designed to help you and your friends play D&D online.
 A full command list can be found [here](https://avrae.io/commands)!
@@ -191,6 +192,9 @@ async def on_command_error(ctx, error):
 
         elif isinstance(original, RequiresLicense):
             return await handle_required_license(ctx, original)
+
+        elif isinstance(original, CollectableRequiresLicenses):
+            return await handle_alias_required_licenses(ctx, original)
 
         elif isinstance(original, AvraeException):
             return await ctx.send(str(original))

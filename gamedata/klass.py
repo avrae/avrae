@@ -59,7 +59,7 @@ class Subclass(Sourced):
         :type name: str
         :type levels: list[list[Trait]]
         """
-        super().__init__('subclass', False, **kwargs)
+        super().__init__('class', False, **kwargs)
         self.name = name
         self.levels = levels
 

@@ -7,11 +7,14 @@ import draconic
 import cogs5e.models.character as character_model
 from aliasing import evaluators
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
-from aliasing.errors import AliasNameConflict, CollectableNotFound, EvaluationError
+from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
+from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
+from gamedata.compendium import compendium
 from utils.argparser import argquote, argsplit
+from utils.functions import long_source_name, natural_join
 
 
 async def handle_aliases(ctx):
@@ -46,6 +49,12 @@ async def handle_aliases(ctx):
             except CollectableNotFound:
                 ctx.view.undo()
                 break
+
+        # workshop alias: handle entitlements check
+        try:
+            await workshop_entitlements_check(ctx, the_alias)
+        except CollectableRequiresLicenses as e:
+            return await handle_alias_required_licenses(ctx, e)
 
     # analytics
     await the_alias.log_invocation(ctx, server_invoker)
@@ -271,6 +280,9 @@ async def parse_snippets(args, ctx) -> str:
             the_snippet = await get_server_snippet_named(ctx, arg)
             server_invoker = True
 
+        if isinstance(the_snippet, WorkshopSnippet):
+            await workshop_entitlements_check(ctx, the_snippet)
+
         if the_snippet:
             args[index] = the_snippet.code
             # analytics
@@ -348,3 +360,88 @@ async def handle_alias_exception(ctx, err):
     except:
         pass
     return await ctx.channel.send(err)
+
+
+async def workshop_entitlements_check(ctx, ws_obj):
+    """
+    :type ws_obj: aliasing.workshop.WorkshopCollectableObject
+    """
+    entitlements = ws_obj.get_entitlements()
+
+    # this may take a while, so type
+    await ctx.trigger_typing()
+
+    # get licensed objects, mapped by entity type
+    available_ids = {k: await ctx.bot.ddb.get_accessible_entities(ctx, ctx.author.id, k) for k in entitlements}
+
+    # get a list of all missing entities for the license error
+    missing = []
+    has_connected_ddb = True
+
+    # run the checks
+    for entity_type, required_ids in entitlements.items():
+        available_set = available_ids[entity_type]
+        if available_set is None:
+            # user has not connected DDB account
+            has_connected_ddb = False
+            # add all ids of this type to missing
+            for missing_id in required_ids:
+                entity = compendium.lookup_by_entitlement(entity_type, missing_id)
+                if entity is not None:
+                    missing.append(entity)
+
+        elif not available_set.issuperset(required_ids):
+            # add the missing ids to missing
+            for missing_id in set(required_ids).difference(available_set):
+                entity = compendium.lookup_by_entitlement(entity_type, missing_id)
+                if entity is not None:
+                    missing.append(entity)
+
+    if missing:
+        raise CollectableRequiresLicenses(missing, ws_obj, has_connected_ddb)
+
+
+async def handle_alias_required_licenses(ctx, err):
+    embed = EmbedWithAuthor(ctx)
+    if not err.has_connected_ddb:
+        # was the user blocked from nSRD by a feature flag?
+        ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+        if ddb_user is None:
+            blocked_by_ff = False
+        else:
+            blocked_by_ff = not (await ctx.bot.ldclient.variation("entitlements-enabled", ddb_user.to_ld_dict(), False))
+
+        if blocked_by_ff:
+            embed.title = "D&D Beyond is currently unavailable"
+            embed.description = f"I was unable to communicate with D&D Beyond to confirm access to:\n" \
+                                f"{', '.join(e.name for e in err.entities)}"
+        else:
+            embed.title = f"Connect your D&D Beyond account to use this customization!"
+            embed.url = "https://www.dndbeyond.com/account"
+            embed.description = \
+                "This customization requires access to one or more entities that are not in the SRD.\n" \
+                "Linking your account means that you'll be able to use everything you own on " \
+                "D&D Beyond in Avrae for free - you can link your accounts " \
+                "[here](https://www.dndbeyond.com/account)."
+            embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
+                                  "link.")
+    else:
+        if len(err.entities) == 1:
+            embed.title = f"Purchase {err.entities[0].name} on D&D Beyond to use this customization!"
+            marketplace_url = err.entities[0].marketplace_url
+        else:
+            embed.title = f"Purchase {len(err.entities)} items on D&D Beyond to use this customization!"
+            marketplace_url = "https://www.dndbeyond.com/marketplace"
+
+        missing = natural_join([f"[{e.name}]({e.marketplace_url})" for e in err.entities], "and")
+        missing_sources = natural_join({long_source_name(e.source) for e in err.entities}, "and")
+
+        embed.description = \
+            f"To use this customization and gain access to more integrations in Avrae, unlock **{missing}** by " \
+            f"purchasing {missing_sources} on D&D Beyond.\n\n" \
+            f"[Go to Marketplace]({marketplace_url})"
+        embed.url = marketplace_url
+
+        embed.set_footer(text="Already purchased? It may take up to a minute for Avrae to recognize the "
+                              "purchase.")
+    await ctx.send(embed=embed)

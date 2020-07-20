@@ -1,4 +1,5 @@
 import abc
+import collections
 import datetime
 import enum
 
@@ -273,7 +274,7 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
 
 class WorkshopCollectableObject(abc.ABC):
     def __init__(self, _id, name,
-                 code, versions, docs, collection_id,
+                 code, versions, docs, entitlements, collection_id,
                  collection=None):
         """
         :param _id: The MongoDB ID of this object.
@@ -286,6 +287,8 @@ class WorkshopCollectableObject(abc.ABC):
         :type versions: list[CodeVersion]
         :param docs: The help docs of this object.
         :type docs: str
+        :param entitlements: A list of entitlements required to run this.
+        :type entitlements: list[RequiredEntitlement]
         :param collection_id: The ID of the top-level Collection this object is a member of.
         :type collection_id: ObjectId
         :param collection: The top-level Collection this object is a member of.
@@ -296,6 +299,7 @@ class WorkshopCollectableObject(abc.ABC):
         self.code = code
         self.versions = versions
         self.docs = docs
+        self.entitlements = entitlements
         self._collection = collection
         # lazy-load collection
         self._collection_id = collection_id
@@ -314,9 +318,16 @@ class WorkshopCollectableObject(abc.ABC):
         self._collection = await WorkshopCollection.from_id(ctx, self._collection_id)
         return self._collection
 
+    def get_entitlements(self):
+        """Returns a dict of {entity_type: [entity_id]} for required entitlements."""
+        out = collections.defaultdict(lambda: [])
+        for ent in self.entitlements:
+            out[ent.entity_type].append(ent.entity_id)
+        return out
+
 
 class WorkshopAlias(WorkshopCollectableObject):
-    def __init__(self, _id, name, code, versions, docs, collection_id, subcommand_ids, parent_id,
+    def __init__(self, _id, name, code, versions, docs, entitlements, collection_id, subcommand_ids, parent_id,
                  collection=None, parent=None):
         """
         :param subcommand_ids: The alias IDs that are a child of this alias.
@@ -324,7 +335,8 @@ class WorkshopAlias(WorkshopCollectableObject):
         :param parent: The alias that is a parent of this alias, if applicable.
         :type parent: WorkshopAlias or None
         """
-        super().__init__(_id, name, code, versions, docs, collection_id=collection_id, collection=collection)
+        super().__init__(_id, name, code, versions, docs, entitlements,
+                         collection_id=collection_id, collection=collection)
         self._subcommands = None
         self._parent = parent
         # lazy-load subcommands, collection, parent
@@ -358,7 +370,8 @@ class WorkshopAlias(WorkshopCollectableObject):
     @classmethod
     def from_dict(cls, raw, collection=None, parent=None):
         versions = [CodeVersion.from_dict(cv) for cv in raw['versions']]
-        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], raw['collection_id'],
+        entitlements = [RequiredEntitlement.from_dict(ent) for ent in raw['entitlements']]
+        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], entitlements, raw['collection_id'],
                    raw['subcommand_ids'], raw['parent_id'], collection, parent)
 
     @classmethod
@@ -398,7 +411,9 @@ class WorkshopSnippet(WorkshopCollectableObject):
             raise CollectableNotFound()
 
         versions = [CodeVersion.from_dict(cv) for cv in raw['versions']]
-        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], raw['collection_id'], collection)
+        entitlements = [RequiredEntitlement.from_dict(ent) for ent in raw['entitlements']]
+        return cls(raw['_id'], raw['name'], raw['code'], versions, raw['docs'], entitlements,
+                   raw['collection_id'], collection)
 
     # helpers
     async def log_invocation(self, ctx, is_server):
@@ -429,6 +444,24 @@ class CodeVersion:
     def from_dict(cls, raw):
         return cls(**raw)
 
+
+class RequiredEntitlement:
+    """An entitlement that a user must have to invoke this alias/snippet."""
+
+    def __init__(self, entity_type, entity_id, required=False):
+        """
+        :param str entity_type: The entity type of the required entitlement.
+        :param int entity_id: The entity id of the required entitlement.
+        :param bool required: Whether this entitlement was required by a moderator and cannot be removed.
+        """
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+        self.required = required
+
+    @classmethod
+    def from_dict(cls, raw):
+        return cls(**raw)
+
 # test_coll = {
 #     '_id': ObjectId(), 'name': 'Test Workshop Collection', 'description': "A test collection", 'image': None,
 #     'owner': 187421759484592128, 'alias_ids': [], 'snippet_ids': [], 'publish_state': PublicationState.PUBLISHED,
@@ -438,10 +471,12 @@ class CodeVersion:
 #
 # test_alias = {
 #     '_id': ObjectId(), 'name': 'wsalias', 'code': 'echo This is wsalias!', 'versions': [],
-#     'docs': "This is a test alias", 'subcommand_ids': [], 'collection_id': ObjectId(), 'parent_id': None
+#     'docs': "This is a test alias", 'subcommand_ids': [], 'collection_id': ObjectId(), 'parent_id': None,
+#     'entitlements': []
 # }
 #
 # test_snippet = {
 #     '_id': ObjectId(), 'name': 'wssnippet', 'code': '-phrase "This is wssnippet!"', 'versions': [],
-#     'docs': "This is a test snippet", 'collection_id': ObjectId()
+#     'docs': "This is a test snippet", 'collection_id': ObjectId(),
+#     'entitlements': []
 # }

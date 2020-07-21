@@ -422,7 +422,10 @@ def parse_critterdb_spellcasting(traits, base_stats):
             extracted = []
             spell_names = text.split(', ')
             for name in spell_names:
-                s = name.strip('* _')
+                # remove any (parenthetical stuff) except (UA)
+                name = re.sub(r'\((?!ua\)).+\)', '', name.lower())
+
+                s = name.strip('* _').replace('.', '').replace('$', '')
 
                 try:
                     real_name = next(sp for sp in compendium.spells if sp.name.lower() == s).name

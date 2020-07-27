@@ -357,7 +357,7 @@ class SheetManager(commands.Cog):
         ).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
-        await ctx.send('Your characters:\n{}'.format(', '.join(c['name'] for c in user_characters)))
+        await ctx.send('Your characters:\n{}'.format(', '.join(sorted(c['name'] for c in user_characters))))
 
     @character.command(name='delete')
     async def character_delete(self, ctx, *, name):

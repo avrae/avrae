@@ -22,7 +22,8 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import auth_and_chan, generate_token, get_positivity, list_get, search_and_select, try_delete
+from utils.functions import auth_and_chan, confirm, generate_token, get_positivity, list_get, search_and_select, \
+    try_delete
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -155,6 +156,8 @@ class SheetManager(commands.Cog):
         """
         character: Character = await Character.from_ctx(ctx)
         attack = await search_and_select(ctx, character.overrides.attacks, name, lambda a: a.name)
+        if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}?")):
+            return await ctx.send("Okay, aborting delete.")
         character.overrides.attacks.remove(attack)
         await character.commit(ctx)
         await ctx.send(f"Okay, deleted attack {attack.name}.")

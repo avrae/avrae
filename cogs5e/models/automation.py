@@ -733,7 +733,7 @@ class Damage(Effect):
         max_arg = args.last('max', None, bool, ephem=True)
         magic_arg = args.last('magical', None, bool, ephem=True)
         mi_arg = args.last('mi', None, int)
-        dtype_args = args.get('dtype', [])
+        dtype_args = args.get('dtype', [], ephem=True)
         critdice = args.last('critdice', 0, int)
         hide = args.last('h', type_=bool)
 

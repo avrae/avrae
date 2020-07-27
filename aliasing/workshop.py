@@ -112,7 +112,7 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
 
         return cls(raw['_id'], raw['name'], raw['description'], raw['image'], raw['owner'],
                    raw['alias_ids'], raw['snippet_ids'],
-                   raw['publish_state'], raw['num_subscribers'], raw['num_guild_subscribers'],
+                   PublicationState(raw['publish_state']), raw['num_subscribers'], raw['num_guild_subscribers'],
                    raw['last_edited'], raw['created_at'], raw['tags'])
 
     # helpers

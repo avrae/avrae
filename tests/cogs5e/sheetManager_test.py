@@ -19,7 +19,7 @@ class TestBasicSheetCommands:
 
     async def test_attack_delete(self, avrae, dhttp):
         avrae.message("!a delete TESTATTACKFOOBAR")
-        await dhttp.drain()
+        await dhttp.receive_message()
         avrae.message("y")
 
     async def test_save(self, avrae, dhttp):

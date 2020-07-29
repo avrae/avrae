@@ -185,7 +185,8 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         )
         # log subscribe event
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "subscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": "subscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow(),
+             "user_id": ctx.author.id}
         )
 
     async def unsubscribe(self, ctx):
@@ -198,7 +199,8 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         )
         # log unsub event
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "unsubscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": "unsubscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow(),
+             "user_id": ctx.author.id}
         )
 
     async def set_server_active(self, ctx):
@@ -224,7 +226,8 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         )
         # log sub event
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "server_subscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": "server_subscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow(),
+             "user_id": ctx.author.id}
         )
 
     async def unset_server_active(self, ctx):
@@ -237,7 +240,8 @@ class WorkshopCollection(SubscriberMixin, GuildActiveMixin, EditorMixin):
         )
         # log unsub event
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "server_unsubscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": "server_unsubscribe", "object_id": self.id, "timestamp": datetime.datetime.utcnow(),
+             "user_id": ctx.author.id}
         )
 
     async def _bindings_sanity_check(self, ctx, the_ids, the_bindings, binding_cls):
@@ -388,7 +392,7 @@ class WorkshopAlias(WorkshopCollectableObject):
     async def log_invocation(self, ctx, is_server):
         inv_type = 'workshop_alias' if not is_server else 'workshop_servalias'
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
         )
 
     async def get_subalias_named(self, ctx, name):
@@ -419,7 +423,7 @@ class WorkshopSnippet(WorkshopCollectableObject):
     async def log_invocation(self, ctx, is_server):
         inv_type = 'workshop_snippet' if not is_server else 'workshop_servsnippet'
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": inv_type, "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
         )
 
 

@@ -129,7 +129,7 @@ class Alias(_AliasBase):
 
     async def log_invocation(self, ctx, _):
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "alias", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": "alias", "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
         )
 
     @staticmethod
@@ -164,7 +164,7 @@ class Servalias(_AliasBase):
 
     async def log_invocation(self, ctx, _):
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "servalias", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": "servalias", "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
         )
 
     @staticmethod
@@ -199,7 +199,7 @@ class Snippet(_SnippetBase):
 
     async def log_invocation(self, ctx, _):
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "snippet", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": "snippet", "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
         )
 
     @staticmethod
@@ -234,7 +234,7 @@ class Servsnippet(_SnippetBase):
 
     async def log_invocation(self, ctx, _):
         await ctx.bot.mdb.analytics_alias_events.insert_one(
-            {"type": "servsnippet", "object_id": self.id, "timestamp": datetime.datetime.utcnow()}
+            {"type": "servsnippet", "object_id": self.id, "timestamp": datetime.datetime.utcnow(), "user_id": ctx.author.id}
         )
 
     @staticmethod

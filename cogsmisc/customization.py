@@ -103,7 +103,8 @@ class Customization(commands.Cog):
 
             if the_alias:
                 await self.bot.mdb.analytics_alias_events.insert_one(
-                    {"type": execution_type, "object_id": the_alias['_id'], "timestamp": datetime.datetime.utcnow()}
+                    {"type": execution_type, "object_id": the_alias['_id'], "timestamp": datetime.datetime.utcnow(),
+                     "user_id": message.author.id}
                 )
 
                 command = the_alias['commands']

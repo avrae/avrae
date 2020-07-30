@@ -66,3 +66,4 @@ db.prefixes.createIndex({"guild_id": 1}, {"unique": true});
 
 users:
 db.users.createIndex({"id": 1}, {"unique": true});
+db.users.createIndex({"username": 1, "discriminator": 1});

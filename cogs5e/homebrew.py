@@ -199,7 +199,9 @@ class Homebrew(commands.Cog):
         if pack.image:
             embed.set_thumbnail(url=pack.image)
         itemnames = "\n".join(i.name for i in pack.items)
-        if len(itemnames) < 1020:
+        if not pack.items:
+            embed.add_field(name="Items", value=f"This pack has no items.")
+        elif len(itemnames) < 1020:
             embed.add_field(name="Items", value=itemnames)
         else:
             embed.add_field(name="Items", value=f"{len(pack.items)} items.")
@@ -318,7 +320,9 @@ class Homebrew(commands.Cog):
         if tome.image:
             embed.set_thumbnail(url=tome.image)
         spellnames = "\n".join(i.name for i in tome.spells)
-        if len(spellnames) < 1020:
+        if not tome.spells:
+            embed.add_field(name="Spells", value=f"This tome has no spells.")
+        elif len(spellnames) < 1020:
             embed.add_field(name="Spells", value=spellnames)
         else:
             embed.add_field(name="Spells", value=f"{len(tome.spells)} spells.")

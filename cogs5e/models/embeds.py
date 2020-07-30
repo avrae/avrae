@@ -2,6 +2,8 @@ import random
 
 import discord
 
+from utils.functions import trim_str
+
 
 class EmbedWithAuthor(discord.Embed):
     """An embed with author image and nickname set."""
@@ -76,11 +78,11 @@ def get_long_field_args(text, title, inline=False, chunk_size=1024):
 
 def set_maybe_long_desc(embed, desc):
     """
-    Sets a description that might be longer than 2048 characters but is less than 6000 characters.
+    Sets a description that might be longer than 2048 characters but is less than 5000 characters.
     :param embed: The embed to add the description (and potentially fields) to.
     :param str desc: The description to add. Will overwrite existing description.
     """
-    desc = chunk_text(desc)
+    desc = chunk_text(trim_str(desc, 5000))
     embed.description = ''.join(desc[:2])
     for piece in desc[2:]:
         embed.add_field(name="** **", value=piece, inline=False)

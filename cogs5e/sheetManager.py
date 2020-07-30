@@ -22,7 +22,8 @@ from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import auth_and_chan, generate_token, get_positivity, list_get, search_and_select, try_delete
+from utils.functions import auth_and_chan, confirm, generate_token, get_positivity, list_get, search_and_select, \
+    try_delete
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -80,8 +81,8 @@ class SheetManager(commands.Cog):
         *-immune* <damage immunity>
         *-vuln* <damage vulnerability>
         *-neutral* <damage type> - ignores this damage type in resistance calculations
-        -dtype <damage type> - replaces all damage types with this damage type
-        -dtype <old>new> - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
+        *-dtype <damage type>* - replaces all damage types with this damage type
+        *-dtype <old>new>* - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
         
         *hit* - automatically hits
         *miss* - automatically misses
@@ -155,6 +156,8 @@ class SheetManager(commands.Cog):
         """
         character: Character = await Character.from_ctx(ctx)
         attack = await search_and_select(ctx, character.overrides.attacks, name, lambda a: a.name)
+        if not (await confirm(ctx, f"Are you sure you want to delete {attack.name}?")):
+            return await ctx.send("Okay, aborting delete.")
         character.overrides.attacks.remove(attack)
         await character.commit(ctx)
         await ctx.send(f"Okay, deleted attack {attack.name}.")
@@ -354,7 +357,7 @@ class SheetManager(commands.Cog):
         ).to_list(None)
         if not user_characters:
             return await ctx.send('You have no characters.')
-        await ctx.send('Your characters:\n{}'.format(', '.join(c['name'] for c in user_characters)))
+        await ctx.send('Your characters:\n{}'.format(', '.join(sorted(c['name'] for c in user_characters))))
 
     @character.command(name='delete')
     async def character_delete(self, ctx, *, name):

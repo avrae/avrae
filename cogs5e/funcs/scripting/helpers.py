@@ -178,14 +178,16 @@ async def parse_snippets(args, ctx) -> str:
         snippet_value = None
         if snippet:
             await ctx.bot.mdb.analytics_alias_events.insert_one(
-                {"type": "snippet", "object_id": snippet['_id'], "timestamp": datetime.datetime.utcnow()}
+                {"type": "snippet", "object_id": snippet['_id'], "timestamp": datetime.datetime.utcnow(),
+                 "user_id": ctx.author.id}
             )
             snippet_value = snippet['snippet']
         else:
             snippet = servsnippets.get(arg)
             if snippet:
                 await ctx.bot.mdb.analytics_alias_events.insert_one(
-                    {"type": "servsnippet", "object_id": snippet['_id'], "timestamp": datetime.datetime.utcnow()}
+                    {"type": "servsnippet", "object_id": snippet['_id'], "timestamp": datetime.datetime.utcnow(),
+                     "user_id": ctx.author.id}
                 )
                 snippet_value = snippet['snippet']
 

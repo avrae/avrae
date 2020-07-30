@@ -325,8 +325,8 @@ class DicecloudParser(SheetLoaderABC):
                 reset = 'long'
             try:
                 initial_value = self.evaluator.eval(f['uses'])
-            except draconic.InvalidExpression:
-                continue  # skip on error
+            except draconic.DraconicException:
+                raise ExternalImportError(f"Invalid max uses on limited use feature {f['name']}: {f['uses']}")
             display_type = 'bubble' if initial_value < 7 else None
             co = {
                 "name": f['name'],

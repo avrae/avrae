@@ -149,8 +149,8 @@ class Dice(commands.Cog):
         *-immune* <damage immunity>
         *-vuln* <damage vulnerability>
         *-neutral* <damage type> - ignores this damage type in resistance calculations
-        -dtype <damage type> - replaces all damage types with this damage type
-        -dtype <old>new> - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
+        *-dtype <damage type>* - replaces all damage types with this damage type
+        *-dtype <old>new>* - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
 
         *hit* - automatically hits
         *miss* - automatically misses

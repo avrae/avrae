@@ -290,6 +290,7 @@ async def confirm(ctx, message, delete_msgs=False):
 async def generate_token(img_url, color_override=None):
     def process_img(img_bytes, color_override):
         b = BytesIO(img_bytes)
+        b.seek(0)  # ??? #1175?
         img = Image.open(b)
         template = Image.open('res/template.png')
         transparency_template = Image.open('res/alphatemplate.tif')

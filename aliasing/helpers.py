@@ -27,7 +27,7 @@ async def handle_aliases(ctx):
     # personal alias/servalias
     try:
         the_alias = await get_personal_alias_named(ctx, alias)
-        if the_alias is None:
+        if the_alias is None and ctx.guild is not None:
             the_alias = await get_server_alias_named(ctx, alias)
             server_invoker = True
     except AliasNameConflict as anc:
@@ -276,7 +276,7 @@ async def parse_snippets(args, ctx) -> str:
 
         # personal snippet/servsnippet
         the_snippet = await get_personal_snippet_named(ctx, arg)
-        if the_snippet is None:
+        if the_snippet is None and ctx.guild is not None:
             the_snippet = await get_server_snippet_named(ctx, arg)
             server_invoker = True
 

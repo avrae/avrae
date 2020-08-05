@@ -4,10 +4,11 @@ import re
 import discord
 
 import cogs5e.models.initiative as init
+import gamedata.lookuputils
 from cogs5e.models import initiative
 from cogs5e.models.automation import Automation
 from cogs5e.models.character import Character
-from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args, add_homebrew_footer
+from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import trim_str, verbose_stat
@@ -274,9 +275,7 @@ class Spell(Sourced):
             embed.set_thumbnail(url=self.image)
 
         add_fields_from_args(embed, args.get('f'))
-
-        if self.homebrew:
-            add_homebrew_footer(embed)
+        gamedata.lookuputils.handle_source_footer(embed, self, add_source_str=False)
 
         return {"embed": embed}
 

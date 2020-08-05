@@ -73,3 +73,7 @@ SOURCE_SLUG_MAP = {
     'WA': 'frozen-sick', 'TSCF': 'the-sunless-citadel-free', 'TFoFF': 'the-forge-of-fury-free',
     'LRDToB': 'legends-of-runeterra-dark-tides-of-bilgewater', 'IDRotF': 'icewind-dale-rime-of-the-frostmaiden'
 }
+PARTNERED_SOURCES = ('LRDToB',)
+UA_SOURCES = ('UA',)
+CR_SOURCES = ('CR', 'EGtW', 'WA')
+NONCORE_SOURCES = ('DDIA-MORD', 'LLoK', 'LR', 'IMR', 'MFFV1', 'OGA')

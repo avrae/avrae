@@ -11,6 +11,7 @@ from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
+from utils import constants
 from utils.functions import long_source_name, search_and_select
 from .compendium import compendium
 
@@ -108,11 +109,37 @@ async def handle_required_license(ctx, err):
     await ctx.send(embed=embed)
 
 
-# ---- helper ----
+# ---- helpers ----
 def get_homebrew_formatted_name(named):
     if named.homebrew:
         return f"{named.name} ({HOMEBREW_EMOJI})"
     return named.name
+
+
+def handle_source_footer(embed, sourced, text=None, add_source_str=True):
+    """Handles adding the relevant source icon and source str to the embed's footer."""
+    text_pieces = []
+    if text is not None:
+        text_pieces.append(text)
+    if add_source_str:
+        text_pieces.append(sourced.source_str())
+
+    if sourced.homebrew:
+        embed.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png",
+                         text=' | '.join(text_pieces) or "Homebrew content.")
+    elif sourced.source in constants.UA_SOURCES:
+        embed.set_footer(icon_url="https://media-waterdeep.cursecdn.com/avatars/110/171/636516074887091041.png",
+                         text=' | '.join(text_pieces) or "Unearthed Arcana content.")
+    elif sourced.source in constants.PARTNERED_SOURCES:
+        embed.set_footer(icon_url="https://media-waterdeep.cursecdn.com/avatars/11008/904/637274855809570341.png",
+                         text=' | '.join(text_pieces) or "Partnered content.")
+    elif sourced.source in constants.CR_SOURCES:
+        embed.set_footer(icon_url="https://media-waterdeep.cursecdn.com/avatars/105/174/636512853628516966.png",
+                         text=' | '.join(text_pieces) or "Critical Role content.")
+    elif sourced.source in constants.NONCORE_SOURCES:
+        embed.set_footer(text=' | '.join(text_pieces) or "Noncore content.")
+    elif text_pieces:
+        embed.set_footer(text=' | '.join(text_pieces))
 
 
 # ---- monster stuff ----

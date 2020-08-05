@@ -7,10 +7,9 @@ from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.funcs.scripting import helpers
-from cogs5e.models import embeds
 from cogsmisc.stats import Stats
 from gamedata import Monster
-from gamedata.lookuputils import select_monster_full, select_spell_full
+from gamedata.lookuputils import handle_source_footer, select_monster_full, select_spell_full
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.dice import PersistentRollContext, VerboseMDStringifier
@@ -187,8 +186,7 @@ class Dice(commands.Cog):
         await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         embed.colour = random.randint(0, 0xffffff)
-        if monster.homebrew:
-            embeds.add_homebrew_footer(embed)
+        handle_source_footer(embed, monster, add_source_str=False)
 
         await ctx.send(embed=embed)
 
@@ -233,8 +231,7 @@ class Dice(commands.Cog):
 
         checkutils.run_check(skill_key, monster, args, embed)
 
-        if monster.homebrew:
-            embeds.add_homebrew_footer(embed)
+        handle_source_footer(embed, monster, add_source_str=False)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -265,8 +262,7 @@ class Dice(commands.Cog):
 
         checkutils.run_save(save_stat, monster, args, embed)
 
-        if monster.homebrew:
-            embeds.add_homebrew_footer(embed)
+        handle_source_footer(embed, monster, add_source_str=False)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
@@ -318,8 +314,7 @@ class Dice(commands.Cog):
         if not args.last('h', type_=bool) and 'thumb' not in args:
             embed.set_thumbnail(url=monster.get_image_url())
 
-        if monster.homebrew:
-            embeds.add_homebrew_footer(embed)
+        handle_source_footer(embed, monster, add_source_str=False)
 
         # save changes: combat state
         if combat:

@@ -6,6 +6,7 @@ import os
 
 import newrelic.agent
 
+import gamedata.spell
 from gamedata.background import Background
 from gamedata.feat import Feat
 from gamedata.item import Item
@@ -13,7 +14,6 @@ from gamedata.klass import Class, Subclass
 from gamedata.monster import Monster
 from gamedata.race import Race
 from gamedata.shared import SourcedTrait
-from gamedata.spell import Spell
 from utils import config
 
 log = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ class Compendium:
         self.feats = [Feat.from_data(f) for f in self.raw_feats]
         self.items = [Item.from_data(i) for i in self.raw_items]
         self.monsters = [Monster.from_data(m) for m in self.raw_monsters]
-        self.spells = [Spell.from_data(s) for s in self.raw_spells]
+        self.spells = [gamedata.spell.Spell.from_data(s) for s in self.raw_spells]
 
         # generated
         self._load_classfeats()

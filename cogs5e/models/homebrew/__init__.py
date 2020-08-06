@@ -1,4 +1,4 @@
-from gamedata import Item, Spell
+import gamedata
 from .base import HomebrewContainer
 
 
@@ -9,7 +9,7 @@ class Tome(HomebrewContainer):
 
     @classmethod
     def from_dict(cls, raw):
-        raw['spells'] = [Spell.from_homebrew(s, raw['name']) for s in raw['spells']]
+        raw['spells'] = [gamedata.Spell.from_homebrew(s, raw['name']) for s in raw['spells']]
         return cls(**raw)
 
     # subscription helpers
@@ -29,7 +29,7 @@ class Pack(HomebrewContainer):
 
     @classmethod
     def from_dict(cls, raw):
-        raw['items'] = [Item.from_homebrew(s, raw['name']) for s in raw['items']]
+        raw['items'] = [gamedata.Item.from_homebrew(s, raw['name']) for s in raw['items']]
         return cls(**raw)
 
     # subscription helpers

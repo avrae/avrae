@@ -6,13 +6,13 @@ from math import floor
 import aiohttp
 import html2text
 
+import gamedata.compendium as gd
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
 from cogs5e.models.homebrew.mixins import CommonHomebrewMixin
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import SpellbookSpell
-from gamedata.compendium import compendium
 from gamedata.monster import Monster, MonsterSpellbook, Trait
 from utils.functions import search_and_select
 
@@ -428,7 +428,7 @@ def parse_critterdb_spellcasting(traits, base_stats):
                 s = name.strip('* _').replace('.', '').replace('$', '')
 
                 try:
-                    real_name = next(sp for sp in compendium.spells if sp.name.lower() == s).name
+                    real_name = next(sp for sp in gd.compendium.spells if sp.name.lower() == s).name
                     strict = True
                 except StopIteration:
                     real_name = s

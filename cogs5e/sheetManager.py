@@ -4,6 +4,7 @@ Created on Jan 19, 2017
 @author: andrew
 """
 import asyncio
+import json
 import logging
 import traceback
 
@@ -16,7 +17,7 @@ from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet.attack import Attack
+from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
@@ -147,6 +148,32 @@ class SheetManager(commands.Cog):
         out = f"Created attack {attack.name}!"
         if conflict:
             out += f" Removed a duplicate attack."
+        await ctx.send(out)
+
+    @attack.command(name="import")
+    async def attack_import(self, ctx, *, data):
+        """
+        Imports an attack from JSON exported from the Avrae Dashboard.
+        """
+        character: Character = await Character.from_ctx(ctx)
+
+        try:
+            attack_json = json.loads(data)
+        except json.decoder.JSONDecodeError:
+            return await ctx.send("This is not a valid attack.")
+
+        if not isinstance(attack_json, list):
+            attack_json = [attack_json]
+
+        try:
+            attacks = AttackList.from_dict(attack_json)
+        except:
+            return await ctx.send("This is not a valid attack.")
+
+        character.overrides.attacks.extend(attacks)
+        await character.commit(ctx)
+
+        out = f"Imported {len(attacks)} attacks:\n{attacks.build_str(character)}"
         await ctx.send(out)
 
     @attack.command(name="delete", aliases=['remove'])

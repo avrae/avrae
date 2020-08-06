@@ -141,7 +141,10 @@ class SheetManager(commands.Cog):
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:
-            character.overrides.attacks.remove(conflict)
+            if await confirm(ctx, "This will overwrite an attack with the same name. Continue?"):
+                character.overrides.attacks.remove(conflict)
+            else:
+                return await ctx.send("Okay, aborting.")
         character.overrides.attacks.append(attack)
         await character.commit(ctx)
 
@@ -169,6 +172,15 @@ class SheetManager(commands.Cog):
             attacks = AttackList.from_dict(attack_json)
         except:
             return await ctx.send("This is not a valid attack.")
+
+        conflicts = [a for a in character.overrides.attacks if a.name.lower() in [new.name.lower() for new in attacks]]
+        if conflicts:
+            if await confirm(ctx, f"This will overwrite {len(conflicts)} attacks with the same name "
+                                  f"({', '.join(c.name for c in conflicts)}). Continue?"):
+                for conflict in conflicts:
+                    character.overrides.attacks.remove(conflict)
+            else:
+                return await ctx.send("Okay, aborting.")
 
         character.overrides.attacks.extend(attacks)
         await character.commit(ctx)

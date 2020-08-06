@@ -352,45 +352,6 @@ async def generate_token(img_url, color_override=None):
     return processed
 
 
-def clean_content(content, ctx):
-    transformations = {
-        re.escape('<@{0.id}>'.format(member)): '@' + member.display_name
-        for member in ctx.message.mentions
-    }
-
-    # add the <@!user_id> cases as well..
-    second_mention_transforms = {
-        re.escape('<@!{0.id}>'.format(member)): '@' + member.display_name
-        for member in ctx.message.mentions
-    }
-
-    transformations.update(second_mention_transforms)
-
-    if ctx.guild is not None:
-        role_transforms = {
-            re.escape('<@&{0.id}>'.format(role)): '@' + role.name
-            for role in ctx.message.role_mentions
-        }
-        transformations.update(role_transforms)
-
-    def repl(obj):
-        return transformations.get(re.escape(obj.group(0)), '')
-
-    pattern = re.compile('|'.join(transformations.keys()))
-    result = pattern.sub(repl, content)
-
-    transformations = {
-        '@everyone': '@\u200beveryone',
-        '@here': '@\u200bhere'
-    }
-
-    def repl2(obj):
-        return transformations.get(obj.group(0), '')
-
-    pattern = re.compile('|'.join(transformations.keys()))
-    return pattern.sub(repl2, result)
-
-
 def auth_and_chan(ctx):
     """Message check: same author and channel"""
 

@@ -481,7 +481,8 @@ class SheetManager(commands.Cog):
         if conflict:
             overwrite = "**WARNING**: This will overwrite an existing character."
 
-        await ctx.send(f"{user.mention}, accept a copy of {character.name}? (Type yes/no)\n{overwrite}")
+        await ctx.send(f"{user.mention}, accept a copy of {character.name}? (Type yes/no)\n{overwrite}",
+                       allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         try:
             m = await self.bot.wait_for('message', timeout=300,
                                         check=lambda msg: msg.author == user

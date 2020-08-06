@@ -70,7 +70,7 @@ class Dice(commands.Cog):
                   f"**Total:** {res.total}"
 
         await try_delete(ctx.message)
-        await ctx.send(out)
+        await ctx.send(out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.command(name='multiroll', aliases=['rr'])
@@ -123,7 +123,7 @@ class Dice(commands.Cog):
             out = f"{header}\n{one_result}\n{footer}"
 
         await try_delete(ctx.message)
-        await ctx.send(f"{ctx.author.mention}\n{out}")
+        await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)

@@ -16,6 +16,7 @@ from discord.ext import commands
 import utils.redisIO as redis
 from gamedata.compendium import compendium
 from utils import checks, config
+from utils.functions import confirm
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +61,9 @@ class AdminUtils(commands.Cog):
             "reload_lists": self._reload_lists,
             "serv_info": self._serv_info,
             "whois": self._whois,
-            "ping": self._ping
+            "ping": self._ping,
+            "restart_shard": self._restart_shard,
+            "kill_cluster": self._kill_cluster
         }
         while True:  # if we ever disconnect from pubsub, wait 5s and try reinitializing
             try:  # connect to the pubsub channel
@@ -178,6 +181,29 @@ class AdminUtils(commands.Cog):
     @checks.is_owner()
     async def reload_static(self, ctx):
         resp = await self.pscall("reload_static")
+        await self._send_replies(ctx, resp)
+
+    # ---- cluster management ----
+    @admin.command(hidden=True, name="restart-shard")
+    @checks.is_owner()
+    async def admin_restart_shard(self, ctx, shard_id: int):
+        """Forces a shard to disconnect from the Discord API and reconnect."""
+        if not await confirm(ctx, f"Are you sure you want to restart shard {shard_id}?"):
+            return await ctx.send("ok, not restarting")
+        resp = await self.pscall("restart_shard", kwargs={"shard_id": shard_id}, expected_replies=1)
+        await self._send_replies(ctx, resp)
+
+    @admin.command(hidden=True, name="kill-cluster")
+    @checks.is_owner()
+    async def admin_kill_cluster(self, ctx, cluster_id: int):
+        """Forces a cluster to restart by killing it."""
+        num_shards = len(self.bot.shard_ids) if self.bot.shard_ids is not None else 1
+        if not await confirm(ctx, f"Are you absolutely sure you want to kill cluster {cluster_id}?\n"
+                                  f"**This will terminate approximately {num_shards} shards, which "
+                                  f"will take at least {num_shards * 5} seconds to restart, and "
+                                  f"impact about {len(self.bot.guilds)} servers.**"):
+            return await ctx.send("ok, not killing")
+        resp = await self.pscall("kill_cluster", kwargs={"cluster_id": cluster_id}, expected_replies=1)
         await self._send_replies(ctx, resp)
 
     # ---- workshop ----
@@ -313,6 +339,20 @@ class AdminUtils(commands.Cog):
 
     async def _ping(self):
         return dict(self.bot.latencies)
+
+    async def _restart_shard(self, shard_id: int):
+        if (shard := self.bot.get_shard(shard_id)) is None:
+            return False
+        await shard.reconnect()
+        return f"Reconnected shard {shard.id}"
+
+    async def _kill_cluster(self, cluster_id: int):
+        if cluster_id != self.bot.cluster_id:
+            return False
+        import os
+        import signal
+        os.kill(os.getpid(), signal.SIGTERM)  # please shut down gracefully
+        return "Shutting down..."
 
     # ==== pubsub ====
     async def pscall(self, command, args=None, kwargs=None, *, expected_replies=config.NUM_CLUSTERS or 1, timeout=30):

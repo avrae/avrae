@@ -15,6 +15,8 @@ from discord.ext import commands
 from cogs5e.models import embeds
 from cogsmisc.stats import Stats
 
+CHANGELOG_CHANNEL_ID = 342667972223172608
+
 
 class Core(commands.Cog):
     """
@@ -53,12 +55,32 @@ class Core(commands.Cog):
             "You can invite Avrae to your server here:\n"
             "<https://invite.avrae.io>")
 
-    @commands.command()
+    @commands.group(invoke_without_command=True)
     async def changelog(self, ctx):
         """Prints a link to the official changelog."""
         await ctx.send("You can check out the latest patch notes at "
                        "https://github.com/avrae/avrae/releases/latest, and a list of all releases at "
-                       "<https://github.com/avrae/avrae/releases>!")
+                       "<https://github.com/avrae/avrae/releases>!\n\n"
+                       f"Want to follow changes right here? Run `{ctx.prefix}changelog follow`!")
+
+    @changelog.command(name="follow", aliases=['subscribe'])
+    @commands.has_permissions(manage_webhooks=True)
+    async def changelog_follow(self, ctx):
+        """
+        Subscribes to the changelog in this channel.
+
+        You must have Manage Webhooks permissions to run this command.
+        """
+        try:
+            # TextChannel.follow requires an actual reference to the channel, which we can't get
+            # unless we're on the shard that has the channel in it, so we just make the HTTP call directly
+            await self.bot.http.follow_webhook(CHANGELOG_CHANNEL_ID, webhook_channel_id=ctx.channel.id,
+                                               reason="Following Avrae Changelog")
+        except discord.Forbidden:
+            await ctx.send("I do not have permissions to edit this channel's integrations. Make sure I have "
+                           "`Manage Webhooks` permissions, or you can follow the changelog yourself at "
+                           "<https://support.avrae.io>!")
+        await ctx.send("Okay! All posts in the changelog will show up here.")
 
     @commands.command(aliases=['stats', 'info'])
     async def about(self, ctx):

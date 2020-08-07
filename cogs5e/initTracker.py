@@ -10,16 +10,16 @@ from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from gamedata.lookuputils import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument, SelectionException
+from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogsmisc.stats import Stats
+from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils.argparser import argparse, argsplit
 from utils.functions import confirm, search_and_select, try_delete
 
@@ -1243,8 +1243,12 @@ class InitTracker(commands.Cog):
         args = argparse(args)
 
         if not args.last('i', type_=bool):
-            spell = await select_spell_full(ctx, spell_name,
-                                            list_filter=lambda s: s.name in combatant.spellbook)
+            try:
+                spell = await select_spell_full(ctx, spell_name,
+                                                list_filter=lambda s: s.name in combatant.spellbook)
+            except NoSelectionElements:
+                return await ctx.send(f"No matching spells found in the combatant's spellbook. Cast again "
+                                      f"with the `-i` argument to ignore restrictions!")
         else:
             spell = await select_spell_full(ctx, spell_name)
 

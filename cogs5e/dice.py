@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.funcs.scripting import helpers
+from cogs5e.models.errors import NoSelectionElements
 from cogsmisc.stats import Stats
 from gamedata import Monster
 from gamedata.lookuputils import handle_source_footer, select_monster_full, select_spell_full
@@ -300,7 +301,11 @@ class Dice(commands.Cog):
         args = argparse(args)
 
         if not args.last('i', type_=bool):
-            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
+            try:
+                spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
+            except NoSelectionElements:
+                return await ctx.send(f"No matching spells found in the creature's spellbook. Cast again "
+                                      f"with the `-i` argument to ignore restrictions!")
         else:
             spell = await select_spell_full(ctx, spell_name)
 

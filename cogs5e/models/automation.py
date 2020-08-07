@@ -290,9 +290,12 @@ class Effect:
     def run_children_with_damage(child, autoctx):
         damage = 0
         for effect in child:
-            result = effect.run(autoctx)
-            if result and 'total' in result:
-                damage += result['total']
+            try:
+                result = effect.run(autoctx)
+                if result and 'total' in result:
+                    damage += result['total']
+            except AutomationException as e:
+                autoctx.meta_queue(f"**Error**: {e}")
         return damage
 
     # required methods
@@ -474,7 +477,7 @@ class Attack(Effect):
                 raise AutomationException(f"{explicit_bonus} cannot be interpreted as an attack bonus.")
 
         if attack_bonus is None and b is None:
-            raise NoAttackBonus()
+            raise NoAttackBonus("No spell attack bonus found. Use the `-b` argument to specify one!")
 
         # tracking
         damage = 0
@@ -635,7 +638,7 @@ class Save(Effect):
             dc = maybe_mod(autoctx.args.last('dc'), dc)
 
         if dc is None:
-            raise NoSpellDC()
+            raise NoSpellDC("No spell save DC found. Use the `-dc` argument to specify one!")
         try:
             save_skill = next(s for s in ('strengthSave', 'dexteritySave', 'constitutionSave',
                                           'intelligenceSave', 'wisdomSave', 'charismaSave') if
@@ -1121,10 +1124,10 @@ class TargetException(AutomationException):
 
 
 class NoSpellDC(AutomationException):
-    def __init__(self):
-        super().__init__("No spell save DC found.")
+    def __init__(self, msg="No spell save DC found."):
+        super().__init__(msg)
 
 
 class NoAttackBonus(AutomationException):
-    def __init__(self):
-        super().__init__("No attack bonus found.")
+    def __init__(self, msg="No attack bonus found."):
+        super().__init__(msg)

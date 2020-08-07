@@ -196,35 +196,22 @@ class Spell(Sourced):
             # use resource
             caster.spellbook.cast(self, l)
 
-        # character setup
-        character = None
-        if isinstance(caster, init.PlayerCombatant):
-            character = caster.character
-        elif isinstance(caster, Character):
-            character = caster
-
         # base stat stuff
         mod_arg = args.last("mod", type_=int)
         stat_override = ''
         if mod_arg is not None:
             mod = mod_arg
-            if character:
-                prof_bonus = character.stats.prof_bonus
-            else:
-                prof_bonus = 0
+            prof_bonus = caster.stats.prof_bonus
             dc_override = 8 + mod + prof_bonus
             ab_override = mod + prof_bonus
             spell_override = mod
-        elif character and any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
+        elif any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
             base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
-            mod = character.stats.get_mod(base)
-            dc_override = 8 + mod + character.stats.prof_bonus
-            ab_override = mod + character.stats.prof_bonus
+            mod = caster.stats.get_mod(base)
+            dc_override = 8 + mod + caster.stats.prof_bonus
+            ab_override = mod + caster.stats.prof_bonus
             spell_override = mod
             stat_override = f" with {verbose_stat(base)}"
-
-        if spell_override is None and (caster.spellbook.sab is None or caster.spellbook.dc is None):
-            raise SpellException("This caster does not have the ability to cast spells.")
 
         # begin setup
         embed = discord.Embed()

@@ -201,9 +201,9 @@ class AutomationContext:
         original_names = self.evaluator.builtins.copy()
         self.evaluator.builtins.update(self.metavars)
         try:
-            out = self.evaluator.eval(annostr)
+            out = self.evaluator.eval(annostr.strip('{}'))
         except Exception as ex:
-            raise EvaluationError(ex, annostr)
+            raise EvaluationError(ex, annostr.strip('{}'))
         self.evaluator.builtins = original_names
         return out
 
@@ -294,6 +294,8 @@ class Effect:
                 result = effect.run(autoctx)
                 if result and 'total' in result:
                     damage += result['total']
+            except StopExecution:
+                raise
             except AutomationException as e:
                 autoctx.meta_queue(f"**Error**: {e}")
         return damage
@@ -922,7 +924,7 @@ class IEffect(Effect):
         super(IEffect, self).run(autoctx)
         if isinstance(self.duration, str):
             try:
-                duration = int(autoctx.parse_annostr(self.duration))
+                duration = int(autoctx.parse_annostr(self.duration, is_full_expression=True))
             except ValueError:
                 raise InvalidArgument(f"{self.duration} is not an integer (in effect duration)")
         else:
@@ -987,7 +989,7 @@ class Roll(Effect):
                 else:
                     d = effect_d
 
-        dice_ast = copy.copy(d20.parse(self.dice))
+        dice_ast = copy.copy(d20.parse(autoctx.parse_annostr(self.dice)))
         dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
 
         if not self.hidden:
@@ -1031,7 +1033,7 @@ class Text(Effect):
         hide = autoctx.args.last('h', type_=bool)
 
         if self.text:
-            text = self.text
+            text = autoctx.parse_annostr(self.text)
             if len(text) > 1020:
                 text = f"{text[:1020]}..."
             if not hide:
@@ -1116,6 +1118,14 @@ def _crit_mapper(node):
 
 # ==== exceptions ====
 class AutomationException(AvraeException):
+    pass
+
+
+class StopExecution(AutomationException):
+    """
+    Some check failed that should cause automation to stop, whatever stage of execution it's at.
+    This does not revert any side effects made before this point.
+    """
     pass
 
 

@@ -4,7 +4,7 @@ d20==1.0.4
 
 # top-level deps
 aioboto3==7.0.0
-discord.py==1.4.0
+discord.py==1.4.1
 launchdarkly-server-sdk==6.13.0
 pyjwt==1.7.1
 

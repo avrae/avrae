@@ -208,8 +208,10 @@ async def parse_no_char(cstr, ctx):
     """
     from .evaluators import ScriptingEvaluator
     evaluator = await ScriptingEvaluator.new(ctx)
-    out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
-    await evaluator.run_commits()
+    try:
+        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
+    finally:
+        await evaluator.run_commits()
     return out
 
 

@@ -6,8 +6,6 @@ Created on Jan 13, 2017
 import itertools
 import logging
 
-import discord
-
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew import Pack, Tome

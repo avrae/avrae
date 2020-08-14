@@ -6,6 +6,8 @@ Created on Jan 13, 2017
 import itertools
 import logging
 
+import discord
+
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew import Pack, Tome
@@ -116,30 +118,48 @@ def get_homebrew_formatted_name(named):
     return named.name
 
 
-def handle_source_footer(embed, sourced, text=None, add_source_str=True):
-    """Handles adding the relevant source icon and source str to the embed's footer."""
+def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_overwrite=False):
+    """
+    Handles adding the relevant source icon and source str to the embed's footer.
+
+    :param embed: The embed to operate on.
+    :param sourced: The source to pull data from.
+    :param str text: Any text prepending the source str.
+    :param bool add_source_str: Whether or not to add the source str (e.g. "PHB 168")
+    :param bool allow_overwrite: Whether or not to allow overwriting an existing footer text.
+    """
     text_pieces = []
+    icon_url = embed.Empty
     if text is not None:
         text_pieces.append(text)
     if add_source_str:
         text_pieces.append(sourced.source_str())
 
+    # set icon url and default text
     if sourced.homebrew:
-        embed.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png",
-                         text=' | '.join(text_pieces) or "Homebrew content.")
+        icon_url = "https://avrae.io/assets/img/homebrew.png"
+        text_pieces = text_pieces or ["Homebrew content."]
     elif sourced.source in constants.UA_SOURCES:
-        embed.set_footer(icon_url="https://media-waterdeep.cursecdn.com/avatars/110/171/636516074887091041.png",
-                         text=' | '.join(text_pieces) or "Unearthed Arcana content.")
+        icon_url = "https://media-waterdeep.cursecdn.com/avatars/110/171/636516074887091041.png"
+        text_pieces = text_pieces or ["Unearthed Arcana content."]
     elif sourced.source in constants.PARTNERED_SOURCES:
-        embed.set_footer(icon_url="https://media-waterdeep.cursecdn.com/avatars/11008/904/637274855809570341.png",
-                         text=' | '.join(text_pieces) or "Partnered content.")
+        icon_url = "https://media-waterdeep.cursecdn.com/avatars/11008/904/637274855809570341.png"
+        text_pieces = text_pieces or ["Partnered content."]
     elif sourced.source in constants.CR_SOURCES:
-        embed.set_footer(icon_url="https://media-waterdeep.cursecdn.com/avatars/105/174/636512853628516966.png",
-                         text=' | '.join(text_pieces) or "Critical Role content.")
+        icon_url = "https://media-waterdeep.cursecdn.com/avatars/105/174/636512853628516966.png"
+        text_pieces = text_pieces or ["Critical Role content."]
     elif sourced.source in constants.NONCORE_SOURCES:
-        embed.set_footer(text=' | '.join(text_pieces) or "Noncore content.")
-    elif text_pieces:
-        embed.set_footer(text=' | '.join(text_pieces))
+        text_pieces = text_pieces or ["Noncore content."]
+
+    # do the writing
+    text = ' | '.join(text_pieces) or embed.Empty
+    if not allow_overwrite:
+        if embed.footer.text:
+            text = embed.footer.text
+        if embed.footer.icon_url:
+            icon_url = embed.footer.icon_url
+
+    embed.set_footer(text=text, icon_url=icon_url)
 
 
 # ---- monster stuff ----

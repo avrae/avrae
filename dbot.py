@@ -160,7 +160,8 @@ Invite Avrae to your server [here](https://invite.avrae.io)!
 Join the official development server [here](https://support.avrae.io)!
 '''
 bot = Avrae(prefix=get_prefix, description=desc, pm_help=True, testing=config.TESTING,
-            activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'))
+            activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'),
+            allowed_mentions=discord.AllowedMentions(everyone=False, users=False, roles=False))  # by default, none
 
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)

@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.funcs.scripting import helpers
+from cogs5e.models.errors import NoSelectionElements
 from cogsmisc.stats import Stats
 from gamedata import Monster
 from gamedata.lookuputils import handle_source_footer, select_monster_full, select_spell_full
@@ -70,7 +71,7 @@ class Dice(commands.Cog):
                   f"**Total:** {res.total}"
 
         await try_delete(ctx.message)
-        await ctx.send(out)
+        await ctx.send(out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.command(name='multiroll', aliases=['rr'])
@@ -123,7 +124,7 @@ class Dice(commands.Cog):
             out = f"{header}\n{one_result}\n{footer}"
 
         await try_delete(ctx.message)
-        await ctx.send(f"{ctx.author.mention}\n{out}")
+        await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
     @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)
@@ -300,7 +301,11 @@ class Dice(commands.Cog):
         args = argparse(args)
 
         if not args.last('i', type_=bool):
-            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
+            try:
+                spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in monster.spellbook)
+            except NoSelectionElements:
+                return await ctx.send(f"No matching spells found in the creature's spellbook. Cast again "
+                                      f"with the `-i` argument to ignore restrictions!")
         else:
             spell = await select_spell_full(ctx, spell_name)
 

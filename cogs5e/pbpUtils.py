@@ -9,7 +9,7 @@ from discord.ext import commands
 
 from cogs5e.models import embeds
 from utils.argparser import argparse
-from utils.functions import clean_content, try_delete
+from utils.functions import try_delete
 
 
 class PBPUtils(commands.Cog):
@@ -22,7 +22,7 @@ class PBPUtils(commands.Cog):
     async def echo(self, ctx, *, msg):
         """Echos a message."""
         await try_delete(ctx.message)
-        await ctx.send(f"{ctx.author.display_name}: {clean_content(msg, ctx)}")
+        await ctx.send(f"{ctx.author.display_name}: {msg}")
 
     @commands.command()
     async def techo(self, ctx, seconds: int, *, msg):
@@ -31,7 +31,7 @@ class PBPUtils(commands.Cog):
 
         seconds = min(max(0, seconds), 600)
 
-        await ctx.send(f"{ctx.author.display_name}: {clean_content(msg, ctx)}", delete_after=seconds)
+        await ctx.send(f"{ctx.author.display_name}: {msg}", delete_after=seconds)
 
     @commands.command()
     async def embed(self, ctx, *, args):

@@ -10,16 +10,16 @@ from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from gamedata.lookuputils import select_monster_full, select_spell_full
 from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument, SelectionException
+from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogsmisc.stats import Stats
+from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils.argparser import argparse, argsplit
 from utils.functions import confirm, search_and_select, try_delete
 
@@ -384,7 +384,7 @@ class InitTracker(commands.Cog):
             combat.remove_combatant(co)
             out.append("{} automatically removed from combat.\n".format(co.name))
 
-        await ctx.send("\n".join(out))
+        await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
     @init.command(name="prev", aliases=['previous', 'rewind'])
@@ -399,7 +399,7 @@ class InitTracker(commands.Cog):
 
         combat.rewind_turn()
 
-        await ctx.send(combat.get_turn_str())
+        await ctx.send(combat.get_turn_str(), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
     @init.command(name="move", aliases=['goto'])
@@ -426,7 +426,7 @@ class InitTracker(commands.Cog):
                 combatant = await combat.select_combatant(target)
                 combat.goto_turn(combatant, True)
 
-        await ctx.send(combat.get_turn_str())
+        await ctx.send(combat.get_turn_str(), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
     @init.command(name="skipround", aliases=['round', 'skiprounds'])
@@ -454,7 +454,7 @@ class InitTracker(commands.Cog):
             combat.remove_combatant(co)
             out.append("{} automatically removed from combat.".format(co.name))
 
-        await ctx.send("\n".join(out))
+        await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
     @init.command(name="reroll", aliases=['shuffle'])
@@ -570,6 +570,7 @@ class InitTracker(commands.Cog):
         options = {}
         target_is_group = isinstance(comb, CombatantGroup)
         run_once = set()
+        allowed_mentions = []
 
         def option(opt_name=None, pass_group=False, **kwargs):
             """
@@ -611,6 +612,7 @@ class InitTracker(commands.Cog):
             member = await commands.MemberConverter().convert(ctx, controller_name)
             if member is None:
                 return "\u274c New controller not found."
+            allowed_mentions.append(member.id)
             combatant.controller = str(member.id)
             return f"\u2705 {combatant.name}'s controller set to {combatant.controller_mention()}."
 
@@ -713,7 +715,8 @@ class InitTracker(commands.Cog):
 
         if out:
             for destination, messages in out.items():
-                await destination.send('\n'.join(messages))
+                await destination.send('\n'.join(messages),
+                                       allowed_mentions=discord.AllowedMentions(users=allowed_mentions))
             await combat.final()
         else:
             await ctx.send("No valid options found.")
@@ -1240,8 +1243,12 @@ class InitTracker(commands.Cog):
         args = argparse(args)
 
         if not args.last('i', type_=bool):
-            spell = await select_spell_full(ctx, spell_name,
-                                            list_filter=lambda s: s.name in combatant.spellbook)
+            try:
+                spell = await select_spell_full(ctx, spell_name,
+                                                list_filter=lambda s: s.name in combatant.spellbook)
+            except NoSelectionElements:
+                return await ctx.send(f"No matching spells found in the combatant's spellbook. Cast again "
+                                      f"with the `-i` argument to ignore restrictions!")
         else:
             spell = await select_spell_full(ctx, spell_name)
 

@@ -4,7 +4,9 @@ Created on Sep 23, 2016
 @author: andrew
 """
 import asyncio
+import itertools
 import logging
+import re
 from math import floor
 
 import discord
@@ -14,6 +16,7 @@ from discord.ext import commands
 import utils.redisIO as redis
 from gamedata.compendium import compendium
 from utils import checks, config
+from utils.functions import confirm
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +61,9 @@ class AdminUtils(commands.Cog):
             "reload_lists": self._reload_lists,
             "serv_info": self._serv_info,
             "whois": self._whois,
-            "ping": self._ping
+            "ping": self._ping,
+            "restart_shard": self._restart_shard,
+            "kill_cluster": self._kill_cluster
         }
         while True:  # if we ever disconnect from pubsub, wait 5s and try reinitializing
             try:  # connect to the pubsub channel
@@ -80,42 +85,6 @@ class AdminUtils(commands.Cog):
     # ==== commands ====
     @commands.command(hidden=True)
     @checks.is_owner()
-    async def blacklist(self, ctx, _id: int):
-        self.blacklisted_serv_ids.add(_id)
-        await self.bot.rdb.jset('blacklist', list(self.blacklisted_serv_ids))
-        resp = await self.pscall("reload_lists")
-        await self._send_replies(ctx, resp)
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def whitelist(self, ctx, _id: int):
-        self.whitelisted_serv_ids.add(_id)
-        await self.bot.rdb.jset('server-whitelist', list(self.whitelisted_serv_ids))
-        resp = await self.pscall("reload_lists")
-        await self._send_replies(ctx, resp)
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def chanSay(self, ctx, channel: int, *, message: str):
-        """Low-level calls `bot.http.send_message()`."""
-        await self.bot.http.send_message(channel, message)
-        await ctx.send(f"Sent message.")
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def servInfo(self, ctx, guild_id: int):
-        resp = await self.pscall("serv_info", kwargs={"guild_id": guild_id}, expected_replies=1)
-        await self._send_replies(ctx, resp)
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def whois(self, ctx, user_id: int):
-        user = await self.bot.fetch_user(user_id)
-        resp = await self.pscall("whois", kwargs={"user_id": user_id})
-        await self._send_replies(ctx, resp, base=f"{user_id} is {user}:")
-
-    @commands.command(hidden=True)
-    @checks.is_owner()
     async def pingall(self, ctx):
         resp = await self.pscall("ping")
         embed = discord.Embed(title="Cluster Pings")
@@ -125,13 +94,62 @@ class AdminUtils(commands.Cog):
             embed.add_field(name=f"Cluster {cluster}: {avgping}ms", value=pingstr)
         await ctx.send(embed=embed)
 
-    @commands.command(hidden=True, name='leave')
+    @commands.command(hidden=True)
+    @checks.is_owner()
+    async def changepresence(self, ctx, status=None, *, msg=None):
+        """Changes Avrae's presence. Status: online, idle, dnd"""
+        resp = await self.pscall("changepresence", kwargs={"status": status, "msg": msg})
+        await self._send_replies(ctx, resp)
+
+    @commands.group(hidden=True, invoke_without_command=True)
+    @checks.is_owner()
+    async def admin(self, ctx):
+        """Owner-only admin commands."""
+        await ctx.send("hello yes please give me a subcommand")
+
+    @admin.command(hidden=True)
+    @checks.is_owner()
+    async def blacklist(self, ctx, _id: int):
+        self.blacklisted_serv_ids.add(_id)
+        await self.bot.rdb.jset('blacklist', list(self.blacklisted_serv_ids))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
+
+    @admin.command(hidden=True)
+    @checks.is_owner()
+    async def whitelist(self, ctx, _id: int):
+        self.whitelisted_serv_ids.add(_id)
+        await self.bot.rdb.jset('server-whitelist', list(self.whitelisted_serv_ids))
+        resp = await self.pscall("reload_lists")
+        await self._send_replies(ctx, resp)
+
+    @admin.command(hidden=True)
+    @checks.is_owner()
+    async def chanSay(self, ctx, channel: int, *, message: str):
+        """Low-level calls `bot.http.send_message()`."""
+        await self.bot.http.send_message(channel, message)
+        await ctx.send(f"Sent message.")
+
+    @admin.command(hidden=True)
+    @checks.is_owner()
+    async def servInfo(self, ctx, guild_id: int):
+        resp = await self.pscall("serv_info", kwargs={"guild_id": guild_id}, expected_replies=1)
+        await self._send_replies(ctx, resp)
+
+    @admin.command(hidden=True)
+    @checks.is_owner()
+    async def whois(self, ctx, user_id: int):
+        user = await self.bot.fetch_user(user_id)
+        resp = await self.pscall("whois", kwargs={"user_id": user_id})
+        await self._send_replies(ctx, resp, base=f"{user_id} is {user}:")
+
+    @admin.command(hidden=True, name='leave')
     @checks.is_owner()
     async def leave_server(self, ctx, guild_id: int):
         resp = await self.pscall("leave", kwargs={"guild_id": guild_id}, expected_replies=1)
         await self._send_replies(ctx, resp)
 
-    @commands.command(hidden=True)
+    @admin.command(hidden=True)
     @checks.is_owner()
     async def mute(self, ctx, target: int):
         """Mutes a person by ID."""
@@ -149,7 +167,7 @@ class AdminUtils(commands.Cog):
         resp = await self.pscall("reload_lists")
         await self._send_replies(ctx, resp)
 
-    @commands.command(hidden=True)
+    @admin.command(hidden=True)
     @checks.is_owner()
     async def loglevel(self, ctx, level: int, logger=None):
         """Changes the loglevel. Do not pass logger for global. Default: 20"""
@@ -159,18 +177,81 @@ class AdminUtils(commands.Cog):
         resp = await self.pscall("loglevel", args=[level], kwargs={"logger": logger})
         await self._send_replies(ctx, resp)
 
-    @commands.command(hidden=True)
-    @checks.is_owner()
-    async def changepresence(self, ctx, status=None, *, msg=None):
-        """Changes Avrae's presence. Status: online, idle, dnd"""
-        resp = await self.pscall("changepresence", kwargs={"status": status, "msg": msg})
-        await self._send_replies(ctx, resp)
-
-    @commands.command(hidden=True)
+    @admin.command(hidden=True)
     @checks.is_owner()
     async def reload_static(self, ctx):
         resp = await self.pscall("reload_static")
         await self._send_replies(ctx, resp)
+
+    # ---- cluster management ----
+    @admin.command(hidden=True, name="restart-shard")
+    @checks.is_owner()
+    async def admin_restart_shard(self, ctx, shard_id: int):
+        """Forces a shard to disconnect from the Discord API and reconnect."""
+        if not await confirm(ctx, f"Are you sure you want to restart shard {shard_id}?"):
+            return await ctx.send("ok, not restarting")
+        resp = await self.pscall("restart_shard", kwargs={"shard_id": shard_id}, expected_replies=1)
+        await self._send_replies(ctx, resp)
+
+    @admin.command(hidden=True, name="kill-cluster")
+    @checks.is_owner()
+    async def admin_kill_cluster(self, ctx, cluster_id: int):
+        """Forces a cluster to restart by killing it."""
+        num_shards = len(self.bot.shard_ids) if self.bot.shard_ids is not None else 1
+        if not await confirm(ctx, f"Are you absolutely sure you want to kill cluster {cluster_id}?\n"
+                                  f"**This will terminate approximately {num_shards} shards, which "
+                                  f"will take at least {num_shards * 5} seconds to restart, and "
+                                  f"impact about {len(self.bot.guilds)} servers.**"):
+            return await ctx.send("ok, not killing")
+        resp = await self.pscall("kill_cluster", kwargs={"cluster_id": cluster_id}, expected_replies=1)
+        await self._send_replies(ctx, resp)
+
+    # ---- workshop ----
+    @admin.group(name='workshop', invoke_without_command=True)
+    @checks.is_owner()
+    async def admin_workshop(self, ctx):
+        await ctx.send("subcommands: `tags`, `tags add <slug> <name> <category>`, `tags remove <slug>`")
+
+    @admin_workshop.group(name='tags', invoke_without_command=True)
+    @checks.is_owner()
+    async def admin_workshop_tags(self, ctx):
+        """Lists all tags in the workshop."""
+        embed = discord.Embed()
+        tags = await self.bot.mdb.workshop_tags.find().to_list(None)
+        for category, c_tags in itertools.groupby(tags, lambda t: t['category']):
+            out = []
+            for tag in c_tags:
+                out.append(f"`{tag['slug']}`: {tag['name']}")
+            out = '\n'.join(out)
+            embed.add_field(name=category, value=out)
+
+        if not tags:
+            embed.description = "There are no tags"
+
+        await ctx.send(embed=embed)
+
+    @admin_workshop_tags.command(name='add')
+    @checks.is_owner()
+    async def admin_workshop_tags_add(self, ctx, slug, name, category):
+        """
+        Adds a tag to the workshop.
+
+        Slug must be only alphanum + `-` characters, and not start with `-`.
+        """
+        if not re.match(r'\w[\w\d\-]*', slug):
+            return await ctx.send("Tag must be alnum and not start with -")
+        tag = {"slug": slug, "name": name, "category": category}
+        await self.bot.mdb.workshop_tags.insert_one(tag)
+        await ctx.send(f"Added tag `{slug}`")
+
+    @admin_workshop_tags.command(name='remove')
+    @checks.is_owner()
+    async def admin_workshop_tags_remove(self, ctx, slug):
+        """
+        Removes a tag from the workshop.
+        """
+        result = await self.bot.mdb.workshop_tags.delete_many({"slug": slug})
+        await ctx.send(f"Deleted {result.deleted_count} tags")
 
     # ==== listener ====
     @commands.Cog.listener()
@@ -258,6 +339,20 @@ class AdminUtils(commands.Cog):
 
     async def _ping(self):
         return dict(self.bot.latencies)
+
+    async def _restart_shard(self, shard_id: int):
+        if (shard := self.bot.get_shard(shard_id)) is None:
+            return False
+        await shard.reconnect()
+        return f"Reconnected shard {shard.id}"
+
+    async def _kill_cluster(self, cluster_id: int):
+        if cluster_id != self.bot.cluster_id:
+            return False
+        import os
+        import signal
+        os.kill(os.getpid(), signal.SIGTERM)  # please shut down gracefully
+        return "Shutting down..."
 
     # ==== pubsub ====
     async def pscall(self, command, args=None, kwargs=None, *, expected_replies=config.NUM_CLUSTERS or 1, timeout=30):

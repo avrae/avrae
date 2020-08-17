@@ -11,7 +11,19 @@ from PIL import Image
 from cogs5e.models.errors import ExternalImportError
 
 
+def preprocess_url(url):
+    """
+    Does any necessary changes to the URL before downloading the image.
+
+    Current operations:
+    www.dndbeyond.com/avatars -> media-waterdeep.cursecdn.com/avatars
+    """
+    return url.replace("www.dndbeyond.com/avatars", "media-waterdeep.cursecdn.com/avatars")
+
+
 async def generate_token(img_url, color_override=None):
+    img_url = preprocess_url(img_url)
+
     def process_img(img_bytes, color_override, image_format=None):
         # open the images
         b = BytesIO(img_bytes)

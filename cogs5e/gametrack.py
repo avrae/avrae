@@ -12,12 +12,12 @@ import d20
 import discord
 from discord.ext import commands
 
-from cogs5e.funcs import targetutils
-from gamedata.lookuputils import get_spell_choices, select_spell_full
 from aliasing import helpers
+from cogs5e.funcs import targetutils
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
-from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument
+from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument, NoSelectionElements
+from gamedata.lookuputils import get_spell_choices, select_spell_full
 from utils.argparser import argparse
 from utils.dice import d20_with_adv
 from utils.functions import confirm, search, search_and_select, try_delete
@@ -588,7 +588,12 @@ class GameTrack(commands.Cog):
         args = argparse(args)
 
         if not args.last('i', type_=bool):
-            spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.spellbook)
+            try:
+                spell = await select_spell_full(ctx, spell_name, list_filter=lambda s: s.name in char.spellbook)
+            except NoSelectionElements:
+                return await ctx.send(
+                    f"No matching spells found. Make sure this spell is in your "
+                    f"`{ctx.prefix}spellbook`, or cast with the `-i` argument to ignore restrictions!")
         else:
             spell = await select_spell_full(ctx, spell_name)
 

@@ -18,7 +18,8 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
-from utils.functions import auth_and_chan, clean_content, confirm, get_selection, user_from_id
+from utils.functions import auth_and_chan, confirm
+from utils.functions import get_selection, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
@@ -483,7 +484,6 @@ class Customization(commands.Cog):
             parsed = await transformer
         except EvaluationError as err:
             return await helpers.handle_alias_exception(ctx, err)
-        parsed = clean_content(parsed, ctx)
         await ctx.send(f"{ctx.author.display_name}: {parsed}")
 
     @commands.command()

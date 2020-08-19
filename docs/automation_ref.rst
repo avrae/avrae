@@ -50,7 +50,7 @@ Attack
         type: "attack";
         hit: Effect[];
         miss: Effect[];
-        attackBonus?: AnnotatedString;
+        attackBonus?: IntExpression;
     }
 
 An Attack effect makes an attack roll against a targeted creature.
@@ -66,7 +66,7 @@ It must be inside a Target effect.
 
 .. attribute:: attackBonus
 
-     *optional* - An AnnotatedString that details what attack bonus to use (defaults to caster's spell attack mod).
+     *optional* - An IntExpression that details what attack bonus to use (defaults to caster's spell attack mod).
 
 
 Save
@@ -78,7 +78,7 @@ Save
         stat: "str"|"dex"|"con"|"int"|"wis"|"cha";
         fail: Effect[];
         success: Effect[];
-        dc?: AnnotatedString;
+        dc?: IntExpression;
     }
 
 A Save effect forces a targeted creature to make a saving throw.
@@ -98,7 +98,7 @@ It must be inside a Target effect.
 
 .. attribute:: dc
 
-     *optional* - An AnnotatedString that details what DC to use (defaults to caster's spell DC).
+     *optional* - An IntExpression that details what DC to use (defaults to caster's spell DC).
 
 Damage
 ------
@@ -164,7 +164,7 @@ IEffect
     {
         type: "ieffect";
         name: string;
-        duration: int | AnnotatedString;
+        duration: int | IntExpression;
         effects: AnnotatedString;
         end?: boolean;
     }
@@ -195,7 +195,7 @@ Roll
 
     {
         type: "roll";
-        dice: string;
+        dice: AnnotatedString;
         name: string;
         higher?: {int: string};
         cantripScale?: boolean;
@@ -206,7 +206,7 @@ Rolls some dice and saves the result. Should be in a Meta tag.
 
 .. attribute:: dice
 
-     What dice to roll.
+     An AnnotatedString detailing what dice to roll.
 
 .. attribute:: name
 
@@ -230,14 +230,14 @@ Text
 
     {
         type: "text";
-        text: string;
+        text: AnnotatedString;
     }
 
 Outputs a short amount of text in the resulting embed.
 
 .. attribute:: text
 
-    The text to display.
+    An AnnotatedString detailing the text to display.
 
 AnnotatedString
 ---------------
@@ -249,6 +249,27 @@ This will replace the bracketed portion with the value of the meta variable (usu
 
 To perform math inside an AnnotatedString, surround the formula with two curly braces
 (e.g. ``{{floor(dexterityMod+spell)}}``).
+
+IntExpression
+-------------
+An IntExpression is similar to an AnnotatedString in its ability to use variables and functions. However, it has the
+following differences:
+
+- Curly braces around the expression are not required
+- An IntExpression can only contain one expression
+- The result of an IntExpression must be an integer.
+
+These are valid IntExpressions:
+
+- ``8 + proficiencyBonus + dexterityMod``
+- ``12``
+- ``floor(level / 2)``
+
+These are *not* valid IntExpressions:
+
+- ``1d8``
+- ``DC {8 + proficiencyBonus + dexterityMod}``
+
 
 Examples
 --------

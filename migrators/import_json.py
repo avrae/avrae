@@ -48,14 +48,8 @@ async def run(mdb):
 
 
 if __name__ == '__main__':
-    mdb = None
-    if 'test' in sys.argv:
-        import credentials
-
-        mdb = motor.motor_asyncio.AsyncIOMotorClient(credentials.test_mongo_url).avrae
-    else:
-        mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
-        mdb = mclient[os.getenv('MONGO_DB', "avrae")]
+    mclient = motor.motor_asyncio.AsyncIOMotorClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
+    mdb = mclient[os.getenv('MONGO_DB', "avrae")]
 
     input(f"Inserting into {mdb.name}. Press enter to continue.")
     asyncio.get_event_loop().run_until_complete(run(mdb))

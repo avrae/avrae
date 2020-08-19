@@ -4,6 +4,7 @@ Created on Jan 19, 2017
 @author: andrew
 """
 import asyncio
+import json
 import logging
 import traceback
 
@@ -16,14 +17,14 @@ from aliasing import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
-from cogs5e.models.sheet.attack import Attack
+from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import auth_and_chan, confirm, generate_token, get_positivity, list_get, search_and_select, \
-    try_delete
+from utils.functions import auth_and_chan, confirm, get_positivity, list_get, search_and_select, try_delete
+from utils.img import generate_token
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -140,13 +141,51 @@ class SheetManager(commands.Cog):
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:
-            character.overrides.attacks.remove(conflict)
+            if await confirm(ctx, "This will overwrite an attack with the same name. Continue?"):
+                character.overrides.attacks.remove(conflict)
+            else:
+                return await ctx.send("Okay, aborting.")
         character.overrides.attacks.append(attack)
         await character.commit(ctx)
 
         out = f"Created attack {attack.name}!"
         if conflict:
             out += f" Removed a duplicate attack."
+        await ctx.send(out)
+
+    @attack.command(name="import")
+    async def attack_import(self, ctx, *, data):
+        """
+        Imports an attack from JSON exported from the Avrae Dashboard.
+        """
+        character: Character = await Character.from_ctx(ctx)
+
+        try:
+            attack_json = json.loads(data)
+        except json.decoder.JSONDecodeError:
+            return await ctx.send("This is not a valid attack.")
+
+        if not isinstance(attack_json, list):
+            attack_json = [attack_json]
+
+        try:
+            attacks = AttackList.from_dict(attack_json)
+        except:
+            return await ctx.send("This is not a valid attack.")
+
+        conflicts = [a for a in character.overrides.attacks if a.name.lower() in [new.name.lower() for new in attacks]]
+        if conflicts:
+            if await confirm(ctx, f"This will overwrite {len(conflicts)} attacks with the same name "
+                                  f"({', '.join(c.name for c in conflicts)}). Continue?"):
+                for conflict in conflicts:
+                    character.overrides.attacks.remove(conflict)
+            else:
+                return await ctx.send("Okay, aborting.")
+
+        character.overrides.attacks.extend(attacks)
+        await character.commit(ctx)
+
+        out = f"Imported {len(attacks)} attacks:\n{attacks.build_str(character)}"
         await ctx.send(out)
 
     @attack.command(name="delete", aliases=['remove'])
@@ -442,7 +481,8 @@ class SheetManager(commands.Cog):
         if conflict:
             overwrite = "**WARNING**: This will overwrite an existing character."
 
-        await ctx.send(f"{user.mention}, accept a copy of {character.name}? (Type yes/no)\n{overwrite}")
+        await ctx.send(f"{user.mention}, accept a copy of {character.name}? (Type yes/no)\n{overwrite}",
+                       allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         try:
             m = await self.bot.wait_for('message', timeout=300,
                                         check=lambda msg: msg.author == user

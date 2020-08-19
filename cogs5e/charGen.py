@@ -3,6 +3,7 @@ import logging
 import random
 import textwrap
 
+import discord
 from d20 import roll
 from discord.ext import commands
 
@@ -29,7 +30,8 @@ class CharGenerator(commands.Cog):
             rolls = [roll("4d6kh3") for _ in range(6)]
             stats = '\n'.join(str(r) for r in rolls)
             total = sum([r.total for r in rolls])
-            await ctx.send(f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`")
+            await ctx.send(f"{ctx.message.author.mention}\nGenerated random stats:\n{stats}\nTotal = `{total}`",
+                           allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
             return
 
         try:
@@ -83,7 +85,7 @@ class CharGenerator(commands.Cog):
         def chk(m):
             return m.author == author and m.channel == channel
 
-        await ctx.send(author.mention + " What race?")
+        await ctx.send(author.mention + " What race?", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         try:
             race_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
@@ -91,7 +93,7 @@ class CharGenerator(commands.Cog):
         race_choices = await get_race_choices(ctx)
         race = await search_and_select(ctx, race_choices, race_response.content, lambda e: e.name)
 
-        await ctx.send(author.mention + " What class?")
+        await ctx.send(author.mention + " What class?", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         try:
             class_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
@@ -101,7 +103,8 @@ class CharGenerator(commands.Cog):
 
         subclass_choices = await available(ctx, _class.subclasses, 'class')
         if subclass_choices:
-            await ctx.send(author.mention + " What subclass?")
+            await ctx.send(author.mention + " What subclass?",
+                           allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
             try:
                 subclass_response = await self.bot.wait_for('message', timeout=90, check=chk)
             except asyncio.TimeoutError:
@@ -111,7 +114,8 @@ class CharGenerator(commands.Cog):
         else:
             subclass = None
 
-        await ctx.send(author.mention + " What background?")
+        await ctx.send(author.mention + " What background?",
+                       allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         try:
             bg_response = await self.bot.wait_for('message', timeout=90, check=chk)
         except asyncio.TimeoutError:
@@ -236,7 +240,7 @@ class CharGenerator(commands.Cog):
               f"{background.name} Background.\n" \
               f"Stat Array: `{stats}`\nI have PM'd you full character details."
 
-        await loadingMessage.edit(content=out)
+        await loadingMessage.edit(content=out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
 
     @staticmethod
     def old_name_gen():

@@ -7,13 +7,9 @@ import asyncio
 import logging
 import random
 import re
-from io import BytesIO
 from itertools import zip_longest
 
-import aiohttp
 import discord
-import numpy
-from PIL import Image
 from fuzzywuzzy import fuzz, process
 
 from cogs5e.models.errors import NoSelectionElements, SelectionCancelled
@@ -285,111 +281,6 @@ async def confirm(ctx, message, delete_msgs=False):
         except:
             pass
     return replyBool
-
-
-async def generate_token(img_url, color_override=None):
-    def process_img(img_bytes, color_override):
-        b = BytesIO(img_bytes)
-        b.seek(0)  # ??? #1175?
-        img = Image.open(b)
-        template = Image.open('res/template.png')
-        transparency_template = Image.open('res/alphatemplate.tif')
-        width, height = img.size
-        is_taller = height >= width
-        if is_taller:
-            box = (0, 0, width, width)
-        else:
-            box = (width / 2 - height / 2, 0, width / 2 + height / 2, height)
-        img = img.crop(box)
-        img = img.resize((260, 260), Image.ANTIALIAS)
-
-        if color_override is None:
-            num_pixels = img.size[0] * img.size[1]
-            colors = img.getcolors(num_pixels)
-            rgb = sum(c[0] * c[1][0] for c in colors), sum(c[0] * c[1][1] for c in colors), sum(
-                c[0] * c[1][2] for c in colors)
-            rgb = rgb[0] / num_pixels, rgb[1] / num_pixels, rgb[2] / num_pixels
-        else:
-            rgb = ((color_override >> 16) & 255, (color_override >> 8) & 255, color_override & 255)
-
-        # color the circle
-        bands = template.split()
-        for i, v in enumerate(rgb):
-            out = bands[i].point(lambda p: int(p * v / 255))
-            bands[i].paste(out)
-
-        # alpha blending
-        try:
-            alpha = img.getchannel("A")
-            alpha_pixels = numpy.array(alpha)
-            template_pixels = numpy.asarray(transparency_template)
-            for r, row in enumerate(template_pixels):
-                for c, col in enumerate(row):
-                    alpha_pixels[r][c] = min(alpha_pixels[r][c], col)
-            out = Image.fromarray(alpha_pixels, "L")
-            img.putalpha(out)
-        except ValueError:
-            img.putalpha(transparency_template)
-
-        colored_template = Image.merge(template.mode, bands)
-        img.paste(colored_template, mask=colored_template)
-
-        out_bytes = BytesIO()
-        img.save(out_bytes, "PNG")
-        template.close()
-        transparency_template.close()
-        img.close()
-        out_bytes.seek(0)
-        return out_bytes
-
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(img_url) as resp:
-                img_bytes = await resp.read()
-        processed = await asyncio.get_event_loop().run_in_executor(None, process_img, img_bytes, color_override)
-    except Exception:
-        raise
-
-    return processed
-
-
-def clean_content(content, ctx):
-    transformations = {
-        re.escape('<@{0.id}>'.format(member)): '@' + member.display_name
-        for member in ctx.message.mentions
-    }
-
-    # add the <@!user_id> cases as well..
-    second_mention_transforms = {
-        re.escape('<@!{0.id}>'.format(member)): '@' + member.display_name
-        for member in ctx.message.mentions
-    }
-
-    transformations.update(second_mention_transforms)
-
-    if ctx.guild is not None:
-        role_transforms = {
-            re.escape('<@&{0.id}>'.format(role)): '@' + role.name
-            for role in ctx.message.role_mentions
-        }
-        transformations.update(role_transforms)
-
-    def repl(obj):
-        return transformations.get(re.escape(obj.group(0)), '')
-
-    pattern = re.compile('|'.join(transformations.keys()))
-    result = pattern.sub(repl, content)
-
-    transformations = {
-        '@everyone': '@\u200beveryone',
-        '@here': '@\u200bhere'
-    }
-
-    def repl2(obj):
-        return transformations.get(obj.group(0), '')
-
-    pattern = re.compile('|'.join(transformations.keys()))
-    return pattern.sub(repl2, result)
 
 
 def auth_and_chan(ctx):

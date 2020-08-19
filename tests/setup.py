@@ -101,7 +101,8 @@ DUMMY_READY = {
             'unavailable': True,
             'id': str(TEST_GUILD_ID)
         }
-    ]
+    ],
+    '__shard_id__': 0
 }
 
 DUMMY_GUILD_CREATE = {

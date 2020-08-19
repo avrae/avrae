@@ -6,6 +6,7 @@ import os
 
 import newrelic.agent
 
+import gamedata.spell
 from gamedata.background import Background
 from gamedata.feat import Feat
 from gamedata.item import Item
@@ -13,7 +14,6 @@ from gamedata.klass import Class, Subclass
 from gamedata.monster import Monster
 from gamedata.race import Race
 from gamedata.shared import SourcedTrait
-from gamedata.spell import Spell
 from utils import config
 
 log = logging.getLogger(__name__)
@@ -129,7 +129,7 @@ class Compendium:
         self.feats = deserialize_and_register_lookups(Feat, self.raw_feats)
         self.items = deserialize_and_register_lookups(Item, self.raw_items)
         self.monsters = deserialize_and_register_lookups(Monster, self.raw_monsters)
-        self.spells = deserialize_and_register_lookups(Spell, self.raw_spells)
+        self.spells = deserialize_and_register_lookups(gamedata.spell.Spell, self.raw_spells)
 
         # generated
         self._load_classfeats()

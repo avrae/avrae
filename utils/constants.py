@@ -37,7 +37,7 @@ SOURCE_MAP = {
     'CoSCO': 'Curse of Strahd: Character Options', 'XGtE': "Xanathar's Guide to Everything",
     'TTP': 'The Tortle Package', 'UA': 'Unearthed Arcana', 'DDB': 'D&D Beyond', 'CR': 'Critical Role',
     'TCS': "Tal'Dorei Campaign Setting", 'MToF': 'Mordenkainen’s Tome of Foes', 'DDIA-MORD': 'Rrakkma',
-    'WDH': 'Waterdeep Dragon Heist', 'WDotMM': 'Waterdeep Dungeon of the Mad Mage',
+    'WDH': 'Waterdeep: Dragon Heist', 'WDotMM': 'Waterdeep: Dungeon of the Mad Mage',
     'WGtE': "Wayfinder's Guide to Eberron", 'GGtR': "Guildmasters' Guide to Ravnica", '_APT': 'Archived Playtest',
     'LLoK': 'Lost Laboratory of Kwalish', 'DoIP': 'Dragon of Icespire Peak', 'TMR': 'Tactical Maps Reincarnated',
     'GoS': 'Ghosts of Saltmarsh', 'AI': 'Acquisitions Incorporated', 'HftT': 'Hunt for the Thessalhydra',
@@ -46,9 +46,9 @@ SOURCE_MAP = {
     'SAC': 'Sage Advice Compendium', 'DDvRaM': 'Dungeons & Dragons vs. Rick and Morty', 'LR': 'Locathah Rising',
     'IMR': 'Infernal Machine Rebuild', 'MFFV1': "Mordenkainen's Fiendish Folio Volume 1", 'SD': 'Sapphire Dragon',
     'EGtW': "Explorer's Guide to Wildemount", 'OGA': 'One Grung Above', 'MOoT': 'Mythic Odysseys of Theros',
-    'WA': 'Frozen Sick', 'TSCF': 'The Sunless Citadel (Free)', 'TFoFF': 'The Forge of Fury (Free)'
+    'WA': 'Frozen Sick', 'TSCF': 'The Sunless Citadel (Free)', 'TFoFF': 'The Forge of Fury (Free)',
+    'LRDToB': 'Legends of Runeterra: Dark Tides of Bilgewater', 'IDRotF': 'Icewind Dale: Rime of the Frostmaiden'
 }
-
 SOURCE_SLUG_MAP = {
     'BR': 'basic-rules', 'PHB': 'players-handbook', 'DMG': 'dungeon-masters-guide',
     'EE': 'elemental-evil-players-companion', 'MM': 'monster-manual', 'CoS': 'curse-of-strahd',
@@ -70,5 +70,10 @@ SOURCE_SLUG_MAP = {
     'SAC': 'sage-advice-compendium', 'DDvRaM': 'dungeons-dragons-vs-rick-and-morty', 'LR': 'locathah-rising',
     'IMR': 'infernal-machine-rebuild', 'MFFV1': 'mordenkainens-fiendish-folio-volume-1', 'SD': 'sapphire-dragon',
     'EGtW': 'explorers-guide-to-wildemount', 'OGA': 'one-grung-above', 'MOoT': 'mythic-odysseys-of-theros',
-    'WA': 'frozen-sick', 'TSCF': 'the-sunless-citadel-free', 'TFoFF': 'the-forge-of-fury-free'
+    'WA': 'frozen-sick', 'TSCF': 'the-sunless-citadel-free', 'TFoFF': 'the-forge-of-fury-free',
+    'LRDToB': 'legends-of-runeterra-dark-tides-of-bilgewater', 'IDRotF': 'icewind-dale-rime-of-the-frostmaiden'
 }
+PARTNERED_SOURCES = ('LRDToB',)
+UA_SOURCES = ('UA',)
+CR_SOURCES = ('CR', 'EGtW', 'WA')
+NONCORE_SOURCES = ('DDIA-MORD', 'LLoK', 'LR', 'IMR', 'MFFV1', 'OGA')

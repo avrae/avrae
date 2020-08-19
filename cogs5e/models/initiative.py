@@ -1,4 +1,5 @@
 import cachetools
+import discord
 from d20 import roll
 
 from cogs5e.models.errors import ChannelInCombat, CombatChannelNotFound, CombatException, CombatNotFound, \
@@ -385,6 +386,17 @@ class Combat:
             nextTurn = self.next_combatant
             outStr += f"**Next up**: {nextTurn.name} ({nextTurn.controller_mention()})\n"
         return outStr
+
+    def get_turn_str_mentions(self):
+        """Gets the :class:`discord.AllowedMentions` for the users mentioned in the current turn str."""
+        if isinstance(self.current_combatant, CombatantGroup):
+            user_ids = {discord.Object(id=int(comb.controller)) for comb in self.current_combatant.get_combatants()}
+        else:
+            user_ids = {discord.Object(id=int(self.current_combatant.controller))}
+
+        if self.options.get('turnnotif'):
+            user_ids.add(discord.Object(id=int(self.next_combatant.controller)))
+        return discord.AllowedMentions(users=list(user_ids))
 
     @staticmethod
     async def ensure_unique_chan(ctx):
@@ -1067,6 +1079,14 @@ class CombatantGroup(Combatant):
     @init.setter
     def init(self, new_init):
         self._init = new_init
+
+    @property
+    def init_skill(self):
+        # groups: if all combatants are the same type, return the first one's skill, otherwise +0
+        if all(isinstance(c, MonsterCombatant) for c in self._combatants) \
+                and len(set(c.monster_name for c in self._combatants)) == 1:
+            return self._combatants[0].init_skill
+        return Skill(0)
 
     @property
     def index(self):

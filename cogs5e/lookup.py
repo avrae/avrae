@@ -10,10 +10,11 @@ from discord.ext import commands
 
 import gamedata
 from cogs5e.models import errors
-from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, add_homebrew_footer, set_maybe_long_desc
+from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
-from gamedata.lookuputils import HOMEBREW_EMOJI, can_access, get_item_choices, get_monster_choices, get_spell_choices
+from gamedata.lookuputils import HOMEBREW_EMOJI, can_access, get_item_choices, get_monster_choices, get_spell_choices, \
+    handle_source_footer
 from gamedata.shared import SourcedTrait
 from utils import checks
 from utils.functions import get_positivity, search_and_select, trim_str
@@ -98,7 +99,7 @@ class Lookup(commands.Cog):
         if result.prerequisite:
             embed.add_field(name="Prerequisite", value=result.prerequisite, inline=False)
         add_fields_from_long_text(embed, "Description", result.desc)
-        embed.set_footer(text=f"Feat | {result.source_str()}")
+        handle_source_footer(embed, result, "Feat")
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== races / racefeats ====
@@ -113,7 +114,7 @@ class Lookup(commands.Cog):
         embed.title = result.name
         embed.url = result.url
         set_maybe_long_desc(embed, result.text)
-        embed.set_footer(text=f"Race Feature | {result.source_str()}")
+        handle_source_footer(embed, result, "Race Feature")
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
@@ -131,7 +132,7 @@ class Lookup(commands.Cog):
         embed.add_field(name="Size", value=result.size)
         for t in result.traits:
             add_fields_from_long_text(embed, t.name, t.text)
-        embed.set_footer(text=f"Race | {result.source_str()}")
+        handle_source_footer(embed, result, "Race")
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== classes / classfeats ====
@@ -145,7 +146,7 @@ class Lookup(commands.Cog):
         embed.title = result.name
         embed.url = result.url
         set_maybe_long_desc(embed, result.text)
-        embed.set_footer(text=f"Class Feature | {result.source_str()}")
+        handle_source_footer(embed, result, "Class Feature")
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
@@ -176,7 +177,8 @@ class Lookup(commands.Cog):
                 level_features_str += f"`{i + 1}` {l}\n"
             embed.description = level_features_str
 
-            embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature.")
+            handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature.",
+                                 add_source_str=False)
         else:
             embed.title = f"{result.name}, Level {level}"
 
@@ -189,7 +191,8 @@ class Lookup(commands.Cog):
             for f in level_features:
                 embed.add_field(name=f.name, value=trim_str(f.text, 1024), inline=False)
 
-            embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
+            handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
+                                 add_source_str=False)
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
@@ -209,7 +212,8 @@ class Lookup(commands.Cog):
                 text = trim_str(feature.text, 1024)
                 embed.add_field(name=feature.name, value=text, inline=False)
 
-        embed.set_footer(text=f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.")
+        handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature if it is cut off.",
+                             add_source_str=False)
 
         await (await self._get_destination(ctx)).send(embed=embed)
 
@@ -222,7 +226,7 @@ class Lookup(commands.Cog):
         embed = EmbedWithAuthor(ctx)
         embed.url = result.url
         embed.title = result.name
-        embed.set_footer(text=f"Background | {result.source_str()}")
+        handle_source_footer(embed, result, "Background")
 
         for trait in result.traits:
             text = trim_str(trait.text, 1024)
@@ -382,9 +386,7 @@ class Lookup(commands.Cog):
             if monster.legactions:
                 embed_queue[-1].add_field(name="Legendary Actions", value=str(len(monster.legactions)))
 
-        embed_queue[-1].set_footer(text=f"Creature | {monster.source_str()}")
-        if monster.homebrew:
-            add_homebrew_footer(embed_queue[-1])
+        handle_source_footer(embed_queue[-1], monster, "Creature")
 
         embed_queue[0].set_thumbnail(url=monster.get_image_url())
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
@@ -442,10 +444,7 @@ class Lookup(commands.Cog):
         if higher_levels:
             add_fields_from_long_text(embed_queue[-1], "At Higher Levels", higher_levels)
 
-        embed_queue[-1].set_footer(text=f"Spell | {spell.source_str()}")
-        if spell.homebrew:
-            add_homebrew_footer(embed_queue[-1])
-
+        handle_source_footer(embed_queue[-1], spell, "Spell")
         if spell.image:
             embed_queue[0].set_thumbnail(url=spell.image)
 
@@ -479,9 +478,7 @@ class Lookup(commands.Cog):
         if item.image:
             embed.set_thumbnail(url=item.image)
 
-        embed.set_footer(text=f"Item | {item.source_str()}")
-        if item.homebrew:
-            add_homebrew_footer(embed)
+        handle_source_footer(embed, item, "Item")
 
         await Stats.increase_stat(ctx, "items_looked_up_life")
         await (await self._get_destination(ctx)).send(embed=embed)

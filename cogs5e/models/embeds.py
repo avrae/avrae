@@ -54,13 +54,6 @@ def add_fields_from_args(embed, _fields):
     return embed
 
 
-def add_homebrew_footer(embed):
-    if embed.footer.text:
-        embed.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png", text=embed.footer.text)
-    else:
-        embed.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png", text="Homebrew content.")
-
-
 def chunk_text(text, chunk_size=1024):
     return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
 

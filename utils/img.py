@@ -53,6 +53,7 @@ async def generate_token(img_url, is_subscriber=False):
         out_bytes = BytesIO()
         img.save(out_bytes, "PNG")
         template_img.close()
+        mask_img.close()
         img.close()
         out_bytes.seek(0)
         return out_bytes

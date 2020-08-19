@@ -295,15 +295,19 @@ async def parse_snippets(args, ctx) -> str:
 # transformers
 async def parse_with_character(ctx, character, string):
     evaluator = (await evaluators.ScriptingEvaluator.new(ctx)).with_character(character)
-    out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
-    await evaluator.run_commits()
+    try:
+        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
+    finally:
+        await evaluator.run_commits()
     return out
 
 
 async def parse_with_statblock(ctx, statblock, string):
     evaluator = (await evaluators.ScriptingEvaluator.new(ctx)).with_statblock(statblock)
-    out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
-    await evaluator.run_commits()
+    try:
+        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
+    finally:
+        await evaluator.run_commits()
     return out
 
 
@@ -316,8 +320,10 @@ async def parse_no_char(ctx, cstr):
     :rtype: str
     """
     evaluator = await evaluators.ScriptingEvaluator.new(ctx)
-    out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
-    await evaluator.run_commits()
+    try:
+        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
+    finally:
+        await evaluator.run_commits()
     return out
 
 

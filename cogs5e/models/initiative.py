@@ -1081,6 +1081,14 @@ class CombatantGroup(Combatant):
         self._init = new_init
 
     @property
+    def init_skill(self):
+        # groups: if all combatants are the same type, return the first one's skill, otherwise +0
+        if all(isinstance(c, MonsterCombatant) for c in self._combatants) \
+                and len(set(c.monster_name for c in self._combatants)) == 1:
+            return self._combatants[0].init_skill
+        return Skill(0)
+
+    @property
     def index(self):
         return self._index
 

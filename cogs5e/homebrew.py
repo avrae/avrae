@@ -90,8 +90,9 @@ class Homebrew(commands.Cog):
         # ex: https://critterdb.com//#/publishedbestiary/view/5acb0aa187653a455731b890
         # https://critterdb.com/#/publishedbestiary/view/57552905f9865548206b50b0
         # https://critterdb.com:443/#/bestiary/view/5acfe382de482a4d0ed57b46
-        if not (match := re.match(r'https?://critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)',
-                                  url)):
+        if not (match := re.match(
+                r'https?://(?:www\.)?critterdb.com(?::443|:80)?.*#/(published)?bestiary/view/([0-9a-f]+)',
+                url)):
             return await ctx.send("This is not a CritterDB link.")
 
         loading = await ctx.send("Importing bestiary (this may take a while for large bestiaries)...")

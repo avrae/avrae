@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 
 class Compendium:
-    # noinspection PyUnresolvedReferences
+    # noinspection PyTypeHints
     # prevents pycharm from freaking out over type comments
     def __init__(self):
         # raw data
@@ -80,6 +80,7 @@ class Compendium:
             await self.load_all_mongodb(mdb)
 
         await loop.run_in_executor(None, self.load_common)
+        log.info(f"Done loading data - {len(self._entitlement_lookup)} objects registered")
 
     def load_all_json(self, base_path=None):
         if base_path is not None:
@@ -114,6 +115,8 @@ class Compendium:
 
     # noinspection DuplicatedCode
     def load_common(self):
+        self._entitlement_lookup = {}
+
         def deserialize_and_register_lookups(cls, data_source, entitlement_entity_type=None):
             out = []
             for entity_data in data_source:
@@ -127,7 +130,7 @@ class Compendium:
         self.races = deserialize_and_register_lookups(Race, self.raw_races)
         self.subraces = deserialize_and_register_lookups(Race, self.raw_subraces, entitlement_entity_type='subrace')
         self.feats = deserialize_and_register_lookups(Feat, self.raw_feats)
-        self.items = deserialize_and_register_lookups(Item, self.raw_items)
+        self.items = deserialize_and_register_lookups(Item, self.raw_items, entitlement_entity_type='magic-item')
         self.monsters = deserialize_and_register_lookups(Monster, self.raw_monsters)
         self.spells = deserialize_and_register_lookups(gamedata.spell.Spell, self.raw_spells)
 

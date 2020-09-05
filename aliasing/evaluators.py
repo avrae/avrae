@@ -1,6 +1,6 @@
-import asyncio
 import json
 import re
+import textwrap
 import time
 from math import ceil, floor, sqrt
 
@@ -475,7 +475,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 except Exception as ex:
                     raise EvaluationError(ex, expr)
             elif match.group('drac2'):  # <drac2>...</drac2>
-                expr = match.group('drac2').strip()
+                expr = textwrap.dedent(match.group('drac2')).strip()
                 try:
                     evalresult = self.execute(expr)
                 except Exception as ex:

@@ -344,12 +344,14 @@ class SheetManager(commands.Cog):
         """Generates and sends a token for use on VTTs."""
 
         char: Character = await Character.from_ctx(ctx)
-        color_override = char.get_setting('color')
         if not char.image:
             return await ctx.send("This character has no image.")
 
+        ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+        is_subscriber = ddb_user and ddb_user.subscriber
+
         try:
-            processed = await generate_token(char.image, color_override)
+            processed = await generate_token(char.image, is_subscriber)
         except Exception as e:
             return await ctx.send(f"Error generating token: {e}")
 

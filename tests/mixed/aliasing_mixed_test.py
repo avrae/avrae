@@ -7,7 +7,7 @@ pytestmark = pytest.mark.asyncio
 
 async def test_echo_alias(avrae, dhttp):
     avrae.message("!alias foobar echo foobar")
-    await dhttp.receive_message("Alias `!foobar` added.```py\n!alias foobar echo foobar\n```")
+    await dhttp.receive_message("Alias `foobar` added.```py\n!alias foobar echo foobar\n```")
     avrae.message("!foobar")
     await dhttp.receive_delete()
     await dhttp.receive_message(".+: foobar")

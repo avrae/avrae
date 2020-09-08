@@ -612,7 +612,7 @@ class InitTracker(commands.Cog):
             member = await commands.MemberConverter().convert(ctx, controller_name)
             if member is None:
                 return "\u274c New controller not found."
-            allowed_mentions.append(member.id)
+            allowed_mentions.append(member)
             combatant.controller = str(member.id)
             return f"\u2705 {combatant.name}'s controller set to {combatant.controller_mention()}."
 

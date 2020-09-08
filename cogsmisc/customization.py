@@ -177,6 +177,7 @@ class CollectableManagementGroup(commands.Group):
         await obj.delete(ctx.bot.mdb)
         await ctx.send(f'{self.obj_name.capitalize()} {name} removed.')
 
+    @checks.feature_flag('command.alias-subscribe.enabled')
     async def subscribe(self, ctx, url):
         coll_match = re.match(r'(?:https?://)?avrae\.io/dashboard/workshop/([0-9a-f]{24})(?:$|/)', url)
         if coll_match is None:

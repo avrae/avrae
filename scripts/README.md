@@ -25,3 +25,8 @@ Uploads a generated helpdocs JSON to S3.
 Usage: `bash scripts/sentry_release.sh [environment]`  
 Must be run in a Git repo. Sets up a new Sentry release.  
 Requires the `SENTRY_AUTH_TOKEN` and `SENTRY_ORG` env vars (set in Travis).
+
+### ensure_indices.py
+Usage: `python ensure_indices.py`
+Creates all the necessary database indices. 
+Requires the `MONGO_URL` and `MONGO_DB` env vars.

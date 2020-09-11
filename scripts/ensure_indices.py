@@ -96,7 +96,6 @@ INDICES = {
         IndexModel([('last_edited', DESCENDING)]),
         IndexModel([('num_guild_subscribers', DESCENDING)]),
         IndexModel('owner'),
-        IndexModel([('name', TEXT), ('description', TEXT)])
     ],
     "workshop_aliases": [
         IndexModel('parent_id'),
@@ -110,21 +109,6 @@ INDICES = {
         IndexModel('type'),
         IndexModel([('type', ASCENDING), ('subscriber_id', ASCENDING)]),
         IndexModel('object_id')
-    ],
-    "workshop_explore_scores_7d": [
-        IndexModel('collection.0.tags'),
-        IndexModel([('collection.0.name', TEXT), ('collection.0.description', TEXT)]),
-        IndexModel('expire_at', expireAfterSeconds=0)
-    ],
-    "workshop_explore_scores_30d": [
-        IndexModel('collection.0.tags'),
-        IndexModel([('collection.0.name', TEXT), ('collection.0.description', TEXT)]),
-        IndexModel('expire_at', expireAfterSeconds=0)
-    ],
-    "workshop_explore_scores_180d": [
-        IndexModel('collection.0.tags'),
-        IndexModel([('collection.0.name', TEXT), ('collection.0.description', TEXT)]),
-        IndexModel('expire_at', expireAfterSeconds=0)
     ]
 }
 

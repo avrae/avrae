@@ -450,6 +450,7 @@ class GameTrack(commands.Cog):
             operator = m[0]
             modifier = m[-1]
 
+        change = ''
         try:
             modifier = int(modifier)
         except ValueError:
@@ -457,8 +458,11 @@ class GameTrack(commands.Cog):
         result_embed = EmbedWithCharacter(character)
         if not operator or operator == 'mod':
             new_value = counter.value + modifier
+            change = f' ({"+" if modifier > 0 else ""}{modifier})'
         elif operator == 'set':
             new_value = modifier
+            delta = modifier - counter.value
+            change = f' ({"+" if delta > 0 else ""}{delta})'
         else:
             return await ctx.send("Invalid operator. Use mod or set.")
 
@@ -470,7 +474,7 @@ class GameTrack(commands.Cog):
         else:
             out = str(counter)
 
-        result_embed.add_field(name=counter.name, value=out)
+        result_embed.add_field(name=f'{counter.name}{change}', value=out)
 
         await try_delete(ctx.message)
         await ctx.send(embed=result_embed)

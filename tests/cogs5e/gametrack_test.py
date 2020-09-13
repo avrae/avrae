@@ -173,48 +173,49 @@ class TestSpellbook:
 class TestCustomCounters:
     async def test_cc_create(self, avrae, dhttp):
         avrae.message("!cc create TESTCC")
-        await dhttp.receive_message('Custom Counter created.')
+        await dhttp.receive_message('Custom counter created.')
+        
         avrae.message("!cc create TESTLIMITS -min 0 -max 100")
-        await dhttp.receive_message('Custom Counter created.')
+        await dhttp.receive_message('Custom counter created.')
 
     async def test_cc_summary(self, avrae, dhttp):
         avrae.message("!cc")
-        await dhttp.receive_delete()
         char = await active_character(avrae)
+
         cc_embed = Embed()
         cc_embed.set_author(name=char.name)
+
         for consumable in char.consumables:
             cc_embed.add_field(name=consumable.name, value=consuable.full_str())
         await dhttp.receive_message(embed=cc_embed)
 
     async def test_cc_misc(self, avrae, dhttp):
+        char = await active_character(avrae)
+
         avrae.message("!cc TESTCC +5")
-        await dhttp.receive_delete()
         cc_embed = Embed()
         cc_embed.set_author(name=char.name)
         cc_embed.add_field(name='TESTCC', value='5 (+5)')
         await dhttp.receive_message(embed=cc_embed)
         cc_embed.clear_fields()
+
         avrae.message("!cc TESTLIMITS -99")
-        await dhttp.receive_delete()
         cc_embed.add_field(name='TESTLIMITS', value='1/100 (-99)')
         await dhttp.receive_message(embed=cc_embed)
         cc_embed.clear_fields()
+
         avrae.message("!cc TESTLIMITS -2")
-        await dhttp.receive_delete()
         cc_embed.add_field(name='TESTLIMITS', value='0/100 (-1)\n(1 overflow)')
         await dhttp.receive_message(embed=cc_embed)
 
 
     async def test_cc_reset(self, avrae, dhttp):
         avrae.message("!cc reset TESTLIMITS")
-        await dhttp.receive_delete()
         await dhttp.receive_message('TESTLIMITS: 100/100 (+100).')
 
     async def test_cc_delete(self, avrae, dhttp):
         avrae.message("!cc delete TESTCC")
-        await dhttp.receive_delete()
         await dhttp.receive_message('Deleted counter TESTCC.')
+
         avrae.message("!cc delete TESTLIMITS")
-        await dhttp.receive_delete()
         await dhttp.receive_message('Deleted counter TESTLIMITS.')

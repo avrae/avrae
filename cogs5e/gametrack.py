@@ -451,6 +451,7 @@ class GameTrack(commands.Cog):
             modifier = m[-1]
 
         change = ''
+        old_value = counter.value
         try:
             modifier = int(modifier)
         except ValueError:
@@ -458,11 +459,8 @@ class GameTrack(commands.Cog):
         result_embed = EmbedWithCharacter(character)
         if not operator or operator == 'mod':
             new_value = counter.value + modifier
-            change = f' ({"+" if modifier > 0 else ""}{modifier})'
         elif operator == 'set':
             new_value = modifier
-            delta = modifier - counter.value
-            change = f' ({"+" if delta > 0 else ""}{delta})'
         else:
             return await ctx.send("Invalid operator. Use mod or set.")
 
@@ -470,9 +468,22 @@ class GameTrack(commands.Cog):
         await character.commit(ctx)
 
         if new_value - counter.value:
-            out = f"{str(counter)}\n({abs(new_value - counter.value)} overflow)"
+            overflow = new_value - counter.value
+            changed = counter.value - old_value
+            out = f"{str(counter)}\n({abs(overflow)} overflow)"
+            # Calculations for Change (with overflow)
+            if not operator or operator == 'mod':
+                change = f' ({"+" if changed > 0 else ""}{changed})'
+            elif operator == 'set':
+                change = f' ({"+" if changed > 0 else ""}{changed})'
         else:
             out = str(counter)
+            # Calculations for Change (without overflow)
+            if not operator or operator == 'mod':
+                change = f' ({"+" if modifier > 0 else ""}{modifier})'
+            elif operator == 'set':
+                delta = modifier - old_value
+                change = f' ({"+" if delta > 0 else ""}{delta})'
 
         result_embed.add_field(name=f'{counter.name}{change}', value=out)
 

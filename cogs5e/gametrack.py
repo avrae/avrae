@@ -473,17 +473,17 @@ class GameTrack(commands.Cog):
             out = f"{str(counter)}\n({abs(overflow)} overflow)"
             # Calculations for Change (with overflow)
             if not operator or operator == 'mod':
-                change = f' ({"+" if changed > 0 else ""}{changed})'
+                change = f' ({changed:+})'
             elif operator == 'set':
-                change = f' ({"+" if changed > 0 else ""}{changed})'
+                change = f' ({changed:+})'
         else:
             out = str(counter)
             # Calculations for Change (without overflow)
             if not operator or operator == 'mod':
-                change = f' ({"+" if modifier > 0 else ""}{modifier})'
+                change = f' ({modifier:+})'
             elif operator == 'set':
                 delta = modifier - old_value
-                change = f' ({"+" if delta > 0 else ""}{delta})'
+                change = f' ({delta:+})'
 
         result_embed.add_field(name=f'{counter.name}{change}', value=out)
 

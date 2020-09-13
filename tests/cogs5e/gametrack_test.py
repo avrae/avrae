@@ -2,6 +2,7 @@ import pytest
 from discord import Embed
 
 from tests.utils import active_character
+from cogs5e.models.embeds import EmbedWithCharacter
 
 pytestmark = pytest.mark.asyncio
 
@@ -181,9 +182,7 @@ class TestCustomCounters:
     async def test_cc_summary(self, avrae, dhttp):
         avrae.message("!cc")
         char = await active_character(avrae)
-
-        cc_embed = Embed()
-        cc_embed.set_author(name=char.name)
+        cc_embed = EmbedWithCharacter(char)
 
         for consumable in char.consumables:
             cc_embed.add_field(name=consumable.name, value=consumable.full_str())
@@ -191,23 +190,22 @@ class TestCustomCounters:
 
     async def test_cc_misc(self, avrae, dhttp):
         char = await active_character(avrae)
-        cc_embed = Embed()
-        cc_embed.set_author(name=char.name)
+        cc_embed = EmbedWithCharacter(char)
 
         avrae.message("!cc TESTCC +5")
-        await dhttp.delete_message()
+        await dhttp.receive_delete()
         cc_embed.add_field(name='TESTCC', value='5 (+5)')
         await dhttp.receive_message(embed=cc_embed)
         cc_embed.clear_fields()
 
         avrae.message("!cc TESTLIMITS -99")
-        await dhttp.delete_message()
+        await dhttp.receive_delete()
         cc_embed.add_field(name='TESTLIMITS', value='1/100 (-99)')
         await dhttp.receive_message(embed=cc_embed)
         cc_embed.clear_fields()
 
         avrae.message("!cc TESTLIMITS -2")
-        await dhttp.delete_message()
+        await dhttp.receive_delete()
         cc_embed.add_field(name='TESTLIMITS', value='0/100 (-1)\n(1 overflow)')
         await dhttp.receive_message(embed=cc_embed)
 

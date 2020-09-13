@@ -186,7 +186,7 @@ class TestCustomCounters:
         cc_embed.set_author(name=char.name)
 
         for consumable in char.consumables:
-            cc_embed.add_field(name=consumable.name, value=consuable.full_str())
+            cc_embed.add_field(name=consumable.name, value=consumable.full_str())
         await dhttp.receive_message(embed=cc_embed)
 
     async def test_cc_misc(self, avrae, dhttp):

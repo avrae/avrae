@@ -467,25 +467,25 @@ class GameTrack(commands.Cog):
         counter.set(new_value)
         await character.commit(ctx)
 
+        delta = modifier - old_value
         if new_value - counter.value:
             overflow = new_value - counter.value
             changed = counter.value - old_value
-            out = f"{str(counter)}\n({abs(overflow)} overflow)"
             # Calculations for Change (with overflow)
             if not operator or operator == 'mod':
                 change = f' ({changed:+})'
             elif operator == 'set':
-                change = f' ({changed:+})'
+                change = f' ({delta:+})'
+            out = f"{str(counter)}{change}\n({abs(overflow)} overflow)"
         else:
-            out = str(counter)
             # Calculations for Change (without overflow)
             if not operator or operator == 'mod':
                 change = f' ({modifier:+})'
             elif operator == 'set':
-                delta = modifier - old_value
                 change = f' ({delta:+})'
+            out = str(counter) + change
 
-        result_embed.add_field(name=f'{counter.name}{change}', value=out)
+        result_embed.add_field(name=counter.name, value=out)
 
         await try_delete(ctx.message)
         await ctx.send(embed=result_embed)

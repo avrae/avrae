@@ -467,7 +467,7 @@ class GameTrack(commands.Cog):
         counter.set(new_value)
         await character.commit(ctx)
 
-        delta = f"({new_value - old_value:+})"
+        delta = f"({counter.value - old_value:+})"
         if new_value - counter.value:  # we overflowed somewhere
           out = f"{str(counter)} {delta}\n({abs(new_value - counter.value)} overflow)"
         else:

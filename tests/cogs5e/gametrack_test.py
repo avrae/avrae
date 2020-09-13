@@ -111,7 +111,6 @@ class TestGame:
         status_embed.set_author(name=char.name)
         status_embed.add_field(name="Hit Points", value=r".*")
         status_embed.add_field(name="Spell Slots", value=r".*")
-        char = await active_character(avrae)
         if char.death_saves.successes != 0 or char.death_saves.fails != 0:
             status_embed.add_field(name="Death Saves", value=r".*")
         for _ in char.consumables:

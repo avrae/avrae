@@ -45,7 +45,8 @@ class GameTrack(commands.Cog):
         embed = EmbedWithCharacter(character)
         embed.add_field(name="Hit Points", value=character.hp_str())
         embed.add_field(name="Spell Slots", value=character.spellbook.slots_str())
-        embed.add_field(name="Death Saves", value=str(character.death_saves))
+        if character.death_saves.successes != 0 or character.death_saves.fails != 0:
+            embed.add_field(name="Death Saves", value=str(character.death_saves))
         for counter in character.consumables:
             embed.add_field(name=counter.name, value=counter.full_str())
         await ctx.send(embed=embed)

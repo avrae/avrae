@@ -183,36 +183,37 @@ class TestCustomCounters:
         avrae.message("!cc")
         char = await active_character(avrae)
         cc_embed = EmbedWithCharacter(char)
+        # Needed to allow for embed comparison
+        char.set_setting('color', 0xffffff)
+        cc_embed.color = 0xffffff
 
-        for consumable in char.consumables:
-            cc_embed.add_field(name=consumable.name, value=consumable.full_str())
+        for _ in char.consumables:
+            cc_embed.add_field(name='.+', value=r'((◉+〇*)|(\*\*Current Value\*\*:.+))(\n)*(\*\*Range\*\*: .+)*(\n)*(\*\*Resets On\*\*: .+)*')
         await dhttp.receive_message(embed=cc_embed)
 
     async def test_cc_misc(self, avrae, dhttp):
         char = await active_character(avrae)
         cc_embed = EmbedWithCharacter(char)
+        # Needed to allow for embed comparison
+        char.set_setting('color', 0xffffff)
+        cc_embed.color = 0xffffff
 
+        cc_embed.add_field(name=r'.+', value=r'((\d+)|(\d+\/\d+)) (\((\+|-)\d+\))(\n)*(\(\d+ .+\))*')
         avrae.message("!cc TESTCC +5")
         await dhttp.receive_delete()
-        cc_embed.add_field(name='TESTCC', value='5 (+5)')
         await dhttp.receive_message(embed=cc_embed)
-        cc_embed.clear_fields()
 
         avrae.message("!cc TESTLIMITS -99")
         await dhttp.receive_delete()
-        cc_embed.add_field(name='TESTLIMITS', value='1/100 (-99)')
         await dhttp.receive_message(embed=cc_embed)
-        cc_embed.clear_fields()
 
         avrae.message("!cc TESTLIMITS -2")
         await dhttp.receive_delete()
-        cc_embed.add_field(name='TESTLIMITS', value='0/100 (-1)\n(1 overflow)')
         await dhttp.receive_message(embed=cc_embed)
-
 
     async def test_cc_reset(self, avrae, dhttp):
         avrae.message("!cc reset TESTLIMITS")
-        await dhttp.receive_message('TESTLIMITS: 100/100 (+100).')
+        await dhttp.receive_message(r'(\w+: )(\d+\/\d+ )(\((\+|-)\d+\))')
 
     async def test_cc_delete(self, avrae, dhttp):
         avrae.message("!cc delete TESTCC")

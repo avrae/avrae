@@ -174,7 +174,7 @@ class TestCustomCounters:
     async def test_cc_create(self, avrae, dhttp):
         avrae.message("!cc create TESTCC")
         await dhttp.receive_message('Custom counter created.')
-        
+
         avrae.message("!cc create TESTLIMITS -min 0 -max 100")
         await dhttp.receive_message('Custom counter created.')
 
@@ -191,20 +191,23 @@ class TestCustomCounters:
 
     async def test_cc_misc(self, avrae, dhttp):
         char = await active_character(avrae)
-
-        avrae.message("!cc TESTCC +5")
         cc_embed = Embed()
         cc_embed.set_author(name=char.name)
+
+        avrae.message("!cc TESTCC +5")
+        await dhttp.delete_message()
         cc_embed.add_field(name='TESTCC', value='5 (+5)')
         await dhttp.receive_message(embed=cc_embed)
         cc_embed.clear_fields()
 
         avrae.message("!cc TESTLIMITS -99")
+        await dhttp.delete_message()
         cc_embed.add_field(name='TESTLIMITS', value='1/100 (-99)')
         await dhttp.receive_message(embed=cc_embed)
         cc_embed.clear_fields()
 
         avrae.message("!cc TESTLIMITS -2")
+        await dhttp.delete_message()
         cc_embed.add_field(name='TESTLIMITS', value='0/100 (-1)\n(1 overflow)')
         await dhttp.receive_message(embed=cc_embed)
 

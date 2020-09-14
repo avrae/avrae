@@ -1,17 +1,46 @@
-# avrae
+# Avrae Discord Bot
+[![Avrae Website](http://avrae.io/assets/img/AvraeLogo.jpg)](https://avrae.io/)
+
 [![Build Status](https://travis-ci.org/avrae/avrae.svg?branch=master)](https://travis-ci.org/avrae/avrae)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/678413361db643d9af25d9e8e2cdeaeb)](https://www.codacy.com/app/mommothazaz123/avrae?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=avrae/avrae&amp;utm_campaign=Badge_Grade)
 
-Avrae is a bot to facilitate running Dungeons & Dragons 5e online over Discord.
+Avrae is a Discord bot designed to help you and your friends play D&D online.
 
-You can join the Avrae Development Discord [here](https://discord.gg/pQbd4s6)!
+You can join the Avrae Development Discord [here](https://support.avrae.io), and invite Avrae to your own
+Discord server [here](https://invite.avrae.io)!
+
+## Key Features
+
+### Advanced Dice Roller
+With a custom dice parser, Avrae is one of the most advanced dice rollers on Discord, capable of supporting pretty much 
+every type of roll needed to play D&D. Advantage, disadvantage, and crits are built in, you can keep, drop, or reroll 
+dice as needed, dice can explode, and dice can be bounded.
+
+Want to use the dice roller in your own code? Check out [the code](https://github.com/avrae/d20)!
+
+### Character Sheet Integration
+Avrae can read character sheets from D&D Beyond, Dicecloud, or a Google Sheet, automatically generating macros to roll 
+attacks, ability checks, and saving throws. A player can then simply use a command to make a check, save, attack, or 
+cast, and all necessary rolls will be resolved automatically.
+
+### Initiative Tracking
+The initiative tracker is a fast way to track combat in a text channel. It supports automatic combatant sorting, HP, 
+AC, resistance, and status effect tracking, and integration with the character sheet manager and 5e content to further 
+streamline combat.
+
+### Moddability
+Have a feature in mind that isn't already in Avrae? Avrae provides a fully-featured modding API to write your own
+commands, and a place to share them with the community!
+
+Check out [the docs](https://avrae.readthedocs.io/en/latest/aliasing/api.html) and the 
+[Alias Workshop](https://avrae.io/dashboard/workshop)!
 
 ## Contributing
 
 ### How to run Avrae locally
 #### Using Docker (Recommended)
 
-Check out docker/readme.md.
+Check out [docker/readme.md](docker/readme.md).
 
 #### Building Manually
 ###### OS Requirements

@@ -14,27 +14,41 @@ You can join the Avrae Development Discord [here](https://discord.gg/pQbd4s6)!
 Check out docker/readme.md.
 
 #### Building Manually
-###### OS Requirements
-Avrae runs best on Ubuntu 16.04.4, but should be fully compatible with any UNIX-based system.
+##### OS Requirements
+Avrae is built on Ubuntu, but should be fully compatible with any UNIX-based system.
 It is possible to run Avrae on Windows, but is not recommended.
+
 ##### Creating Support Files
-Avrae is a large project, and can be a bit daunting to get running.
-You'll need to create a few files first.
+You'll need to create a Google Drive Service Account. You can find instructions on how to do this [here](https://gspread.readthedocs.io/en/latest/oauth2.html#using-signed-credentials).
 
-###### Credentials
-Check out `utils/config.py` for the list of env vars.
-
-You'll also need to create a Google Drive Service Account. You can find instructions on how to do this [here](https://gspread.readthedocs.io/en/latest/oauth2.html#using-signed-credentials).
 Follow steps 1-3 in the **Signed Credentials** portion. Rename the JSON `avrae-google.json` and put it in the project root.
 
-##### Actually Running Avrae
+#### Dependencies
 ###### Redis
-You will need to run a Redis instance to serve as a high-performance cache. Download [Redis 4.0](https://redis.io/download) and run a redis server locally **before** launching Avrae.
+You will need to run a Redis instance to serve as a high-performance cache. Download [Redis](https://redis.io/download) and run a redis server locally **before** launching Avrae.
+
 ###### MongoDB
 You will also need to run a MongoDB instance to serve as Avrae's database.
-###### Avrae
-To actually run Avrae, you need Python version >= 3.8.0.
-First, install the dependencies with `pip install -r requirements.txt`.
+
+###### Python
+Avrae requires Python >= 3.8.0.
+
+Install the dependencies with `pip install -r requirements.txt`.
+
+##### Environment Variables
+These are the required/recommended environment variables for local dev.
+
+- `ENVIRONMENT` - "development" for development
+- `TOKEN` - a valid Discord bot token
+- `DISCORD_OWNER_USER_ID` - your Discord user ID
+- `MONGO_URL` - a MongoDB connection string (defaults to `mongodb://localhost:27017`)
+- `REDIS_URL` - a Redis connection string (defaults to `redis://redis:6379/0`)
+- `NO_DICECLOUD` - if set, disables dicecloud connection/importing, otherwise:
+    - `DICECLOUD_USER` - a dicecloud username
+    - `DICECLOUD_PASS` - the password for the dicecloud user
+    - `DICECLOUD_TOKEN` - a dicecloud API token
+
+##### Running
 
 - If running Avrae in unsharded mode (**recommended for testing**), run `python dbot.py test`.
 - If running Avrae in sharded mode, run `python dbot.py`.
@@ -42,15 +56,15 @@ First, install the dependencies with `pip install -r requirements.txt`.
 #### Testing
 To test Avrae, run these commands:
 ```
-docker-compose -f docker-compose.test.yml -p avrae build
-docker-compose -f docker-compose.test.yml -p avrae up -d
+docker-compose -f docker-compose.ci.yml -p avrae build
+docker-compose -f docker-compose.ci.yml -p avrae up -d
 docker logs -f avrae_tests_1
 ```
 This should initialize an ephemeral database to run command unit tests in. 
 You should set the `DICECLOUD_USER`, `DICECLOUD_PASS`, `DICECLOUD_TOKEN`, and `GOOGLE_SERVICE_ACCOUNT` env vars to their correct values.
 
 #### Misc
-Env vars required to deploy to production:
+Env vars required to deploy to production - not required for local dev:
 - `NUM_CLUSTERS` - equal to the number of ECS tasks running Avrae
 - `DDB_AUTH_SECRET` - JWT signing secret for DDB auth request
 - `DDB_AUTH_WATERDEEP_SECRET` - JWT signing secret for DDB auth response

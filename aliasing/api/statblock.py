@@ -540,7 +540,7 @@ class AliasResistances:
     @property
     def vuln(self):
         """
-        A list of damage types that the stat block is resistant to.
+        A list of damage types that the stat block is vulnerable to.
 
         :rtype: list[Resistance]
         """
@@ -558,7 +558,8 @@ class AliasResistances:
     @property
     def neutral(self):
         """
-        A list of damage types that the stat block is vulnerable to.
+        A list of damage types that the stat block ignores in damage calculations. (i.e. will not handle resistances/
+        vulnerabilities/immunities)
 
         :rtype: list[Resistance]
         """

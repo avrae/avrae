@@ -14,6 +14,7 @@ from discord.ext.commands import BucketType, NoPrivateMessage
 
 from aliasing import helpers, personal, workshop
 from aliasing.errors import EvaluationError
+from cogs5e.models import embeds
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
@@ -145,8 +146,8 @@ class CollectableManagementGroup(commands.Group):
         user_obj_names = list(user_objs.keys())
         if user_obj_names:
             has_at_least_1 = True
-            embed.add_field(name=f"Your {self.obj_name_pl.title()}", value=', '.join(sorted(user_obj_names)),
-                            inline=False)
+            embeds.add_fields_from_long_text(embed, f"Your {self.obj_name_pl.title()}",
+                                             ', '.join(sorted(user_obj_names)))
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
             the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])

@@ -76,7 +76,7 @@ class AttackList:
 
     # utils
     def build_str(self, caster):
-        return '\n'.join(atk.build_str(caster) for atk in self.attacks)
+        return '\n'.join(sorted((atk.build_str(caster) for atk in self.attacks), key=str.lower))
 
     def __str__(self):
         return '\n'.join(str(atk) for atk in self.attacks)

@@ -6,6 +6,7 @@ from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import StatBlock
+from utils import config
 from utils.constants import SKILL_MAP
 from utils.functions import a_or_an, bubble_format
 from .shared import Sourced
@@ -235,8 +236,8 @@ class Monster(StatBlock, Sourced):
     def get_token_url(self, is_sub=False):
         """Returns a monster's token URL."""
         if is_sub:
-            return self.token_sub_fp
-        return self.token_free_fp
+            return f"{config.MONSTER_TOKEN_ENDPOINT}/{self.token_sub_fp}"
+        return f"{config.MONSTER_TOKEN_ENDPOINT}/{self.token_free_fp}"
 
     # ---- setter overrides ----
     @property

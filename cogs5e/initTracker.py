@@ -9,8 +9,8 @@ from d20 import roll
 from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
+from aliasing import helpers
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
@@ -302,7 +302,7 @@ class InitTracker(commands.Cog):
         """
         char: Character = await Character.from_ctx(ctx)
         args = await helpers.parse_snippets(args, ctx)
-        args = await char.parse_cvars(args, ctx)
+        args = await helpers.parse_with_character(ctx, char, args)
         args = argparse(args)
 
         embed = EmbedWithCharacter(char, False)
@@ -1092,9 +1092,9 @@ class InitTracker(commands.Cog):
         # argument parsing
         is_player = isinstance(combatant, PlayerCombatant)
         if is_player and combatant.character_owner == str(ctx.author.id):
-            args = await combatant.character.parse_cvars(args, ctx)
+            args = await helpers.parse_with_character(ctx, combatant.character, args)
         else:
-            args = await helpers.parse_no_char(args, ctx)
+            args = await helpers.parse_with_statblock(ctx, combatant, args)
         args = argparse(args)
 
         # handle old targeting method
@@ -1237,9 +1237,9 @@ class InitTracker(commands.Cog):
         is_character = isinstance(combatant, PlayerCombatant)
 
         if is_character and combatant.character_owner == str(ctx.author.id):
-            args = await combatant.character.parse_cvars(args, ctx)
+            args = await helpers.parse_with_character(ctx, combatant.character, args)
         else:
-            args = await helpers.parse_no_char(args, ctx)
+            args = await helpers.parse_with_statblock(ctx, combatant, args)
         args = argparse(args)
 
         if not args.last('i', type_=bool):

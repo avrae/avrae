@@ -36,24 +36,6 @@ class NotAllowed(AvraeException):
     pass
 
 
-class EvaluationError(AvraeException):
-    """Raised when a cvar evaluation causes an error."""
-
-    def __init__(self, original, expression=None):
-        super().__init__(f"Error evaluating expression: {original}")
-        self.original = original
-        self.expression = expression
-
-
-class FunctionRequiresCharacter(AvraeException):
-    """
-    Raised when a function that requires a character is called without one.
-    """
-
-    def __init__(self, msg=None):
-        super().__init__(msg or "This alias requires an active character.")
-
-
 class OutdatedSheet(AvraeException):
     """Raised when a feature is used that requires an updated sheet."""
 

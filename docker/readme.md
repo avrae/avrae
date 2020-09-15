@@ -7,6 +7,7 @@
 - [Discord](https://discordapp.com/) account.
 - [Google Drive Service Account](https://gspread.readthedocs.io/en/latest/oauth2.html#using-signed-credentials).
     - Follow steps 1-3 in the **Signed Credentials** portion. The contents of this JSON file is your `GOOGLE_SERVICE_ACCOUNT` env var.
+    - Alternatively, save that json file in the root project directory as `avrae-google.json`.
 
 
 ### Discord setup
@@ -29,20 +30,17 @@
 1. Create a `docker\env` file with real credentials.
 2. Run `docker-compose up --build`.
 
-### docker\env file
+### docker\env file (dev)
 
+    TOKEN=1
     DISCORD_OWNER_USER_ID=1
-    DISCORD_BOT_TOKEN=a
     DICECLOUD_USER=b
     DICECLOUD_PASS=c
     DICECLOUD_TOKEN=d
+
+    # set these to these literal values
+    MONGO_URL=mongodb://root:topsecret@mongo:27017
+    REDIS_URL=redis://redis:6379/0
+    
+    # optional - only required if not using avrae-google.json 
     GOOGLE_SERVICE_ACCOUNT=e
-    DBL_TOKEN=f
-    
-    # Only required if using New Relic integration
-    NEW_RELIC_CONFIG_FILE=newrelic.ini
-    NEW_RELIC_ENVIRONMENT=development
-    NEW_RELIC_LICENSE_KEY=abcd
-    
-    # Only required if using sentry.io integration
-    SENTRY_DSN=abcd

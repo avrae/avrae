@@ -191,6 +191,7 @@ XLevel           How many levels a character has in class X. int
 
 .. note::
     ``XLevel`` is not guaranteed to exist for any given ``X``, and may not exist for GSheet 1.3/1.4 characters.
+    It is recommended to use ``AliasCharacter.levels.get()`` to access arbitrary levels instead.
 
 .. _function-reference:
 
@@ -367,26 +368,35 @@ Draconic Functions
     >>> args.get('b')
     ['1d4[bless]']
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.chanid()
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.character()
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.combat()
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.combat()
 
     .. note::
         If called outside of a character context, ``combat().me`` will be ``None``.
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.delete_uvar(name)
+.. attribute:: ctx
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.dump_json
+    The context the alias was invoked in. See :class:`~aliasing.api.context.AliasContext` for more details.
 
-.. autofunction:: cogs5e.funcs.scripting.functions.err
+    Note that this is an automatically bound name and not a function.
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.exists(name)
+    :type: :class:`~aliasing.api.context.AliasContext`
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.get(name, default=None)
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.get_gvar(address)
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.delete_uvar(name)
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.load_json
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.dump_json
+
+.. autofunction:: aliasing.api.functions.err
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.exists(name)
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get(name, default=None)
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_gvar(address)
+
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
 
 .. function:: randint(x)
 
@@ -396,21 +406,26 @@ Draconic Functions
     :return: A random integer.
     :rtype: int
 
-.. autofunction:: cogs5e.funcs.scripting.functions.roll
+.. autofunction:: aliasing.api.functions.roll
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.servid()
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.set_uvar(name, value)
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.set(name, value)
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.set_uvar_nx(name, value)
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.set_uvar(name, value)
+.. autofunction:: aliasing.api.functions.typeof
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.set_uvar_nx(name, value)
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.uvar_exists(name)
 
-.. autofunction:: cogs5e.funcs.scripting.functions.typeof
+.. autofunction:: aliasing.api.functions.vroll(rollStr, multiply=1, add=0)
 
-.. autofunction:: cogs5e.funcs.scripting.evaluators.ScriptingEvaluator.uvar_exists(name)
+.. warning::
+    The following functions are deprecated and should be avoided:
 
-.. autofunction:: cogs5e.funcs.scripting.functions.vroll(rollStr, multiply=1, add=0)
+    .. autofunction:: aliasing.evaluators.ScriptingEvaluator.chanid()
+
+    .. autofunction:: aliasing.evaluators.ScriptingEvaluator.servid()
+
+    .. autofunction:: aliasing.evaluators.ScriptingEvaluator.set(name, value)
 
 Character Context
 ^^^^^^^^^^^^^^^^^
@@ -418,207 +433,297 @@ Character Context
 These functions are only available when a character is active in a scripting context. Otherwise, attempts to call
 these functions will raise a :exc:`FunctionRequiresCharacter` exception.
 
+.. warning::
+
+    As of v2.2.0, *all* character context functions have been deprecated and should be replaced. See each function's
+    documentation for its replacement.
+
 Custom Counters
 """""""""""""""
 
-.. function:: cc_exists(name)
+.. warning::
 
-    Returns whether a custom counter exists.
+    .. function:: cc_exists(name)
 
-    :param str name: The name of the custom counter to check.
-    :returns: Whether the counter exists.
-    :rtype: bool
+        .. deprecated:: 2.2.0
+            Use ``character().cc_exists()`` instead.
 
-.. function:: cc_str(name)
+        Returns whether a custom counter exists.
 
-    Returns a string representing a custom counter.
+        :param str name: The name of the custom counter to check.
+        :returns: Whether the counter exists.
+        :rtype: bool
 
-    :param str name: The name of the custom counter to get.
-    :returns: A string representing the current value, maximum, and minimum of the counter.
-    :rtype: str
-    :raises: :exc:`ConsumableException` if the counter does not exist.
+    .. function:: cc_str(name)
 
-    Example:
+        .. deprecated:: 2.2.0
+            Use ``character().cc_str()`` instead.
 
-    >>> cc_str("Ki")
-    '11/17'
-    >>> cc_str("Bardic Inspiration")
-    '◉◉◉〇〇'
+        Returns a string representing a custom counter.
 
-.. function:: create_cc(name, minVal=None, maxVal=None, reset=None, dispType=None)
+        :param str name: The name of the custom counter to get.
+        :returns: A string representing the current value, maximum, and minimum of the counter.
+        :rtype: str
+        :raises: :exc:`ConsumableException` if the counter does not exist.
 
-    Creates a custom counter. If a counter with the same name already exists, it will replace it.
+        Example:
 
-    :param str name: The name of the counter to create.
-    :param str minVal: The minimum value of the counter. Supports :ref:`cvar-table` parsing.
-    :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
-    :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
-    :param str dispType: Either ``None`` or ``'bubble'``.
+        >>> cc_str("Ki")
+        '11/17'
+        >>> cc_str("Bardic Inspiration")
+        '◉◉◉〇〇'
 
-.. function:: create_cc_nx(name, minVal=None, maxVal=None, reset=None, dispType=None)
+    .. function:: create_cc(name, minVal=None, maxVal=None, reset=None, dispType=None)
 
-    Creates a custom counter if one with the given name does not already exist.
-    Equivalent to:
+        .. deprecated:: 2.2.0
+            Use ``character().create_cc()`` instead.
 
-    >>> if not cc_exists(name):
-    >>>     create_cc(name, minVal, maxVal, reset, dispType)
+        Creates a custom counter. If a counter with the same name already exists, it will replace it.
 
-.. function:: delete_cc(name)
+        :param str name: The name of the counter to create.
+        :param str minVal: The minimum value of the counter. Supports :ref:`cvar-table` parsing.
+        :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
+        :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
+        :param str dispType: Either ``None`` or ``'bubble'``.
 
-    Deletes a custom counter.
+    .. function:: create_cc_nx(name, minVal=None, maxVal=None, reset=None, dispType=None)
 
-    :param str name: The name of the custom counter to delete.
-    :raises: :exc:`ConsumableException` if the counter does not exist.
+        .. deprecated:: 2.2.0
+            Use ``character().create_cc_nx()`` instead.
 
-.. function:: get_cc(name)
+        Creates a custom counter if one with the given name does not already exist.
+        Equivalent to:
 
-    Gets the value of a custom counter.
+        >>> if not cc_exists(name):
+        >>>     create_cc(name, minVal, maxVal, reset, dispType)
 
-    :param str name: The name of the custom counter to get.
-    :returns: The current value of the counter.
-    :rtype: int
-    :raises: :exc:`ConsumableException` if the counter does not exist.
+    .. function:: delete_cc(name)
+
+        .. deprecated:: 2.2.0
+            Use ``character().delete_cc()`` instead.
+
+        Deletes a custom counter.
+
+        :param str name: The name of the custom counter to delete.
+        :raises: :exc:`ConsumableException` if the counter does not exist.
+
+    .. function:: get_cc(name)
+
+        .. deprecated:: 2.2.0
+            Use ``character().get_cc()`` instead.
+
+        Gets the value of a custom counter.
+
+        :param str name: The name of the custom counter to get.
+        :returns: The current value of the counter.
+        :rtype: int
+        :raises: :exc:`ConsumableException` if the counter does not exist.
 
 
-.. function:: get_cc_max(name)
+    .. function:: get_cc_max(name)
 
-    Gets the maximum value of a custom counter.
+        .. deprecated:: 2.2.0
+            Use ``character().get_cc_max()`` instead.
 
-    :param str name: The name of the custom counter maximum to get.
-    :returns: The maximum value of the counter. If a counter has no maximum, it will return an obscenely large number (2^31-1).
-    :rtype: int
-    :raises: :exc:`ConsumableException` if the counter does not exist.
+        Gets the maximum value of a custom counter.
 
-.. function:: get_cc_min(name)
+        :param str name: The name of the custom counter maximum to get.
+        :returns: The maximum value of the counter. If a counter has no maximum, it will return an obscenely large number (2^31-1).
+        :rtype: int
+        :raises: :exc:`ConsumableException` if the counter does not exist.
 
-    Gets the minimum value of a custom counter.
+    .. function:: get_cc_min(name)
 
-    :param str name: The name of the custom counter minimum to get.
-    :returns: The minimum value of the counter. If a counter has no minimum, it will return an obscenely small number (-2^31).
-    :rtype: int
-    :raises: :exc:`ConsumableException` if the counter does not exist.
+        .. deprecated:: 2.2.0
+            Use ``character().get_cc_min()`` instead.
 
-.. function:: mod_cc(name, value, strict=False)
+        Gets the minimum value of a custom counter.
 
-    Modifies the value of a custom counter. Equivalent to ``set_cc(name, get_cc(name) + value, strict)``.
+        :param str name: The name of the custom counter minimum to get.
+        :returns: The minimum value of the counter. If a counter has no minimum, it will return an obscenely small number (-2^31).
+        :rtype: int
+        :raises: :exc:`ConsumableException` if the counter does not exist.
 
-.. function:: set_cc(name, value, strict=False)
+    .. function:: mod_cc(name, value, strict=False)
 
-    Sets the value of a custom counter.
+        .. deprecated:: 2.2.0
+            Use ``character().mod_cc()`` instead.
 
-    :param str name: The name of the custom counter to set.
-    :param int value: The value to set the counter to.
-    :param bool strict: If ``True``, will raise a :exc:`CounterOutOfBounds` if the new value is out of bounds, otherwise silently clips to bounds.
-    :raises: :exc:`ConsumableException` if the counter does not exist.
+        Modifies the value of a custom counter. Equivalent to ``set_cc(name, get_cc(name) + value, strict)``.
+
+    .. function:: set_cc(name, value, strict=False)
+
+        .. deprecated:: 2.2.0
+            Use ``character().set_cc()`` instead.
+
+        Sets the value of a custom counter.
+
+        :param str name: The name of the custom counter to set.
+        :param int value: The value to set the counter to.
+        :param bool strict: If ``True``, will raise a :exc:`CounterOutOfBounds` if the new value is out of bounds, otherwise silently clips to bounds.
+        :raises: :exc:`ConsumableException` if the counter does not exist.
 
 Spell Slots
 """""""""""
 
-.. function:: get_slots(level)
+.. warning::
 
-    Gets the number of remaining spell slots of a given level that a character has.
+    .. function:: get_slots(level)
 
-    :param int level: The level to get the remaining slots of.
-    :returns: The number of remaining slots of that level.
-    :rtype: int
+        .. deprecated:: 2.2.0
+            Use ``character().spellbook.get_slots()`` instead.
 
-.. function:: get_slots_max(level)
+        Gets the number of remaining spell slots of a given level that a character has.
 
-    Gets the maximum number of spell slots of a given level that a character has.
+        :param int level: The level to get the remaining slots of.
+        :returns: The number of remaining slots of that level.
+        :rtype: int
 
-    :param int level: The level to get the maximum slots of.
-    :returns: The maximum number of slots of that level.
-    :rtype: int
+    .. function:: get_slots_max(level)
 
-.. function:: set_slots(level, value)
+        .. deprecated:: 2.2.0
+            Use ``character().spellbook.get_slots_max()`` instead.
 
-    Sets how many spell slots of a given level a character has.
+        Gets the maximum number of spell slots of a given level that a character has.
 
-    :param int level: The level of spell slots to set.
-    :param int value: The value to set the remaining slots to.
-    :raises: :exc:`CounterOutOfBounds` if the number of slots is invalid.
+        :param int level: The level to get the maximum slots of.
+        :returns: The maximum number of slots of that level.
+        :rtype: int
 
-.. function:: slots_str(level)
+    .. function:: set_slots(level, value)
 
-    Returns a string representing how many spell slots a character has of a given level.
+        .. deprecated:: 2.2.0
+            Use ``character().spellbook.set_slots()`` instead.
 
-    :param int level: The level to get the slots of.
-    :returns: A string representing the current remaining and maximum number of slots of that level.
-    :rtype: str
+        Sets how many spell slots of a given level a character has.
 
-.. function:: use_slot(level)
+        :param int level: The level of spell slots to set.
+        :param int value: The value to set the remaining slots to.
+        :raises: :exc:`CounterOutOfBounds` if the number of slots is invalid.
 
-    Uses one spell slot of a given level. Equivalent to ``set_slots(level, get_slots(level) - 1)``.
+    .. function:: slots_str(level)
+
+        .. deprecated:: 2.2.0
+            Use ``character().spellbook.slots_str()`` instead.
+
+        Returns a string representing how many spell slots a character has of a given level.
+
+        :param int level: The level to get the slots of.
+        :returns: A string representing the current remaining and maximum number of slots of that level.
+        :rtype: str
+
+    .. function:: use_slot(level)
+
+        .. deprecated:: 2.2.0
+            Use ``character().spellbook.use_slot()`` instead.
+
+        Uses one spell slot of a given level. Equivalent to ``set_slots(level, get_slots(level) - 1)``.
 
 Hit Points
 """"""""""
 
-.. function:: get_hp()
+.. warning::
 
-    :returns: The character's current hit points.
-    :rtype: int
+    .. function:: get_hp()
 
-.. function:: get_temphp()
+        .. deprecated:: 2.2.0
+            Use ``character().hp`` instead.
 
-    :returns: The character's current temporary hit points.
-    :rtype: int
+        :returns: The character's current hit points.
+        :rtype: int
 
-.. function:: hp_str()
+    .. function:: get_temphp()
 
-    Returns a string representing a character's current HP, max HP, and temp HP.
+        .. deprecated:: 2.2.0
+            Use ``character().temp_hp`` instead.
 
-.. function:: mod_hp(value, overflow=True)
+        :returns: The character's current temporary hit points.
+        :rtype: int
 
-    Modifies the character's remaining hit points by *value*. If *value* is negative, will deal damage to temp HP first.
+    .. function:: hp_str()
 
-    :param int value: How much to modify remaining HP by.
-    :param bool overflow: If ``False``, clips the new HP value to ``[0..hp]``.
+        .. deprecated:: 2.2.0
+            Use ``character().hp_str()`` instead.
 
-.. function:: set_hp(value)
+        Returns a string representing a character's current HP, max HP, and temp HP.
 
-    Sets the character's remaining hit points. Ignores temp HP.
+    .. function:: mod_hp(value, overflow=True)
 
-    :param int value: The new value for hit points.
+        .. deprecated:: 2.2.0
+            Use ``character().modify_hp()`` instead.
 
-.. function:: set_temphp(value)
+        Modifies the character's remaining hit points by *value*. If *value* is negative, will deal damage to temp HP first.
 
-    Sets the character's remaining temp HP.
+        :param int value: How much to modify remaining HP by.
+        :param bool overflow: If ``False``, clips the new HP value to ``[0..hp]``.
 
-    :param int value: The new value for temporary hit points.
+    .. function:: set_hp(value)
+
+        .. deprecated:: 2.2.0
+            Use ``character().set_hp()`` instead.
+
+        Sets the character's remaining hit points. Ignores temp HP.
+
+        :param int value: The new value for hit points.
+
+    .. function:: set_temphp(value)
+
+        .. deprecated:: 2.2.0
+            Use ``character().set_temp_hp()`` instead.
+
+        Sets the character's remaining temp HP.
+
+        :param int value: The new value for temporary hit points.
 
 Cvars
 """""
 
-.. note::
-    All custom character variables are locally bound to a Draconic scope. To access their values, use them like a normal
-    name.
+.. warning::
 
-.. function:: delete_cvar(name)
+    .. note::
+        All custom character variables are locally bound to a Draconic scope. To access their values, use them like a normal
+        name.
 
-    Deletes a custom character variable. Does nothing if the cvar does not exist.
+    .. function:: delete_cvar(name)
 
-    :param str name: The name of the variable to delete.
+        .. deprecated:: 2.2.0
+            Use ``character().delete_cvar()`` instead.
 
-.. function:: set_cvar(name, value)
+        Deletes a custom character variable. Does nothing if the cvar does not exist.
 
-    Sets a custom character variable, which will be available in all scripting contexts using this character.
+        :param str name: The name of the variable to delete.
 
-    :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
-    :param str value: The value to set it to.
+    .. function:: set_cvar(name, value)
 
-.. function:: set_cvar_nx(name, value)
+        .. deprecated:: 2.2.0
+            Use ``character().set_cvar()`` instead.
 
-    Sets a custom character variable if it is not already set.
+        Sets a custom character variable, which will be available in all scripting contexts using this character.
 
-    :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
-    :param str value: The value to set it to.
+        :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
+        :param str value: The value to set it to.
+
+    .. function:: set_cvar_nx(name, value)
+
+        .. deprecated:: 2.2.0
+            Use ``character().set_cvar_nx()`` instead.
+
+        Sets a custom character variable if it is not already set.
+
+        :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
+        :param str value: The value to set it to.
 
 Other
 """""
 
-.. function:: get_raw()
+.. warning::
 
-    Returns a raw representation of character data.
+    .. function:: get_raw()
+
+        .. deprecated:: 2.2.0
+            Deprecated without replacement. Use ``character()`` to get a representation of the character instead.
+
+        Returns a raw representation of character data.
 
 See Also
 --------
@@ -631,10 +736,143 @@ Draconic's syntax is very similar to Python. Other Python features supported in 
 * `Assignments <https://docs.python.org/3/reference/simple_stmts.html#assignment-statements>`_ (``a = 15``)
 * `List Comprehensions <https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions>`_
 
+Initiative Models
+-----------------
+
+SimpleCombat
+^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.combat.SimpleCombat()
+    :members:
+
+    .. attribute:: combatants
+
+        A list of all :class:`~aliasing.api.combat.SimpleCombatant` in combat.
+
+    .. attribute:: current
+
+        The :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
+        representing the combatant whose turn it is.
+
+    .. attribute:: me
+
+        The :class:`~aliasing.api.combat.SimpleCombatant` representing the active character in combat, or ``None``
+        if the character is not in the combat.
+
+    .. attribute:: round_num
+
+        An :class:`int` representing the round number of the combat.
+
+    .. attribute:: turn_num
+
+        An :class:`int` representing the initiative score of the current turn.
+
+SimpleCombatant
+^^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.combat.SimpleCombatant(AliasStatBlock)
+    :inherited-members:
+    :members:
+
+    .. attribute:: effects
+
+        A list of :class:`~aliasing.api.combat.SimpleEffect` active on the combatant.
+
+        :type: list of :class:`~aliasing.api.combat.SimpleEffect`
+
+    .. attribute:: init
+
+        What the combatant rolled for initiative.
+
+        :type: int
+
+    .. attribute:: initmod
+
+        An int representing the combatant's initiative modifier.
+
+        :type: int
+
+    .. attribute:: level
+
+        .. deprecated:: 2.2.0
+            Use ``SimpleCombatant.levels.total_level`` or ``SimpleCombatant.spellbook.caster_level`` instead.
+
+        The combatant's spellcaster level. ``0`` if the combatant is not a player or spellcaster.
+
+        :type: int
+
+    .. attribute:: resists
+
+        .. deprecated:: 2.2.0
+            Use ``SimpleCombatant.resistances`` instead.
+
+        The combatant's resistances, immunities, and vulnerabilities.
+
+        :type: :class:`~aliasing.api.statblock.AliasResistances`
+
+    .. attribute:: type
+
+        The type of the object (``"combatant"``), to determine whether this is a group or not.
+
+        :type: str
+
+
+SimpleGroup
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.combat.SimpleGroup()
+    :members:
+
+    .. attribute:: combatants
+
+        A list of all :class:`~aliasing.api.combat.SimpleCombatant` in this group.
+
+    .. attribute:: type
+
+        The type of the object (``"group"``), to determine whether this is a group or not.
+
+        :type: str
+
+SimpleEffect
+^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.combat.SimpleEffect()
+    :members:
+
+    .. attribute:: conc
+
+        Whether the effect requires concentration.
+
+        :type: bool
+
+    .. attribute:: duration
+
+        The initial duration of the effect, in rounds (``-1`` = infinite).
+
+        :type: int
+
+    .. attribute:: effect
+
+        The applied effect of the object.
+
+        :type: dict
+
+    .. attribute:: name
+
+        The name of the effect.
+
+        :type: str
+
+    .. attribute:: remaining
+
+        The remaining duration of the effect, in rounds.
+
+        :type: int
+
 SimpleRollResult
 ----------------
 
-.. autoclass:: cogs5e.funcs.scripting.functions.SimpleRollResult()
+.. autoclass:: aliasing.api.functions.SimpleRollResult()
 
     .. attribute:: dice
 
@@ -670,182 +908,213 @@ SimpleRollResult
 
     .. automethod:: __str__
 
-SimpleCombat
-------------
-
-.. autoclass:: cogs5e.funcs.scripting.combat.SimpleCombat()
-    :members:
-
-    .. attribute:: combatants
-
-        A list of all :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant` in combat.
-
-    .. attribute:: current
-
-        The :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant` or :class:`~cogs5e.funcs.scripting.combat.SimpleGroup`
-        representing the combatant whose turn it is.
-
-    .. attribute:: me
-
-        The :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant` representing the active character in combat, or ``None``
-        if the character is not in the combat.
-
-    .. attribute:: round_num
-
-        An :class:`int` representing the round number of the combat.
-
-    .. attribute:: turn_num
-
-        An :class:`int` representing the initiative score of the current turn.
-
-SimpleCombatant
----------------
-
-.. autoclass:: cogs5e.funcs.scripting.combat.SimpleCombatant()
-    :members:
-
-    .. attribute:: ac
-
-        The combatant's armor class. ``None`` if not set.
-
-        :type: Optional[int]
-
-    .. attribute:: attacks
-
-        A list of the combatant's attacks.
-
-        :type: list of dict
-
-    .. attribute:: effects
-
-        A list of :class:`~cogs5e.funcs.scripting.combat.SimpleEffect` active on the combatant.
-
-        :type: list of :class:`~cogs5e.funcs.scripting.combat.SimpleEffect`
-
-    .. attribute:: hp
-
-        The combatant's current hit points. ``None`` if not set.
-
-        :type: Optional[int]
-
-    .. attribute:: init
-
-        What the combatant rolled for initiative.
-
-        :type: int
-
-    .. attribute:: initmod
-
-        An int representing the combatant's initiative modifier.
-
-        :type: int
-
-    .. attribute:: level
-
-        The combatant's spellcaster level. ``0`` if the combatant is not a player or spellcaster.
-
-        :type: int
-
-    .. attribute:: maxhp
-
-        The combatant's maximum hit points. ``None`` if not set.
-
-        :type: Optional[int]
-
-    .. attribute:: name
-
-        The combatant's name.
-
-        :type: str
-
-    .. attribute:: note
-
-        The note on the combatant. Can be ``None``.
-
-        :type: Optional[str]
-
-    .. attribute:: ratio
-
-        .. deprecated:: 1.1.5
-            Use ``combatant.hp / combatant.maxhp`` instead.
-
-        The percentage of health the combatant has remaining (0.0 = 0%, 1.0 = 100%).
-
-        :type: float
-
-    .. attribute:: resists
-
-        The combatant's resistances, immunities, and vulnerabilities.
-
-        :type: Resistances
-
-    .. attribute:: temphp
-
-        How many temporary hit points the combatant has.
-
-        :type: int
-
-    .. attribute:: type
-
-        The type of the object (``"combatant"``), to determine whether this is a group or not.
-
-        :type: str
-
-
-SimpleGroup
------------
-
-.. autoclass:: cogs5e.funcs.scripting.combat.SimpleGroup()
-    :members:
-
-    .. attribute:: combatants
-
-        A list of all :class:`~cogs5e.funcs.scripting.combat.SimpleCombatant` in this group.
-
-    .. attribute:: type
-
-        The type of the object (``"group"``), to determine whether this is a group or not.
-
-        :type: str
-
-SimpleEffect
-------------
-
-.. autoclass:: cogs5e.funcs.scripting.combat.SimpleEffect()
-    :members:
-
-    .. attribute:: conc
-
-        Whether the effect requires concentration.
-
-        :type: bool
-
-    .. attribute:: duration
-
-        The initial duration of the effect, in rounds (``-1`` = infinite).
-
-        :type: int
-
-    .. attribute:: effect
-
-        The applied effect of the object.
-
-        :type: dict
-
-    .. attribute:: name
-
-        The name of the effect.
-
-        :type: str
-
-    .. attribute:: remaining
-
-        The remaining duration of the effect, in rounds.
-
-        :type: int
-
 ParsedArguments
 ---------------
 
 .. autoclass:: utils.argparser.ParsedArguments()
     :members:
+
+Context Models
+--------------
+
+AliasContext
+^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasContext()
+    :members:
+
+AliasGuild
+^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasGuild()
+    :members:
+
+AliasChannel
+^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasChannel()
+    :members:
+
+AliasAuthor
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasAuthor()
+    :members:
+
+AliasCharacter
+--------------
+
+.. autoclass:: aliasing.api.character.AliasCharacter(AliasStatBlock)
+    :members:
+    :inherited-members:
+
+StatBlock Models
+----------------
+
+AliasStatBlock
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasStatBlock()
+    :members:
+
+AliasBaseStats
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasBaseStats()
+    :members:
+
+AliasLevels
+^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasLevels()
+    :members:
+
+    .. attribute:: for (cls, level) in AliasLevels:
+
+        Iterates over pairs of class names and the number of levels in that class.
+
+        :type: Iterable[tuple[str, int]]
+
+AliasAttackList
+^^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasAttackList()
+    :members:
+
+    .. attribute:: str(AliasAttackList)
+
+        Returns a string representation of all attacks in this attack list.
+
+        :type: str
+
+    .. attribute:: len(AliasAttackList)
+
+        Returns the number of attacks in this attack list.
+
+        :type: int
+
+    .. attribute:: for attack in AliasAttackList:
+
+        Iterates over attacks in this attack list.
+
+        :type: Iterable[:class:`~aliasing.api.statblock.AliasAttack`]
+
+    .. attribute:: AliasAttackList[i]
+
+        Gets the *i*-th indexed attack.
+
+        :type: :class:`~aliasing.api.statblock.AliasAttack`
+
+
+AliasAttack
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasAttack()
+    :members:
+
+    .. attribute:: str(AliasAttack)
+
+        Returns a string representation of this attack.
+
+        :type: str
+
+AliasSkill
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasSkill()
+    :members:
+
+AliasSkills
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasSkills()
+
+    .. attribute:: for (skill_name, skill) in AliasSkills:
+
+        Iterates over pairs of skill names and corresponding skills.
+
+        :type: Iterable[tuple[str, :class:`~aliasing.api.statblock.AliasSkill`]]
+
+    .. attribute:: acrobatics
+        animalHandling
+        arcana
+        athletics
+        deception
+        history
+        initiative
+        insight
+        intimidation
+        investigation
+        medicine
+        nature
+        perception
+        performance
+        persuasion
+        religion
+        sleightOfHand
+        stealth
+        survival
+        strength
+        dexterity
+        constitution
+        intelligence
+        wisdom
+        charisma
+
+        The skill modifier for the given skill.
+
+        :type: :class:`~aliasing.api.statblock.AliasSkill`
+
+AliasSaves
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasSaves()
+    :members:
+
+    .. attribute:: for (save_name, skill) in AliasSaves:
+
+        Iterates over pairs of save names and corresponding save.
+
+        :type: Iterable[tuple[str, :class:`~aliasing.api.statblock.AliasSkill`]]
+
+AliasResistances
+^^^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasResistances()
+    :members:
+
+Resistance
+^^^^^^^^^^
+
+.. autoclass:: cogs5e.models.sheet.resistance.Resistance()
+    :members:
+
+    .. attribute:: dtype
+
+        The damage type.
+
+        :type: str
+
+    .. attribute:: unless
+
+        A set of tokens that if present, this resistance will not apply.
+
+        :type: set[str]
+
+    .. attribute:: only
+
+        A set of tokens that unless present, this resistance will not apply.
+
+        :type: set[str]
+
+AliasSpellbook
+^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.statblock.AliasSpellbook()
+    :members:
+
+    .. attribute:: spell in AliasSpellbook
+
+        Returns whether the spell named *spell* (str) is known.
+
+        :type: bool

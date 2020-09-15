@@ -11,6 +11,8 @@ services:
       - redis
     environment:
       - DISCORD_OWNER_USER_ID=98765432109876543
+      - MONGO_URL=mongodb://root:topsecret@mongo:27017
+      - REDIS_URL=redis://redis:6379/0
       - DICECLOUD_USER
       - DICECLOUD_PASS
       - DICECLOUD_TOKEN

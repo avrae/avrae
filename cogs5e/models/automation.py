@@ -4,11 +4,12 @@ import logging
 import d20
 from d20 import roll
 
+import aliasing.evaluators
+import cogs5e.models.character as character_api
 import cogs5e.models.initiative as init
-from cogs5e.funcs.scripting.evaluators import SpellEvaluator
 from cogs5e.models import embeds
-from cogs5e.models.character import Character
-from cogs5e.models.errors import AvraeException, EvaluationError, InvalidArgument, InvalidSaveType
+from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType
+from aliasing.errors import EvaluationError
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from utils.dice import RerollableStringifier
 from utils.functions import maybe_mod
@@ -93,7 +94,7 @@ class Automation:
         """
         :type caster: :class:`~cogs5e.models.sheet.statblock.StatBlock
         """
-        evaluator = SpellEvaluator.with_caster(caster)
+        evaluator = aliasing.evaluators.SpellEvaluator.with_caster(caster)
         return f"{Effect.build_child_str(self.effects, caster, evaluator)}."
 
     def __str__(self):
@@ -130,10 +131,10 @@ class AutomationContext:
         self.character = None
         if isinstance(caster, init.PlayerCombatant):
             self.character = caster.character
-        elif isinstance(caster, Character):
+        elif isinstance(caster, character_api.Character):
             self.character = caster
 
-        self.evaluator = SpellEvaluator.with_caster(caster, spell_override=spell_override)
+        self.evaluator = aliasing.evaluators.SpellEvaluator.with_caster(caster, spell_override=spell_override)
 
         self.combatant = None
         if isinstance(caster, init.Combatant):
@@ -264,7 +265,7 @@ class AutomationTarget:
     def character(self):
         if isinstance(self.target, init.PlayerCombatant):
             return self.target.character
-        elif isinstance(self.target, Character):
+        elif isinstance(self.target, character_api.Character):
             return self.target
         return None
 

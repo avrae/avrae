@@ -10,6 +10,4 @@ RUN mkdir shared
 
 COPY . .
 
-COPY docker/credentials-development.py credentials.py
-
 ENTRYPOINT bash scripts/gen_help.sh && pytest --cov=cogs5e --cov=cogsmisc --cov=utils --cov-report=xml:shared/coverage.xml tests/ test

@@ -1,22 +1,21 @@
 import os
 import sys
 
-import credentials
-
 # ==== bot config constants / env vars ====
+TOKEN = os.environ.get('DISCORD_BOT_TOKEN', '')
 TESTING = os.environ.get("TESTING") or 'test' in sys.argv
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'production' if not TESTING else 'development')
-ALPHA_TOKEN = os.environ.get("ALPHA_TOKEN")  # optional - if not supplied, will use credentials file
 GIT_COMMIT_SHA = os.getenv('GIT_COMMIT_SHA')
 NUM_CLUSTERS = int(os.getenv('NUM_CLUSTERS')) if 'NUM_CLUSTERS' in os.environ else None
 NUM_SHARDS = int(os.getenv('NUM_SHARDS')) if 'NUM_SHARDS' in os.environ else None
 RELOAD_INTERVAL = os.getenv('RELOAD_INTERVAL', '0')  # compendium static data reload interval
 ECS_METADATA_ENDPT = os.getenv('ECS_CONTAINER_METADATA_URI')  # set by ECS
+OWNER_ID = int(os.getenv('DISCORD_OWNER_USER_ID', 0))
 
 # ---- mongo/redis ----
 MONGO_URL = os.getenv('MONGO_URL', "mongodb://localhost:27017")
 MONGODB_DB_NAME = os.getenv('MONGODB_DB_NAME', 'avrae')
-REDIS_URL = os.getenv('REDIS_URL', '127.0.0.1')
+REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 REDIS_DB_NUM = int(os.getenv('REDIS_DB_NUM', 0))
 
 # ---- user ----
@@ -26,15 +25,15 @@ DEFAULT_PREFIX = os.getenv('DEFAULT_PREFIX', '!')
 SENTRY_DSN = os.getenv('SENTRY_DSN') or None
 # NEW_RELIC_LICENSE_KEY = os.getenv('NEW_RELIC_LICENSE_KEY')  # commented - set in newrelic.py because of import order
 
-# ---- character sheets ----
-NO_DICECLOUD = os.environ.get("NO_DICECLOUD", False)
-DICECLOUD_USER = os.getenv('DICECLOUD_USER', 'avrae') if not TESTING else credentials.test_dicecloud_user
-DICECLOUD_PASS = credentials.dicecloud_pass.encode() if not TESTING else credentials.test_dicecloud_pass.encode()
-DICECLOUD_API_KEY = credentials.dicecloud_token if not TESTING else credentials.test_dicecloud_token
+# ---- character sheets ---
+NO_DICECLOUD = os.environ.get('NO_DICECLOUD', 'DICECLOUD_USER' not in os.environ)
+DICECLOUD_USER = os.getenv('DICECLOUD_USER')
+DICECLOUD_PASS = os.getenv('DICECLOUD_PASS', '').encode()
+DICECLOUD_API_KEY = os.getenv('DICECLOUD_TOKEN')
 
 GOOGLE_SERVICE_ACCOUNT = os.getenv('GOOGLE_SERVICE_ACCOUNT')  # optional - if not supplied, uses avrae-google.json
 
-DDB_CHAR_COMPUTATION_ENDPT = os.getenv('CHARACTER_COMPUTATION_ENDPOINT')  # if not set, DDB import disabled locally
+DDB_CHAR_COMPUTATION_ENDPT = os.getenv('CHARACTER_COMPUTATION_ENDPOINT')  # optional - if not set, DDB import disabled locally
 
 # ---- ddb auth ----
 # if environment is development, DDB auth is skipped unless auth service url is not null
@@ -52,3 +51,6 @@ DYNAMO_ENTITY_TABLE = os.getenv('DYNAMO_ENTITY_TABLE')
 
 # ---- launchdarkly ----
 LAUNCHDARKLY_SDK_KEY = os.getenv('LAUNCHDARKLY_SDK_KEY')
+
+# ---- discord bot list ----
+DBL_TOKEN = os.getenv('DBL_TOKEN')  # optional

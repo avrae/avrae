@@ -9,7 +9,7 @@ import logging
 import aiohttp
 from discord.ext import commands
 
-import credentials
+from utils import config
 from cogsmisc.stats import Stats
 
 log = logging.getLogger(__name__)
@@ -28,13 +28,13 @@ class Publicity(commands.Cog):
             self.bot.loop.create_task(self.background_update())
 
     async def update_server_count(self):
-        if self.bot.testing or not credentials.dbl_token:
+        if self.bot.testing or not config.DBL_TOKEN:
             return
         payload = {"server_count": await Stats.get_guild_count(self.bot)}
         async with aiohttp.ClientSession() as aioclient:
             try:
                 await aioclient.post(f"{DBL_API}{self.bot.user.id}/stats", data=payload,
-                                     headers={"Authorization": credentials.dbl_token})
+                                     headers={"Authorization": config.DBL_TOKEN})
             except Exception as e:
                 log.error(f"Error posting server count: {e}")
 

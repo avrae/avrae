@@ -1,5 +1,6 @@
 import json
 import re
+import textwrap
 import time
 from math import ceil, floor, sqrt
 
@@ -7,12 +8,17 @@ import d20
 import draconic
 import json.scanner
 
-from cogs5e.models.errors import ConsumableException, EvaluationError, FunctionRequiresCharacter, InvalidArgument
+import aliasing.api.character as character_api
+import aliasing.api.combat as combat_api
+import cogs5e.models.sheet.player as player_api
+from aliasing import helpers
+from aliasing.api.context import AliasContext
+from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
+from aliasing.api.legacy import LegacyRawCharacter
+from aliasing.errors import EvaluationError, FunctionRequiresCharacter
+from cogs5e.models.errors import ConsumableException, InvalidArgument
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext
-from . import helpers
-from .functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
-from .legacy import LegacyRawCharacter
 
 DEFAULT_BUILTINS = {
     # builtins
@@ -26,7 +32,7 @@ DEFAULT_BUILTINS = {
 SCRIPTING_RE = re.compile(
     r'(?<!\\)(?:'  # backslash-escape
     r'{{(?P<drac1>.+?)}}'  # {{drac1}}
-    r'|(?<!{){(?P<roll>.+?)}'  # <roll>
+    r'|(?<!{){(?P<roll>.+?)}'  # {roll}
     r'|<drac2>(?P<drac2>(?:.|\n)+?)</drac2>'  # <drac2>drac2</drac2>
     r'|<(?P<lookup>[^\s]+?)>'  # <lookup>
     r')'
@@ -63,7 +69,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     def __init__(self, ctx, *args, **kwargs):
         super(ScriptingEvaluator, self).__init__(*args, **kwargs)
 
-        self.builtins.update(  # character-only functions
+        self.builtins.update(  # fixme character-only functions, all deprecated now
             get_cc=self.needs_char, set_cc=self.needs_char, get_cc_max=self.needs_char,
             get_cc_min=self.needs_char, mod_cc=self.needs_char,
             cc_exists=self.needs_char, create_cc_nx=self.needs_char, create_cc=self.needs_char,
@@ -77,14 +83,14 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         # char-agnostic globals
         self.builtins.update(
-            set=self.set, exists=self.exists, combat=self.combat,
+            set=self.set, exists=self.exists, get=self.get,
+            combat=self.combat, character=self.character,
             get_gvar=self.get_gvar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
-            chanid=self.chanid, servid=self.servid,
-            get=self.get,
+            chanid=self.chanid, servid=self.servid,  # fixme deprecated - use ctx instead
             load_json=self.load_json, dump_json=self.dump_json,
-            argparse=argparse
+            argparse=argparse, ctx=AliasContext(ctx)
         )
 
         # roll limiting
@@ -111,12 +117,17 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         inst._cache['uvars'].update(uvars)
         return inst
 
-    async def with_character(self, character):
-        self._names.update(character.get_scope_locals())
+    def with_statblock(self, statblock):
+        self._names.update(statblock.get_scope_locals())
+        return self
 
-        self._cache['character'] = character
+    def with_character(self, character):
+        self.with_statblock(character)
+
+        self._cache['character'] = character_api.AliasCharacter(character, self)
 
         # define character-specific functions
+        # fixme deprecated
 
         # helpers
         def _get_consumable(name):
@@ -156,8 +167,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                          dispType: str = None):
             if not cc_exists(name):
-                from cogs5e.models.sheet.player import CustomCounter
-                new_consumable = CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
+                new_consumable = player_api.CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
                 character.consumables.append(new_consumable)
                 self.character_changed = True
 
@@ -243,7 +253,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
     async def run_commits(self):
         if self.character_changed and 'character' in self._cache:
-            await self._cache['character'].commit(self.ctx)
+            await self._cache['character'].func_commit(self.ctx)
         if self.combat_changed and 'combat' in self._cache and self._cache['combat']:
             await self._cache['combat'].func_commit()
         if self.uvars_changed and 'uvars' in self._cache and self._cache['uvars']:
@@ -279,13 +289,23 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Returns the combat active in the channel if one is. Otherwise, returns ``None``.
 
-        :rtype: :class:`~cogs5e.funcs.scripting.combat.SimpleCombat`
+        :rtype: :class:`~aliasing.api.combat.SimpleCombat`
         """
-        from .combat import SimpleCombat
         if 'combat' not in self._cache:
-            self._cache['combat'] = SimpleCombat.from_ctx(self.ctx)
+            self._cache['combat'] = combat_api.SimpleCombat.from_ctx(self.ctx)
         self.combat_changed = True
         return self._cache['combat']
+
+    def character(self):
+        """
+        Returns the active character if one is. Otherwise, raises a :exc:`FunctionRequiresCharacter` error.
+
+        :rtype: :class:`~aliasing.api.character.AliasCharacter`
+        """
+        if 'character' not in self._cache:
+            raise FunctionRequiresCharacter()
+        self.character_changed = True
+        return self._cache['character']
 
     def uvar_exists(self, name):
         """
@@ -347,6 +367,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Returns the ID of the active Discord channel.
 
+        .. deprecated:: 2.1.0
+            Use ``ctx.channel.id`` instead.
+
         :rtype: str
         """
         return str(self.ctx.channel.id)
@@ -354,6 +377,9 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
     def servid(self):
         """
         Returns the ID of the active Discord guild, or None if in DMs.
+
+        .. deprecated:: 2.1.0
+            Use ``ctx.guild.id`` instead.
 
         :rtype: str
         """
@@ -427,30 +453,35 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         ops = r"([-+*/().<>=])"
 
         def evalrepl(match):
-            try:
-                if match.group('lookup'):  # <>
-                    if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
-                        return match.group(0)
-                    out = match.group('lookup')
-                    evalresult = str(self.names.get(out, out))
-                elif match.group('roll'):  # {}
-                    varstr = match.group('roll')
-                    curlyout = ""
-                    for substr in re.split(ops, varstr):
-                        temp = substr.strip()
-                        curlyout += str(self.names.get(temp, temp)) + " "
-                    try:
-                        evalresult = str(self._limited_roll(curlyout))
-                    except:
-                        evalresult = '0'
-                elif match.group('drac1'):  # {{}}
-                    evalresult = self.eval(match.group('drac1').strip())
-                elif match.group('drac2'):  # <drac2>...</drac2>
-                    evalresult = self.execute(match.group('drac2').strip())
-                else:
-                    evalresult = None
-            except Exception as ex:
-                raise EvaluationError(ex, match.group(0))
+            if match.group('lookup'):  # <>
+                if re.match(r'<a?([@#]|:.+:)[&!]{0,2}\d+>', match.group(0)):  # ignore mentions
+                    return match.group(0)
+                out = match.group('lookup')
+                evalresult = str(self.names.get(out, out))
+            elif match.group('roll'):  # {}
+                varstr = match.group('roll')
+                curlyout = ""
+                for substr in re.split(ops, varstr):
+                    temp = substr.strip()
+                    curlyout += str(self.names.get(temp, temp)) + " "
+                try:
+                    evalresult = str(self._limited_roll(curlyout))
+                except:
+                    evalresult = '0'
+            elif match.group('drac1'):  # {{}}
+                expr = match.group('drac1').strip()
+                try:
+                    evalresult = self.eval(expr)
+                except Exception as ex:
+                    raise EvaluationError(ex, expr)
+            elif match.group('drac2'):  # <drac2>...</drac2>
+                expr = textwrap.dedent(match.group('drac2')).strip()
+                try:
+                    evalresult = self.execute(expr)
+                except Exception as ex:
+                    raise EvaluationError(ex, expr)
+            else:
+                evalresult = None
 
             return str(evalresult) if evalresult is not None else ''
 

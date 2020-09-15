@@ -13,7 +13,7 @@ from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
 from cogs5e.funcs import attackutils, checkutils, targetutils
-from cogs5e.funcs.scripting import helpers
+from aliasing import helpers
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
@@ -56,7 +56,7 @@ class SheetManager(commands.Cog):
     @staticmethod
     async def new_arg_stuff(args, ctx, character):
         args = await helpers.parse_snippets(args, ctx)
-        args = await character.parse_cvars(args, ctx)
+        args = await helpers.parse_with_character(ctx, character, args)
         args = argparse(args)
         return args
 

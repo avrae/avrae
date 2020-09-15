@@ -43,7 +43,8 @@ class SubscriberMixin(MixinBase, abc.ABC):
             raise NotAllowed("You are not subscribed to this.")
 
         await self.sub_coll(ctx).delete_many(
-            {"subscriber_id": ctx.author.id, "object_id": self.id}  # unsubscribe, unactive, uneditor
+            {"type": {"$in": ["subscribe", "active"]}, "subscriber_id": ctx.author.id, "object_id": self.id}
+            # unsubscribe, unactive
         )
 
     async def num_subscribers(self, ctx):
@@ -51,9 +52,15 @@ class SubscriberMixin(MixinBase, abc.ABC):
         return await self.sub_coll(ctx).count_documents({"type": "subscribe", "object_id": self.id})
 
     @classmethod
+    async def my_subs(cls, ctx):
+        """Returns an async iterator of dicts representing the subscription objects."""
+        async for sub in cls.sub_coll(ctx).find({"type": "subscribe", "subscriber_id": ctx.author.id}):
+            yield sub
+
+    @classmethod
     async def my_sub_ids(cls, ctx):
         """Returns an async iterator of ObjectIds representing objects the contextual author is subscribed to."""
-        async for sub in cls.sub_coll(ctx).find({"type": "subscribe", "subscriber_id": ctx.author.id}):
+        async for sub in cls.my_subs(ctx):
             yield sub['object_id']
 
 
@@ -106,10 +113,20 @@ class GuildActiveMixin(MixinBase, abc.ABC):
         await self.sub_coll(ctx).delete_many(
             {"type": "server_active", "subscriber_id": ctx.guild.id, "object_id": self.id})
 
+    async def num_server_active(self, ctx):
+        """Returns the number of guilds that have this object active."""
+        return await self.sub_coll(ctx).count_documents({"type": "server_active", "object_id": self.id})
+
+    @classmethod
+    async def guild_active_subs(cls, ctx):
+        """Returns an async iterator of dicts representing the subscription object."""
+        async for sub in cls.sub_coll(ctx).find({"type": "server_active", "subscriber_id": ctx.guild.id}):
+            yield sub
+
     @classmethod
     async def guild_active_ids(cls, ctx):
         """Returns a async iterator of ObjectIds representing the objects active in the contextual server."""
-        async for sub in cls.sub_coll(ctx).find({"type": "server_active", "subscriber_id": ctx.guild.id}):
+        async for sub in cls.guild_active_subs(ctx):
             yield sub['object_id']
 
 

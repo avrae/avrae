@@ -69,14 +69,18 @@ class Levels:
 
     # ---------- main funcs ----------
     def __iter__(self):
-        """Yields an iterator of (Class, Level) pairs (e.g. (Bard, 5), (Warlock, 1))
-        a character has at least 1 class in."""
+        """
+        An iterator of (Class, Level) pairs (e.g. (Bard, 5), (Warlock, 1)) that a character has at least 1 class in.
+        """
         for cls, lvl in self.classes.items():
             if lvl > 0:
                 yield cls, lvl
 
     def get(self, cls_name: str, default=0):
         return self.classes.get(cls_name, default)
+
+    def __str__(self):
+        return '/'.join(f"{cls} {lvl}" for cls, lvl in self)
 
 
 class Skill:
@@ -136,6 +140,9 @@ class Skill:
 
     def __int__(self):
         return self.value
+
+    def __repr__(self):
+        return f"<Skill value={self.value} prof={self.prof} bonus={self.bonus} adv={self.adv}>"
 
 
 class Skills:

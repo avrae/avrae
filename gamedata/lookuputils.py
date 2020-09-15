@@ -45,6 +45,12 @@ async def available(ctx, entities, entity_type, user_id=None):
     return [e for e in entities if e.is_free or e.entity_id in available_ids]
 
 
+def can_access(entity, available_ids=None):
+    return entity.is_free \
+           or available_ids is not None and entity.entity_id in available_ids \
+           or entity.homebrew
+
+
 async def handle_required_license(ctx, err):
     """
     Logs a unlicensed search and displays a prompt.

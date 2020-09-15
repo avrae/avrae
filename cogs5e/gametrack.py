@@ -12,8 +12,8 @@ import d20
 import discord
 from discord.ext import commands
 
+from aliasing import helpers
 from cogs5e.funcs import targetutils
-from cogs5e.funcs.scripting import helpers
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument, NoSelectionElements
@@ -589,7 +589,7 @@ class GameTrack(commands.Cog):
         char: Character = await Character.from_ctx(ctx)
 
         args = await helpers.parse_snippets(args, ctx)
-        args = await char.parse_cvars(args, ctx)
+        args = await helpers.parse_with_character(ctx, char, args)
         args = argparse(args)
 
         if not args.last('i', type_=bool):

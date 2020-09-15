@@ -1,7 +1,7 @@
 import discord.utils
 from discord.ext import commands
 
-import credentials
+from utils import config
 
 
 # The permission system of the bot is based on a "just works" basis
@@ -16,7 +16,7 @@ import credentials
 
 # ===== predicates =====
 def author_is_owner(ctx):
-    return ctx.author.id == credentials.owner_id
+    return ctx.author.id == config.OWNER_ID
 
 
 def _check_permissions(ctx, perms):

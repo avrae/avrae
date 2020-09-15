@@ -20,8 +20,9 @@ from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
-from cogs5e.funcs.scripting.helpers import handle_alias_exception
-from cogs5e.models.errors import AvraeException, EvaluationError, RequiresLicense
+from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
+from cogs5e.models.errors import AvraeException, RequiresLicense
+from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from gamedata.compendium import compendium
 from gamedata.ddb import BeyondClient, BeyondClientBase
 from gamedata.lookuputils import handle_required_license
@@ -58,11 +59,7 @@ class Avrae(commands.AutoShardedBot):
         super(Avrae, self).__init__(prefix, help_command=help_command, description=description, **options)
         self.testing = testing
         self.state = "init"
-        self.credentials = Credentials()
-        if config.TESTING:
-            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(self.credentials.test_mongo_url)
-        else:
-            self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
+        self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
         self.prefixes = dict()
@@ -86,11 +83,7 @@ class Avrae(commands.AutoShardedBot):
         self.ldclient = AsyncLaunchDarklyClient(self.loop, sdk_key=config.LAUNCHDARKLY_SDK_KEY)
 
     async def setup_rdb(self):
-        if config.TESTING:
-            redis_url = self.credentials.test_redis_url
-        else:
-            redis_url = config.REDIS_URL
-        return RedisIO(await aioredis.create_redis_pool(redis_url, db=config.REDIS_DB_NUM))
+        return RedisIO(await aioredis.create_redis_pool(config.REDIS_URL, db=config.REDIS_DB_NUM))
 
     async def get_server_prefix(self, msg):
         return (await get_prefix(self, msg))[-1]
@@ -136,21 +129,6 @@ class Avrae(commands.AutoShardedBot):
                     scope.set_tag("guild.id", context.guild.id)
                     scope.set_tag("guild.name", str(context.guild))
             sentry_sdk.capture_exception(exception)
-
-
-class Credentials:
-    def __init__(self):
-        try:
-            import credentials
-        except ImportError:
-            raise Exception("Credentials not found.")
-        self.token = credentials.officialToken
-        self.test_redis_url = credentials.test_redis_url
-        self.test_mongo_url = credentials.test_mongo_url
-        if config.TESTING:
-            self.token = credentials.testToken
-        if config.ALPHA_TOKEN:
-            self.token = config.ALPHA_TOKEN
 
 
 desc = '''
@@ -216,6 +194,9 @@ async def on_command_error(ctx, error):
         elif isinstance(original, RequiresLicense):
             return await handle_required_license(ctx, original)
 
+        elif isinstance(original, CollectableRequiresLicenses):
+            return await handle_alias_required_licenses(ctx, original)
+
         elif isinstance(original, AvraeException):
             return await ctx.send(str(original))
 
@@ -265,7 +246,16 @@ async def on_command_error(ctx, error):
 async def on_message(message):
     if message.author.id in bot.muted:
         return
-    await bot.process_commands(message)
+
+    # we override the default command processing to handle aliases
+    if message.author.bot:
+        return
+
+    ctx = await bot.get_context(message)
+    if ctx.command is not None:  # builtins first
+        await bot.invoke(ctx)
+    elif ctx.invoked_with:  # then aliases if there is some word (and not just the prefix)
+        await handle_aliases(ctx)
 
 
 @bot.event
@@ -286,4 +276,4 @@ if __name__ == '__main__':
     faulthandler.enable()  # assumes we log errors to stderr, traces segfaults
     bot.state = "run"
     bot.loop.create_task(compendium.reload_task(bot.mdb))
-    bot.run(bot.credentials.token)
+    bot.run(config.TOKEN)

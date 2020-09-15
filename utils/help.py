@@ -3,6 +3,11 @@ import itertools
 import discord
 from discord.ext.commands import Group, HelpCommand
 
+import aliasing.errors
+import aliasing.helpers
+import aliasing.personal
+from utils.functions import user_from_id
+
 
 class EmbedPaginator:
     EMBED_MAX = 6000
@@ -16,6 +21,9 @@ class EmbedPaginator:
         self._current_field = []
         self._field_count = 0
         self._embed_count = 0
+
+        self._footer_url = None
+        self._footer_text = None
 
         self._default_embed_options = embed_options
         self._embeds = [discord.Embed(**embed_options)]
@@ -83,6 +91,25 @@ class EmbedPaginator:
         self._current_field = []
         self._field_count = 0
 
+    def set_footer(self, icon_url=None, value=None):
+        """Sets the footer on the final embed."""
+        self._footer_url = icon_url
+        self._footer_text = value
+
+    def close_footer(self):
+        """Write the footer to the last embed."""
+        current_count = self._embed_count
+        kwargs = {}
+        if self._footer_url:
+            current_count += len(self._footer_url)
+            kwargs['icon_url'] = self._footer_url
+        if self._footer_text:
+            current_count += len(self._footer_text)
+            kwargs['text'] = self._footer_text
+        if current_count > self.EMBED_MAX:
+            self.close_embed()
+        self._embeds[-1].set_footer(**kwargs)
+
     def close_embed(self):
         """Terminate the current embed and create a new one."""
         self._embeds.append(discord.Embed(**self._default_embed_options))
@@ -97,6 +124,7 @@ class EmbedPaginator:
         """Returns the rendered list of embeds."""
         if self._field_count:
             self.close_field()
+        self.close_footer()
         return self._embeds
 
     def __repr__(self):
@@ -170,7 +198,53 @@ class AvraeHelp(HelpCommand):
         if command and command.endswith("-here"):
             command = command[:-5].strip() or None
             self.in_dms = False
-        return await super(AvraeHelp, self).command_callback(ctx, command=command)
+
+        # copied from super impl for custom alias handling
+        await self.prepare_help_command(ctx, command)
+        bot = ctx.bot
+
+        if command is None:
+            mapping = self.get_bot_mapping()
+            return await self.send_bot_help(mapping)
+
+        # Check if it's a cog
+        cog = bot.get_cog(command)
+        if cog is not None:
+            return await self.send_cog_help(cog)
+
+        maybe_coro = discord.utils.maybe_coroutine
+
+        # If it's not a cog then it's a command.
+        # Since we want to have detailed errors when someone
+        # passes an invalid subcommand, we need to walk through
+        # the command group chain ourselves.
+        keys = command.split(' ')
+        cmd = bot.all_commands.get(keys[0])
+        if cmd is None:
+            alias = (await aliasing.helpers.get_personal_alias_named(ctx, keys[0])) \
+                    or (await aliasing.helpers.get_server_alias_named(ctx, keys[0]))
+            if alias is not None:
+                return await self.send_alias_help(alias, keys)
+            else:
+                string = await maybe_coro(self.command_not_found, self.remove_mentions(keys[0]))
+                return await self.send_error_message(string)
+
+        for key in keys[1:]:
+            try:
+                found = cmd.all_commands.get(key)
+            except AttributeError:
+                string = await maybe_coro(self.subcommand_not_found, cmd, self.remove_mentions(key))
+                return await self.send_error_message(string)
+            else:
+                if found is None:
+                    string = await maybe_coro(self.subcommand_not_found, cmd, self.remove_mentions(key))
+                    return await self.send_error_message(string)
+                cmd = found
+
+        if isinstance(cmd, Group):
+            return await self.send_group_help(cmd)
+        else:
+            return await self.send_command_help(cmd)
 
     def get_destination(self):
         if self.in_dms:
@@ -232,6 +306,53 @@ class AvraeHelp(HelpCommand):
         note = self.get_ending_note()
         if note:
             self.embed_paginator.add_field("More Help", note)
+
+        await self.send()
+
+    async def send_alias_help(self, alias, full_cmd_path):
+        fqp = [full_cmd_path[0]]  # fully qualified path
+        ctx = self.context
+
+        self.embed_paginator.set_footer(icon_url="https://avrae.io/assets/img/homebrew.png",
+                                        value="User-created command.")
+
+        # is this a personal alias?
+        if isinstance(alias, (aliasing.personal.Alias, aliasing.personal.Servalias)):
+            name = ' '.join(fqp)
+            self.embed_paginator.add_field(name=f"{ctx.prefix}{name}")
+            self.embed_paginator.extend_field(f"{name} is a personal or server alias and has no help attached.")
+            await self.send()
+            return
+
+        # is the requested help for a subcommand?
+        for key in full_cmd_path[1:]:
+            try:
+                alias = await alias.get_subalias_named(ctx, key)
+            except aliasing.errors.CollectableNotFound:
+                return await self.send_error_message(f'The alias "{" ".join(fqp)}" has no subalias "{key}".')
+            fqp.append(key)
+
+        # send help
+        the_collection = await alias.load_collection(ctx)
+        owner = await user_from_id(ctx, the_collection.owner)
+
+        # metadata
+        self.embed_paginator.add_field(name=f"{ctx.prefix}{' '.join(fqp)}")
+        self.embed_paginator.extend_field(f"From {the_collection.name} by {owner}.\n"
+                                          f"[View on Workshop]({the_collection.url})")
+
+        # docs
+        self.embed_paginator.add_field(name="Help")
+        alias_docs = alias.docs or "No documentation."
+        for line in alias_docs.splitlines():
+            self.embed_paginator.extend_field(line)
+
+        # subcommands
+        await alias.load_subcommands(ctx)
+        if alias.subcommands:
+            self.embed_paginator.add_field(name="Subcommands")
+            for sc in alias.subcommands:
+                self.embed_paginator.extend_field(f"**{sc.name}** - {sc.short_docs}")
 
         await self.send()
 

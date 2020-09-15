@@ -8,7 +8,7 @@ import html2text
 
 import gamedata.compendium as gd
 from cogs5e.models.errors import ExternalImportError, NoActiveBrew
-from cogs5e.models.homebrew.mixins import CommonHomebrewMixin
+from utils.subscription_mixins import CommonHomebrewMixin
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances

@@ -7,7 +7,6 @@ import cogs5e.models.initiative as init
 import gamedata.lookuputils
 from cogs5e.models import initiative
 from cogs5e.models.automation import Automation
-from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException
 from utils.constants import STAT_ABBREVIATIONS

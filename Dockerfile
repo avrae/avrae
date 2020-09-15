@@ -15,8 +15,6 @@ RUN pip install --user --no-warn-script-location -r requirements.txt
 
 COPY --chown=avrae:avrae . .
 
-COPY --chown=avrae:avrae docker/credentials-${ENVIRONMENT}.py credentials.py
-
 # Download AWS pubkey to connect to documentDB
 RUN if [ "$ENVIRONMENT" = "production" ]; then wget https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem; fi
 

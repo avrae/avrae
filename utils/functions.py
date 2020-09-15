@@ -175,8 +175,9 @@ async def get_selection(ctx, choices, delete=True, pm=False, message=None, force
     """Returns the selected choice, or None. Choices should be a list of two-tuples of (name, choice).
     If delete is True, will delete the selection message and the response.
     If length of choices is 1, will return the only choice unless force_select is True.
-    :raises NoSelectionElements if len(choices) is 0.
-    :raises SelectionCancelled if selection is cancelled."""
+
+    :raises NoSelectionElements: if len(choices) is 0.
+    :raises SelectionCancelled: if selection is cancelled."""
     if len(choices) == 0:
         raise NoSelectionElements()
     elif len(choices) == 1 and not force_select:
@@ -349,3 +350,50 @@ def trim_str(text, max_len):
     if len(text) < max_len:
         return text
     return f"{text[:max_len - 4]}..."
+
+
+async def user_from_id(ctx, the_id):
+    """
+    Gets a :class:`discord.User` given their user id in the context. Returns member if context has data.
+
+    :type ctx: discord.ext.commands.Context
+    :type the_id: int
+    :rtype: discord.User
+    """
+
+    async def update_known_user(the_user):
+        await ctx.bot.mdb.users.update_one(
+            {"id": str(the_user.id)},
+            {"$set": {'username': the_user.name, 'discriminator': the_user.discriminator,
+                      'avatar': the_user.avatar, 'bot': the_user.bot}},
+            upsert=True
+        )
+
+    if ctx.guild:  # try and get member
+        member = ctx.guild.get_member(the_id)
+        if member is not None:
+            await update_known_user(member)
+            return member
+
+    # try and see if user is in bot cache
+    user = ctx.bot.get_user(the_id)
+    if user is not None:
+        await update_known_user(user)
+        return user
+
+    # or maybe the user is in our known user db
+    user_doc = await ctx.bot.mdb.users.find_one({"id": str(the_id)})
+    if user_doc is not None:
+        # noinspection PyProtectedMember
+        # technically we're not supposed to create User objects like this
+        # but it *should* be fine
+        return discord.User(state=ctx.bot._connection, data=user_doc)
+
+    # fetch the user from the Discord API
+    try:
+        fetched_user = await ctx.bot.fetch_user(the_id)
+    except discord.NotFound:
+        return None
+
+    await update_known_user(fetched_user)
+    return fetched_user

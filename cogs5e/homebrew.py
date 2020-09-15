@@ -9,7 +9,7 @@ from cogs5e.models.errors import NoActiveBrew, NoSelectionElements, NotAllowed
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary, select_bestiary
 from utils import checks
-from utils.functions import confirm, search_and_select
+from utils.functions import confirm, search_and_select, user_from_id
 
 log = logging.getLogger(__name__)
 
@@ -245,7 +245,8 @@ class Homebrew(commands.Cog):
             return await ctx.send("This pack is not public.")
 
         await pack.subscribe(ctx)
-        await ctx.send(f"Subscribed to {pack.name}. "  # by {pack.owner['username']}. "  # todo owner username
+        pack_owner = await user_from_id(ctx, pack.owner)
+        await ctx.send(f"Subscribed to {pack.name} by {pack_owner}. "
                        f"Use `{ctx.prefix}pack {pack.name}` to select it.")
 
     @pack.command(name='unsubscribe', aliases=['unsub'])
@@ -366,7 +367,8 @@ class Homebrew(commands.Cog):
             return await ctx.send("This tome is not public.")
 
         await tome.subscribe(ctx)
-        await ctx.send(f"Subscribed to {tome.name}. "  # by {tome.owner['username']}. "  # todo
+        tome_owner = await user_from_id(ctx, tome.owner)
+        await ctx.send(f"Subscribed to {tome.name} by {tome_owner}. "
                        f"Use `{ctx.prefix}tome {tome.name}` to select it.")
 
     @tome.command(name='unsubscribe', aliases=['unsub'])

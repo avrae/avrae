@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 
 class Compendium:
-    # noinspection PyUnresolvedReferences
+    # noinspection PyTypeHints
     # prevents pycharm from freaking out over type comments
     def __init__(self):
         # raw data
@@ -54,6 +54,9 @@ class Compendium:
         self.names = []
         self.rule_references = []
 
+        # lookup helpers
+        self._entitlement_lookup = {}
+
         self._base_path = os.path.relpath('res')
 
     async def reload_task(self, mdb=None):
@@ -77,6 +80,7 @@ class Compendium:
             await self.load_all_mongodb(mdb)
 
         await loop.run_in_executor(None, self.load_common)
+        log.info(f"Done loading data - {len(self._entitlement_lookup)} objects registered")
 
     def load_all_json(self, base_path=None):
         if base_path is not None:
@@ -111,14 +115,24 @@ class Compendium:
 
     # noinspection DuplicatedCode
     def load_common(self):
-        self.backgrounds = [Background.from_data(b) for b in self.raw_backgrounds]
-        self.classes = [Class.from_data(c) for c in self.raw_classes]
-        self.races = [Race.from_data(r) for r in self.raw_races]
-        self.subraces = [Race.from_data(r) for r in self.raw_subraces]
-        self.feats = [Feat.from_data(f) for f in self.raw_feats]
-        self.items = [Item.from_data(i) for i in self.raw_items]
-        self.monsters = [Monster.from_data(m) for m in self.raw_monsters]
-        self.spells = [gamedata.spell.Spell.from_data(s) for s in self.raw_spells]
+        self._entitlement_lookup = {}
+
+        def deserialize_and_register_lookups(cls, data_source, entitlement_entity_type=None):
+            out = []
+            for entity_data in data_source:
+                entity = cls.from_data(entity_data)
+                self._register_entitlement_lookup(entity, entitlement_entity_type=entitlement_entity_type)
+                out.append(entity)
+            return out
+
+        self.backgrounds = deserialize_and_register_lookups(Background, self.raw_backgrounds)
+        self.classes = deserialize_and_register_lookups(Class, self.raw_classes)
+        self.races = deserialize_and_register_lookups(Race, self.raw_races)
+        self.subraces = deserialize_and_register_lookups(Race, self.raw_subraces, entitlement_entity_type='subrace')
+        self.feats = deserialize_and_register_lookups(Feat, self.raw_feats)
+        self.items = deserialize_and_register_lookups(Item, self.raw_items, entitlement_entity_type='magic-item')
+        self.monsters = deserialize_and_register_lookups(Monster, self.raw_monsters)
+        self.spells = deserialize_and_register_lookups(gamedata.spell.Spell, self.raw_spells)
 
         # generated
         self._load_classfeats()
@@ -131,6 +145,8 @@ class Compendium:
             for subcls in cls.subclasses:
                 copied = copy.copy(subcls)
                 copied.name = f"{cls.name}: {subcls.name}"
+                # register lookups
+                self._register_entitlement_lookup(copied)
                 self.subclasses.append(copied)
 
     def _load_classfeats(self):
@@ -177,6 +193,14 @@ class Compendium:
         for subrace in self.subraces:
             self.subrfeats.extend(rf for rf in handle_race(subrace))
 
+    def _register_entitlement_lookup(self, entity, entitlement_entity_type=None):
+        entity_type = entitlement_entity_type or entity.entity_type
+        k = (entity_type, entity.entity_id)
+        if k in self._entitlement_lookup:
+            log.info(f"Overwriting existing entity lookup key: {k} "
+                     f"({self._entitlement_lookup[k].name} -> {entity.name})")
+        self._entitlement_lookup[k] = entity
+
     def read_json(self, filename, default):
         data = default
         filepath = os.path.join(self._base_path, filename)
@@ -187,6 +211,11 @@ class Compendium:
             log.warning("File not found: {}".format(filepath))
         log.debug("Loaded {} things from file {}".format(len(data), filename))
         return data
+
+    # helpers
+    def lookup_by_entitlement(self, entity_type: str, entity_id: int):
+        """Gets an entity by its entitlement data."""
+        return self._entitlement_lookup.get((entity_type, entity_id))
 
 
 compendium = Compendium()

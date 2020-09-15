@@ -185,7 +185,7 @@ class StatBlock:
     # must implement deserializer
     @classmethod
     def from_dict(cls, *args, **kwargs):
-        raise NotImplemented
+        raise NotImplementedError
 
     def to_dict(self):
         return {

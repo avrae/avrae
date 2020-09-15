@@ -451,7 +451,7 @@ class AliasSkill:
         :param int mod_override: Overrides the skill modifier.
         :rtype: str
         """
-        return self._skill.d20(bool(base_adv), reroll, min_val, mod_override)
+        return self._skill.d20(base_adv, reroll, min_val, mod_override)
 
     def __int__(self):
         return int(self._skill)

@@ -182,10 +182,8 @@ class TestCustomCounters:
     async def test_cc_summary(self, avrae, dhttp):
         avrae.message("!cc")
         char = await active_character(avrae)
-        cc_embed = EmbedWithCharacter(char)
+        cc_embed = Embed()
         # Needed to allow for embed comparison
-        char.set_setting('color', 0xffffff)
-        cc_embed.color = 0xffffff
 
         for _ in char.consumables:
             cc_embed.add_field(name='.+', value=r'((◉+〇*)|(\*\*Current Value\*\*:.+))(\n)*(\*\*Range\*\*: .+)*(\n)*(\*\*Resets On\*\*: .+)*')
@@ -193,10 +191,7 @@ class TestCustomCounters:
 
     async def test_cc_misc(self, avrae, dhttp):
         char = await active_character(avrae)
-        cc_embed = EmbedWithCharacter(char)
-        # Needed to allow for embed comparison
-        char.set_setting('color', 0xffffff)
-        cc_embed.color = 0xffffff
+        cc_embed = Embed()
         test_cc = next(cc for cc in char.consumables if cc.name == "TESTCC")
         test_cc_limits = next(cc for cc in char.consumables if cc.name == "TESTLIMITS")
 

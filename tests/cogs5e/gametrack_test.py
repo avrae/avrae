@@ -2,6 +2,7 @@ import pytest
 from discord import Embed
 
 from tests.utils import active_character
+from cogs5e.models.embeds import EmbedWithCharacter
 
 pytestmark = pytest.mark.asyncio
 
@@ -173,21 +174,54 @@ class TestSpellbook:
 class TestCustomCounters:
     async def test_cc_create(self, avrae, dhttp):
         avrae.message("!cc create TESTCC")
-        await dhttp.receive_message()
+        await dhttp.receive_message('Custom counter created.')
+
         avrae.message("!cc create TESTLIMITS -min 0 -max 100")
-        await dhttp.receive_message()
+        await dhttp.receive_message('Custom counter created.')
 
     async def test_cc_summary(self, avrae, dhttp):
         avrae.message("!cc")
+        char = await active_character(avrae)
+        cc_embed = Embed()
+        # Needed to allow for embed comparison
+
+        for _ in char.consumables:
+            cc_embed.add_field(name='.+', value=r'((◉+〇*)|(\*\*Current Value\*\*:.+))(\n)*(\*\*Range\*\*: .+)*(\n)*(\*\*Resets On\*\*: .+)*')
+        await dhttp.receive_message(embed=cc_embed)
 
     async def test_cc_misc(self, avrae, dhttp):
+        char = await active_character(avrae)
+        cc_embed = Embed()
+        test_cc = next(cc for cc in char.consumables if cc.name == "TESTCC")
+        test_cc_limits = next(cc for cc in char.consumables if cc.name == "TESTLIMITS")
+
+        cc_embed.add_field(name=r'.+', value=r'((\d+)|(\d+\/\d+)) (\((\+|-)\d+\))(\n)*(\(\d+ .+\))*')
         avrae.message("!cc TESTCC +5")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(embed=cc_embed)
+        assert test_cc.value == 5
+
         avrae.message("!cc TESTLIMITS -99")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(embed=cc_embed)
+        assert test_cc_limits.value == 1
+
         avrae.message("!cc TESTLIMITS -2")
+        await dhttp.receive_delete()
+        await dhttp.receive_message(embed=cc_embed)
+        assert test_cc_limits.value == 0
 
     async def test_cc_reset(self, avrae, dhttp):
+        char = await active_character(avrae)
+
+        test_cc_limits = next(cc for cc in char.consumables if cc.name == "TESTLIMITS")
         avrae.message("!cc reset TESTLIMITS")
+        await dhttp.receive_message(r'(\w+: )(\d+\/\d+ )(\((\+|-)\d+\))')
+        assert test_cc_limits.value == 100
 
     async def test_cc_delete(self, avrae, dhttp):
         avrae.message("!cc delete TESTCC")
+        await dhttp.receive_message('Deleted counter TESTCC.')
+
         avrae.message("!cc delete TESTLIMITS")
+        await dhttp.receive_message('Deleted counter TESTLIMITS.')

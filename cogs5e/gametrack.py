@@ -450,6 +450,8 @@ class GameTrack(commands.Cog):
             operator = m[0]
             modifier = m[-1]
 
+        change = ''
+        old_value = counter.value
         try:
             modifier = int(modifier)
         except ValueError:
@@ -465,10 +467,11 @@ class GameTrack(commands.Cog):
         counter.set(new_value)
         await character.commit(ctx)
 
-        if new_value - counter.value:
-            out = f"{str(counter)}\n({abs(new_value - counter.value)} overflow)"
+        delta = f"({counter.value - old_value:+})"
+        if new_value - counter.value:  # we overflowed somewhere
+          out = f"{str(counter)} {delta}\n({abs(new_value - counter.value)} overflow)"
         else:
-            out = str(counter)
+          out = f"{str(counter)} {delta}"
 
         result_embed.add_field(name=counter.name, value=out)
 

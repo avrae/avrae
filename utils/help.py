@@ -164,6 +164,8 @@ class AvraeHelp(HelpCommand):
 
     async def send(self):
         """A helper utility to send the page output from :attr:`paginator` to the destination."""
+        self.add_help_footer()
+
         destination = self.get_destination()
         for embed in self.embed_paginator.embeds:
             await destination.send(embed=embed)
@@ -192,6 +194,11 @@ class AvraeHelp(HelpCommand):
             except ValueError:
                 for line in command.help.splitlines():
                     self.embed_paginator.extend_field(line)
+
+    def add_help_footer(self):
+        self.embed_paginator.set_footer(value="Arguments surrounded in angled brackets (<args>) are mandatory,"
+                                              " while those surrounded in square brackets ([args]) are optional."
+                                              " In either case, don't include the brackets.")
 
     # ===== HelpCommand overrides =====
     async def command_callback(self, ctx, *, command=None):

@@ -65,7 +65,7 @@ class AttackList:
     def __init__(self, attacks=None):
         if attacks is None:
             attacks = []
-        self.attacks = attacks
+        self.attacks = sorted((atk for atk in attacks), key=lambda atk: str(atk).lower())
 
     @classmethod
     def from_dict(cls, l):  # technicaly from_list, but consistency
@@ -76,7 +76,7 @@ class AttackList:
 
     # utils
     def build_str(self, caster):
-        return '\n'.join(sorted((atk.build_str(caster) for atk in self.attacks), key=str.lower))
+        return '\n'.join(atk.build_str(caster) for atk in self.attacks)
 
     def __str__(self):
         return '\n'.join(str(atk) for atk in self.attacks)

@@ -47,7 +47,8 @@ SOURCE_MAP = {
     'IMR': 'Infernal Machine Rebuild', 'MFFV1': "Mordenkainen's Fiendish Folio Volume 1", 'SD': 'Sapphire Dragon',
     'EGtW': "Explorer's Guide to Wildemount", 'OGA': 'One Grung Above', 'MOoT': 'Mythic Odysseys of Theros',
     'WA': 'Frozen Sick', 'TSCF': 'The Sunless Citadel (Free)', 'TFoFF': 'The Forge of Fury (Free)',
-    'LRDToB': 'Legends of Runeterra: Dark Tides of Bilgewater', 'IDRotF': 'Icewind Dale: Rime of the Frostmaiden'
+    'LRDToB': 'Legends of Runeterra: Dark Tides of Bilgewater', 'IDRotF': 'Icewind Dale: Rime of the Frostmaiden',
+    'TCoE': 'Tasha’s Cauldron of Everything'
 }
 SOURCE_SLUG_MAP = {
     'BR': 'basic-rules', 'PHB': 'players-handbook', 'DMG': 'dungeon-masters-guide',
@@ -71,7 +72,8 @@ SOURCE_SLUG_MAP = {
     'IMR': 'infernal-machine-rebuild', 'MFFV1': 'mordenkainens-fiendish-folio-volume-1', 'SD': 'sapphire-dragon',
     'EGtW': 'explorers-guide-to-wildemount', 'OGA': 'one-grung-above', 'MOoT': 'mythic-odysseys-of-theros',
     'WA': 'frozen-sick', 'TSCF': 'the-sunless-citadel-free', 'TFoFF': 'the-forge-of-fury-free',
-    'LRDToB': 'legends-of-runeterra-dark-tides-of-bilgewater', 'IDRotF': 'icewind-dale-rime-of-the-frostmaiden'
+    'LRDToB': 'legends-of-runeterra-dark-tides-of-bilgewater', 'IDRotF': 'icewind-dale-rime-of-the-frostmaiden',
+    'TCoE': 'tashas-cauldron-of-everything'
 }
 PARTNERED_SOURCES = ('LRDToB',)
 UA_SOURCES = ('UA',)

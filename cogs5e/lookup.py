@@ -18,6 +18,7 @@ from gamedata.lookuputils import HOMEBREW_EMOJI, can_access, get_item_choices, g
 from gamedata.shared import SourcedTrait
 from utils import checks
 from utils.functions import get_positivity, search_and_select, trim_str
+from utils.img import fetch_monster_image
 
 LARGE_THRESHOLD = 200
 
@@ -371,13 +372,14 @@ class Lookup(commands.Cog):
             else:
                 await ctx.send(embed=embed)
 
-    async def _do_monster_image(self, ctx, name: str, image_getter):
-        """Handles an image command for a monster (monimage/token)."""
+    @commands.command()
+    async def monimage(self, ctx, *, name=None):
+        """Shows a monster's image."""
         choices = await get_monster_choices(ctx, filter_by_license=False)
         monster = await self._lookup_search3(ctx, {'monster': choices}, name)
         await Stats.increase_stat(ctx, "monsters_looked_up_life")
 
-        url = image_getter(monster)
+        url = monster.get_image_url()
         embed = EmbedWithAuthor(ctx)
         embed.title = monster.name
         embed.description = f"{monster.size} monster."
@@ -389,11 +391,6 @@ class Lookup(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def monimage(self, ctx, *, name=None):
-        """Shows a monster's image."""
-        await self._do_monster_image(ctx, name, lambda monster: monster.get_image_url())
-
-    @commands.command()
     async def token(self, ctx, *, name=None):
         """Shows a monster's token."""
         if name is None:
@@ -402,10 +399,26 @@ class Lookup(commands.Cog):
                 return await ctx.send("Error: SheetManager cog not loaded.")
             return await ctx.invoke(token_cmd)
 
+        choices = await get_monster_choices(ctx, filter_by_license=False)
+        monster = await self._lookup_search3(ctx, {'monster': choices}, name)
+        await Stats.increase_stat(ctx, "monsters_looked_up_life")
+
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         is_subscriber = ddb_user and ddb_user.subscriber
 
-        await self._do_monster_image(ctx, name, lambda monster: monster.get_token_url(is_subscriber))
+        token_url = monster.get_token_url(is_subscriber)
+        if not token_url:
+            return await ctx.send("This monster has no image.")
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = monster.name
+        embed.description = f"{monster.size} monster."
+
+        image = await fetch_monster_image(token_url)
+
+        file = discord.File(image, filename="image.png")
+        embed.set_image(url="attachment://image.png")
+        await ctx.send(embed=embed, file=file)
 
     # ==== spells ====
     @commands.command()

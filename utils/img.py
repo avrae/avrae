@@ -2,6 +2,8 @@
 Image processing utilities.
 """
 import asyncio
+import hashlib
+import os
 from io import BytesIO
 
 import aiohttp
@@ -78,3 +80,32 @@ async def generate_token(img_url, is_subscriber=False):
         raise
 
     return processed
+
+
+async def fetch_monster_image(img_url: str):
+    """
+    Fetches a monster token image from the given URL, caching it until the bot restarts.
+
+    :returns: A file-like object (file or bytesio) containing the monster token, or a path to the existing cached image.
+    :rtype: BytesIO or str
+    """
+    # ensure cache dir exists
+    os.makedirs(".cache/monster-tokens", exist_ok=True)
+
+    sha = hashlib.sha1(img_url.encode()).hexdigest()
+    cache_path = f'.cache/monster-tokens/{sha}.png'
+    if os.path.exists(cache_path):
+        return cache_path
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(img_url) as resp:
+            if not 199 < resp.status < 300:
+                raise ExternalImportError(f"I was unable to download the image to tokenize. "
+                                          f"({resp.status} {resp.reason})")
+            img_bytes = await resp.read()
+
+    # cache
+    with open(cache_path, 'wb') as f:
+        f.write(img_bytes)
+
+    return BytesIO(img_bytes)

@@ -367,7 +367,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Returns the ID of the active Discord channel.
 
-        .. deprecated:: 2.1.0
+        .. deprecated:: 2.5.0
             Use ``ctx.channel.id`` instead.
 
         :rtype: str
@@ -378,7 +378,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Returns the ID of the active Discord guild, or None if in DMs.
 
-        .. deprecated:: 2.1.0
+        .. deprecated:: 2.5.0
             Use ``ctx.guild.id`` instead.
 
         :rtype: str

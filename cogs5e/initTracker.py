@@ -723,7 +723,8 @@ class InitTracker(commands.Cog):
 
     @init.command()
     async def status(self, ctx, name: str = '', *, args: str = ''):
-        """Gets the status of a combatant or group. If no name is specified, it will default to current combatant.
+        """Gets the status of a combatant or group.
+        If no name is specified, it will default to current combatant.
         __Valid Arguments__
         private - PMs the controller of the combatant a more detailed status."""
 

@@ -1,3 +1,6 @@
+import discord
+
+
 class AliasContext:
     """
     Used to expose some information about the context, like the guild name, channel name, author name, and
@@ -59,6 +62,7 @@ class AliasGuild:
     """
     Represents the Discord guild (server) an alias was invoked in.
     """
+
     def __init__(self, guild):
         """
         :type guild: discord.Guild
@@ -92,13 +96,14 @@ class AliasChannel:
     """
     Represents the Discord channel an alias was invoked in.
     """
+
     def __init__(self, channel):
         """
         :type channel: discord.TextChannel
         """
         self._name = str(channel)
         self._id = channel.id
-        self._topic = channel.topic
+        self._topic = channel.topic if not isinstance(channel, discord.DMChannel) else None
 
     @property
     def name(self):
@@ -135,6 +140,7 @@ class AliasAuthor:
     """
     Represents the Discord user who invoked an alias.
     """
+
     def __init__(self, author):
         """
         :type author: discord.User

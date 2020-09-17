@@ -722,12 +722,18 @@ class InitTracker(commands.Cog):
             await ctx.send("No valid options found.")
 
     @init.command()
-    async def status(self, ctx, name: str, *, args: str = ''):
+    async def status(self, ctx, name: str = '', *, args: str = ''):
         """Gets the status of a combatant or group.
         __Valid Arguments__
         private - PMs the controller of the combatant a more detailed status."""
+
         combat = await Combat.from_ctx(ctx)
-        combatant = await combat.select_combatant(name, select_group=True)
+
+        if name == 'private' or name == '':
+            combatant = combat.current_combatant
+        else:
+            combatant = await combat.select_combatant(name, select_group=True)
+
         if combatant is None:
             await ctx.send("Combatant or group not found.")
             return

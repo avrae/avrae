@@ -100,7 +100,7 @@ async def fetch_monster_image(img_url: str):
     async with aiohttp.ClientSession() as session:
         async with session.get(img_url) as resp:
             if not 199 < resp.status < 300:
-                raise ExternalImportError(f"I was unable to download the image to tokenize. "
+                raise ExternalImportError(f"I was unable to retrieve the monster token. "
                                           f"({resp.status} {resp.reason})")
             img_bytes = await resp.read()
 

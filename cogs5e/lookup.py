@@ -579,7 +579,7 @@ class Lookup(commands.Cog):
             the_entity, the_etype = e
             if the_entity.homebrew:
                 return f"{the_entity.name} ({HOMEBREW_EMOJI})"
-            elif can_access(the_etype, available_ids[the_etype]):
+            elif can_access(the_entity, available_ids[the_etype]):
                 return the_entity.name
             return f"{the_entity.name}\\*"
 

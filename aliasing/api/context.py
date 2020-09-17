@@ -96,7 +96,7 @@ class AliasChannel:
         """
         :type channel: discord.TextChannel
         """
-        self._name = channel.name
+        self._name = str(channel)
         self._id = channel.id
         self._topic = channel.topic
 

@@ -451,7 +451,7 @@ class AliasSkill:
         :param int mod_override: Overrides the skill modifier.
         :rtype: str
         """
-        return self._skill.d20(bool(base_adv), reroll, min_val, mod_override)
+        return self._skill.d20(base_adv, reroll, min_val, mod_override)
 
     def __int__(self):
         return int(self._skill)
@@ -540,7 +540,7 @@ class AliasResistances:
     @property
     def vuln(self):
         """
-        A list of damage types that the stat block is resistant to.
+        A list of damage types that the stat block is vulnerable to.
 
         :rtype: list[Resistance]
         """
@@ -558,7 +558,8 @@ class AliasResistances:
     @property
     def neutral(self):
         """
-        A list of damage types that the stat block is vulnerable to.
+        A list of damage types that the stat block ignores in damage calculations. (i.e. will not handle resistances/
+        vulnerabilities/immunities)
 
         :rtype: list[Resistance]
         """

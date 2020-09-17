@@ -445,7 +445,7 @@ Custom Counters
 
     .. function:: cc_exists(name)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().cc_exists()`` instead.
 
         Returns whether a custom counter exists.
@@ -456,7 +456,7 @@ Custom Counters
 
     .. function:: cc_str(name)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().cc_str()`` instead.
 
         Returns a string representing a custom counter.
@@ -475,7 +475,7 @@ Custom Counters
 
     .. function:: create_cc(name, minVal=None, maxVal=None, reset=None, dispType=None)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().create_cc()`` instead.
 
         Creates a custom counter. If a counter with the same name already exists, it will replace it.
@@ -488,7 +488,7 @@ Custom Counters
 
     .. function:: create_cc_nx(name, minVal=None, maxVal=None, reset=None, dispType=None)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().create_cc_nx()`` instead.
 
         Creates a custom counter if one with the given name does not already exist.
@@ -499,7 +499,7 @@ Custom Counters
 
     .. function:: delete_cc(name)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().delete_cc()`` instead.
 
         Deletes a custom counter.
@@ -509,7 +509,7 @@ Custom Counters
 
     .. function:: get_cc(name)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().get_cc()`` instead.
 
         Gets the value of a custom counter.
@@ -522,7 +522,7 @@ Custom Counters
 
     .. function:: get_cc_max(name)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().get_cc_max()`` instead.
 
         Gets the maximum value of a custom counter.
@@ -534,7 +534,7 @@ Custom Counters
 
     .. function:: get_cc_min(name)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().get_cc_min()`` instead.
 
         Gets the minimum value of a custom counter.
@@ -546,14 +546,14 @@ Custom Counters
 
     .. function:: mod_cc(name, value, strict=False)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().mod_cc()`` instead.
 
         Modifies the value of a custom counter. Equivalent to ``set_cc(name, get_cc(name) + value, strict)``.
 
     .. function:: set_cc(name, value, strict=False)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().set_cc()`` instead.
 
         Sets the value of a custom counter.
@@ -570,7 +570,7 @@ Spell Slots
 
     .. function:: get_slots(level)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().spellbook.get_slots()`` instead.
 
         Gets the number of remaining spell slots of a given level that a character has.
@@ -581,7 +581,7 @@ Spell Slots
 
     .. function:: get_slots_max(level)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().spellbook.get_slots_max()`` instead.
 
         Gets the maximum number of spell slots of a given level that a character has.
@@ -592,7 +592,7 @@ Spell Slots
 
     .. function:: set_slots(level, value)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().spellbook.set_slots()`` instead.
 
         Sets how many spell slots of a given level a character has.
@@ -603,7 +603,7 @@ Spell Slots
 
     .. function:: slots_str(level)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().spellbook.slots_str()`` instead.
 
         Returns a string representing how many spell slots a character has of a given level.
@@ -614,7 +614,7 @@ Spell Slots
 
     .. function:: use_slot(level)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().spellbook.use_slot()`` instead.
 
         Uses one spell slot of a given level. Equivalent to ``set_slots(level, get_slots(level) - 1)``.
@@ -626,7 +626,7 @@ Hit Points
 
     .. function:: get_hp()
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().hp`` instead.
 
         :returns: The character's current hit points.
@@ -634,7 +634,7 @@ Hit Points
 
     .. function:: get_temphp()
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().temp_hp`` instead.
 
         :returns: The character's current temporary hit points.
@@ -642,14 +642,14 @@ Hit Points
 
     .. function:: hp_str()
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().hp_str()`` instead.
 
         Returns a string representing a character's current HP, max HP, and temp HP.
 
     .. function:: mod_hp(value, overflow=True)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().modify_hp()`` instead.
 
         Modifies the character's remaining hit points by *value*. If *value* is negative, will deal damage to temp HP first.
@@ -659,7 +659,7 @@ Hit Points
 
     .. function:: set_hp(value)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().set_hp()`` instead.
 
         Sets the character's remaining hit points. Ignores temp HP.
@@ -668,7 +668,7 @@ Hit Points
 
     .. function:: set_temphp(value)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().set_temp_hp()`` instead.
 
         Sets the character's remaining temp HP.
@@ -686,7 +686,7 @@ Cvars
 
     .. function:: delete_cvar(name)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().delete_cvar()`` instead.
 
         Deletes a custom character variable. Does nothing if the cvar does not exist.
@@ -695,7 +695,7 @@ Cvars
 
     .. function:: set_cvar(name, value)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().set_cvar()`` instead.
 
         Sets a custom character variable, which will be available in all scripting contexts using this character.
@@ -705,7 +705,7 @@ Cvars
 
     .. function:: set_cvar_nx(name, value)
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``character().set_cvar_nx()`` instead.
 
         Sets a custom character variable if it is not already set.
@@ -720,7 +720,7 @@ Other
 
     .. function:: get_raw()
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Deprecated without replacement. Use ``character()`` to get a representation of the character instead.
 
         Returns a raw representation of character data.
@@ -794,7 +794,7 @@ SimpleCombatant
 
     .. attribute:: level
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``SimpleCombatant.levels.total_level`` or ``SimpleCombatant.spellbook.caster_level`` instead.
 
         The combatant's spellcaster level. ``0`` if the combatant is not a player or spellcaster.
@@ -803,7 +803,7 @@ SimpleCombatant
 
     .. attribute:: resists
 
-        .. deprecated:: 2.2.0
+        .. deprecated:: 2.5.0
             Use ``SimpleCombatant.resistances`` instead.
 
         The combatant's resistances, immunities, and vulnerabilities.

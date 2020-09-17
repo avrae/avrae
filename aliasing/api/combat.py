@@ -267,7 +267,7 @@ class SimpleCombatant(AliasStatBlock):
     @property
     def temphp(self):  # deprecated - use temp_hp instead
         """
-        .. deprecated:: 2.1.0
+        .. deprecated:: 2.5.0
             Use ``SimpleCombatant.temp_hp`` instead.
 
         How many temporary hit points the combatant has.
@@ -279,7 +279,7 @@ class SimpleCombatant(AliasStatBlock):
     @property
     def maxhp(self):  # deprecated - use max_hp instead
         """
-        .. deprecated:: 2.1.0
+        .. deprecated:: 2.5.0
             Use ``SimpleCombatant.max_hp`` instead.
 
         The combatant's maximum hit points. ``None`` if not set.
@@ -290,7 +290,7 @@ class SimpleCombatant(AliasStatBlock):
 
     def mod_hp(self, mod: int, overheal: bool = False):  # deprecated - use modify_hp instead
         """
-        .. deprecated:: 2.1.0
+        .. deprecated:: 2.5.0
             Use ``SimpleCombatant.modify_hp()`` instead.
 
         Modifies a combatant's remaining hit points by a value.
@@ -302,7 +302,7 @@ class SimpleCombatant(AliasStatBlock):
 
     def set_thp(self, thp: int):  # deprecated - use set_temp_hp
         """
-        .. deprecated:: 2.1.0
+        .. deprecated:: 2.5.0
             Use ``SimpleCombatant.set_temp_hp()`` instead.
 
         Sets the combatant's temp HP.

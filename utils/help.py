@@ -164,8 +164,6 @@ class AvraeHelp(HelpCommand):
 
     async def send(self):
         """A helper utility to send the page output from :attr:`paginator` to the destination."""
-        self.add_help_footer()
-
         destination = self.get_destination()
         for embed in self.embed_paginator.embeds:
             await destination.send(embed=embed)
@@ -209,6 +207,9 @@ class AvraeHelp(HelpCommand):
         # copied from super impl for custom alias handling
         await self.prepare_help_command(ctx, command)
         bot = ctx.bot
+
+        # add the default footer here, it can be overridden later
+        self.add_help_footer()
 
         if command is None:
             mapping = self.get_bot_mapping()

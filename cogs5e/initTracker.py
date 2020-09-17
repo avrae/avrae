@@ -738,7 +738,7 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant or group not found.")
             return
 
-        private = 'private' in args.lower()
+        private = 'private' in args.lower() or name == 'private'
         if not isinstance(combatant, CombatantGroup):
             private = private and str(ctx.author.id) == combatant.controller
             status = combatant.get_status(private=private)

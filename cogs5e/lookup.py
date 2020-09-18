@@ -393,9 +393,9 @@ class Lookup(commands.Cog):
     @commands.command()
     async def token(self, ctx, name=None, *args):
         """
-        Shows a monster's token.
+        Shows a monster or your character's token.
         __Valid Arguments__
-        -border <gold|plain> - Chooses the token border.
+        -border <gold|plain|none> - Chooses the token border.
         """
         if name is None or name.startswith('-'):
             token_cmd = self.bot.get_command('playertoken')
@@ -413,26 +413,20 @@ class Lookup(commands.Cog):
         # select border
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         is_subscriber = ddb_user and ddb_user.subscriber
-        args = argparse(args)
-        border = args.last('border')
+        token_args = argparse(args)
 
         if monster.homebrew:
             # homebrew: generate token
             if not monster.get_image_url():
                 return await ctx.send("This monster has no image.")
-            border_type = img.TokenBorderEnum.GOLD if is_subscriber else img.TokenBorderEnum.PLAIN
-            if border == 'plain':
-                border_type = img.TokenBorderEnum.PLAIN
-            elif border == 'none':
-                border_type = img.TokenBorderEnum.NONE
             try:
-                image = await img.generate_token(monster.get_image_url(), border_type)
+                image = await img.generate_token(monster.get_image_url(), is_subscriber, token_args)
             except Exception as e:
                 return await ctx.send(f"Error generating token: {e}")
         else:
             # official monsters
             token_url = monster.get_token_url(is_subscriber)
-            if border == 'plain':
+            if token_args.last('border') == 'plain':
                 token_url = monster.get_token_url(False)
 
             if not token_url:

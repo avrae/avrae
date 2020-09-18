@@ -15,12 +15,6 @@ from cogs5e.models.errors import ExternalImportError
 TOKEN_SIZE = (256, 256)
 
 
-class TokenBorderEnum(enum.Enum):
-    NONE = 'NONE'
-    PLAIN = 'PLAIN'
-    GOLD = 'GOLD'
-
-
 def preprocess_url(url):
     """
     Does any necessary changes to the URL before downloading the image.
@@ -31,8 +25,15 @@ def preprocess_url(url):
     return url.replace("www.dndbeyond.com/avatars", "media-waterdeep.cursecdn.com/avatars")
 
 
-async def generate_token(img_url, border: TokenBorderEnum = TokenBorderEnum.PLAIN):
+async def generate_token(img_url, is_subscriber=False, token_args=None):
     img_url = preprocess_url(img_url)
+    template = 'res/template-s.png' if is_subscriber else 'res/template-f.png'
+    if token_args:
+        border = token_args.last('border')
+        if border == 'plain':
+            template = 'res/template-f.png'
+        elif border == 'none':
+            template = None
 
     def process_img(the_img_bytes, template_fp='res/template-f.png'):
         # open the image
@@ -79,12 +80,6 @@ async def generate_token(img_url, border: TokenBorderEnum = TokenBorderEnum.PLAI
                 if not content_type.startswith('image/'):
                     raise ExternalImportError(f"This does not look like an image file (content type {content_type}).")
                 img_bytes = await resp.read()
-        if border == TokenBorderEnum.GOLD:
-            template = 'res/template-s.png'
-        elif border == TokenBorderEnum.PLAIN:
-            template = 'res/template-f.png'
-        else:
-            template = None
         processed = await asyncio.get_event_loop().run_in_executor(None, process_img, img_bytes, template)
     except Exception:
         raise

@@ -351,19 +351,12 @@ class SheetManager(commands.Cog):
         if not char.image:
             return await ctx.send("This character has no image.")
 
-        args = argparse(args)
-        border = args.last('border')
-
+        token_args = argparse(args)
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         is_subscriber = ddb_user and ddb_user.subscriber
-        border_type = img.TokenBorderEnum.GOLD if is_subscriber else img.TokenBorderEnum.PLAIN
-        if border == 'plain':
-            border_type = img.TokenBorderEnum.PLAIN
-        elif border == 'none':
-            border_type = img.TokenBorderEnum.NONE
 
         try:
-            processed = await img.generate_token(char.image, border_type)
+            processed = await img.generate_token(char.image, is_subscriber, token_args)
         except Exception as e:
             return await ctx.send(f"Error generating token: {e}")
 

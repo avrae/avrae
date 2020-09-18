@@ -111,6 +111,7 @@ class InitTracker(commands.Cog):
         -immune <damage type> - Gives the combatant immunity to the given damage type.
         -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
         adv/dis - Rolls the initiative check with advantage/disadvantage.
+        -note <note> - Sets the combatant's note.
         """
         private = False
         place = None
@@ -150,6 +151,8 @@ class InitTracker(commands.Cog):
         if args.last('ac'):
             ac = args.last('ac', type_=int)
 
+        note = args.last('note')
+
         for k in ('resist', 'immune', 'vuln'):
             resists[k] = args.get(k)
 
@@ -176,6 +179,10 @@ class InitTracker(commands.Cog):
         if thp and thp > 0:
             me.temp_hp = thp
 
+        # -note (#1211)
+        if note:
+            me.notes = note
+
         if group is None:
             combat.add_combatant(me)
             await ctx.send(f"{name} was added to combat with initiative {init_roll_skeleton}.")
@@ -200,7 +207,9 @@ class InitTracker(commands.Cog):
         -rollhp - Rolls the monsters HP, instead of using the default value.
         -hp <hp> - Sets starting HP.
         -thp <thp> - Sets starting THP.
-        -ac <ac> - Sets the combatant's starting AC."""
+        -ac <ac> - Sets the combatant's starting AC.
+        -note <note> - Sets the combatant's note.
+        """
 
         monster = await select_monster_full(ctx, monster_name, pm=True)
 
@@ -216,6 +225,7 @@ class InitTracker(commands.Cog):
         thp = args.last('thp', type_=int)
         ac = args.last('ac', type_=int)
         n = args.last('n', 1, int)
+        note = args.last('note')
         name_template = args.last('name', monster.name[:2].upper() + '#')
         init_skill = monster.skills.initiative
 
@@ -269,6 +279,10 @@ class InitTracker(commands.Cog):
                 if thp and thp > 0:
                     me.temp_hp = thp
 
+                # -note (#1211)
+                if note:
+                    me.notes = note
+
                 if group is None:
                     combat.add_combatant(me)
                     out += f"{name} was added to combat with initiative {check_roll.result if p is None else p}.\n"
@@ -298,6 +312,7 @@ class InitTracker(commands.Cog):
         -p <value> - Places combatant at the given value, instead of rolling.
         -h - Hides HP, AC, Resists, etc.
         -group <group> - Adds the combatant to a group.
+        -note <note> - Sets the combatant's note.
         [user snippet]
         """
         char: Character = await Character.from_ctx(ctx)
@@ -309,6 +324,7 @@ class InitTracker(commands.Cog):
 
         p = args.last('p', type_=int)
         group = args.last('group')
+        note = args.last('note')
 
         if p is None:
             args.ignore('rr')
@@ -331,6 +347,10 @@ class InitTracker(commands.Cog):
             return
 
         me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
+
+        # -note (#1211)
+        if note:
+            me.notes = note
 
         if group is None:
             combat.add_combatant(me)

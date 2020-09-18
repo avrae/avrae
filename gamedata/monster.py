@@ -235,6 +235,8 @@ class Monster(StatBlock, Sourced):
 
     def get_token_url(self, is_sub=False):
         """Returns a monster's token URL."""
+        if not self.token_free_fp:
+            return None
         if is_sub:
             return f"{config.MONSTER_TOKEN_ENDPOINT}/{self.token_sub_fp}"
         return f"{config.MONSTER_TOKEN_ENDPOINT}/{self.token_free_fp}"

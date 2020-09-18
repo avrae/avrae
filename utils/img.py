@@ -2,6 +2,7 @@
 Image processing utilities.
 """
 import asyncio
+import enum
 import hashlib
 import os
 from io import BytesIO
@@ -14,6 +15,12 @@ from cogs5e.models.errors import ExternalImportError
 TOKEN_SIZE = (256, 256)
 
 
+class TokenBorderEnum(enum.Enum):
+    NONE = 'NONE'
+    PLAIN = 'PLAIN'
+    GOLD = 'GOLD'
+
+
 def preprocess_url(url):
     """
     Does any necessary changes to the URL before downloading the image.
@@ -24,15 +31,13 @@ def preprocess_url(url):
     return url.replace("www.dndbeyond.com/avatars", "media-waterdeep.cursecdn.com/avatars")
 
 
-async def generate_token(img_url, is_subscriber=False):
+async def generate_token(img_url, border: TokenBorderEnum = TokenBorderEnum.PLAIN):
     img_url = preprocess_url(img_url)
 
     def process_img(the_img_bytes, template_fp='res/template-f.png'):
-        # open the images
+        # open the image
         b = BytesIO(the_img_bytes)
         img = Image.open(b).convert('RGBA')
-        template_img = Image.open(template_fp)
-        mask_img = Image.open('res/alphatemplate.tif')
 
         # crop/resize the token image
         width, height = img.size
@@ -45,17 +50,20 @@ async def generate_token(img_url, is_subscriber=False):
         img = img.resize(TOKEN_SIZE, Image.ANTIALIAS)
 
         # paste mask
+        mask_img = Image.open('res/alphatemplate.tif')
         mask_img = ImageChops.darker(mask_img, img.getchannel('A'))
         img.putalpha(mask_img)
+        mask_img.close()
 
         # paste template
-        img.paste(template_img, mask=template_img)
+        if template_fp:
+            template_img = Image.open(template_fp)
+            img.paste(template_img, mask=template_img)
+            template_img.close()
 
         # save the image, close files
         out_bytes = BytesIO()
         img.save(out_bytes, "PNG")
-        template_img.close()
-        mask_img.close()
         img.close()
         out_bytes.seek(0)
         return out_bytes
@@ -71,10 +79,12 @@ async def generate_token(img_url, is_subscriber=False):
                 if not content_type.startswith('image/'):
                     raise ExternalImportError(f"This does not look like an image file (content type {content_type}).")
                 img_bytes = await resp.read()
-        if is_subscriber:
+        if border == TokenBorderEnum.GOLD:
             template = 'res/template-s.png'
-        else:
+        elif border == TokenBorderEnum.PLAIN:
             template = 'res/template-f.png'
+        else:
+            template = None
         processed = await asyncio.get_event_loop().run_in_executor(None, process_img, img_bytes, template)
     except Exception:
         raise

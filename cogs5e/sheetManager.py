@@ -12,8 +12,8 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
-from cogs5e.funcs import attackutils, checkutils, targetutils
 from aliasing import helpers
+from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
@@ -21,10 +21,10 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
+from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
 from utils.functions import auth_and_chan, confirm, get_positivity, list_get, search_and_select, try_delete
-from utils.img import generate_token
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -340,18 +340,30 @@ class SheetManager(commands.Cog):
         await ctx.send(f"Portrait override removed!")
 
     @commands.command(hidden=True)  # hidden, as just called by token command
-    async def playertoken(self, ctx):
-        """Generates and sends a token for use on VTTs."""
+    async def playertoken(self, ctx, *args):
+        """
+        Generates and sends a token for use on VTTs.
+        __Valid Arguments__
+        -border <gold|plain|none> - Chooses the token border.
+        """
 
         char: Character = await Character.from_ctx(ctx)
         if not char.image:
             return await ctx.send("This character has no image.")
 
+        args = argparse(args)
+        border = args.last('border')
+
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         is_subscriber = ddb_user and ddb_user.subscriber
+        border_type = img.TokenBorderEnum.GOLD if is_subscriber else img.TokenBorderEnum.PLAIN
+        if border == 'plain':
+            border_type = img.TokenBorderEnum.PLAIN
+        elif border == 'none':
+            border_type = img.TokenBorderEnum.NONE
 
         try:
-            processed = await generate_token(char.image, is_subscriber)
+            processed = await img.generate_token(char.image, border_type)
         except Exception as e:
             return await ctx.send(f"Error generating token: {e}")
 

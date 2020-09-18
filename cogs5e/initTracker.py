@@ -312,6 +312,7 @@ class InitTracker(commands.Cog):
         -p <value> - Places combatant at the given value, instead of rolling.
         -h - Hides HP, AC, Resists, etc.
         -group <group> - Adds the combatant to a group.
+        -note <note> - Sets the combatant's note.
         [user snippet]
         """
         char: Character = await Character.from_ctx(ctx)
@@ -347,7 +348,7 @@ class InitTracker(commands.Cog):
 
         me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
 
-        # -note (#1211
+        # -note (#1211)
         if note:
             me.notes = note
 

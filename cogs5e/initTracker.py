@@ -323,6 +323,7 @@ class InitTracker(commands.Cog):
 
         p = args.last('p', type_=int)
         group = args.last('group')
+        note = args.last('note')
 
         if p is None:
             args.ignore('rr')
@@ -345,6 +346,10 @@ class InitTracker(commands.Cog):
             return
 
         me = await PlayerCombatant.from_character(char, ctx, combat, controller, init, private)
+
+        # -note (#1211
+        if note:
+            me.notes = note
 
         if group is None:
             combat.add_combatant(me)

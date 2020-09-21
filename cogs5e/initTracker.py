@@ -98,7 +98,7 @@ class InitTracker(commands.Cog):
         Generic combatants have a 10 in every stat and +0 to every modifier.
         If a character is set up with the SheetManager module, you can use !init join instead.
         If you are adding monsters to combat, you can use !init madd instead.
-        
+
         __Valid Arguments__
         -h - Hides HP, AC, resistances, and attack list.
         -p - Places combatant at the given modifier, instead of rolling
@@ -128,7 +128,7 @@ class InitTracker(commands.Cog):
         if args.last('h', type_=bool):
             private = True
 
-        if 'p' in args:
+        if args.get('p'):
             try:
                 place_arg = args.last('p')
                 if place_arg is True:
@@ -162,7 +162,7 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant already exists.")
             return
 
-        if not place:
+        if not place and place != 0:
             init_skill = Skill(modifier, adv=adv)
             init_roll = roll(init_skill.d20())
             init = init_roll.total
@@ -304,7 +304,7 @@ class InitTracker(commands.Cog):
     async def join(self, ctx, *, args: str = ''):
         """
         Adds the current active character to combat. A character must be loaded through the SheetManager module first.
-        __Valid Arguments__ 
+        __Valid Arguments__
         adv/dis - Give advantage or disadvantage to the initiative roll.
         -b <condition bonus> - Adds a bonus to the combatants' Initiative roll.
         -phrase <phrase> - Adds flavor text.
@@ -509,7 +509,7 @@ class InitTracker(commands.Cog):
 
     @init.command(name="meta", aliases=['metaset'])
     async def metasetting(self, ctx, *settings):
-        """Changes the settings of the active combat. 
+        """Changes the settings of the active combat.
         __Valid Settings__
         dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
         turnnotif - Notifies the controller of the next combatant in initiative.
@@ -1032,7 +1032,7 @@ class InitTracker(commands.Cog):
         -f "Field Title|Field Text" - Creates a field with the given title and text.
         -thumb <url> - Adds a thumbnail to the attack.
         [user snippet] - Allows the user to use snippets on the attack.
-        
+
         -custom - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add to hit and damage.
 
         An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on."""

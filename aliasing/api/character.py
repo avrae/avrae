@@ -13,6 +13,8 @@ class AliasCharacter(AliasStatBlock):
         super().__init__(character)
         self._character = character
         self._interpreter = interpreter
+        # death saves
+        self._death_saves = None
 
     # helpers
     def _get_consumable(self, name):
@@ -22,6 +24,41 @@ class AliasCharacter(AliasStatBlock):
         return consumable
 
     # methods
+    # --- death saves ---
+    @property
+    def death_saves(self):
+        if self._death_saves is None:
+            self._death_saves = AliasDeathSaves(self._character.death_saves)
+        return self._death_saves
+
+    # --- other properties ---
+    @property
+    def race(self):
+        """
+        Gets the character's race.
+
+        :rtype: str or None
+        """
+        return self._character.race
+
+    @property
+    def background(self):
+        """
+        Gets the character's background.
+
+        :rtype: str or None
+        """
+        return self._character.background
+
+    @property
+    def csettings(self):
+        """
+        Gets a copy of the character's settings dict.
+
+        :rtype: dict
+        """
+        return self._character.options.options.copy()
+
     # --- ccs ---
     def get_cc(self, name):
         """
@@ -171,3 +208,73 @@ class AliasCharacter(AliasStatBlock):
     # --- private helpers ----
     async def func_commit(self, ctx):
         await self._character.commit(ctx)
+
+
+class AliasDeathSaves:
+    def __init__(self, death_saves):
+        """
+        :type death_saves: cogs5e.models.sheet.player.DeathSaves
+        """
+        self._death_saves = death_saves
+
+    @property
+    def successes(self):
+        """
+        Returns the number of successful death saves.
+
+        :rtype: int
+        """
+        return self._death_saves.successes
+
+    @property
+    def fails(self):
+        """
+        Returns the number of failed death saves.
+
+        :rtype: int
+        """
+        return self._death_saves.fails
+
+    def succeed(self, num=1):
+        """
+        Adds one or more successful death saves.
+
+        :param int num: The number of successful death saves to add.
+        """
+        self._death_saves.succeed(num)
+
+    def fail(self, num=1):
+        """
+        Adds one or more failed death saves.
+
+        :param int num: The number of failed death saves to add.
+        """
+        self._death_saves.fail(num)
+
+    def is_stable(self):
+        """
+        Returns whether or not the character is stable.
+
+        :rtype: bool
+        """
+        return self._death_saves.is_stable()
+
+    def is_dead(self):
+        """
+        Returns whether or not the character is dead.
+
+        :rtype: bool
+        """
+        return self._death_saves.is_dead()
+
+    def reset(self):
+        """
+        Resets all death saves.
+        """
+        self._death_saves.reset()
+
+    def __str__(self):
+        return str(self._death_saves)
+
+    def __repr__(self):
+        return f"<AliasDeathSaves successes={self.successes} fails={self.fails}>"

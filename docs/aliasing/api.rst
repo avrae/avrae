@@ -948,6 +948,12 @@ AliasCharacter
     :members:
     :inherited-members:
 
+AliasDeathSaves
+^^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.character.AliasDeathSaves
+    :members:
+
 StatBlock Models
 ----------------
 

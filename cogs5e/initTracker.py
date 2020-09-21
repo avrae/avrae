@@ -162,7 +162,7 @@ class InitTracker(commands.Cog):
             await ctx.send("Combatant already exists.")
             return
 
-        if not place and place != 0:
+        if place is None:
             init_skill = Skill(modifier, adv=adv)
             init_roll = roll(init_skill.d20())
             init = init_roll.total

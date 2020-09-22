@@ -395,7 +395,7 @@ class Lookup(commands.Cog):
         """
         Shows a monster or your character's token.
         __Valid Arguments__
-        -border <gold|plain|none> - Chooses the token border.
+        -border <plain|none (player token only)> - Chooses the token border.
         """
         if name is None or name.startswith('-'):
             token_cmd = self.bot.get_command('playertoken')

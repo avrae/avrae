@@ -1,0 +1,80 @@
+!admin workshop tags add barbarian Barbarian Classes
+!admin workshop tags add bard Bard Classes
+!admin workshop tags add cleric Cleric Classes
+!admin workshop tags add druid Druid Classes
+!admin workshop tags add fighter Fighter Classes
+!admin workshop tags add monk Monk Classes
+!admin workshop tags add paladin Paladin Classes
+!admin workshop tags add ranger Ranger Classes
+!admin workshop tags add rogue Rogue Classes
+!admin workshop tags add sorcerer Sorcerer Classes
+!admin workshop tags add warlock Warlock Classes
+!admin workshop tags add wizard Wizard Classes
+!admin workshop tags add artificer Artificer Classes
+!admin workshop tags add blood-hunter "Blood Hunter" Classes
+
+!admin workshop tags add dragonborn Dragonborn Races
+!admin workshop tags add dwarf Dwarf Races
+!admin workshop tags add elf Elf Races
+!admin workshop tags add gnome Gnome Races
+!admin workshop tags add half-elf Half-Elf Races
+!admin workshop tags add halfling Halfling Races
+!admin workshop tags add half-orc Half-Orc Races
+!admin workshop tags add human Human Races
+!admin workshop tags add tiefling Tiefling Races
+!admin workshop tags add leonin Leonin Races
+!admin workshop tags add satyr Satyr Races
+!admin workshop tags add aarakocra Aarakocra Races
+!admin workshop tags add genasi Genasi Races
+!admin workshop tags add goliath Goliath Races
+!admin workshop tags add aasimar Aasimar Races
+!admin workshop tags add bugbear Bugbear Races
+!admin workshop tags add firbolg Firbolg Races
+!admin workshop tags add goblin Goblin Races
+!admin workshop tags add hobgoblin Hobgoblin Races
+!admin workshop tags add kenku Kenku Races
+!admin workshop tags add kobold Kobold Races
+!admin workshop tags add lizardfolk Lizardfolk Races
+!admin workshop tags add orc Orc Races
+!admin workshop tags add tabaxi Tabaxi Races
+!admin workshop tags add triton Triton Races
+!admin workshop tags add yuan-ti-pureblood "Yuan-ti Pureblood" Races
+!admin workshop tags add tortle Tortle Races
+!admin workshop tags add changeling Changeling Races
+!admin workshop tags add kalashtar Kalashtar Races
+!admin workshop tags add shifter Shifter Races
+!admin workshop tags add warforged Warforged Races
+!admin workshop tags add gith Gith Races
+!admin workshop tags add centaur Centaur Races
+!admin workshop tags add loxodon Loxodon Races
+!admin workshop tags add minotaur Minotaur Races
+!admin workshop tags add simic-hybrid "Simic Hybrid" Races
+!admin workshop tags add vedalken Vedalken Races
+!admin workshop tags add locathah Locathah Races
+!admin workshop tags add grung Grung Races
+
+!admin workshop tags add players-handbook "Player's Handbook" Books
+!admin workshop tags add dungeon-masters-guide "Dungeon Master's Guide" Books
+!admin workshop tags add monster-manual "Monster Manual" Books
+!admin workshop tags add volos-guide-to-monsters "Volo's Guide to Monsters" Books
+!admin workshop tags add xanathars-guide-to-everything "Xanathar's Guide to Everything" Books
+!admin workshop tags add mordenkainens-tome-of-foes "Mordenkainen's Tome of Foes" Books
+!admin workshop tags add eberron-rising-from-the-last-war "Eberron: Rising from the Last War" Books
+!admin workshop tags add guildmasters-guide-to-ravnica "Guildmaster's Guide to Ravnica" Books
+!admin workshop tags add explorers-guide-to-wildemount "Explorer's Guide to WIldemount" Books
+!admin workshop tags add mythic-odysseys-of-theros "Mythic Odysseys of Theros" Books
+!admin workshop tags add sword-coast-adventurers-guide "Sword Coast Adventurer's Guide" Books
+!admin workshop tags add adventure-book "Adventure Book" Books
+
+!admin workshop tags add class Class Other
+!admin workshop tags add race Race Other
+!admin workshop tags add subclass Subclass Other
+!admin workshop tags add spell Spell Other
+!admin workshop tags add item Item Other
+!admin workshop tags add monster Monster Other
+!admin workshop tags add feat Feat Other
+!admin workshop tags add utility Utility Other
+!admin workshop tags add initiative Initiative Other
+!admin workshop tags add noncore-5e "Noncore 5e" Other
+!admin workshop tags add non-5e Non-5e Other
+!admin workshop tags add homebrew Homebrew Other

@@ -141,7 +141,7 @@
     "actions": [
       {
         "name": "Dagger",
-        "desc": "_Melee or_Ranged Weapon Attack:__ +5 to hit, reach 5 ft. or range 20/60 ft., one target. _Hit:_ 4 (1d4 + 2) piercing damage."
+        "desc": "_Melee or Ranged Weapon Attack:_ +5 to hit, reach 5 ft. or range 20/60 ft., one target. _Hit:_ 4 (1d4 + 2) piercing damage."
       }
     ],
     "reactions": [],
@@ -154,7 +154,7 @@
         "2": 3,
         "3": 3,
         "4": 3,
-        "5": 0,
+        "5": 1,
         "6": 0,
         "7": 0,
         "8": 0,
@@ -165,13 +165,29 @@
         "2": 3,
         "3": 3,
         "4": 3,
-        "5": 0,
+        "5": 1,
         "6": 0,
         "7": 0,
         "8": 0,
         "9": 0
       },
       "spells": [
+        {
+          "name": "Fire Bolt",
+          "strict": true
+        },
+        {
+          "name": "Light",
+          "strict": true
+        },
+        {
+          "name": "Mage Hand",
+          "strict": true
+        },
+        {
+          "name": "Prestidigitation",
+          "strict": true
+        },
         {
           "name": "Detect Magic",
           "strict": true
@@ -215,6 +231,10 @@
         {
           "name": "Ice Storm",
           "strict": true
+        },
+        {
+          "name": "Cone of Cold",
+          "strict": true
         }
       ],
       "dc": 14,
@@ -229,6 +249,8 @@
       "immune": [],
       "vuln": []
     },
+    "token_free": null,
+    "token_sub": null,
     "attacks": [
       {
         "name": "Dagger",
@@ -425,6 +447,8 @@
       "immune": [],
       "vuln": []
     },
+    "token_free": "16939-f.png",
+    "token_sub": "16939-s.png",
     "attacks": [
       {
         "name": "Dagger",
@@ -648,6 +672,8 @@
       "immune": [],
       "vuln": []
     },
+    "token_free": "16939-f.png",
+    "token_sub": "16939-s.png",
     "attacks": [
       {
         "name": "Dagger",

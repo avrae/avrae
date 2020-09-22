@@ -16,7 +16,8 @@ from gamedata.compendium import compendium
 from gamedata.lookuputils import HOMEBREW_EMOJI, can_access, get_item_choices, get_monster_choices, get_spell_choices, \
     handle_source_footer
 from gamedata.shared import SourcedTrait
-from utils import checks
+from utils import checks, img
+from utils.argparser import argparse
 from utils.functions import get_positivity, search_and_select, trim_str
 
 LARGE_THRESHOLD = 200
@@ -235,31 +236,6 @@ class Lookup(commands.Cog):
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== monsters ====
-    @commands.command(aliases=['monimage'])
-    async def token(self, ctx, *, name=None):
-        """Shows a monster's image."""
-
-        if name is None:
-            token_cmd = self.bot.get_command('playertoken')
-            if token_cmd is None:
-                return await ctx.send("Error: SheetManager cog not loaded.")
-            return await ctx.invoke(token_cmd)
-
-        choices = await get_monster_choices(ctx, filter_by_license=False)
-        monster = await self._lookup_search3(ctx, {'monster': choices}, name)
-        await Stats.increase_stat(ctx, "monsters_looked_up_life")
-
-        url = monster.get_image_url()
-        embed = EmbedWithAuthor(ctx)
-        embed.title = monster.name
-        embed.description = f"{monster.size} monster."
-
-        if not url:
-            return await ctx.channel.send("This monster has no image.")
-
-        embed.set_image(url=url)
-        await ctx.send(embed=embed)
-
     @commands.command()
     async def monster(self, ctx, *, name: str):
         """Looks up a monster.
@@ -395,6 +371,76 @@ class Lookup(commands.Cog):
                 await ctx.author.send(embed=embed)
             else:
                 await ctx.send(embed=embed)
+
+    @commands.command()
+    async def monimage(self, ctx, *, name=None):
+        """Shows a monster's image."""
+        choices = await get_monster_choices(ctx, filter_by_license=False)
+        monster = await self._lookup_search3(ctx, {'monster': choices}, name)
+        await Stats.increase_stat(ctx, "monsters_looked_up_life")
+
+        url = monster.get_image_url()
+        embed = EmbedWithAuthor(ctx)
+        embed.title = monster.name
+        embed.description = f"{monster.size} monster."
+
+        if not url:
+            return await ctx.channel.send("This monster has no image.")
+
+        embed.set_image(url=url)
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    async def token(self, ctx, name=None, *args):
+        """
+        Shows a monster or your character's token.
+        __Valid Arguments__
+        -border <gold|plain|none> - Chooses the token border.
+        """
+        if name is None or name.startswith('-'):
+            token_cmd = self.bot.get_command('playertoken')
+            if token_cmd is None:
+                return await ctx.send("Error: SheetManager cog not loaded.")
+            if name:
+                args = (name, *args)
+            return await ctx.invoke(token_cmd, *args)
+
+        # select monster
+        choices = await get_monster_choices(ctx, filter_by_license=False)
+        monster = await self._lookup_search3(ctx, {'monster': choices}, name)
+        await Stats.increase_stat(ctx, "monsters_looked_up_life")
+
+        # select border
+        ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+        is_subscriber = ddb_user and ddb_user.subscriber
+        token_args = argparse(args)
+
+        if monster.homebrew:
+            # homebrew: generate token
+            if not monster.get_image_url():
+                return await ctx.send("This monster has no image.")
+            try:
+                image = await img.generate_token(monster.get_image_url(), is_subscriber, token_args)
+            except Exception as e:
+                return await ctx.send(f"Error generating token: {e}")
+        else:
+            # official monsters
+            token_url = monster.get_token_url(is_subscriber)
+            if token_args.last('border') == 'plain':
+                token_url = monster.get_token_url(False)
+
+            if not token_url:
+                return await ctx.send("This monster has no image.")
+
+            image = await img.fetch_monster_image(token_url)
+
+        embed = EmbedWithAuthor(ctx)
+        embed.title = monster.name
+        embed.description = f"{monster.size} monster."
+
+        file = discord.File(image, filename="image.png")
+        embed.set_image(url="attachment://image.png")
+        await ctx.send(embed=embed, file=file)
 
     # ==== spells ====
     @commands.command()

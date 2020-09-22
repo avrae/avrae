@@ -6,6 +6,7 @@ from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook
 from cogs5e.models.sheet.statblock import StatBlock
+from utils import config
 from utils.constants import SKILL_MAP
 from utils.functions import a_or_an, bubble_format
 from .shared import Sourced
@@ -31,7 +32,7 @@ class Monster(StatBlock, Sourced):
                  la_per_round=3, passiveperc: int = None,
                  # augmented
                  resistances: Resistances = None, attacks: AttackList = None, proper: bool = False,
-                 image_url: str = None, spellcasting=None,
+                 image_url: str = None, spellcasting=None, token_free_fp=None, token_sub_fp=None,
                  # sourcing
                  homebrew=False, **kwargs):
         if traits is None:
@@ -89,6 +90,8 @@ class Monster(StatBlock, Sourced):
         self.la_per_round = la_per_round
         self.proper = proper
         self.image_url = image_url
+        self.token_free_fp = token_free_fp
+        self.token_sub_fp = token_sub_fp
         # resistances including notes, e.g. "Bludgeoning from nonmagical weapons"
         self._displayed_resistances = display_resists or resistances
 
@@ -115,6 +118,7 @@ class Monster(StatBlock, Sourced):
                    d['la_per_round'], d['passiveperc'],
                    # augmented
                    resistances, attacks, d['proper'], d['image_url'], spellcasting=spellcasting,
+                   token_free_fp=d['token_free'], token_sub_fp=d['token_sub'],
                    # sourcing
                    source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
 
@@ -228,6 +232,14 @@ class Monster(StatBlock, Sourced):
     def get_image_url(self):
         """Returns a monster's image URL."""
         return self.image_url or ''
+
+    def get_token_url(self, is_sub=False):
+        """Returns a monster's token URL."""
+        if not self.token_free_fp:
+            return None
+        if is_sub:
+            return f"{config.MONSTER_TOKEN_ENDPOINT}/{self.token_sub_fp}"
+        return f"{config.MONSTER_TOKEN_ENDPOINT}/{self.token_free_fp}"
 
     # ---- setter overrides ----
     @property

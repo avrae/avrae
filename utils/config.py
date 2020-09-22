@@ -11,6 +11,7 @@ NUM_SHARDS = int(os.getenv('NUM_SHARDS')) if 'NUM_SHARDS' in os.environ else Non
 RELOAD_INTERVAL = os.getenv('RELOAD_INTERVAL', '0')  # compendium static data reload interval
 ECS_METADATA_ENDPT = os.getenv('ECS_CONTAINER_METADATA_URI')  # set by ECS
 OWNER_ID = int(os.getenv('DISCORD_OWNER_USER_ID', 0))
+MONSTER_TOKEN_ENDPOINT = os.getenv('MONSTER_TOKEN_ENDPOINT')  # S3: monster tokens
 
 # ---- mongo/redis ----
 MONGO_URL = os.getenv('MONGO_URL', "mongodb://localhost:27017")

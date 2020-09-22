@@ -412,7 +412,7 @@ class Lookup(commands.Cog):
 
         # select border
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
-        is_subscriber = ddb_user and ddb_user.subscriber
+        is_subscriber = ddb_user and ddb_user.is_subscriber
         token_args = argparse(args)
 
         if monster.homebrew:

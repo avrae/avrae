@@ -373,7 +373,7 @@ class Lookup(commands.Cog):
                 await ctx.send(embed=embed)
 
     @commands.command()
-    async def monimage(self, ctx, *, name=None):
+    async def monimage(self, ctx, *, name):
         """Shows a monster's image."""
         choices = await get_monster_choices(ctx, filter_by_license=False)
         monster = await self._lookup_search3(ctx, {'monster': choices}, name)

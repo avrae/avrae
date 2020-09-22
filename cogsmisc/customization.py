@@ -150,7 +150,10 @@ class CollectableManagementGroup(commands.Group):
                                              ', '.join(sorted(user_obj_names)))
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
-            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            try:
+                the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            except workshop.CollectionNotFound:
+                continue
             if bindings := subscription_doc[self.binding_key]:
                 has_at_least_1 = True
                 embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),

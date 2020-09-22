@@ -229,8 +229,9 @@ class AvraeHelp(HelpCommand):
         keys = command.split(' ')
         cmd = bot.all_commands.get(keys[0])
         if cmd is None:
-            alias = (await aliasing.helpers.get_personal_alias_named(ctx, keys[0])) \
-                    or (await aliasing.helpers.get_server_alias_named(ctx, keys[0]))
+            alias = await aliasing.helpers.get_personal_alias_named(ctx, keys[0])
+            if alias is None and ctx.guild is not None:
+                alias = await aliasing.helpers.get_server_alias_named(ctx, keys[0])
             if alias is not None:
                 return await self.send_alias_help(alias, keys)
             else:

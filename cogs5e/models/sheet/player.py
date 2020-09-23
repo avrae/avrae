@@ -163,15 +163,16 @@ class CustomCounter:
             raise CounterOutOfBounds()
 
         new_value = min(max(minv, new_value), maxv)
-        self._value = new_value
+        self._value = int(new_value)
 
         if self.live_id:
             self._character.sync_consumable(self)
+        return self._value
 
     def reset(self):
         if self.reset_on == 'none' or self.max is None:
             raise NoReset()
-        self.set(self.get_max())
+        return self.set(self.get_max())
 
     def full_str(self):
         _min = self.get_min()

@@ -73,6 +73,10 @@ INDICES = {
     "servaliases": [],
     "servsnippets": [],
     "uvars": [],
+    "svars": [
+        IndexModel('owner'),
+        IndexModel([('owner', ASCENDING), ('name', ASCENDING)], unique=True)
+    ],
 
     # core bot stuff
     "prefixes": [

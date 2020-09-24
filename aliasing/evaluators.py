@@ -86,6 +86,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             set=self.set, exists=self.exists, get=self.get,
             combat=self.combat, character=self.character,
             get_gvar=self.get_gvar,
+            get_svar=self.get_svar,
             set_uvar=self.set_uvar, delete_uvar=self.delete_uvar, set_uvar_nx=self.set_uvar_nx,
             uvar_exists=self.uvar_exists,
             chanid=self.chanid, servid=self.servid,  # fixme deprecated - use ctx instead
@@ -102,6 +103,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         self._cache = {
             "gvars": {},
+            "svars": {},
             "uvars": {}
         }
 
@@ -329,6 +331,23 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
                 return None
             self._cache['gvars'][address] = result['value']
         return self._cache['gvars'][address]
+
+    def get_svar(self, name):
+        """
+        Retrieves and returns the value of a svar (server variable).
+
+        :param str name: The name of the svar.
+        :return: The value of the svar, or None if it does not exist.
+        :rtype: str or None
+        """
+        if self.ctx.guild is None:
+            return None
+        if name not in self._cache['svars']:
+            result = self.ctx.bot.mdb.svars.delegate.find_one({"owner": self.ctx.guild.id, "name": name})
+            if result is None:
+                return None
+            self._cache['svars'][name] = result['value']
+        return self._cache['svars'][name]
 
     def set_uvar(self, name: str, value: str):
         """

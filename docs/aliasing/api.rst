@@ -226,6 +226,15 @@ Python Builtins
     :return: The smallest integer >= x.
     :rtype: int
 
+.. function:: enumerate(x)
+
+    Returns a iterable of tuples containing a count and the values from the iterable.
+
+    :param x: The value to convert.
+    :type x: iterable
+    :return: The float.
+    :rtype: iterator
+
 .. function:: float(x)
 
     Converts *x* to a floating point number.

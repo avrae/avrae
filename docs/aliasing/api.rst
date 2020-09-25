@@ -232,8 +232,8 @@ Python Builtins
 
     :param x: The value to convert.
     :type x: iterable
-    :return: iterable of count and objects.
-    :rtype: iterator
+    :return: enumerate of count and objects.
+    :rtype: iterable[tuple[int, any]]
 
 .. function:: float(x)
 

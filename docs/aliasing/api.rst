@@ -396,6 +396,8 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_gvar(address)
 
+.. autofunction:: aliasing.evaluators.ScriptingEvaluator.get_svar(name)
+
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
 
 .. function:: randint(x)
@@ -724,6 +726,77 @@ Other
             Deprecated without replacement. Use ``character()`` to get a representation of the character instead.
 
         Returns a raw representation of character data.
+
+Variable Scopes
+---------------
+
+In addition to Python's normal variable scoping rules, Avrae introduces 4 new scopes in the form of character variables,
+user variables, server variables, and global variables. The intended purpose and binding rules of each are detailed
+below.
+
++---------------+------+-------+----------+------------+------------------+
+| Variable Type | Read | Write | Binding  | Scope      | Who              |
++===============+======+=======+==========+============+==================+
+| Cvar          | Yes  | Yes   | Implicit | Character  | User             |
++---------------+------+-------+----------+------------+------------------+
+| Uvar          | Yes  | Yes   | Implicit | User       | User             |
++---------------+------+-------+----------+------------+------------------+
+| Svar          | Yes  | No    | Explicit | Server     | Anyone on server |
++---------------+------+-------+----------+------------+------------------+
+| Gvar          | Yes  | No    | Explicit | Everywhere | Anyone           |
++---------------+------+-------+----------+------------+------------------+
+
+Character Variables
+^^^^^^^^^^^^^^^^^^^
+*aka cvars*
+
+Character variables are variables bound to a character. These are usually used to set character-specific defaults
+or options for aliases and snippets (e.g. a character's familiar type/name). When running an alias or snippet, cvars are
+*implicitly* bound as local variables in the runtime.
+
+Cvars can be written or deleted in Draconic using :meth:`.AliasCharacter.set_cvar` and
+:meth:`.AliasCharacter.delete_cvar`, respectively.
+
+All characters contain some built-in character variables (see :ref:`cvar-table`). These cannot be overwritten.
+
+User Variables
+^^^^^^^^^^^^^^
+*aka uvars*
+
+User variables are bound per Discord user, and will go with you regardless of what server or character you are on.
+These variables are usually used for user-specific options (e.g. a user's timezone, favorite color, etc.). When running
+an alias or snippet, uvars are *implicitly* bound as local variables in the runtime. If a cvar and uvar have the same
+name, the cvar takes priority.
+
+Uvars can be written or deleted in Draconic using :meth:`~aliasing.evaluators.ScriptingEvaluator.set_uvar` or
+:meth:`~aliasing.evaluators.ScriptingEvaluator.delete_uvar`, respectively.
+
+Server Variables
+^^^^^^^^^^^^^^^^
+*aka svars*
+
+Server variables are named variables bound per Discord server, and can only be accessed in the Discord server they are
+bound in. These variables are usually used for server-specific options for server aliases (e.g. stat rolling methods,
+server calendar, etc.). Unlike cvars and uvars, svars must be *explicitly* retrieved in an alias by calling
+:meth:`~aliasing.evaluators.ScriptingEvaluator.get_svar`. Svars can be listed and read by anyone on the server, so be
+careful what data you store!
+
+Svars can only be written or deleted using ``!svar <name> <value>`` and ``!svar delete <name>``, respectively. These
+commands can only be issued by a member who has Administrator Discord permissions or a Discord role named "Server
+Aliaser" or "Dragonspeaker".
+
+Global Variables
+^^^^^^^^^^^^^^^^
+*aka gvars*
+
+Global variables are uniquely named variables that are accessible by anyone, anywhere in Avrae. These variables are
+usually used for storing large amounts of read-only data (e.g. an alias' help message, a JSON file containing cards,
+etc.). These variables are automatically assigned a unique name on creation (in the form of a 36 character UUID), and
+must be *explicitly* retrieved in an alias by calling :meth:`~aliasing.evaluators.ScriptingEvaluator.get_gvar`.
+Gvars can be read by anyone, so be careful what data you store!
+
+Gvars can only be created using ``!gvar create <value>``, and by default can only be edited by its creator. See
+``!help gvar`` for more information.
 
 See Also
 --------

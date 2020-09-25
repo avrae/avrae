@@ -579,6 +579,7 @@ class AliasSpellbook:
         :type spellbook: cogs5e.models.sheet.spellcasting.Spellbook
         """
         self._spellbook = spellbook
+        self._spells = None
 
     @property
     def dc(self):
@@ -615,6 +616,17 @@ class AliasSpellbook:
         :rtype: int
         """
         return self._spellbook.spell_mod
+
+    @property
+    def spells(self):
+        """
+        The list of spells in this spellbook.
+
+        :rtype: list[AliasSpellbookSpell]
+        """
+        if self._spells is None:
+            self._spells = [AliasSpellbookSpell(s) for s in self._spellbook.spells]
+        return self._spells
 
     def slots_str(self, level):
         """
@@ -701,6 +713,56 @@ class AliasSpellbook:
 
     def __repr__(self):
         return "<AliasSpellbook object>"
+
+
+class AliasSpellbookSpell:
+    def __init__(self, spell):
+        """
+        :type spell: cogs5e.models.sheet.spellcasting.SpellbookSpell
+        """
+        self._spell = spell
+
+    @property
+    def name(self):
+        """
+        The name of the spell.
+
+        :rtype: str
+        """
+        return self._spell.name
+
+    @property
+    def dc(self):
+        """
+        The spell's overridden DC. None if this spell uses the default caster DC.
+
+        :rtype: int or None
+        """
+        return self._spell.dc
+
+    @property
+    def sab(self):
+        """
+        The spell's overridden spell attack bonus. None if this spell uses the default caster spell attack bonus.
+
+        :rtype: int or None
+        """
+        return self._spell.sab
+
+    @property
+    def mod(self):
+        """
+        The spell's overridden spellcasting modifier. None if this spell uses the default caster spellcasting modifier.
+
+        :rtype: int or None
+        """
+        return self._spell.mod
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f"<AliasSpellbookSpell name={self.name} dc={self.dc} sab={self.sab} mod={self.mod}>"
 
 
 class _SpellProxy:

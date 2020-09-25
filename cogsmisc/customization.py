@@ -48,6 +48,7 @@ class CollectableManagementGroup(commands.Group):
         # helpers
         self.binding_key = 'alias_bindings' if self.is_alias else 'snippet_bindings'
         self.obj_name = 'alias' if self.is_alias else 'snippet'
+        self.obj_copy_command = self.obj_name  # when an item is viewed, we show the non-server version of the command
         self.obj_name_pl = 'aliases' if self.is_alias else 'snippets'
 
         if self.is_server:
@@ -100,7 +101,7 @@ class CollectableManagementGroup(commands.Group):
         await obj.commit(ctx.bot.mdb)
 
         out = f'{self.obj_name.capitalize()} `{name}` added.' \
-              f'```py\n{ctx.prefix}{self.name} {name} {code}\n```'
+              f'```py\n{ctx.prefix}{self.obj_copy_command} {name} {code}\n```'
 
         if len(out) > 2000:
             out = f'{self.obj_name.capitalize()} `{name}` added.\n' \
@@ -116,7 +117,7 @@ class CollectableManagementGroup(commands.Group):
         if collectable is None:
             return await ctx.send(f"No {self.obj_name} named {name} found.")
         elif isinstance(collectable, self.personal_cls):  # personal
-            out = f'**{name}**: ```py\n{ctx.prefix}{self.name} {collectable.name} {collectable.code}\n```'
+            out = f'**{name}**: ```py\n{ctx.prefix}{self.obj_copy_command} {collectable.name} {collectable.code}\n```'
             out = out if len(out) <= 2000 else f'**{collectable.name}**:\nCommand output too long to display.'
             return await ctx.send(out)
         else:  # collection
@@ -149,7 +150,10 @@ class CollectableManagementGroup(commands.Group):
                                              ', '.join(sorted(user_obj_names)))
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
-            the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            try:
+                the_collection = await workshop.WorkshopCollection.from_id(ctx, subscription_doc['object_id'])
+            except workshop.CollectionNotFound:
+                continue
             if bindings := subscription_doc[self.binding_key]:
                 has_at_least_1 = True
                 embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
@@ -422,7 +426,7 @@ class Customization(commands.Cog):
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
         If a user and a server have aliases with the same name, the user alias will take priority.
         """,
-        checks=[guild_only_check]
+        checks=[guild_only_check], aliases=['serveralias']
     )
 
     snippet = CollectableManagementGroup(
@@ -469,7 +473,7 @@ class Customization(commands.Cog):
         Requires __Administrator__ Discord permissions or a role called "Server Aliaser".
         If a user and a server have snippets with the same name, the user snippet will take priority.
         """,
-        checks=[guild_only_check]
+        checks=[guild_only_check], aliases=['serversnippet']
     )
 
     @commands.command()

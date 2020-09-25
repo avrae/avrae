@@ -9,12 +9,9 @@ from boto3.dynamodb.conditions import Key
 
 from cogsmisc.stats import Stats
 # auth service
-from utils.config import DDB_AUTH_AUDIENCE as AUDIENCE, \
-    DDB_AUTH_EXPIRY_SECONDS as EXPIRY_SECONDS, \
-    DDB_AUTH_ISSUER as ISSUER, \
-    DDB_AUTH_SECRET as MY_SECRET, \
-    DDB_WATERDEEP_SECRET as WATERDEEP_SECRET, \
-    DDB_AUTH_SERVICE_URL as AUTH_BASE_URL
+from utils.config import DDB_AUTH_AUDIENCE as AUDIENCE, DDB_AUTH_EXPIRY_SECONDS as EXPIRY_SECONDS, \
+    DDB_AUTH_ISSUER as ISSUER, DDB_AUTH_SECRET as MY_SECRET, DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, \
+    DDB_WATERDEEP_SECRET as WATERDEEP_SECRET
 # dynamo
 # env: AWS_ACCESS_KEY_ID
 # env: AWS_SECRET_ACCESS_KEY
@@ -330,6 +327,11 @@ class BeyondUser:
     @property
     def is_staff(self):
         return 'D&D Beyond Staff' in self.roles
+
+    @property
+    def is_subscriber(self):
+        """Used to count staff and insiders as subscribers."""
+        return self.subscriber or self.is_insider or self.is_staff
 
 
 class UserEntitlements:

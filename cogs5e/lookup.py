@@ -373,7 +373,7 @@ class Lookup(commands.Cog):
                 await ctx.send(embed=embed)
 
     @commands.command()
-    async def monimage(self, ctx, *, name=None):
+    async def monimage(self, ctx, *, name):
         """Shows a monster's image."""
         choices = await get_monster_choices(ctx, filter_by_license=False)
         monster = await self._lookup_search3(ctx, {'monster': choices}, name)
@@ -395,7 +395,7 @@ class Lookup(commands.Cog):
         """
         Shows a monster or your character's token.
         __Valid Arguments__
-        -border <gold|plain|none> - Chooses the token border.
+        -border <plain|none (player token only)> - Overrides the token border.
         """
         if name is None or name.startswith('-'):
             token_cmd = self.bot.get_command('playertoken')
@@ -412,7 +412,7 @@ class Lookup(commands.Cog):
 
         # select border
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
-        is_subscriber = ddb_user and ddb_user.subscriber
+        is_subscriber = ddb_user and ddb_user.is_subscriber
         token_args = argparse(args)
 
         if monster.homebrew:

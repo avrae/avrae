@@ -7,9 +7,9 @@ from d20 import roll
 import aliasing.evaluators
 import cogs5e.models.character as character_api
 import cogs5e.models.initiative as init
+from aliasing.errors import EvaluationError
 from cogs5e.models import embeds
 from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType
-from aliasing.errors import EvaluationError
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from utils.dice import RerollableStringifier
 from utils.functions import maybe_mod
@@ -201,10 +201,11 @@ class AutomationContext:
 
         original_names = self.evaluator.builtins.copy()
         self.evaluator.builtins.update(self.metavars)
+        expr = annostr.strip('{}')
         try:
-            out = self.evaluator.eval(annostr.strip('{}'))
+            out = self.evaluator.eval(expr)
         except Exception as ex:
-            raise EvaluationError(ex, annostr.strip('{}'))
+            raise AutomationEvaluationException(ex, expr)
         self.evaluator.builtins = original_names
         return out
 
@@ -1132,6 +1133,15 @@ class StopExecution(AutomationException):
 
 class TargetException(AutomationException):
     pass
+
+
+class AutomationEvaluationException(EvaluationError, AutomationException):
+    """
+    An error occurred while evaluating Draconic in automation.
+    """
+
+    def __init__(self, original, expression):
+        super().__init__(original, expression)  # EvaluationError.__init__()
 
 
 class NoSpellDC(AutomationException):

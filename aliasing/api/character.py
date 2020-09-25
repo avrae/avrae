@@ -13,7 +13,8 @@ class AliasCharacter(AliasStatBlock):
         super().__init__(character)
         self._character = character
         self._interpreter = interpreter
-        # death saves
+        # memoized attrs
+        self._consumables = None
         self._death_saves = None
 
     # helpers
@@ -31,35 +32,18 @@ class AliasCharacter(AliasStatBlock):
             self._death_saves = AliasDeathSaves(self._character.death_saves)
         return self._death_saves
 
-    # --- other properties ---
-    @property
-    def race(self):
-        """
-        Gets the character's race.
-
-        :rtype: str or None
-        """
-        return self._character.race
-
-    @property
-    def background(self):
-        """
-        Gets the character's background.
-
-        :rtype: str or None
-        """
-        return self._character.background
-
-    @property
-    def csettings(self):
-        """
-        Gets a copy of the character's settings dict.
-
-        :rtype: dict
-        """
-        return self._character.options.options.copy()
-
     # --- ccs ---
+    @property
+    def consumables(self):
+        """
+        Returns a list of custom counters on the character.
+
+        :rtype: list[AliasCustomCounter]
+        """
+        if self._consumables is None:
+            self._consumables = [AliasCustomCounter(cc) for cc in self._character.consumables]
+        return self._consumables
+
     def get_cc(self, name):
         """
         Gets the value of a custom counter.
@@ -101,8 +85,10 @@ class AliasCharacter(AliasStatBlock):
         :param int value: The value to set the counter to.
         :param bool strict: If ``True``, will raise a :exc:`CounterOutOfBounds` if the new value is out of bounds, otherwise silently clips to bounds.
         :raises: :exc:`ConsumableException` if the counter does not exist.
+        :returns: The cc's new value.
+        :rtype: int
         """
-        self._get_consumable(name).set(int(value), strict)
+        return self._get_consumable(name).set(int(value), strict)
 
     def mod_cc(self, name, val: int, strict=False):
         """
@@ -132,6 +118,8 @@ class AliasCharacter(AliasStatBlock):
         if not self.cc_exists(name):
             new_consumable = player_api.CustomCounter.new(self._character, name, minVal, maxVal, reset, dispType)
             self._character.consumables.append(new_consumable)
+            self._consumables = None  # reset cache
+            return AliasCustomCounter(new_consumable)
 
     def create_cc(self, name: str, *args, **kwargs):
         """
@@ -142,10 +130,12 @@ class AliasCharacter(AliasStatBlock):
         :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
         :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
         :param str dispType: Either ``None`` or ``'bubble'``.
+        :rtype: AliasCustomCounter
+        :returns: The newly created counter.
         """
         if self.cc_exists(name):
             self.delete_cc(name)
-        self.create_cc_nx(name, *args, **kwargs)
+        return self.create_cc_nx(name, *args, **kwargs)
 
     def cc_exists(self, name):
         """
@@ -175,6 +165,15 @@ class AliasCharacter(AliasStatBlock):
         return str(self._get_consumable(name))
 
     # --- cvars ---
+    @property
+    def cvars(self):
+        """
+        Returns a dict of cvars bound on this character.
+
+        :rtype: dict
+        """
+        return self._character.cvars.copy()
+
     def set_cvar(self, name, val: str):
         """
         Sets a custom character variable, which will be available in all scripting contexts using this character.
@@ -205,9 +204,153 @@ class AliasCharacter(AliasStatBlock):
         if name in self._character.cvars:
             del self._character.cvars[name]
 
+    # --- other properties ---
+    @property
+    def owner(self):
+        """
+        Returns the id of this character's owner.
+
+        :rtype: int
+        """
+        return self._character.owner
+
+    @property
+    def upstream(self):
+        """
+        Returns the upstream key for this character.
+
+        :rtype: str
+        """
+        return self._character.upstream
+
+    @property
+    def sheet_type(self):
+        """
+        Returns the sheet type of this character (beyond, dicecloud, google).
+
+        :rtype: str
+        """
+        return self._character.sheet_type
+
+    @property
+    def race(self):
+        """
+        Gets the character's race.
+
+        :rtype: str or None
+        """
+        return self._character.race
+
+    @property
+    def background(self):
+        """
+        Gets the character's background.
+
+        :rtype: str or None
+        """
+        return self._character.background
+
+    @property
+    def csettings(self):
+        """
+        Gets a copy of the character's settings dict.
+
+        :rtype: dict
+        """
+        return self._character.options.options.copy()
+
     # --- private helpers ----
     async def func_commit(self, ctx):
         await self._character.commit(ctx)
+
+
+class AliasCustomCounter:
+    def __init__(self, cc):
+        """
+        :type cc: cogs5e.models.sheet.player.CustomCounter
+        """
+        self._cc = cc
+
+    @property
+    def name(self):
+        """
+        Returns the cc's name.
+
+        :rtype: str
+        """
+        return self._cc.name
+
+    @property
+    def value(self):
+        """
+        Returns the current value of the cc.
+
+        :rtype: int
+        """
+        return self._cc.value
+
+    @property
+    def max(self):
+        """
+        Returns the maximum value of the cc, or 2^31-1 if the cc has no max.
+
+        :rtype: int
+        """
+        return self._cc.get_max()
+
+    @property
+    def min(self):
+        """
+        Returns the minimum value of the cc, or -2^31 if the cc has no min.
+
+        :rtype: int
+        """
+        return self._cc.get_min()
+
+    @property
+    def reset_on(self):
+        """
+        Returns the condition on which the cc resets. ('long', 'short', 'none', None)
+
+        :rtype: str or None
+        """
+        return self._cc.reset_on
+
+    @property
+    def display_type(self):
+        """
+        Returns the cc's display type. (None, 'bubble')
+
+        :rtype: str
+        """
+        return self._cc.display_type
+
+    def set(self, new_value, strict=False):
+        """
+        Sets the cc's value to a new value.
+
+        :param int new_value: The new value to set.
+        :param bool strict: Whether to error when going out of bounds (true) or to clip silently (false).
+        :return: The cc's new value.
+        :rtype: int
+        """
+        return self._cc.set(new_value, strict)
+
+    def reset(self):
+        """
+        Resets the cc to its max. Errors if the cc has no max or no reset.
+
+        :return: The cc's new value.
+        :rtype: int
+        """
+        return self._cc.reset()
+
+    def __str__(self):
+        return str(self._cc)
+
+    def __repr__(self):
+        return f"<AliasCustomCounter name={self.name} value={self.value} max={self.max} min={self.min} " \
+               f"reset_on={self.reset_on} display_type={self.display_type}>"
 
 
 class AliasDeathSaves:

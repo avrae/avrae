@@ -948,10 +948,16 @@ AliasCharacter
     :members:
     :inherited-members:
 
+AliasCustomCounter
+^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.character.AliasCustomCounter()
+    :members:
+
 AliasDeathSaves
 ^^^^^^^^^^^^^^^
 
-.. autoclass:: aliasing.api.character.AliasDeathSaves
+.. autoclass:: aliasing.api.character.AliasDeathSaves()
     :members:
 
 StatBlock Models
@@ -1124,3 +1130,9 @@ AliasSpellbook
         Returns whether the spell named *spell* (str) is known.
 
         :type: bool
+
+AliasSpellbookSpell
+"""""""""""""""""""
+
+.. autoclass:: aliasing.api.statblock.AliasSpellbookSpell()
+    :members:

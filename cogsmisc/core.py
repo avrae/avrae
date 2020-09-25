@@ -6,7 +6,7 @@ Created on Dec 26, 2016
 import random
 import time
 from datetime import datetime, timedelta
-from math import floor, isnan
+from math import floor, isfinite
 
 import discord
 import psutil
@@ -45,7 +45,7 @@ class Core(commands.Cog):
         pong = await ctx.send("Pong.")
         delta = datetime.utcnow() - now
         httping = floor(delta.total_seconds() * 1000)
-        wsping = floor(self.bot.latency * 1000) if not isnan(self.bot.latency) else "Unknown"
+        wsping = floor(self.bot.latency * 1000) if isfinite(self.bot.latency) else "Unknown"
         await pong.edit(content=f"Pong.\nHTTP Ping = {httping} ms.\nWS Ping = {wsping} ms.")
 
     @commands.command()

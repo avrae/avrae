@@ -410,6 +410,8 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Gets the value of a name, or returns *default* if the name is not set.
 
+        Retrieves names in the order of local > cvar > uvar. Does not interact with svars.
+
         :param str name: The name to retrieve.
         :param default: What to return if the name is not set.
         """

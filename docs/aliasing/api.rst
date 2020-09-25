@@ -232,7 +232,7 @@ Python Builtins
 
     :param x: The value to convert.
     :type x: iterable
-    :return: The float.
+    :return: iterable of count and objects.
     :rtype: iterator
 
 .. function:: float(x)

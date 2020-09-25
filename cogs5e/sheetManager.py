@@ -353,7 +353,7 @@ class SheetManager(commands.Cog):
 
         token_args = argparse(args)
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
-        is_subscriber = ddb_user and ddb_user.subscriber
+        is_subscriber = ddb_user and ddb_user.is_subscriber
 
         try:
             processed = await img.generate_token(char.image, is_subscriber, token_args)

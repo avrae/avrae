@@ -6,7 +6,7 @@ import draconic
 
 import cogs5e.models.character as character_model
 from aliasing import evaluators
-from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
+from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
@@ -233,14 +233,50 @@ async def update_uvars(ctx, uvar_dict, changed=None):
                 await ctx.bot.mdb.uvars.delete_one({"owner": str(ctx.author.id), "name": name})
 
 
+# svars
+async def get_svars(ctx):
+    if ctx.guild is None:
+        return {}
+    svars = {}
+    async for svar in ctx.bot.mdb.svars.find({"owner": ctx.guild.id}):
+        svars[svar['name']] = svar['value']
+    return svars
+
+
+async def get_svar(ctx, name):
+    if ctx.guild is None:
+        return None
+    svar = await ctx.bot.mdb.svars.find_one({"owner": ctx.guild.id, "name": name})
+    if svar is None:
+        return None
+    return svar['value']
+
+
+async def set_svar(ctx, name, value):
+    if ctx.guild is None:
+        raise NotAllowed("You cannot set a svar in a private message.")
+    value = str(value)
+    if not name.isidentifier():
+        raise InvalidArgument("Svar names must be valid identifiers "
+                              "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+    elif len(value) > SVAR_SIZE_LIMIT:
+        raise InvalidArgument(f"Svars must be shorter than {SVAR_SIZE_LIMIT} characters.")
+    await ctx.bot.mdb.svars.update_one(
+        {"owner": ctx.guild.id, "name": name},
+        {"$set": {"value": value}},
+        True)
+
+
 # gvars
 async def create_gvar(ctx, value):
     value = str(value)
     if len(value) > GVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Gvars must be shorter than {GVAR_SIZE_LIMIT} characters.")
     name = str(uuid.uuid4())
-    data = {'key': name, 'owner': str(ctx.author.id), 'owner_name': str(ctx.author), 'value': value,
-            'editors': []}
+    data = {
+        'key': name, 'owner': str(ctx.author.id), 'owner_name': str(ctx.author), 'value': value,
+        'editors': []
+    }
     await ctx.bot.mdb.gvars.insert_one(data)
     return name
 

@@ -4,6 +4,7 @@ Created on Sep 23, 2016
 @author: andrew
 """
 import asyncio
+import copy
 import itertools
 import logging
 import re
@@ -182,6 +183,20 @@ class AdminUtils(commands.Cog):
     async def reload_static(self, ctx):
         resp = await self.pscall("reload_static")
         await self._send_replies(ctx, resp)
+
+    @admin.command(hidden=True, name='su')
+    @checks.is_owner()
+    async def admin_su(self, ctx, member: discord.Member, *, content):
+        msg = copy.copy(ctx.message)
+        msg.author = member
+        msg.content = content
+        new_ctx = await self.bot.get_context(msg)
+        # copied from dbot#on_message()
+        if new_ctx.command is not None:
+            await self.bot.invoke(new_ctx)
+        elif new_ctx.invoked_with:
+            from aliasing.helpers import handle_aliases
+            await handle_aliases(ctx)
 
     # ---- cluster management ----
     @admin.command(hidden=True, name="restart-shard")

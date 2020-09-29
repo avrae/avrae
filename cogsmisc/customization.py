@@ -19,8 +19,7 @@ from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import InvalidArgument, NoCharacter, NotAllowed
 from utils import checks
-from utils.functions import auth_and_chan, confirm
-from utils.functions import get_selection, user_from_id
+from utils.functions import auth_and_chan, confirm, get_selection, user_from_id
 
 ALIASER_ROLES = ("server aliaser", "dragonspeaker")
 
@@ -630,6 +629,61 @@ class Customization(commands.Cog):
 
         await self.bot.mdb.uvars.delete_many({"owner": str(ctx.author.id)})
         return await ctx.send("OK. I have deleted all your uvars.")
+
+    @commands.group(invoke_without_command=True, aliases=['svar'])
+    @commands.guild_only()
+    async def servervar(self, ctx, name=None, *, value=None):
+        """
+        Commands to manage server variables for use in snippets and aliases.
+
+        Server variables may only be set by those with permissions to create server aliases (see `!help servalias`),
+        must be explicitly retrieved in an alias, and are read-only.
+
+        These are usually used to set server-wide defaults for aliases without editing the code.
+
+        See http://avrae.io/cheatsheets/aliasing for more help.
+        """
+        if name is None:
+            return await self.svar_list(ctx)
+
+        if value is None:  # display value
+            svar = await helpers.get_svar(ctx, name)
+            if svar is None:
+                return await ctx.send("This svar is not defined.")
+            return await ctx.send(f'**{name}**: ```\n{svar}\n```')
+
+        if not _can_edit_servaliases(ctx):
+            return await ctx.send("You do not have permissions to edit server variables. Either __Administrator__ "
+                                  "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
+                                  "is required.")
+
+        if name in STAT_VAR_NAMES or not name.isidentifier():
+            return await ctx.send("Could not create svar: already builtin, or contains invalid character!")
+
+        await helpers.set_svar(ctx, name, value)
+        await ctx.send(f'Server variable `{name}` set to: `{value}`')
+
+    @servervar.command(name='remove', aliases=['delete'])
+    @commands.guild_only()
+    async def svar_remove(self, ctx, name):
+        """Deletes a svar from the server."""
+        if not _can_edit_servaliases(ctx):
+            return await ctx.send("You do not have permissions to edit server variables. Either __Administrator__ "
+                                  "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "
+                                  "is required.")
+
+        result = await self.bot.mdb.svars.delete_one({"owner": ctx.guild.id, "name": name})
+        if not result.deleted_count:
+            return await ctx.send("Svar does not exist.")
+        await ctx.send(f'Server variable {name} removed.')
+
+    @servervar.command(name='list')
+    @commands.guild_only()
+    async def svar_list(self, ctx):
+        """Lists all svars for the server."""
+        server_vars = await helpers.get_svars(ctx)
+        sorted_vars = ', '.join(sorted(name for name in server_vars.keys()))
+        await ctx.send(f'This server\'s server variables:\n{sorted_vars}')
 
     @commands.group(invoke_without_command=True, aliases=['gvar'])
     async def globalvar(self, ctx, name=None):

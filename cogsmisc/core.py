@@ -97,10 +97,6 @@ class Core(commands.Cog):
         embed.title = "Invite Avrae to your server!"
         embed.url = "https://invite.avrae.io"
         embed.colour = 0x7289da
-        total_members = sum(1 for _ in self.bot.get_all_members())
-        unique_members = len(self.bot.users)
-        members = '%s total\n%s unique' % (total_members, unique_members)
-        embed.add_field(name='Members (Cluster)', value=members)
         embed.add_field(name='Uptime', value=str(timedelta(seconds=round(time.monotonic() - self.start_time))))
         motd = random.choice(["May the RNG be with you", "May your rolls be high",
                               "Will give higher rolls for cookies", ">:3",
@@ -108,14 +104,14 @@ class Core(commands.Cog):
         embed.set_footer(
             text=f'{motd} | Build {await self.bot.rdb.get("build_num")} | Cluster {self.bot.cluster_id}')
 
-        commands_run = "{commands_used_life} total\n{dice_rolled_life} dice rolled\n" \
-                       "{spells_looked_up_life} spells looked up\n{monsters_looked_up_life} monsters looked up\n" \
-                       "{items_looked_up_life} items looked up\n" \
-                       "{rounds_init_tracked_life} rounds of initiative tracked ({turns_init_tracked_life} turns)" \
+        commands_run = "{commands_used_life:,} total\n{dice_rolled_life:,} dice rolled\n" \
+                       "{spells_looked_up_life:,} spells looked up\n{monsters_looked_up_life:,} monsters looked up\n" \
+                       "{items_looked_up_life:,} items looked up\n" \
+                       "{rounds_init_tracked_life:,} rounds of initiative tracked ({turns_init_tracked_life:,} turns)" \
             .format(**stats)
         embed.add_field(name="Commands Run", value=commands_run)
-        embed.add_field(name="Servers", value=f"{len(self.bot.guilds)} on this cluster\n"
-                                              f"{await Stats.get_guild_count(self.bot)} total")
+        embed.add_field(name="Servers", value=f"{len(self.bot.guilds):,} on this cluster\n"
+                                              f"{await Stats.get_guild_count(self.bot):,} total")
         memory_usage = psutil.Process().memory_full_info().uss / 1024 ** 2
         embed.add_field(name='Memory Usage', value='{:.2f} MiB'.format(memory_usage))
         embed.add_field(name='About', value='Made with :heart: by zhu.exe#4211 and the D&D Beyond team\n'

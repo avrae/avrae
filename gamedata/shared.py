@@ -42,8 +42,6 @@ class Sourced(abc.ABC):
         """Returns the marketplace URL for this sourced object."""
         if self._url:
             return f"{self._url}?utm_source=avrae&utm_medium=marketplacelink"
-        elif slug := source_slug(self.source):
-            return f"https://www.dndbeyond.com/marketplace/sources/{slug}?utm_source=avrae&utm_medium=marketplacelink"
         return f"https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
 
     def __repr__(self):

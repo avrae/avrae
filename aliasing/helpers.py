@@ -468,15 +468,20 @@ async def handle_alias_required_licenses(ctx, err):
             embed.set_footer(text="Already linked your account? It may take up to a minute for Avrae to recognize the "
                                   "link.")
     else:
-        if len(err.entities) == 1:
+        missing_source_ids = {e.source for e in err.entities}
+        if len(err.entities) == 1:  # 1 entity, display entity piecemeal
             embed.title = f"Purchase {err.entities[0].name} on D&D Beyond to use this customization!"
             marketplace_url = err.entities[0].marketplace_url
-        else:
-            embed.title = f"Purchase {len(err.entities)} items on D&D Beyond to use this customization!"
-            marketplace_url = "https://www.dndbeyond.com/marketplace"
+        elif len(missing_source_ids) == 1:  # 1 source, recommend purchasing source
+            missing_source = next(iter(missing_source_ids))
+            embed.title = f"Purchase {long_source_name(missing_source)} on D&D Beyond to use this customization!"
+            marketplace_url = f"https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
+        else:  # more than 1 source
+            embed.title = f"Purchase {len(missing_source_ids)} items on D&D Beyond to use this customization!"
+            marketplace_url = "https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
 
         missing = natural_join([f"[{e.name}]({e.marketplace_url})" for e in err.entities], "and")
-        missing_sources = natural_join({long_source_name(e.source) for e in err.entities}, "and")
+        missing_sources = natural_join([long_source_name(e.source) for e in missing_source_ids], "and")
 
         embed.description = \
             f"To use this customization and gain access to more integrations in Avrae, unlock **{missing}** by " \

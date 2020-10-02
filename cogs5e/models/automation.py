@@ -934,11 +934,16 @@ class IEffect(Effect):
         else:
             duration = self.duration
 
+        if self.desc:
+            desc = autoctx.parse_annostr(self.desc)
+            if len(desc) > 500:
+                desc = f"{desc[:500]}..."
+
         duration = autoctx.args.last('dur', duration, int)
         if isinstance(autoctx.target.target, init.Combatant):
             effect = init.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
                                      duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
-                                     concentration=self.concentration, desc=self.desc)
+                                     concentration=self.concentration, desc=desc)
             if autoctx.conc_effect:
                 if autoctx.conc_effect.combatant is autoctx.target.target and self.concentration:
                     raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")

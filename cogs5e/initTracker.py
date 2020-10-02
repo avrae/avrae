@@ -63,6 +63,7 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
         turnnotif - Notifies the controller of the next combatant in initiative.
+        deathdelete - Disables deleting monsters below 0 hp.
         -name <name> - Sets a name for the combat instance."""
         await Combat.ensure_unique_chan(ctx)
 
@@ -75,6 +76,8 @@ class InitTracker(commands.Cog):
             options['name'] = args.last('name')
         if args.last('turnnotif', False, bool):
             options['turnnotif'] = True
+        if args.last('deathdelete', False, bool):
+            options['deathdelete'] = True
 
         temp_summary_msg = await ctx.send("```Awaiting combatants...```")
         Combat.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
@@ -381,15 +384,15 @@ class InitTracker(commands.Cog):
             await ctx.send("It is not your turn.")
             return
 
-        toRemove = []
-        if combat.current_combatant is not None:
+        to_remove = []
+        if combat.current_combatant is not None and not combat.options.get('deathdelete', False):
             if isinstance(combat.current_combatant, CombatantGroup):
-                thisTurn = combat.current_combatant.get_combatants()
+                this_turn = combat.current_combatant.get_combatants()
             else:
-                thisTurn = [combat.current_combatant]
-            for co in thisTurn:
+                this_turn = [combat.current_combatant]
+            for co in this_turn:
                 if isinstance(co, MonsterCombatant) and co.hp <= 0:
-                    toRemove.append(co)
+                    to_remove.append(co)
 
         advanced_round, messages = combat.advance_turn()
         out = messages
@@ -399,12 +402,19 @@ class InitTracker(commands.Cog):
             await Stats.increase_stat(ctx, "rounds_init_tracked_life")
 
         out.append(combat.get_turn_str())
-
-        for co in toRemove:
+        next_deleted = False
+        for co in to_remove:
+            # prevent error when the current combatant is the only combatant
+            if co == combat.next_combatant:
+                next_deleted = True
             combat.remove_combatant(co)
             out.append("{} automatically removed from combat.\n".format(co.name))
 
-        await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
+        if next_deleted and len(combat.get_combatants()) == 0:
+            await ctx.send("\n".join(out))
+            await ctx.send('No remaining combatants.')
+        else:
+            await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
     @init.command(name="prev", aliases=['previous', 'rewind'])
@@ -513,6 +523,7 @@ class InitTracker(commands.Cog):
         __Valid Settings__
         dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
         turnnotif - Notifies the controller of the next combatant in initiative.
+        deathdelete - Toggles removing monsters below 0 HP.
         -name <name> - Sets a name for the combat instance"""
         args = argparse(settings)
         combat = await Combat.from_ctx(ctx)
@@ -528,9 +539,13 @@ class InitTracker(commands.Cog):
         if args.last('turnnotif', False, bool):
             options['turnnotif'] = not options.get('turnnotif')
             out += f"Turn notification turned {'on' if options['turnnotif'] else 'off'}.\n"
+        if args.last('deathdelete', default=False, type_=bool):
+            options['deathdelete'] = not options.get('deathdelete', False)
+            out += f"Monsters at 0 HP will be {'left' if options['deathdelete'] else 'removed'}.\n"
 
         combat.options = options
         await combat.commit()
+        out = out if out else 'No Settings Changed'
         await ctx.send(out)
 
     @init.command(name="list", aliases=['summary'])

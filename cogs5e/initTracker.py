@@ -402,19 +402,18 @@ class InitTracker(commands.Cog):
             await Stats.increase_stat(ctx, "rounds_init_tracked_life")
 
         out.append(combat.get_turn_str())
-        next_deleted = False
+        removed = []
         for co in to_remove:
-            # prevent error when the current combatant is the only combatant
-            if co == combat.next_combatant:
-                next_deleted = True
             combat.remove_combatant(co)
-            out.append("{} automatically removed from combat.\n".format(co.name))
+            removed.append("{} automatically removed from combat.\n".format(co.name))
 
-        if next_deleted and len(combat.get_combatants()) == 0:
-            await ctx.send("\n".join(out))
-            await ctx.send('No remaining combatants.')
+        next_mentions = combat.get_turn_str_mentions()
+        out += removed
+        if next_mentions is not None:
+            await ctx.send("\n".join(out), allowed_mentions=next_mentions)
         else:
-            await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
+            await ctx.send('\n'.join(removed))
+            await ctx.send('No combatants remain.')
         await combat.final()
 
     @init.command(name="prev", aliases=['previous', 'rewind'])

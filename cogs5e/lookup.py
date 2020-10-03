@@ -12,13 +12,14 @@ import gamedata
 from cogs5e.models import errors
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
 from cogsmisc.stats import Stats
+from cogsmisc.core import Core
 from gamedata.compendium import compendium
 from gamedata.lookuputils import HOMEBREW_EMOJI, can_access, get_item_choices, get_monster_choices, get_spell_choices, \
     handle_source_footer
 from gamedata.shared import SourcedTrait
-from utils import checks, img
+from utils import img
 from utils.argparser import argparse
-from utils.functions import get_positivity, search_and_select, trim_str
+from utils.functions import search_and_select, trim_str
 
 LARGE_THRESHOLD = 200
 
@@ -243,7 +244,7 @@ class Lookup(commands.Cog):
         Game Master Roles: GM, DM, Game Master, Dungeon Master
         __Valid Arguments__
         -h - Shows the obfuscated stat block, even if you can see the full stat block."""
-        guild_settings = await self.get_settings(ctx.guild)
+        guild_settings = await Core.get_server_settings(self, ctx.guild)
         pm = guild_settings.get("pm_result", False)
         pm_dm = guild_settings.get("pm_dm", False)
         req_dm_monster = guild_settings.get("req_dm_monster", True)
@@ -529,60 +530,6 @@ class Lookup(commands.Cog):
         await Stats.increase_stat(ctx, "items_looked_up_life")
         await (await self._get_destination(ctx)).send(embed=embed)
 
-    # ==== server settings ====
-    @commands.command()
-    @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def lookup_settings(self, ctx, *args):
-        """Changes settings for the lookup module.
-        __Valid Settings__
-        -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
-            -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
-        -pm_result [True/False] - PMs the result of the lookup to reduce spam.
-        """
-        guild_id = str(ctx.guild.id)
-        guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
-        if guild_settings is None:
-            guild_settings = {}
-        out = ""
-        if '-req_dm_monster' in args:
-            try:
-                setting = args[args.index('-req_dm_monster') + 1]
-            except IndexError:
-                setting = 'True'
-            setting = get_positivity(setting)
-            guild_settings['req_dm_monster'] = setting if setting is not None else True
-            out += 'req_dm_monster set to {}!\n'.format(str(guild_settings['req_dm_monster']))
-        if '-pm_dm' in args:
-            try:
-                setting = args[args.index('-pm_dm') + 1]
-            except IndexError:
-                setting = 'True'
-            setting = get_positivity(setting)
-            guild_settings['pm_dm'] = setting if setting is not None else True
-            out += 'pm_dm set to {}!\n'.format(str(guild_settings['pm_dm']))
-        if '-pm_result' in args:
-            try:
-                setting = args[args.index('-pm_result') + 1]
-            except IndexError:
-                setting = 'False'
-            setting = get_positivity(setting)
-            guild_settings['pm_result'] = setting if setting is not None else False
-            out += 'pm_result set to {}!\n'.format(str(guild_settings['pm_result']))
-
-        if guild_settings:
-            await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
-            await ctx.send("Lookup settings set:\n" + out)
-        else:
-            await ctx.send("No settings found. Make sure your syntax is correct.")
-
-    # ==== helpers ====
-    async def get_settings(self, guild):
-        settings = {}  # default PM settings
-        if guild is not None:
-            settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
-        return settings or {}
-
     async def _add_training_data(self, lookup_type, query, result_name, metadata=None, srd=True, could_view=True):
         data = {"type": lookup_type, "query": query, "result": result_name, "srd": srd, "could_view": could_view}
         if metadata:
@@ -592,7 +539,7 @@ class Lookup(commands.Cog):
         await self.bot.mdb.nn_training.insert_one(data)
 
     async def _get_destination(self, ctx):
-        guild_settings = await self.get_settings(ctx.guild)
+        guild_settings = await Core.get_server_settings(self, ctx.guild)
         pm = guild_settings.get("pm_result", False)
         return ctx.author if pm else ctx.channel
 

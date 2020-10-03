@@ -14,6 +14,8 @@ from discord.ext import commands
 
 from cogs5e.models import embeds
 from cogsmisc.stats import Stats
+from utils import checks
+from utils.functions import get_positivity
 
 CHANGELOG_CHANNEL_ID = 342667972223172608
 
@@ -170,6 +172,72 @@ class Core(commands.Cog):
                        f"Roles: {ddb_user.roles}\n"
                        f"Subscriber: {ddb_user.subscriber}\n"
                        f"Subscription Tier: {ddb_user.subscription_tier}\n```")
+
+    # ==== server settings ====
+    @commands.command(aliases=['lookup_settings'])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def server_settings(self, ctx, *args):
+        """Changes settings for the server.
+        __Valid Settings__
+        -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
+        -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
+        -pm_result [True/False] - PMs the result of the lookup to reduce spam.
+        -death_save_dc [#] - Sets a server wide Death Save DC.
+        """
+        guild_id = str(ctx.guild.id)
+        guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})
+        if guild_settings is None:
+            guild_settings = {}
+        out = ""
+        if '-req_dm_monster' in args:
+            try:
+                setting = args[args.index('-req_dm_monster') + 1]
+            except IndexError:
+                setting = 'True'
+            setting = get_positivity(setting)
+            guild_settings['req_dm_monster'] = setting if setting is not None else True
+            out += 'req_dm_monster set to {}!\n'.format(str(guild_settings['req_dm_monster']))
+        if '-pm_dm' in args:
+            try:
+                setting = args[args.index('-pm_dm') + 1]
+            except IndexError:
+                setting = 'True'
+            setting = get_positivity(setting)
+            guild_settings['pm_dm'] = setting if setting is not None else True
+            out += 'pm_dm set to {}!\n'.format(str(guild_settings['pm_dm']))
+        if '-pm_result' in args:
+            try:
+                setting = args[args.index('-pm_result') + 1]
+            except IndexError:
+                setting = 'False'
+            setting = get_positivity(setting)
+            guild_settings['pm_result'] = setting if setting is not None else False
+            out += 'pm_result set to {}!\n'.format(str(guild_settings['pm_result']))
+        if '-death_save_dc' in args:
+            try:
+                setting = int(args[args.index('-death_save_dc') + 1])
+            except IndexError:
+                setting = 10
+            except ValueError:
+                setting = guild_settings['death_save_dc'] or 10
+                out += "Invalid Entry: Death Save DC requires an integer.\n"
+            guild_settings['death_save_dc'] = setting if setting is not None else False
+            out += 'Death Save DC set to {}!\n'.format(str(guild_settings['death_save_dc']))
+
+        if guild_settings:
+            await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings},
+                                                         upsert=True)
+            await ctx.send("Server settings set:\n" + out)
+        else:
+            await ctx.send("No settings found. Make sure your syntax is correct.")
+
+
+    async def get_server_settings(self, guild):
+        settings = {}  # default PM settings
+        if guild is not None:
+            settings = await self.bot.mdb.lookupsettings.find_one({"server": str(guild.id)})
+        return settings or {}
 
 
 def setup(bot):

@@ -539,7 +539,6 @@ class Lookup(commands.Cog):
         -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
             -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
         -pm_result [True/False] - PMs the result of the lookup to reduce spam.
-        -death_save_dc [#] - Sets a server wide Death Save DC.
         """
         guild_id = str(ctx.guild.id)
         guild_settings = await self.bot.mdb.lookupsettings.find_one({"server": guild_id})

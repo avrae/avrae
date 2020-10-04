@@ -530,10 +530,10 @@ class Lookup(commands.Cog):
         await (await self._get_destination(ctx)).send(embed=embed)
 
     # ==== server settings ====
-    @commands.command(aliases=['lookup_settings'])
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def server_settings(self, ctx, *args):
+    async def lookup_settings(self, ctx, *args):
         """Changes settings for the server.
         __Valid Settings__
         -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
@@ -572,8 +572,7 @@ class Lookup(commands.Cog):
             out += 'pm_result set to {}!\n'.format(str(guild_settings['pm_result']))
 
         if guild_settings:
-            await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings},
-                                                         upsert=True)
+            await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
             await ctx.send("Server settings set:\n" + out)
         else:
             await ctx.send("No settings found. Make sure your syntax is correct.")
@@ -594,7 +593,7 @@ class Lookup(commands.Cog):
         await self.bot.mdb.nn_training.insert_one(data)
 
     async def _get_destination(self, ctx):
-        guild_settings = await self.get_settings(self, ctx.guild)
+        guild_settings = await self.get_settings(ctx.guild)
         pm = guild_settings.get("pm_result", False)
         return ctx.author if pm else ctx.channel
 

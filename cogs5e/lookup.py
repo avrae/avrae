@@ -534,10 +534,10 @@ class Lookup(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def lookup_settings(self, ctx, *args):
-        """Changes settings for the server.
+        """Changes settings for the lookup module.
         __Valid Settings__
         -req_dm_monster [True/False] - Requires a Game Master role to show a full monster stat block.
-        -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
+            -pm_dm [True/False] - PMs a DM the full monster stat block instead of outputting to chat, if req_dm_monster is True.
         -pm_result [True/False] - PMs the result of the lookup to reduce spam.
         -death_save_dc [#] - Sets a server wide Death Save DC.
         """
@@ -573,7 +573,7 @@ class Lookup(commands.Cog):
 
         if guild_settings:
             await self.bot.mdb.lookupsettings.update_one({"server": guild_id}, {"$set": guild_settings}, upsert=True)
-            await ctx.send("Server settings set:\n" + out)
+            await ctx.send("Lookup settings set:\n" + out)
         else:
             await ctx.send("No settings found. Make sure your syntax is correct.")
 

@@ -14,8 +14,6 @@ from discord.ext import commands
 
 from cogs5e.models import embeds
 from cogsmisc.stats import Stats
-from utils import checks
-from utils.functions import get_positivity
 
 CHANGELOG_CHANNEL_ID = 342667972223172608
 

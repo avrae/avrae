@@ -14,7 +14,6 @@ from discord.ext import commands
 
 from aliasing import helpers
 from cogs5e.funcs import targetutils
-from cogsmisc.core import Core
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument, NoSelectionElements
@@ -242,14 +241,13 @@ class GameTrack(commands.Cog):
         """Commands to manage character death saves.
         __Valid Arguments__
         See `!help save`."""
-        guild_settings = await Core.get_server_settings(self, ctx.guild)
         character: Character = await Character.from_ctx(ctx)
 
         args = argparse(args)
         adv = args.adv()
         b = args.join('b', '+')
         phrase = args.join('phrase', '\n')
-        dc = args.last('dc', guild_settings.get("death_save_dc", 10), int)
+        dc = args.last('dc', 10, int)
 
         if b:
             save_roll = d20.roll(f"{d20_with_adv(adv)}+{b}")

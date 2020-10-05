@@ -207,7 +207,7 @@ class SheetManager(commands.Cog):
         __Valid Arguments__
         *adv/dis*
         *-b [conditional bonus]*
-        -dc [dc] (does not apply to Death Saves)
+        -dc [dc]
         -rr [iterations] (does not apply to Death Saves)
 
         -phrase [flavor text]

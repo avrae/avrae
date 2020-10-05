@@ -65,8 +65,8 @@ class AliasContext:
         return self._invoked_with
 
     def __repr__(self):
-        return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix} " \
-               f"name={self.invoked_with}>"
+        return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix}" \
+               f" name={self.invoked_with}>"
 
 
 class AliasGuild:

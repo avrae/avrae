@@ -477,10 +477,12 @@ async def handle_alias_required_licenses(ctx, err):
             embed.title = f"Purchase {long_source_name(missing_source)} on D&D Beyond to use this customization!"
             marketplace_url = f"https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
         else:  # more than 1 source
-            embed.title = f"Purchase {len(missing_source_ids)} items on D&D Beyond to use this customization!"
+            embed.title = f"Purchase {len(missing_source_ids)} sources on D&D Beyond to use this customization!"
             marketplace_url = "https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
 
         missing = natural_join([f"[{e.name}]({e.marketplace_url})" for e in err.entities], "and")
+        if len(missing) > 1400:
+            missing = f"{len(err.entities)} items"
         missing_sources = natural_join([long_source_name(e.source) for e in missing_source_ids], "and")
 
         embed.description = \

@@ -407,7 +407,7 @@ class InitTracker(commands.Cog):
         next_mentions = combat.get_turn_str_mentions()
         out += removed
         if combat.current_combatant is None or len(combat.get_combatants()) == 0:
-            out.append('No combatants remain.')
+            removed.append('\nNo combatants remain.')
             await ctx.send('\n'.join(removed))
         else:
             await ctx.send("\n".join(out), allowed_mentions=next_mentions)

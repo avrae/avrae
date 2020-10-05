@@ -158,9 +158,6 @@ class CollectableManagementGroup(commands.Group):
                 has_at_least_1 = True
                 embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
                                 inline=False)
-            else:
-                embed.add_field(name=the_collection.name, value=f"This collection has no {self.obj_name_pl}.",
-                                inline=False)
 
         if not has_at_least_1:
             embed.description = f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]" \

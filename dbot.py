@@ -137,9 +137,14 @@ A full command list can be found [here](https://avrae.io/commands)!
 Invite Avrae to your server [here](https://invite.avrae.io)!
 Join the official development server [here](https://support.avrae.io)!
 '''
+intents = discord.Intents(
+    guilds=True, members=True, messages=True, reactions=True,
+    bans=False, emojis=False, integrations=False, webhooks=False, invites=False, voice_states=False, presences=False,
+    typing=False
+)  # https://discord.com/developers/docs/topics/gateway#gateway-intents
 bot = Avrae(prefix=get_prefix, description=desc, pm_help=True, testing=config.TESTING,
             activity=discord.Game(name=f'D&D 5e | {config.DEFAULT_PREFIX}help'),
-            allowed_mentions=discord.AllowedMentions(everyone=False, users=False, roles=False))  # by default, none
+            allowed_mentions=discord.AllowedMentions.none(), intents=intents, chunk_guilds_at_startup=False)
 
 log_formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
 handler = logging.StreamHandler(sys.stdout)

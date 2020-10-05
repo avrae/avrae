@@ -938,6 +938,8 @@ class IEffect(Effect):
             desc = autoctx.parse_annostr(self.desc)
             if len(desc) > 500:
                 desc = f"{desc[:500]}..."
+        else:
+            desc = None
 
         duration = autoctx.args.last('dur', duration, int)
         if isinstance(autoctx.target.target, init.Combatant):
@@ -954,7 +956,7 @@ class IEffect(Effect):
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
         else:
             effect = init.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects),
-                                     tick_on_end=self.tick_on_end, concentration=self.concentration, desc=self.desc)
+                                     tick_on_end=self.tick_on_end, concentration=self.concentration, desc=desc)
             autoctx.queue(f"**Effect**: {str(effect)}")
 
     def build_str(self, caster, evaluator):

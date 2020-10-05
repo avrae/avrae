@@ -384,7 +384,10 @@ class InitTracker(commands.Cog):
             await ctx.send("It is not your turn.")
             return
 
-        to_remove = []
+        advanced_round, messages = combat.advance_turn()
+        out = messages
+
+        removed = []
         if combat.current_combatant is not None and not combat.options.get('deathdelete', False):
             if isinstance(combat.current_combatant, CombatantGroup):
                 this_turn = combat.current_combatant.get_combatants()
@@ -392,28 +395,22 @@ class InitTracker(commands.Cog):
                 this_turn = [combat.current_combatant]
             for co in this_turn:
                 if isinstance(co, MonsterCombatant) and co.hp <= 0:
-                    to_remove.append(co)
-
-        advanced_round, messages = combat.advance_turn()
-        out = messages
+                    combat.remove_combatant(co)
+                    removed.append(f"{co.name} automatically removed from combat.")
 
         await Stats.increase_stat(ctx, "turns_init_tracked_life")
         if advanced_round:
             await Stats.increase_stat(ctx, "rounds_init_tracked_life")
 
         out.append(combat.get_turn_str())
-        removed = []
-        for co in to_remove:
-            combat.remove_combatant(co)
-            removed.append("{} automatically removed from combat.\n".format(co.name))
 
         next_mentions = combat.get_turn_str_mentions()
         out += removed
-        if next_mentions is not None:
-            await ctx.send("\n".join(out), allowed_mentions=next_mentions)
-        else:
+        if combat.current_combatant is None or len(combat.get_combatants()) == 0:
+            out.append('No combatants remain.')
             await ctx.send('\n'.join(removed))
-            await ctx.send('No combatants remain.')
+        else:
+            await ctx.send("\n".join(out), allowed_mentions=next_mentions)
         await combat.final()
 
     @init.command(name="prev", aliases=['previous', 'rewind'])

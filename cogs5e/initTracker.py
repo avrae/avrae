@@ -13,7 +13,7 @@ from aliasing import helpers
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
+from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException, NoCombatants
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
@@ -384,9 +384,6 @@ class InitTracker(commands.Cog):
             await ctx.send("It is not your turn.")
             return
 
-        advanced_round, messages = combat.advance_turn()
-        out = messages
-
         removed = []
         if combat.current_combatant is not None and not combat.options.get('deathdelete', False):
             if isinstance(combat.current_combatant, CombatantGroup):
@@ -397,6 +394,16 @@ class InitTracker(commands.Cog):
                 if isinstance(co, MonsterCombatant) and co.hp <= 0:
                     combat.remove_combatant(co)
                     removed.append(f"{co.name} automatically removed from combat.")
+        try:
+            advanced_round, messages = combat.advance_turn()
+        except NoCombatants:
+            # If we removed the last combatant, catch NoCombatants so we can display the removed Combatants
+            if removed:
+                advanced_round, messages = False, ''
+            # Otherwise re-raise the error.
+            else:
+                raise
+        out = messages
 
         await Stats.increase_stat(ctx, "turns_init_tracked_life")
         if advanced_round:

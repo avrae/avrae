@@ -1244,7 +1244,8 @@ class Effect:
                   'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus'}
 
     def __init__(self, combat, combatant, name: str, duration: int, remaining: int, effect: dict,
-                 concentration: bool = False, children: list = None, parent: dict = None, tonend: bool = False):
+                 concentration: bool = False, children: list = None, parent: dict = None,
+                 tonend: bool = False, desc: str = None):
         if children is None:
             children = []
         self.combat = combat
@@ -1257,10 +1258,11 @@ class Effect:
         self.children = children
         self.parent = parent
         self.ticks_on_end = tonend
+        self.desc = desc
 
     @classmethod
     def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None,
-            tick_on_end=False):
+            tick_on_end=False, desc: str = None):
         if isinstance(effect_args, str):
             if (combatant and isinstance(combatant, PlayerCombatant)) or character:
                 effect_args = argparse(effect_args, combatant.character or character)
@@ -1283,7 +1285,7 @@ class Effect:
         except (ValueError, TypeError):
             raise InvalidArgument("Effect duration must be an integer.")
         return cls(combat, combatant, name, duration, duration, effect_dict, concentration=concentration,
-                   tonend=tick_on_end)
+                   tonend=tick_on_end, desc=desc)
 
     def set_parent(self, parent):
         """Sets the parent of an effect."""
@@ -1319,6 +1321,8 @@ class Effect:
         out.append(self.get_parenthetical())
         if self.concentration:
             out.append("<C>")
+        if self.desc:
+            out.append(f"\n - {self.desc}")
         return ' '.join(out)
 
     def get_short_str(self):
@@ -1437,4 +1441,4 @@ class Effect:
     def to_dict(self):
         return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect,
                 'concentration': self.concentration, 'children': self.children, 'parent': self.parent,
-                'tonend': self.ticks_on_end}
+                'tonend': self.ticks_on_end, 'desc': self.desc}

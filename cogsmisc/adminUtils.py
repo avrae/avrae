@@ -275,19 +275,6 @@ class AdminUtils(commands.Cog):
             return await server.leave()
         elif server.id in self.whitelisted_serv_ids:
             return
-        bots = sum(1 for m in server.members if m.bot)
-        members = len(server.members)
-        ratio = bots / members
-        if ratio >= 0.6 and members >= 20:
-            log.info("Detected bot collection server ({}), ratio {}. Leaving.".format(server.id, ratio))
-            try:
-                await server.owner.send("Please do not add me to bot collection servers. "
-                                        "Your server was flagged for having over 60% bots. "
-                                        "If you believe this is an error, please PM the bot author.")
-            except:
-                pass
-            await asyncio.sleep(members / 200)
-            await server.leave()
 
     # ==== helper ====
     @staticmethod

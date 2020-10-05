@@ -242,10 +242,12 @@ class GameTrack(commands.Cog):
         __Valid Arguments__
         See `!help save`."""
         character: Character = await Character.from_ctx(ctx)
+
         args = argparse(args)
         adv = args.adv()
         b = args.join('b', '+')
         phrase = args.join('phrase', '\n')
+        dc = args.last('dc', 10, int)
 
         if b:
             save_roll = d20.roll(f"{d20_with_adv(adv)}+{b}")
@@ -264,7 +266,7 @@ class GameTrack(commands.Cog):
             character.hp = 1
         elif save_roll.crit == d20.CritType.FAIL:
             character.death_saves.fail(2)
-        elif save_roll.total >= 10:
+        elif save_roll.total >= dc:
             character.death_saves.succeed()
         else:
             character.death_saves.fail()
@@ -280,6 +282,8 @@ class GameTrack(commands.Cog):
         embed.description = save_roll.result + (f'\n*{phrase}*' if phrase else '')
         if death_phrase:
             embed.set_footer(text=death_phrase)
+        if dc != 10:
+            embed.description = f"**DC {dc}**\n" + embed.description
 
         embed.add_field(name="Death Saves", value=str(character.death_saves))
 

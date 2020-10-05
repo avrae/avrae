@@ -332,12 +332,13 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             self._cache['gvars'][address] = result['value']
         return self._cache['gvars'][address]
 
-    def get_svar(self, name):
+    def get_svar(self, name, default=None):
         """
         Retrieves and returns the value of a svar (server variable).
 
         :param str name: The name of the svar.
-        :return: The value of the svar, or None if it does not exist.
+        :param default: What to return if the name is not set.
+        :return: The value of the svar, or the default value if it does not exist.
         :rtype: str or None
         """
         if self.ctx.guild is None:
@@ -345,7 +346,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         if name not in self._cache['svars']:
             result = self.ctx.bot.mdb.svars.delegate.find_one({"owner": self.ctx.guild.id, "name": name})
             if result is None:
-                return None
+                return default
             self._cache['svars'][name] = result['value']
         return self._cache['svars'][name]
 

@@ -399,7 +399,7 @@ class InitTracker(commands.Cog):
         except NoCombatants:
             # If we removed the last combatant, catch NoCombatants so we can display the removed Combatants
             if removed:
-                advanced_round, messages = False, ''
+                advanced_round, messages = False, []
             # Otherwise re-raise the error.
             else:
                 raise

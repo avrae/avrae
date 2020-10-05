@@ -348,7 +348,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
             if result is None:
                 return default
             self._cache['svars'][name] = result['value']
-        return self._cache['svars'][name] if self._cache['svars'][name] is not None else default
+        return self._cache['svars'][name]
 
     def set_uvar(self, name: str, value: str):
         """

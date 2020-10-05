@@ -229,7 +229,7 @@ class SimpleCombatant(AliasStatBlock):
         return None
 
     def add_effect(self, name: str, args: str, duration: int = -1, concentration: bool = False, parent=None,
-                   end: bool = False):
+                   end: bool = False, desc: str = None):
         """
         Adds an effect to the combatant.
 
@@ -240,12 +240,13 @@ class SimpleCombatant(AliasStatBlock):
         :param parent: The parent of the effect.
         :type parent: :class:`~aliasing.api.combat.SimpleEffect`
         :param bool end: Whether the effect ticks on the end of turn.
+        :param str desc: A description of the effect.
         """
         existing = self._combatant.get_effect(name, True)
         if existing:
             existing.remove()
         effectObj = Effect.new(self._combatant.combat, self._combatant, duration=duration, name=name, effect_args=args,
-                               concentration=concentration, tick_on_end=end)
+                               concentration=concentration, tick_on_end=end, desc=desc)
         if parent:
             effectObj.set_parent(parent._effect)
         self._combatant.add_effect(effectObj)
@@ -359,6 +360,7 @@ class SimpleEffect:
         self.remaining = self._effect.remaining
         self.effect = self._effect.effect
         self.conc = self._effect.concentration
+        self.desc = self._effect.desc
 
     def __str__(self):
         return str(self._effect)

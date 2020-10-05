@@ -925,7 +925,8 @@ class InitTracker(commands.Cog):
         -neutral <damage type> - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
         __General__
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
-        -sb <save bonus> - Adds a bonus to all saving throws."""
+        -sb <save bonus> - Adds a bonus to all saving throws.
+        -desc <description> - Adds a description of the effect."""
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
 
@@ -942,6 +943,7 @@ class InitTracker(commands.Cog):
         conc = args.last('conc', False, bool)
         end = args.last('end', False, bool)
         parent = args.last('parent')
+        desc = args.last('desc')
 
         if parent is not None:
             parent = parent.split('|', 1)
@@ -957,7 +959,7 @@ class InitTracker(commands.Cog):
                 out = "Effect already exists."
             else:
                 effect_obj = Effect.new(combat, combatant, duration=duration, name=effect_name, effect_args=args,
-                                        concentration=conc, tick_on_end=end)
+                                        concentration=conc, tick_on_end=end, desc=desc)
                 result = combatant.add_effect(effect_obj)
                 if parent:
                     effect_obj.set_parent(parent)

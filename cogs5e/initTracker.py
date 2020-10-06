@@ -13,7 +13,7 @@ from aliasing import helpers
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException, NoCombatants
+from cogs5e.models.errors import InvalidArgument, NoCombatants, NoSelectionElements, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
@@ -21,7 +21,7 @@ from cogs5e.models.sheet.resistance import Resistances
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils.argparser import argparse, argsplit
-from utils.functions import confirm, search_and_select, try_delete
+from utils.functions import confirm, get_guild_member, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
 
@@ -746,7 +746,7 @@ class InitTracker(commands.Cog):
                     response = await opt_func(target)
                     if response:
                         if target.is_private:
-                            destination = ctx.guild.get_member(int(comb.controller)) or ctx.channel
+                            destination = (await get_guild_member(ctx.guild, int(comb.controller))) or ctx.channel
                         else:
                             destination = ctx.channel
                         out[destination].append(response)
@@ -788,9 +788,7 @@ class InitTracker(commands.Cog):
                                 combatant.get_combatants()])
 
         if private:
-            controller = ctx.guild.get_member(int(combatant.controller))
-            if controller:
-                await controller.send("```markdown\n" + status + "```")
+            await combatant.message_controller(ctx, f"```markdown\n{status}```")
         else:
             await ctx.send("```markdown\n" + status + "```")
 
@@ -800,11 +798,7 @@ class InitTracker(commands.Cog):
 
         if combatant.is_private:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
-            try:
-                controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)}{deltaend}")
-            except:
-                pass
+            await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)}{deltaend}")
         else:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}{deltaend}")
 
@@ -819,11 +813,7 @@ class InitTracker(commands.Cog):
         if hp is None:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
             if combatant.is_private:
-                try:
-                    controller = ctx.guild.get_member(int(combatant.controller))
-                    await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)}")
-                except:
-                    pass
+                await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)}")
             return
 
         # i hp NAME mod X does not call i hp mod NAME X - handle this
@@ -912,11 +902,7 @@ class InitTracker(commands.Cog):
 
         if combatant.is_private:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
-            try:
-                controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)} {delta}")
-            except:
-                pass
+            await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)} {delta}")
         else:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()} {delta}")
         await combat.final()

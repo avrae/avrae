@@ -12,7 +12,7 @@ from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
-from utils.functions import get_selection, maybe_mod
+from utils.functions import get_guild_member, get_selection, maybe_mod
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
@@ -760,6 +760,18 @@ class Combatant(StatBlock):
 
     def controller_mention(self):
         return f"<@{self.controller}>"
+
+    async def message_controller(self, ctx, *args, **kwargs):
+        """Sends a message to the combatant's controller."""
+        if ctx.guild is None:
+            raise RequiresContext("message_controller requires a guild context.")
+        member = await get_guild_member(ctx.guild, int(self.controller))
+        if member is None:  # member is not in the guild, oh well
+            return
+        try:
+            await member.send(*args, **kwargs)
+        except discord.Forbidden:  # member is not accepting PMs from us, oh well
+            pass
 
     def on_turn(self, num_turns=1):
         """

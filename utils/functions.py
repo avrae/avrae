@@ -397,3 +397,15 @@ async def user_from_id(ctx, the_id):
 
     await update_known_user(fetched_user)
     return fetched_user
+
+
+async def get_guild_member(guild, member_id):
+    """Gets and caches a specific guild member."""
+    if guild is None:
+        return None
+    if (member := guild.get_member(member_id)) is not None:
+        return member
+    result = await guild.query_members(user_ids=[member_id], limit=1, cache=True)
+    if result:
+        return result[0]
+    return None

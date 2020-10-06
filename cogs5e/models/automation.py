@@ -12,7 +12,7 @@ from cogs5e.models import embeds
 from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from utils.dice import RerollableStringifier
-from utils.functions import maybe_mod
+from utils.functions import get_guild_member, maybe_mod
 
 log = logging.getLogger(__name__)
 
@@ -82,11 +82,11 @@ class Automation:
         autoctx.build_embed()
         for user, msgs in autoctx.pm_queue.items():
             try:
-                user = ctx.guild.get_member(int(user))
+                member = await get_guild_member(ctx.guild, int(user))
                 if title:
-                    await user.send(f"{title}\n" + '\n'.join(msgs))
+                    await member.send(f"{title}\n" + '\n'.join(msgs))
                 else:
-                    await user.send('\n'.join(msgs))
+                    await member.send('\n'.join(msgs))
             except:
                 pass
 

@@ -79,6 +79,8 @@ def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ' '), ch
         else:
             chunks.append(chunk)
 
+    # remove extra split_char from last chunk
+    chunks[-1] = chunks[-1][:-len(split_char)]
     return chunks
 
 

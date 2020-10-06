@@ -13,7 +13,7 @@ from aliasing import helpers
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException, NoCombatants
+from cogs5e.models.errors import InvalidArgument, NoCombatants, NoSelectionElements, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
@@ -21,7 +21,7 @@ from cogs5e.models.sheet.resistance import Resistances
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils.argparser import argparse, argsplit
-from utils.functions import confirm, search_and_select, try_delete
+from utils.functions import confirm, get_guild_member, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
 
@@ -368,8 +368,10 @@ class InitTracker(commands.Cog):
 
     @init.command(name="next", aliases=['n'])
     async def nextInit(self, ctx):
-        """Moves to the next turn in initiative order.
-        It must be your turn or you must be the DM (the person who started combat) to use this command."""
+        """
+        Moves to the next turn in initiative order.
+        It must be your turn or you must be a DM to use this command.
+        """
 
         combat = await Combat.from_ctx(ctx)
 
@@ -377,6 +379,7 @@ class InitTracker(commands.Cog):
             await ctx.send("There are no combatants.")
             return
 
+        # check: is the user allowed to move combat on
         allowed_to_pass = (combat.index is None) \
                           or (str(ctx.author.id) in (combat.current_combatant.controller, combat.dm)) \
                           or DM_ROLES.intersection({r.name.lower() for r in ctx.author.roles})
@@ -384,7 +387,9 @@ class InitTracker(commands.Cog):
             await ctx.send("It is not your turn.")
             return
 
-        removed = []
+        # get the list of combatants to remove, but don't remove them yet (we need to advance the turn first
+        # to prevent a re-sort happening if the last combatant on a turn is removed)
+        to_remove = []
         if combat.current_combatant is not None and not combat.options.get('deathdelete', False):
             if isinstance(combat.current_combatant, CombatantGroup):
                 this_turn = combat.current_combatant.get_combatants()
@@ -392,32 +397,31 @@ class InitTracker(commands.Cog):
                 this_turn = [combat.current_combatant]
             for co in this_turn:
                 if isinstance(co, MonsterCombatant) and co.hp <= 0:
-                    combat.remove_combatant(co)
-                    removed.append(f"{co.name} automatically removed from combat.")
-        try:
-            advanced_round, messages = combat.advance_turn()
-        except NoCombatants:
-            # If we removed the last combatant, catch NoCombatants so we can display the removed Combatants
-            if removed:
-                advanced_round, messages = False, []
-            # Otherwise re-raise the error.
-            else:
-                raise
-        out = messages
+                    to_remove.append(co)
 
+        # actually advance the turn
+        advanced_round, out = combat.advance_turn()
+
+        # now we can remove the combatants
+        removed_messages = []
+        for co in to_remove:
+            combat.remove_combatant(co)
+            removed_messages.append(f"{co.name} automatically removed from combat.")
+
+        # misc stat stuff
         await Stats.increase_stat(ctx, "turns_init_tracked_life")
         if advanced_round:
             await Stats.increase_stat(ctx, "rounds_init_tracked_life")
 
-        out.append(combat.get_turn_str())
-
-        next_mentions = combat.get_turn_str_mentions()
-        out += removed
-        if combat.current_combatant is None or len(combat.get_combatants()) == 0:
-            removed.append('\nNo combatants remain.')
-            await ctx.send('\n'.join(removed))
+        # build the output
+        if combat.current_combatant is None:
+            out.append('\nNo combatants remain.')
         else:
-            await ctx.send("\n".join(out), allowed_mentions=next_mentions)
+            out.append(combat.get_turn_str())
+        out.extend(removed_messages)
+
+        # send and commit
+        await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
     @init.command(name="prev", aliases=['previous', 'rewind'])
@@ -746,7 +750,7 @@ class InitTracker(commands.Cog):
                     response = await opt_func(target)
                     if response:
                         if target.is_private:
-                            destination = ctx.guild.get_member(int(comb.controller)) or ctx.channel
+                            destination = (await get_guild_member(ctx.guild, int(comb.controller))) or ctx.channel
                         else:
                             destination = ctx.channel
                         out[destination].append(response)
@@ -788,9 +792,7 @@ class InitTracker(commands.Cog):
                                 combatant.get_combatants()])
 
         if private:
-            controller = ctx.guild.get_member(int(combatant.controller))
-            if controller:
-                await controller.send("```markdown\n" + status + "```")
+            await combatant.message_controller(ctx, f"```markdown\n{status}```")
         else:
             await ctx.send("```markdown\n" + status + "```")
 
@@ -800,11 +802,7 @@ class InitTracker(commands.Cog):
 
         if combatant.is_private:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
-            try:
-                controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)}{deltaend}")
-            except:
-                pass
+            await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)}{deltaend}")
         else:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}{deltaend}")
 
@@ -819,11 +817,7 @@ class InitTracker(commands.Cog):
         if hp is None:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
             if combatant.is_private:
-                try:
-                    controller = ctx.guild.get_member(int(combatant.controller))
-                    await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)}")
-                except:
-                    pass
+                await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)}")
             return
 
         # i hp NAME mod X does not call i hp mod NAME X - handle this
@@ -912,11 +906,7 @@ class InitTracker(commands.Cog):
 
         if combatant.is_private:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
-            try:
-                controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)} {delta}")
-            except:
-                pass
+            await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)} {delta}")
         else:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()} {delta}")
         await combat.final()

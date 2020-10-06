@@ -10,7 +10,7 @@ from discord.ext import commands
 
 import gamedata
 from cogs5e.models import errors
-from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
+from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, chunk_text, set_maybe_long_desc
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
 from gamedata.lookuputils import HOMEBREW_EMOJI, can_access, get_item_choices, get_monster_choices, get_spell_choices, \
@@ -278,7 +278,7 @@ class Lookup(commands.Cog):
             else:
                 # noinspection PyTypeChecker
                 embed_queue.append(discord.Embed(colour=color, title=title))
-                trait_all = [desc[i:i + 2040] for i in range(0, len(desc), 2040)]
+                trait_all = chunk_text(desc, max_chunk_size=2048)
                 embed_queue[-1].description = trait_all[0]
                 for t in trait_all[1:]:
                     # noinspection PyTypeChecker
@@ -469,22 +469,20 @@ class Lookup(commands.Cog):
                f"**Duration**: {spell.duration}"
         embed.add_field(name="Meta", value=meta)
 
-        text = spell.description
         higher_levels = spell.higherlevels
-
-        if len(text) > 1020:
-            pieces = [text[:1020]] + [text[i:i + 2040] for i in range(1020, len(text), 2040)]
-        else:
-            pieces = [text]
+        pieces = chunk_text(spell.description)
 
         embed.add_field(name="Description", value=pieces[0], inline=False)
 
         embed_queue = [embed]
         if len(pieces) > 1:
-            for piece in pieces[1:]:
+            for i, piece in enumerate(pieces[1::2]):
                 temp_embed = discord.Embed()
                 temp_embed.colour = color
-                temp_embed.description = piece
+                if (next_idx := (i + 1) * 2) < len(pieces):  # this is chunked into 1024 pieces, and descs can handle 2
+                    temp_embed.description = piece + pieces[next_idx]
+                else:
+                    temp_embed.description = piece
                 embed_queue.append(temp_embed)
 
         if higher_levels:

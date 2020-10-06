@@ -108,8 +108,8 @@ class CombatNotFound(CombatException):
 class RequiresContext(CombatException):
     """Raised when a combat is committed without context."""
 
-    def __init__(self):
-        super().__init__("Combat not contextualized.")
+    def __init__(self, msg=None):
+        super().__init__(msg or "Combat not contextualized.")
 
 
 class ChannelInCombat(CombatException):

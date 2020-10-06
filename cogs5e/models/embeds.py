@@ -54,18 +54,42 @@ def add_fields_from_args(embed, _fields):
     return embed
 
 
-def chunk_text(text, chunk_size=1024):
-    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ' '), chunker_i=0):
+    """
+    Recursively chunks *text* into a list of str, with each element no longer than *max_chunk_size*.
+    Prefers splitting on the elements of *chunk_on*, in order.
+    """
+
+    if len(text) <= max_chunk_size:  # the chunk is small enough
+        return [text]
+    if chunker_i >= len(chunk_on):  # we have no more preferred chunk_on characters
+        # optimization: instead of merging a thousand characters, just use list slicing
+        return [text[:max_chunk_size],
+                *chunk_text(text[max_chunk_size:], max_chunk_size, chunk_on, chunker_i + 1)]
+
+    # split on the current character
+    chunks = []
+    split_char = chunk_on[chunker_i]
+    for chunk in text.split(split_char):
+        chunk = f"{chunk}{split_char}"
+        if len(chunk) > max_chunk_size:  # this chunk needs to be split more, recurse
+            chunks.extend(chunk_text(chunk, max_chunk_size, chunk_on, chunker_i + 1))
+        elif chunks and len(chunk) + len(chunks[-1]) <= max_chunk_size:  # this chunk can be merged
+            chunks[-1] += chunk
+        else:
+            chunks.append(chunk)
+
+    return chunks
 
 
 def get_long_field_args(text, title, inline=False, chunk_size=1024):
     """Returns a list of dicts (to pass as kwargs) given a long text."""
-    chunks = chunk_text(text, chunk_size=chunk_size)
+    chunks = chunk_text(text, chunk_size)
     if not chunks:
         return []
-    out = [{"name": title, "value": chunks[0], "inline": inline}]
+    out = [{"name": title, "value": chunks[0].strip(), "inline": inline}]
     for chunk in chunks[1:]:
-        out.append({"name": "** **", "value": chunk, "inline": inline})
+        out.append({"name": "** **", "value": chunk.strip(), "inline": inline})
     return out
 
 
@@ -76,9 +100,9 @@ def set_maybe_long_desc(embed, desc):
     :param str desc: The description to add. Will overwrite existing description.
     """
     desc = chunk_text(trim_str(desc, 5000))
-    embed.description = ''.join(desc[:2])
+    embed.description = ''.join(desc[:2]).strip()
     for piece in desc[2:]:
-        embed.add_field(name="** **", value=piece, inline=False)
+        embed.add_field(name="** **", value=piece.strip(), inline=False)
 
 
 def add_fields_from_long_text(embed, field_name, text):

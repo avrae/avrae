@@ -367,6 +367,9 @@ class Combat:
     def get_turn_str(self):
         nextCombatant = self.current_combatant
 
+        if nextCombatant is None:
+            return None
+
         if isinstance(nextCombatant, CombatantGroup):
             thisTurn = nextCombatant.get_combatants()
             outStr = "**Initiative {} (round {})**: {} ({})\n{}"
@@ -389,12 +392,14 @@ class Combat:
 
     def get_turn_str_mentions(self):
         """Gets the :class:`discord.AllowedMentions` for the users mentioned in the current turn str."""
+        if self.current_combatant is None:
+            return discord.AllowedMentions.none()
         if isinstance(self.current_combatant, CombatantGroup):
             user_ids = {discord.Object(id=int(comb.controller)) for comb in self.current_combatant.get_combatants()}
         else:
             user_ids = {discord.Object(id=int(self.current_combatant.controller))}
 
-        if self.options.get('turnnotif'):
+        if self.options.get('turnnotif') and self.next_combatant is not None:
             user_ids.add(discord.Object(id=int(self.next_combatant.controller)))
         return discord.AllowedMentions(users=list(user_ids))
 

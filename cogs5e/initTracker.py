@@ -612,7 +612,7 @@ class InitTracker(commands.Cog):
         options = {}
         target_is_group = isinstance(comb, CombatantGroup)
         run_once = set()
-        allowed_mentions = []
+        allowed_mentions = set()
 
         def option(opt_name=None, pass_group=False, **kwargs):
             """
@@ -654,7 +654,7 @@ class InitTracker(commands.Cog):
             member = await commands.MemberConverter().convert(ctx, controller_name)
             if member is None:
                 return "\u274c New controller not found."
-            allowed_mentions.append(member)
+            allowed_mentions.add(member)
             combatant.controller = str(member.id)
             return f"\u2705 {combatant.name}'s controller set to {combatant.controller_mention()}."
 
@@ -758,7 +758,7 @@ class InitTracker(commands.Cog):
         if out:
             for destination, messages in out.items():
                 await destination.send('\n'.join(messages),
-                                       allowed_mentions=discord.AllowedMentions(users=allowed_mentions))
+                                       allowed_mentions=discord.AllowedMentions(users=list(allowed_mentions)))
             await combat.final()
         else:
             await ctx.send("No valid options found.")

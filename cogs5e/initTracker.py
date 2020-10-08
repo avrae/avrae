@@ -144,7 +144,7 @@ class InitTracker(commands.Cog):
         if args.last('controller'):
             controller_name = args.last('controller')
             member = await commands.MemberConverter().convert(ctx, controller_name)
-            controller = str(member.id) if member is not None else controller
+            controller = str(member.id) if member is not None and not member.bot else controller
         if args.last('group'):
             group = args.last('group')
         if args.last('hp'):
@@ -654,6 +654,8 @@ class InitTracker(commands.Cog):
             member = await commands.MemberConverter().convert(ctx, controller_name)
             if member is None:
                 return "\u274c New controller not found."
+            if member.bot:
+                return "\u274c Bots cannot control combatants."
             allowed_mentions.add(member)
             combatant.controller = str(member.id)
             return f"\u2705 {combatant.name}'s controller set to {combatant.controller_mention()}."

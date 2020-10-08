@@ -517,7 +517,7 @@ class SheetManager(commands.Cog):
         `talent true/false` - Enables/disables whether to apply a rogue's Reliable Talent on checks you're proficient with."""
         char = await Character.from_ctx(ctx)
 
-        out = ['Operations complete!']
+        out = []
         skip = False
         for i, arg in enumerate(args):
             if skip:
@@ -525,6 +525,10 @@ class SheetManager(commands.Cog):
             if arg in CHARACTER_SETTINGS:
                 skip = True
                 out.append(CHARACTER_SETTINGS[arg].run(ctx, char, list_get(i + 1, None, args)))
+
+        if not out:
+            return await ctx.send(f"No valid settings found. See `{ctx.prefix}help {ctx.invoked_with}` for a list "
+                                  f"of valid settings.")
 
         await char.commit(ctx)
         await ctx.send('\n'.join(out))

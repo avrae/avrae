@@ -48,6 +48,15 @@ def test_argparse():
     args = argparse("""adv dis adv""")
     assert args.adv() == 0
 
+    args = argparse("""adv dis ea""")
+    assert args.adv() == 0
+
+    args = argparse("""ea""")
+    assert args.adv() == 2
+
+    args = argparse("""adv ea""")
+    assert args.adv() == 2
+
 
 def test_argparse_ephem():
     args = argparse("""-d5 1d6 adv1 -d 1""")

@@ -150,9 +150,9 @@ class ParsedArguments:
         adv = 0
         if self.last("adv", type_=bool, ephem=ephem):
             adv += 1
-        if self.last("dis", type_=bool, ephem=ephem):
+        if has_dis := self.last("dis", type_=bool, ephem=ephem):
             adv += -1
-        if ea and self.last("ea", type_=bool, ephem=ephem) and adv > -1:
+        if ea and self.last("ea", type_=bool, ephem=ephem) and not has_dis:
             return 2
         if not boolwise:
             return adv

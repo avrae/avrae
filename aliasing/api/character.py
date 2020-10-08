@@ -19,7 +19,7 @@ class AliasCharacter(AliasStatBlock):
 
     # helpers
     def _get_consumable(self, name):
-        consumable = next((con for con in self._character.consumables if con.name == name), None)
+        consumable = self._character.get_consumable(name)
         if consumable is None:
             raise ConsumableException(f"There is no counter named {name}.")
         return consumable
@@ -343,7 +343,8 @@ class AliasCustomCounter:
         :return: The cc's new value.
         :rtype: int
         """
-        return self._cc.reset()
+        result = self._cc.reset()
+        return result.new_value  # todo what about the rest of the data?
 
     def __str__(self):
         return str(self._cc)

@@ -290,6 +290,10 @@ class Character(StatBlock):
     async def select_consumable(self, ctx, name):
         return await search_and_select(ctx, self.consumables, name, lambda ctr: ctr.name)
 
+    def get_consumable(self, name):
+        """Gets the next custom counter with the exact given name (case-sensitive). Returns None if not found."""
+        return next((con for con in self.consumables if con.name == name), None)
+
     def sync_consumable(self, ctr):
         if self._live_integration:
             self._live_integration.sync_consumable(ctr)
@@ -304,7 +308,7 @@ class Character(StatBlock):
             if ctr.reset_on == scope:
                 before = ctr.value
                 try:
-                    ctr.reset()
+                    ctr.reset()  # todo
                 except NoReset:
                     continue
                 reset.append((ctr, ctr.value - before))

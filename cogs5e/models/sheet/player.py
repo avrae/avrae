@@ -1,3 +1,7 @@
+import collections
+
+import d20
+
 from cogs5e.models.errors import CounterOutOfBounds, InvalidArgument, NoReset
 from utils.functions import bubble_format
 from .attack import AttackList
@@ -89,19 +93,22 @@ class CustomCounter:
                  'reset': "`!cc reset`",
                  'hp': "Gaining HP"}
 
-    def __init__(self, character, name, value, minv=None, maxv=None, reset=None, display_type=None, live_id=None):
+    def __init__(self, character, name, value, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
+                 reset_to=None, reset_by=None):
         self._character = character
         self.name = name
         self._value = value
         self.min = minv
         self.max = maxv
         self.reset_on = reset
+        self.reset_to = reset_to
+        self.reset_by = reset_by
         self.display_type = display_type
         self.live_id = live_id
 
         # cached values
-        self._max = None
-        self._min = None
+        self._max_value = None
+        self._min_value = None
 
     @classmethod
     def from_dict(cls, char, d):
@@ -112,44 +119,71 @@ class CustomCounter:
                 "display_type": self.display_type, "live_id": self.live_id}
 
     @classmethod
-    def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None):
+    def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
+            reset_to=None, reset_by=None):
         if reset not in ('short', 'long', 'none', None):
             raise InvalidArgument("Invalid reset.")
         if any(c in name for c in ".$"):
             raise InvalidArgument("Invalid character in CC name.")
-        if minv is not None and maxv is not None:
-            max_value = character.evaluate_math(maxv)
-            if max_value < character.evaluate_math(minv):
-                raise InvalidArgument("Max value is less than min value.")
-            if max_value == 0:
-                raise InvalidArgument("Max value cannot be 0.")
-        if reset and maxv is None:
-            raise InvalidArgument("Reset passed but no maximum passed.")
         if display_type == 'bubble' and (maxv is None or minv is None):
             raise InvalidArgument("Bubble display requires a max and min value.")
 
-        if maxv:
-            value = character.evaluate_math(maxv)
-        else:
-            value = 0
-        return cls(character, name.strip(), value, minv, maxv, reset, display_type, live_id)
+        # sanity checks
+        if maxv is None and reset not in ('none', None):
+            raise InvalidArgument("Reset passed but no maximum passed.")
+        if reset_to is not None and reset_by is not None:
+            raise InvalidArgument("Both `resetto` and `resetby` arguments found.")
+
+        min_value = None
+        if minv is not None:
+            min_value = character.evaluate_math(minv)
+
+        max_value = None
+        if maxv is not None:
+            max_value = character.evaluate_math(maxv)
+            if min_value is not None and max_value < min_value:
+                raise InvalidArgument("Max value is less than min value.")
+            if max_value == 0:
+                raise InvalidArgument("Max value cannot be 0.")
+
+        reset_to_value = None
+        if reset_to is not None:
+            reset_to_value = character.evaluate_math(reset_to)
+            if min_value is not None and reset_to_value < min_value:
+                raise InvalidArgument("Reset to value is less than min value.")
+            if max_value is not None and reset_to_value > max_value:
+                raise InvalidArgument("Reset to value is greater than max value.")
+
+        try:
+            d20.parse(reset_by)
+        except d20.RollSyntaxError:
+            raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
+
+        # set initial value
+        initial_value = max(0, min_value or 0)
+        if reset_to_value is not None:
+            initial_value = reset_to_value
+        elif max_value is not None:
+            initial_value = max_value
+
+        return cls(character, name.strip(), initial_value, minv, maxv, reset, display_type, live_id, reset_to, reset_by)
 
     # ---------- main funcs ----------
     def get_min(self):
-        if self._min is None:
+        if self._min_value is None:
             if self.min is None:
-                self._min = -(2 ** 31)
+                self._min_value = -(2 ** 31)
             else:
-                self._min = self._character.evaluate_math(self.min)
-        return self._min
+                self._min_value = self._character.evaluate_math(self.min)
+        return self._min_value
 
     def get_max(self):
-        if self._max is None:
+        if self._max_value is None:
             if self.max is None:
-                self._max = 2 ** 31 - 1
+                self._max_value = 2 ** 31 - 1
             else:
-                self._max = self._character.evaluate_math(self.max)
-        return self._max
+                self._max_value = self._character.evaluate_math(self.max)
+        return self._max_value
 
     @property
     def value(self):
@@ -170,9 +204,41 @@ class CustomCounter:
         return self._value
 
     def reset(self):
-        if self.reset_on == 'none' or self.max is None:
+        """
+        Resets the counter to its target value.
+
+        :returns CustomCounterResetResult: (new_value: int, old_value: int, target_value: int, delta: str)
+        """
+        if self.reset_on == 'none':
             raise NoReset()
-        return self.set(self.get_max())
+
+        old_value = self.value
+
+        # reset to: fixed value
+        if self.reset_to is not None:
+            target_value = self._character.evaluate_math(self.reset_to)
+            new_value = self.set(target_value)
+            delta = f"{new_value - old_value:+}"
+
+        # reset by: modify current value
+        elif self.reset_by is not None:
+            roll_result = d20.roll(self.reset_by)
+            target_value = old_value + roll_result.total
+            new_value = self.set(target_value)
+            delta = f"+{roll_result.result}"
+
+        # go to max
+        elif self.max is not None:
+            target_value = self.get_max()
+            new_value = self.set(target_value)
+            delta = f"{new_value - old_value:+}"
+
+        # no reset
+        else:
+            raise NoReset()
+
+        return CustomCounterResetResult(new_value=new_value, old_value=old_value, target_value=target_value,
+                                        delta=delta)
 
     def full_str(self):
         _min = self.get_min()
@@ -207,3 +273,7 @@ class CustomCounter:
                 out = str(self.value)
 
         return out
+
+
+CustomCounterResetResult = collections.namedtuple('CustomCounterResetResult',
+                                                  ['new_value', 'old_value', 'target_value', 'delta'])

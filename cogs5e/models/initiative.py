@@ -259,7 +259,7 @@ class Combat:
         for c in self._combatants:
             init_roll = roll(c.init_skill.d20())
             c.init = init_roll.total
-            rolls[c.name] = init_roll
+            rolls[c] = init_roll
         self.sort_combatants()
 
         # reset current turn
@@ -267,8 +267,9 @@ class Combat:
         self._current_index = None
 
         order = []
-        for combatant_name, init_roll in sorted(rolls.items(), key=lambda r: r[1].total, reverse=True):
-            order.append(f"{init_roll.result}: {combatant_name}")
+        for combatant, init_roll in sorted(rolls.items(), key=lambda r: (r[1].total, int(r[0].init_skill)),
+                                           reverse=True):
+            order.append(f"{init_roll.result}: {combatant.name}")
 
         order = "\n".join(order)
 

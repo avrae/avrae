@@ -49,13 +49,13 @@ def test_argparse():
     assert args.adv() == 0
 
     args = argparse("""adv dis ea""")
-    assert args.adv() == 0
+    assert args.adv(ea=True) == 0
 
     args = argparse("""ea""")
-    assert args.adv() == 2
+    assert args.adv(ea=True) == 2
 
     args = argparse("""adv ea""")
-    assert args.adv() == 2
+    assert args.adv(ea=True) == 2
 
 
 def test_argparse_ephem():

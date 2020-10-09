@@ -107,16 +107,17 @@ class AliasCharacter(AliasStatBlock):
         self._character.consumables.remove(to_delete)
 
     def create_cc_nx(self, name: str, minVal: str = None, maxVal: str = None, reset: str = None,
-                     dispType: str = None):
+                     dispType: str = None, reset_to: str = None, reset_by: str = None):
         """
         Creates a custom counter if one with the given name does not already exist.
         Equivalent to:
 
         >>> if not cc_exists(name):
-        >>>     create_cc(name, minVal, maxVal, reset, dispType)
+        >>>     create_cc(name, minVal, maxVal, reset, dispType, reset_to, reset_by)
         """
         if not self.cc_exists(name):
-            new_consumable = player_api.CustomCounter.new(self._character, name, minVal, maxVal, reset, dispType)
+            new_consumable = player_api.CustomCounter.new(self._character, name, minVal, maxVal, reset, dispType,
+                                                          reset_to=reset_to, reset_by=reset_by)
             self._character.consumables.append(new_consumable)
             self._consumables = None  # reset cache
             return AliasCustomCounter(new_consumable)
@@ -130,6 +131,8 @@ class AliasCharacter(AliasStatBlock):
         :param str maxVal: The maximum value of the counter. Supports :ref:`cvar-table` parsing.
         :param str reset: One of ``'short'``, ``'long'``, ``'hp'``, ``'none'``, or ``None``.
         :param str dispType: Either ``None`` or ``'bubble'``.
+        :param str reset_to: The value the counter should reset to. Supports :ref:`cvar-table` parsing.
+        :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
         :rtype: AliasCustomCounter
         :returns: The newly created counter.
         """
@@ -325,6 +328,25 @@ class AliasCustomCounter:
         """
         return self._cc.display_type
 
+    @property
+    def reset_to(self):
+        """
+        Returns the value the cc resets to, if it was created with an explicit ``resetto``.
+
+        :rtype: int or None
+        """
+        return self._cc.get_reset_to()
+
+    @property
+    def reset_by(self):
+        """
+        Returns the amount the cc changes by on a reset, if it was created with an explicit ``resetby``.
+
+        :return: The amount the cc changes by. Guaranteed to be a rollable string.
+        :rtype: str or None
+        """
+        return self._cc.reset_by
+
     def set(self, new_value, strict=False):
         """
         Sets the cc's value to a new value.
@@ -338,20 +360,24 @@ class AliasCustomCounter:
 
     def reset(self):
         """
-        Resets the cc to its max. Errors if the cc has no max or no reset.
+        Resets the cc to its reset value. Errors if the cc has no reset value or no reset.
 
-        :return: The cc's new value.
-        :rtype: int
+        The reset value is calculated in 3 steps:
+        - if the cc has a ``reset_to`` value, it is reset to that
+        - else if the cc has a ``reset_by`` value, it is modified by that much
+        - else the reset value is its max
+
+        :return CustomCounterResetResult: (new_value: int, old_value: int, target_value: int, delta: str)
         """
-        result = self._cc.reset()
-        return result.new_value  # todo what about the rest of the data?
+        return self._cc.reset()
 
     def __str__(self):
         return str(self._cc)
 
     def __repr__(self):
         return f"<AliasCustomCounter name={self.name} value={self.value} max={self.max} min={self.min} " \
-               f"reset_on={self.reset_on} display_type={self.display_type}>"
+               f"reset_on={self.reset_on} display_type={self.display_type} reset_to={self.reset_to} " \
+               f"reset_by={self.reset_by}>"
 
 
 class AliasDeathSaves:

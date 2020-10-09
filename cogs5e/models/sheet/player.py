@@ -187,6 +187,11 @@ class CustomCounter:
                 self._max_value = self._character.evaluate_math(self.max)
         return self._max_value
 
+    def get_reset_to(self):
+        if self.reset_to is None:
+            return None
+        return self._character.evaluate_math(self.reset_to)
+
     @property
     def value(self):
         return self._value
@@ -218,7 +223,7 @@ class CustomCounter:
 
         # reset to: fixed value
         if self.reset_to is not None:
-            target_value = self._character.evaluate_math(self.reset_to)
+            target_value = self.get_reset_to()
             new_value = self.set(target_value)
             delta = f"{new_value - old_value:+}"
 
@@ -261,8 +266,7 @@ class CustomCounter:
         if _reset:
             val += f"**Resets On**: {_reset}\n"
         if self.reset_to is not None:
-            reset_to = self._character.evaluate_math(self.reset_to)
-            val += f"**Resets To**: {reset_to}"
+            val += f"**Resets To**: {self.get_reset_to()}"
         if self.reset_by is not None:
             val += f"**On Reset**: +{self.reset_by}"
         return val.strip()

@@ -116,7 +116,8 @@ class CustomCounter:
 
     def to_dict(self):
         return {"name": self.name, "value": self._value, "minv": self.min, "maxv": self.max, "reset": self.reset_on,
-                "display_type": self.display_type, "live_id": self.live_id}
+                "display_type": self.display_type, "live_id": self.live_id, "reset_to": self.reset_to,
+                "reset_by": self.reset_by}
 
     @classmethod
     def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
@@ -154,10 +155,11 @@ class CustomCounter:
             if max_value is not None and reset_to_value > max_value:
                 raise InvalidArgument("Reset to value is greater than max value.")
 
-        try:
-            d20.parse(reset_by)
-        except d20.RollSyntaxError:
-            raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
+        if reset_by is not None:
+            try:
+                d20.parse(reset_by)
+            except d20.RollSyntaxError:
+                raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
 
         # set initial value
         initial_value = max(0, min_value or 0)
@@ -258,6 +260,11 @@ class CustomCounter:
                 val += f"**Range**: \u2264{_max}\n"
         if _reset:
             val += f"**Resets On**: {_reset}\n"
+        if self.reset_to is not None:
+            reset_to = self._character.evaluate_math(self.reset_to)
+            val += f"**Resets To**: {reset_to}"
+        if self.reset_by is not None:
+            val += f"**On Reset**: +{self.reset_by}"
         return val.strip()
 
     def __str__(self):

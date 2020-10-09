@@ -105,19 +105,20 @@ class GameTrack(commands.Cog):
 
         embed = EmbedWithCharacter(character, name=False)
         if rest_type == 'long':
-            reset = character.long_rest()
+            reset_counters = character.long_rest()
             embed.title = f"{character.name} took a Long Rest!"
         elif rest_type == 'short':
-            reset = character.short_rest()
+            reset_counters = character.short_rest()
             embed.title = f"{character.name} took a Short Rest!"
         elif rest_type == 'all':
-            reset = character.reset_all_consumables()
+            reset_counters = character.reset_all_consumables()
             embed.title = f"{character.name} reset all counters!"
         else:
             raise ValueError(f"Invalid rest type: {rest_type}")
 
         if '-h' in args:
-            values = ', '.join(set(ctr.name for ctr, _ in reset) | {"Hit Points", "Death Saves", "Spell Slots"})
+            values = ', '.join(
+                set(ctr.name for ctr, _ in reset_counters) | {"Hit Points", "Death Saves", "Spell Slots"})
             embed.add_field(name="Reset Values", value=values)
         else:
             # hp
@@ -140,14 +141,10 @@ class GameTrack(commands.Cog):
                 embed.add_field(name="Spell Slots", value='\n'.join(slots_out))
 
             # ccs
-            displayed_counters = set()
             counters_out = []
-            for counter, delta in reset:
-                if counter.name in displayed_counters:
-                    continue
-                displayed_counters.add(counter.name)
-                if delta:
-                    counters_out.append(f"{counter.name}: {str(counter)} ({delta:+})")
+            for counter, result in reset_counters:
+                if result.new_value != result.old_value:
+                    counters_out.append(f"{counter.name}: {str(counter)} ({result.delta})")
                 else:
                     counters_out.append(f"{counter.name}: {str(counter)}")
             if counters_out:
@@ -557,15 +554,13 @@ class GameTrack(commands.Cog):
         if name:
             character: Character = await Character.from_ctx(ctx)
             counter = await character.select_consumable(ctx, name)
-            before = counter.value
             try:
-                counter.reset()  # todo
+                result = counter.reset()
                 await character.commit(ctx)
             except ConsumableException as e:
                 await ctx.send(f"Counter could not be reset: {e}")
             else:
-                delta = counter.value - before
-                await ctx.send(f"{counter.name}: {str(counter)} ({delta:+}).")
+                await ctx.send(f"{counter.name}: {str(counter)} ({result.delta}).")
         else:
             await self._rest(ctx, 'all', *args)
 

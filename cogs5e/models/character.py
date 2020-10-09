@@ -306,18 +306,17 @@ class Character(StatBlock):
         reset = []
         for ctr in self.consumables:
             if ctr.reset_on == scope:
-                before = ctr.value
                 try:
-                    ctr.reset()  # todo
+                    result = ctr.reset()
                 except NoReset:
                     continue
-                reset.append((ctr, ctr.value - before))
+                reset.append((ctr, result))
         return reset
 
     # ---------- RESTING ----------
     def on_hp(self):
         """
-        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return Death Saves.
         """
         reset = []
@@ -326,42 +325,45 @@ class Character(StatBlock):
             self.death_saves.reset()
         return reset
 
-    def short_rest(self):
+    def short_rest(self, cascade=True):
         """
-        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return Spell Slots or Death Saves.
         """
         reset = []
-        reset.extend(self.on_hp())
+        if cascade:
+            reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
         if self.get_setting('srslots', False):
             self.spellbook.reset_slots()
         return reset
 
-    def long_rest(self):
+    def long_rest(self, cascade=True):
         """
         Resets all applicable consumables.
-        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return HP, Spell Slots, or Death Saves.
         """
         reset = []
-        reset.extend(self.on_hp())
-        reset.extend(self.short_rest())
+        if cascade:
+            reset.extend(self.on_hp())
+            reset.extend(self.short_rest(cascade=False))
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
         if not self.get_setting('srslots', False):
             self.spellbook.reset_slots()
         return reset
 
-    def reset_all_consumables(self):
+    def reset_all_consumables(self, cascade=True):
         """
-        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return HP, Spell Slots, or Death Saves.
         """
         reset = []
-        reset.extend(self.on_hp())
-        reset.extend(self.short_rest())
-        reset.extend(self.long_rest())
+        if cascade:
+            reset.extend(self.on_hp())
+            reset.extend(self.short_rest(cascade=False))
+            reset.extend(self.long_rest(cascade=False))
         reset.extend(self._reset_custom(None))
         return reset
 

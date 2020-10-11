@@ -127,7 +127,7 @@ class CollectableManagementGroup(commands.Group):
             embed.title = f"{ctx.prefix}{name}" if self.is_alias else name
             embed.description = f"From {the_collection.name} by {owner}.\n" \
                                 f"[View on Workshop]({the_collection.url})"
-            embed.add_field(name="Help", value=collectable.docs or "No documentation.", inline=False)
+            embeds.add_fields_from_long_text(embed, "Help", collectable.docs or "No documentation.")
 
             if isinstance(collectable, workshop.WorkshopAlias):
                 await collectable.load_subcommands(ctx)
@@ -157,9 +157,6 @@ class CollectableManagementGroup(commands.Group):
             if bindings := subscription_doc[self.binding_key]:
                 has_at_least_1 = True
                 embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
-                                inline=False)
-            else:
-                embed.add_field(name=the_collection.name, value=f"This collection has no {self.obj_name_pl}.",
                                 inline=False)
 
         if not has_at_least_1:

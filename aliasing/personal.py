@@ -230,7 +230,7 @@ class Servsnippet(_SnippetBase):
         self.name = new_name
 
     async def delete(self, mdb):
-        await mdb.servsnippets.delete_one({"owner": self.owner, "name": self.name})
+        await mdb.servsnippets.delete_one({"server": self.owner, "name": self.name})
 
     async def log_invocation(self, ctx, _):
         await ctx.bot.mdb.analytics_alias_events.insert_one(

@@ -13,7 +13,7 @@ from aliasing import helpers
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
+from cogs5e.models.errors import InvalidArgument, NoCombatants, NoSelectionElements, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
@@ -21,7 +21,7 @@ from cogs5e.models.sheet.resistance import Resistances
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils.argparser import argparse, argsplit
-from utils.functions import confirm, search_and_select, try_delete
+from utils.functions import confirm, get_guild_member, search_and_select, try_delete
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +63,7 @@ class InitTracker(commands.Cog):
         __Valid Arguments__
         dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
         turnnotif - Notifies the controller of the next combatant in initiative.
+        deathdelete - Disables deleting monsters below 0 hp.
         -name <name> - Sets a name for the combat instance."""
         await Combat.ensure_unique_chan(ctx)
 
@@ -75,6 +76,8 @@ class InitTracker(commands.Cog):
             options['name'] = args.last('name')
         if args.last('turnnotif', False, bool):
             options['turnnotif'] = True
+        if args.last('deathdelete', False, bool):
+            options['deathdelete'] = True
 
         temp_summary_msg = await ctx.send("```Awaiting combatants...```")
         Combat.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
@@ -365,8 +368,10 @@ class InitTracker(commands.Cog):
 
     @init.command(name="next", aliases=['n'])
     async def nextInit(self, ctx):
-        """Moves to the next turn in initiative order.
-        It must be your turn or you must be the DM (the person who started combat) to use this command."""
+        """
+        Moves to the next turn in initiative order.
+        It must be your turn or you must be a DM to use this command.
+        """
 
         combat = await Combat.from_ctx(ctx)
 
@@ -374,6 +379,7 @@ class InitTracker(commands.Cog):
             await ctx.send("There are no combatants.")
             return
 
+        # check: is the user allowed to move combat on
         allowed_to_pass = (combat.index is None) \
                           or (str(ctx.author.id) in (combat.current_combatant.controller, combat.dm)) \
                           or DM_ROLES.intersection({r.name.lower() for r in ctx.author.roles})
@@ -381,29 +387,40 @@ class InitTracker(commands.Cog):
             await ctx.send("It is not your turn.")
             return
 
-        toRemove = []
-        if combat.current_combatant is not None:
+        # get the list of combatants to remove, but don't remove them yet (we need to advance the turn first
+        # to prevent a re-sort happening if the last combatant on a turn is removed)
+        to_remove = []
+        if combat.current_combatant is not None and not combat.options.get('deathdelete', False):
             if isinstance(combat.current_combatant, CombatantGroup):
-                thisTurn = combat.current_combatant.get_combatants()
+                this_turn = combat.current_combatant.get_combatants()
             else:
-                thisTurn = [combat.current_combatant]
-            for co in thisTurn:
+                this_turn = [combat.current_combatant]
+            for co in this_turn:
                 if isinstance(co, MonsterCombatant) and co.hp <= 0:
-                    toRemove.append(co)
+                    to_remove.append(co)
 
-        advanced_round, messages = combat.advance_turn()
-        out = messages
+        # actually advance the turn
+        advanced_round, out = combat.advance_turn()
 
+        # now we can remove the combatants
+        removed_messages = []
+        for co in to_remove:
+            combat.remove_combatant(co)
+            removed_messages.append(f"{co.name} automatically removed from combat.")
+
+        # misc stat stuff
         await Stats.increase_stat(ctx, "turns_init_tracked_life")
         if advanced_round:
             await Stats.increase_stat(ctx, "rounds_init_tracked_life")
 
-        out.append(combat.get_turn_str())
+        # build the output
+        if combat.current_combatant is None:
+            out.append('\nNo combatants remain.')
+        else:
+            out.append(combat.get_turn_str())
+        out.extend(removed_messages)
 
-        for co in toRemove:
-            combat.remove_combatant(co)
-            out.append("{} automatically removed from combat.\n".format(co.name))
-
+        # send and commit
         await ctx.send("\n".join(out), allowed_mentions=combat.get_turn_str_mentions())
         await combat.final()
 
@@ -513,6 +530,7 @@ class InitTracker(commands.Cog):
         __Valid Settings__
         dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
         turnnotif - Notifies the controller of the next combatant in initiative.
+        deathdelete - Toggles removing monsters below 0 HP.
         -name <name> - Sets a name for the combat instance"""
         args = argparse(settings)
         combat = await Combat.from_ctx(ctx)
@@ -528,9 +546,13 @@ class InitTracker(commands.Cog):
         if args.last('turnnotif', False, bool):
             options['turnnotif'] = not options.get('turnnotif')
             out += f"Turn notification turned {'on' if options['turnnotif'] else 'off'}.\n"
+        if args.last('deathdelete', default=False, type_=bool):
+            options['deathdelete'] = not options.get('deathdelete', False)
+            out += f"Monsters at 0 HP will be {'left' if options['deathdelete'] else 'removed'}.\n"
 
         combat.options = options
         await combat.commit()
+        out = out if out else 'No Settings Changed'
         await ctx.send(out)
 
     @init.command(name="list", aliases=['summary'])
@@ -728,7 +750,7 @@ class InitTracker(commands.Cog):
                     response = await opt_func(target)
                     if response:
                         if target.is_private:
-                            destination = ctx.guild.get_member(int(comb.controller)) or ctx.channel
+                            destination = (await get_guild_member(ctx.guild, int(comb.controller))) or ctx.channel
                         else:
                             destination = ctx.channel
                         out[destination].append(response)
@@ -770,9 +792,7 @@ class InitTracker(commands.Cog):
                                 combatant.get_combatants()])
 
         if private:
-            controller = ctx.guild.get_member(int(combatant.controller))
-            if controller:
-                await controller.send("```markdown\n" + status + "```")
+            await combatant.message_controller(ctx, f"```markdown\n{status}```")
         else:
             await ctx.send("```markdown\n" + status + "```")
 
@@ -782,11 +802,7 @@ class InitTracker(commands.Cog):
 
         if combatant.is_private:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
-            try:
-                controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)}{deltaend}")
-            except:
-                pass
+            await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)}{deltaend}")
         else:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}{deltaend}")
 
@@ -801,11 +817,7 @@ class InitTracker(commands.Cog):
         if hp is None:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
             if combatant.is_private:
-                try:
-                    controller = ctx.guild.get_member(int(combatant.controller))
-                    await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)}")
-                except:
-                    pass
+                await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)}")
             return
 
         # i hp NAME mod X does not call i hp mod NAME X - handle this
@@ -894,11 +906,7 @@ class InitTracker(commands.Cog):
 
         if combatant.is_private:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()}")
-            try:
-                controller = ctx.guild.get_member(int(combatant.controller))
-                await controller.send(f"{combatant.name}'s HP: {combatant.hp_str(True)} {delta}")
-            except:
-                pass
+            await combatant.message_controller(ctx, f"{combatant.name}'s HP: {combatant.hp_str(True)} {delta}")
         else:
             await ctx.send(f"{combatant.name}: {combatant.hp_str()} {delta}")
         await combat.final()
@@ -925,7 +933,8 @@ class InitTracker(commands.Cog):
         -neutral <damage type> - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
         __General__
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.
-        -sb <save bonus> - Adds a bonus to all saving throws."""
+        -sb <save bonus> - Adds a bonus to all saving throws.
+        -desc <description> - Adds a description of the effect."""
         combat = await Combat.from_ctx(ctx)
         args = argparse(args)
 
@@ -942,6 +951,7 @@ class InitTracker(commands.Cog):
         conc = args.last('conc', False, bool)
         end = args.last('end', False, bool)
         parent = args.last('parent')
+        desc = args.last('desc')
 
         if parent is not None:
             parent = parent.split('|', 1)
@@ -957,7 +967,7 @@ class InitTracker(commands.Cog):
                 out = "Effect already exists."
             else:
                 effect_obj = Effect.new(combat, combatant, duration=duration, name=effect_name, effect_args=args,
-                                        concentration=conc, tick_on_end=end)
+                                        concentration=conc, tick_on_end=end, desc=desc)
                 result = combatant.add_effect(effect_obj)
                 if parent:
                     effect_obj.set_parent(parent)

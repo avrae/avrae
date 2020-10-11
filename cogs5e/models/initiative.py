@@ -12,7 +12,7 @@ from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.argparser import argparse
 from utils.constants import RESIST_TYPES
-from utils.functions import get_selection, maybe_mod
+from utils.functions import get_guild_member, get_selection, maybe_mod
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
@@ -367,6 +367,9 @@ class Combat:
     def get_turn_str(self):
         nextCombatant = self.current_combatant
 
+        if nextCombatant is None:
+            return None
+
         if isinstance(nextCombatant, CombatantGroup):
             thisTurn = nextCombatant.get_combatants()
             outStr = "**Initiative {} (round {})**: {} ({})\n{}"
@@ -389,12 +392,14 @@ class Combat:
 
     def get_turn_str_mentions(self):
         """Gets the :class:`discord.AllowedMentions` for the users mentioned in the current turn str."""
+        if self.current_combatant is None:
+            return discord.AllowedMentions.none()
         if isinstance(self.current_combatant, CombatantGroup):
             user_ids = {discord.Object(id=int(comb.controller)) for comb in self.current_combatant.get_combatants()}
         else:
             user_ids = {discord.Object(id=int(self.current_combatant.controller))}
 
-        if self.options.get('turnnotif'):
+        if self.options.get('turnnotif') and self.next_combatant is not None:
             user_ids.add(discord.Object(id=int(self.next_combatant.controller)))
         return discord.AllowedMentions(users=list(user_ids))
 
@@ -755,6 +760,18 @@ class Combatant(StatBlock):
 
     def controller_mention(self):
         return f"<@{self.controller}>"
+
+    async def message_controller(self, ctx, *args, **kwargs):
+        """Sends a message to the combatant's controller."""
+        if ctx.guild is None:
+            raise RequiresContext("message_controller requires a guild context.")
+        member = await get_guild_member(ctx.guild, int(self.controller))
+        if member is None:  # member is not in the guild, oh well
+            return
+        try:
+            await member.send(*args, **kwargs)
+        except discord.Forbidden:  # member is not accepting PMs from us, oh well
+            pass
 
     def on_turn(self, num_turns=1):
         """
@@ -1239,7 +1256,8 @@ class Effect:
                   'vuln': 'Vulnerability', 'neutral': 'Neutral', 'attack': 'Attack', 'sb': 'Save Bonus'}
 
     def __init__(self, combat, combatant, name: str, duration: int, remaining: int, effect: dict,
-                 concentration: bool = False, children: list = None, parent: dict = None, tonend: bool = False):
+                 concentration: bool = False, children: list = None, parent: dict = None,
+                 tonend: bool = False, desc: str = None):
         if children is None:
             children = []
         self.combat = combat
@@ -1252,10 +1270,11 @@ class Effect:
         self.children = children
         self.parent = parent
         self.ticks_on_end = tonend
+        self.desc = desc
 
     @classmethod
     def new(cls, combat, combatant, name, duration, effect_args, concentration: bool = False, character=None,
-            tick_on_end=False):
+            tick_on_end=False, desc: str = None):
         if isinstance(effect_args, str):
             if (combatant and isinstance(combatant, PlayerCombatant)) or character:
                 effect_args = argparse(effect_args, combatant.character or character)
@@ -1278,7 +1297,7 @@ class Effect:
         except (ValueError, TypeError):
             raise InvalidArgument("Effect duration must be an integer.")
         return cls(combat, combatant, name, duration, duration, effect_dict, concentration=concentration,
-                   tonend=tick_on_end)
+                   tonend=tick_on_end, desc=desc)
 
     def set_parent(self, parent):
         """Sets the parent of an effect."""
@@ -1314,6 +1333,8 @@ class Effect:
         out.append(self.get_parenthetical())
         if self.concentration:
             out.append("<C>")
+        if self.desc:
+            out.append(f"\n - {self.desc}")
         return ' '.join(out)
 
     def get_short_str(self):
@@ -1432,4 +1453,4 @@ class Effect:
     def to_dict(self):
         return {'name': self.name, 'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect,
                 'concentration': self.concentration, 'children': self.children, 'parent': self.parent,
-                'tonend': self.ticks_on_end}
+                'tonend': self.ticks_on_end, 'desc': self.desc}

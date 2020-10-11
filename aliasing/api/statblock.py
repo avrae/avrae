@@ -335,6 +335,8 @@ class AliasAttackList:
             yield AliasAttack(atk, self._parent_statblock)
 
     def __getitem__(self, item):
+        if isinstance(item, slice):
+            return AliasAttackList(self._attack_list[item], self._parent_statblock)
         return AliasAttack(self._attack_list[item], self._parent_statblock)
 
     def __len__(self):

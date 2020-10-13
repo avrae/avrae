@@ -128,16 +128,25 @@ class SheetManager(commands.Cog):
     async def attack_add(self, ctx, name, *args):
         """
         Adds an attack to the active character.
-        __Arguments__
-        -d [damage]: How much damage the attack should do.
-        -b [to-hit]: The to-hit bonus of the attack.
-        -desc [description]: A description of the attack.
+        __Valid Arguments__
+        -d <damage> - How much damage the attack should do.
+        -b <to-hit> - The to-hit bonus of the attack.
+        -desc <description> - A description of the attack.
+        -verb <verb> - The verb to use for this attack. (e.g. "Padellis <verb> a dagger!")
+        proper - This attack's name is a proper noun.
+        -criton <#> - This attack crits on a number other than a natural 20.
+        -phrase <text> - Some flavor text to add to each attack with this attack.
+        -thumb <image url> - The attack's image.
+        -c <extra crit damage> - How much extra damage (beyond doubling dice) this attack does on a crit.
         """
         character: Character = await Character.from_ctx(ctx)
         parsed = argparse(args)
 
         attack = Attack.new(name, bonus_calc=parsed.join('b', '+'),
-                            damage_calc=parsed.join('d', '+'), details=parsed.join('desc', '\n'))
+                            damage_calc=parsed.join('d', '+'), details=parsed.join('desc', '\n'),
+                            verb=parsed.last('verb'), proper=parsed.last('proper', False, bool),
+                            criton=parsed.last('criton', type_=int), phrase=parsed.join('phrase', '\n'),
+                            thumb=parsed.last('thumb'), extra_crit_damage=parsed.last('c'))
 
         conflict = next((a for a in character.overrides.attacks if a.name.lower() == attack.name.lower()), None)
         if conflict:

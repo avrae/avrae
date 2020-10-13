@@ -488,16 +488,19 @@ class Attack(Effect):
 
         # roll attack against autoctx.target
         if not (hit or miss):
-            formatted_d20 = '1d20'
-            if adv == 1:
-                formatted_d20 = '2d20kh1'
-            elif adv == 2:
-                formatted_d20 = '3d20kh1'
-            elif adv == -1:
-                formatted_d20 = '2d20kl1'
-
+            # reroll before kh/kl (#1199)
+            reroll_str = ''
             if reroll:
-                formatted_d20 = f"{formatted_d20}ro{reroll}"
+                reroll_str = f"ro{reroll}"
+
+            if adv == 1:
+                formatted_d20 = f'2d20{reroll_str}kh1'
+            elif adv == 2:
+                formatted_d20 = f'3d20{reroll_str}kh1'
+            elif adv == -1:
+                formatted_d20 = f'2d20{reroll_str}kl1'
+            else:
+                formatted_d20 = f'1d20{reroll_str}'
 
             to_hit_message = 'To Hit'
             if ac:

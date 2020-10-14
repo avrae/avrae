@@ -84,6 +84,7 @@ class SimpleCombatant(AliasStatBlock):
     """
     Represents a combatant in combat.
     """
+
     def __init__(self, combatant: Combatant, hidestats=True):
         super().__init__(combatant)
         self._combatant = combatant
@@ -105,6 +106,24 @@ class SimpleCombatant(AliasStatBlock):
         :rtype: str or None
         """
         return self._combatant.notes
+
+    @property
+    def controller(self):
+        """
+        The ID of the combatant's controller.
+
+        :rtype: int
+        """
+        return int(self._combatant.controller)
+
+    @property
+    def group(self):
+        """
+        The name of the group the combatant is in, or ``None`` if the combatant is not in a group.
+
+        :rtype: str or None
+        """
+        return self._combatant.group
 
     def save(self, ability: str, adv: bool = None):
         """
@@ -334,6 +353,15 @@ class SimpleGroup:
         self.type = "group"
         self.combatants = [SimpleCombatant(c) for c in self._group.get_combatants()]
 
+    @property
+    def name(self):
+        """
+        The name of the group.
+
+        :rtype: str
+        """
+        return self._group.name
+
     def get_combatant(self, name):
         """
         Gets a :class:`~aliasing.api.combat.SimpleCombatant`, fuzzy searching (partial match) on name.
@@ -361,9 +389,34 @@ class SimpleEffect:
         self.effect = self._effect.effect
         self.conc = self._effect.concentration
         self.desc = self._effect.desc
+        self.ticks_on_end = self._effect.ticks_on_end
+        self.combatant_name = self._effect.combatant.name
+        self._parent = None
+        self._children = None
 
-    def __str__(self):
-        return str(self._effect)
+    @property
+    def parent(self):
+        """
+        Gets the parent effect of this effect, or ``None`` if this effect has no parent.
+
+        :rtype: :class:`~aliasing.api.combat.SimpleEffect` or None
+        """
+        if self._parent is None:
+            the_parent = self._effect.parent
+            if the_parent is not None:
+                self._parent = SimpleEffect(self._effect.get_parent_effect())
+        return self._parent
+
+    @property
+    def children(self):
+        """
+        Gets the child effects of this effect.
+
+        :rtype: list of :class:`~aliasing.api.combat.SimpleEffect`
+        """
+        if self._children is None:
+            self._children = [SimpleEffect(e) for e in self._effect.get_children_effects()]
+        return self._children
 
     def set_parent(self, parent):
         """
@@ -373,3 +426,12 @@ class SimpleEffect:
         :type parent: :class:`~aliasing.api.combat.SimpleEffect`
         """
         self._effect.set_parent(parent._effect)
+
+    def __str__(self):
+        return str(self._effect)
+
+    def __repr__(self):
+        return f"<SimpleEffect name=f{self.name!r} duration={self.duration!r} remaining={self.remaining!r}>"
+
+    def __eq__(self, other):
+        return isinstance(other, SimpleEffect) and self._effect is other._effect

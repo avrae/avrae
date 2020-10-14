@@ -921,6 +921,12 @@ SimpleEffect
 .. autoclass:: aliasing.api.combat.SimpleEffect()
     :members:
 
+    .. attribute:: combatant_name
+
+        The name of the combatant this effect is on.
+
+        :type: str
+
     .. attribute:: conc
 
         Whether the effect requires concentration.
@@ -950,6 +956,12 @@ SimpleEffect
         The remaining duration of the effect, in rounds.
 
         :type: int
+
+    .. attribute:: ticks_on_end
+
+        Whether the effect duration ticks at the end of the combatant's turn or at the start.
+
+        :type: bool
 
 SimpleRollResult
 ----------------

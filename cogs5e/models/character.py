@@ -1,5 +1,4 @@
 import logging
-import random
 
 import cachetools
 
@@ -150,7 +149,7 @@ class Character(StatBlock):
 
     # ---------- Basic CRUD ----------
     def get_color(self):
-        return self.options.get('color') or random.randint(0, 0xffffff)
+        return self.options.get('color', super().get_color())
 
     @property
     def owner(self):

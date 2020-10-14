@@ -13,13 +13,14 @@ from aliasing import helpers
 from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
-from cogs5e.models.errors import InvalidArgument, NoCombatants, NoSelectionElements, SelectionException
+from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
 from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
+from utils import constants
 from utils.argparser import argparse, argsplit
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
 
@@ -1186,16 +1187,53 @@ class InitTracker(commands.Cog):
             targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
 
         # embed setup
-        embed = discord.Embed()
-        if is_player:
-            embed.colour = combatant.character.get_color()
-        else:
-            embed.colour = random.randint(0, 0xffffff)
+        embed = discord.Embed(color=combatant.get_color())
 
         # run
         await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
+
+    @init.command(aliases=['c'])
+    async def check(self, ctx, check, *args):
+        """
+        Rolls an ability check as the current combatant. See `!help check` for valid arguments.
+        """
+        combat = await Combat.from_ctx(ctx)
+        combatant = combat.current_combatant
+        if combatant is None:
+            return await ctx.send("It is not currently anyone's turn.")
+
+        skill_key = await search_and_select(ctx, constants.SKILL_NAMES, check, lambda s: s)
+        embed = discord.Embed(color=combatant.get_color())
+
+        args = await helpers.parse_snippets(args, ctx)
+        args = argparse(args)
+
+        checkutils.run_check(skill_key, combatant, args, embed)
+
+        await ctx.send(embed=embed)
+        await try_delete(ctx.message)
+
+    @init.command(aliases=['s'])
+    async def save(self, ctx, save, *args):
+        """
+        Rolls an ability save as the current combatant. See `!help save` for valid arguments.
+        """
+        combat = await Combat.from_ctx(ctx)
+        combatant = combat.current_combatant
+        if combatant is None:
+            return await ctx.send("It is not currently anyone's turn.")
+
+        embed = discord.Embed(color=combatant.get_color())
+        args = await helpers.parse_snippets(args, ctx)
+        args = argparse(args)
+
+        checkutils.run_save(save, combatant, args, embed)
+
+        # send
+        await ctx.send(embed=embed)
+        await try_delete(ctx.message)
 
     @init.command()
     async def cast(self, ctx, spell_name, *, args=''):
@@ -1296,7 +1334,7 @@ class InitTracker(commands.Cog):
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
 
         embed = result['embed']
-        embed.colour = random.randint(0, 0xffffff) if not is_character else combatant.character.get_color()
+        embed.colour = combatant.get_color()
         await ctx.send(embed=embed)
         await combat.final()
 

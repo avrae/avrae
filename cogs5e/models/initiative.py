@@ -1025,6 +1025,9 @@ class PlayerCombatant(Combatant):
     def get_scope_locals(self):
         return {**self.character.get_scope_locals(), **super().get_scope_locals()}
 
+    def get_color(self):
+        return self.character.get_color()
+
     # ==== serialization ====
     @classmethod
     async def from_dict(cls, raw, ctx, combat):

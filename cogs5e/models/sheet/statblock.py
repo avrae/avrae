@@ -1,3 +1,5 @@
+import random
+
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
@@ -126,6 +128,9 @@ class StatBlock:
     # ----- Display -----
     def get_title_name(self):
         return self._name
+
+    def get_color(self):
+        return random.randint(0, 0xffffff)
 
     # ----- HP -----
     def hp_str(self):

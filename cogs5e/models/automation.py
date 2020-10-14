@@ -520,6 +520,10 @@ class Attack(Effect):
             else:
                 itercrit = to_hit_roll.crit
 
+            # nocrit
+            if itercrit == 1 and nocrit:
+                itercrit = 0
+
             # -ac #
             target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
             if target_has_ac:
@@ -547,12 +551,13 @@ class Attack(Effect):
 
             if itercrit == 2:
                 damage += self.on_miss(autoctx)
-            elif itercrit == 1 and not nocrit:
+            elif itercrit == 1:
                 damage += self.on_crit(autoctx)
             else:
                 damage += self.on_hit(autoctx)
         elif hit:
             autoctx.queue(f"**To Hit**: Automatic hit!")
+            # nocrit and crit cancel out
             if crit and not nocrit:
                 damage += self.on_crit(autoctx)
             else:

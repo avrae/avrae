@@ -446,6 +446,7 @@ class Attack(Effect):
         args = autoctx.args
         adv = args.adv(ea=True, ephem=True)
         crit = args.last('crit', None, bool, ephem=True) and 1
+        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         hit = args.last('hit', None, bool, ephem=True) and 1
         miss = (args.last('miss', None, bool, ephem=True) and not hit) and 1
         b = args.join('b', '+', ephem=True)
@@ -546,13 +547,13 @@ class Attack(Effect):
 
             if itercrit == 2:
                 damage += self.on_miss(autoctx)
-            elif itercrit == 1:
+            elif itercrit == 1 and not nocrit:
                 damage += self.on_crit(autoctx)
             else:
                 damage += self.on_hit(autoctx)
         elif hit:
             autoctx.queue(f"**To Hit**: Automatic hit!")
-            if crit:
+            if crit and not nocrit:
                 damage += self.on_crit(autoctx)
             else:
                 damage += self.on_hit(autoctx)
@@ -737,6 +738,7 @@ class Damage(Effect):
         d_args = args.get('d', [], ephem=True)
         c_args = args.get('c', [], ephem=True)
         crit_arg = args.last('crit', None, bool, ephem=True)
+        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         max_arg = args.last('max', None, bool, ephem=True)
         magic_arg = args.last('magical', None, bool, ephem=True)
         mi_arg = args.last('mi', None, int)
@@ -780,7 +782,8 @@ class Damage(Effect):
             dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
 
         # crit
-        in_crit = autoctx.in_crit or crit_arg
+        # nocrit (#1216)
+        in_crit = (autoctx.in_crit or crit_arg) and not nocrit
         roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
         if in_crit:
             dice_ast = d20.utils.tree_map(_crit_mapper, dice_ast)

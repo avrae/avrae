@@ -836,6 +836,10 @@ SimpleCombat
         The :class:`~aliasing.api.combat.SimpleCombatant` or :class:`~aliasing.api.combat.SimpleGroup`
         representing the combatant whose turn it is.
 
+    .. attribute:: groups
+
+        A list of all :class:`~aliasing.api.combat.SimpleGroup` in combat.
+
     .. attribute:: me
 
         The :class:`~aliasing.api.combat.SimpleCombatant` representing the active character in combat, or ``None``
@@ -908,6 +912,14 @@ SimpleGroup
     .. attribute:: combatants
 
         A list of all :class:`~aliasing.api.combat.SimpleCombatant` in this group.
+
+        :type: list of :class:`~aliasing.api.combat.SimpleCombatant`
+
+    .. attribute:: name
+
+        The name of the group.
+
+        :type: str
 
     .. attribute:: type
 

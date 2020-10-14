@@ -94,7 +94,6 @@ class SimpleCombatant(AliasStatBlock):
         self.initmod = int(self._combatant.init_skill)
         self.init = self._combatant.init
         self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
-        # self.group = SimpleGroup(self._combatant.group) if self._combatant.group is not None else None
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead

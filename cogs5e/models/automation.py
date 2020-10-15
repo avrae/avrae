@@ -509,37 +509,36 @@ class Attack(Effect):
             else:
                 to_hit_roll = roll(f"{formatted_d20}+{attack_bonus}")
 
-            # crit processing
+            # hit/miss/crit processing
+            # leftmost roll value - -criton
             left = to_hit_roll.expr
             while left.children:
                 left = left.children[0]
             d20_value = left.total
-
-            if d20_value >= criton:
-                itercrit = 1
-            else:
-                itercrit = to_hit_roll.crit
-
-            # nocrit
-            if itercrit == 1 and nocrit:
-                itercrit = 0
 
             # -ac #
             target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
             if target_has_ac:
                 ac = ac or autoctx.target.ac
 
-            if itercrit == 0 and ac:
-                if to_hit_roll.total < ac:
-                    itercrit = 2  # miss!
+            # assign hit values
+            did_hit = True
+            did_crit = False
+
+            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # crit
+                did_crit = True if not nocrit else False
+            elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
+                did_hit = False
+            elif ac and to_hit_roll.total < ac:  # miss
+                did_hit = False
 
             # output
             if not hide:  # not hidden
                 autoctx.queue(f"**{to_hit_message}**: {to_hit_roll.result}")
             elif target_has_ac:  # hidden
-                if itercrit == 2:
+                if not did_hit:
                     hit_type = 'MISS'
-                elif itercrit == 1:
+                elif did_crit:
                     hit_type = 'CRIT'
                 else:
                     hit_type = 'HIT'
@@ -549,9 +548,9 @@ class Attack(Effect):
                 autoctx.queue(f"**To Hit**: {formatted_d20}... = `{to_hit_roll.total}`")
                 autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
 
-            if itercrit == 2:
+            if not did_hit:
                 damage += self.on_miss(autoctx)
-            elif itercrit == 1:
+            elif did_crit:
                 damage += self.on_crit(autoctx)
             else:
                 damage += self.on_hit(autoctx)

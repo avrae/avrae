@@ -17,6 +17,7 @@ class AliasContext:
         self._channel = AliasChannel(ctx.channel)
         self._author = AliasAuthor(ctx.author)
         self._prefix = ctx.prefix
+        self._alias = ctx.invoked_with
 
     @property
     def guild(self):
@@ -54,8 +55,23 @@ class AliasContext:
         """
         return self._prefix
 
+    @property
+    def alias(self):
+        """
+        The name the alias was invoked with.
+        Note: When used in a base command, this will return the deepest sub-command, but when used in an alias it will
+        return the base command.
+
+        >>> !test {{ctx.alias}}
+        'test'
+
+        :rtype: str
+        """
+        return self._alias
+
     def __repr__(self):
-        return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix}>"
+        return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix}" \
+               f" alias={self.alias}>"
 
 
 class AliasGuild:

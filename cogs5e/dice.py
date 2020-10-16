@@ -155,6 +155,7 @@ class Dice(commands.Cog):
         *hit* - automatically hits
         *miss* - automatically misses
         *crit* - automatically crits if hit
+        *nocrit* - nullifies critical hits
         *max* - deals max damage
         *magical* - makes the damage type magical
 

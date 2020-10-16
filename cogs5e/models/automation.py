@@ -446,6 +446,7 @@ class Attack(Effect):
         args = autoctx.args
         adv = args.adv(ea=True, ephem=True)
         crit = args.last('crit', None, bool, ephem=True) and 1
+        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         hit = args.last('hit', None, bool, ephem=True) and 1
         miss = (args.last('miss', None, bool, ephem=True) and not hit) and 1
         b = args.join('b', '+', ephem=True)
@@ -511,33 +512,36 @@ class Attack(Effect):
             else:
                 to_hit_roll = roll(f"{formatted_d20}+{attack_bonus}")
 
-            # crit processing
+            # hit/miss/crit processing
+            # leftmost roll value - -criton
             left = to_hit_roll.expr
             while left.children:
                 left = left.children[0]
             d20_value = left.total
-
-            if d20_value >= criton:
-                itercrit = 1
-            else:
-                itercrit = to_hit_roll.crit
 
             # -ac #
             target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
             if target_has_ac:
                 ac = ac or autoctx.target.ac
 
-            if itercrit == 0 and ac:
-                if to_hit_roll.total < ac:
-                    itercrit = 2  # miss!
+            # assign hit values
+            did_hit = True
+            did_crit = False
+
+            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # crit
+                did_crit = True if not nocrit else False
+            elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
+                did_hit = False
+            elif ac and to_hit_roll.total < ac:  # miss
+                did_hit = False
 
             # output
             if not hide:  # not hidden
                 autoctx.queue(f"**{to_hit_message}**: {to_hit_roll.result}")
             elif target_has_ac:  # hidden
-                if itercrit == 2:
+                if not did_hit:
                     hit_type = 'MISS'
-                elif itercrit == 1:
+                elif did_crit:
                     hit_type = 'CRIT'
                 else:
                     hit_type = 'HIT'
@@ -547,15 +551,16 @@ class Attack(Effect):
                 autoctx.queue(f"**To Hit**: {formatted_d20}... = `{to_hit_roll.total}`")
                 autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
 
-            if itercrit == 2:
+            if not did_hit:
                 damage += self.on_miss(autoctx)
-            elif itercrit == 1:
+            elif did_crit:
                 damage += self.on_crit(autoctx)
             else:
                 damage += self.on_hit(autoctx)
         elif hit:
             autoctx.queue(f"**To Hit**: Automatic hit!")
-            if crit:
+            # nocrit and crit cancel out
+            if crit and not nocrit:
                 damage += self.on_crit(autoctx)
             else:
                 damage += self.on_hit(autoctx)
@@ -740,6 +745,7 @@ class Damage(Effect):
         d_args = args.get('d', [], ephem=True)
         c_args = args.get('c', [], ephem=True)
         crit_arg = args.last('crit', None, bool, ephem=True)
+        nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         max_arg = args.last('max', None, bool, ephem=True)
         magic_arg = args.last('magical', None, bool, ephem=True)
         mi_arg = args.last('mi', None, int)
@@ -783,7 +789,8 @@ class Damage(Effect):
             dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
 
         # crit
-        in_crit = autoctx.in_crit or crit_arg
+        # nocrit (#1216)
+        in_crit = (autoctx.in_crit or crit_arg) and not nocrit
         roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
         if in_crit:
             dice_ast = d20.utils.tree_map(_crit_mapper, dice_ast)

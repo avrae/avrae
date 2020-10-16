@@ -1037,6 +1037,7 @@ class InitTracker(commands.Cog):
         *hit* - The attack automatically hits.
         *miss* - The attack automatically misses.
         *crit* - The attack automatically crits.
+        *nocrit* - Nullifies critical hits.
         *max* - Maximizes damage rolls.
 
         -h - Hides rolled values.
@@ -1098,6 +1099,7 @@ class InitTracker(commands.Cog):
         *hit* - The attack automatically hits.
         *miss* - The attack automatically misses.
         *crit* - The attack automatically crits.
+        *nocrit* - Nullifies critical hits.
         *max* - Maximizes damage rolls.
 
         -h - Hides rolled values.

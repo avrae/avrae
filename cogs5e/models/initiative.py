@@ -189,6 +189,13 @@ class Combat:
                     combatants.append(c)
         return combatants
 
+    def get_groups(self):
+        """
+        Returns a list of all CombatantGroups in a combat
+        :return: A list of all CombatantGroups
+        """
+        return [g for g in self._combatants if isinstance(g, CombatantGroup)]
+
     def add_combatant(self, combatant):
         self._combatants.append(combatant)
         self.sort_combatants()

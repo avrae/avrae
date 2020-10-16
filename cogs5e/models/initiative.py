@@ -1430,17 +1430,27 @@ class Effect:
         self.combatant.remove_effect(self)
 
     def on_name_change(self, old_name, new_name):
-        for effect in self.get_children_effects():
+        for child_ref in self.children:
+            effect = self.get_child_effect(child_ref)
             effect.parent['combatant'] = new_name
+            # #1315 - if parent/child hierarchy is on the same combatant it can be weird
+            # eventually, this should be fixed by todo asssigning unique ids to combatants
+            if child_ref['combatant'] == old_name:
+                child_ref['combatant'] = new_name
 
         if self.parent:
             parent = self.get_parent_effect()
+            if parent is None:
+                return
             for child in parent.children:
                 if child['combatant'] == old_name:
                     child['combatant'] = new_name
 
     def get_parent_effect(self):
-        return self.combat.get_combatant(self.parent['combatant'], True).get_effect(self.parent['effect'], True)
+        combatant = self.combat.get_combatant(self.parent['combatant'], True)
+        if combatant is None:
+            return None
+        return combatant.get_effect(self.parent['effect'], True)
 
     def get_children_effects(self):
         """Returns an iterator of Effects of this Effect's children."""

@@ -13,6 +13,7 @@ class SimpleCombat:
         self._combat: Combat = combat
 
         self.combatants = [SimpleCombatant(c) for c in combat.get_combatants()]
+        self.groups = [SimpleGroup(c) for c in combat.get_groups()]
         if me:
             self.me = SimpleCombatant(me, False)
         else:

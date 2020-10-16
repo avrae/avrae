@@ -348,6 +348,7 @@ class GoogleSheet(SheetLoaderABC):
                 levelcell = f"N{rownum}"
                 classname = self.additional.value(namecell)
                 if classname:
+                    classname = re.sub(r'[.$]', '_', classname)  # sentry-H7 - invalid class names
                     classlevel = int(self.additional.value(levelcell))
                     level_dict[classname] = classlevel
                 else:  # classes should be top-aligned

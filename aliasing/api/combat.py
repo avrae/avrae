@@ -334,7 +334,6 @@ class SimpleGroup:
         self._group = group
         self.type = "group"
         self.combatants = [SimpleCombatant(c) for c in self._group.get_combatants()]
-        self.name = group.name
 
     def get_combatant(self, name):
         """

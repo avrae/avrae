@@ -915,12 +915,6 @@ SimpleGroup
 
         :type: list of :class:`~aliasing.api.combat.SimpleCombatant`
 
-    .. attribute:: name
-
-        The name of the group.
-
-        :type: str
-
     .. attribute:: type
 
         The type of the object (``"group"``), to determine whether this is a group or not.

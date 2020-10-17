@@ -216,7 +216,7 @@ class GoogleSheet(SheetLoaderABC):
         if '1.3' in vcell:
             self.version = (1, 3)
         elif vcell:
-            self.additional = TempCharacter(doc.get_worksheet(1))
+            self.additional = TempCharacter(doc.worksheet('Additional'))
             self.version = (2, 1) if "2.1" in vcell else (2, 0) if "2" in vcell else (1, 0)
 
     # main loading methods

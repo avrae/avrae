@@ -483,7 +483,7 @@ async def handle_alias_required_licenses(ctx, err):
         missing = natural_join([f"[{e.name}]({e.marketplace_url})" for e in err.entities], "and")
         if len(missing) > 1400:
             missing = f"{len(err.entities)} items"
-        missing_sources = natural_join([long_source_name(e.source) for e in missing_source_ids], "and")
+        missing_sources = natural_join([long_source_name(e) for e in missing_source_ids], "and")
 
         embed.description = \
             f"To use this customization and gain access to more integrations in Avrae, unlock **{missing}** by " \

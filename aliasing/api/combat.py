@@ -432,7 +432,7 @@ class SimpleEffect:
         return str(self._effect)
 
     def __repr__(self):
-        return f"<SimpleEffect name=f{self.name!r} duration={self.duration!r} remaining={self.remaining!r}>"
+        return f"<SimpleEffect name={self.name!r} duration={self.duration!r} remaining={self.remaining!r}>"
 
     def __eq__(self, other):
         return isinstance(other, SimpleEffect) and self._effect is other._effect

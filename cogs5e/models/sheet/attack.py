@@ -3,11 +3,16 @@ class Attack:
     Actually an automation script.
     """
 
-    def __init__(self, name, automation, verb=None, proper=False):
+    def __init__(self, name, automation, verb=None, proper=False, criton=None, phrase=None, thumb=None,
+                 extra_crit_damage=None, **_):
         self.name = name
         self.automation = automation
         self.verb = verb
         self.proper = proper
+        self.criton = criton
+        self.phrase = phrase
+        self.thumb = thumb
+        self.extra_crit_damage = extra_crit_damage
 
     @classmethod
     def from_dict(cls, d):
@@ -17,8 +22,8 @@ class Attack:
             return cls.from_v1(d)
 
         from cogs5e.models import automation
-        return cls(name=d['name'], automation=automation.Automation.from_data(d['automation']),
-                   verb=d.get('verb'), proper=d.get('proper'))
+        return cls(name=d.pop('name'), automation=automation.Automation.from_data(d.pop('automation')),
+                   **d)
 
     @classmethod
     def from_old(cls, d):
@@ -37,22 +42,31 @@ class Attack:
         return cls(d['name'], old_to_automation(bonus, damage, d['details']))
 
     def to_dict(self):
-        return {"name": self.name, "automation": self.automation.to_dict(), "verb": self.verb, "proper": self.proper,
-                "_v": 2}
+        base = {"name": self.name, "automation": self.automation.to_dict(), "_v": 2}
+        if self.proper:
+            base['proper'] = True
+
+        for optattr in ('verb', 'criton', 'phrase', 'thumb', 'extra_crit_damage'):
+            if (val := getattr(self, optattr)) is not None:
+                base[optattr] = val
+        return base
 
     # ---------- main funcs ----------
     @classmethod
-    def new(cls, name, bonus_calc: str = None, damage_calc: str = None, details: str = None):
+    def new(cls, name, bonus_calc: str = None, damage_calc: str = None, details: str = None,
+            verb=None, proper=False, criton=None, phrase=None, thumb=None, extra_crit_damage=None):
         """Creates a new attack for a character."""
         if bonus_calc is not None:
             bonus_calc = str(bonus_calc)
 
-        return cls(name, old_to_automation(bonus_calc, damage_calc, details))
+        return cls(name, old_to_automation(bonus_calc, damage_calc, details), verb=verb, proper=proper, criton=criton,
+                   phrase=phrase, thumb=thumb, extra_crit_damage=extra_crit_damage)
 
     @classmethod
     def copy(cls, other):
         """Returns a shallow copy of an attack."""
-        return cls(other.name, other.automation, other.verb, other.proper)
+        return cls(other.name, other.automation, other.verb, other.proper, other.criton, other.phrase, other.thumb,
+                   other.extra_crit_damage)
 
     def build_str(self, caster):
         return f"**{self.name}**: {self.automation.build_str(caster)}"

@@ -150,9 +150,9 @@ class ParsedArguments:
         adv = 0
         if self.last("adv", type_=bool, ephem=ephem):
             adv += 1
-        if self.last("dis", type_=bool, ephem=ephem):
+        if has_dis := self.last("dis", type_=bool, ephem=ephem):
             adv += -1
-        if ea and self.last("ea", type_=bool, ephem=ephem) and adv > -1:
+        if ea and self.last("ea", type_=bool, ephem=ephem) and not has_dis:
             return 2
         if not boolwise:
             return adv
@@ -180,6 +180,28 @@ class ParsedArguments:
         del self[arg]
         for context in self._contexts.values():
             del context[arg]
+
+    def update(self, new):
+        """
+        Updates the arguments in this argument list from a dict.
+
+        :param new: The new values for each argument.
+        :type new: dict[str, str] or dict[str, list[str]]
+        """
+        for k, v in new.items():
+            self[k] = v
+
+    def update_nx(self, new):
+        """
+        Like ``.update()``, but only fills in arguments that were not already parsed. Ignores the argument if the
+        value is None.
+
+        :param new: The new values for each argument.
+        :type new: dict[str, str] or dict[str, list[str]] or dict[str, None]
+        """
+        for k, v in new.items():
+            if k not in self and v is not None:
+                self[k] = v
 
     # ephemeral setup
     def _parse_ephemeral(self, argdict):
@@ -270,6 +292,10 @@ class ParsedArguments:
         return len(self._parsed)
 
     def __setitem__(self, key, value):
+        """
+        :type key: str
+        :type value: str or list[str]
+        """
         if not isinstance(value, list):
             value = [value]
         self._parsed[key] = value

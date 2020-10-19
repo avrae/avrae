@@ -105,19 +105,20 @@ class GameTrack(commands.Cog):
 
         embed = EmbedWithCharacter(character, name=False)
         if rest_type == 'long':
-            reset = character.long_rest()
+            reset_counters = character.long_rest()
             embed.title = f"{character.name} took a Long Rest!"
         elif rest_type == 'short':
-            reset = character.short_rest()
+            reset_counters = character.short_rest()
             embed.title = f"{character.name} took a Short Rest!"
         elif rest_type == 'all':
-            reset = character.reset_all_consumables()
+            reset_counters = character.reset_all_consumables()
             embed.title = f"{character.name} reset all counters!"
         else:
             raise ValueError(f"Invalid rest type: {rest_type}")
 
         if '-h' in args:
-            values = ', '.join(set(ctr.name for ctr, _ in reset) | {"Hit Points", "Death Saves", "Spell Slots"})
+            values = ', '.join(
+                set(ctr.name for ctr, _ in reset_counters) | {"Hit Points", "Death Saves", "Spell Slots"})
             embed.add_field(name="Reset Values", value=values)
         else:
             # hp
@@ -140,14 +141,10 @@ class GameTrack(commands.Cog):
                 embed.add_field(name="Spell Slots", value='\n'.join(slots_out))
 
             # ccs
-            displayed_counters = set()
             counters_out = []
-            for counter, delta in reset:
-                if counter.name in displayed_counters:
-                    continue
-                displayed_counters.add(counter.name)
-                if delta:
-                    counters_out.append(f"{counter.name}: {str(counter)} ({delta:+})")
+            for counter, result in reset_counters:
+                if result.new_value != result.old_value:
+                    counters_out.append(f"{counter.name}: {str(counter)} ({result.delta})")
                 else:
                     counters_out.append(f"{counter.name}: {str(counter)}")
             if counters_out:
@@ -473,9 +470,9 @@ class GameTrack(commands.Cog):
 
         delta = f"({counter.value - old_value:+})"
         if new_value - counter.value:  # we overflowed somewhere
-          out = f"{str(counter)} {delta}\n({abs(new_value - counter.value)} overflow)"
+            out = f"{str(counter)} {delta}\n({abs(new_value - counter.value)} overflow)"
         else:
-          out = f"{str(counter)} {delta}"
+            out = f"{str(counter)} {delta}"
 
         result_embed.add_field(name=counter.name, value=out)
 
@@ -484,12 +481,16 @@ class GameTrack(commands.Cog):
 
     @customcounter.command(name='create')
     async def customcounter_create(self, ctx, name, *args):
-        """Creates a new custom counter.
+        """
+        Creates a new custom counter.
         __Valid Arguments__
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.
         `-min <min value>` - The minimum value of the counter.
-        `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers."""
+        `-type <bubble|default>` - Whether the counter displays bubbles to show remaining uses or numbers. Default - numbers.
+        `-resetto <value>` - The value to reset the counter to. Default - maximum.
+        `-resetby <value>` - Rather than resetting to a certain value, modify the counter by this much per reset. Supports dice.
+        """
         character: Character = await Character.from_ctx(ctx)
 
         conflict = next((c for c in character.consumables if c.name.lower() == name.lower()), None)
@@ -504,8 +505,11 @@ class GameTrack(commands.Cog):
         _max = args.last('max')
         _min = args.last('min')
         _type = args.last('type')
+        reset_to = args.last('resetto')
+        reset_by = args.last('resetby')
         try:
-            new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type)
+            new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
+                                            reset_to=reset_to, reset_by=reset_by)
             character.consumables.append(new_counter)
             await character.commit(ctx)
         except InvalidArgument as e:
@@ -550,15 +554,13 @@ class GameTrack(commands.Cog):
         if name:
             character: Character = await Character.from_ctx(ctx)
             counter = await character.select_consumable(ctx, name)
-            before = counter.value
             try:
-                counter.reset()
+                result = counter.reset()
                 await character.commit(ctx)
             except ConsumableException as e:
                 await ctx.send(f"Counter could not be reset: {e}")
             else:
-                delta = counter.value - before
-                await ctx.send(f"{counter.name}: {str(counter)} ({delta:+}).")
+                await ctx.send(f"{counter.name}: {str(counter)} ({result.delta}).")
         else:
             await self._rest(ctx, 'all', *args)
 

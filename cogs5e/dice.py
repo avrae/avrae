@@ -68,7 +68,7 @@ class Dice(commands.Cog):
         if len(out) > 1999:
             out = f"{ctx.author.mention}  :game_die:\n" \
                   f"{str(res)[:100]}...\n" \
-                  f"**Total:** {res.total}"
+                  f"**Total**: {res.total}"
 
         await try_delete(ctx.message)
         await ctx.send(out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))

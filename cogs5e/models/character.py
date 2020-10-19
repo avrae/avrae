@@ -1,5 +1,4 @@
 import logging
-import random
 
 import cachetools
 
@@ -150,7 +149,7 @@ class Character(StatBlock):
 
     # ---------- Basic CRUD ----------
     def get_color(self):
-        return self.options.get('color') or random.randint(0, 0xffffff)
+        return self.options.get('color', super().get_color())
 
     @property
     def owner(self):
@@ -290,6 +289,10 @@ class Character(StatBlock):
     async def select_consumable(self, ctx, name):
         return await search_and_select(ctx, self.consumables, name, lambda ctr: ctr.name)
 
+    def get_consumable(self, name):
+        """Gets the next custom counter with the exact given name (case-sensitive). Returns None if not found."""
+        return next((con for con in self.consumables if con.name == name), None)
+
     def sync_consumable(self, ctr):
         if self._live_integration:
             self._live_integration.sync_consumable(ctr)
@@ -302,18 +305,17 @@ class Character(StatBlock):
         reset = []
         for ctr in self.consumables:
             if ctr.reset_on == scope:
-                before = ctr.value
                 try:
-                    ctr.reset()
+                    result = ctr.reset()
                 except NoReset:
                     continue
-                reset.append((ctr, ctr.value - before))
+                reset.append((ctr, result))
         return reset
 
     # ---------- RESTING ----------
     def on_hp(self):
         """
-        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return Death Saves.
         """
         reset = []
@@ -322,42 +324,45 @@ class Character(StatBlock):
             self.death_saves.reset()
         return reset
 
-    def short_rest(self):
+    def short_rest(self, cascade=True):
         """
-        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return Spell Slots or Death Saves.
         """
         reset = []
-        reset.extend(self.on_hp())
+        if cascade:
+            reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
         if self.get_setting('srslots', False):
             self.spellbook.reset_slots()
         return reset
 
-    def long_rest(self):
+    def long_rest(self, cascade=True):
         """
         Resets all applicable consumables.
-        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return HP, Spell Slots, or Death Saves.
         """
         reset = []
-        reset.extend(self.on_hp())
-        reset.extend(self.short_rest())
+        if cascade:
+            reset.extend(self.on_hp())
+            reset.extend(self.short_rest(cascade=False))
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
         if not self.get_setting('srslots', False):
             self.spellbook.reset_slots()
         return reset
 
-    def reset_all_consumables(self):
+    def reset_all_consumables(self, cascade=True):
         """
-        Returns a list of all the reset counters and their deltas in [(counter, delta)].
+        Returns a list of all the reset counters and their reset results in [(counter, result)].
         Resets but does not return HP, Spell Slots, or Death Saves.
         """
         reset = []
-        reset.extend(self.on_hp())
-        reset.extend(self.short_rest())
-        reset.extend(self.long_rest())
+        if cascade:
+            reset.extend(self.on_hp())
+            reset.extend(self.short_rest(cascade=False))
+            reset.extend(self.long_rest(cascade=False))
         reset.extend(self._reset_custom(None))
         return reset
 

@@ -172,6 +172,16 @@ class CustomCounter:
         elif max_value is not None:
             initial_value = max_value
 
+        # length checks
+        if desc and len(desc) > 800:
+            raise InvalidArgument('Description must be less than 800 characters.')
+
+        if title and len(title) >= 256:
+            raise InvalidArgument('Title must be less than 256 characters.')
+
+        if len(name) > 256:
+            raise InvalidArgument('Name must be less than 256 characters.')
+
         return cls(character, name.strip(), initial_value, minv, maxv, reset, display_type, live_id,
                    title, desc, reset_to, reset_by)
 

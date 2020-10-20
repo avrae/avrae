@@ -94,7 +94,7 @@ class SimpleCombatant(AliasStatBlock):
 
         self.initmod = int(self._combatant.init_skill)
         self.init = self._combatant.init
-        self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
+        self._update_effects()
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
@@ -270,7 +270,7 @@ class SimpleCombatant(AliasStatBlock):
         if parent:
             effectObj.set_parent(parent._effect)
         self._combatant.add_effect(effectObj)
-        self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
+        self._update_effects()
 
     def remove_effect(self, name: str):
         """
@@ -281,10 +281,14 @@ class SimpleCombatant(AliasStatBlock):
         effect = self._combatant.get_effect(name, strict=False)
         if effect:
             effect.remove()
-            self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
+            self._update_effects()
 
     def __str__(self):
         return str(self._combatant)
+
+    # === utility ====
+    def _update_effects(self):
+        self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
 
     # === deprecated ===
     @property

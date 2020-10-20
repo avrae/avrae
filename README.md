@@ -112,3 +112,4 @@ Env vars required to deploy to production - not required for local dev:
 Other env vars:
 - `NUM_SHARDS` - explicitly set the number of shards to run
 - `GIT_COMMIT_SHA` - should be set in Travis (required for prod)
+

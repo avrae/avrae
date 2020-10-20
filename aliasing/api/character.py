@@ -284,6 +284,24 @@ class AliasCustomCounter:
         return self._cc.name
 
     @property
+    def title(self):
+        """
+        Returns the cc's title.
+
+        :rtype: str or None
+        """
+        return self._cc.title
+
+    @property
+    def desc(self):
+        """
+        Returns the cc's description.
+
+        :rtype: str or None
+        """
+        return self._cc.desc
+
+    @property
     def value(self):
         """
         Returns the current value of the cc.
@@ -376,8 +394,8 @@ class AliasCustomCounter:
 
     def __repr__(self):
         return f"<AliasCustomCounter name={self.name} value={self.value} max={self.max} min={self.min} " \
-               f"reset_on={self.reset_on} display_type={self.display_type} reset_to={self.reset_to} " \
-               f"reset_by={self.reset_by}>"
+               f"title={self.title} desc={self.desc} display_type={self.display_type} " \
+               f"reset_on={self.reset_on} reset_to={self.reset_to} reset_by={self.reset_by}>"
 
 
 class AliasDeathSaves:

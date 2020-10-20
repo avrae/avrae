@@ -270,6 +270,7 @@ class SimpleCombatant(AliasStatBlock):
         if parent:
             effectObj.set_parent(parent._effect)
         self._combatant.add_effect(effectObj)
+        self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
 
     def remove_effect(self, name: str):
         """
@@ -280,6 +281,7 @@ class SimpleCombatant(AliasStatBlock):
         effect = self._combatant.get_effect(name, strict=False)
         if effect:
             effect.remove()
+            self.effects = [SimpleEffect(e) for e in self._combatant.get_effects()]
 
     def __str__(self):
         return str(self._combatant)

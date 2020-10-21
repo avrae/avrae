@@ -149,7 +149,7 @@ class Character(StatBlock):
 
     # ---------- Basic CRUD ----------
     def get_color(self):
-        return self.options.get('color', super().get_color())
+        return self.options.get('color') or super().get_color()
 
     @property
     def owner(self):

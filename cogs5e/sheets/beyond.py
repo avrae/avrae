@@ -288,8 +288,8 @@ class BeyondSheetParser(SheetLoaderABC):
 
             # target and damage meta
             target = automation.Target('each', [the_attack])
-            target.meta = [automation.Roll(attack['damage'] or '0', 'damage')]
-            effects = [target]
+            damage_roll = automation.Roll(attack['damage'] or '0', 'damage')
+            effects = [damage_roll, target]
             # description text
             if desc:
                 effects.append(automation.Text(desc))

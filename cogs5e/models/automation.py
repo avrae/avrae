@@ -274,7 +274,7 @@ class AutomationTarget:
 class Effect:
     def __init__(self, type_, meta=None, **_):  # ignore bad kwargs
         self.type = type_
-        if meta:
+        if meta:  # meta is deprecated
             meta = Effect.deserialize(meta)
         else:
             meta = []
@@ -354,6 +354,8 @@ class Target(Effect):
 
     def run(self, autoctx):
         super(Target, self).run(autoctx)
+        # WEB-038 (.io #121) - this will semantically work correctly, but will make the display really weird
+        previous_target = autoctx.target
 
         if self.target in ('all', 'each'):
             for target in autoctx.targets:
@@ -368,7 +370,8 @@ class Target(Effect):
             except IndexError:
                 return
             self.run_effects(autoctx)
-        autoctx.target = None
+
+        autoctx.target = previous_target
 
     def run_effects(self, autoctx):
         args = autoctx.args

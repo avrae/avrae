@@ -1,6 +1,7 @@
 import itertools
 import logging
 
+from cogs5e.models.errors import CounterOutOfBounds
 from cogs5e.models.sheet.attack import AttackList
 from cogs5e.models.sheet.base import BaseStats, Levels, Saves, Skills
 from cogs5e.models.sheet.resistance import Resistances
@@ -424,6 +425,9 @@ class MonsterCastableSpellbook(MonsterSpellbook):
         if spell.name.lower() in [s.lower() for s in self.at_will]:
             return
         elif (daily_key := next((k for k in self.daily if spell.name.lower() == k.lower()), None)) is not None:
-            self.daily[daily_key] -= 1
+            if self.daily[daily_key] > 0:
+                self.daily[daily_key] -= 1
+            else:
+                raise CounterOutOfBounds("You do not have any remaining casts of this spell.")
         else:
             self.use_slot(level)

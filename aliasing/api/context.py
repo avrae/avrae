@@ -15,7 +15,8 @@ class AliasContext:
         """
         self._guild = None if ctx.guild is None else AliasGuild(ctx.guild)
         self._channel = AliasChannel(ctx.channel)
-        self._category = None if ctx.channel.category is None else AliasCategory(ctx.channel.category)
+        self._category = AliasCategory(ctx.channel.category) if hasattr(ctx.channel, 'category') \
+                                                                and ctx.channel.category is not None else None
         self._author = AliasAuthor(ctx.author)
         self._prefix = ctx.prefix
         self._alias = ctx.invoked_with

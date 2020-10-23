@@ -52,8 +52,9 @@ class Dice(commands.Cog):
         **Advanced Options**
         __Operators__
         Operators are always followed by a selector, and operate on the items in the set that match the selector.
+        A set can be made of a single or multiple entries i.e. `1d20` or `(1d6,1d8,1d10)`
 
-        Work on dice and numbers
+        These operations work on dice and sets of numbers
         `k` - keep - Keeps all matched values.
         `p` - drop - Drops all matched values.
 

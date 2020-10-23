@@ -15,6 +15,7 @@ class AliasContext:
         """
         self._guild = None if ctx.guild is None else AliasGuild(ctx.guild)
         self._channel = AliasChannel(ctx.channel)
+        self._category = AliasCategory(ctx.channel.category)
         self._author = AliasAuthor(ctx.author)
         self._prefix = ctx.prefix
         self._alias = ctx.invoked_with
@@ -69,9 +70,18 @@ class AliasContext:
         """
         return self._alias
 
+    @property
+    def category(self):
+        """
+        The category of the channel the alias was run in
+
+        :rtype: :class:`~aliasing.api.context.AliasContext`
+        """
+        return self._category
+
     def __repr__(self):
-        return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix}" \
-               f" alias={self.alias}>"
+        return f"<AliasContext guild={self.guild} channel={self.channel} category={self.category} author={self.author}"\
+               f" prefix={self.prefix} alias={self.alias}>"
 
 
 class AliasGuild:
@@ -204,3 +214,37 @@ class AliasAuthor:
 
     def __str__(self):
         return f"{self.name}#{self.discriminator}"
+
+
+class AliasCategory:
+    """
+    Represents the category of the Discord channel an alias was invoked in.
+    """
+
+    def __init__(self, category):
+        """
+        :type channel: discord.TextChannel
+        """
+        self._name = str(category)
+        self._id = category.id
+
+    @property
+    def name(self):
+        """
+        The name of the channel, not including the preceding hash (#).
+
+        :rtype: str
+        """
+        return self._name
+
+    @property
+    def id(self):
+        """
+        The ID of the channel.
+
+        :rtype: int
+        """
+        return self._id
+
+    def __str__(self):
+        return self.name

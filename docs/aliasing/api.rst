@@ -1035,6 +1035,12 @@ AliasChannel
 .. autoclass:: aliasing.api.context.AliasChannel()
     :members:
 
+AliasCategory
+^^^^^^^^^^^^
+
+.. autoclass:: aliasing.api.context.AliasCategory()
+    :members:
+
 AliasAuthor
 ^^^^^^^^^^^
 

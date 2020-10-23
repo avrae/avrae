@@ -62,9 +62,9 @@ class Dice(commands.Cog):
         `rr` - reroll - Rerolls all matched die values until none match.
         `ro` - reroll - once - Rerolls all matched die values once. 
         `ra` - reroll and add - Rerolls up to one matched die value once, add to the roll.
-        `e` - explode on - Rolls an additional die for each matched die value. Exploded dice can explode.
         `mi` - minimum - Sets the minimum value of each die.
         `ma` - maximum - Sets the maximum value of each die.
+        `e` - explode on - Rolls an additional die for each matched die value. Exploded dice can explode.
 
         __Selectors__
         Selectors select from the remaining kept values in a set.

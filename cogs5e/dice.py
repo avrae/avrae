@@ -31,31 +31,59 @@ class Dice(commands.Cog):
 
     @commands.command(name='roll', aliases=['r'])
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
-        """Rolls dice in xdy format.
+        """Roll is used to roll any combination of dice in the `XdY` format. (`1d6`, `2d8`, etc)
+        
+        Multiple rolls can be added together as an equation. Standard Math operators and Parentheses can be used: `() + - / \*`
+
+        Roll also accepts `adv` and `dis` for Advantage and Disadvantage. Rolls can also be tagged with `[text]` for informational purposes. Any text after the roll will assign the name of the roll.
+
+        ___Examples___
+        `!r` or `!r 1d20` - Roll a single d20, just like at the table
+        `!r 1d20+4` - A skill check or attack roll
+        `!r 1d8+2+1d6` - Longbow damage with Hunter’s Mark
+
+        `!r 1d20+1 adv` - A skill check or attack roll with Advantage
+        `!r 1d20-3 dis` - A skill check or attack roll with Disadvantage
+
+        `!r (1d8+4)*2` - Warhammer damage against bludgeoning vulnerability
+
+        `!r 1d10[cold]+2d6[piercing] Ice Knife` - The Ice Knife Spell does cold and piercing damage
+
+        **Advanced Options**
+        __Operators__
+        Operators are always followed by a selector, and operate on the items in the set that match the selector.
+
+        Work on dice and numbers
+        `k` - keep - Keeps all matched values.
+        `p` - drop - Drops all matched values.
+
+        These operators only work on dice rolls.
+        `rr` - reroll - Rerolls all matched die values until none match.
+        `ro` - reroll - once - Rerolls all matched die values once. 
+        `ra` - reroll and add - Rerolls up to one matched die value once, add to the roll.
+        `e` - explode on - Rolls an additional die for each matched die value. Exploded dice can explode.
+        `mi` - minimum - Sets the minimum value of each die.
+        `ma` - maximum - Sets the maximum value of each die.
+
+        __Selectors__
+        Selectors select from the remaining kept values in a set.
+        `X`  | literal X
+        `lX` | lowest X
+        `hX` | highest X
+        `>X` | greater than X
+        `<X` | less than X
+
         __Examples__
-        !r xdy Attack!
-        !r xdy+z adv Attack with Advantage!
-        !r xdy-z dis Hide with Heavy Armor!
-        !r xdy+xdy*z
-        !r XdYkhZ
-        !r 4d6mi2[fire] Elemental Adept, Fire
-        !r 2d6e6 Explode on 6
-        !r 10d6ra6 Spell Bombardment
-        !r 4d6ro<3 Great Weapon Master
-        __Supported Operators__
-        k (keep)
-        p (drop)
-        ro (reroll once)
-        rr (reroll infinitely)
-        mi/ma (min/max result)
-        e (explode dice of value)
-        ra (reroll and add)
-        __Supported Selectors__
-        X (literal X)
-        lX (lowest X)
-        hX (highest X)
-        >X (greater than X)
-        <X (less than X)"""
+        `!r 2d20kh1+4` - Advantage roll, using Keep Highest format
+        `!r 2d20kl1-2` - Disadvantage roll, using Keep Lowest format
+        `!r 4d6mi2[fire]` - Elemental Adept, Fire
+        `!r 10d6ra6` - Wild Magic Sorcerer Spell Bombardment
+        `!r 4d6ro<3` - Great Weapon Master
+        `!r 2d6e6` - Explode on 6
+        `!r (1d6,1d8,1d10)kh2` - Keep 2 highest rolls of a set of dice
+
+        **Additional Information can be found at:**
+        https://d20.readthedocs.io/en/latest/start.html#dice-syntax"""
 
         if rollStr == '0/0':  # easter eggs
             return await ctx.send("What do you expect me to do, destroy the universe?")

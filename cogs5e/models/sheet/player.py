@@ -94,12 +94,12 @@ class CustomCounter:
                  'hp': "Gaining HP"}
 
     def __init__(self, character, name, value, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
-                 title=None, desc=None, reset_to=None, reset_by=None):
+                 reset_to=None, reset_by=None, title=None, desc=None):
         self._character = character
         self.name = name
 
-        self._title = title
-        self._desc = desc
+        self.title = title
+        self.desc = desc
 
         self._value = value
         self.min = minv
@@ -120,12 +120,12 @@ class CustomCounter:
 
     def to_dict(self):
         return {"name": self.name, "value": self._value, "minv": self.min, "maxv": self.max, "reset": self.reset_on,
-                "display_type": self.display_type, "live_id": self.live_id, "title": self.title, "desc": self.desc,
-                "reset_to": self.reset_to, "reset_by": self.reset_by}
+                "display_type": self.display_type, "live_id": self.live_id, "reset_to": self.reset_to,
+                "reset_by": self.reset_by, "title": self.title, "desc": self.desc}
 
     @classmethod
     def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
-            title=None, desc=None, reset_to=None, reset_by=None):
+            reset_to=None, reset_by=None, title=None, desc=None):
         if reset not in ('short', 'long', 'none', None):
             raise InvalidArgument("Invalid reset.")
         if any(c in name for c in ".$"):
@@ -183,7 +183,7 @@ class CustomCounter:
             raise InvalidArgument('Name must be less than 256 characters.')
 
         return cls(character, name.strip(), initial_value, minv, maxv, reset, display_type, live_id,
-                   title, desc, reset_to, reset_by)
+                   reset_to, reset_by, title, desc)
 
     # ---------- main funcs ----------
     def get_min(self):
@@ -210,25 +210,6 @@ class CustomCounter:
     @property
     def value(self):
         return self._value
-
-    @property
-    def title(self):
-        # Replace `[cname]` with the counter's name and [name] with player's name
-        if self._title is not None:
-            return self._title.replace('[cname]', self.name).replace('[name]', self._character.name)
-        return None
-
-    @title.setter
-    def title(self, value):
-        self._title = value
-
-    @property
-    def desc(self):
-        return self._desc
-
-    @desc.setter
-    def desc(self, value):
-        self._desc = value
 
     def set(self, new_value: int, strict=False):
         minv = self.get_min()
@@ -312,15 +293,14 @@ class CustomCounter:
     def __str__(self):
         _max = self.get_max()
 
-        out = self.desc + '\n' if self.desc else ''
         if self.display_type == 'bubble':
             assert self.max is not None
-            out += bubble_format(self.value, _max)
+            out = bubble_format(self.value, _max)
         else:
             if self.max is not None:
-                out += f"{self.value}/{_max}"
+                out = f"{self.value}/{_max}"
             else:
-                out += str(self.value)
+                out = str(self.value)
 
         return out
 

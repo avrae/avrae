@@ -15,8 +15,6 @@ class AliasContext:
         """
         self._guild = None if ctx.guild is None else AliasGuild(ctx.guild)
         self._channel = AliasChannel(ctx.channel)
-        self._category = AliasCategory(ctx.channel.category) if hasattr(ctx.channel, 'category') \
-                                                                and ctx.channel.category is not None else None
         self._author = AliasAuthor(ctx.author)
         self._prefix = ctx.prefix
         self._alias = ctx.invoked_with
@@ -71,14 +69,6 @@ class AliasContext:
         """
         return self._alias
 
-    @property
-    def category(self):
-        """
-        The category of the channel the alias was run in
-
-        :rtype: :class:`~aliasing.api.context.AliasContext`
-        """
-        return self._category
 
     def __repr__(self):
         return f"<AliasContext guild={self.guild} channel={self.channel} category={self.category} author={self.author}"\
@@ -131,6 +121,8 @@ class AliasChannel:
         self._name = str(channel)
         self._id = channel.id
         self._topic = channel.topic if not isinstance(channel, discord.DMChannel) else None
+        self._category = AliasCategory(channel.category) if hasattr(channel, 'category') \
+                                                            and channel.category is not None else None
 
     @property
     def name(self):
@@ -158,6 +150,15 @@ class AliasChannel:
         :rtype: str
         """
         return self._topic
+
+    @property
+    def category(self):
+        """
+        The category of the channel the alias was run in
+
+        :rtype: :class:`~aliasing.api.context.AliasCategory` or None
+        """
+        return self._category
 
     def __str__(self):
         return self.name
@@ -224,7 +225,7 @@ class AliasCategory:
 
     def __init__(self, category):
         """
-        :type channel: discord.TextChannel
+        :type channel: discord.ChannelCategory
         """
         self._name = str(category)
         self._id = category.id
@@ -232,7 +233,7 @@ class AliasCategory:
     @property
     def name(self):
         """
-        The name of the channel, not including the preceding hash (#).
+        The name of the category, not including the preceding hash (#).
 
         :rtype: str
         """
@@ -241,7 +242,7 @@ class AliasCategory:
     @property
     def id(self):
         """
-        The ID of the channel.
+        The ID of the category.
 
         :rtype: int
         """

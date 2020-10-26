@@ -443,8 +443,8 @@ class GameTrack(commands.Cog):
 
         cc_embed_title = counter.title if counter.title is not None else counter.name
 
-        # replace [cname] and [name] in title
-        cc_embed_title = cc_embed_title.replace('[name]', character.name).replace('[cname]', counter.name)
+        # replace [name] in title
+        cc_embed_title = cc_embed_title.replace('[name]', character.name)
 
         cc_desc = counter.desc + '\n' if counter.desc else ''
 
@@ -492,7 +492,7 @@ class GameTrack(commands.Cog):
         """
         Creates a new custom counter.
         __Valid Arguments__
-        `-title <title>` - Sets the title when setting or viewing the counter. `[cname]` will be replaced with the counter name and `[name]` will be replaced with the player's name.
+        `-title <title>` - Sets the title when setting or viewing the counter. `[name]` will be replaced with the player's name.
         `-desc <desc>` - Sets the description when setting or viewing the counter.
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.

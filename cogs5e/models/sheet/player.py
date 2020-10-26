@@ -173,8 +173,8 @@ class CustomCounter:
             initial_value = max_value
 
         # length checks
-        if desc and len(desc) > 800:
-            raise InvalidArgument('Description must be less than 800 characters.')
+        if desc and len(desc) > 1024:
+            raise InvalidArgument('Description must be less than 1024 characters.')
 
         if title and len(title) >= 256:
             raise InvalidArgument('Title must be less than 256 characters.')
@@ -262,14 +262,12 @@ class CustomCounter:
         return CustomCounterResetResult(new_value=new_value, old_value=old_value, target_value=target_value,
                                         delta=delta)
 
-    def full_str(self, desc=False):
+    def full_str(self):
         _min = self.get_min()
         _max = self.get_max()
         _reset = self.RESET_MAP.get(self.reset_on)
 
         val = ''
-        if desc and self.desc:
-            val += f'{self.desc}\n'
 
         if self.display_type == 'bubble':
             assert self.max is not None

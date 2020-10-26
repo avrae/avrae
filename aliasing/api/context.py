@@ -71,8 +71,8 @@ class AliasContext:
 
 
     def __repr__(self):
-        return f"<AliasContext guild={self.guild} channel={self.channel} category={self.category} author={self.author}"\
-               f" prefix={self.prefix} alias={self.alias}>"
+        return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix} " \
+               f"alias={self.alias}>"
 
 
 class AliasGuild:
@@ -121,8 +121,7 @@ class AliasChannel:
         self._name = str(channel)
         self._id = channel.id
         self._topic = channel.topic if not isinstance(channel, discord.DMChannel) else None
-        self._category = AliasCategory(channel.category) if hasattr(channel, 'category') \
-                                                            and channel.category is not None else None
+        self._category = AliasCategory(channel.category) if getattr(channel, 'category', None) is not None else None
 
     @property
     def name(self):
@@ -233,7 +232,7 @@ class AliasCategory:
     @property
     def name(self):
         """
-        The name of the category, not including the preceding hash (#).
+        The name of the category
 
         :rtype: str
         """

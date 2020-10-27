@@ -267,8 +267,6 @@ class CustomCounter:
         _max = self.get_max()
         _reset = self.RESET_MAP.get(self.reset_on)
 
-        val = ''
-
         if self.display_type == 'bubble':
             assert self.max is not None
             val = f"{bubble_format(self.value, _max)}\n"

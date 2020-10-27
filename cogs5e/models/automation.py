@@ -196,6 +196,12 @@ class AutomationContext:
         return 0
 
     def parse_annostr(self, annostr, is_full_expression=False):
+        """
+        Parses an AnnotatedString or IntExpression.
+
+        :param str annostr: The string to parse.
+        :param bool is_full_expression: Whether the string is an IntExpression.
+        """
         if not is_full_expression:
             return self.evaluator.transformed_str(annostr, extra_names=self.metavars)
 
@@ -642,7 +648,7 @@ class Save(Effect):
         dc_override = None
         if self.dc:
             try:
-                dc_override = autoctx.parse_annostr(self.dc)
+                dc_override = autoctx.parse_annostr(self.dc, is_full_expression=True)
                 dc_override = int(dc_override)
             except (TypeError, ValueError):
                 raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")

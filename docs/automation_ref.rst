@@ -5,18 +5,12 @@ This page details the structure of Avrae's Automation system, the backbone behin
 
 Basic Structure
 ---------------
-An automation run is made up of a list of *effects*.
-See below for what each effect does.
+An automation run is made up of a list of *effects*. See below for what each effect does.
 
-.. code-block:: typescript
+All Automation runs provide the following variables:
 
-    {
-        type: string;
-        meta?: Effect[];
-    }
-
-All effects in an effect's ``meta`` will be executed before the
-rest of the effect, if there is a meta.
+- ``caster`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The character, combatant, or monster who is running the automation.
+- ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`) A list of combatants targeted by this automation (i.e. the ``-t`` argument).
 
 Target
 ------
@@ -41,6 +35,11 @@ It designates what creatures to affect.
 .. attribute:: effects
 
     A list of effects that each targeted creature will be subject to.
+
+**Variables**
+
+- ``target`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The current target.
+- ``targetIteration`` (:class:`int`) If running multiple iterations (i.e. ``-rr``), the current iteration.
 
 Attack
 ------
@@ -68,6 +67,10 @@ It must be inside a Target effect.
 
      *optional* - An IntExpression that details what attack bonus to use (defaults to caster's spell attack mod).
 
+**Variables**
+
+- ``lastAttackDidHit`` (:class:`bool`) Whether the attack hit.
+- ``lastAttackDidCrit`` (:class:`bool`) If the attack hit, whether it crit.
 
 Save
 ----
@@ -99,6 +102,10 @@ It must be inside a Target effect.
 .. attribute:: dc
 
      *optional* - An IntExpression that details what DC to use (defaults to caster's spell DC).
+
+**Variables**
+
+- ``lastSaveDidPass`` (:class:`bool`) Whether the target passed the save.
 
 Damage
 ------
@@ -132,6 +139,10 @@ Deals damage to a targeted creature. It must be inside a Target effect.
 
      *optional* - Whether this roll should scale like a cantrip.
 
+**Variables**
+
+- ``lastDamage`` (:class:`int`) The amount of damage dealt.
+
 TempHP
 ------
 .. code-block:: typescript
@@ -156,6 +167,10 @@ Sets the target's THP. It must be inside a Target effect.
 .. attribute:: cantripScale
 
      *optional* - Whether this roll should scale like a cantrip.
+
+**Variables**
+
+- ``lastTempHp`` (:class:`int`) The amount of temp HP granted.
 
 IEffect
 -------
@@ -202,7 +217,8 @@ Roll
         hidden?: boolean;
     }
 
-Rolls some dice and saves the result. Should be in a Meta tag.
+Rolls some dice and saves the result in a variable. Displays the roll and its name in a Meta field, unless
+``hidden`` is ``true``.
 
 .. attribute:: dice
 
@@ -224,6 +240,10 @@ Rolls some dice and saves the result. Should be in a Meta tag.
 
      *optional* - If ``true``, won't display the roll in the Meta field, or apply any bonuses from -d.
 
+**Variables**
+
+- ``lastRoll`` (:class:`int`) The total of the roll.
+
 Text
 ----
 .. code-block:: typescript
@@ -241,11 +261,15 @@ Outputs a short amount of text in the resulting embed.
 
 AnnotatedString
 ---------------
-An AnnotatedString is a string that can access saved variables from a meta effect.
+An AnnotatedString is a string that can access saved variables.
 To access a variable, surround the name in brackets (e.g. ``{damage}``).
-Available variables are any defined in Meta effects and the :ref:`cvar-table`.
+Available variables include:
 
-This will replace the bracketed portion with the value of the meta variable (usually a roll).
+- implicit variables from Effects (see relevant effect for a list of variables it provides)
+- any defined in a ``Roll`` or ``Set Variable`` effect
+- all variables from the :ref:`cvar-table`
+
+This will replace the bracketed portion with the value of the meta variable.
 
 To perform math inside an AnnotatedString, surround the formula with two curly braces
 (e.g. ``{{floor(dexterityMod+spell)}}``).
@@ -284,7 +308,7 @@ A normal attack:
         "effects": [
           {
             "type": "attack",
-            "attackBonus": "{dexterityMod + proficiencyBonus}",
+            "attackBonus": "dexterityMod + proficiencyBonus",
             "hit": [
               {
                 "type": "damage",
@@ -302,6 +326,19 @@ A spell that requires a Dexterity save for half damage:
 .. code-block:: json
 
     [
+      {
+        "type": "roll",
+        "dice": "8d6[fire]",
+        "name": "damage",
+        "higher": {
+          "4": "1d6[fire]",
+          "5": "2d6[fire]",
+          "6": "3d6[fire]",
+          "7": "4d6[fire]",
+          "8": "5d6[fire]",
+          "9": "6d6[fire]"
+        }
+      },
       {
         "type": "target",
         "target": "all",
@@ -322,21 +359,6 @@ A spell that requires a Dexterity save for half damage:
               }
             ]
           }
-        ],
-        "meta": [
-          {
-            "type": "roll",
-            "dice": "8d6[fire]",
-            "name": "damage",
-            "higher": {
-              "4": "1d6[fire]",
-              "5": "2d6[fire]",
-              "6": "3d6[fire]",
-              "7": "4d6[fire]",
-              "8": "5d6[fire]",
-              "9": "6d6[fire]"
-            }
-          }
         ]
       },
       {
@@ -356,7 +378,7 @@ An attack from a poisoned blade:
         "effects": [
           {
             "type": "attack",
-            "attackBonus": "{strengthMod + proficiencyBonus}",
+            "attackBonus": "strengthMod + proficiencyBonus",
             "hit": [
               {
                 "type": "damage",

@@ -446,13 +446,11 @@ class GameTrack(commands.Cog):
         # replace [name] in title
         cc_embed_title = cc_embed_title.replace('[name]', character.name)
 
-        cc_desc = counter.desc if counter.desc else ''
-
         if modifier is None:  # display value
             counter_display_embed = EmbedWithCharacter(character)
             counter_display_embed.add_field(name=counter.name, value=counter.full_str())
-            if cc_desc:
-                counter_display_embed.add_field(name='Description', value=cc_desc, inline=False)
+            if counter.desc:
+                counter_display_embed.add_field(name='Description', value=counter.desc, inline=False)
             return await ctx.send(embed=counter_display_embed)
 
         operator = None
@@ -486,8 +484,8 @@ class GameTrack(commands.Cog):
 
         result_embed.add_field(name=cc_embed_title, value=out)
 
-        if cc_desc:
-            result_embed.add_field(name='Description', value=cc_desc, inline=False)
+        if counter.desc:
+            result_embed.add_field(name='Description', value=counter.desc, inline=False)
 
         await try_delete(ctx.message)
         await ctx.send(embed=result_embed)

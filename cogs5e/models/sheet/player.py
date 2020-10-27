@@ -271,9 +271,9 @@ class CustomCounter:
 
         if self.display_type == 'bubble':
             assert self.max is not None
-            val += f"{bubble_format(self.value, _max)}\n"
+            val = f"{bubble_format(self.value, _max)}\n"
         else:
-            val += f"**Current Value**: {self.value}\n"
+            val = f"**Current Value**: {self.value}\n"
             if self.min is not None and self.max is not None:
                 val += f"**Range**: {_min} - {_max}\n"
             elif self.min is not None:

@@ -33,7 +33,7 @@ class Dice(commands.Cog):
     async def rollCmd(self, ctx, *, rollStr: str = '1d20'):
         """Roll is used to roll any combination of dice in the `XdY` format. (`1d6`, `2d8`, etc)
         
-        Multiple rolls can be added together as an equation. Standard Math operators and Parentheses can be used: `() + - / \*`
+        Multiple rolls can be added together as an equation. Standard Math operators and Parentheses can be used: `() + - / *`
 
         Roll also accepts `adv` and `dis` for Advantage and Disadvantage. Rolls can also be tagged with `[text]` for informational purposes. Any text after the roll will assign the name of the roll.
 

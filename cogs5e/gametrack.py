@@ -434,15 +434,23 @@ class GameTrack(commands.Cog):
     async def customcounter(self, ctx, name=None, *, modifier=None):
         """Commands to implement custom counters.
         When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
-        If modifier is not supplied, prints the value and metadata of the counter *name*."""
+        If modifier is not supplied, prints the value and metadata of the counter *name*.
+        """
         if name is None:
             return await self.customcounter_summary(ctx)
         character: Character = await Character.from_ctx(ctx)
         counter = await character.select_consumable(ctx, name)
 
+        cc_embed_title = counter.title if counter.title is not None else counter.name
+
+        # replace [name] in title
+        cc_embed_title = cc_embed_title.replace('[name]', character.name)
+
         if modifier is None:  # display value
             counter_display_embed = EmbedWithCharacter(character)
             counter_display_embed.add_field(name=counter.name, value=counter.full_str())
+            if counter.desc:
+                counter_display_embed.add_field(name='Description', value=counter.desc, inline=False)
             return await ctx.send(embed=counter_display_embed)
 
         operator = None
@@ -474,7 +482,10 @@ class GameTrack(commands.Cog):
         else:
             out = f"{str(counter)} {delta}"
 
-        result_embed.add_field(name=counter.name, value=out)
+        result_embed.add_field(name=cc_embed_title, value=out)
+
+        if counter.desc:
+            result_embed.add_field(name='Description', value=counter.desc, inline=False)
 
         await try_delete(ctx.message)
         await ctx.send(embed=result_embed)
@@ -484,6 +495,8 @@ class GameTrack(commands.Cog):
         """
         Creates a new custom counter.
         __Valid Arguments__
+        `-title <title>` - Sets the title when setting or viewing the counter. `[name]` will be replaced with the player's name.
+        `-desc <desc>` - Sets the description when setting or viewing the counter.
         `-reset <short|long|none>` - Counter will reset to max on a short/long rest, or not ever when "none". Default - will reset on a call of `!cc reset`.
         `-max <max value>` - The maximum value of the counter.
         `-min <min value>` - The minimum value of the counter.
@@ -507,9 +520,11 @@ class GameTrack(commands.Cog):
         _type = args.last('type')
         reset_to = args.last('resetto')
         reset_by = args.last('resetby')
+        title = args.last('title')
+        desc = args.last('desc')
         try:
             new_counter = CustomCounter.new(character, name, maxv=_max, minv=_min, reset=_reset, display_type=_type,
-                                            reset_to=reset_to, reset_by=reset_by)
+                                            reset_to=reset_to, reset_by=reset_by, title=title, desc=desc)
             character.consumables.append(new_counter)
             await character.commit(ctx)
         except InvalidArgument as e:

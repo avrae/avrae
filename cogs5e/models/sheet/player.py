@@ -94,9 +94,13 @@ class CustomCounter:
                  'hp': "Gaining HP"}
 
     def __init__(self, character, name, value, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
-                 reset_to=None, reset_by=None):
+                 reset_to=None, reset_by=None, title=None, desc=None):
         self._character = character
         self.name = name
+
+        self.title = title
+        self.desc = desc
+
         self._value = value
         self.min = minv
         self.max = maxv
@@ -117,11 +121,11 @@ class CustomCounter:
     def to_dict(self):
         return {"name": self.name, "value": self._value, "minv": self.min, "maxv": self.max, "reset": self.reset_on,
                 "display_type": self.display_type, "live_id": self.live_id, "reset_to": self.reset_to,
-                "reset_by": self.reset_by}
+                "reset_by": self.reset_by, "title": self.title, "desc": self.desc}
 
     @classmethod
     def new(cls, character, name, minv=None, maxv=None, reset=None, display_type=None, live_id=None,
-            reset_to=None, reset_by=None):
+            reset_to=None, reset_by=None, title=None, desc=None):
         if reset not in ('short', 'long', 'none', None):
             raise InvalidArgument("Invalid reset.")
         if any(c in name for c in ".$"):
@@ -168,7 +172,18 @@ class CustomCounter:
         elif max_value is not None:
             initial_value = max_value
 
-        return cls(character, name.strip(), initial_value, minv, maxv, reset, display_type, live_id, reset_to, reset_by)
+        # length checks
+        if desc and len(desc) > 1024:
+            raise InvalidArgument('Description must be less than 1024 characters.')
+
+        if title and len(title) >= 256:
+            raise InvalidArgument('Title must be less than 256 characters.')
+
+        if len(name) > 256:
+            raise InvalidArgument('Name must be less than 256 characters.')
+
+        return cls(character, name.strip(), initial_value, minv, maxv, reset, display_type, live_id,
+                   reset_to, reset_by, title, desc)
 
     # ---------- main funcs ----------
     def get_min(self):

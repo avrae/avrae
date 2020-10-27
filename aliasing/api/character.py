@@ -107,16 +107,18 @@ class AliasCharacter(AliasStatBlock):
         self._character.consumables.remove(to_delete)
 
     def create_cc_nx(self, name: str, minVal: str = None, maxVal: str = None, reset: str = None,
-                     dispType: str = None, reset_to: str = None, reset_by: str = None):
+                     dispType: str = None, reset_to: str = None, reset_by: str = None,
+                     title: str = None, desc: str = None):
         """
         Creates a custom counter if one with the given name does not already exist.
         Equivalent to:
 
         >>> if not cc_exists(name):
-        >>>     create_cc(name, minVal, maxVal, reset, dispType, reset_to, reset_by)
+        >>>     create_cc(name, minVal, maxVal, reset, dispType, reset_to, reset_by, title, desc)
         """
         if not self.cc_exists(name):
             new_consumable = player_api.CustomCounter.new(self._character, name, minVal, maxVal, reset, dispType,
+                                                          title=title, desc=desc,
                                                           reset_to=reset_to, reset_by=reset_by)
             self._character.consumables.append(new_consumable)
             self._consumables = None  # reset cache
@@ -133,6 +135,8 @@ class AliasCharacter(AliasStatBlock):
         :param str dispType: Either ``None`` or ``'bubble'``.
         :param str reset_to: The value the counter should reset to. Supports :ref:`cvar-table` parsing.
         :param str reset_by: How much the counter should change by on a reset. Supports dice but not cvars.
+        :param str title: The title of the counter.
+        :param str desc: The description of the counter.
         :rtype: AliasCustomCounter
         :returns: The newly created counter.
         """
@@ -284,6 +288,24 @@ class AliasCustomCounter:
         return self._cc.name
 
     @property
+    def title(self):
+        """
+        Returns the cc's title.
+
+        :rtype: str or None
+        """
+        return self._cc.title
+
+    @property
+    def desc(self):
+        """
+        Returns the cc's description.
+
+        :rtype: str or None
+        """
+        return self._cc.desc
+
+    @property
     def value(self):
         """
         Returns the current value of the cc.
@@ -376,8 +398,8 @@ class AliasCustomCounter:
 
     def __repr__(self):
         return f"<AliasCustomCounter name={self.name} value={self.value} max={self.max} min={self.min} " \
-               f"reset_on={self.reset_on} display_type={self.display_type} reset_to={self.reset_to} " \
-               f"reset_by={self.reset_by}>"
+               f"title={self.title} desc={self.desc} display_type={self.display_type} " \
+               f"reset_on={self.reset_on} reset_to={self.reset_to} reset_by={self.reset_by}>"
 
 
 class AliasDeathSaves:

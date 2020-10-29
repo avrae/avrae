@@ -44,7 +44,7 @@ class AliasCharacter(AliasStatBlock):
             self._consumables = [AliasCustomCounter(cc) for cc in self._character.consumables]
         return self._consumables
 
-    def get_consumable(self, name):
+    def cc(self, name):
         """
         Gets the AliasCustomCounter with the name `name`
 
@@ -53,7 +53,7 @@ class AliasCharacter(AliasStatBlock):
         :rtype: AliasCustomCounter
         :raises: :exc:`ConsumableException` if the counter does not exist.
         """
-        return self._get_consumable(name)
+        return AliasCustomCounter(self._get_consumable(name))
 
     def get_cc(self, name):
         """

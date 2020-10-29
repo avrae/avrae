@@ -10,7 +10,7 @@ An automation run is made up of a list of *effects*. See below for what each eff
 All Automation runs provide the following variables:
 
 - ``caster`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The character, combatant, or monster who is running the automation.
-- ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`) A list of combatants targeted by this automation (i.e. the ``-t`` argument).
+- ``targets`` (list of :class:`~aliasing.api.statblock.AliasStatBlock`, :class:`str`, or None) A list of combatants targeted by this automation (i.e. the ``-t`` argument).
 
 Target
 ------
@@ -39,7 +39,7 @@ It designates what creatures to affect.
 **Variables**
 
 - ``target`` (:class:`~aliasing.api.statblock.AliasStatBlock`) The current target.
-- ``targetIteration`` (:class:`int`) If running multiple iterations (i.e. ``-rr``), the current iteration.
+- ``targetIteration`` (:class:`int`) If running multiple iterations (i.e. ``-rr``), the current iteration (1-indexed).
 
 Attack
 ------
@@ -259,6 +259,76 @@ Outputs a short amount of text in the resulting embed.
 
     An AnnotatedString detailing the text to display.
 
+Set Variable
+------------
+.. versionadded:: 2.7.0
+
+.. code-block:: typescript
+
+    {
+        type: "variable";
+        name: string;
+        value: IntExpression;
+        higher?: {int: IntExpression};
+        onError?: IntExpression;
+    }
+
+Saves the result of an ``IntExpression`` to a variable without displaying anything.
+
+.. attribute:: name
+
+     The name of the variable to save.
+
+.. attribute:: value
+
+     The value to set the variable to.
+
+.. attribute:: higher
+
+     *optional* - What to set the variable to instead when a spell is cast at a higher level.
+
+.. attribute:: onError
+
+     *optional* - If provided, what to set the variable to if the normal value would throw an error.
+
+Condition
+---------
+.. versionadded:: 2.7.0
+
+.. code-block:: typescript
+
+    {
+        type: "condition";
+        condition: IntExpression;
+        onTrue: Effect[];
+        onFalse: Effect[];
+        errorBehaviour?: "true" | "false" | "both" | "neither" | "raise";
+    }
+
+Run certain effects if a special condition is met, or other effects otherwise.
+
+.. attribute:: condition
+
+     The condition to check.
+
+.. attribute:: onTrue
+
+     The effects to run if ``condition`` is ``True`` or any non-zero value.
+
+.. attribute:: onFalse
+
+     The effects to run if ``condition`` is ``False`` or ``0``.
+
+.. attribute:: errorBehaviour
+
+     How to behave if the condition raises an error:
+
+    - ``"true"``: Run the ``onTrue`` effects.
+    - ``"false"``: Run the ``onFalse`` effects. (*default*)
+    - ``"both"``: Run both the ``onTrue`` and ``onFalse`` effects, in that order.
+    - ``"neither"``: Skip this effect.
+    - ``"raise"``: Raise the error and halt execution.
+
 AnnotatedString
 ---------------
 An AnnotatedString is a string that can access saved variables.
@@ -297,6 +367,10 @@ These are *not* valid IntExpressions:
 
 Examples
 --------
+
+Attack
+^^^^^^
+
 A normal attack:
 
 .. code-block:: json
@@ -320,6 +394,9 @@ A normal attack:
         ]
       }
     ]
+
+Save
+^^^^
 
 A spell that requires a Dexterity save for half damage:
 
@@ -367,6 +444,9 @@ A spell that requires a Dexterity save for half damage:
       }
     ]
 
+Attack & Save
+^^^^^^^^^^^^^
+
 An attack from a poisoned blade:
 
 .. code-block:: json
@@ -404,5 +484,139 @@ An attack from a poisoned blade:
       {
         "type": "text",
         "text": "On a hit, a target must make a DC 12 Constitution saving throw or take 1d6 poison damage."
+      }
+    ]
+
+Draining Attack
+^^^^^^^^^^^^^^^
+
+An attack that heals the caster for half the amount of damage dealt:
+
+.. code-block:: json
+
+    [
+      {
+        "type": "variable",
+        "name": "lastDamage",
+        "value": "0"
+      },
+      {
+        "type": "target",
+        "target": "each",
+        "effects": [
+          {
+            "type": "attack",
+            "attackBonus": "charismaMod + proficiencyBonus",
+            "hit": [
+              {
+                "type": "damage",
+                "damage": "3d6[necrotic]"
+              }
+            ],
+            "miss": []
+          }
+        ]
+      },
+      {
+        "type": "target",
+        "target": "self",
+        "effects": [
+          {
+            "type": "damage",
+            "damage": "-{lastDamage}/2 [heal]"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "On a hit, the target takes 3d6 necrotic damage, and you regain hit points equal to half the amount of necrotic damage dealt."
+      }
+    ]
+
+Target Health-Based
+^^^^^^^^^^^^^^^^^^^
+
+A spell that does different amounts of damage based on whether or not the target is damaged:
+
+.. code-block:: json
+
+    [
+      {
+        "type": "target",
+        "target": "each",
+        "effects": [
+          {
+            "type": "save",
+            "stat": "wis",
+            "fail": [
+              {
+                "type": "condition",
+                "condition": "target.hp < target.max_hp",
+                "onTrue": [
+                  {
+                    "type": "damage",
+                    "damage": "1d8 [necrotic]"
+                  }
+                ],
+                "onFalse": [
+                  {
+                    "type": "damage",
+                    "damage": "1d4 [necrotic]"
+                  }
+                ],
+                "errorBehaviour": "both"
+              }
+            ],
+            "success": []
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "The target must succeed on a Wisdom saving throw or take 1d4 necrotic damage. If the target is missing any of its hit points, it instead takes 1d8 necrotic damage."
+      }
+    ]
+
+Area Draining Effect
+^^^^^^^^^^^^^^^^^^^^
+
+An effect that heals the caster for the total damage dealt:
+
+.. code-block:: json
+
+    [
+      {
+        "type": "variable",
+        "name": "totalDamage",
+        "value": "0"
+      },
+      {
+        "type": "target",
+        "target": "each",
+        "effects": [
+          {
+            "type": "damage",
+            "damage": "1d6 [necrotic]"
+          },
+          {
+            "type": "variable",
+            "name": "totalDamage",
+            "value": "totalDamage + lastDamage"
+          }
+        ]
+      },
+      {
+        "type": "target",
+        "target": "self",
+        "effects": [
+          {
+            "type": "damage",
+            "damage": "-{totalDamage} [heal]"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "text": "Each creature within 10 feet of you takes 1d6 necrotic damage. You regain hit points equal to the sum of the necrotic damage dealt."
       }
     ]

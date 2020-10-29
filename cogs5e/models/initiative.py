@@ -941,6 +941,8 @@ class MonsterCombatant(Combatant):
         raw = super(MonsterCombatant, self).to_dict()
         raw['monster_name'] = self.monster_name
         raw['cr'] = self.cr
+        raw['race'] = self.race
+        raw['image_url'] = self.image_url
         raw['type'] = 'monster'
         return raw
 

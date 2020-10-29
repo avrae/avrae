@@ -105,7 +105,7 @@ class SimpleCombatant(AliasStatBlock):
             self._cr = combatant.character.levels.total_level
             self._image_url = combatant.character.image
         # All StatBlocks have get_color
-        self._color = combatant.get_color()
+        self._color = hex(combatant.get_color())
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
@@ -142,7 +142,7 @@ class SimpleCombatant(AliasStatBlock):
         """
         The CR or Level of the combatant. ``None`` if they do not have a CR or level.
 
-        :rtype: int or None
+        :rtype: str or None
         """
 
         return self._cr
@@ -160,9 +160,10 @@ class SimpleCombatant(AliasStatBlock):
     @property
     def color(self):
         """
-        The color of the combatant. Will always be random unless they are a PlayerCombatant and have an override.
+        The hex-code for the color of the combatant.
+        Will always be random unless they the combatant is a Player and have an override.
 
-        :rtype: int
+        :rtype: str
         """
         return self._color
 

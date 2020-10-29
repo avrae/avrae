@@ -164,7 +164,7 @@ class SimpleCombatant(AliasStatBlock):
     def color(self):
         """
         The hex-code for the color of the combatant.
-        Will always be random unless they the combatant is a Player and have an override.
+        Will always be random unless they the combatant is a Player and has an override.
 
         :rtype: str
         """

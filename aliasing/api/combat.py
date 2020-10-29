@@ -95,15 +95,18 @@ class SimpleCombatant(AliasStatBlock):
         self.initmod = int(self._combatant.init_skill)
         self.init = self._combatant.init
         self._update_effects()
-        # get CR or Level
+        # Type-specific Properties
         if isinstance(combatant, MonsterCombatant):
             self._cr = combatant.cr
+            self._image_url = combatant.image_url
         elif isinstance(combatant, PlayerCombatant):
             self._cr = combatant.character.levels.total_level
+            self._image_url = combatant.character.image
         else:
             self._cr = None
-
-
+            self._image_url = None
+        # All StatBlocks have get_color
+        self._color = combatant.get_color()
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
@@ -116,16 +119,6 @@ class SimpleCombatant(AliasStatBlock):
         :rtype: str or None
         """
         return self._combatant.notes
-
-    @property
-    def cr(self):
-        """
-        The CR or Level of the combatant. ``None`` if it they do not have a CR or level.
-
-        :rtype: int or None
-        """
-
-        return self._cr
 
     @property
     def controller(self):
@@ -144,6 +137,35 @@ class SimpleCombatant(AliasStatBlock):
         :rtype: str or None
         """
         return self._combatant.group
+
+    @property
+    def cr(self):
+        """
+        The CR or Level of the combatant. ``None`` if they do not have a CR or level.
+
+        :rtype: int or None
+        """
+
+        return self._cr
+
+    @property
+    def image_url(self):
+        """
+        The image url of the combatant. ``None`` if the combatant does not have an image.
+
+        :rtype: str or None
+        """
+
+        return self._image_url
+
+    @property
+    def color(self):
+        """
+        The color of the combatant. Will always be random unless they are a PlayerCombatant and have an override.
+
+        :rtype: int
+        """
+        return self._color
 
     def save(self, ability: str, adv: bool = None):
         """

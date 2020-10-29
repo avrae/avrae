@@ -877,15 +877,17 @@ class MonsterCombatant(Combatant):
                  spellbook: Spellbook = None,
                  ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
                  # monster specific
-                 monster_name=None):
+                 monster_name=None, cr: int = None):
         super(MonsterCombatant, self).__init__(
             ctx, combat, name, controller_id, private, init, index, notes, effects, group,
             stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp)
         self._monster_name = monster_name
+        self._cr = cr
 
     @classmethod
     def from_monster(cls, monster, ctx, combat, name, controller_id, init, private, hp=None, ac=None):
         monster_name = monster.name
+        cr = monster.cr
         hp = int(monster.hp) if not hp else int(hp)
         ac = int(monster.ac) if not ac else int(ac)
 
@@ -903,21 +905,28 @@ class MonsterCombatant(Combatant):
                    skills=monster.skills, saves=monster.saves, resistances=resistances,
                    spellbook=spellbook, ac=ac, max_hp=hp,
                    # monster specific
-                   monster_name=monster_name)
+                   monster_name=monster_name, cr=cr)
 
     @classmethod
     def from_dict(cls, raw, ctx, combat):
         inst = super(MonsterCombatant, cls).from_dict(raw, ctx, combat)
         inst._monster_name = raw['monster_name']
+        # Not all Monsters will have a 'cr' until all inits have ended that were started before change
+        inst._cr = raw['cr'] if 'cr' in raw else None
         return inst
 
     @property
     def monster_name(self):
         return self._monster_name
 
+    @property
+    def cr(self):
+        return self._cr
+
     def to_dict(self):
         raw = super(MonsterCombatant, self).to_dict()
         raw['monster_name'] = self.monster_name
+        raw['cr'] = self.cr
         raw['type'] = 'monster'
         return raw
 

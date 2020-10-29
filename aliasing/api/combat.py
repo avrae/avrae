@@ -3,7 +3,7 @@ from d20 import roll
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
 from cogs5e.models.errors import CombatNotFound, InvalidSaveType
-from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
+from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, PlayerCombatant, MonsterCombatant, Effect
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
 
@@ -95,6 +95,15 @@ class SimpleCombatant(AliasStatBlock):
         self.initmod = int(self._combatant.init_skill)
         self.init = self._combatant.init
         self._update_effects()
+        # get CR or Level
+        if isinstance(combatant, MonsterCombatant):
+            self._cr = combatant.cr
+        elif isinstance(combatant, PlayerCombatant):
+            self._cr = combatant.character.levels.total_level
+        else:
+            self._cr = None
+
+
         # deprecated drac 2.1
         self.resists = self.resistances  # use .resistances instead
         self.level = self._combatant.spellbook.caster_level  # use .spellbook.caster_level or .levels.total_level instead
@@ -107,6 +116,16 @@ class SimpleCombatant(AliasStatBlock):
         :rtype: str or None
         """
         return self._combatant.notes
+
+    @property
+    def cr(self):
+        """
+        The CR or Level of the combatant. ``None`` if it they do not have a CR or level.
+
+        :rtype: int or None
+        """
+
+        return self._cr
 
     @property
     def controller(self):

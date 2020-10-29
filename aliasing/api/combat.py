@@ -96,15 +96,14 @@ class SimpleCombatant(AliasStatBlock):
         self.init = self._combatant.init
         self._update_effects()
         # Type-specific Properties
+        self._cr = None
+        self._image_url = None
         if isinstance(combatant, MonsterCombatant):
             self._cr = combatant.cr
             self._image_url = combatant.image_url
         elif isinstance(combatant, PlayerCombatant):
             self._cr = combatant.character.levels.total_level
             self._image_url = combatant.character.image
-        else:
-            self._cr = None
-            self._image_url = None
         # All StatBlocks have get_color
         self._color = combatant.get_color()
         # deprecated drac 2.1

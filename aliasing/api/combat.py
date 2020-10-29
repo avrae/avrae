@@ -98,12 +98,15 @@ class SimpleCombatant(AliasStatBlock):
         # Type-specific Properties
         self._cr = None
         self._image_url = None
+        self._race = None
         if isinstance(combatant, MonsterCombatant):
             self._cr = combatant.cr
             self._image_url = combatant.image_url
+            self._race = combatant.race
         elif isinstance(combatant, PlayerCombatant):
             self._cr = combatant.character.levels.total_level
             self._image_url = combatant.character.image
+            self._race = combatant.character.race
         # All StatBlocks have get_color
         self._color = hex(combatant.get_color())
         # deprecated drac 2.1
@@ -166,6 +169,15 @@ class SimpleCombatant(AliasStatBlock):
         :rtype: str
         """
         return self._color
+
+    @property
+    def race(self):
+        """
+        The race of the combatant. Will return None for combatants with no race.
+
+        :rtype: str or None
+        """
+        return self._race
 
     def save(self, ability: str, adv: bool = None):
         """

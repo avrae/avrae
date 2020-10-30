@@ -134,7 +134,7 @@ class CustomCounter:
             raise InvalidArgument("Bubble display requires a max and min value.")
 
         # sanity checks
-        if maxv is None and reset not in ('none', None):
+        if maxv is None and reset not in ('none', None) and not (reset_to or reset_by):
             raise InvalidArgument("Reset passed but no maximum passed.")
         if reset_to is not None and reset_by is not None:
             raise InvalidArgument("Both `resetto` and `resetby` arguments found.")

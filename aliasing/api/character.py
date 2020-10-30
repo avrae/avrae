@@ -44,6 +44,17 @@ class AliasCharacter(AliasStatBlock):
             self._consumables = [AliasCustomCounter(cc) for cc in self._character.consumables]
         return self._consumables
 
+    def cc(self, name):
+        """
+        Gets the AliasCustomCounter with the name `name`
+
+        :param str name: The name of the custom counter to get.
+        :returns: The custom counter.
+        :rtype: AliasCustomCounter
+        :raises: :exc:`ConsumableException` if the counter does not exist.
+        """
+        return AliasCustomCounter(self._get_consumable(name))
+
     def get_cc(self, name):
         """
         Gets the value of a custom counter.

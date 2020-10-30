@@ -182,6 +182,8 @@ IEffect
         duration: int | IntExpression;
         effects: AnnotatedString;
         end?: boolean;
+        conc?: boolean;
+        desc?: AnnotatedString;
     }
 
 Adds an InitTracker Effect to a targeted creature, if the automation target is in combat.
@@ -203,6 +205,14 @@ It must be inside a Target effect.
 .. attribute:: end
 
      *optional* - Whether the effect timer should tick on the end of the turn, rather than start.
+
+.. attribute:: conc
+
+     *optional* - Whether the effect requires concentration.
+
+.. attribute:: desc
+
+     *optional* - The description of the effect (displays on combatant's turn).
 
 Roll
 ----

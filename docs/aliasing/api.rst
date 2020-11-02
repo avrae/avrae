@@ -1036,7 +1036,7 @@ AliasChannel
     :members:
 
 AliasCategory
-^^^^^^^^^^^^
+^^^^^^^^^^^^^
 
 .. autoclass:: aliasing.api.context.AliasCategory()
     :members:

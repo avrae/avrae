@@ -4,6 +4,7 @@ import logging
 import d20
 from d20 import roll
 
+import aliasing.api.statblock
 import aliasing.evaluators
 import cogs5e.models.character as character_api
 import cogs5e.models.initiative as init
@@ -11,6 +12,7 @@ from aliasing.errors import EvaluationError
 from cogs5e.models import embeds
 from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
+from cogs5e.models.sheet.statblock import StatBlock
 from utils.dice import RerollableStringifier
 from utils.functions import get_guild_member, maybe_mod
 
@@ -117,7 +119,11 @@ class AutomationContext:
         self.ab_override = ab_override
         self.dc_override = dc_override
 
-        self.metavars = {}
+        self.metavars = {
+            # caster, targets as default (#1335)
+            "caster": aliasing.api.statblock.AliasStatBlock(caster),
+            "targets": [_maybe_alias_statblock(t) for t in targets]
+        }
         self.target = None
         self.in_crit = False
 
@@ -196,6 +202,12 @@ class AutomationContext:
         return 0
 
     def parse_annostr(self, annostr, is_full_expression=False):
+        """
+        Parses an AnnotatedString or IntExpression.
+
+        :param str annostr: The string to parse.
+        :param bool is_full_expression: Whether the string is an IntExpression.
+        """
         if not is_full_expression:
             return self.evaluator.transformed_str(annostr, extra_names=self.metavars)
 
@@ -360,18 +372,23 @@ class Target(Effect):
         if self.target in ('all', 'each'):
             for target in autoctx.targets:
                 autoctx.target = AutomationTarget(target)
+                autoctx.metavars['target'] = _maybe_alias_statblock(target)  # #1335
                 self.run_effects(autoctx)
         elif self.target == 'self':
             autoctx.target = AutomationTarget(autoctx.caster)
+            autoctx.metavars['target'] = _maybe_alias_statblock(autoctx.caster)  # #1335
             self.run_effects(autoctx)
         else:
             try:
-                autoctx.target = AutomationTarget(autoctx.targets[self.target - 1])
+                target = autoctx.targets[self.target - 1]
+                autoctx.target = AutomationTarget(target)
+                autoctx.metavars['target'] = _maybe_alias_statblock(target)  # #1335
             except IndexError:
                 return
             self.run_effects(autoctx)
 
         autoctx.target = previous_target
+        autoctx.metavars['target'] = _maybe_alias_statblock(previous_target)  # #1335
 
     def run_effects(self, autoctx):
         args = autoctx.args
@@ -381,6 +398,9 @@ class Target(Effect):
         total_damage = 0
         in_target = autoctx.target.target is not None
 
+        # #1335
+        autoctx.metavars['targetIteration'] = 1
+
         # 2 binary attributes: (rr?, target?)
         # each case must end with a push_embed_field()
         if rr > 1:
@@ -389,6 +409,9 @@ class Target(Effect):
                     iter_title = f"{type(self.effects[0]).__name__} {iteration + 1}"
                 else:
                     iter_title = f"Iteration {iteration + 1}"
+
+                # #1335
+                autoctx.metavars['targetIteration'] = iteration + 1
 
                 # target, rr
                 if in_target:
@@ -487,8 +510,9 @@ class Attack(Effect):
         if attack_bonus is None and b is None:
             raise NoAttackBonus("No spell attack bonus found. Use the `-b` argument to specify one!")
 
-        # tracking
-        damage = 0
+        # reset metavars (#1335)
+        autoctx.metavars['lastAttackDidHit'] = False
+        autoctx.metavars['lastAttackDidCrit'] = False
 
         # roll attack against autoctx.target
         if not (hit or miss):
@@ -555,30 +579,33 @@ class Attack(Effect):
                 autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
 
             if not did_hit:
-                damage += self.on_miss(autoctx)
+                damage = self.on_miss(autoctx)
             elif did_crit:
-                damage += self.on_crit(autoctx)
+                damage = self.on_crit(autoctx)
             else:
-                damage += self.on_hit(autoctx)
+                damage = self.on_hit(autoctx)
         elif hit:
             autoctx.queue(f"**To Hit**: Automatic hit!")
             # nocrit and crit cancel out
             if crit and not nocrit:
-                damage += self.on_crit(autoctx)
+                damage = self.on_crit(autoctx)
             else:
-                damage += self.on_hit(autoctx)
+                damage = self.on_hit(autoctx)
         else:
             autoctx.queue(f"**To Hit**: Automatic miss!")
-            damage += self.on_miss(autoctx)
+            damage = self.on_miss(autoctx)
 
         return {"total": damage}
 
     def on_hit(self, autoctx):
+        # assign metavars (#1335)
+        autoctx.metavars['lastAttackDidHit'] = True
         return self.run_children_with_damage(self.hit, autoctx)
 
     def on_crit(self, autoctx):
         original = autoctx.in_crit
         autoctx.in_crit = True
+        autoctx.metavars['lastAttackDidCrit'] = True
         result = self.on_hit(autoctx)
         autoctx.in_crit = original
         return result
@@ -642,7 +669,7 @@ class Save(Effect):
         dc_override = None
         if self.dc:
             try:
-                dc_override = autoctx.parse_annostr(self.dc)
+                dc_override = autoctx.parse_annostr(self.dc, is_full_expression=True)
                 dc_override = int(dc_override)
             except (TypeError, ValueError):
                 raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")
@@ -692,9 +719,11 @@ class Save(Effect):
         return {"total": damage}
 
     def on_success(self, autoctx):
+        autoctx.metavars['lastSaveDidPass'] = True
         return self.run_children_with_damage(self.success, autoctx)
 
     def on_fail(self, autoctx):
+        autoctx.metavars['lastSaveDidPass'] = False
         return self.run_children_with_damage(self.fail, autoctx)
 
     def build_str(self, caster, evaluator):
@@ -850,6 +879,9 @@ class Damage(Effect):
 
         autoctx.target.damage(autoctx, dmgroll.total, allow_overheal=self.overheal)
 
+        # #1335
+        autoctx.metavars['lastDamage'] = dmgroll.total
+
         # return metadata for scripting
         return {'damage': f"**{roll_for}**: {result}", 'total': dmgroll.total, 'roll': dmgroll}
 
@@ -861,6 +893,7 @@ class Damage(Effect):
     def build_str(self, caster, evaluator):
         super(Damage, self).build_str(caster, evaluator)
         damage = evaluator.transformed_str(self.damage)
+        evaluator.builtins['lastDamage'] = damage
         return f"{damage} damage"
 
 
@@ -899,6 +932,7 @@ class TempHP(Effect):
 
         dmgroll = roll(dice_ast)
         autoctx.queue(f"**THP**: {dmgroll.result}")
+        autoctx.metavars['lastTempHp'] = dmgroll.total  # #1335
 
         if autoctx.target.combatant:
             autoctx.target.combatant.temp_hp = max(dmgroll.total, 0)
@@ -917,6 +951,7 @@ class TempHP(Effect):
     def build_str(self, caster, evaluator):
         super(TempHP, self).build_str(caster, evaluator)
         amount = evaluator.transformed_str(self.amount)
+        evaluator.builtins['lastTempHp'] = amount
         return f"{amount} temp HP"
 
 
@@ -1034,10 +1069,12 @@ class Roll(Effect):
 
         d20.utils.simplify_expr(rolled.expr)
         autoctx.metavars[self.name] = RerollableStringifier().stringify(rolled.expr.roll)
+        autoctx.metavars['lastRoll'] = rolled.total  # #1335
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)
         evaluator.builtins[self.name] = self.dice
+        evaluator.builtins['lastRoll'] = self.dice
         return ""
 
 
@@ -1070,6 +1107,131 @@ class Text(Effect):
         return ""
 
 
+class SetVariable(Effect):
+    def __init__(self, name: str, value: str, higher: dict = None, onError: str = None, **kwargs):
+        super().__init__('variable', **kwargs)
+        self.name = name
+        self.value = value
+        self.higher = higher
+        self.on_error = onError
+
+    def to_dict(self):
+        out = super().to_dict()
+        out.update({"name": self.name, "value": self.value})
+        if self.higher is not None:
+            out['higher'] = self.higher
+        if self.on_error is not None:
+            out['onError'] = self.on_error
+        return out
+
+    def run(self, autoctx):
+        super().run(autoctx)
+        level_value = self.value
+        # handle upcast
+        if autoctx.is_spell and self.higher and autoctx.get_cast_level() != autoctx.spell.level:
+            higher = self.higher.get(str(autoctx.get_cast_level()))
+            if higher:
+                level_value = higher
+
+        # parse value
+        try:
+            value = autoctx.parse_annostr(level_value, is_full_expression=True)
+        except AutomationEvaluationException as e:
+            if self.on_error is not None:
+                value = autoctx.parse_annostr(self.on_error, is_full_expression=True)
+            else:
+                raise StopExecution(f"Error in SetVariable (`{self.name} = {level_value}`):\n{e}")
+
+        # cast to int
+        try:
+            final_value = int(value)
+        except (TypeError, ValueError):
+            raise AutomationException(f"{value} cannot be interpreted as an integer "
+                                      f"(in `{self.name} = {level_value}`).")
+
+        # bind
+        autoctx.metavars[self.name] = final_value
+
+    def build_str(self, caster, evaluator):
+        super().build_str(caster, evaluator)
+        try:
+            value = evaluator.eval(self.value)
+        except:
+            try:
+                value = evaluator.eval(self.on_error)
+            except:
+                value = self.value
+        evaluator.builtins[self.name] = value
+        return ""
+
+
+class Condition(Effect):
+    def __init__(self, condition: str, onTrue: list, onFalse: list, errorBehaviour: str = 'false', **kwargs):
+        super().__init__('condition', **kwargs)
+        self.condition = condition
+        self.on_true = onTrue
+        self.on_false = onFalse
+        self.error_behaviour = errorBehaviour
+
+    @classmethod
+    def from_data(cls, data):
+        data['onTrue'] = Effect.deserialize(data['onTrue'])
+        data['onFalse'] = Effect.deserialize(data['onFalse'])
+        return super().from_data(data)
+
+    def to_dict(self):
+        out = super().to_dict()
+        on_true = Effect.serialize(self.on_true)
+        on_false = Effect.serialize(self.on_false)
+        out.update({'condition': self.condition, 'onTrue': on_true, 'onFalse': on_false,
+                    'errorBehaviour': self.error_behaviour})
+        return out
+
+    def run(self, autoctx):
+        super().run(autoctx)
+        try:
+            condition_result = autoctx.parse_annostr(self.condition, is_full_expression=True)
+        except AutomationEvaluationException as e:
+            if self.error_behaviour == 'true':
+                to_run = self.on_true
+            elif self.error_behaviour == 'false':
+                to_run = self.on_false
+            elif self.error_behaviour == 'both':
+                to_run = self.on_true + self.on_false
+            elif self.error_behaviour == 'neither':
+                return
+            else:  # raise
+                raise StopExecution(f"Error when evaluating condition `{self.condition}`:\n{e}")
+        else:
+            if condition_result:
+                to_run = self.on_true
+            else:
+                to_run = self.on_false
+
+        damage = self.run_children_with_damage(to_run, autoctx)
+        return {"total": damage}
+
+    def build_str(self, caster, evaluator):
+        super().build_str(caster, evaluator)
+
+        on_true = self.build_child_str(self.on_true, caster, evaluator)
+        on_false = self.build_child_str(self.on_false, caster, evaluator)
+
+        # neither: do nothing
+        if not (on_true or on_false):
+            return ""
+
+        # one: return "maybe X".
+        elif on_true and not on_false:
+            return f"maybe {on_true}"
+        elif on_false and not on_true:
+            return f"maybe {on_false}"
+
+        # both: return "X or Y".
+        else:
+            return f"{on_true} or {on_false}"
+
+
 EFFECT_MAP = {
     "target": Target,
     "attack": Attack,
@@ -1078,11 +1240,20 @@ EFFECT_MAP = {
     "temphp": TempHP,
     "ieffect": IEffect,
     "roll": Roll,
-    "text": Text
+    "text": Text,
+    "variable": SetVariable,
+    "condition": Condition,
 }
 
 
 # ==== helpers ====
+def _maybe_alias_statblock(target):
+    """Returns the AliasStatBlock for the target if applicable."""
+    if not isinstance(target, (StatBlock, str, type(None))):
+        raise ValueError("target must be a statblock, str, or None")
+    return aliasing.api.statblock.AliasStatBlock(target) if isinstance(target, StatBlock) else target
+
+
 def _upcast_scaled_dice(effect, autoctx, dice_ast):
     """Scales the dice of the cast to its appropriate amount (handling cantrip scaling and higher level addition)."""
     if autoctx.is_spell:

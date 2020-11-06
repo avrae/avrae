@@ -32,3 +32,6 @@ class CampaignLink:
         return [cls.from_dict(link)
                 async for link
                 in ctx.bot.mdb.gamelog_campaigns.find({"channel_id": ctx.channel.id})]
+
+    async def delete(self, mdb):
+        await mdb.gamelog_campaigns.delete_one({"campaign_id": self.campaign_id, "channel_id": self.channel_id})

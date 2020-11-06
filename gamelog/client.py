@@ -4,10 +4,12 @@ import logging
 from pymongo.errors import DuplicateKeyError
 
 from gamelog.campaign import CampaignLink
-from gamelog.errors import CampaignAlreadyLinked
+from gamelog.errors import CampaignAlreadyLinked, NoCampaignLink
+from gamelog.events import GameLogEvent
 from utils import config
 
 GAME_LOG_PUBSUB_CHANNEL = f"game-log:{config.ENVIRONMENT}"
+AVRAE_EVENT_SOURCE = 'avrae'
 log = logging.getLogger(__name__)
 log.setLevel(10)  # todo remove this - sets loglevel to debug in dev
 
@@ -58,7 +60,25 @@ class GameLogClient:
     async def _recv(self, msg):
         log.debug(f"Received message: {msg}")
         # deserialize message into event
-        # todo
+        event = GameLogEvent.from_gamelog_message(msg)
+
+        # check: is this event from us (ignore it)?
+        if event.source == AVRAE_EVENT_SOURCE:
+            return
+
+        # check: is this campaign linked to a channel?
+        try:
+            campaign = await CampaignLink.from_id(self.bot.mdb, event.game_id)
+        except NoCampaignLink:
+            return
 
         # check: is this campaign id for an event that is handled by this cluster?
-        campaign = await CampaignLink.from_id(self.bot.mdb, msg['gameId'])
+        if (guild := self.bot.get_guild(campaign.guild_id)) is None:
+            return
+
+        # check: is the channel still there?
+        if (channel := guild.get_channel(campaign.channel_id)) is None:
+            return
+
+        # todo process the event
+        await channel.send(f"Received message: {msg}")

@@ -330,14 +330,6 @@ def bubble_format(value: int, max_: int, fill_from_right=False):
     return f"{filled}{empty}"
 
 
-def long_source_name(source):
-    return constants.SOURCE_MAP.get(source, source)
-
-
-def source_slug(source):
-    return constants.SOURCE_SLUG_MAP.get(source)
-
-
 def natural_join(things, between: str):
     if len(things) < 3:
         return f" {between} ".join(things)

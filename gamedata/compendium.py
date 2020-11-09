@@ -8,6 +8,7 @@ import newrelic.agent
 
 import gamedata.spell
 from gamedata.background import Background
+from gamedata.book import Book
 from gamedata.feat import Feat
 from gamedata.item import Item
 from gamedata.klass import Class, Subclass
@@ -32,6 +33,7 @@ class Compendium:
         self.raw_races = []  # type: list[dict]
         self.raw_subraces = []  # type: list[dict]
         self.raw_spells = []  # type: list[dict]
+        self.raw_books = []  # type: list[dict]
 
         # models
         self.backgrounds = []  # type: list[Background]
@@ -49,6 +51,7 @@ class Compendium:
         self.items = []  # type: list[Item]
         self.monsters = []  # type: list[Monster]
         self.spells = []  # type: list[Spell]
+        self.books = []  # type: list[Book]
 
         # blobs
         self.names = []
@@ -56,6 +59,7 @@ class Compendium:
 
         # lookup helpers
         self._entitlement_lookup = {}
+        self._book_lookup = {}
 
         self._base_path = os.path.relpath('res')
 
@@ -94,6 +98,7 @@ class Compendium:
         self.raw_races = self.read_json('srd-races.json', [])
         self.raw_subraces = self.read_json('srd-subraces.json', [])
         self.raw_spells = self.read_json('srd-spells.json', [])
+        self.raw_books = self.read_json('books.json', [])
 
         self.names = self.read_json('names.json', [])
         self.rule_references = self.read_json('srd-references.json', [])
@@ -109,6 +114,7 @@ class Compendium:
         self.raw_races = lookup.get('races', [])
         self.raw_subraces = lookup.get('subraces', [])
         self.raw_spells = lookup.get('spells', [])
+        self.raw_books = lookup.get('books', [])
 
         self.names = lookup.get('names', [])
         self.rule_references = lookup.get('srd-references', [])
@@ -116,6 +122,7 @@ class Compendium:
     # noinspection DuplicatedCode
     def load_common(self):
         self._entitlement_lookup = {}
+        self._book_lookup = {}
 
         def deserialize_and_register_lookups(cls, data_source, entitlement_entity_type=None):
             out = []
@@ -133,11 +140,13 @@ class Compendium:
         self.items = deserialize_and_register_lookups(Item, self.raw_items, entitlement_entity_type='magic-item')
         self.monsters = deserialize_and_register_lookups(Monster, self.raw_monsters)
         self.spells = deserialize_and_register_lookups(gamedata.spell.Spell, self.raw_spells)
+        self.books = deserialize_and_register_lookups(Book, self.raw_books)
 
         # generated
         self._load_classfeats()
         self._load_subclasses()
         self._load_racefeats()
+        self._register_book_lookups()
 
     def _load_subclasses(self):
         self.subclasses = []
@@ -201,6 +210,10 @@ class Compendium:
                      f"({self._entitlement_lookup[k].name} -> {entity.name})")
         self._entitlement_lookup[k] = entity
 
+    def _register_book_lookups(self):
+        for book in self.books:
+            self._book_lookup[book.source] = book
+
     def read_json(self, filename, default):
         data = default
         filepath = os.path.join(self._base_path, filename)
@@ -216,6 +229,14 @@ class Compendium:
     def lookup_by_entitlement(self, entity_type: str, entity_id: int):
         """Gets an entity by its entitlement data."""
         return self._entitlement_lookup.get((entity_type, entity_id))
+
+    def book_by_source(self, short_source: str):
+        """
+        Gets a Book by its short code.
+
+        :rtype: Book
+        """
+        return self._book_lookup.get(short_source)
 
 
 compendium = Compendium()

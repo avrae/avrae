@@ -1,7 +1,5 @@
 import abc
 
-from utils.functions import source_slug
-
 
 class Sourced(abc.ABC):
     """A base class for entities with a source."""

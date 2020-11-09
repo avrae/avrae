@@ -11,8 +11,7 @@ from cogs5e.models.errors import NoActiveBrew
 from cogs5e.models.homebrew import Pack, Tome
 from cogs5e.models.homebrew.bestiary import Bestiary
 from cogsmisc.stats import Stats
-from utils import constants
-from utils.functions import long_source_name, search_and_select
+from utils.functions import search_and_select
 from .compendium import compendium
 
 HOMEBREW_EMOJI = "<:homebrew:434140566834511872>"
@@ -134,25 +133,26 @@ def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_o
     """
     text_pieces = []
     icon_url = embed.Empty
+    book = compendium.book_by_source(sourced.source)
     if text is not None:
         text_pieces.append(text)
     if add_source_str:
         text_pieces.append(sourced.source_str())
 
     # set icon url and default text
-    if sourced.homebrew:
+    if book is None:
         icon_url = "https://avrae.io/assets/img/homebrew.png"
         text_pieces = text_pieces or ["Homebrew content."]
-    elif sourced.source in constants.UA_SOURCES:
+    elif book.is_ua:
         icon_url = "https://media-waterdeep.cursecdn.com/avatars/110/171/636516074887091041.png"
         text_pieces = text_pieces or ["Unearthed Arcana content."]
-    elif sourced.source in constants.PARTNERED_SOURCES:
+    elif book.is_partnered:
         icon_url = "https://media-waterdeep.cursecdn.com/avatars/11008/904/637274855809570341.png"
         text_pieces = text_pieces or ["Partnered content."]
-    elif sourced.source in constants.CR_SOURCES:
+    elif book.is_cr:
         icon_url = "https://media-waterdeep.cursecdn.com/avatars/105/174/636512853628516966.png"
         text_pieces = text_pieces or ["Critical Role content."]
-    elif sourced.source in constants.NONCORE_SOURCES:
+    elif book.is_noncore:
         text_pieces = text_pieces or ["Noncore content."]
 
     # do the writing
@@ -164,6 +164,20 @@ def handle_source_footer(embed, sourced, text=None, add_source_str=True, allow_o
             icon_url = embed.footer.icon_url
 
     embed.set_footer(text=text, icon_url=icon_url)
+
+
+def long_source_name(source):
+    book = compendium.book_by_source(source)
+    if book is None:
+        return source
+    return book.name
+
+
+def source_slug(source):
+    book = compendium.book_by_source(source)
+    if book is None:
+        return None
+    return book.slug
 
 
 # ---- monster stuff ----

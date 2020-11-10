@@ -8,7 +8,7 @@ import gamedata.lookuputils
 from cogs5e.models import initiative
 from cogs5e.models.automation import Automation
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
-from cogs5e.models.errors import AvraeException
+from cogs5e.models.errors import AvraeException, InvalidArgument
 from utils.constants import STAT_ABBREVIATIONS
 from utils.functions import trim_str, verbose_stat
 from .shared import Sourced
@@ -197,6 +197,7 @@ class Spell(Sourced):
 
         # base stat stuff
         mod_arg = args.last("mod", type_=int)
+        with_arg = args.last("with")
         stat_override = ''
         if mod_arg is not None:
             mod = mod_arg
@@ -204,13 +205,14 @@ class Spell(Sourced):
             dc_override = 8 + mod + prof_bonus
             ab_override = mod + prof_bonus
             spell_override = mod
-        elif any(args.last(s, type_=bool) for s in STAT_ABBREVIATIONS):
-            base = next(s for s in STAT_ABBREVIATIONS if args.last(s, type_=bool))
-            mod = caster.stats.get_mod(base)
+        elif with_arg is not None:
+            if with_arg not in STAT_ABBREVIATIONS:
+                raise InvalidArgument(f"{with_arg} is not a valid stat to cast with.")
+            mod = caster.stats.get_mod(with_arg)
             dc_override = 8 + mod + caster.stats.prof_bonus
             ab_override = mod + caster.stats.prof_bonus
             spell_override = mod
-            stat_override = f" with {verbose_stat(base)}"
+            stat_override = f" with {verbose_stat(with_arg)}"
 
         # begin setup
         embed = discord.Embed()

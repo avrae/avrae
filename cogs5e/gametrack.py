@@ -581,7 +581,8 @@ class GameTrack(commands.Cog):
 
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *, args=''):
-        """Casts a spell.
+        """
+        Casts a spell.
         __Valid Arguments__
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l <level> - Specifies the level to cast the spell at.
@@ -603,7 +604,7 @@ class GameTrack(commands.Cog):
         -thumb <url> - adds an image to the cast.
         -dur <duration> - changes the duration of any effect applied by the spell.
         -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
-        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
+        -with <int/wis/cha> - different skill base for DC/AB (will not account for extra bonuses)
         """
         await try_delete(ctx.message)
 

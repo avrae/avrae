@@ -211,11 +211,14 @@ class CollectableManagementGroup(commands.Group):
         if self.before_edit_check:
             await self.before_edit_check(ctx)
 
+        # counter: how many objects are currently bound to a given name?
+        # used to assign index of new name
         name_indices = Counter()
         for name in await self.personal_cls.get_ctx_map(ctx):
             name_indices[name] += 1
 
-        renamed = []
+        rename_tris = []  # (old name, new name, collection name)
+        to_do = []
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
             doc_changed = False
@@ -227,18 +230,29 @@ class CollectableManagementGroup(commands.Group):
                     new_name = f"{binding['name']}-{new_index}"
                     # do rename
                     binding['name'] = new_name
-                    renamed.append(
-                        f"`{old_name}` ({the_collection.name}) is now `{new_name}`")
+                    rename_tris.append((old_name, new_name, the_collection.name))
                     doc_changed = True
                 name_indices[old_name] += 1
 
-            if doc_changed:  # write the new subscription object to the db
+            if doc_changed:  # queue writing the new subscription object to the db
                 update_meth = the_collection.update_alias_bindings if self.is_alias \
                     else the_collection.update_snippet_bindings
-                await update_meth(ctx, subscription_doc)
+                # this creates a Coroutine object that is not executed until it is awaited by asyncio.gather below
+                # the magic of coroutines!
+                to_do.append(update_meth(ctx, subscription_doc))
 
-        the_renamed = '\n'.join(renamed)
-        await ctx.send(f"Renamed {len(renamed)} {self.obj_name_pl}!\n{the_renamed}")
+        # confirm mass change
+        changes = '\n'.join([f"`{old}` ({collection}) -> `{new}`" for old, new, collection in rename_tris])
+        response = await confirm(ctx, f"This will rename {len(rename_tris)} {self.obj_name_pl}. "
+                                      f"Do you want to continue?\n"
+                                      f"{changes}")
+        if not response:
+            return await ctx.send("Ok, aborting.")
+
+        # execute the pending changes
+        await asyncio.gather(*to_do)
+        the_renamed = '\n'.join([f"`{old}` ({collection}) is now `{new}`" for old, new, collection in rename_tris])
+        await ctx.send(f"Renamed {len(rename_tris)} {self.obj_name_pl}!\n{the_renamed}")
 
     async def rename(self, ctx, old_name, new_name):
         if self.before_edit_check:

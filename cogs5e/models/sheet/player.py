@@ -134,8 +134,10 @@ class CustomCounter:
             raise InvalidArgument("Bubble display requires a max and min value.")
 
         # sanity checks
-        if maxv is None and reset not in ('none', None) and not (reset_to or reset_by):
-            raise InvalidArgument("Reset passed but no maximum passed.")
+        if reset not in ('none', None) and (maxv is None and
+                                            reset_to is None and
+                                            reset_by is None):
+            raise InvalidArgument("Reset passed but no valid reset value (`max`, `resetto`, `resetby`) passed.")
         if reset_to is not None and reset_by is not None:
             raise InvalidArgument("Both `resetto` and `resetby` arguments found.")
 
@@ -161,7 +163,7 @@ class CustomCounter:
 
         if reset_by is not None:
             try:
-                d20.parse(reset_by)
+                d20.parse(str(reset_by))
             except d20.RollSyntaxError:
                 raise InvalidArgument(f"{reset_by} (`resetby`) cannot be interpreted as a number or dice string.")
 

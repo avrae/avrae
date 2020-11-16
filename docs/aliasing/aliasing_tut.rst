@@ -79,7 +79,7 @@ The end result is:
 
 .. code-block:: text
 
-  !alias orc-relentless embed {{cc="Relentless Endurance"}} {{v=cc_exists(cc) and get_cc(cc) and not get_hp()}} -title "{{f"{name} {'uses' if v else 'tries to use'} {cc}!"}}" -desc "{{"When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead." if v else "You have more than 0 hit points." if get_hp() else "You can’t use this feature again until you finish a Long Rest." if cc_exists(cc) else "You do not have this ability."}}" {{mod_cc(cc, -1) if v else ""}} -f "{{f"{cc}|{cc_str(cc) if cc_exists(cc) else '*None*'}"}}" {{set_hp(1) if v and not get_hp() else ""}}
+  !alias orc-relentless embed {{cc="Relentless Endurance"}} {{v=cc_exists(cc) and get_cc(cc) and not get_hp()}} -title "{{f"{name} {'uses' if v else 'tries to use'} {cc}!"}}" -desc "{{"When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead." if v else "You have more than 0 hit points." if get_hp() else "You can’t use this feature again until you finish a Long Rest." if cc_exists(cc) else "You do not have this ability."}}" {{mod_cc(cc, -1) if v else ""}} -f "{{f"{cc}|{cc_str(cc) if cc_exists(cc) else '*None*'}"}}" {{set_hp(1) if v and not get_hp() else ""}} -color <color> -thumb <image>
 
 
 Insult Tutorial

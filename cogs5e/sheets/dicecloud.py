@@ -304,7 +304,7 @@ class DicecloudParser(SheetLoaderABC):
         counters = []
 
         for res in CLASS_RESOURCES:
-            res_value = self.calculate_stat(res)
+            res_value = int(self.calculate_stat(res))
             if res_value > 0:
                 display_type = 'bubble' if res_value < 6 else None
                 co = {  # we have to initialize counters this way, which is meh
@@ -325,7 +325,7 @@ class DicecloudParser(SheetLoaderABC):
             elif 'long rest' in desc:
                 reset = 'long'
             try:
-                initial_value = self.evaluator.eval(f['uses'])
+                initial_value = int(self.evaluator.eval(f['uses']))
             except draconic.DraconicException:
                 raise ExternalImportError(f"Invalid max uses on limited use feature {f['name']}: {f['uses']}")
             display_type = 'bubble' if initial_value < 7 else None

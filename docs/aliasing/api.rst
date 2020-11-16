@@ -939,6 +939,12 @@ SimpleEffect
 
         :type: bool
 
+    .. attribute:: desc
+
+        The description of the effect.
+
+        :type: str
+
     .. attribute:: duration
 
         The initial duration of the effect, in rounds (``-1`` = infinite).

@@ -18,10 +18,9 @@ from cogs5e.funcs import targetutils
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument, NoSelectionElements
+from ddb.gamelog import CampaignLink, GameLogClient
+from ddb.gamelog.errors import NoCampaignLink
 from gamedata.lookuputils import get_spell_choices, select_spell_full
-from gamelog.campaign import CampaignLink
-from gamelog.client import GameLogClient
-from gamelog.errors import NoCampaignLink
 from utils import checks
 from utils.argparser import argparse
 from utils.dice import d20_with_adv

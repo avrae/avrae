@@ -23,7 +23,7 @@ from discord.ext.commands.errors import CommandInvokeError
 from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
 from cogs5e.models.errors import AvraeException, RequiresLicense
-from ddb.client import BeyondClient, BeyondClientBase
+from ddb import BeyondClient, BeyondClientBase
 from gamedata.compendium import compendium
 from gamedata.lookuputils import handle_required_license
 from utils.aldclient import AsyncLaunchDarklyClient

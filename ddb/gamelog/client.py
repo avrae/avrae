@@ -3,9 +3,9 @@ import logging
 
 from pymongo.errors import DuplicateKeyError
 
-from gamelog.campaign import CampaignLink
-from gamelog.errors import CampaignAlreadyLinked, NoCampaignLink
-from gamelog.events import GameLogEvent
+from ddb.gamelog.link import CampaignLink
+from ddb.gamelog.errors import CampaignAlreadyLinked, NoCampaignLink
+from ddb.gamelog.events import GameLogEvent
 from utils import config
 
 GAME_LOG_PUBSUB_CHANNEL = f"game-log:{config.ENVIRONMENT}"
@@ -20,6 +20,7 @@ class GameLogClient:
         :param bot: Avrae instance
         """
         self.bot = bot
+        self.ddb = bot.ddb
         self.rdb = bot.rdb
         self.loop = bot.loop
 

@@ -20,11 +20,11 @@ from discord.errors import Forbidden, HTTPException, InvalidArgument, NotFound
 from discord.ext import commands
 from discord.ext.commands.errors import CommandInvokeError
 
+from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
 from cogs5e.models.errors import AvraeException, RequiresLicense
-from aliasing.errors import CollectableRequiresLicenses, EvaluationError
+from ddb.client import BeyondClient, BeyondClientBase
 from gamedata.compendium import compendium
-from gamedata.ddb import BeyondClient, BeyondClientBase
 from gamedata.lookuputils import handle_required_license
 from utils.aldclient import AsyncLaunchDarklyClient
 from utils.help import help_command

@@ -22,7 +22,6 @@ class GameLogClient:
         self.bot = bot
         self.rdb = bot.rdb
         self.loop = bot.loop
-        self.http = None  # todo
 
     def init(self):
         self.loop.create_task(self.main_loop())

@@ -34,7 +34,7 @@ async def available(ctx, entities, entity_type, user_id=None):
     :type entity_type: str
     :param user_id: The Discord user ID of the user (optional - if not passed, assumes ctx.author)
     :type user_id: int
-    :rtype: list[gamedata.shared.Sourced]
+    :returns: the list of accessible entities
     """
     if user_id is None:
         user_id = ctx.author.id

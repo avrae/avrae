@@ -6,8 +6,8 @@ import aiohttp
 from boto3.dynamodb.conditions import Key
 
 from cogsmisc.stats import Stats
-from ddb import auth, entitlements
-from ddb.errors import AuthException
+from ddb import auth, campaign, entitlements
+from ddb.errors import AuthException, WaterdeepException
 from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, DYNAMO_ENTITY_TABLE, DYNAMO_REGION, DYNAMO_USER_TABLE
 
 # dynamo
@@ -15,6 +15,7 @@ from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, DYNAMO_ENTITY_TA
 # env: AWS_SECRET_ACCESS_KEY
 
 AUTH_DISCORD = f"{AUTH_BASE_URL}/v1/discord-token"
+WATERDEEP_BASE = "https://www.dndbeyond.com"
 
 # cache
 USER_ENTITLEMENT_TTL = 1 * 60
@@ -29,6 +30,9 @@ class BeyondClientBase:  # for development - assumes no entitlements
 
     async def get_ddb_user(self, ctx, user_id):
         return None
+
+    async def get_active_campaigns(self, ctx, user):
+        return []
 
     async def close(self):
         pass
@@ -59,6 +63,7 @@ class BeyondClient(BeyondClientBase):
         self.ddb_entity_table = self.dynamo.Table(DYNAMO_ENTITY_TABLE)
         log.info("DDB client initialized")
 
+    # ==== methods ====
     async def get_accessible_entities(self, ctx, user_id, entity_type):
         """
         Returns a set of entity IDs of the given entity type that the given user is allowed to access in the given
@@ -121,6 +126,32 @@ class BeyondClient(BeyondClientBase):
         await Stats.count_ddb_link(ctx, user_id, user)
         return user
 
+    async def get_active_campaigns(self, ctx, user):
+        """
+        Gets a list of campaigns the given user is in.
+
+        GET /api/campaigns/active-campaigns
+
+        :type ctx: discord.ext.commands.Context
+        :param user: The DDB user.
+        :type user: auth.BeyondUser
+        :rtype: list[campaign.ActiveCampaign]
+        """
+        try:
+            async with self.http.get(f"{WATERDEEP_BASE}/api/campaigns/active-campaigns") as resp:
+                if not 199 < resp.status < 300:
+                    raise WaterdeepException(f"Waterdeep returned {resp.status}: {await resp.text()}")
+                try:
+                    data = await resp.json()
+                except (aiohttp.ContentTypeError, ValueError, TypeError):
+                    raise WaterdeepException(f"Could not deserialize Waterdeep response: {await resp.text()}")
+        except aiohttp.ServerTimeoutError:
+            raise WaterdeepException("Timed out connecting to Waterdeep")
+        if not data['success']:
+            raise WaterdeepException(f"Waterdeep returned an error: {data}")
+        return [campaign.ActiveCampaign.from_json(j) for j in data['data']]
+
+    # ==== entitlement helpers ====
     async def _get_user_entitlements(self, ctx, user_id):
         """
         Gets a user's entitlements in the current context, from cache or by communicating with DDB.

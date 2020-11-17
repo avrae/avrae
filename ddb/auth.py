@@ -7,7 +7,7 @@ from utils.config import DDB_AUTH_AUDIENCE as AUDIENCE, DDB_AUTH_EXPIRY_SECONDS 
 
 
 class BeyondUser:
-    def __init__(self, token, user_id, username, roles, subscriber=None, subscription_tier=None):
+    def __init__(self, token: str, user_id: str, username: str, roles: list, subscriber=None, subscription_tier=None):
         self.token = token
         self.user_id = user_id
         self.username = username

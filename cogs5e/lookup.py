@@ -122,9 +122,10 @@ class Lookup(commands.Cog):
     @commands.command()
     async def race(self, ctx, *, name: str):
         """Looks up a race."""
-        result: gamedata.Race = await self._lookup_search3(ctx,
-                                                           {'race': compendium.races, 'subrace': compendium.subraces},
-                                                           name, 'race')
+        result: gamedata.Race = await self._lookup_search3(
+            ctx,
+            {'race': compendium.races, 'subrace': compendium.subraces},
+            name, 'race')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name
@@ -140,8 +141,10 @@ class Lookup(commands.Cog):
     @commands.command()
     async def classfeat(self, ctx, *, name: str):
         """Looks up a class feature."""
-        result: SourcedTrait = await self._lookup_search3(ctx, {'class': compendium.cfeats}, name,
-                                                          query_type='classfeat')
+        result: SourcedTrait = await self._lookup_search3(
+            ctx,
+            {'class': compendium.cfeats, 'class-feature': compendium.optional_cfeats},
+            name, query_type='classfeat')
 
         embed = EmbedWithAuthor(ctx)
         embed.title = result.name

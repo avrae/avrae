@@ -13,7 +13,8 @@ from cogs5e.models import errors
 from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, chunk_text, set_maybe_long_desc
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
-from gamedata.lookuputils import HOMEBREW_EMOJI, can_access, get_item_choices, get_monster_choices, get_spell_choices, \
+from gamedata.lookuputils import HOMEBREW_EMOJI, available, can_access, get_item_choices, get_monster_choices, \
+    get_spell_choices, \
     handle_source_footer
 from gamedata.shared import SourcedTrait
 from utils import checks, img
@@ -173,13 +174,18 @@ class Lookup(commands.Cog):
                 level = result.levels[level - 1]
                 levels.append(', '.join([feature.name for feature in level]))
 
-            embed.add_field(name="Starting Proficiencies", value=result.proficiencies, inline=False)
-            embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
-
             level_features_str = ""
             for i, l in enumerate(levels):
                 level_features_str += f"`{i + 1}` {l}\n"
             embed.description = level_features_str
+
+            available_ocfs = await available(ctx, result.optional_features, entity_type='class-feature')
+            if available_ocfs:
+                ocf_names = ', '.join(ocf.name for ocf in available_ocfs)
+                embed.add_field(name="Optional Class Features", value=ocf_names, inline=False)
+
+            embed.add_field(name="Starting Proficiencies", value=result.proficiencies, inline=False)
+            embed.add_field(name="Starting Equipment", value=result.equipment, inline=False)
 
             handle_source_footer(embed, result, f"Use {ctx.prefix}classfeat to look up a feature.",
                                  add_source_str=False)

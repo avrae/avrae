@@ -14,8 +14,7 @@ from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, chu
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
 from gamedata.lookuputils import HOMEBREW_EMOJI, available, can_access, get_item_choices, get_monster_choices, \
-    get_spell_choices, \
-    handle_source_footer
+    get_spell_choices, handle_source_footer
 from gamedata.shared import SourcedTrait
 from utils import checks, img
 from utils.argparser import argparse

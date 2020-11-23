@@ -7,9 +7,8 @@ import ddb
 from ddb.gamelog.errors import CampaignAlreadyLinked, LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.events import GameLogEvent
 from ddb.gamelog.link import CampaignLink
-from utils import config
 
-GAME_LOG_PUBSUB_CHANNEL = f"game-log:{config.ENVIRONMENT}"
+GAME_LOG_PUBSUB_CHANNEL = 'game-log'
 AVRAE_EVENT_SOURCE = 'avrae'
 log = logging.getLogger(__name__)
 log.setLevel(10)  # todo remove this - sets loglevel to debug in dev

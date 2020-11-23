@@ -32,7 +32,9 @@ class Character(StatBlock):
                  skills: Skills, resistances: Resistances, saves: Saves, ac: int, max_hp: int, hp: int, temp_hp: int,
                  cvars: dict, options: dict, overrides: dict, consumables: list, death_saves: dict,
                  spellbook: Spellbook,
-                 live, race: str, background: str, **kwargs):
+                 live, race: str, background: str,
+                 ddb_campaign_id: str = None,
+                 **kwargs):
         if kwargs:
             log.warning(f"Unused kwargs: {kwargs}")
         # sheet metadata
@@ -62,7 +64,7 @@ class Character(StatBlock):
         self.consumables = [CustomCounter.from_dict(self, cons) for cons in consumables]
         self.death_saves = DeathSaves.from_dict(death_saves)
 
-        # live sheet integrations
+        # live sheet resource integrations
         self._live = live
         integration = INTEGRATION_MAP.get(live)
         if integration:
@@ -73,6 +75,9 @@ class Character(StatBlock):
         # misc research things
         self.race = race
         self.background = background
+
+        # ddb live sync
+        self.ddb_campaign_id = ddb_campaign_id
 
     # ---------- Deserialization ----------
     @classmethod
@@ -137,7 +142,7 @@ class Character(StatBlock):
             "image": self._image, "cvars": self.cvars, "options": self.options.to_dict(),
             "overrides": self.overrides.to_dict(), "consumables": [co.to_dict() for co in self.consumables],
             "death_saves": self.death_saves.to_dict(), "live": self._live, "race": self.race,
-            "background": self.background
+            "background": self.background, "ddb_campaign_id": self.ddb_campaign_id
         })
         return d
 

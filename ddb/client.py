@@ -8,14 +8,15 @@ from boto3.dynamodb.conditions import Key
 from cogsmisc.stats import Stats
 from ddb import auth, campaign, entitlements
 from ddb.errors import AuthException, WaterdeepException
-from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, DYNAMO_ENTITY_TABLE, DYNAMO_REGION, DYNAMO_USER_TABLE
+from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, \
+    DDB_WATERDEEP_URL as WATERDEEP_BASE, \
+    DYNAMO_ENTITY_TABLE, DYNAMO_REGION, DYNAMO_USER_TABLE
 
 # dynamo
 # env: AWS_ACCESS_KEY_ID
 # env: AWS_SECRET_ACCESS_KEY
 
 AUTH_DISCORD = f"{AUTH_BASE_URL}/v1/discord-token"
-WATERDEEP_BASE = "https://www.dndbeyond.com"
 
 # cache
 USER_ENTITLEMENT_TTL = 1 * 60
@@ -101,7 +102,7 @@ class BeyondClient(BeyondClientBase):
 
         :type ctx: discord.ext.commands.Context
         :type user_id: int
-        :rtype: BeyondUser or None
+        :rtype: auth.BeyondUser or None
         """
         log.debug(f"Getting DDB user for Discord ID {user_id}")
         user_cache_key = f"beyond.user.{user_id}"
@@ -130,7 +131,7 @@ class BeyondClient(BeyondClientBase):
         """
         Gets a list of campaigns the given user is in.
 
-        GET /api/campaigns/active-campaigns
+        GET /api/campaign/stt/active-campaigns
 
         :type ctx: discord.ext.commands.Context
         :param user: The DDB user.
@@ -138,7 +139,8 @@ class BeyondClient(BeyondClientBase):
         :rtype: list[campaign.ActiveCampaign]
         """
         try:
-            async with self.http.get(f"{WATERDEEP_BASE}/api/campaigns/active-campaigns") as resp:
+            async with self.http.get(f"{WATERDEEP_BASE}/api/campaign/stt/active-campaigns",
+                                     headers={"Authorization": f"Bearer {user.token}"}) as resp:
                 if not 199 < resp.status < 300:
                     raise WaterdeepException(f"Waterdeep returned {resp.status}: {await resp.text()}")
                 try:

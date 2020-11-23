@@ -3,9 +3,10 @@ import logging
 
 from pymongo.errors import DuplicateKeyError
 
-from ddb.gamelog.link import CampaignLink
-from ddb.gamelog.errors import CampaignAlreadyLinked, NoCampaignLink
+import ddb
+from ddb.gamelog.errors import CampaignAlreadyLinked, LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.events import GameLogEvent
+from ddb.gamelog.link import CampaignLink
 from utils import config
 
 GAME_LOG_PUBSUB_CHANNEL = f"game-log:{config.ENVIRONMENT}"
@@ -20,7 +21,7 @@ class GameLogClient:
         :param bot: Avrae instance
         """
         self.bot = bot
-        self.ddb = bot.ddb
+        self.ddb = bot.ddb  # type: ddb.BeyondClient
         self.rdb = bot.rdb
         self.loop = bot.loop
 
@@ -29,9 +30,18 @@ class GameLogClient:
 
     # ==== campaign helpers ====
     async def create_campaign_link(self, ctx, campaign_id: str):
-        # todo - is the current user authorized to link this campaign?
-        campaign_name = f"Campaign {campaign_id}"  # todo get campaign name from metadata
-        link = CampaignLink(campaign_id, campaign_name, ctx.channel.id, ctx.guild.id, ctx.author.id)
+        # is the current user authorized to link this campaign?
+        ddb_user = await self.ddb.get_ddb_user(ctx, ctx.author.id)
+        active_campaigns = await self.ddb.get_active_campaigns(ctx, ddb_user)
+        this_campaign = next((c for c in active_campaigns if c.id == campaign_id), None)
+
+        if this_campaign is None:  # the user is not in the campaign
+            raise LinkNotAllowed("You are not in this campaign, or this campaign does not exist.")
+        elif this_campaign.dm_id != ddb_user.user_id:  # the user is not the DM
+            raise LinkNotAllowed("Only the DM of a campaign is allowed to link a campaign to a Discord channel.")
+
+        # create the link
+        link = CampaignLink(campaign_id, this_campaign.name, ctx.channel.id, ctx.guild.id, ctx.author.id)
         try:
             await self.bot.mdb.gamelog_campaigns.insert_one(link.to_dict())
         except DuplicateKeyError:
@@ -74,10 +84,12 @@ class GameLogClient:
 
         # check: is this campaign id for an event that is handled by this cluster?
         if (guild := self.bot.get_guild(campaign.guild_id)) is None:
+            log.debug(f"Guild {campaign.guild_id} is not in this cluster - ignoring")
             return
 
         # check: is the channel still there?
         if (channel := guild.get_channel(campaign.channel_id)) is None:
+            log.info(f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event")
             return
 
         # todo process the event

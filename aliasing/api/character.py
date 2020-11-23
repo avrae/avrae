@@ -28,6 +28,11 @@ class AliasCharacter(AliasStatBlock):
     # --- death saves ---
     @property
     def death_saves(self):
+        """
+        Returns the characters death saves.
+
+        :rtype: AliasDeathSaves
+        """
         if self._death_saves is None:
             self._death_saves = AliasDeathSaves(self._character.death_saves)
         return self._death_saves

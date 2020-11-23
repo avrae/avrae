@@ -251,7 +251,7 @@ class BeyondSheetParser(SheetLoaderABC):
             display_type = 'bubble' if cons['max'] < 7 else None
             reset = RESET_MAP.get(cons['reset'], 'long')
             name = cons['name'].replace('\u2019', "'")
-            desc = cons['desc'].replace('\u2019', "'")
+            desc = cons['desc'].replace('\u2019', "'") if cons['desc'] is not None else None
 
             if cons['max'] and name:  # don't make counters with a range of 0 - 0, or blank named counters
                 out.append(

@@ -33,15 +33,15 @@ class GameLogClient:
         # is the current user authorized to link this campaign?
         ddb_user = await self.ddb.get_ddb_user(ctx, ctx.author.id)
         active_campaigns = await self.ddb.get_active_campaigns(ctx, ddb_user)
-        this_campaign = next((c for c in active_campaigns if c.id == campaign_id), None)
+        the_campaign = next((c for c in active_campaigns if c.id == campaign_id), None)
 
-        if this_campaign is None:  # the user is not in the campaign
+        if the_campaign is None:  # the user is not in the campaign
             raise LinkNotAllowed("You are not in this campaign, or this campaign does not exist.")
-        elif this_campaign.dm_id != ddb_user.user_id:  # the user is not the DM
+        elif the_campaign.dm_id != ddb_user.user_id:  # the user is not the DM
             raise LinkNotAllowed("Only the DM of a campaign is allowed to link a campaign to a Discord channel.")
 
         # create the link
-        link = CampaignLink(campaign_id, this_campaign.name, ctx.channel.id, ctx.guild.id, ctx.author.id)
+        link = CampaignLink(campaign_id, the_campaign.name, ctx.channel.id, ctx.guild.id, ctx.author.id)
         try:
             await self.bot.mdb.gamelog_campaigns.insert_one(link.to_dict())
         except DuplicateKeyError:

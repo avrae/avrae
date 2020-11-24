@@ -671,7 +671,7 @@ class GameTrack(commands.Cog):
                 ctx, "This campaign is already linked to another channel. Link it to this one instead?")
             if not result:
                 return await ctx.send("Ok, canceling.")
-            await existing_link.delete()
+            await existing_link.delete(ctx.bot.mdb)
 
         # do link (and dm check)
         result = await self.glclient.create_campaign_link(ctx, campaign_id)
@@ -717,7 +717,7 @@ class GameTrack(commands.Cog):
                                   "from a channel.")
 
         # remove campaign link
-        await the_link.delete()
+        await the_link.delete(ctx.bot.mdb)
         await ctx.send(f"Okay, removed the link from {the_link.campaign_name}. Its rolls will no longer show up here.")
 
 

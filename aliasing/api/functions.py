@@ -122,17 +122,20 @@ def safe_range(start, stop=None, step=None):
 
 # err()
 class AliasException(AvraeException):
-    pass
+    def __init__(self, msg, pm_user):
+        super().__init__(msg)
+        self.pm_user = pm_user
 
 
-def err(reason):
+def err(reason, pm_user=True):
     """
     Stops evaluation of an alias and shows the user an error.
 
     :param str reason: The error to show.
+    :param bool pm_user: Whether or not to PM the user the error traceback.
     :raises: AliasException
     """
-    raise AliasException(reason)
+    raise AliasException(reason, pm_user)
 
 
 # typeof()

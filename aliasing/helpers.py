@@ -393,7 +393,9 @@ async def handle_alias_exception(ctx, err):
 
     tb = ''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))
     try:
-        if isinstance(e, AliasException) and e.pm_user:
+        if isinstance(e, AliasException) and not e.pm_user:
+            pass
+        else:
             await ctx.author.send(
                 f"```py\n"
                 f"Error {location}:\n"

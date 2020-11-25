@@ -4,6 +4,7 @@ import logging
 from pymongo.errors import DuplicateKeyError
 
 import ddb
+from ddb.gamelog.context import GameLogEventContext
 from ddb.gamelog.errors import CampaignAlreadyLinked, LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.events import GameLogEvent
 from ddb.gamelog.link import CampaignLink
@@ -23,6 +24,7 @@ class GameLogClient:
         self.ddb = bot.ddb  # type: ddb.BeyondClient
         self.rdb = bot.rdb
         self.loop = bot.loop
+        self._event_handlers = {}
 
     def init(self):
         self.loop.create_task(self.main_loop())
@@ -91,5 +93,35 @@ class GameLogClient:
             log.info(f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event")
             return
 
-        # todo process the event
-        await channel.send(f"Received message: {msg}")
+        # process the event
+        await channel.send(f"Received message: {msg}")  # todo remove this debug line
+        if event.event_type not in self._event_handlers:
+            log.warning(f"No callback registered for event {event.event_type!r}")
+            return
+
+        gctx = GameLogEventContext(self.bot, event, guild, channel)  # todo character
+        await self._event_handlers[event.event_type](gctx)
+
+    # ==== game log callback registration ====
+    def register_callback(self, event_type, handler):
+        """
+        Registers a coroutine as the callback for some event. If a callback is already registered for the given
+        event type, raises a ValueError.
+
+        :param str event_type: The event type to register.
+        :param handler: The coroutine to call.
+        :type handler: Callable[[ddb.gamelog.context.GameLogEventContext], Awaitable[Any]]
+        """
+        if event_type in self._event_handlers:
+            raise ValueError(f"A callback is already registered for {event_type!r}")
+        self._event_handlers[event_type] = handler
+
+    def deregister_callback(self, event_type):
+        """
+        Deregisters a callback. If a callback for the given event type is not registered, does nothing.
+
+        :param str event_type:
+        """
+        if event_type not in self._event_handlers:
+            return
+        del self._event_handlers[event_type]

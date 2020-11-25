@@ -88,7 +88,7 @@ class GameTrack(commands.Cog):
             character.spellbook.set_slots(level, value)
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
-                                f"{character.spellbook.slots_str(level)} ({(value - level):+})"
+                                f"{character.spellbook.slots_str(level)} ({(value - old_slots):+})"
         await ctx.send(embed=embed)
 
     async def _rest(self, ctx, rest_type, *args):

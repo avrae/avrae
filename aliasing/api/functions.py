@@ -127,7 +127,7 @@ class AliasException(AvraeException):
         self.pm_user = pm_user
 
 
-def err(reason, pm_user=True):
+def err(reason, pm_user=False):
     """
     Stops evaluation of an alias and shows the user an error.
 

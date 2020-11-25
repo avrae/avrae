@@ -24,6 +24,7 @@ from aliasing.errors import CollectableRequiresLicenses, EvaluationError
 from aliasing.helpers import handle_alias_exception, handle_alias_required_licenses, handle_aliases
 from cogs5e.models.errors import AvraeException, RequiresLicense
 from ddb import BeyondClient, BeyondClientBase
+from ddb.gamelog import GameLogClient
 from gamedata.compendium import compendium
 from gamedata.lookuputils import handle_required_license
 from utils.aldclient import AsyncLaunchDarklyClient
@@ -59,9 +60,13 @@ class Avrae(commands.AutoShardedBot):
         super(Avrae, self).__init__(prefix, help_command=help_command, description=description, **options)
         self.testing = testing
         self.state = "init"
+
+        # dbs
         self.mclient = motor.motor_asyncio.AsyncIOMotorClient(config.MONGO_URL)
         self.mdb = self.mclient[config.MONGODB_DB_NAME]
         self.rdb = self.loop.run_until_complete(self.setup_rdb())
+
+        # misc caches
         self.prefixes = dict()
         self.muted = set()
         self.cluster_id = 0
@@ -81,6 +86,10 @@ class Avrae(commands.AutoShardedBot):
 
         # launchdarkly
         self.ldclient = AsyncLaunchDarklyClient(self.loop, sdk_key=config.LAUNCHDARKLY_SDK_KEY)
+
+        # ddb game log
+        self.glclient = GameLogClient(bot)
+        self.glclient.init()
 
     async def setup_rdb(self):
         return RedisIO(await aioredis.create_redis_pool(config.REDIS_URL, db=config.REDIS_DB_NUM))

@@ -13,9 +13,23 @@ class GameLog(commands.Cog):
     Link your D&D Beyond campaign to a Discord channel to see players' rolls in real time!
     """
 
+    # setup/teardown
     def __init__(self, bot):
         self.bot = bot
 
+        self._gl_callbacks = {
+            'dice_roll_begin': self.dice_roll_begin,
+            'dice_roll': self.dice_roll
+        }
+        for event_type, callback in self._gl_callbacks.items():
+            self.bot.glclient.register_callback(event_type, callback)
+
+    def cog_unload(self):
+        # deregister all glclient listeners
+        for event_type in self._gl_callbacks:
+            self.bot.glclient.deregister_callback(event_type)
+
+    # ==== commands ====
     @commands.group(name='campaign', invoke_without_command=True)
     @commands.guild_only()
     @checks.feature_flag('command.campaign.enabled', use_ddb_user=True)
@@ -122,7 +136,16 @@ class GameLog(commands.Cog):
                        f"up here, and checks, saves, and attacks made by characters in your campaign here will "
                        f"appear in D&D Beyond!")
 
-        # ===== game log handlers (move to own cog?) =====
+    # ==== game log handlers ====
+    @staticmethod
+    async def dice_roll_begin(gctx):
+        """
+        Sends a typing indicator to the linked channel to indicate that something is about to happen.
+        """
+        await gctx.channel.trigger_typing()
+
+    async def dice_roll(self, gctx):
+        pass
 
 
 def setup(bot):

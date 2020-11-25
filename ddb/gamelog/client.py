@@ -100,7 +100,10 @@ class GameLogClient:
             return
 
         gctx = GameLogEventContext(self.bot, event, guild, channel)  # todo character
-        await self._event_handlers[event.event_type](gctx)
+        try:
+            await self._event_handlers[event.event_type](gctx)
+        except Exception as e:
+            self.bot.log_exception(e)
 
     # ==== game log callback registration ====
     def register_callback(self, event_type, handler):

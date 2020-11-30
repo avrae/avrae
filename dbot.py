@@ -34,7 +34,8 @@ from utils.redisIO import RedisIO
 # -----COGS-----
 COGS = (
     "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
-    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogsmisc.customization", "cogsmisc.core",
+    "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogs5e.gamelog",
+    "cogsmisc.customization", "cogsmisc.core",
     "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"
 )
 
@@ -88,7 +89,7 @@ class Avrae(commands.AutoShardedBot):
         self.ldclient = AsyncLaunchDarklyClient(self.loop, sdk_key=config.LAUNCHDARKLY_SDK_KEY)
 
         # ddb game log
-        self.glclient = GameLogClient(bot)
+        self.glclient = GameLogClient(self)
         self.glclient.init()
 
     async def setup_rdb(self):

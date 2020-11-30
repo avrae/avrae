@@ -118,6 +118,7 @@ class GameLogClient:
         if event_type in self._event_handlers:
             raise ValueError(f"A callback is already registered for {event_type!r}")
         self._event_handlers[event_type] = handler
+        log.debug(f"Registered callback for {event_type!r}")
 
     def deregister_callback(self, event_type):
         """
@@ -128,3 +129,4 @@ class GameLogClient:
         if event_type not in self._event_handlers:
             return
         del self._event_handlers[event_type]
+        log.debug(f"Deregistered callback for {event_type!r}")

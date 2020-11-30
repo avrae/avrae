@@ -236,26 +236,7 @@ class SimpleCombatant(AliasStatBlock):
         if not isinstance(group, str):
             raise ValueError('Group name must be a string.')
 
-        # copied and modified from !i opt code
-
-        combat = self._combatant.combat
-        combatant = self._combatant
-        current = combatant.combat.current_combatant
-        was_current = combatant is current or \
-                      (isinstance(current, CombatantGroup) and combatant in current and len(current) == 1)
-
-        combat.remove_combatant(combatant, ignore_remove_hook=True)
-        if group.lower() == 'none':
-            combat.add_combatant(combatant)
-            if was_current:
-                combat.goto_turn(combatant, True)
-            return None
-        else:
-            c_group = combat.get_group(group, create=combatant.init)
-            c_group.add_combatant(combatant)
-            if was_current:
-                combat.goto_turn(combatant, True)
-            return SimpleGroup(c_group)
+        return self._combatant.set_group(group_name=group)
 
     def set_note(self, note: str):
         """

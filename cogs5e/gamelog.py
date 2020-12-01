@@ -60,6 +60,7 @@ class GameLog(commands.Cog):
             await existing_link.delete(ctx.bot.mdb)
 
         # do link (and dm check)
+        await ctx.trigger_typing()
         result = await self.bot.glclient.create_campaign_link(ctx, campaign_id)
         await ctx.send(f"Linked {result.campaign_name} to this channel! Your players' rolls from D&D Beyond will show "
                        f"up here, and checks, saves, and attacks made by characters in your campaign here will "
@@ -106,35 +107,6 @@ class GameLog(commands.Cog):
         await the_link.delete(ctx.bot.mdb)
         await ctx.send(f"Okay, removed the link from {the_link.campaign_name}. Its rolls will no longer show up here.")
 
-    @campaign.command(name='add-debug')
-    @commands.guild_only()
-    async def campaign_add_debug(self, ctx):
-        # https://stg.dndbeyond.com/game-log-test/897929
-        # https://stg.dndbeyond.com/campaigns/897929
-        campaign_id = "897929"
-        campaign_name = "DDB Test Campaign"
-
-        # is there already an existing link?
-        try:
-            existing_link = await CampaignLink.from_id(self.bot.mdb, campaign_id)
-        except NoCampaignLink:
-            existing_link = None
-
-        if existing_link is not None and existing_link.channel_id == ctx.channel.id:
-            return await ctx.send("This campaign is already linked to this channel.")
-        elif existing_link is not None:
-            result = await confirm(
-                ctx, "This campaign is already linked to another channel. Link it to this one instead?")
-            if not result:
-                return await ctx.send("Ok, canceling.")
-            await existing_link.delete()
-
-        link = CampaignLink(campaign_id, campaign_name, ctx.channel.id, ctx.guild.id, ctx.author.id)
-        await self.bot.mdb.gamelog_campaigns.insert_one(link.to_dict())
-
-        await ctx.send(f"Linked {campaign_name} to this channel! Your players' rolls from D&D Beyond will show "
-                       f"up here, and checks, saves, and attacks made by characters in your campaign here will "
-                       f"appear in D&D Beyond!")
 
     # ==== game log handlers ====
     @staticmethod

@@ -149,7 +149,7 @@ class BeyondClient(BeyondClientBase):
                     raise WaterdeepException(f"Could not deserialize Waterdeep response: {await resp.text()}")
         except aiohttp.ServerTimeoutError:
             raise WaterdeepException("Timed out connecting to Waterdeep")
-        if not data['success']:
+        if not data.get('status') == 'success':
             raise WaterdeepException(f"Waterdeep returned an error: {data}")
         return [campaign.ActiveCampaign.from_json(j) for j in data['data']]
 

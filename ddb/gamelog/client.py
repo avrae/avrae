@@ -93,13 +93,13 @@ class GameLogClient:
             log.info(f"Could not find channel {campaign.channel_id} in guild {guild.id} - discarding event")
             return
 
-        # process the event
-        await channel.send(f"Received message: {msg}")  # todo remove this debug line
+        # check: do we have a callback for this event?
         if event.event_type not in self._event_handlers:
-            log.warning(f"No callback registered for event {event.event_type!r}")
+            log.info(f"No callback registered for event {event.event_type!r} - discarding event")
             return
 
-        gctx = GameLogEventContext(self.bot, event, guild, channel)  # todo character
+        # process the event
+        gctx = GameLogEventContext(self.bot, event, guild, channel)
         try:
             await self._event_handlers[event.event_type](gctx)
         except Exception as e:

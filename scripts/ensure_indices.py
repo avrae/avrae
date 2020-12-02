@@ -116,6 +116,10 @@ INDICES = {
     ],
 
     # game log linking
+    "ddb_account_map": [
+        IndexModel('ddb_id', unique=True),
+        IndexModel('discord_id', unique=True)
+    ],
     "gamelog_campaigns": [
         IndexModel('campaign_id', unique=True),
         IndexModel('channel_id')

@@ -117,14 +117,25 @@ class BeyondClient(BeyondClientBase):
         user_claim = auth.jwt_for_user(user_id)
         token, ttl = await self._fetch_token(user_claim)
 
-        # cache unlinked if user is unlinked
         if token is None:
+            # cache unlinked if user is unlinked
             await ctx.bot.rdb.jsetex(user_cache_key, unlinked_sentinel, USER_ENTITLEMENT_TTL)
+            # remove any ddb -> discord user mapping
+            await ctx.bot.mdb.ddb_account_map.delete_one({"discord_id": user_id})
             return None
 
         user = auth.BeyondUser.from_jwt(token)
         await ctx.bot.rdb.jsetex(user_cache_key, user.to_dict(), ttl)
         await Stats.count_ddb_link(ctx, user_id, user)
+
+        # update the ddb -> discord user mapping
+        await ctx.bot.mdb.ddb_account_map.delete_one({"ddb_id": user.user_id})
+        await ctx.bot.mdb.ddb_account_map.update_one(
+            {"discord_id": user_id},
+            {"$set": {"ddb_id": user.user_id}},
+            upsert=True
+        )
+
         return user
 
     async def get_active_campaigns(self, ctx, user):

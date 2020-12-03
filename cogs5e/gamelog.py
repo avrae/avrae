@@ -1,10 +1,13 @@
 import re
 
+import discord
 from discord.ext import commands
 
+import ddb.dice
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
 from utils import checks
+from utils.constants import DDB_LOGO_EMOJI
 from utils.functions import confirm, search_and_select
 
 
@@ -107,6 +110,8 @@ class GameLog(commands.Cog):
         await the_link.delete(ctx.bot.mdb)
         await ctx.send(f"Okay, removed the link from {the_link.campaign_name}. Its rolls will no longer show up here.")
 
+    # https://stg.dndbeyond.com/game-log-test/897929
+    # https://stg.dndbeyond.com/campaigns/897929
 
     # ==== game log handlers ====
     @staticmethod
@@ -117,7 +122,14 @@ class GameLog(commands.Cog):
         await gctx.channel.trigger_typing()
 
     async def dice_roll(self, gctx):
-        pass
+        """
+        Sends a message with the result of the roll, similar to `!r`.
+        """
+        discord_id = await gctx.get_discord_user_id()
+        roll_request = ddb.dice.RollRequest.from_dict(gctx.event.data)
+        out = f"<@{discord_id}>  :game_die: {DDB_LOGO_EMOJI}\n{str(dice_result)}"
+        # the user knows they rolled - don't need to ping them in discord
+        await gctx.channel.send(out, allowed_mentions=discord.AllowedMentions.none())
 
 
 def setup(bot):

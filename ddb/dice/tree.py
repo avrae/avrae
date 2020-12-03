@@ -18,6 +18,7 @@ https://github.com/DnDBeyond/ddb-integrated-dice/blob/master/packages/ddb-dice/s
         - RollType
         - RollKind
 """
+import d20
 
 from .constants import DiceOperation, RollKind, RollType
 
@@ -75,6 +76,20 @@ class RollRequestRoll:
             result = RollResult.from_dict(result)
         return cls(dice_notation, roll_type, roll_kind, result)
 
+    def to_d20(self, stringifier=None):
+        """
+        Returns a d20.RollResult representing this roll request.
+
+        :param stringifier: The d20 stringifier to use to stringify the result.
+        :type stringifier: d20.Stringifier
+        :rtype: d20.RollResult
+        """
+        if stringifier is None:
+            stringifier = d20.MarkdownStringifier()
+        ast = self.dice_notation.d20_ast()
+        result = self.dice_notation.d20_expr()
+        return d20.RollResult(ast, result, stringifier)
+
 
 class RollResult:
     def __init__(self, values, total, constant):
@@ -106,6 +121,48 @@ class DiceNotation:
         dice_set = [DieTerm.from_dict(dt) for dt in d['set']]
         return cls(dice_set, d['constant'])
 
+    def d20_ast(self):
+        """
+        :return: The d20 AST representing the dice rolled in this roll.
+        :rtype: d20.ast.Expression
+        """
+        return self._build_tree(module_base=d20.ast, child_method=lambda dt: dt.d20_ast)
+
+    def d20_expr(self):
+        """
+        :return: The d20 expression representing the results of this roll.
+        :rtype: d20.Expression
+        """
+        return self._build_tree(module_base=d20, child_method=lambda dt: dt.d20_expr)
+
+    def _build_tree(self, module_base, child_method):
+        """
+        Base method for building an ast or expression tree.
+
+        :param module_base: The module to get tree node classes from. (AST or Expression)
+        :param child_method: A callable that returns a method of DieTerm to generate tree nodes for children.
+        """
+        # if no dice were rolled, just return the literal
+        if not self.set:
+            return module_base.Expression(module_base.Literal(self.constant), comment=None)
+
+        # step 1: generate Dice for each roll in the set
+        set_dice = [child_method(dt)() for dt in self.set]
+
+        # step 2: combine them with BinOps
+        root, *rest = set_dice
+        for dice in rest:
+            root = module_base.BinOp(root, '+', dice)
+
+        # step 3: combine with a constant with a BinOp (if there)
+        if self.constant < 0:
+            root = module_base.BinOp(root, '-', module_base.Literal(-self.constant))
+        elif self.constant > 0:
+            root = module_base.BinOp(root, '+', module_base.Literal(self.constant))
+
+        # done
+        return module_base.Expression(root, comment=None)
+
 
 class DieTerm:
     def __init__(self, count, die_type, dice, operation, operand=None):
@@ -128,6 +185,40 @@ class DieTerm:
         operation = DiceOperation(d['operation'])
         return cls(d['count'], d['dieType'], dice, operation, d.get('operand'))
 
+    @property
+    def size(self):
+        return int(self.die_type.strip('d'))
+
+    def d20_ast(self):
+        """
+        :rtype: d20.ast.Dice or d20.ast.OperatedDice
+        """
+        dice = d20.ast.Dice(self.count, self.size)
+        if self.operation == DiceOperation.SUM:
+            return dice
+        elif self.operation == DiceOperation.MIN:
+            klX = d20.ast.SetOperator('k', [d20.ast.SetSelector('l', self.operand)])
+            return d20.ast.OperatedDice(dice, klX)
+        else:  # DiceOperation.MAX
+            khX = d20.ast.SetOperator('k', [d20.ast.SetSelector('h', self.operand)])
+            return d20.ast.OperatedDice(dice, khX)
+
+    def d20_expr(self):
+        """
+        :rtype: d20.Dice
+        """
+        # create expression for each individual Die
+        the_dice = [die.d20_expr() for die in self.dice]
+
+        # setup operations
+        operations = []
+        if self.operation == DiceOperation.MIN:
+            operations = [d20.SetOperator('k', [d20.SetSelector('l', self.operand)])]
+        elif self.operation == DiceOperation.MAX:
+            operations = [d20.SetOperator('k', [d20.SetSelector('h', self.operand)])]
+
+        return d20.Dice(num=self.count, size=self.size, values=the_dice, operations=operations)
+
 
 class Die:
     def __init__(self, die_type, die_value):
@@ -141,3 +232,13 @@ class Die:
     @classmethod
     def from_dict(cls, d):
         return cls(d['dieType'], d['dieValue'])
+
+    @property
+    def size(self):
+        return int(self.die_type.strip('d'))
+
+    def d20_expr(self):
+        """
+        :rtype: d20.Die
+        """
+        return d20.Die(self.size, values=[d20.Literal(self.die_value)])

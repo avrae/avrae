@@ -8,6 +8,7 @@ from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
 from utils import checks
 from utils.constants import DDB_LOGO_EMOJI
+from utils.dice import VerboseMDStringifier
 from utils.functions import confirm, search_and_select
 
 
@@ -41,6 +42,8 @@ class GameLog(commands.Cog):
         Links a D&D Beyond campaign to this channel, displaying rolls made on players' character sheets in real time.
 
         You must be the DM of the campaign to link it to a channel.
+
+        Not seeing a player's rolls? Link their D&D Beyond and Discord accounts [here](https://www.dndbeyond.com/account), and check with the `!ddb` command!
         """
         link_match = re.match(r'(?:https?://)?(?:www\.)?dndbeyond\.com/campaigns/(\d+)(?:$|/)', campaign_link)
         if link_match is None:
@@ -126,8 +129,12 @@ class GameLog(commands.Cog):
         Sends a message with the result of the roll, similar to `!r`.
         """
         discord_id = await gctx.get_discord_user_id()
+        if discord_id is None:  # todo: should we just discard all events without a discord id?
+            return
         roll_request = ddb.dice.RollRequest.from_dict(gctx.event.data)
-        out = f"<@{discord_id}>  :game_die: {DDB_LOGO_EMOJI}\n{str(dice_result)}"
+        results = '\n\n'.join(str(rr.to_d20(stringifier=VerboseMDStringifier())) for rr in roll_request.rolls)
+
+        out = f"<@{discord_id}> **rolled from** {DDB_LOGO_EMOJI}:\n{results}"
         # the user knows they rolled - don't need to ping them in discord
         await gctx.channel.send(out, allowed_mentions=discord.AllowedMentions.none())
 

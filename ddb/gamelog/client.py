@@ -33,6 +33,9 @@ class GameLogClient:
     async def create_campaign_link(self, ctx, campaign_id: str):
         # is the current user authorized to link this campaign?
         ddb_user = await self.ddb.get_ddb_user(ctx, ctx.author.id)
+        if ddb_user is None:
+            raise LinkNotAllowed("You do not have a D&D Beyond account connected to your Discord account. "
+                                 "Connect your accounts at <https://www.dndbeyond.com/account>!")
         active_campaigns = await self.ddb.get_active_campaigns(ctx, ddb_user)
         the_campaign = next((c for c in active_campaigns if c.id == campaign_id), None)
 

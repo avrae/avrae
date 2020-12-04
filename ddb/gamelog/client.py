@@ -1,5 +1,7 @@
 import asyncio
+import datetime
 import logging
+import traceback
 
 from pymongo.errors import DuplicateKeyError
 
@@ -8,6 +10,7 @@ from ddb.gamelog.context import GameLogEventContext
 from ddb.gamelog.errors import CampaignAlreadyLinked, LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.events import GameLogEvent
 from ddb.gamelog.link import CampaignLink
+from ddb.utils import ddb_id_to_discord_id
 
 GAME_LOG_PUBSUB_CHANNEL = 'game-log'
 AVRAE_EVENT_SOURCE = 'avrae'
@@ -101,11 +104,18 @@ class GameLogClient:
             log.info(f"No callback registered for event {event.event_type!r} - discarding event")
             return
 
+        # set up the event context
+        discord_user_id = await ddb_id_to_discord_id(self.bot.mdb, event.user_id)
+        if discord_user_id is None:
+            log.info(f"No discord user associated with event {event.event_type!r} - discarding event")
+            return
+        gctx = GameLogEventContext(self.bot, event, guild, channel, discord_user_id)
+
         # process the event
-        gctx = GameLogEventContext(self.bot, event, guild, channel)
         try:
             await self._event_handlers[event.event_type](gctx)
         except Exception as e:
+            traceback.print_exc()
             self.bot.log_exception(e)
 
     # ==== game log callback registration ====

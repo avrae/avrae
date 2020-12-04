@@ -152,9 +152,14 @@ class GameLog(commands.Cog):
         await roll_callbacks.get(first_roll.roll_type, self.dice_roll_roll)(gctx, roll_request)
 
     @staticmethod
-    async def dice_roll_roll(gctx, roll_request):
-        """Generic roll: Display the roll in a format similar to ``!r``."""
-        results = '\n\n'.join(str(rr.to_d20(stringifier=VerboseMDStringifier())) for rr in roll_request.rolls)
+    async def dice_roll_roll(gctx, roll_request, comment=None):
+        """
+        Generic roll: Display the roll in a format similar to ``!r``.
+
+        :param str comment: A comment to display in the result, rather than "Result".
+        """
+        results = '\n\n'.join(str(rr.to_d20(stringifier=VerboseMDStringifier(), comment=comment))
+                              for rr in roll_request.rolls)
 
         out = f"<@{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{results}"
         # the user knows they rolled - don't need to ping them in discord
@@ -163,24 +168,25 @@ class GameLog(commands.Cog):
     async def dice_roll_check(self, gctx, roll_request):
         """Check: Display like ``!c``. Requires character - if not imported falls back to default roll."""
 
-        # only listen to the first roll
-        if len(roll_request.rolls) > 1:
-            log.warning(f"Got {len(roll_request.rolls)} rolls for check (event {gctx.event.id!r}), discarding rolls 2+")
-        the_roll = roll_request.rolls[0]
-
         # check for loaded character
         character = await gctx.get_character()
         if character is None:
-            the_roll.
-            await self.dice_roll_roll(gctx, roll_request)
+            await self.dice_roll_roll(gctx, roll_request, comment=roll_request.action)
             return
+
+        # only listen to the first roll
+        if len(roll_request.rolls) > 1:
+            log.warning(
+                f"Got {len(roll_request.rolls)} rolls for check (event {gctx.event.id!r}), discarding rolls 2+")
+        the_roll = roll_request.rolls[0]
 
         # send embed
         embed = embeds.EmbedWithCharacter(character, name=False)
         embed.title = f"{character.get_title_name()} makes {a_or_an(roll_request.action)} check!"
         embed.description = str(the_roll.to_d20())
-        embed.set_footer(text=f"Rolled in {gctx.campaign.campaign_name} from D&D Beyond",
+        embed.set_footer(text=f"Rolled in {gctx.campaign.campaign_name}",
                          icon_url=constants.DDB_LOGO_ICON)
+        await gctx.channel.send(embed=embed)
 
     async def dice_roll_save(self, gctx, roll_request):
         """Save: Display like ``!s``."""

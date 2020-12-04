@@ -5,7 +5,7 @@ import os
 
 from redis import Redis
 
-GAME_LOG_PUBSUB_CHANNEL = "game-log:development"
+GAME_LOG_PUBSUB_CHANNEL = "game-log"
 REDIS_URL = os.getenv('REDIS_URL')
 REDIS_PASS = os.getenv('REDIS_PASS')
 

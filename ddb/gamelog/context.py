@@ -1,6 +1,7 @@
 import logging
 
 from cogs5e.models.character import Character
+from cogs5e.models.errors import NoCharacter
 from utils.functions import get_guild_member, user_from_id
 
 _sentinel = object()
@@ -71,5 +72,9 @@ class GameLogEventContext:
             return None
 
         ddb_character_upstream = f"beyond-{self.event.entity_id}"
-        self._character = await Character.from_bot_and_ids(self.bot, str(self.discord_user_id), ddb_character_upstream)
+        try:
+            self._character = await Character.from_bot_and_ids(self.bot, str(self.discord_user_id),
+                                                               ddb_character_upstream)
+        except NoCharacter:
+            self._character = None
         return self._character

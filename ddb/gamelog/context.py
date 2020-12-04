@@ -53,3 +53,21 @@ class GameLogEventContext:
 
         self._discord_user = user
         return user
+
+    async def get_character(self):
+        """
+        Gets the Avrae character associated with the event. Returns None if the character is not found.
+
+        :rtype: cogs5e.models.character.Character or None
+        """
+        if self._character is not _sentinel:
+            return self._character
+
+        # event is not in the character scope
+        if self.event.entity_type != 'character':
+            self._character = None
+            return None
+
+        ddb_character_upstream = f"beyond-{self.event.entity_id}"
+        self._character = await Character.from_bot_and_ids(self.bot, str(self.discord_user_id), ddb_character_upstream)
+        return self._character

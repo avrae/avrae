@@ -108,7 +108,8 @@ class Character(StatBlock):
             return inst
 
     @classmethod
-    async def from_bot_and_ids(cls, bot, owner_id, character_id):
+    async def from_bot_and_ids(cls, bot, owner_id: str, character_id: str):
+        owner_id = str(owner_id)
         if (owner_id, character_id) in cls._cache:
             # read from cache
             return cls._cache[owner_id, character_id]
@@ -121,7 +122,8 @@ class Character(StatBlock):
         return inst
 
     @classmethod
-    def from_bot_and_ids_sync(cls, bot, owner_id, character_id):
+    def from_bot_and_ids_sync(cls, bot, owner_id: str, character_id: str):
+        owner_id = str(owner_id)
         if (owner_id, character_id) in cls._cache:
             # read from cache
             return cls._cache[owner_id, character_id]

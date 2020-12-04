@@ -15,11 +15,11 @@ class GameLogEvent:
         self.event_type = kwargs['eventType']  # type: str
         self.source = kwargs['source']  # type: str
         self.data = kwargs['data']
+        self.entity_id = kwargs['entityId']  # type: str
+        self.entity_type = kwargs['entityType']  # type: str
 
         # other stuff
         self.id = kwargs['id']  # type: str
-        self.entity_id = kwargs['entityId']  # type: str
-        self.entity_type = kwargs['entityType']  # type: str
         self.date_time = kwargs['dateTime']  # type: str
         self.persist = kwargs['persist']  # type: bool
         self.message_scope = kwargs['messageScope']  # type: str

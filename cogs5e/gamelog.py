@@ -1,3 +1,4 @@
+import logging
 import re
 
 import discord
@@ -11,6 +12,8 @@ from utils.constants import DDB_LOGO_EMOJI
 from utils.dice import VerboseMDStringifier
 from utils.functions import confirm, search_and_select
 
+log = logging.getLogger(__name__)
+
 
 class GameLog(commands.Cog):
     """
@@ -23,7 +26,9 @@ class GameLog(commands.Cog):
 
         self._gl_callbacks = {
             'dice_roll_begin': self.dice_roll_begin,
-            'dice_roll': self.dice_roll
+            'dice/roll/begin': self.dice_roll,
+            'dice_roll': self.dice_roll,
+            'dice/roll/fulfilled': self.dice_roll
         }
         for event_type, callback in self._gl_callbacks.items():
             self.bot.glclient.register_callback(event_type, callback)
@@ -117,6 +122,7 @@ class GameLog(commands.Cog):
     # https://stg.dndbeyond.com/campaigns/897929
 
     # ==== game log handlers ====
+    # ---- dice ----
     @staticmethod
     async def dice_roll_begin(gctx):
         """
@@ -128,15 +134,60 @@ class GameLog(commands.Cog):
         """
         Sends a message with the result of the roll, similar to `!r`.
         """
-        discord_id = await gctx.get_discord_user_id()
-        if discord_id is None:  # todo: should we just discard all events without a discord id?
-            return
         roll_request = ddb.dice.RollRequest.from_dict(gctx.event.data)
+        if not roll_request.rolls:  # do nothing if there are no rolls actually made
+            return
+        first_roll = roll_request.rolls[0]
+
+        roll_callbacks = {  # takes in (gctx, roll_request)
+            ddb.dice.RollType.CHECK: self.dice_roll_check,
+            ddb.dice.RollType.SAVE: self.dice_roll_save,
+            ddb.dice.RollType.TO_HIT: self.dice_roll_to_hit,
+            ddb.dice.RollType.DAMAGE: self.dice_roll_damage,
+            ddb.dice.RollType.SPELL: self.dice_roll_spell,
+            ddb.dice.RollType.HEAL: self.dice_roll_heal
+        }
+
+        # noinspection PyArgumentList
+        await roll_callbacks.get(first_roll.roll_type, self.dice_roll_roll)(gctx, roll_request)
+
+    @staticmethod
+    async def dice_roll_roll(gctx, roll_request):
+        """Generic roll: Display the roll in a format similar to ``!r``."""
         results = '\n\n'.join(str(rr.to_d20(stringifier=VerboseMDStringifier())) for rr in roll_request.rolls)
 
-        out = f"<@{discord_id}> **rolled from** {DDB_LOGO_EMOJI}:\n{results}"
+        out = f"<@{gctx.discord_user_id}> **rolled from** {DDB_LOGO_EMOJI}:\n{results}"
         # the user knows they rolled - don't need to ping them in discord
         await gctx.channel.send(out, allowed_mentions=discord.AllowedMentions.none())
+
+    async def dice_roll_check(self, gctx, roll_request):
+        """Check: Display like ``!c``. Requires character - if not imported falls back to default roll."""
+        # check for loaded character
+
+        # only listen to the first roll
+        if len(roll_request.rolls) > 1:
+            log.warning(f"Got {len(roll_request.rolls)} rolls for check (event {gctx.event.id!r}), discarding rolls 2+")
+        roll = roll_request.rolls[0]
+
+    async def dice_roll_save(self, gctx, roll_request):
+        """Save: Display like ``!s``."""
+        pass
+
+    async def dice_roll_to_hit(self, gctx, roll_request):
+        """To Hit rolls from attacks/spells."""
+        pass
+
+    async def dice_roll_damage(self, gctx, roll_request):
+        """Damage rolls from attacks/spells."""
+        pass
+
+    async def dice_roll_spell(self, gctx, roll_request):
+        """Unknown when this is used. Set roll comment and pass to default roll handler."""
+        pass
+
+    async def dice_roll_heal(self, gctx, roll_request):
+        """Healing and temp HP. how to handle best?"""
+        pass
 
 
 def setup(bot):

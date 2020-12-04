@@ -12,16 +12,18 @@ class GameLogEventContext:
     The context in which a game log event occurred. It is convention to pass this to the handler as ``gctx``.
     """
 
-    def __init__(self, bot, event, guild, channel, discord_user_id):
+    def __init__(self, bot, event, campaign, guild, channel, discord_user_id):
         """
         :type bot: dbot.Avrae
         :type event: ddb.gamelog.events.GameLogEvent
+        :type campaign: ddb.gamelog.link.CampaignLink
         :type guild: discord.Guild
         :type channel: discord.TextChannel
         :type discord_user_id: int
         """
         self.bot = bot
         self.event = event
+        self.campaign = campaign
         self.guild = guild
         self.channel = channel
         self.discord_user_id = discord_user_id

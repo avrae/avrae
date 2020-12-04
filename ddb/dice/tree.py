@@ -76,18 +76,19 @@ class RollRequestRoll:
             result = RollResult.from_dict(result)
         return cls(dice_notation, roll_type, roll_kind, result)
 
-    def to_d20(self, stringifier=None):
+    def to_d20(self, stringifier=None, comment=None):
         """
         Returns a d20.RollResult representing this roll request.
 
         :param stringifier: The d20 stringifier to use to stringify the result.
         :type stringifier: d20.Stringifier
+        :param str comment: The comment to add to the resulting expression.
         :rtype: d20.RollResult
         """
         if stringifier is None:
             stringifier = d20.MarkdownStringifier()
-        ast = self.dice_notation.d20_ast()
-        result = self.dice_notation.d20_expr()
+        ast = self.dice_notation.d20_ast(comment=comment)
+        result = self.dice_notation.d20_expr(comment=comment)
         return d20.RollResult(ast, result, stringifier)
 
 
@@ -121,30 +122,31 @@ class DiceNotation:
         dice_set = [DieTerm.from_dict(dt) for dt in d['set']]
         return cls(dice_set, d['constant'])
 
-    def d20_ast(self):
+    def d20_ast(self, **kwargs):
         """
         :return: The d20 AST representing the dice rolled in this roll.
         :rtype: d20.ast.Expression
         """
-        return self._build_tree(module_base=d20.ast, child_method=lambda dt: dt.d20_ast)
+        return self._build_tree(module_base=d20.ast, child_method=lambda dt: dt.d20_ast, **kwargs)
 
-    def d20_expr(self):
+    def d20_expr(self, **kwargs):
         """
         :return: The d20 expression representing the results of this roll.
         :rtype: d20.Expression
         """
-        return self._build_tree(module_base=d20, child_method=lambda dt: dt.d20_expr)
+        return self._build_tree(module_base=d20, child_method=lambda dt: dt.d20_expr, **kwargs)
 
-    def _build_tree(self, module_base, child_method):
+    def _build_tree(self, module_base, child_method, comment=None):
         """
         Base method for building an ast or expression tree.
 
         :param module_base: The module to get tree node classes from. (AST or Expression)
         :param child_method: A callable that returns a method of DieTerm to generate tree nodes for children.
+        :param str comment: A comment to add to the resulting expression.
         """
         # if no dice were rolled, just return the literal
         if not self.set:
-            return module_base.Expression(module_base.Literal(self.constant), comment=None)
+            return module_base.Expression(module_base.Literal(self.constant), comment=comment)
 
         # step 1: generate Dice for each roll in the set
         set_dice = [child_method(dt)() for dt in self.set]
@@ -161,7 +163,7 @@ class DiceNotation:
             root = module_base.BinOp(root, '+', module_base.Literal(self.constant))
 
         # done
-        return module_base.Expression(root, comment=None)
+        return module_base.Expression(root, comment=comment)
 
 
 class DieTerm:

@@ -109,7 +109,7 @@ class GameLogClient:
         if discord_user_id is None:
             log.info(f"No discord user associated with event {event.event_type!r} - discarding event")
             return
-        gctx = GameLogEventContext(self.bot, event, guild, channel, discord_user_id)
+        gctx = GameLogEventContext(self.bot, event, campaign, guild, channel, discord_user_id)
 
         # process the event
         try:

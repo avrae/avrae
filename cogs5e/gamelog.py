@@ -5,12 +5,12 @@ import discord
 from discord.ext import commands
 
 import ddb.dice
+from cogs5e.models import embeds
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
-from utils import checks
-from utils.constants import DDB_LOGO_EMOJI
+from utils import checks, constants
 from utils.dice import VerboseMDStringifier
-from utils.functions import confirm, search_and_select
+from utils.functions import a_or_an, confirm, search_and_select
 
 log = logging.getLogger(__name__)
 
@@ -156,18 +156,31 @@ class GameLog(commands.Cog):
         """Generic roll: Display the roll in a format similar to ``!r``."""
         results = '\n\n'.join(str(rr.to_d20(stringifier=VerboseMDStringifier())) for rr in roll_request.rolls)
 
-        out = f"<@{gctx.discord_user_id}> **rolled from** {DDB_LOGO_EMOJI}:\n{results}"
+        out = f"<@{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{results}"
         # the user knows they rolled - don't need to ping them in discord
         await gctx.channel.send(out, allowed_mentions=discord.AllowedMentions.none())
 
     async def dice_roll_check(self, gctx, roll_request):
         """Check: Display like ``!c``. Requires character - if not imported falls back to default roll."""
-        # check for loaded character
 
         # only listen to the first roll
         if len(roll_request.rolls) > 1:
             log.warning(f"Got {len(roll_request.rolls)} rolls for check (event {gctx.event.id!r}), discarding rolls 2+")
-        roll = roll_request.rolls[0]
+        the_roll = roll_request.rolls[0]
+
+        # check for loaded character
+        character = await gctx.get_character()
+        if character is None:
+            the_roll.
+            await self.dice_roll_roll(gctx, roll_request)
+            return
+
+        # send embed
+        embed = embeds.EmbedWithCharacter(character, name=False)
+        embed.title = f"{character.get_title_name()} makes {a_or_an(roll_request.action)} check!"
+        embed.description = str(the_roll.to_d20())
+        embed.set_footer(text=f"Rolled in {gctx.campaign.campaign_name} from D&D Beyond",
+                         icon_url=constants.DDB_LOGO_ICON)
 
     async def dice_roll_save(self, gctx, roll_request):
         """Save: Display like ``!s``."""

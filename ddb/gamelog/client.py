@@ -118,6 +118,25 @@ class GameLogClient:
             traceback.print_exc()
             self.bot.log_exception(e)
 
+        # do analytics
+        await self._event_analytics(gctx)
+
+    async def _event_analytics(self, gctx):
+        """
+        Called for each event that is successfully processed. Logs the event type, ddb user, ddb campaign,
+        discord user id, discord guild id, discord channel id, event id, and timestamp.
+        """
+        await self.bot.mdb.analytics_gamelog_events.insert_one({
+            "event_type": gctx.event.event_type,
+            "ddb_user": gctx.event.user_id,
+            "ddb_campaign": gctx.event.game_id,
+            "discord_user": gctx.discord_user_id,
+            "guild_id": gctx.guild.id,
+            "channel_id": gctx.channel.id,
+            "event_id": gctx.event.id,
+            "timestamp": datetime.datetime.now()
+        })
+
     # ==== game log callback registration ====
     def register_callback(self, event_type, handler):
         """

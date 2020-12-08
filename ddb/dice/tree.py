@@ -211,15 +211,19 @@ class DieTerm:
         """
         # create expression for each individual Die
         the_dice = [die.d20_expr() for die in self.dice]
+        inst = d20.Dice(num=self.count, size=self.size, values=the_dice)
 
         # setup operations
-        operations = []
         if self.operation == DiceOperation.MIN:
-            operations = [d20.SetOperator('k', [d20.SetSelector('l', self.operand)])]
+            op = d20.SetOperator('k', [d20.SetSelector('l', self.operand)])
+            op.operate(inst)
+            inst.operations.append(op)
         elif self.operation == DiceOperation.MAX:
-            operations = [d20.SetOperator('k', [d20.SetSelector('h', self.operand)])]
+            op = d20.SetOperator('k', [d20.SetSelector('h', self.operand)])
+            op.operate(inst)
+            inst.operations.append(op)
 
-        return d20.Dice(num=self.count, size=self.size, values=the_dice, operations=operations)
+        return inst
 
 
 class Die:

@@ -132,6 +132,8 @@ class GameLog(commands.Cog):
         """
         Sends a message with the result of the roll, similar to `!r`.
         """
+        await gctx.channel.trigger_typing()
+
         roll_request = ddb.dice.RollRequest.from_dict(gctx.event.data)
         if not roll_request.rolls:  # do nothing if there are no rolls actually made
             return
@@ -231,13 +233,13 @@ class GameLog(commands.Cog):
 
         # generate the embed based on whether we found avrae annotated data
         if action is not None:
-            embed = gamelogutils.embed_for_action(gctx, action, character, attack_roll.to_d20())
+            embed = gamelogutils.embed_for_action(gctx, action, character, attack_roll)
             # create a PendingAttack if the action has a damage,
             if not gamelogutils.automation_has_damage(automation):
                 pend_damage = False
         else:
             # or if the action is unknown (we assume basic to hit/damage then)
-            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, character, attack_roll.to_d20())
+            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, character, attack_roll)
 
         message = await gctx.channel.send(embed=embed)
         if pend_damage:
@@ -254,21 +256,21 @@ class GameLog(commands.Cog):
         if len(roll_request.rolls) > 1:
             log.warning(f"Got {len(roll_request.rolls)} rolls for to hit {gctx.event.id!r}, discarding rolls 2+")
         damage_roll = roll_request.rolls[0]
-        attack_d20 = None
+        attack_roll = None
 
         # find the relevant PendingAttack, if available
         pending = await gamelogutils.PendingAttack.for_damage(gctx, roll_request)
         if pending is not None:
             # update the PendingAttack with its damage
-            attack_d20 = pending.roll_request.rolls[0].to_d20()
+            attack_roll = pending.roll_request.rolls[0]
 
         # generate embed based on action
         action = await gamelogutils.action_from_roll_request(gctx, character, roll_request)
         if action is not None:
-            embed = gamelogutils.embed_for_action(gctx, action, character, attack_d20, damage_roll.to_d20())
+            embed = gamelogutils.embed_for_action(gctx, action, character, attack_roll, damage_roll)
         else:
             embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, character,
-                                                        attack_d20, damage_roll.to_d20())
+                                                        attack_roll, damage_roll)
 
         # either update the old message or post a new one
         if pending is not None:
@@ -291,10 +293,10 @@ class GameLog(commands.Cog):
 
         # generate the embed based on whether we found avrae annotated data
         if action is not None:
-            embed = gamelogutils.embed_for_action(gctx, action, character, attack_roll.to_d20(), damage_roll.to_d20())
+            embed = gamelogutils.embed_for_action(gctx, action, character, attack_roll, damage_roll)
         else:
             embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, character,
-                                                        attack_roll.to_d20(), damage_roll.to_d20())
+                                                        attack_roll, damage_roll)
 
         await gctx.channel.send(embed=embed)
 

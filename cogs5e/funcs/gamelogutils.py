@@ -1,6 +1,6 @@
+import ddb.dice
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.sheet.attack import Attack
-from ddb.dice import RollRequest
 from ddb.gamelog.context import GameLogEventContext
 from ddb.gamelog.events import GameLogEvent
 from gamedata.compendium import compendium
@@ -17,7 +17,7 @@ async def action_from_roll_request(gctx, character, roll_request):
 
     :type gctx: ddb.gamelog.context.GameLogEventContext
     :type character: cogs5e.models.character.Character
-    :type roll_request: RollRequest
+    :type roll_request: ddb.dice.RollRequest
     :rtype: Attack or gamedata.spell.Spell
     """
     action_name = roll_request.action
@@ -47,8 +47,8 @@ def embed_for_action(gctx, action, character, to_hit_roll=None, damage_roll=None
     :type gctx: GameLogEventContext
     :type action: Attack or gamedata.spell.Spell
     :type character: cogs5e.models.character.Character
-    :type to_hit_roll: d20.RollResult
-    :type damage_roll: d20.RollResult
+    :type to_hit_roll: ddb.dice.tree.RollRequestRoll
+    :type damage_roll: ddb.dice.tree.RollRequestRoll
     """
     embed = EmbedWithCharacter(character, name=False)
     automation = action.automation
@@ -60,14 +60,17 @@ def embed_for_action(gctx, action, character, to_hit_roll=None, damage_roll=None
         verb = action.verb or "attacks with"
         embed.title = f'{character.get_title_name()} {verb} {attack_name}!'
     else:  # spell
-        embed.title = f'{character.get_title_name()} cast {action.name}!'
+        embed.title = f'{character.get_title_name()} casts {action.name}!'
 
     # add to hit (and damage, either if it is provided or the action expects damage and it is not provided)
     meta_rolls = []
     if to_hit_roll is not None:
-        meta_rolls.append(f"**To Hit**: {str(to_hit_roll)}")
+        meta_rolls.append(f"**To Hit**: {str(to_hit_roll.to_d20())}")
     if damage_roll is not None:
-        meta_rolls.append(f"**Damage**: {str(damage_roll)}")
+        if damage_roll.roll_kind == ddb.dice.RollKind.CRITICAL_HIT:
+            meta_rolls.append(f"**Damage (CRIT!)**: {str(damage_roll.to_d20())}")
+        else:
+            meta_rolls.append(f"**Damage**: {str(damage_roll.to_d20())}")
     elif automation_has_damage(automation):
         meta_rolls.append("**Damage**: Waiting for roll...")
         waiting_for_damage = True
@@ -105,8 +108,8 @@ def embed_for_basic_attack(gctx, action_name, character, to_hit_roll=None, damag
     :type gctx: GameLogEventContext
     :type action_name: str
     :type character: cogs5e.models.character.Character
-    :type to_hit_roll: d20.RollResult
-    :type damage_roll: d20.RollResult
+    :type to_hit_roll: ddb.dice.tree.RollRequestRoll
+    :type damage_roll: ddb.dice.tree.RollRequestRoll
     """
     embed = EmbedWithCharacter(character, name=False)
 
@@ -116,10 +119,13 @@ def embed_for_basic_attack(gctx, action_name, character, to_hit_roll=None, damag
     # add to hit (and damage, either if it is provided or the action expects damage and it is not provided)
     meta_rolls = []
     if to_hit_roll is not None:
-        meta_rolls.append(f"**To Hit**: {str(to_hit_roll)}")
+        meta_rolls.append(f"**To Hit**: {str(to_hit_roll.to_d20())}")
 
     if damage_roll is not None:
-        meta_rolls.append(f"**Damage**: {str(damage_roll)}")
+        if damage_roll.roll_kind == ddb.dice.RollKind.CRITICAL_HIT:
+            meta_rolls.append(f"**Damage (CRIT!)**: {str(damage_roll.to_d20())}")
+        else:
+            meta_rolls.append(f"**Damage**: {str(damage_roll.to_d20())}")
     else:
         meta_rolls.append("**Damage**: Waiting for roll...")
 
@@ -189,7 +195,7 @@ class PendingAttack:
         }
 
     @classmethod
-    async def create(cls, gctx: GameLogEventContext, roll_request: RollRequest,
+    async def create(cls, gctx: GameLogEventContext, roll_request: ddb.dice.RollRequest,
                      to_hit_event: GameLogEvent, message_id: int):
         """Creates and caches a new PendingAttack instance."""
         inst = cls(to_hit_event, message_id)
@@ -198,7 +204,7 @@ class PendingAttack:
         return inst
 
     @classmethod
-    async def for_damage(cls, gctx: GameLogEventContext, roll_request: RollRequest):
+    async def for_damage(cls, gctx: GameLogEventContext, roll_request: ddb.dice.RollRequest):
         """Gets the relevant PendingAttack instance from cache for a given damage RollRequest in context, or None."""
         cache_key = await cls.cache_key_from_ctx(gctx, roll_request)
         data = await gctx.bot.rdb.jget(cache_key)
@@ -209,10 +215,10 @@ class PendingAttack:
     # helpers
     @property
     def roll_request(self):
-        return RollRequest.from_dict(self.to_hit_event.data)
+        return ddb.dice.RollRequest.from_dict(self.to_hit_event.data)
 
     @staticmethod
-    async def cache_key_from_ctx(gctx: GameLogEventContext, roll_request: RollRequest):
+    async def cache_key_from_ctx(gctx: GameLogEventContext, roll_request: ddb.dice.RollRequest):
         character = await gctx.get_character()
         if character is None:
             raise ValueError("Cannot create a cache key for event with no character")

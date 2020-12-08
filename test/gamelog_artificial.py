@@ -1,6 +1,7 @@
 """
 Used to test sending events to the game log pubsub.
 """
+import json
 import os
 
 from redis import Redis
@@ -18,8 +19,14 @@ def main(redis):
 
     print("Connected, ready for events!")
 
+    buf = ""
+
     while True:
-        redis.publish(GAME_LOG_PUBSUB_CHANNEL, input())
+        last_input = input()
+        buf += last_input
+        if not last_input:
+            redis.publish(GAME_LOG_PUBSUB_CHANNEL, json.dumps(json.loads(buf)))
+            buf = ""
 
 
 def handle_event(event):

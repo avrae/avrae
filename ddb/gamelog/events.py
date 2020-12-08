@@ -26,10 +26,21 @@ class GameLogEvent:
         self.message_target = kwargs['messageTarget']  # type: str
         self.connection_id = kwargs.get('connectionId')
 
+        # raw event for easy serialization
+        self._raw = kwargs
+
     @classmethod
     def from_gamelog_message(cls, event: str):
         data = json.loads(event)
         return cls(**data)
+
+    # ser/deser for event saving
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
+    def to_dict(self):
+        return self._raw
 
     @property
     def timestamp(self):

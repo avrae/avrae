@@ -28,7 +28,7 @@ class RollRequest:
         """
         :type action: str
         :type rolls: list[RollRequestRoll]
-        :type context: RollContext
+        :type context: RollContext or None
         :type roll_id: str or None
         """
         self.action = action

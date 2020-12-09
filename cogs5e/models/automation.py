@@ -82,6 +82,9 @@ class Automation:
             after(autoctx)
 
         autoctx.build_embed()
+        if combat:
+            if combat.options.get('nopm', False):
+                return
         for user, msgs in autoctx.pm_queue.items():
             try:
                 member = await get_guild_member(ctx.guild, int(user))

@@ -773,6 +773,8 @@ class Combatant(StatBlock):
         """Sends a message to the combatant's controller."""
         if ctx.guild is None:
             raise RequiresContext("message_controller requires a guild context.")
+        if not self.combat.options.get('nopm', False):
+            return
         member = await get_guild_member(ctx.guild, int(self.controller))
         if member is None:  # member is not in the guild, oh well
             return

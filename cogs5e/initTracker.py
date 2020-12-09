@@ -65,7 +65,8 @@ class InitTracker(commands.Cog):
         dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
         turnnotif - Notifies the controller of the next combatant in initiative.
         deathdelete - Disables deleting monsters below 0 hp.
-        -name <name> - Sets a name for the combat instance."""
+        -name <name> - Sets a name for the combat instance.
+        nopm - Disables sending a PM when a combatant is damaged."""
         await Combat.ensure_unique_chan(ctx)
 
         options = {}
@@ -79,6 +80,8 @@ class InitTracker(commands.Cog):
             options['turnnotif'] = True
         if args.last('deathdelete', False, bool):
             options['deathdelete'] = True
+        if args.last('nopm', False, bool):
+            options['nopm'] = True
 
         temp_summary_msg = await ctx.send("```Awaiting combatants...```")
         Combat.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
@@ -532,7 +535,8 @@ class InitTracker(commands.Cog):
         dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
         turnnotif - Notifies the controller of the next combatant in initiative.
         deathdelete - Toggles removing monsters below 0 HP.
-        -name <name> - Sets a name for the combat instance"""
+        -name <name> - Sets a name for the combat instance
+        nopm - Disables sending a PM when a combatant is damaged."""
         args = argparse(settings)
         combat = await Combat.from_ctx(ctx)
         options = combat.options
@@ -550,6 +554,9 @@ class InitTracker(commands.Cog):
         if args.last('deathdelete', default=False, type_=bool):
             options['deathdelete'] = not options.get('deathdelete', False)
             out += f"Monsters at 0 HP will be {'left' if options['deathdelete'] else 'removed'}.\n"
+        if args.last('nopm', False, bool):
+            options['nopm'] = not options.get('nopm', False)
+            out += f"Attacks against hidden combatants {'will not' if options['nopm'] else 'will'} send PM's.\n"
 
         combat.options = options
         await combat.commit()

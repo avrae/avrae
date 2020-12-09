@@ -156,6 +156,8 @@ class GameLog(commands.Cog):
         """
         Generic roll: Display the roll in a format similar to ``!r``.
 
+        :type gctx: ddb.gamelog.context.GameLogEventContext
+        :type roll_request: ddb.dice.RollRequest
         :param str comment: A comment to display in the result, rather than "Result".
         """
         results = '\n\n'.join(str(rr.to_d20(stringifier=VerboseMDStringifier(), comment=comment))

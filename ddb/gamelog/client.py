@@ -8,7 +8,7 @@ from pymongo.errors import DuplicateKeyError
 import ddb
 from ddb.gamelog.context import GameLogEventContext
 from ddb.gamelog.errors import CampaignAlreadyLinked, LinkNotAllowed, NoCampaignLink
-from ddb.gamelog.events import GameLogEvent
+from ddb.gamelog.event import GameLogEvent
 from ddb.gamelog.link import CampaignLink
 from ddb.utils import ddb_id_to_discord_id
 

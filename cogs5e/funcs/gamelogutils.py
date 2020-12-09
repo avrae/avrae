@@ -2,7 +2,7 @@ import ddb.dice
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.sheet.attack import Attack
 from ddb.gamelog.context import GameLogEventContext
-from ddb.gamelog.events import GameLogEvent
+from ddb.gamelog.event import GameLogEvent
 from gamedata.compendium import compendium
 from gamedata.lookuputils import available
 from utils import constants

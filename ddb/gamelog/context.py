@@ -16,7 +16,7 @@ class GameLogEventContext:
     def __init__(self, bot, event, campaign, guild, channel, discord_user_id):
         """
         :type bot: dbot.Avrae
-        :type event: ddb.gamelog.events.GameLogEvent
+        :type event: ddb.gamelog.event.GameLogEvent
         :type campaign: ddb.gamelog.link.CampaignLink
         :type guild: discord.Guild
         :type channel: discord.TextChannel

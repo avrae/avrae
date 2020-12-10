@@ -18,6 +18,8 @@ https://github.com/DnDBeyond/ddb-integrated-dice/blob/master/packages/ddb-dice/s
         - RollType
         - RollKind
 """
+import uuid
+
 import d20
 
 from .constants import DiceOperation, RollKind, RollType
@@ -43,15 +45,33 @@ class RollRequest:
             context = RollContext.from_dict(context)
         return cls(d['action'], rolls, context, d.get('rollId'))
 
+    @classmethod
+    def new(cls, rolls, context=None, action='custom'):
+        """
+        Creates a new RollRequest.
+
+        :type rolls: list[RollRequestRoll]
+        :param RollContext context: The context this roll took place in.
+        :param str action: The action that this is a roll for (name of attack, spell, check, or abbr of save).
+        """
+        roll_id = str(uuid.uuid4())
+        return cls(action, rolls, context, roll_id)
+
 
 class RollContext:
-    def __init__(self, entity_id=None, entity_type=None):
+    def __init__(self, entity_id: str = None, entity_type: str = None):
         self.entity_id = entity_id
         self.entity_type = entity_type
 
     @classmethod
     def from_dict(cls, d):
         return cls(d.get('entityId'), d.get('entityType'))
+
+    @classmethod
+    def from_character(cls, character):
+        """Returns a context associated with a DDB character."""
+        character_id = character.upstream.split('-', 1)[-1]
+        return cls(character_id, 'character')
 
 
 class RollRequestRoll:
@@ -75,6 +95,18 @@ class RollRequestRoll:
         if (result := d.get('result')) is not None:
             result = RollResult.from_dict(result)
         return cls(dice_notation, roll_type, roll_kind, result)
+
+    @classmethod
+    def from_d20(cls, result, roll_type=RollType.ROLL, roll_kind=RollKind.NONE):
+        """
+        Creates a satisfied RollRequestRoll from a d20 roll result.
+
+        :type result: d20.RollResult
+        :type roll_type: RollType
+        :type roll_kind: RollKind
+        """
+        dice_notation = DiceNotation.from_d20(result)
+        return cls(dice_notation, roll_type, roll_kind, roll_result)
 
     def to_d20(self, stringifier=None, comment=None):
         """
@@ -121,6 +153,44 @@ class DiceNotation:
     def from_dict(cls, d):
         dice_set = [DieTerm.from_dict(dt) for dt in d['set']]
         return cls(dice_set, d['constant'])
+
+    @classmethod
+    def from_d20(cls, result: d20.RollResult):
+        # DiceNotation only supports (XdY+)*(N)? so anything that doesn't fit that must be a constant
+        dice_set = []
+        constants = []
+
+        def recurse(root):
+            if isinstance(root, d20.Parenthetical):
+                root = root.value
+            # a leaf we care about will always be dice or literal (which falls thru)
+            if isinstance(root, d20.Dice):
+                dice_set.append(DieTerm.from_d20(root))
+            # we only want to recurse on sets, positive unops, and positive binops
+            elif isinstance(root, d20.Set):
+                for term in root.keptset:
+                    recurse(term)
+            elif isinstance(root, d20.UnOp):
+                if root.op == '+':
+                    recurse(root.value)
+                else:
+                    constants.append(root.total)
+            elif isinstance(root, d20.BinOp):
+                if root.op == '+':
+                    recurse(root.left)
+                    recurse(root.right)
+                elif root.op == '-':
+                    constants.append(-root.right.total)
+                    recurse(root.left)
+                else:
+                    constants.append(root.total)
+            # otherwise it's unsupported and we leave it as a constant
+            else:
+                constants.append(root.total)
+
+        recurse(result.expr.roll)
+
+        return cls(dice_set, sum(constants))
 
     def d20_ast(self, **kwargs):
         """

@@ -3,6 +3,7 @@ import datetime
 import logging
 import traceback
 
+import aiohttp
 from pymongo.errors import DuplicateKeyError
 
 import ddb
@@ -11,6 +12,7 @@ from ddb.gamelog.errors import CampaignAlreadyLinked, LinkNotAllowed, NoCampaign
 from ddb.gamelog.event import GameLogEvent
 from ddb.gamelog.link import CampaignLink
 from ddb.utils import ddb_id_to_discord_id
+from utils.config import DDB_GAMELOG_ENDPOINT
 
 GAME_LOG_PUBSUB_CHANNEL = 'game-log'
 AVRAE_EVENT_SOURCE = 'avrae'
@@ -29,8 +31,16 @@ class GameLogClient:
         self.loop = bot.loop
         self._event_handlers = {}
 
+        self.http = None
+        self.loop.run_until_complete(self._initialize())
+
     def init(self):
         self.loop.create_task(self.main_loop())
+
+    async def _initialize(self):
+        """Initialize our async resources: aiohttp"""
+        self.http = aiohttp.ClientSession()  # this wants to run in a coroutine
+        log.info("Game Log client initialized")
 
     # ==== campaign helpers ====
     async def create_campaign_link(self, ctx, campaign_id: str):
@@ -54,6 +64,24 @@ class GameLogClient:
         except DuplicateKeyError:
             raise CampaignAlreadyLinked()
         return link
+
+    # ==== http ====
+    async def post_message(self, ddb_user, message):
+        """
+        Posts a message to the game log. Silently logs errors to not interfere with operation of commands.
+
+        :type ddb_user: ddb.auth.BeyondUser
+        :type message: GameLogEvent
+        """
+        try:
+            async with self.http.post(f"{DDB_GAMELOG_ENDPOINT}/postMessage",
+                                      headers={"Authorization": f"Bearer {ddb_user.token}"},
+                                      json=message.to_dict()) as resp:
+                if not 199 < resp.status < 300:
+                    log.warning(f"Game Log returned {resp.status}: {await resp.text()}")
+        except aiohttp.ServerTimeoutError:
+            log.warning("Timed out connecting to Game Log")
+        # todo exponential backoff if retryable error code
 
     # ==== game log event loop ====
     async def main_loop(self):

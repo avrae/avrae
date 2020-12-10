@@ -34,9 +34,7 @@ DICECLOUD_API_KEY = os.getenv('DICECLOUD_TOKEN')
 
 GOOGLE_SERVICE_ACCOUNT = os.getenv('GOOGLE_SERVICE_ACCOUNT')  # optional - if not supplied, uses avrae-google.json
 
-DDB_CHAR_COMPUTATION_ENDPT = os.getenv('CHARACTER_COMPUTATION_ENDPOINT')  # optional - if not set, DDB import disabled locally
-
-# ---- ddb auth ----
+# ---- ddb entitlements ----
 # if environment is development, DDB auth is skipped unless auth service url is not null
 DDB_AUTH_SECRET = os.getenv('DDB_AUTH_SECRET')
 DDB_WATERDEEP_SECRET = os.getenv('DDB_AUTH_WATERDEEP_SECRET')
@@ -50,9 +48,13 @@ DYNAMO_ENTITY_TABLE = os.getenv('DYNAMO_ENTITY_TABLE')
 # env: AWS_ACCESS_KEY_ID
 # env: AWS_SECRET_ACCESS_KEY
 
-# ---- ddb (waterdeep) ----
+# ---- ddb other ----
+# optional - if not set, DDB import disabled locally
+DDB_CHAR_COMPUTATION_ENDPT = os.getenv('CHARACTER_COMPUTATION_ENDPOINT')
 # used to override waterdeep URL in dev/stg
 DDB_WATERDEEP_URL = os.getenv('DDB_WATERDEEP_URL', "https://www.dndbeyond.com")
+# game log base endpoint
+DDB_GAMELOG_ENDPOINT = os.getenv('DDB_GAMELOG_ENDPOINT')
 
 # ---- launchdarkly ----
 LAUNCHDARKLY_SDK_KEY = os.getenv('LAUNCHDARKLY_SDK_KEY')

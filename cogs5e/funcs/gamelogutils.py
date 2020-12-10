@@ -9,6 +9,7 @@ from utils import constants
 from utils.functions import a_or_an
 
 
+# ==== event helpers ====
 async def action_from_roll_request(gctx, character, roll_request):
     """
     Gets an action (spell or attack) from a character based on the roll request. None if it cannot be found.
@@ -37,6 +38,7 @@ async def action_from_roll_request(gctx, character, roll_request):
     return None
 
 
+# ---- display helpers ----
 def embed_for_action(gctx, action, character, to_hit_roll=None, damage_roll=None):
     """
     Creates an embed for a character performing some action (attack or spell).
@@ -224,3 +226,34 @@ class PendingAttack:
             raise ValueError("Cannot create a cache key for event with no character")
         action_name = roll_request.action  # todo maybe this can be the context instead
         return f"gamelog.pendingattack.{gctx.discord_user_id}.{character.upstream}.{action_name}"
+
+
+# ==== command message generators ====
+async def send_message_for_roll():
+    pass
+
+
+async def send_message_for_check(ctx, character, rolls):
+    """
+    :type ctx: discord.ext.commands.Context
+    :type character: cogs5e.models.character.Character
+    :type rolls: list of d20.RollResult
+    """
+    pass
+
+
+async def send_message_for_save(ctx, character, rolls):
+    """
+    :type ctx: discord.ext.commands.Context
+    :type character: cogs5e.models.character.Character
+    :type rolls: list of d20.RollResult
+    """
+    pass
+
+
+async def send_message_for_attack():
+    pass
+
+
+async def send_message_for_cast():
+    pass

@@ -1387,8 +1387,9 @@ class InitTracker(commands.Cog):
             combat = await Combat.from_ctx(ctx)
 
             try:
-                await ctx.author.send(f"End of combat report: {combat.round_num} rounds "
-                                      f"{combat.get_summary(True)}")
+                if not combat.options.get('nopm', False):
+                    await ctx.author.send(f"End of combat report: {combat.round_num} rounds "
+                                          f"{combat.get_summary(True)}")
 
                 summary = await combat.get_summary_msg()
                 await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")

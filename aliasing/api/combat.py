@@ -236,7 +236,11 @@ class SimpleCombatant(AliasStatBlock):
         if not (isinstance(group, str) or group is None):
             raise ValueError('Group name must be a string or None.')
 
-        return self._combatant.set_group(group_name=group)
+        group = self._combatant.set_group(group_name=group)
+        if group is None:
+            return None
+
+        return SimpleGroup(group)
 
     def set_note(self, note: str):
         """

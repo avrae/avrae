@@ -91,6 +91,9 @@ INDICES = {
     "combats": [],
     "lookupsettings": [],
     "static_data": [],
+    "user_permissions": [
+        IndexModel('id', unique=True)
+    ],
 
     # alias workshop
     "workshop_collections": [

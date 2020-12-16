@@ -688,6 +688,25 @@ class Combatant(StatBlock):
     def group(self, value):
         self._group = value
 
+    def set_group(self, group_name):
+        current = self.combat.current_combatant
+        was_current = self is current or \
+                      (isinstance(current, CombatantGroup) and self in current and len(current) == 1)
+        self.combat.remove_combatant(self, ignore_remove_hook=True)
+        if isinstance(group_name, str) and group_name.lower() == 'none':
+            group_name = None
+        if group_name is None:
+            self.combat.add_combatant(self)
+            if was_current:
+                self.combat.goto_turn(self, True)
+            return None
+        else:
+            c_group = self.combat.get_group(group_name, create=self.init)
+            c_group.add_combatant(self)
+            if was_current:
+                self.combat.goto_turn(self, True)
+            return c_group
+
     def add_effect(self, effect):
         # handle name conflict
         if self.get_effect(effect.name, True):

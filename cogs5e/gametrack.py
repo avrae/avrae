@@ -73,9 +73,10 @@ class GameTrack(commands.Cog):
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
                                 f"{character.spellbook.slots_str(level)}"
         else:
+            old_slots = character.spellbook.get_slots(level)
             try:
                 if value.startswith(('+', '-')):
-                    value = character.spellbook.get_slots(level) + int(value)
+                    value = old_slots + int(value)
                 else:
                     value = int(value)
             except ValueError:
@@ -87,7 +88,7 @@ class GameTrack(commands.Cog):
             character.spellbook.set_slots(level, value)
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
-                                f"{character.spellbook.slots_str(level)}"
+                                f"{character.spellbook.slots_str(level)} ({(value - old_slots):+})"
         await ctx.send(embed=embed)
 
     async def _rest(self, ctx, rest_type, *args):
@@ -581,7 +582,8 @@ class GameTrack(commands.Cog):
 
     @commands.command(pass_context=True)
     async def cast(self, ctx, spell_name, *, args=''):
-        """Casts a spell.
+        """
+        Casts a spell.
         __Valid Arguments__
         -i - Ignores Spellbook restrictions, for demonstrations or rituals.
         -l <level> - Specifies the level to cast the spell at.
@@ -603,7 +605,7 @@ class GameTrack(commands.Cog):
         -thumb <url> - adds an image to the cast.
         -dur <duration> - changes the duration of any effect applied by the spell.
         -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
-        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
+        -with <int/wis/cha> - different skill base for DC/AB (will not account for extra bonuses)
         """
         await try_delete(ctx.message)
 

@@ -8,6 +8,7 @@ import cogs5e.models.character as character_model
 from aliasing import evaluators
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
+from aliasing.api.functions import AliasException
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
 from cogs5e.models.embeds import EmbedWithAuthor
@@ -393,13 +394,16 @@ async def handle_alias_exception(ctx, err):
 
     tb = ''.join(traceback.format_exception(type(e), e, e.__traceback__, limit=0, chain=False))
     try:
-        await ctx.author.send(
-            f"```py\n"
-            f"Error {location}:\n"
-            f"{point_to_error}"
-            f"{tb}\n"
-            f"```"
-            f"This is an issue in a user-created command; do *not* report this on the official bug tracker.")
+        if isinstance(e, AliasException) and not e.pm_user:
+            pass
+        else:
+            await ctx.author.send(
+                f"```py\n"
+                f"Error {location}:\n"
+                f"{point_to_error}"
+                f"{tb}\n"
+                f"```"
+                f"This is an issue in a user-created command; do *not* report this on the official bug tracker.")
     except:
         pass
     return await ctx.channel.send(err)

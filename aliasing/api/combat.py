@@ -225,6 +225,23 @@ class SimpleCombatant(AliasStatBlock):
             raise ValueError("Combatants must have a name.")
         self._combatant.name = str(name)
 
+    def set_group(self, group):
+        """
+        Sets the combatant's group
+
+        :param str group: The name of the group. None to remove from group.
+        :return: The combatant's new group, or None if the combatant was removed from a group.
+        :rtype: :class:`~aliasing.api.combat.SimpleGroup` or None   
+        """
+        if not (isinstance(group, str) or group is None):
+            raise ValueError('Group name must be a string or None.')
+
+        group = self._combatant.set_group(group_name=group)
+        if group is None:
+            return None
+
+        return SimpleGroup(group)
+
     def set_note(self, note: str):
         """
         Sets the combatant's note.

@@ -342,7 +342,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         :rtype: str or None
         """
         if self.ctx.guild is None:
-            return None
+            return default
         if name not in self._cache['svars']:
             result = self.ctx.bot.mdb.svars.delegate.find_one({"owner": self.ctx.guild.id, "name": name})
             if result is None:

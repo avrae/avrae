@@ -37,6 +37,8 @@ class Compendium:
         self.backgrounds = []  # type: list[Background]
 
         self.cfeats = []  # type: list[SourcedTrait]
+        self.optional_cfeats = []  # type: list[SourcedTrait]
+        # cfeats uses class as entitlement lookup - optional cfeats uses class-feature
         self.classes = []  # type: list[Class]
         self.subclasses = []  # type: list[Subclass]
 
@@ -160,7 +162,7 @@ class Compendium:
         def handle_class(cls_or_sub):
             for i, level in enumerate(cls_or_sub['levels']):
                 for feature in level:
-                    copied = SourcedTrait.from_trait_and_sourced_dicts(feature, cls_or_sub, "classfeat")
+                    copied = SourcedTrait.from_trait_and_sourced_dicts(feature, cls_or_sub, "class-feature")
                     copied.name = f"{cls_or_sub['name']}: {feature['name']}"
                     if copied.name in seen:
                         copied.name = f"{copied.name} (Level {i + 1})"
@@ -168,9 +170,14 @@ class Compendium:
                     self.cfeats.append(copied)
 
             for feature in cls_or_sub['class_feature_options']:
-                copied = SourcedTrait.from_trait_and_sourced_dicts(feature, cls_or_sub, "classfeat")
+                copied = SourcedTrait.from_trait_and_sourced_dicts(feature, cls_or_sub, "class-feature")
                 copied.name = f"{cls_or_sub['name']}: {feature['name']}"
                 self.cfeats.append(copied)
+
+            for feature in cls_or_sub['optional_features']:
+                copied = SourcedTrait.from_trait_and_sourced_dicts(feature, cls_or_sub, "class-feature")
+                copied.name = f"{cls_or_sub['name']}: {feature['name']}"
+                self.optional_cfeats.append(copied)
 
         for cls in self.raw_classes:
             handle_class(cls)

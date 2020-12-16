@@ -58,6 +58,34 @@ def test_argparse():
     assert args.adv(ea=True) == 2
 
 
+def test_argparse_custom_adv():
+    args = argparse('custom_adv')
+    custom_adv = {
+        'adv': 'custom_adv',
+    }
+
+    assert args.adv(custom=custom_adv) == 1
+    assert args.adv() == 0
+
+    custom_dis = {
+        'dis': 'custom_dis'
+    }
+    assert args.adv(custom=custom_dis) == 0
+
+    args = argparse('custom_dis')
+
+    assert args.adv(custom=custom_dis) == -1
+    assert args.adv() == 0
+
+    custom_ea = {
+        'ea': 'custom_ea'
+    }
+    args = argparse('custom_ea')
+
+    assert args.adv(ea=True, custom=custom_ea) == 2
+    assert args.adv() == 0
+
+
 def test_argparse_ephem():
     args = argparse("""-d5 1d6 adv1 -d 1""")
     for _ in range(4):

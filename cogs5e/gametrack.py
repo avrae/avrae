@@ -74,9 +74,10 @@ class GameTrack(commands.Cog):
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
                                 f"{character.spellbook.slots_str(level)}"
         else:
+            old_slots = character.spellbook.get_slots(level)
             try:
                 if value.startswith(('+', '-')):
-                    value = character.spellbook.get_slots(level) + int(value)
+                    value = old_slots + int(value)
                 else:
                     value = int(value)
             except ValueError:
@@ -88,7 +89,7 @@ class GameTrack(commands.Cog):
             character.spellbook.set_slots(level, value)
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
-                                f"{character.spellbook.slots_str(level)}"
+                                f"{character.spellbook.slots_str(level)} ({(value - old_slots):+})"
         await ctx.send(embed=embed)
 
     async def _rest(self, ctx, rest_type, *args):

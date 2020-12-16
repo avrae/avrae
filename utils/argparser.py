@@ -138,21 +138,32 @@ class ParsedArguments:
         except (ValueError, TypeError):
             raise InvalidArgument(f"{last_arg} cannot be cast to {type_.__name__} (in `{arg}`)")
 
-    def adv(self, ea=False, boolwise=False, ephem=False):
+    def adv(self, ea=False, boolwise=False, ephem=False, custom: dict = None):
         """
         Determines whether to roll with advantage, disadvantage, Elven Accuracy, or no special effect.
 
         :param ea: Whether to parse for elven accuracy.
         :param boolwise: Whether to return an integer or tribool representation.
         :param ephem: Whether to return an ephemeral argument if such exists.
+        :param custom: Dictionary of custom values to parse for. There should be a key for each value you want to overwrite. ``custom={'adv': 'custom_adv'}`` would allow you to parse for advantage if the ``custom_adv`` argument is found.
+
         :return: -1 for dis, 0 for normal, 1 for adv, 2 for ea
         """
+        adv_str, dis_str, ea_str = 'adv', 'dis', 'ea'
+        if custom is not None:
+            if 'adv' in custom:
+                adv_str = custom['adv']
+            if 'dis' in custom:
+                dis_str = custom['dis']
+            if 'ea' in custom:
+                ea_str = custom['ea']
+
         adv = 0
-        if self.last("adv", type_=bool, ephem=ephem):
+        if self.last(adv_str, type_=bool, ephem=ephem):
             adv += 1
-        if has_dis := self.last("dis", type_=bool, ephem=ephem):
+        if has_dis := self.last(dis_str, type_=bool, ephem=ephem):
             adv += -1
-        if ea and self.last("ea", type_=bool, ephem=ephem) and not has_dis:
+        if ea and self.last(ea_str, type_=bool, ephem=ephem) and not has_dis:
             return 2
         if not boolwise:
             return adv

@@ -684,22 +684,11 @@ class InitTracker(commands.Cog):
 
         @option()
         async def group(combatant):
-            current = combat.current_combatant
-            was_current = combatant is current or \
-                          (isinstance(current, CombatantGroup) and combatant in current and len(current) == 1)
             group_name = args.last('group')
-            combat.remove_combatant(combatant, ignore_remove_hook=True)
-            if group_name.lower() == 'none':
-                combat.add_combatant(combatant)
-                if was_current:
-                    combat.goto_turn(combatant, True)
+            new_group = combatant.set_group(group_name=group_name)
+            if new_group is None:
                 return f"\u2705 {combatant.name} removed from all groups."
-            else:
-                c_group = combat.get_group(group_name, create=combatant.init)
-                c_group.add_combatant(combatant)
-                if was_current:
-                    combat.goto_turn(combatant, True)
-                return f"\u2705 {combatant.name} added to group {c_group.name}."
+            return f"\u2705 {combatant.name} added to group {new_group.name}."
 
         @option(pass_group=True)
         async def name(combatant):

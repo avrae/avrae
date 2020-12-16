@@ -6,6 +6,7 @@ Created on Sep 23, 2016
 import asyncio
 import copy
 import itertools
+import json
 import logging
 import re
 from math import floor
@@ -197,6 +198,19 @@ class AdminUtils(commands.Cog):
         elif new_ctx.invoked_with:
             from aliasing.helpers import handle_aliases
             await handle_aliases(ctx)
+
+    @admin.command(hidden=True)
+    @checks.is_owner()
+    async def set_user_permissions(self, ctx, member: discord.Member, permission: str, value: bool):
+        """Sets a user's global permission."""
+        await self.bot.mdb.user_permissions.update_one(
+            {"id": str(member.id)},
+            {"$set": {permission: value}},
+            upsert=True
+        )
+        permissions = await self.bot.mdb.user_permissions.find_one({"id": str(member.id)})
+        del permissions['_id']
+        await ctx.send(f"Updated user permissions: ```json\n{json.dumps(permissions, indent=2)}\n```")
 
     # ---- cluster management ----
     @admin.command(hidden=True, name="restart-shard")

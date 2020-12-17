@@ -97,6 +97,7 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
                             list_filter=None, selectkey=None, search_func=search, return_metadata=False):
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
+
     :param ctx: The context of the search.
     :param list_to_search: The list of objects to search.
     :param query: The value to search for.
@@ -108,8 +109,7 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
     :param list_filter: A filter to filter the list to search by.
     :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
     :param search_func: The function to use to search.
-    :param return_metadata Whether to return a metadata object {num_options, chosen_index}.
-    :return:
+    :param return_metadata: Whether to return a metadata object {num_options, chosen_index}.
     """
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))

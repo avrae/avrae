@@ -2,10 +2,11 @@
 Main entrypoint for the tutorials extension. The tutorials themselves can be found in this module, and
 are registered here. The tutorial commands are also registered here, as part of the Help cog.
 """
+import discord
 from discord.ext import commands
 
 from cogs5e.models.embeds import EmbedWithAuthor
-from utils.functions import confirm, search_and_select
+from utils.functions import confirm, get_guild_member, search_and_select
 from .example import ExampleTutorial
 from .models import TutorialStateMap
 
@@ -104,6 +105,15 @@ class Tutorials(commands.Cog):
 
         # run tutorial state listener
         await state.listener(ctx, user_state)
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        owner = await get_guild_member(guild, guild.owner_id)
+        if owner is not None:
+            try:
+                await owner.send("blep")  # todo display getting started guide
+            except discord.HTTPException:
+                pass
 
     # ==== helpers ====
     def get_tutorial_and_state(self, user_state):

@@ -14,6 +14,10 @@ Draconic
 The language used in Avrae aliases is a custom modified version of Python, called Draconic. In most cases,
 Draconic uses the same syntax and base types as Python - any exceptions will be documented here!
 
+.. note::
+    It is highly recommended to be familiar with the Python language before diving into Draconic, as the two
+    use the same syntax and types.
+
 As Draconic is meant to both be an operational and templating language, there are multiple ways to use Draconic
 inside your alias.
 

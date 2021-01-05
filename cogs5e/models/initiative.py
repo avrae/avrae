@@ -526,7 +526,8 @@ class Combatant(StatBlock):
             resists: Resistances, ctx, combat):
         skills = Skills.default()
         skills.update({"initiative": init_skill})
-        return cls(ctx, combat, name, controller_id, private, init, resistances=resists, skills=skills,
+        levels = Levels({"Monster": 0})
+        return cls(ctx, combat, name, controller_id, private, init, levels=levels, resistances=resists, skills=skills,
                    max_hp=max_hp, ac=ac)
 
     @classmethod

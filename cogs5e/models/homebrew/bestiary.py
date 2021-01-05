@@ -401,7 +401,7 @@ def parse_critterdb_spellcasting(traits, base_stats):
     usual_dc = (0, 0)  # dc, number of spells using dc
     usual_sab = (0, 0)  # same thing
     usual_cab = (0, 0)
-    caster_level = 1
+    caster_level = 0 # default caster level should be 0
     slots = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0}
 
     for trait in traits:

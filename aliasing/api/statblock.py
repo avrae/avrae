@@ -293,7 +293,7 @@ class AliasLevels:
         """
         The total level.
 
-        :rtype: int
+        :rtype: float or int
         """
         return self._levels.total_level
 
@@ -303,7 +303,7 @@ class AliasLevels:
 
         :param str cls_name: The name of the class to get the levels of.
         :param int default: What to return if the statblock does not have levels in the given class.
-        :rtype: int
+        :rtype: float or int
         """
         return self._levels.get(cls_name, default)
 

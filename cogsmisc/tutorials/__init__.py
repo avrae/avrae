@@ -9,6 +9,7 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from utils.functions import confirm, get_guild_member, search_and_select
 from .example import ExampleTutorial
 from .models import TutorialStateMap
+from .quickstart import Quickstart
 
 
 class Tutorials(commands.Cog):
@@ -18,7 +19,7 @@ class Tutorials(commands.Cog):
 
     # tutorial keys should never change - if needed, change the name in the constructor to change the display name
     tutorials = {
-        "test_example": ExampleTutorial(name="example", description="this is an example tutorial")
+        "quickstart": Quickstart()
     }
 
     def __init__(self, bot):

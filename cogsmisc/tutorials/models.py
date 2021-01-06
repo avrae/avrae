@@ -2,24 +2,38 @@
 Misc data models for tutorials.
 """
 import abc
+import textwrap
+
+from cogs5e.models.embeds import EmbedWithAuthor
 
 
-class Tutorial:
+class Tutorial(abc.ABC):
     """
     Base class for all tutorials. Each tutorial should subclass this class, and use the @state decorator to
     register states.
     """
+    name = None
+    description = None
 
-    def __init__(self, name, description):
-        self.name = name
-        self.description = description
+    def __init__(self, name=None, description=None):
+        members = dir(self)  # don't include name, desc, etc
+
+        self.name = name or self.name
+        self.description = description or self.description
+
+        if self.name is None:
+            raise ValueError(f"Name not supplied in tutorial {type(self).__name__} or constructor")
+        if self.description is None:
+            raise ValueError(f"Description not supplied in tutorial {type(self).__name__} or constructor")
+        else:
+            self.description = textwrap.dedent(self.description.strip())
 
         self.states = {}
         self.first_state = None
 
         # iterate over members to find state registrations
         # what do you mean, 'hack'? :)
-        for member in dir(self):
+        for member in members:
             value = getattr(self, member)
             if isinstance(value, TutorialState):
                 self.states[value.key] = value
@@ -125,7 +139,6 @@ class TutorialStateMap:
 # registration decorators
 # use @state to register states inside a Tutorial class
 # then register the Tutorial in the cog
-
 def state(key=None, first=False):
     """Registers the class as a TutorialState in the Tutorial."""
 
@@ -133,3 +146,37 @@ def state(key=None, first=False):
         return cls(key=key, first=first)
 
     return deco
+
+
+class TutorialEmbed(EmbedWithAuthor):
+    """Embed with author avatar, nick, color, and tutorial footer set."""
+
+    def __init__(self, tstate: TutorialState, ctx, **kwargs):
+        super().__init__(ctx, **kwargs)
+        self.set_footer(
+            text=f"{tstate.tutorial.name} | {ctx.prefix}tutorial skip to skip | {ctx.prefix}tutorial end to end")
+
+        self._description = self.Empty
+
+    # custom description handler that strips/dedents so we can use triple-quoted strings in our code
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, value):
+        if not isinstance(value, str):
+            self._description = value
+        else:
+            self._description = textwrap.dedent(value).strip()
+
+
+def checklist(items):
+    """Generates a checklist from a list of pairs of (item, complete)."""
+    out = []
+    for item, complete in items:
+        if complete:
+            out.append(f":small_blue_diamond: ~~{item}~~")
+        else:
+            out.append(f":small_orange_diamond: {item}")
+    return '\n'.join(out)

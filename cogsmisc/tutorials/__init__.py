@@ -56,7 +56,8 @@ class Tutorials(commands.Cog):
         """Lists the available tutorials."""
         embed = EmbedWithAuthor(ctx)
         embed.title = "Available Tutorials"
-        embed.description = f"Use `{ctx.prefix}tutorial <name>` to select a tutorial from the ones available below!"
+        embed.description = f"Use `{ctx.prefix}tutorial <name>` to select a tutorial from the ones available below!\n" \
+                            f"First time here? Try `{ctx.prefix}tutorial quickstart`!"
         for tutorial in self.tutorials.values():
             embed.add_field(name=tutorial.name, value=tutorial.description, inline=False)
         await ctx.send(embed=embed)

@@ -26,7 +26,7 @@ class Quickstart(Tutorial):
             embed.title = "Using Bot Commands"
             embed.description = f"""
             Each command in Avrae starts with a *prefix*, or a short string of symbols at the start of a message. By \
-            default, this prefix is `{config.DEFAULT_PREFIX}`{server_prefix_override}. Avrae will only start a command \
+            default, this prefix is `{config.DEFAULT_PREFIX}`{server_prefix_override}. Avrae will only run a command \
             if a message starts with this prefix.
             
             To use a command in Avrae, type the prefix, then the name of the command. For example, to roll a d20, send \
@@ -45,11 +45,11 @@ class Quickstart(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
             Great! As you might have guessed, `{ctx.prefix}roll <dice>` is the command to roll some dice. Throughout \
-            the rest of this tutorial and other tutorials, we'll show commands in code blocks like that. 
+            the rest of this tutorial and other tutorials, we'll show commands in code blocks like `this`. 
             
             When you see something like `<dice>` or `[dice]`, this is called an *argument*: it means you can put some \
-            input there, like the dice you want to roll. Arguments like `<this>` are required, and arguments like \
-            `[this]` are optional.
+            input there, like the dice you want to roll. Arguments in brackets like `<this>` are required, and \
+            arguments in brackets like `[this]` are optional.
             """
             await ctx.send(embed=embed)
             await ctx.trigger_typing()
@@ -71,7 +71,7 @@ class Quickstart(Tutorial):
             ```
             {ctx.prefix}beyond <url>
             ```
-            Or, if you've already imported a character, switch to them now!
+            Or, if you've already imported a character, switch to them now using `{ctx.prefix}character <name>`!
             """
             await ctx.send(embed=embed)
 
@@ -96,7 +96,8 @@ class Quickstart(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
             Nice to meet you, {character.name}! Avrae has no limit on how many characters you can import, but you can \
-            only have one "active" at a time. To switch between active characters, use `{ctx.prefix}character <name>`.
+            only have one "active" at a time across all servers. To switch between active characters, use \
+            `{ctx.prefix}character <name>`.
             
             Also, if you change your character's character sheet, Avrae will need to be updated to know about those \
             changes. Whenever you do so, make sure to run `{ctx.prefix}update` to update your active character!
@@ -151,6 +152,15 @@ class Quickstart(Tutorial):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
-            # todo
             await ctx.trigger_typing()
+            await asyncio.sleep(3)
+            embed = TutorialEmbed(self, ctx, footer=False)
+            embed.description = f"""
+            That's all you need to get started! If you ever need a refresher on one command, you can use \
+            `{ctx.prefix}help <command>` to get the command's help sent to you. Next, you might want to try the \
+            *Playing the Game* tutorial - start this tutorial with `{ctx.prefix}tutorial Playing the Game`.
+
+            Looking for additional resources? Come join us at the [Avrae Development Discord](https://support.avrae.io).
+            """
+            await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

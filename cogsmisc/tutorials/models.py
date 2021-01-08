@@ -151,10 +151,11 @@ def state(key=None, first=False):
 class TutorialEmbed(EmbedWithAuthor):
     """Embed with author avatar, nick, color, and tutorial footer set."""
 
-    def __init__(self, tstate: TutorialState, ctx, **kwargs):
+    def __init__(self, tstate: TutorialState, ctx, footer=True, **kwargs):
         super().__init__(ctx, **kwargs)
-        self.set_footer(
-            text=f"{tstate.tutorial.name} | {ctx.prefix}tutorial skip to skip | {ctx.prefix}tutorial end to end")
+        if footer:
+            self.set_footer(
+                text=f"{tstate.tutorial.name} | {ctx.prefix}tutorial skip to skip | {ctx.prefix}tutorial end to end")
 
         self._description = self.Empty
 

@@ -27,7 +27,7 @@ class Tutorials(commands.Cog):
 
     # ==== commands ====
     @commands.group(invoke_without_command=True)
-    async def tutorial(self, ctx, name=None):
+    async def tutorial(self, ctx, *, name=None):
         """
         Shows the current tutorial objective, lists the available tutorials if one is not active, or begins a new tutorial.
         """

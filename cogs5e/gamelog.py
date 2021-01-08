@@ -194,8 +194,11 @@ class GameLog(commands.Cog):
 
     async def dice_roll_check(self, gctx, roll_request):
         """Check: Display like ``!c``. Requires character - if not imported falls back to default roll."""
+        check_name = roll_request.action
+        if check_name in constants.STAT_ABBREVIATIONS:
+            check_name = verbose_stat(check_name)
         await self._dice_roll_embed_common(gctx, roll_request, "{name} makes {check} check!",
-                                           check=a_or_an(roll_request.action))
+                                           check=a_or_an(check_name))
 
     async def dice_roll_save(self, gctx, roll_request):
         """Save: Display like ``!s``."""

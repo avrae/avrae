@@ -60,9 +60,9 @@ class Monster(StatBlock, Sourced):
             resistances = Resistances.from_dict(dict(vuln=vuln, resist=resist, immune=immune))
 
         try:
-            levels = Levels({"Monster": spellcasting.caster_level or int(cr)})
+            levels = Levels({"Monster": floatify_cr(cr)})
         except ValueError:
-            levels = None
+            levels = Levels({"Monster": 0})
 
         Sourced.__init__(self, 'monster', homebrew, source=kwargs['source'],
                          entity_id=kwargs.get('entity_id'), page=kwargs.get('page'), url=kwargs.get('url'),
@@ -343,6 +343,10 @@ def _calc_prof(stats, saves, skills):
     if prof is not None:
         return prof
     return 0
+
+
+def floatify_cr(cr: str) -> float:
+    return {'1/8': 0.125, '1/4': 0.25, '1/2': 0.5}.get(cr) or float(cr)
 
 
 # ===== spellcasting =====

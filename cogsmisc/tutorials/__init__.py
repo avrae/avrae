@@ -6,6 +6,8 @@ import discord
 from discord.ext import commands
 
 from cogs5e.models.embeds import EmbedWithAuthor
+from utils import checks
+from utils.aldclient import discord_user_to_dict
 from utils.functions import confirm, get_guild_member, search_and_select
 from .example import ExampleTutorial
 from .models import TutorialStateMap
@@ -27,6 +29,7 @@ class Tutorials(commands.Cog):
 
     # ==== commands ====
     @commands.group(invoke_without_command=True)
+    @checks.feature_flag('commands.tutorial.enabled')
     async def tutorial(self, ctx, *, name=None):
         """
         Shows the current tutorial objective, lists the available tutorials if one is not active, or begins a new tutorial.
@@ -52,6 +55,7 @@ class Tutorials(commands.Cog):
             await self.tutorial_list(ctx)
 
     @tutorial.command(name='list')
+    @checks.feature_flag('commands.tutorial.enabled')
     async def tutorial_list(self, ctx):
         """Lists the available tutorials."""
         embed = EmbedWithAuthor(ctx)
@@ -63,6 +67,7 @@ class Tutorials(commands.Cog):
         await ctx.send(embed=embed)
 
     @tutorial.command(name='skip')
+    @checks.feature_flag('commands.tutorial.enabled')
     async def tutorial_skip(self, ctx):
         """Skips the current objective, and moves on to the next part of the tutorial."""
         user_state = await TutorialStateMap.from_ctx(ctx)
@@ -81,6 +86,7 @@ class Tutorials(commands.Cog):
         await state.transition(ctx, user_state)
 
     @tutorial.command(name='end')
+    @checks.feature_flag('commands.tutorial.enabled')
     async def tutorial_end(self, ctx):
         """Ends the current tutorial."""
         user_state = await TutorialStateMap.from_ctx(ctx)
@@ -112,6 +118,10 @@ class Tutorials(commands.Cog):
     async def on_guild_join(self, guild):
         owner = await get_guild_member(guild, guild.owner_id)
         if owner is not None:
+            flag_on = await self.bot.ldclient.variation(
+                'cog.tutorials.guild_join.enabled', discord_user_to_dict(owner), default=False)
+            if not flag_on:
+                return
             try:
                 await owner.send("blep")  # todo display getting started guide
             except discord.HTTPException:

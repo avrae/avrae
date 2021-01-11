@@ -226,34 +226,3 @@ class PendingAttack:
             raise ValueError("Cannot create a cache key for event with no character")
         action_name = roll_request.action  # todo maybe this can be the context instead
         return f"gamelog.pendingattack.{gctx.discord_user_id}.{character.upstream}.{action_name}"
-
-
-# ==== command message generators ====
-async def send_message_for_roll():
-    pass
-
-
-async def send_message_for_check(ctx, character, rolls):
-    """
-    :type ctx: discord.ext.commands.Context
-    :type character: cogs5e.models.character.Character
-    :type rolls: list of d20.RollResult
-    """
-    pass
-
-
-async def send_message_for_save(ctx, character, rolls):
-    """
-    :type ctx: discord.ext.commands.Context
-    :type character: cogs5e.models.character.Character
-    :type rolls: list of d20.RollResult
-    """
-    pass
-
-
-async def send_message_for_attack():
-    pass
-
-
-async def send_message_for_cast():
-    pass

@@ -1,14 +1,17 @@
 import logging
 import re
 
+import d20
 import discord
 from discord.ext import commands
 
 import ddb.dice
 from cogs5e.funcs import gamelogutils
 from cogs5e.models import embeds
+from ddb.dice import RollContext, RollKind, RollRequest, RollRequestRoll, RollType
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
+from ddb.gamelog.event import GameLogEvent
 from utils import checks, constants
 from utils.dice import VerboseMDStringifier
 from utils.functions import a_or_an, confirm, search_and_select, verbose_stat
@@ -302,6 +305,67 @@ class GameLog(commands.Cog):
                                                         attack_roll, damage_roll)
 
         await gctx.channel.send(embed=embed)
+
+    # ==== game log send methods ====
+    # to access, get the cog from the handler function that is making the checks and call these
+    async def _send_roll_request(self, ctx, character, roll_request):
+        """
+        Sends a roll result to DDB, running checks on the context to ensure that the message should be sent.
+        """
+        # their character must be in a campaign
+        if (campaign_id := character.ddb_campaign_id) is None:
+            return
+        # and the character's campaign must be linked to this channel
+        campaign_link = await CampaignLink.from_id(ctx.bot.mdb, campaign_id)
+        if campaign_link.channel_id != ctx.channel.id:
+            return
+        # and the user must have their ddb acct connected
+        ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+        if ddb_user is None:
+            return
+
+        event = GameLogEvent.dice_roll_fulfilled(
+            game_id=campaign_id, user_id=ddb_user.user_id, roll_request=roll_request,
+            entity_id=character.upstream_id
+        )
+        await self.bot.glclient.post_message(ddb_user, event)
+
+    async def send_roll(self):
+        pass
+
+    async def send_check(self, ctx, character, skill, rolls, adv=d20.AdvType.NONE):
+        """
+        :type ctx: discord.ext.commands.Context
+        :type character: cogs5e.models.character.Character
+        :type skill: str
+        :type rolls: list of d20.RollResult
+        :type adv: d20.AdvType
+        """
+        roll_kind = RollKind.from_d20_adv(adv)
+        roll_request_rolls = [RollRequestRoll.from_d20(r, roll_type=RollType.CHECK, roll_kind=roll_kind)
+                              for r in rolls]
+        roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), skill)
+        await self._send_roll_request(ctx, character, roll_request)
+
+    async def send_save(self, ctx, character, ability, rolls, adv=d20.AdvType.NONE):
+        """
+        :type ctx: discord.ext.commands.Context
+        :type character: cogs5e.models.character.Character
+        :type ability: str
+        :type rolls: list of d20.RollResult
+        :type adv: d20.AdvType
+        """
+        roll_kind = RollKind.from_d20_adv(adv)
+        roll_request_rolls = [RollRequestRoll.from_d20(r, roll_type=RollType.SAVE, roll_kind=roll_kind)
+                              for r in rolls]
+        roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), ability)
+        await self._send_roll_request(ctx, character, roll_request)
+
+    async def send_attack(self):
+        pass
+
+    async def send_cast(self):
+        pass
 
 
 def setup(bot):

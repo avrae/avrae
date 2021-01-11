@@ -54,7 +54,7 @@ DDB_CHAR_COMPUTATION_ENDPT = os.getenv('CHARACTER_COMPUTATION_ENDPOINT')
 # used to override waterdeep URL in dev/stg
 DDB_WATERDEEP_URL = os.getenv('DDB_WATERDEEP_URL', "https://www.dndbeyond.com")
 # game log base endpoint
-DDB_GAMELOG_ENDPOINT = os.getenv('DDB_GAMELOG_ENDPOINT')
+DDB_GAMELOG_ENDPOINT = os.getenv('DDB_GAMELOG_ENDPOINT', "https://game-log-rest-live.dndbeyond.com/v1")
 
 # ---- launchdarkly ----
 LAUNCHDARKLY_SDK_KEY = os.getenv('LAUNCHDARKLY_SDK_KEY')

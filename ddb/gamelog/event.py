@@ -38,6 +38,15 @@ class GameLogEvent:
         data = json.loads(event)
         return cls(**data)
 
+    @classmethod
+    def dice_roll_fulfilled(cls, game_id, user_id, roll_request, entity_id, entity_type='character', **kwargs):
+        return cls(
+            gameId=game_id, userId=user_id, eventType='dice/roll/fulfilled', source=AVRAE_EVENT_SOURCE,
+            data=roll_request.to_dict(), entityId=entity_id, entityType=entity_type, id=str(uuid.uuid4()),
+            dateTime=str(time.time()), persist=True, messageScope='gameId', messageTarget=game_id,
+            **kwargs
+        )
+
     # ser/deser for event saving
     @classmethod
     def from_dict(cls, d):

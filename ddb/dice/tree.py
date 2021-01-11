@@ -82,8 +82,7 @@ class RollContext:
     @classmethod
     def from_character(cls, character):
         """Returns a context associated with a DDB character."""
-        character_id = character.upstream.split('-', 1)[-1]
-        return cls(character_id, 'character')
+        return cls(character.upstream_id, 'character')
 
 
 class RollRequestRoll:

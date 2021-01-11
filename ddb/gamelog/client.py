@@ -17,7 +17,6 @@ from utils.config import DDB_GAMELOG_ENDPOINT
 GAME_LOG_PUBSUB_CHANNEL = 'game-log'
 AVRAE_EVENT_SOURCE = 'avrae'
 log = logging.getLogger(__name__)
-log.setLevel(10)  # todo remove this - sets loglevel to debug in dev
 
 
 class GameLogClient:

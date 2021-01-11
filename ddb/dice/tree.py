@@ -28,24 +28,26 @@ SUPPORTED_DIE_SIZES = (4, 6, 8, 10, 12, 20, 100)
 
 
 class RollRequest:
-    def __init__(self, action, rolls, context=None, roll_id=None):
+    def __init__(self, action, rolls, context=None, roll_id=None, set_id=None):
         """
         :type action: str
         :type rolls: list[RollRequestRoll]
         :type context: RollContext or None
         :type roll_id: str or None
+        :type set_id: str or None
         """
         self.action = action
         self.rolls = rolls
         self.context = context
         self.roll_id = roll_id
+        self.set_id = set_id
 
     @classmethod
     def from_dict(cls, d):
         rolls = [RollRequestRoll.from_dict(r) for r in d['rolls']]
         if (context := d.get('context')) is not None:
             context = RollContext.from_dict(context)
-        return cls(d['action'], rolls, context, d.get('rollId'))
+        return cls(d['action'], rolls, context, d.get('rollId'), d.get('setId'))
 
     def to_dict(self):
         rolls = [rr.to_dict() for rr in self.rolls]

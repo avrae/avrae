@@ -38,7 +38,7 @@ class GameLog(commands.Cog):
             self.bot.glclient.deregister_callback(event_type)
 
     # ==== commands ====
-    @commands.group(name='campaign', invoke_without_command=True, hidden=True)
+    @commands.group(name='campaign', invoke_without_command=True)
     @commands.guild_only()
     @checks.feature_flag('command.campaign.enabled', use_ddb_user=True)
     async def campaign(self, ctx, campaign_link):

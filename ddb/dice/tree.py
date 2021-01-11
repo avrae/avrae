@@ -55,16 +55,17 @@ class RollRequest:
         return {"action": self.action, "rolls": rolls, "context": context, "roll_id": self.roll_id}
 
     @classmethod
-    def new(cls, rolls, context=None, action='custom'):
+    def new(cls, rolls, context=None, action='custom', set_id='00101'):
         """
         Creates a new RollRequest.
 
         :type rolls: list[RollRequestRoll]
         :param RollContext context: The context this roll took place in.
         :param str action: The action that this is a roll for (name of attack, spell, check, or abbr of save).
+        :param str set_id: The dice set ID the roll was made with (default basic black)
         """
         roll_id = str(uuid.uuid4())
-        return cls(action, rolls, context, roll_id)
+        return cls(action, rolls, context, roll_id, set_id)
 
 
 class RollContext:

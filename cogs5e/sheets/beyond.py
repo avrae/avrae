@@ -18,8 +18,6 @@ from cogs5e.models.sheet.player import CustomCounter
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.models.sheet.spellcasting import Spellbook, SpellbookSpell
 from cogs5e.sheets.abc import SHEET_VERSION, SheetLoaderABC
-from ddb.gamelog import CampaignLink
-from ddb.gamelog.errors import NoCampaignLink
 from gamedata.compendium import compendium
 from utils import config, constants
 
@@ -90,8 +88,6 @@ class BeyondSheetParser(SheetLoaderABC):
         campaign_id = None
         if campaign is not None:
             campaign_id = str(campaign['id'])
-            # side effect: update the game log link of this campaign's name (since this is the only point we get name)
-            await self._update_gamelog_campaign_link_name(campaign_id, campaign['name'])
 
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
@@ -309,15 +305,3 @@ class BeyondSheetParser(SheetLoaderABC):
             return Attack(attack['name'], automation.Automation(effects))
         else:
             return Attack.new(attack['name'], attack['toHit'], attack['damage'] or '0', desc)
-
-    async def _update_gamelog_campaign_link_name(self, campaign_id: str, campaign_name: str):
-        try:
-            campaign_link = await CampaignLink.from_id(self.ctx.bot.mdb, campaign_id)
-        except NoCampaignLink:
-            pass
-        else:
-            campaign_link.campaign_name = campaign_name
-            self.ctx.bot.mdb.gamelog_campaigns.update_one(
-                {"campaign_id": campaign_id},
-                {"$set": {"campaign_name": campaign_name}}
-            )

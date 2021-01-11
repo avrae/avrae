@@ -1,5 +1,9 @@
 import datetime
 import json
+import time
+import uuid
+
+from ddb.gamelog.constants import AVRAE_EVENT_SOURCE
 
 
 class GameLogEvent:
@@ -45,4 +49,3 @@ class GameLogEvent:
     @property
     def timestamp(self):
         return datetime.datetime.fromtimestamp(float(self.date_time))
-

@@ -77,10 +77,11 @@ class GameLogClient:
 
         try:
             data = message.to_dict()
-            log.debug(f"Sending gamelog event: {data}")
+            log.debug(f"Sending gamelog event {message.id!r}: {data}")
             async with self.http.post(f"{DDB_GAMELOG_ENDPOINT}/postMessage",
                                       headers={"Authorization": f"Bearer {ddb_user.token}"},
                                       json=data) as resp:
+                log.debug(f"Game Log returned {resp.status} for request ID {message.id!r}")
                 if not 199 < resp.status < 300:
                     log.warning(f"Game Log returned {resp.status}: {await resp.text()}")
         except aiohttp.ServerTimeoutError:

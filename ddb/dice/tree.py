@@ -52,7 +52,7 @@ class RollRequest:
     def to_dict(self):
         rolls = [rr.to_dict() for rr in self.rolls]
         context = self.context.to_dict() if self.context is not None else None
-        return {"action": self.action, "rolls": rolls, "context": context, "roll_id": self.roll_id}
+        return {"action": self.action, "rolls": rolls, "context": context, "rollId": self.roll_id, "setId": self.set_id}
 
     @classmethod
     def new(cls, rolls, context=None, action='custom', set_id='00101'):

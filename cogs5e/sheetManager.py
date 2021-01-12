@@ -24,7 +24,8 @@ from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import auth_and_chan, confirm, get_positivity, list_get, search_and_select, try_delete
+from utils.functions import auth_and_chan, camel_to_title, confirm, get_positivity, list_get, search_and_select, \
+    try_delete
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -275,10 +276,12 @@ class SheetManager(commands.Cog):
         args = await self.new_arg_stuff(args, ctx, char)
 
         checkutils.update_csetting_args(char, args, skill)
-        checkutils.run_check(skill_key, char, args, embed)
+        results = checkutils.run_check(skill_key, char, args, embed)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
+        if gamelog := self.bot.get_cog('GameLog'):
+            await gamelog.send_check(ctx, char, camel_to_title(skill_key), results)
 
     @commands.group(invoke_without_command=True)
     async def desc(self, ctx):

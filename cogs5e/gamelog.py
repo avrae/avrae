@@ -333,33 +333,28 @@ class GameLog(commands.Cog):
     async def send_roll(self):
         pass
 
-    async def send_check(self, ctx, character, skill, rolls, adv=d20.AdvType.NONE):
+    async def send_check(self, ctx, character, skill, rolls):
         """
         :type ctx: discord.ext.commands.Context
         :type character: cogs5e.models.character.Character
         :type skill: str
         :type rolls: list of d20.RollResult
-        :type adv: d20.AdvType
         """
-        roll_kind = RollKind.from_d20_adv(adv)
-        roll_request_rolls = [RollRequestRoll.from_d20(r, roll_type=RollType.CHECK, roll_kind=roll_kind)
-                              for r in rolls]
+        roll_request_rolls = [
+            RollRequestRoll.from_d20(r, roll_type=RollType.CHECK, roll_kind=RollKind.guess_from_d20(r))
+            for r in rolls
+        ]
         roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), skill)
         await self._send_roll_request(ctx, character, roll_request)
 
-    async def send_save(self, ctx, character, ability, rolls, adv=d20.AdvType.NONE):
+    async def send_save(self, ctx, character, ability, rolls):
         """
         :type ctx: discord.ext.commands.Context
         :type character: cogs5e.models.character.Character
         :type ability: str
         :type rolls: list of d20.RollResult
-        :type adv: d20.AdvType
         """
-        roll_kind = RollKind.from_d20_adv(adv)
-        roll_request_rolls = [RollRequestRoll.from_d20(r, roll_type=RollType.SAVE, roll_kind=roll_kind)
-                              for r in rolls]
-        roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), ability)
-        await self._send_roll_request(ctx, character, roll_request)
+        pass
 
     async def send_attack(self):
         pass

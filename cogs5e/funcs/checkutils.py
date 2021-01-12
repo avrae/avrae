@@ -33,7 +33,7 @@ def run_check(skill_key, caster, args, embed):
     :type args: utils.argparser.ParsedArguments
     :type embed: discord.Embed
     :return: The total of each check.
-    :rtype: list of int
+    :rtype: list of d20.RollResult
     """
     skill = caster.skills[skill_key]
     skill_name = camel_to_title(skill_key)
@@ -69,7 +69,7 @@ def run_save(save_key, caster, args, embed):
     :type args: utils.argparser.ParsedArguments
     :type embed: discord.Embed
     :return: The total of each save.
-    :rtype: list of int
+    :rtype: list of d20.RollResult
     """
     try:
         save = caster.saves.get(save_key)
@@ -95,6 +95,11 @@ def run_save(save_key, caster, args, embed):
 
 
 def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
+    """
+    Runs a roll for a given Skill.
+
+    :rtype: list of d20.RollResult
+    """
     # ephemeral support: adv, b
     # phrase
     phrase = args.join('phrase', '\n')
@@ -131,7 +136,7 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
         if dc and result.total >= dc:
             num_successes += 1
 
-        results.append(result.total)
+        results.append(result)
 
         # output
         if iterations > 1:

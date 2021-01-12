@@ -43,7 +43,9 @@ class GameLogEvent:
         return cls(
             gameId=game_id, userId=user_id, eventType='dice/roll/fulfilled', source=AVRAE_EVENT_SOURCE,
             data=roll_request.to_dict(), entityId=entity_id, entityType=entity_type, id=str(uuid.uuid4()),
-            dateTime=str(time.time()), persist=True, messageScope='gameId', messageTarget=game_id,
+            dateTime=str(int(time.time())), persist=True, messageScope='gameId', messageTarget=game_id,
+            **kwargs
+        )
             **kwargs
         )
 

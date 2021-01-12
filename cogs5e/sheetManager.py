@@ -243,11 +243,13 @@ class SheetManager(commands.Cog):
 
         caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
 
-        checkutils.run_save(skill, caster, args, embed)
+        results = checkutils.run_save(skill, caster, args, embed)
 
         # send
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
+        if gamelog := self.bot.get_cog('GameLog'):
+            await gamelog.send_save(ctx, char, skill[:3], results)
 
     @commands.command(aliases=['c'])
     async def check(self, ctx, check, *args):

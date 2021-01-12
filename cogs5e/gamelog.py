@@ -354,7 +354,12 @@ class GameLog(commands.Cog):
         :type ability: str
         :type rolls: list of d20.RollResult
         """
-        pass
+        roll_request_rolls = [
+            RollRequestRoll.from_d20(r, roll_type=RollType.SAVE, roll_kind=RollKind.guess_from_d20(r))
+            for r in rolls
+        ]
+        roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), ability)
+        await self._send_roll_request(ctx, character, roll_request)
 
     async def send_attack(self):
         pass

@@ -1,6 +1,11 @@
 from aliasing.errors import EvaluationError
 from cogs5e.models.errors import AvraeException
 
+__all__ = (
+    'AutomationException', 'StopExecution', 'TargetException', 'AutomationEvaluationException', 'NoSpellDC',
+    'NoAttackBonus'
+)
+
 
 class AutomationException(AvraeException):
     pass

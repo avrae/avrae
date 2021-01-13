@@ -62,9 +62,9 @@ class SaveResult(EffectResult):
 
 @dataclass(frozen=True)
 class DamageResult(EffectResult):
-    damage: int
     damage_roll: d20.RollResult
     in_crit: bool
+    damage: int  # needs to be last because otherwise it does some default value shenanigans with dataclass
 
 
 @dataclass(frozen=True)

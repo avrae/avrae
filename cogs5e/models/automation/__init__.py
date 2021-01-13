@@ -66,17 +66,20 @@ class Automation:
         :type before: function
         :param after: A function, taking in the AutomationContext, to run after automation runs.
         :type after: function
+        :rtype: AutomationResult
         """
         if not targets:
             targets = [None]  # outputs a single iteration of effects in a generic meta field
         autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect, ab_override,
                                     dc_override, spell_override)
 
+        results = []
+
         if before is not None:
             before(autoctx)
 
         for effect in self.effects:
-            effect.run(autoctx)
+            results.append(effect.run(autoctx))
 
         if after is not None:
             after(autoctx)
@@ -91,6 +94,9 @@ class Automation:
                     await member.send('\n'.join(msgs))
             except:
                 pass
+
+        # todo
+        return AutomationResult(effect_results=results)
 
     def build_str(self, caster):
         """

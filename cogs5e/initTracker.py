@@ -334,8 +334,8 @@ class InitTracker(commands.Cog):
             args.ignore('rr')
             args.ignore('dc')
             checkutils.update_csetting_args(char, args, char.skills.initiative)
-            roll_results = checkutils.run_check('initiative', char, args, embed)
-            init = roll_results[-1].total
+            result = checkutils.run_check('initiative', char, args, embed)
+            init = result.rolls[-1].total
         else:
             init = p
             embed.title = "{} already rolled initiative!".format(char.name)

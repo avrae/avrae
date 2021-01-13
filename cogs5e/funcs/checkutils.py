@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 from d20 import roll
 
 import cogs5e.models.initiative as init
@@ -33,7 +35,7 @@ def run_check(skill_key, caster, args, embed):
     :type args: utils.argparser.ParsedArguments
     :type embed: discord.Embed
     :return: The total of each check.
-    :rtype: list of d20.RollResult
+    :rtype: CheckResult
     """
     skill = caster.skills[skill_key]
     skill_name = camel_to_title(skill_key)
@@ -55,7 +57,8 @@ def run_check(skill_key, caster, args, embed):
     else:
         embed.title = f'{caster.get_title_name()} makes {a_or_an(skill_name)} check!'
 
-    return _run_common(skill, args, embed, mod_override=mod)
+    result = _run_common(skill, args, embed, mod_override=mod)
+    return CheckResult(rolls=result.rolls, skill=skill, skill_name=skill_name, skill_roll_result=result)
 
 
 def run_save(save_key, caster, args, embed):
@@ -69,11 +72,12 @@ def run_save(save_key, caster, args, embed):
     :type args: utils.argparser.ParsedArguments
     :type embed: discord.Embed
     :return: The total of each save.
-    :rtype: list of d20.RollResult
+    :rtype: SaveResult
     """
     try:
         save = caster.saves.get(save_key)
-        save_name = f"{verbose_stat(save_key[:3]).title()} Save"
+        stat_name = verbose_stat(save_key[:3]).title()
+        save_name = f"{stat_name} Save"
     except ValueError:
         raise InvalidArgument('That\'s not a valid save.')
 
@@ -91,14 +95,15 @@ def run_save(save_key, caster, args, embed):
     if isinstance(caster, init.Combatant):
         args['b'] = args.get('b') + caster.active_effects('sb')
 
-    return _run_common(save, args, embed, rr_format="Save {}")
+    result = _run_common(save, args, embed, rr_format="Save {}")
+    return SaveResult(rolls=result.rolls, skill=save, skill_name=stat_name, skill_roll_result=result)
 
 
 def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
     """
     Runs a roll for a given Skill.
 
-    :rtype: list of d20.RollResult
+    :rtype: SkillRollResult
     """
     # ephemeral support: adv, b
     # phrase
@@ -160,4 +165,9 @@ def _run_common(skill, args, embed, mod_override=None, rr_format="Check {}"):
     if 'thumb' in args:
         embed.set_thumbnail(url=args.last('thumb'))
 
-    return results
+    return SkillRollResult(rolls=results, iterations=iterations, dc=dc, successes=num_successes)
+
+
+SkillRollResult = namedtuple('SkillRollResult', 'rolls iterations dc successes')
+CheckResult = namedtuple('CheckResult', 'rolls skill skill_name skill_roll_result')
+SaveResult = namedtuple('SaveResult', 'rolls skill skill_name skill_roll_result')

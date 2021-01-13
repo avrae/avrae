@@ -243,13 +243,13 @@ class SheetManager(commands.Cog):
 
         caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
 
-        results = checkutils.run_save(skill, caster, args, embed)
+        result = checkutils.run_save(skill, caster, args, embed)
 
         # send
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
         if gamelog := self.bot.get_cog('GameLog'):
-            await gamelog.send_save(ctx, char, skill[:3], results)
+            await gamelog.send_save(ctx, char, result.skill_name, result.rolls)
 
     @commands.command(aliases=['c'])
     async def check(self, ctx, check, *args):
@@ -278,12 +278,12 @@ class SheetManager(commands.Cog):
         args = await self.new_arg_stuff(args, ctx, char)
 
         checkutils.update_csetting_args(char, args, skill)
-        results = checkutils.run_check(skill_key, char, args, embed)
+        result = checkutils.run_check(skill_key, char, args, embed)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
         if gamelog := self.bot.get_cog('GameLog'):
-            await gamelog.send_check(ctx, char, camel_to_title(skill_key), results)
+            await gamelog.send_check(ctx, char, result.skill_name, result.rolls)
 
     @commands.group(invoke_without_command=True)
     async def desc(self, ctx):

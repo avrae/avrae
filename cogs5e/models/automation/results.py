@@ -16,13 +16,13 @@ class EffectResult(abc.ABC):
     Base class for the result of an automation effect.
     """
 
-    @property
-    def children(self) -> typing.Iterable['EffectResult']:
+    def get_children(self) -> typing.Iterable['EffectResult']:
+        if hasattr(self, 'children'):
+            return self.children
         return []
 
-    @property
-    def damage(self) -> int:
-        return sum(child.damage for child in self.children)
+    def get_damage(self) -> int:
+        return sum(child.get_damage() for child in self.get_children())
 
 
 @dataclass(frozen=True)
@@ -35,8 +35,7 @@ class TargetResult(EffectResult):
     targets: typing.Tuple[typing.Union[None, str, 'cogs5e.models.sheet.statblock.StatBlock']] = ()
     results: typing.Tuple[typing.List[EffectResult], ...] = ()
 
-    @property
-    def children(self):
+    def get_children(self):
         for inst in self.results:
             yield from inst
 
@@ -62,9 +61,12 @@ class SaveResult(EffectResult):
 
 @dataclass(frozen=True)
 class DamageResult(EffectResult):
+    damage: int
     damage_roll: d20.RollResult
     in_crit: bool
-    damage: int  # needs to be last because otherwise it does some default value shenanigans with dataclass
+
+    def get_damage(self) -> int:
+        return self.damage
 
 
 @dataclass(frozen=True)

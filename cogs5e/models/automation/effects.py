@@ -170,7 +170,7 @@ class Target(Effect):
                     autoctx.queue(f"\n**__{iter_title}__**")
 
                 iteration_results = self.run_children(self.effects, autoctx)
-                total_damage += sum(r.damage for r in iteration_results)
+                total_damage += sum(r.get_damage() for r in iteration_results)
                 results.append(iteration_results)
 
                 # no target, rr

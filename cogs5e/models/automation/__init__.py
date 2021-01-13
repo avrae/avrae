@@ -52,7 +52,7 @@ class Automation:
         :type before: function
         :param after: A function, taking in the AutomationContext, to run after automation runs.
         :type after: function
-        :rtype: AutomationResult
+        :rtype: list of EffectResult
         """
         if not targets:
             targets = [None]  # outputs a single iteration of effects in a generic meta field
@@ -81,8 +81,7 @@ class Automation:
             except:
                 pass
 
-        # todo
-        # return AutomationResult(effect_results=results)
+        return results
 
     def build_str(self, caster):
         """

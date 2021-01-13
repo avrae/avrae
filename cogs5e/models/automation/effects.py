@@ -10,6 +10,7 @@ from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from utils.dice import RerollableStringifier
 from utils.functions import maybe_mod
 from .errors import *
+from .results import *
 from .runtime import AutomationContext, AutomationTarget
 from .utils import crit_mapper, max_mapper, maybe_alias_statblock, mi_mapper, upcast_scaled_dice
 
@@ -38,18 +39,18 @@ class Effect:
         return [e.to_dict() for e in obj_list]
 
     @staticmethod
-    def run_children_with_damage(child, autoctx):
-        damage = 0
+    def run_children(child, autoctx):
+        results = []
         for effect in child:
             try:
                 result = effect.run(autoctx)
-                if result and 'total' in result:
-                    damage += result['total']
+                if result is not None:
+                    results.append(result)
             except StopExecution:
                 raise
             except AutomationException as e:
                 autoctx.meta_queue(f"**Error**: {e}")
-        return damage
+        return results
 
     # required methods
     @classmethod
@@ -110,35 +111,43 @@ class Target(Effect):
         super(Target, self).run(autoctx)
         # WEB-038 (.io #121) - this will semantically work correctly, but will make the display really weird
         previous_target = autoctx.target
+        result_pairs = []
 
         if self.target in ('all', 'each'):
             for target in autoctx.targets:
                 autoctx.target = AutomationTarget(target)
                 autoctx.metavars['target'] = maybe_alias_statblock(target)  # #1335
-                self.run_effects(autoctx)
+                for iteration_result in self.run_effects(autoctx):
+                    result_pairs.append((target, iteration_result))
         elif self.target == 'self':
-            autoctx.target = AutomationTarget(autoctx.caster)
-            autoctx.metavars['target'] = maybe_alias_statblock(autoctx.caster)  # #1335
-            self.run_effects(autoctx)
+            target = autoctx.caster
+            autoctx.target = AutomationTarget(target)
+            autoctx.metavars['target'] = maybe_alias_statblock(target)  # #1335
+            for iteration_result in self.run_effects(autoctx):
+                result_pairs.append((target, iteration_result))
         else:
             try:
                 target = autoctx.targets[self.target - 1]
                 autoctx.target = AutomationTarget(target)
                 autoctx.metavars['target'] = maybe_alias_statblock(target)  # #1335
             except IndexError:
-                return
-            self.run_effects(autoctx)
+                return TargetResult()
+            for iteration_result in self.run_effects(autoctx):
+                result_pairs.append((target, iteration_result))
 
         autoctx.target = previous_target
         autoctx.metavars['target'] = maybe_alias_statblock(previous_target)  # #1335
+
+        targets, results = zip(*result_pairs)  # convenient unzipping :D
+        return TargetResult(targets, results)
 
     def run_effects(self, autoctx):
         args = autoctx.args
         args.set_context(autoctx.target.target)
         rr = min(args.last('rr', 1, int), 25)
 
-        total_damage = 0
         in_target = autoctx.target.target is not None
+        results = []
 
         # #1335
         autoctx.metavars['targetIteration'] = 1
@@ -146,6 +155,7 @@ class Target(Effect):
         # 2 binary attributes: (rr?, target?)
         # each case must end with a push_embed_field()
         if rr > 1:
+            total_damage = 0
             for iteration in range(rr):
                 if len(self.effects) == 1:
                     iter_title = f"{type(self.effects[0]).__name__} {iteration + 1}"
@@ -159,7 +169,9 @@ class Target(Effect):
                 if in_target:
                     autoctx.queue(f"\n**__{iter_title}__**")
 
-                total_damage += self.run_children_with_damage(self.effects, autoctx)
+                iteration_results = self.run_children(self.effects, autoctx)
+                total_damage += sum(r.damage for r in iteration_results)
+                results.append(iteration_results)
 
                 # no target, rr
                 if not in_target:
@@ -175,11 +187,13 @@ class Target(Effect):
                     autoctx.queue(f"{total_damage}")
                     autoctx.push_embed_field("Total Damage", inline=True)
         else:
-            total_damage += self.run_children_with_damage(self.effects, autoctx)
+            results.append(self.run_children(self.effects, autoctx))
             if in_target:  # target, no rr
                 autoctx.push_embed_field(autoctx.target.name)
             else:  # no target, no rr
                 autoctx.push_embed_field(None, to_meta=True)
+
+        return results
 
     def build_str(self, caster, evaluator):
         super(Target, self).build_str(caster, evaluator)
@@ -259,6 +273,9 @@ class Attack(Effect):
         # reset metavars (#1335)
         autoctx.metavars['lastAttackDidHit'] = False
         autoctx.metavars['lastAttackDidCrit'] = False
+        did_hit = True
+        did_crit = False
+        to_hit_roll = None
 
         # roll attack against autoctx.target
         if not (hit or miss):
@@ -298,9 +315,6 @@ class Attack(Effect):
                 ac = ac or autoctx.target.ac
 
             # assign hit values
-            did_hit = True
-            did_crit = False
-
             if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # crit
                 did_crit = True if not nocrit else False
             elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
@@ -325,28 +339,33 @@ class Attack(Effect):
                 autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
 
             if not did_hit:
-                damage = self.on_miss(autoctx)
+                children = self.on_miss(autoctx)
             elif did_crit:
-                damage = self.on_crit(autoctx)
+                children = self.on_crit(autoctx)
             else:
-                damage = self.on_hit(autoctx)
+                children = self.on_hit(autoctx)
         elif hit:
             autoctx.queue(f"**To Hit**: Automatic hit!")
             # nocrit and crit cancel out
             if crit and not nocrit:
-                damage = self.on_crit(autoctx)
+                did_crit = True
+                children = self.on_crit(autoctx)
             else:
-                damage = self.on_hit(autoctx)
+                children = self.on_hit(autoctx)
         else:
+            did_hit = False
             autoctx.queue(f"**To Hit**: Automatic miss!")
-            damage = self.on_miss(autoctx)
+            children = self.on_miss(autoctx)
 
-        return {"total": damage}
+        return AttackResult(
+            attack_bonus=attack_bonus, ac=ac, to_hit_roll=to_hit_roll, did_hit=did_hit, did_crit=did_crit,
+            children=children
+        )
 
     def on_hit(self, autoctx):
         # assign metavars (#1335)
         autoctx.metavars['lastAttackDidHit'] = True
-        return self.run_children_with_damage(self.hit, autoctx)
+        return self.run_children(self.hit, autoctx)
 
     def on_crit(self, autoctx):
         original = autoctx.in_crit
@@ -358,7 +377,7 @@ class Attack(Effect):
 
     def on_miss(self, autoctx):
         autoctx.queue("**Miss!**")
-        return self.run_children_with_damage(self.miss, autoctx)
+        return self.run_children(self.miss, autoctx)
 
     def build_str(self, caster, evaluator):
         super(Attack, self).build_str(caster, evaluator)
@@ -438,6 +457,8 @@ class Save(Effect):
         except StopIteration:
             raise InvalidSaveType()
 
+        save_roll = None
+
         autoctx.meta_queue(f"**DC**: {dc}")
         if not autoctx.target.is_simple:
             save_blurb = f'{save_skill[:3].upper()} Save'
@@ -463,18 +484,18 @@ class Save(Effect):
             is_success = False
 
         if is_success:
-            damage = self.on_success(autoctx)
+            children = self.on_success(autoctx)
         else:
-            damage = self.on_fail(autoctx)
-        return {"total": damage}
+            children = self.on_fail(autoctx)
+        return SaveResult(dc=dc, ability=save_skill, save_roll=save_roll, did_save=is_success, children=children)
 
     def on_success(self, autoctx):
         autoctx.metavars['lastSaveDidPass'] = True
-        return self.run_children_with_damage(self.success, autoctx)
+        return self.run_children(self.success, autoctx)
 
     def on_fail(self, autoctx):
         autoctx.metavars['lastSaveDidPass'] = False
-        return self.run_children_with_damage(self.fail, autoctx)
+        return self.run_children(self.fail, autoctx)
 
     def build_str(self, caster, evaluator):
         super(Save, self).build_str(caster, evaluator)
@@ -635,9 +656,7 @@ class Damage(Effect):
 
         # #1335
         autoctx.metavars['lastDamage'] = dmgroll.total
-
-        # return metadata for scripting
-        return {'damage': f"**{roll_for}**: {result}", 'total': dmgroll.total, 'roll': dmgroll}
+        return DamageResult(damage=dmgroll.total, damage_roll=dmgroll, in_crit=in_crit)
 
     def is_meta(self, autoctx, strict=False):
         if not strict:
@@ -685,17 +704,20 @@ class TempHP(Effect):
             dice_ast = d20.utils.tree_map(max_mapper, dice_ast)
 
         dmgroll = roll(dice_ast)
+        thp_amount = max(dmgroll.total, 0)
         autoctx.queue(f"**THP**: {dmgroll.result}")
-        autoctx.metavars['lastTempHp'] = dmgroll.total  # #1335
+        autoctx.metavars['lastTempHp'] = thp_amount  # #1335
 
         if autoctx.target.combatant:
-            autoctx.target.combatant.temp_hp = max(dmgroll.total, 0)
+            autoctx.target.combatant.temp_hp = thp_amount
             autoctx.footer_queue(
                 "{}: {}".format(autoctx.target.combatant.name, autoctx.target.combatant.hp_str()))
         elif autoctx.target.character:
-            autoctx.target.character.temp_hp = max(dmgroll.total, 0)
+            autoctx.target.character.temp_hp = thp_amount
             autoctx.footer_queue(
                 "{}: {}".format(autoctx.target.character.name, autoctx.target.character.hp_str()))
+
+        return TempHPResult(amount=thp_amount, amount_roll=dmgroll)
 
     def is_meta(self, autoctx, strict=False):
         if not strict:
@@ -744,6 +766,7 @@ class IEffect(Effect):
             desc = None
 
         duration = autoctx.args.last('dur', duration, int)
+        conc_conflict = []
         if isinstance(autoctx.target.target, init.Combatant):
             effect = init.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
                                      duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
@@ -760,6 +783,8 @@ class IEffect(Effect):
             effect = init.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects),
                                      tick_on_end=self.tick_on_end, concentration=self.concentration, desc=desc)
             autoctx.queue(f"**Effect**: {str(effect)}")
+
+        return IEffectResult(effect=effect, conc_conflict=conc_conflict)
 
     def build_str(self, caster, evaluator):
         super(IEffect, self).build_str(caster, evaluator)
@@ -822,8 +847,10 @@ class Roll(Effect):
             autoctx.meta_queue(f"**{self.name.title()}**: {rolled.result}")
 
         d20.utils.simplify_expr(rolled.expr)
-        autoctx.metavars[self.name] = RerollableStringifier().stringify(rolled.expr.roll)
+        simplified = RerollableStringifier().stringify(rolled.expr.roll)
+        autoctx.metavars[self.name] = simplified
         autoctx.metavars['lastRoll'] = rolled.total  # #1335
+        return RollResult(result=rolled.total, roll=rolled, simplified=simplified)
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)
@@ -856,6 +883,8 @@ class Text(Effect):
             else:
                 autoctx.add_pm(str(autoctx.ctx.author.id), text)
 
+            return TextResult(text=text)
+
     def build_str(self, caster, evaluator):
         super(Text, self).build_str(caster, evaluator)
         return ""
@@ -887,10 +916,13 @@ class SetVariable(Effect):
             if higher:
                 level_value = higher
 
+        did_error = False
+
         # parse value
         try:
             value = autoctx.parse_annostr(level_value, is_full_expression=True)
         except AutomationEvaluationException as e:
+            did_error = True
             if self.on_error is not None:
                 value = autoctx.parse_annostr(self.on_error, is_full_expression=True)
             else:
@@ -905,6 +937,7 @@ class SetVariable(Effect):
 
         # bind
         autoctx.metavars[self.name] = final_value
+        return SetVariableResult(value=value, did_error=did_error)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
@@ -943,27 +976,37 @@ class Condition(Effect):
 
     def run(self, autoctx):
         super().run(autoctx)
+        did_error = False
+        do_true = False
+        do_false = False
         try:
             condition_result = autoctx.parse_annostr(self.condition, is_full_expression=True)
         except AutomationEvaluationException as e:
+            did_error = True
             if self.error_behaviour == 'true':
-                to_run = self.on_true
+                do_true = True
             elif self.error_behaviour == 'false':
-                to_run = self.on_false
+                do_false = True
             elif self.error_behaviour == 'both':
-                to_run = self.on_true + self.on_false
+                do_true = True
+                do_false = True
             elif self.error_behaviour == 'neither':
-                return
+                pass
             else:  # raise
                 raise StopExecution(f"Error when evaluating condition `{self.condition}`:\n{e}")
         else:
             if condition_result:
-                to_run = self.on_true
+                do_true = True
             else:
-                to_run = self.on_false
+                do_false = True
 
-        damage = self.run_children_with_damage(to_run, autoctx)
-        return {"total": damage}
+        children = []
+        if do_true:
+            children += self.run_children(self.on_true, autoctx)
+        if do_false:
+            children += self.run_children(self.on_true, autoctx)
+
+        return ConditionResult(did_true=do_true, did_false=do_false, did_error=did_error, children=children)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

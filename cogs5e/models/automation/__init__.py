@@ -8,13 +8,13 @@ import aliasing.api.statblock
 import aliasing.evaluators
 import cogs5e.models.character as character_api
 import cogs5e.models.initiative as init
-from aliasing.errors import EvaluationError
 from cogs5e.models import embeds
-from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType
+from cogs5e.models.errors import InvalidArgument, InvalidSaveType
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.dice import RerollableStringifier
 from utils.functions import get_guild_member, maybe_mod
+from .errors import AutomationEvaluationException, AutomationException, NoAttackBonus, NoSpellDC, StopExecution
 
 log = logging.getLogger(__name__)
 
@@ -1336,39 +1336,3 @@ def _crit_mapper(node):
     if isinstance(node, d20.ast.Dice):
         return d20.ast.Dice(node.num * 2, node.size)
     return node
-
-
-# ==== exceptions ====
-class AutomationException(AvraeException):
-    pass
-
-
-class StopExecution(AutomationException):
-    """
-    Some check failed that should cause automation to stop, whatever stage of execution it's at.
-    This does not revert any side effects made before this point.
-    """
-    pass
-
-
-class TargetException(AutomationException):
-    pass
-
-
-class AutomationEvaluationException(EvaluationError, AutomationException):
-    """
-    An error occurred while evaluating Draconic in automation.
-    """
-
-    def __init__(self, original, expression):
-        super().__init__(original, expression)  # EvaluationError.__init__()
-
-
-class NoSpellDC(AutomationException):
-    def __init__(self, msg="No spell save DC found."):
-        super().__init__(msg)
-
-
-class NoAttackBonus(AutomationException):
-    def __init__(self, msg="No attack bonus found."):
-        super().__init__(msg)

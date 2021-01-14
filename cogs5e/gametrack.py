@@ -629,7 +629,7 @@ class GameTrack(commands.Cog):
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         result = await spell.cast(ctx, caster, targets, args, combat=combat)
 
-        embed = result['embed']
+        embed = result.embed
         embed.colour = char.get_color()
         if 'thumb' not in args:
             embed.set_thumbnail(url=char.image)

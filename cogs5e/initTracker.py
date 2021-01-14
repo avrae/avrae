@@ -1324,7 +1324,7 @@ class InitTracker(commands.Cog):
 
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
 
-        embed = result['embed']
+        embed = result.embed
         embed.colour = combatant.get_color()
         await ctx.send(embed=embed)
         await combat.final()

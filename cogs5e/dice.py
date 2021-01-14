@@ -347,7 +347,7 @@ class Dice(commands.Cog):
         result = await spell.cast(ctx, caster, targets, args, combat=combat)
 
         # embed display
-        embed = result['embed']
+        embed = result.embed
         embed.colour = random.randint(0, 0xffffff)
 
         if not args.last('h', type_=bool) and 'thumb' not in args:

@@ -319,6 +319,8 @@ async def _servalias_before_edit(ctx, name=None):
 
 
 async def _servsnippet_before_edit(ctx, _=None):
+    if ctx.guild is None:
+        raise commands.NoPrivateMessage()
     if not _can_edit_servaliases(ctx):
         raise NotAllowed("You do not have permission to edit server snippets. Either __Administrator__ "
                          "Discord permissions or a role named \"Server Aliaser\" or \"Dragonspeaker\" "

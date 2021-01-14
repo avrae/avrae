@@ -18,6 +18,14 @@ class RollKind(enum.Enum):
     CRITICAL_HIT = 'critical hit'
 
     @classmethod
+    def from_d20_adv(cls, result):
+        if result == 0:
+            return cls.NONE
+        elif result == -1:
+            return cls.DISADVANTAGE
+        return cls.ADVANTAGE
+
+    @classmethod
     def guess_from_d20(cls, result):
         """
         Guesses advantage/disadvantage based on a d20.RollResult.

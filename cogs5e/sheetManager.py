@@ -112,10 +112,12 @@ class SheetManager(commands.Cog):
         attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
 
         embed = EmbedWithCharacter(char, name=False)
-        await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
+        if gamelog := self.bot.get_cog('GameLog'):
+            await gamelog.send_automation(ctx, char, attack.name, result)
 
     @attack.command(name="list")
     async def attack_list(self, ctx):

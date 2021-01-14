@@ -639,6 +639,8 @@ class GameTrack(commands.Cog):
         if combat:
             await combat.final()
         await ctx.send(embed=embed)
+        if (gamelog := self.bot.get_cog('GameLog')) and result.automation_result:
+            await gamelog.send_automation(ctx, char, spell.name, result.automation_result)
 
 
 def setup(bot):

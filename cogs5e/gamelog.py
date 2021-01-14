@@ -8,6 +8,7 @@ from discord.ext import commands
 import ddb.dice
 from cogs5e.funcs import gamelogutils
 from cogs5e.models import embeds
+from cogs5e.models.automation.results import AttackResult, DamageResult, RollResult, SaveResult, TempHPResult
 from ddb.dice import RollContext, RollKind, RollRequest, RollRequestRoll, RollType
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
@@ -324,7 +325,7 @@ class GameLog(commands.Cog):
         if ddb_user is None:
             return
 
-        event = GameLogEvent.dice_roll_pending(
+        event = GameLogEvent.dice_roll_pending(  # todo remove
             game_id=campaign_id, user_id=ddb_user.user_id, roll_request=roll_request,
             entity_id=character.upstream_id
         )
@@ -376,7 +377,43 @@ class GameLog(commands.Cog):
         :type ability_name: str
         :type automation_result: cogs5e.models.automation.AutomationResult
         """
-        pass
+        roll_request_rolls = []
+
+        # dfs over the automation result tree, looking for results w/ dice that we care about
+        def dfs(node):
+            if isinstance(node, AttackResult):
+                if node.to_hit_roll is not None:
+                    roll_request_rolls.append(RollRequestRoll.from_d20(
+                        node.to_hit_roll, roll_type=RollType.TO_HIT,
+                        roll_kind=RollKind.from_d20_adv(node.adv)
+                    ))
+            elif isinstance(node, SaveResult):
+                if node.save_roll is not None:
+                    roll_request_rolls.append(RollRequestRoll.from_d20(
+                        node.save_roll, roll_type=RollType.SAVE,
+                        roll_kind=RollKind.from_d20_adv(node.adv)
+                    ))
+            elif isinstance(node, DamageResult):
+                roll_request_rolls.append(RollRequestRoll.from_d20(
+                    node.damage_roll, roll_type=RollType.DAMAGE,
+                    roll_kind=RollKind.CRITICAL_HIT if node.in_crit else RollKind.NONE
+                ))
+            elif isinstance(node, TempHPResult):
+                roll_request_rolls.append(RollRequestRoll.from_d20(node.amount_roll, roll_type=RollType.HEAL))
+            elif isinstance(node, RollResult):
+                if not node.hidden:
+                    roll_request_rolls.append(RollRequestRoll.from_d20(
+                        node.roll,
+                        roll_type=RollType.SPELL if automation_result.is_spell else RollType.ROLL
+                    ))
+            for child in node.get_children():
+                dfs(child)
+
+        dfs(automation_result)
+        if not roll_request_rolls:
+            return
+        roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), ability_name)
+        await self._send_roll_request(ctx, character, roll_request)
 
 
 def setup(bot):

@@ -358,7 +358,7 @@ class Attack(Effect):
             children = self.on_miss(autoctx)
 
         return AttackResult(
-            attack_bonus=attack_bonus, ac=ac, to_hit_roll=to_hit_roll, did_hit=did_hit, did_crit=did_crit,
+            attack_bonus=attack_bonus, ac=ac, to_hit_roll=to_hit_roll, adv=adv, did_hit=did_hit, did_crit=did_crit,
             children=children
         )
 
@@ -434,6 +434,7 @@ class Save(Effect):
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
         hide = autoctx.args.last('h', type_=bool)
+        adv = autoctx.args.adv()
 
         dc_override = None
         if self.dc:
@@ -487,7 +488,8 @@ class Save(Effect):
             children = self.on_success(autoctx)
         else:
             children = self.on_fail(autoctx)
-        return SaveResult(dc=dc, ability=save_skill, save_roll=save_roll, did_save=is_success, children=children)
+        return SaveResult(dc=dc, ability=save_skill, save_roll=save_roll, adv=adv, did_save=is_success,
+                          children=children)
 
     def on_success(self, autoctx):
         autoctx.metavars['lastSaveDidPass'] = True
@@ -850,7 +852,7 @@ class Roll(Effect):
         simplified = RerollableStringifier().stringify(rolled.expr.roll)
         autoctx.metavars[self.name] = simplified
         autoctx.metavars['lastRoll'] = rolled.total  # #1335
-        return RollResult(result=rolled.total, roll=rolled, simplified=simplified)
+        return RollResult(result=rolled.total, roll=rolled, simplified=simplified, hidden=self.hidden)
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)

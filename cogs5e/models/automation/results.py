@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import d20
 
 __all__ = (
-    'EffectResult',
+    'EffectResult', 'AutomationResult',
     'TargetResult', 'AttackResult', 'SaveResult', 'DamageResult', 'TempHPResult', 'IEffectResult', 'RollResult',
     'TextResult', 'SetVariableResult', 'ConditionResult'
 )
@@ -23,6 +23,16 @@ class EffectResult(abc.ABC):
 
     def get_damage(self) -> int:
         return sum(child.get_damage() for child in self.get_children())
+
+    def __iter__(self):
+        yield from self.get_children()
+
+
+@dataclass(frozen=True)
+class AutomationResult(EffectResult):
+    """Class for the overall result of automation (technically not an effect, but eh)."""
+    children: typing.List[EffectResult]
+    is_spell: bool = False
 
 
 @dataclass(frozen=True)
@@ -45,6 +55,7 @@ class AttackResult(EffectResult):
     attack_bonus: int  # does not include -b bonuses
     ac: typing.Optional[int]
     to_hit_roll: typing.Optional[d20.RollResult]  # can be None iff automatic hit/miss - see did_hit
+    adv: int
     did_hit: bool
     did_crit: bool
     children: typing.List[EffectResult]
@@ -55,6 +66,7 @@ class SaveResult(EffectResult):
     dc: int
     ability: str
     save_roll: typing.Optional[d20.RollResult]  # None if target is simple or automatic fail/pass
+    adv: int
     did_save: bool
     children: typing.List[EffectResult]
 
@@ -86,6 +98,7 @@ class RollResult(EffectResult):
     result: int
     roll: d20.RollResult
     simplified: str
+    hidden: bool
 
 
 @dataclass(frozen=True)

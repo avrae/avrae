@@ -2,6 +2,7 @@ import aliasing.evaluators
 from utils.functions import get_guild_member
 from .effects import *
 from .errors import *
+from .results import *
 from .runtime import *
 
 
@@ -52,7 +53,7 @@ class Automation:
         :type before: function
         :param after: A function, taking in the AutomationContext, to run after automation runs.
         :type after: function
-        :rtype: list of EffectResult
+        :rtype: AutomationResult
         """
         if not targets:
             targets = [None]  # outputs a single iteration of effects in a generic meta field
@@ -81,7 +82,7 @@ class Automation:
             except:
                 pass
 
-        return results
+        return AutomationResult(children=results, is_spell=spell is not None)
 
     def build_str(self, caster):
         """

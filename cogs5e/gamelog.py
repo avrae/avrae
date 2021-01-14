@@ -9,6 +9,8 @@ import ddb.dice
 from cogs5e.funcs import gamelogutils
 from cogs5e.models import embeds
 from cogs5e.models.automation.results import AttackResult, DamageResult, RollResult, SaveResult, TempHPResult
+from cogs5e.models.character import Character
+from cogs5e.models.errors import NoCharacter
 from ddb.dice import RollContext, RollKind, RollRequest, RollRequestRoll, RollType
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
@@ -309,36 +311,52 @@ class GameLog(commands.Cog):
 
     # ==== game log send methods ====
     # to access, get the cog from the handler function that is making the checks and call these
-    async def _send_roll_request(self, ctx, character, roll_request):
+    async def _send_preflight(self, ctx, character):
         """
-        Sends a roll result to DDB, running checks on the context to ensure that the message should be sent.
+        Call before any dice event processing. Returns a tuple (campaign_id, ddb_user), the latter will be None
+        if the preflight checks fail.
         """
         # their character must be in a campaign
         if (campaign_id := character.ddb_campaign_id) is None:
-            return
+            return None, None
         # and the character's campaign must be linked to this channel
         campaign_link = await CampaignLink.from_id(ctx.bot.mdb, campaign_id)
         if campaign_link.channel_id != ctx.channel.id:
-            return
+            return None, None
         # and the user must have their ddb acct connected
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         if ddb_user is None:
-            return
+            return campaign_id, None
+        return campaign_id, ddb_user
 
-        event = GameLogEvent.dice_roll_pending(  # todo remove
-            game_id=campaign_id, user_id=ddb_user.user_id, roll_request=roll_request,
-            entity_id=character.upstream_id
-        )
-        await self.bot.glclient.post_message(ddb_user, event)
-
+    async def _send_roll_request(self, campaign_id, ddb_user, character, roll_request):
+        """Sends a roll result to DDB."""
         event = GameLogEvent.dice_roll_fulfilled(
             game_id=campaign_id, user_id=ddb_user.user_id, roll_request=roll_request,
             entity_id=character.upstream_id
         )
         await self.bot.glclient.post_message(ddb_user, event)
 
-    async def send_roll(self):
-        pass
+    async def send_roll(self, ctx, result):
+        """
+        Send the result of a basic roll the user made, with no knowledge of character or context
+
+        :type ctx: discord.ext.commands.Context
+        :type result: d20.RollResult
+        """
+        # while roll doesn't require character, sendback to ddb does
+        try:
+            character = await Character.from_ctx(ctx)
+        except NoCharacter:
+            return
+        campaign_id, ddb_user = await self._send_preflight(ctx, character)
+        if ddb_user is None:
+            return
+
+        rrr = RollRequestRoll.from_d20(result, roll_type=RollType.ROLL, roll_kind=RollKind.guess_from_d20(result))
+        comment = result.comment or 'Custom'
+        roll_request = RollRequest.new([rrr], RollContext.from_character(character), comment)
+        await self._send_roll_request(campaign_id, ddb_user, character, roll_request)
 
     async def send_check(self, ctx, character, skill, rolls):
         """
@@ -347,12 +365,16 @@ class GameLog(commands.Cog):
         :type skill: str
         :type rolls: list of d20.RollResult
         """
+        campaign_id, ddb_user = await self._send_preflight(ctx, character)
+        if ddb_user is None:
+            return
+
         roll_request_rolls = [
             RollRequestRoll.from_d20(r, roll_type=RollType.CHECK, roll_kind=RollKind.guess_from_d20(r))
             for r in rolls
         ]
         roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), skill)
-        await self._send_roll_request(ctx, character, roll_request)
+        await self._send_roll_request(campaign_id, ddb_user, character, roll_request)
 
     async def send_save(self, ctx, character, ability, rolls):
         """
@@ -361,12 +383,16 @@ class GameLog(commands.Cog):
         :type ability: str
         :type rolls: list of d20.RollResult
         """
+        campaign_id, ddb_user = await self._send_preflight(ctx, character)
+        if ddb_user is None:
+            return
+
         roll_request_rolls = [
             RollRequestRoll.from_d20(r, roll_type=RollType.SAVE, roll_kind=RollKind.guess_from_d20(r))
             for r in rolls
         ]
         roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), ability)
-        await self._send_roll_request(ctx, character, roll_request)
+        await self._send_roll_request(campaign_id, ddb_user, character, roll_request)
 
     async def send_automation(self, ctx, character, ability_name, automation_result):
         """
@@ -377,6 +403,10 @@ class GameLog(commands.Cog):
         :type ability_name: str
         :type automation_result: cogs5e.models.automation.AutomationResult
         """
+        campaign_id, ddb_user = await self._send_preflight(ctx, character)
+        if ddb_user is None:
+            return
+
         roll_request_rolls = []
 
         # dfs over the automation result tree, looking for results w/ dice that we care about
@@ -413,7 +443,7 @@ class GameLog(commands.Cog):
         if not roll_request_rolls:
             return
         roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), ability_name)
-        await self._send_roll_request(ctx, character, roll_request)
+        await self._send_roll_request(campaign_id, ddb_user, character, roll_request)
 
 
 def setup(bot):

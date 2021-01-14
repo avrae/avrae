@@ -848,8 +848,9 @@ class Roll(Effect):
         if not self.hidden:
             autoctx.meta_queue(f"**{self.name.title()}**: {rolled.result}")
 
-        d20.utils.simplify_expr(rolled.expr)
-        simplified = RerollableStringifier().stringify(rolled.expr.roll)
+        simplified_expr = copy.deepcopy(rolled.expr)
+        d20.utils.simplify_expr(simplified_expr)
+        simplified = RerollableStringifier().stringify(simplified_expr.roll)
         autoctx.metavars[self.name] = simplified
         autoctx.metavars['lastRoll'] = rolled.total  # #1335
         return RollResult(result=rolled.total, roll=rolled, simplified=simplified, hidden=self.hidden)

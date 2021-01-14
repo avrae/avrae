@@ -324,6 +324,12 @@ class GameLog(commands.Cog):
         if ddb_user is None:
             return
 
+        event = GameLogEvent.dice_roll_pending(
+            game_id=campaign_id, user_id=ddb_user.user_id, roll_request=roll_request,
+            entity_id=character.upstream_id
+        )
+        await self.bot.glclient.post_message(ddb_user, event)
+
         event = GameLogEvent.dice_roll_fulfilled(
             game_id=campaign_id, user_id=ddb_user.user_id, roll_request=roll_request,
             entity_id=character.upstream_id
@@ -361,10 +367,15 @@ class GameLog(commands.Cog):
         roll_request = RollRequest.new(roll_request_rolls, RollContext.from_character(character), ability)
         await self._send_roll_request(ctx, character, roll_request)
 
-    async def send_attack(self):
-        pass
+    async def send_automation(self, ctx, character, ability_name, automation_result):
+        """
+        Attacks, casting, etc (any result from the automation engine)
 
-    async def send_cast(self):
+        :type ctx: discord.ext.commands.Context
+        :type character: cogs5e.models.character.Character
+        :type ability_name: str
+        :type automation_result: cogs5e.models.automation.AutomationResult
+        """
         pass
 
 

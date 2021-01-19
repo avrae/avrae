@@ -47,7 +47,7 @@ class GameLog(commands.Cog):
     @commands.group(name='campaign', invoke_without_command=True)
     @commands.guild_only()
     @checks.feature_flag('command.campaign.enabled', use_ddb_user=True)
-    async def campaign(self, ctx, campaign_link):
+    async def campaign(self, ctx, campaign_link=None):
         """
         Links a D&D Beyond campaign to this channel, displaying rolls made on players' character sheets in real time.
 
@@ -55,6 +55,9 @@ class GameLog(commands.Cog):
 
         Not seeing a player's rolls? Link their D&D Beyond and Discord accounts [here](https://www.dndbeyond.com/account), and check with the `!ddb` command!
         """
+        if campaign_link is None:
+            return await self.campaign_list(ctx)
+
         link_match = re.match(r'(?:https?://)?(?:www\.)?dndbeyond\.com/campaigns/(\d+)(?:$|/)', campaign_link)
         if link_match is None:
             return await ctx.send("This is not a D&D Beyond campaign link.")
@@ -78,9 +81,16 @@ class GameLog(commands.Cog):
         # do link (and dm check)
         await ctx.trigger_typing()
         result = await self.bot.glclient.create_campaign_link(ctx, campaign_id)
-        await ctx.send(f"Linked {result.campaign_name} to this channel! Your players' rolls from D&D Beyond will show "
-                       f"up here, and checks, saves, and attacks made by characters in your campaign here will "
-                       f"appear in D&D Beyond!")
+        embed = embeds.EmbedWithAuthor(ctx)
+        embed.title = f"Linked {result.campaign_name}!"
+        embed.description = (f"Linked {result.campaign_name} to this channel! Your players' rolls from D&D Beyond "
+                             f"will show up here, and checks, saves, and attacks made by characters in your campaign "
+                             f"here will appear in D&D Beyond!")
+        embed.add_field(name="Not Seeing Rolls?",
+                        value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
+                              f"and Discord accounts are linked](https://www.dndbeyond.com/account)! You can "
+                              f"check your players' link status by having them run `{ctx.prefix}ddb`.")
+        await ctx.send(embed=embed)
 
     @campaign.command(name='list')
     @commands.guild_only()
@@ -92,9 +102,16 @@ class GameLog(commands.Cog):
             return await ctx.send(f"This channel is not linked to any D&D Beyond campaigns. "
                                   f"Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/...` to have "
                                   f"your and your players' rolls show up here in real time!")
-        await ctx.send(f"This channel is linked to {len(existing_links)} "
-                       f"{'campaign' if len(existing_links) == 1 else 'campaigns'}:\n"
-                       f"{', '.join(cl.campaign_name for cl in existing_links)}")
+        embed = embeds.EmbedWithAuthor(ctx)
+        embed.title = "D&D Beyond Campaign Links"
+        embed.description = (f"This channel is linked to {len(existing_links)} "
+                             f"{'campaign' if len(existing_links) == 1 else 'campaigns'}:\n"
+                             f"{', '.join(cl.campaign_name for cl in existing_links)}")
+        embed.add_field(name="Not Seeing Rolls?",
+                        value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
+                              f"and Discord accounts are linked](https://www.dndbeyond.com/account)! You can "
+                              f"check your players' link status by having them run `{ctx.prefix}ddb`.")
+        await ctx.send(embed=embed)
 
     @campaign.command(name='remove')
     @commands.guild_only()

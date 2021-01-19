@@ -1128,12 +1128,6 @@ class InitTracker(commands.Cog):
             args = await helpers.parse_with_statblock(ctx, combatant, args)
         args = argparse(args)
 
-        # handle old targeting method
-        target_name = None
-        if 't' not in args and len(raw_args) > 0:
-            target_name = atk_name
-            atk_name = raw_args[0]
-
         # attack selection/caster handling
         try:
             if isinstance(combatant, CombatantGroup):
@@ -1159,23 +1153,7 @@ class InitTracker(commands.Cog):
             return await ctx.send("Attack not found.")
 
         # target handling
-        if 't' not in args and target_name is not None:
-            # old single-target
-            targets = []
-            try:
-                target = await combat.select_combatant(target_name, "Select the target.", select_group=True)
-                if isinstance(target, CombatantGroup):
-                    targets.extend(target.get_combatants())
-                else:
-                    targets.append(target)
-            except SelectionException:
-                return await ctx.send("Target not found.")
-            await ctx.author.send(f"You are using the old targeting syntax, which is deprecated. "
-                                  f"In the future, you should use "
-                                  f"`{ctx.prefix}init attack {atk_name} -t {target_name}`!")
-        else:
-            # multi-targeting
-            targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
+        targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
 
         # embed setup
         embed = discord.Embed(color=combatant.get_color())

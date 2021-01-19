@@ -1358,19 +1358,26 @@ class Effect:
 
     # --- stringification ---
     def __str__(self):
-        out = [self.name]
-        if duration := self.duration_str():
-            out.append(duration)
-        out.append(self.get_parenthetical())
-        if self.concentration:
-            out.append("<C>")
-        if self.desc:
-            out.append(f"\n - {self.desc}")
-        return ' '.join(out)
+        return self.get_str(duration=True, parenthetical=True, concentration=True, description=True)
 
     def get_short_str(self):
         """Gets a short string describing the effect (for display in init summary)"""
-        return f'{self.name} {self.duration_str()}'.strip()
+        return self.get_str(duration=True, parenthetical=False, concentration=False, description=False)
+
+    def get_str(self, duration=True, parenthetical=True, concentration=True, description=True):
+        """More customizable as to what actually shows."""
+        out = [self.name]
+        if duration:
+            the_duration = self.duration_str()
+            if the_duration:
+                out.append(the_duration)
+        if parenthetical:
+            out.append(self.get_parenthetical())
+        if concentration and self.concentration:
+            out.append("<C>")
+        if description and self.desc:
+            out.append(f"\n - {self.desc}")
+        return ' '.join(out).strip()
 
     def duration_str(self):
         """Gets a string describing this effect's duration."""

@@ -1016,13 +1016,13 @@ class IEffect(Effect):
                     raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
                 effect.set_parent(autoctx.conc_effect)
             effect_result = autoctx.target.target.add_effect(effect)
-            autoctx.queue(f"**Effect**: {str(effect)}")
+            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
             if conc_conflict := effect_result['conc_conflict']:
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
         else:
             effect = init.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects),
                                      tick_on_end=self.tick_on_end, concentration=self.concentration, desc=desc)
-            autoctx.queue(f"**Effect**: {str(effect)}")
+            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
 
     def build_str(self, caster, evaluator):
         super(IEffect, self).build_str(caster, evaluator)

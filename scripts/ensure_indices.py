@@ -1,6 +1,6 @@
 import os
 
-from pymongo import ASCENDING, DESCENDING, IndexModel, MongoClient, TEXT
+from pymongo import ASCENDING, DESCENDING, IndexModel, MongoClient
 
 INDICES = {
     # homebrew
@@ -116,7 +116,17 @@ INDICES = {
         IndexModel('type'),
         IndexModel([('type', ASCENDING), ('subscriber_id', ASCENDING)]),
         IndexModel('object_id')
-    ]
+    ],
+
+    # game log linking
+    "ddb_account_map": [
+        IndexModel('ddb_id', unique=True),
+        IndexModel('discord_id', unique=True)
+    ],
+    "gamelog_campaigns": [
+        IndexModel('campaign_id', unique=True),
+        IndexModel('channel_id')
+    ],
 }
 
 
@@ -139,5 +149,5 @@ if __name__ == '__main__':
     mclient = MongoClient(os.getenv('MONGO_URL', "mongodb://localhost:27017"))
     mdb = mclient[os.getenv('MONGO_DB', "avrae")]
 
-    input(f"Inserting into {mdb.name}. Press enter to continue.")
+    input(f"Indexing on {mdb.name}. Press enter to continue.")
     run(mdb)

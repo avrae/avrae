@@ -50,6 +50,10 @@ DYNAMO_ENTITY_TABLE = os.getenv('DYNAMO_ENTITY_TABLE')
 # env: AWS_ACCESS_KEY_ID
 # env: AWS_SECRET_ACCESS_KEY
 
+# ---- ddb (waterdeep) ----
+# used to override waterdeep URL in dev/stg
+DDB_WATERDEEP_URL = os.getenv('DDB_WATERDEEP_URL', "https://www.dndbeyond.com")
+
 # ---- launchdarkly ----
 LAUNCHDARKLY_SDK_KEY = os.getenv('LAUNCHDARKLY_SDK_KEY')
 

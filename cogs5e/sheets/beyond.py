@@ -83,10 +83,17 @@ class BeyondSheetParser(SheetLoaderABC):
         race = self._get_race()
         background = self._get_background()
 
+        # ddb campaign
+        campaign = self.character_data.get('campaign')
+        campaign_id = None
+        if campaign is not None:
+            campaign_id = str(campaign['id'])
+
         character = Character(
             owner_id, upstream, active, sheet_type, import_version, name, description, image, stats, levels, attacks,
             skills, resistances, saves, ac, max_hp, hp, temp_hp, cvars, options, overrides, consumables, death_saves,
-            spellbook, live, race, background
+            spellbook, live, race, background,
+            ddb_campaign_id=campaign_id
         )
         return character
 

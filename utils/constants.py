@@ -79,3 +79,7 @@ PARTNERED_SOURCES = ('LRDToB',)
 UA_SOURCES = ('UA',)
 CR_SOURCES = ('CR', 'EGtW', 'WA')
 NONCORE_SOURCES = ('DDIA-MORD', 'LLoK', 'LR', 'IMR', 'MFFV1', 'OGA')
+
+# ---- emojis, icons, other discord things ----
+DDB_LOGO_EMOJI = '<:beyond:783780183559372890>'
+DDB_LOGO_ICON = 'https://cdn.discordapp.com/emojis/783780183559372890.png?v=1'

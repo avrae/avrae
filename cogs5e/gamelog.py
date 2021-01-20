@@ -219,13 +219,15 @@ class GameLog(commands.Cog):
         if check_name in constants.STAT_ABBREVIATIONS:
             check_name = verbose_stat(check_name)
         await self._dice_roll_embed_common(gctx, roll_request, "{name} makes {check} check!",
-                                           check=a_or_an(check_name))
+                                           check=a_or_an(check_name.title()))
 
     async def dice_roll_save(self, gctx, roll_request):
         """Save: Display like ``!s``."""
-        save_name = f"{verbose_stat(roll_request.action).title()} Save"
-        await self._dice_roll_embed_common(gctx, roll_request, "{name} makes {save}!",
-                                           save=a_or_an(save_name))
+        save_name = roll_request.action
+        if save_name in constants.STAT_ABBREVIATIONS:
+            save_name = verbose_stat(save_name)
+        await self._dice_roll_embed_common(gctx, roll_request, "{name} makes {save} Save!",
+                                           save=a_or_an(save_name.title()))
 
     async def dice_roll_heal(self, gctx, roll_request):
         """Healing and temp HP. Displays like a check/save/attack"""

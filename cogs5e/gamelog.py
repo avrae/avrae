@@ -88,8 +88,9 @@ class GameLog(commands.Cog):
                              f"here will appear in D&D Beyond!")
         embed.add_field(name="Not Seeing Rolls?",
                         value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
-                              f"and Discord accounts are linked](https://www.dndbeyond.com/account)! You can "
-                              f"check your players' link status by having them run `{ctx.prefix}ddb`.")
+                              f"and Discord accounts are linked](https://www.dndbeyond.com/account) and their "
+                              f"[characters are imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)! "
+                              f"You can check your players' link status with `{ctx.prefix}ddb`.")
         await ctx.send(embed=embed)
 
     @campaign.command(name='list')
@@ -109,8 +110,9 @@ class GameLog(commands.Cog):
                              f"{', '.join(cl.campaign_name for cl in existing_links)}")
         embed.add_field(name="Not Seeing Rolls?",
                         value=f"Not seeing one or more of your players' rolls? Make sure their [D&D Beyond "
-                              f"and Discord accounts are linked](https://www.dndbeyond.com/account)! You can "
-                              f"check your players' link status by having them run `{ctx.prefix}ddb`.")
+                              f"and Discord accounts are linked](https://www.dndbeyond.com/account) and their "
+                              f"[characters are imported](https://avrae.readthedocs.io/en/stable/cheatsheets/get_started.html#step-2-add-a-character)! "
+                              f"You can check your players' link status with `{ctx.prefix}ddb`.")
         await ctx.send(embed=embed)
 
     @campaign.command(name='remove')

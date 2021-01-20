@@ -43,6 +43,10 @@ To add a character from D&D Beyond, use the following command::
 
   !beyond https://ddb.ac/characters/...
 
+.. note::
+    If you link your D&D Beyond and Discord accounts and your DM links your campaign to a channel, your character's
+    rolls made on D&D Beyond or the Player App will appear in Discord!
+
 Dicecloud
 ^^^^^^^^^
 To add a character from Dicecloud, use the following command::

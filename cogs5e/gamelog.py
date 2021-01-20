@@ -348,6 +348,10 @@ class GameLog(commands.Cog):
         ddb_user = await self.bot.ddb.get_ddb_user(ctx, ctx.author.id)
         if ddb_user is None:
             return campaign_id, None
+        # and they must be allowed to use game log send by feature flag
+        flag = await self.bot.ldclient.variation('cog.gamelog.roll_send.enabled', ddb_user.to_ld_dict(), False)
+        if not flag:
+            return campaign_id, None
         return campaign_id, ddb_user
 
     async def _send_roll_request(self, campaign_id, ddb_user, character, roll_request):

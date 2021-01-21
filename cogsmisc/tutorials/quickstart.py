@@ -25,12 +25,9 @@ class Quickstart(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Using Bot Commands"
             embed.description = f"""
-            Each command in Avrae starts with a *prefix*, or a short string of characters at the start of a message. \
-            By default, this prefix is `{config.DEFAULT_PREFIX}`{server_prefix_override}. Avrae will only run a \
-            command if a message starts with this prefix.
+            Each command in Avrae starts with a *prefix*, or a short string of characters at the start of a message. By default, this prefix is `{config.DEFAULT_PREFIX}`{server_prefix_override}. Avrae will only run a command if a message starts with this prefix.
             
-            To use a command in Avrae, type the prefix, then the name of the command. For example, to roll a d20, send \
-            a message containing `{ctx.prefix}roll d20`. Try it now!
+            To use a command in Avrae, type the prefix, then the name of the command. For example, to roll a d20, send a message containing `{ctx.prefix}roll d20`. Try it now!
             ```
             {ctx.prefix}roll d20
             ```
@@ -44,12 +41,9 @@ class Quickstart(Tutorial):
         async def transition(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
-            Great! As you might have guessed, `{ctx.prefix}roll <dice>` is the command to roll some dice. Throughout \
-            the rest of this tutorial and other tutorials, we'll show commands in code blocks like `this`. 
+            Great! As you might have guessed, `{ctx.prefix}roll <dice>` is the command to roll some dice. Throughout the rest of this tutorial and other tutorials, we'll show commands in code blocks like `this`. 
             
-            When you see something like `<dice>` or `[dice]`, this is called an *argument*: it means you can put some \
-            input there, like the dice you want to roll. Arguments in brackets like `<this>` are required, and \
-            arguments in brackets like `[this]` are optional.
+            When you see something like `<dice>` or `[dice]`, this is called an *argument*: it means you can put some input there, like the dice you want to roll. Arguments in brackets like `<this>` are required, and arguments in brackets like `[this]` are optional.
             """
             await ctx.send(embed=embed)
             await ctx.trigger_typing()
@@ -62,12 +56,9 @@ class Quickstart(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Importing a Character"
             embed.description = f"""
-            Now, let's import a character and get started with Avrae's automated attacks, skill checks, and ability \
-            saves! First, go ahead and make a character on \
-            [D&D Beyond](https://www.dndbeyond.com/?utm_source=avrae&utm_medium=tutorial).
+            Now, let's import a character and get started with Avrae's automated attacks, skill checks, and ability saves! First, go ahead and make a character on [D&D Beyond](https://www.dndbeyond.com/?utm_source=avrae&utm_medium=tutorial).
             
-            Once you're ready, import the character into Avrae with the command `{ctx.prefix}beyond <url>`, using \
-            either the "Sharable Link" on your character sheet or the URL in the address bar of your browser.
+            Once you're ready, import the character into Avrae with the command `{ctx.prefix}beyond <url>`, using either the "Sharable Link" on your character sheet or the URL in the address bar of your browser.
             ```
             {ctx.prefix}beyond <url>
             ```
@@ -95,12 +86,9 @@ class Quickstart(Tutorial):
 
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
-            Nice to meet you, {character.name}! Avrae has no limit on how many characters you can import, but you can \
-            only have one "active" at a time across all servers. To switch between active characters, use \
-            `{ctx.prefix}character <name>`.
+            Nice to meet you, {character.name}! Avrae has no limit on how many characters you can import, but you can only have one "active" at a time across all servers. To switch between active characters, use `{ctx.prefix}character <name>`.
             
-            Also, if you change your character's character sheet, Avrae will need to be updated to know about those \
-            changes. Whenever you do so, make sure to run `{ctx.prefix}update` to update your active character!
+            Also, if you change your character's character sheet, Avrae will need to be updated to know about those changes. Whenever you do so, make sure to run `{ctx.prefix}update` to update your active character!
             """
             await ctx.send(embed=embed)
             await ctx.trigger_typing()
@@ -113,12 +101,9 @@ class Quickstart(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Checks, Saves, and Attacks"
             embed.description = f"""
-            Finally, let's go over the three most important rolls in D&D: skill checks, saving throws, and attacks. \
-            Now that your character is saved in Avrae, you can easily make these three rolls with simple commands: \
-            `{ctx.prefix}check <skill>`, `{ctx.prefix}save <ability>`, and `{ctx.prefix}attack <action>`. 
+            Finally, let's go over the three most important rolls in D&D: skill checks, saving throws, and attacks. Now that your character is saved in Avrae, you can easily make these three rolls with simple commands: `{ctx.prefix}check <skill>`, `{ctx.prefix}save <ability>`, and `{ctx.prefix}attack <action>`. 
 
-            For example, you can make a Stealth check with `{ctx.prefix}check stealth`, a Dexterity save with \
-            `{ctx.prefix}save dex`, and an unarmed attack with `{ctx.prefix}attack "Unarmed Strike"`. Try these now!
+            For example, you can make a Stealth check with `{ctx.prefix}check stealth`, a Dexterity save with `{ctx.prefix}save dex`, and an unarmed attack with `{ctx.prefix}attack "Unarmed Strike"`. Try these now!
             ```
             {ctx.prefix}check <skill>
             {ctx.prefix}save <ability>
@@ -156,9 +141,7 @@ class Quickstart(Tutorial):
             await asyncio.sleep(3)
             embed = TutorialEmbed(self, ctx, footer=False)
             embed.description = f"""
-            That's all you need to get started! If you ever need a refresher on one command, you can use \
-            `{ctx.prefix}help <command>` to get the command's help sent to you. Next, you might want to try the \
-            *Playing the Game* tutorial - start this tutorial with `{ctx.prefix}tutorial Playing the Game`.
+            That's all you need to get started! If you ever need a refresher on one command, you can use `{ctx.prefix}help <command>` to get the command's help sent to you. Next, you might want to try the *Playing the Game* tutorial - start this tutorial with `{ctx.prefix}tutorial Playing the Game`.
 
             Looking for additional resources? Come join us at the [Avrae Development Discord](https://support.avrae.io).
             """

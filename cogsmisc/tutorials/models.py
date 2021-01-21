@@ -26,7 +26,7 @@ class Tutorial(abc.ABC):
         if self.description is None:
             raise ValueError(f"Description not supplied in tutorial {type(self).__name__} or constructor")
         else:
-            self.description = textwrap.dedent(self.description.strip())
+            self.description = textwrap.dedent(self.description).strip()
 
         self.states = {}
         self.first_state = None

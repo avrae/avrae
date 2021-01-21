@@ -6,6 +6,12 @@ from .models import Tutorial, TutorialState, state
 
 
 class ExampleTutorial(Tutorial):
+    name = "Example"
+    description = """
+    *9001 minutes*
+    These are some words about what this tutorial is
+    """
+
     @state()
     class FirstState(TutorialState):
         async def objective(self, ctx, state_map):

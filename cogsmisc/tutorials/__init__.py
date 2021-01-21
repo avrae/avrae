@@ -9,9 +9,10 @@ from cogs5e.models.embeds import EmbedWithAuthor
 from utils import checks
 from utils.aldclient import discord_user_to_dict
 from utils.functions import confirm, get_guild_member, search_and_select
-from .example import ExampleTutorial
+from .ddblink import DDBLink
 from .models import TutorialStateMap
 from .quickstart import Quickstart
+from .spellcasting import Spellcasting
 
 
 class Tutorials(commands.Cog):
@@ -21,7 +22,9 @@ class Tutorials(commands.Cog):
 
     # tutorial keys should never change - if needed, change the name in the constructor to change the display name
     tutorials = {
-        "quickstart": Quickstart()
+        "quickstart": Quickstart(),
+        "ddblink": DDBLink(),
+        "spellcasting": Spellcasting()
     }
 
     def __init__(self, bot):

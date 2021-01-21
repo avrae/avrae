@@ -25,9 +25,9 @@ class Quickstart(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Using Bot Commands"
             embed.description = f"""
-            Each command in Avrae starts with a *prefix*, or a short string of symbols at the start of a message. By \
-            default, this prefix is `{config.DEFAULT_PREFIX}`{server_prefix_override}. Avrae will only run a command \
-            if a message starts with this prefix.
+            Each command in Avrae starts with a *prefix*, or a short string of characters at the start of a message. \
+            By default, this prefix is `{config.DEFAULT_PREFIX}`{server_prefix_override}. Avrae will only run a \
+            command if a message starts with this prefix.
             
             To use a command in Avrae, type the prefix, then the name of the command. For example, to roll a d20, send \
             a message containing `{ctx.prefix}roll d20`. Try it now!
@@ -118,7 +118,7 @@ class Quickstart(Tutorial):
             `{ctx.prefix}check <skill>`, `{ctx.prefix}save <ability>`, and `{ctx.prefix}attack <action>`. 
 
             For example, you can make a Stealth check with `{ctx.prefix}check stealth`, a Dexterity save with \
-            `{ctx.prefix}save dex`, and an unarmed attack with `{ctx.prefix}attack unarmed`. Try these now!
+            `{ctx.prefix}save dex`, and an unarmed attack with `{ctx.prefix}attack "Unarmed Strike"`. Try these now!
             ```
             {ctx.prefix}check <skill>
             {ctx.prefix}save <ability>

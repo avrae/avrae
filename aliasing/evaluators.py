@@ -452,11 +452,14 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         return json.loads(jsonstr, cls=self._json_decoder())
 
-    def dump_json(self, obj):
+    def dump_json(self, obj, indent=None):
         """
         Serializes an object to a JSON string. See :func:`json.dumps`.
+
+        :param obj: The object to serialize.
+        :param int indent: The amount of indentation, if any.
         """
-        return json.dumps(obj, default=self._dump_json_default)
+        return json.dumps(obj, indent=indent, default=self._dump_json_default)
 
     # ==== roll limiters ====
     def _limited_vroll(self, dice, multiply=1, add=0):

@@ -16,7 +16,6 @@ from ddb.utils import ddb_id_to_discord_id
 from utils.config import DDB_GAMELOG_ENDPOINT
 
 log = logging.getLogger(__name__)
-log.setLevel(10)  # fixme remove for prod
 
 
 class GameLogClient:
@@ -88,7 +87,6 @@ class GameLogClient:
             log.warning("Timed out connecting to Game Log")
         except Exception as e:
             self.bot.log_exception(e)
-        # todo exponential backoff if retryable error code
 
     # ==== game log event loop ====
     async def main_loop(self):

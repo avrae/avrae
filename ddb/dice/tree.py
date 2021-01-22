@@ -134,7 +134,8 @@ class RollRequestRoll:
 
         :param stringifier: The d20 stringifier to use to stringify the result.
         :type stringifier: d20.Stringifier
-        :param str comment: The comment to add to the resulting expression.
+        :param comment: The comment to add to the resulting expression.
+        :type comment: str or None
         :rtype: d20.RollResult
         """
         if stringifier is None:

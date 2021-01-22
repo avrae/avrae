@@ -20,10 +20,10 @@ class RunningTheGame(Tutorial):
 
             First, let's run a check for a monster. After that, try a save for a monster. These are both similar to how they would be run as a player.
             
-            As an example, to make a Sleight of Hand check for a Commoner, you would use  `{ctx.prefix}monster_check Commoner "Sleight of Hand"`. To have that same Commoner roll a Dexterity saving throw, you would use `{ctx.prefix}monster_save Commoner Dexterity`. Try it yourself!
+            As an example, to make a Sleight of Hand check for a Commoner, you would use  `{ctx.prefix}moncheck Commoner "Sleight of Hand"`. To have that same Commoner roll a Dexterity saving throw, you would use `{ctx.prefix}monsave Commoner Dexterity`. Try it yourself!
             ```
-            {ctx.prefix}monster_check <name of monster> <skill>
-            {ctx.prefix}monster_save <name of monster> <ability>
+            {ctx.prefix}moncheck <name of monster> <skill>
+            {ctx.prefix}monsave <name of monster> <ability>
             ```
             """
             await ctx.send(embed=embed)
@@ -40,9 +40,9 @@ class RunningTheGame(Tutorial):
                 embed = TutorialEmbed(self, ctx)
                 embed.title = "Objectives"
                 embed.description = checklist([
-                    (f"Make a skill check for a monster with {ctx.prefix}monster_check <name of monster> <skill>.",
+                    (f"Make a skill check for a monster with `{ctx.prefix}moncheck <name of monster> <skill>`.",
                      state_map.data.get('has_check')),
-                    (f"Make an ability save for a monster with {ctx.prefix}monster_save <name of monster> <ability>.",
+                    (f"Make an ability save for a monster with `{ctx.prefix}monsave <name of monster> <ability>`.",
                      state_map.data.get('has_save')),
                 ])
                 await ctx.send(embed=embed)
@@ -57,7 +57,7 @@ class RunningTheGame(Tutorial):
 
             When using these commands for monsters with multiple words in their name, make sure to surround the monster's name in quotes.
             
-            As a note, if `{ctx.prefix}monster_check` and `{ctx.prefix}monster_save` seem like a handful to type out, you can also use `{ctx.prefix}mc` and {ctx.prefix}ms`, respectively, to achieve the same effect, so long as you use the proper arguments.
+            As a note, if `{ctx.prefix}moncheck` and `{ctx.prefix}monsave` seem like a handful to type out, you can also use `{ctx.prefix}mc` and `{ctx.prefix}ms`, respectively, to achieve the same effect, so long as you use the proper arguments.
             """
             await ctx.send(embed=embed)
             await ctx.trigger_typing()
@@ -74,9 +74,9 @@ class RunningTheGame(Tutorial):
 
             Firstly, to have an effective idea of what attacks a monster can use, you can list them off.
             
-            For example, doing `{ctx.prefix}monster_attack "Silver Dragon Wyrmling" list` would list off the attacks of a Silver Dragon Wyrmling. Try that!
+            For example, doing `{ctx.prefix}monattack "Silver Dragon Wyrmling" list` would list off the attacks of a Silver Dragon Wyrmling. Try that!
             ```
-            {ctx.prefix}monster_attack <monster name> list
+            {ctx.prefix}monattack <monster name> list
             ```
             """
             await ctx.send(embed=embed)
@@ -93,7 +93,7 @@ class RunningTheGame(Tutorial):
             embed.description = f"""
             Great! Knowing what attacks a monster can do is quintessential to using them.
             
-            To note, you can also use `{ctx.prefix}ma` instead of `{ctx.prefix}monster_attack`, as shorthand, so long as you use the proper arguments. And, again, if a monster's name is multiple words, surround the monster's name in quotes for the best effect.
+            To note, you can also use `{ctx.prefix}ma` instead of `{ctx.prefix}monattack`, as shorthand, so long as you use the proper arguments. And, again, if a monster's name is multiple words, surround the monster's name in quotes for the best effect.
             
             Now, let's put that knowledge to use.
             """
@@ -110,9 +110,9 @@ class RunningTheGame(Tutorial):
             embed.description = f"""
             Using monster attacks is similar to how one would use attacks as a player. To note, these attacks will not deal any damage to players automatically. You may want to consider using the initiative tracker for combats. To view the tutorial for how to run combats as a DM, view the "Initiative (DM)" tutorial once you have finished here.
             
-            For example, to have the Silver Dragon Wyrmling from before attack with its bite, you would use `{ctx.prefix}monster_attack "Silver Dragon Wyrmling" bite`. Try attacking with a monster now.
+            For example, to have the Silver Dragon Wyrmling from before attack with its bite, you would use `{ctx.prefix}monattack "Silver Dragon Wyrmling" bite`. Try attacking with a monster now.
             ```
-            {ctx.prefix}monster_attack <name of monster> <name of attack>
+            {ctx.prefix}monattack <name of monster> <name of attack>
             ```
             """
             await ctx.send(embed=embed)
@@ -126,7 +126,7 @@ class RunningTheGame(Tutorial):
             embed.description = f"""
             Excellent! Having the knowledge of how to use monster attacks outside of initiative is good knowledge to have.
             
-            Like before, when attacking with a monster (or an attack!) that has multiple words to it, surround that argument in quotes for best effect. You can also use `{ctx.prefix}ma` as shorthand for `{ctx.prefix}monster_attack`, so long as you use the proper arguments to achieve your desired effect.
+            Like before, when attacking with a monster (or an attack!) that has multiple words to it, surround that argument in quotes for best effect. You can also use `{ctx.prefix}ma` as shorthand for `{ctx.prefix}monattack`, so long as you use the proper arguments to achieve your desired effect.
             
             Let's move on to the next part of this tutorial.
             """
@@ -145,11 +145,11 @@ class RunningTheGame(Tutorial):
             
             To cast a spell using a monster, you must first ensure that that monster has spells that it can cast. To view the list of spells a monster can cast, view its information using the Lookup function of the bot, which is covered in the D&D Beyond Link section of the tutorial. In case you've forgotten, though, it is as simple as `{ctx.prefix}monster <name of monster>`.
             
-            Let's use a Lich as an example. To have a Lich cast Blight, you would use `{ctx.prefix}monster_cast Lich Blight`.
+            Let's use a Lich as an example. To have a Lich cast Blight, you would use `{ctx.prefix}moncast Lich Blight`.
             
             Once you have found a monster that has spellcasting, try casting one of its spells.
             ```
-            {ctx.prefix}monster_cast <name of monster> <name of spell>
+            {ctx.prefix}moncast <name of monster> <name of spell>
             ```
             """
             await ctx.send(embed=embed)
@@ -163,11 +163,13 @@ class RunningTheGame(Tutorial):
             embed.description = f"""
             Superb! Keep in mind that, like with monster attacks, monster spells will not automatically deal damage to your players' characters. To do that, you must be using the initiative tracker, which is covered in the Initiative (DM) section of the tutorial.
 
-            Like with the previous commands, when casting using a monster with multiple words in its name or using a spell with multiple words in its name, you should surround the argument in quotes. Also, you can also use `{ctx.prefix}mcast` as shorthand for `{ctx.prefix}monster_cast`, providing you use all the proper arguments in their proper places.
+            Like with the previous commands, when casting using a monster with multiple words in its name or using a spell with multiple words in its name, you should surround the argument in quotes. Also, you can also use `{ctx.prefix}mcast` as shorthand for `{ctx.prefix}moncast`, providing you use all the proper arguments in their proper places.
             
-            All of the commands covered in this tutorial have in-depth `{ctx.prefix}help` entries for them which list off more in-depth and specific arguments for each command. To view these help entries, use `{ctx.prefix}help monster_check`, `{ctx.prefix}help monster_save`, `{ctx.prefix}help monster_attack`, or `{ctx.prefix}help monster_cast`, respectively.
+            All of the commands covered in this tutorial have in-depth `{ctx.prefix}help` entries for them which list off more in-depth and specific arguments for each command. To view these help entries, use `{ctx.prefix}help moncheck`, `{ctx.prefix}help monsave`, `{ctx.prefix}help monattack`, or `{ctx.prefix}help moncast`, respectively.
             
             One final note. While it was touched upon before, you should know that, as a DM, you cannot change or alter your players' stats in any way (such as modifying their HP or spell slots) without using the initiative tracker. You can learn more about the initiative tracker and how to use it by viewing the "Initiative (DM)" tutorial.
+            
+            That's it for this tutorial!
             """
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

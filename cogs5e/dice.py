@@ -156,7 +156,7 @@ class Dice(commands.Cog):
         await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
-    @commands.group(aliases=['ma', 'monster_attack'], invoke_without_command=True)
+    @commands.group(name='monattack', aliases=['ma', 'monster_attack'], invoke_without_command=True)
     async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
         """Rolls a monster's attack.
         __Valid Arguments__
@@ -231,7 +231,7 @@ class Dice(commands.Cog):
         monster_name = monster.get_title_name()
         return await ctx.send(f"{monster_name}'s attacks:\n{monster.attacks.build_str(monster)}")
 
-    @commands.command(aliases=['mc'])
+    @commands.command(name='moncheck', aliases=['mc', 'monster_check'])
     async def monster_check(self, ctx, monster_name, check, *args):
         """Rolls a check for a monster.
         __Valid Arguments__
@@ -269,7 +269,7 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(aliases=['ms'])
+    @commands.command(name='monsave', aliases=['ms', 'monster_save'])
     async def monster_save(self, ctx, monster_name, save_stat, *args):
         """Rolls a save for a monster.
         __Valid Arguments__
@@ -301,7 +301,7 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(aliases=['mcast'])
+    @commands.command(name='moncast', aliases=['mcast', 'monster_cast'])
     async def monster_cast(self, ctx, monster_name, spell_name, *args):
         """
         Casts a spell as a monster.

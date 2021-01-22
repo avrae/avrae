@@ -241,7 +241,10 @@ class DMInitiative(Tutorial):
         async def listener(self, ctx, state_map):
             if ctx.channel.id != state_map.persist_data.get('channel_id'):
                 return
-            if ctx.command is ctx.bot.get_command('i hp'):
+            if ctx.command in (
+                    ctx.bot.get_command('i hp set'),
+                    ctx.bot.get_command('i hp')
+            ):
                 the_combat = await Combat.from_ctx(ctx)
                 woofer = get_the_woofer(the_combat)
                 if woofer is None:
@@ -277,7 +280,10 @@ class DMInitiative(Tutorial):
         async def listener(self, ctx, state_map):
             if ctx.channel.id != state_map.persist_data.get('channel_id'):
                 return
-            if ctx.command is ctx.bot.get_command('i hp'):
+            if ctx.command in (
+                    ctx.bot.get_command('i hp max'),
+                    ctx.bot.get_command('i hp')
+            ):
                 the_combat = await Combat.from_ctx(ctx)
                 woofer = get_the_woofer(the_combat)
                 if woofer is None:
@@ -347,7 +353,7 @@ class DMInitiative(Tutorial):
                                        f"run `{ctx.prefix}tutorial` to add Orkira back and continue.")
                         return
 
-                if orkira.get_effects():  # relatively loose check, just checks for any effect, not necessarily SW
+                if orkira.get_effect("Spiritual Weapon"):
                     await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -419,7 +425,7 @@ class DMInitiative(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Effects III"
             embed.description = f"""
-            If you look closely, you'll notice this effect comes with a new attack.  This attack has the same name as the effect (in this case, `"spiritual weapon"`), which you can verify by checking her attacks (`{ctx.prefix}i a Orkira list`).
+            If you look closely, you'll notice this effect comes with a new attack.  This attack has the same name as the effect (in this case, `"spiritual weapon"`), which you can verify by checking her attacks (`{ctx.prefix}i a list Orkira`).
             
             The help text there also says Orkira can spend her bonus action to use that attack now.  Let's give it a try!
             ```
@@ -452,7 +458,7 @@ class DMInitiative(Tutorial):
             embed.description = f"""
             When an effect's duration expires, it will end automatically.  Cases often arise, however, that could cause it to end early.  Perhaps an enemy wizard cast dispel magic.  In such an event, we can end the effect early using `{ctx.prefix}init re <name> [effect]`.
             ```
-            !i re Orkira "spiritual weapon"
+            {ctx.prefix}i re Orkira "spiritual weapon"
             ```
             """
             await ctx.send(embed=embed)
@@ -469,13 +475,13 @@ class DMInitiative(Tutorial):
                     await self.transition(ctx, state_map)
                     return
 
-                if not orkira.get_effects():
+                if not orkira.get_effect("Spiritual Weapon"):
                     await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
-            If you look once more at the pinned message or at Orkira's status, that effect is no longer there.  The attack it provided is also gone, which you can verify with `{ctx.prefix}i a Orkira list`.
+            If you look once more at the pinned message or at Orkira's status, that effect is no longer there.  The attack it provided is also gone, which you can verify with `{ctx.prefix}i a list Orkira`.
             """
             await ctx.send(embed=embed)
             await ctx.trigger_typing()
@@ -490,7 +496,7 @@ class DMInitiative(Tutorial):
             embed.description = f"""
             Combatants can similarly be removed.  If Orkira defeats the death dog (changing its status to `<Dead>`), it will be removed automatically at the end of its turn.  For now, it's going to avoid that fate and choose to flee instead.  We can remove it manually with `{ctx.prefix}init remove <name>`.
             ```
-            !i remove DE1
+            {ctx.prefix}i remove DE1
             ```
             """
             await ctx.send(embed=embed)

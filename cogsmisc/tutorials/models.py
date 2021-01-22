@@ -91,11 +91,15 @@ class TutorialStateMap:
     The tutorial and state a given user is in, along with any user-specific data that state might need.
     """
 
-    def __init__(self, user_id, tutorial_key, state_key, data, **_):
+    def __init__(self, user_id, tutorial_key, state_key, data, persist_data=None, **_):
+        if persist_data is None:
+            persist_data = {}
+
         self.user_id = user_id
         self.tutorial_key = tutorial_key
         self.state_key = state_key
-        self.data = data
+        self.data = data  # state-specific data
+        self.persist_data = persist_data  # sticks around the whole tutorial
 
     # db/ser
     @classmethod
@@ -111,7 +115,8 @@ class TutorialStateMap:
 
     def to_dict(self):
         return {
-            "user_id": self.user_id, "tutorial_key": self.tutorial_key, "state_key": self.state_key, "data": self.data
+            "user_id": self.user_id, "tutorial_key": self.tutorial_key, "state_key": self.state_key, "data": self.data,
+            "persist_data": self.persist_data
         }
 
     async def commit(self, ctx):
@@ -123,7 +128,7 @@ class TutorialStateMap:
 
     @classmethod
     def new(cls, ctx, tutorial_key, tutorial):
-        return cls(ctx.author.id, tutorial_key, tutorial.first_state.key, {})
+        return cls(ctx.author.id, tutorial_key, tutorial.first_state.key, {}, {})
 
     # state transitions
     async def transition(self, ctx, new_state):

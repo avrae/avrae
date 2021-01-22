@@ -1,8 +1,3 @@
-"""
-This is an example tutorial not designed to be run. It demonstrates how to use tutorial states and can be used
-as a stub to build new tutorials from.
-"""
-
 from .models import Tutorial, TutorialEmbed, TutorialState, state
 
 

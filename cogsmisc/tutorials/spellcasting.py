@@ -78,7 +78,7 @@ class Spellcasting(Tutorial):
 
             In order to target a creature with a spell, you must be playing on a character that can cast spells, have the spell that they're trying to cast in their known spells, and have a spell slot of that spell's appropriate level. While you can target creatures outside of initiative using the following command, know that the automation of healing and damage will not play out unless you are in initiative.
             
-            Why don't we first try casting a spell that normally only has one target? For example, Call Lightning. In this specific example, you would use `{ctx.prefix}cast "Call Lightning" -t "Adult Blue Dragon"`. Note the `-t` argument! Try it yourself.
+            Why don't we first try casting a spell that normally only has one target? For example, Chill Touch. In this specific example, you would use `{ctx.prefix}cast "Chill Touch" -t "Adult Blue Dragon"`. Note the `-t` argument! Try it yourself.
             ```
             {ctx.prefix}cast <name of spell> -t <name of target>
             ```

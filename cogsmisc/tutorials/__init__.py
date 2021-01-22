@@ -10,8 +10,10 @@ from utils import checks
 from utils.aldclient import discord_user_to_dict
 from utils.functions import confirm, get_guild_member, search_and_select
 from .ddblink import DDBLink
+from .init_dm import DMInitiative
 from .models import TutorialStateMap
 from .quickstart import Quickstart
+from .runningthegame import RunningTheGame
 from .spellcasting import Spellcasting
 
 
@@ -23,8 +25,12 @@ class Tutorials(commands.Cog):
     # tutorial keys should never change - if needed, change the name in the constructor to change the display name
     tutorials = {
         "quickstart": Quickstart(),
+        # "playingthegame": None,
         "ddblink": DDBLink(),
-        "spellcasting": Spellcasting()
+        "spellcasting": Spellcasting(),
+        "runningthegame": RunningTheGame(),
+        # "init_player": None,
+        "init_dm": DMInitiative()
     }
 
     def __init__(self, bot):

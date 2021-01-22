@@ -84,7 +84,7 @@ class DMInitiative(Tutorial):
             embed.description = f"""
             By default, Avrae gives each monster a unique ID using the first two letters of its name and a number.  If you check your pinned messages, you should see DE1 added to the fight.
             
-            There are other arguments you can use here, too, to control how the monster is added.  You can give it a special name (`-name Cerberus`), add a few at once (`-n 3`), and more.  Check `{ctx.prefix}help i madd` for the full list.
+            There are other arguments you can use here, too, to control how the monster is added.  You can give it a special name (`-name Woofer`), add a few at once (`-n 3`), and more.  Check `{ctx.prefix}help i madd` for the full list.
             
             Just for fun, you can also use `{ctx.prefix}monimage death dog` to give your players a frightening look at the monstrosity bearing down on them.
             """

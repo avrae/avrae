@@ -1106,7 +1106,6 @@ class InitTracker(commands.Cog):
     @staticmethod
     async def _attack(ctx, combatant_name, atk_name, unparsed_args):
         args = await helpers.parse_snippets(unparsed_args, ctx)
-        raw_args = argsplit(unparsed_args)
         combat = await Combat.from_ctx(ctx)
 
         # attacker handling

@@ -3,17 +3,18 @@ import datetime
 import logging
 import traceback
 
+import aiohttp
 from pymongo.errors import DuplicateKeyError
 
 import ddb
+from ddb.gamelog.constants import AVRAE_EVENT_SOURCE, GAME_LOG_PUBSUB_CHANNEL
 from ddb.gamelog.context import GameLogEventContext
 from ddb.gamelog.errors import CampaignAlreadyLinked, LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.event import GameLogEvent
 from ddb.gamelog.link import CampaignLink
 from ddb.utils import ddb_id_to_discord_id
+from utils.config import DDB_GAMELOG_ENDPOINT
 
-GAME_LOG_PUBSUB_CHANNEL = 'game-log'
-AVRAE_EVENT_SOURCE = 'avrae'
 log = logging.getLogger(__name__)
 
 
@@ -28,8 +29,16 @@ class GameLogClient:
         self.loop = bot.loop
         self._event_handlers = {}
 
+        self.http = None
+        self.loop.run_until_complete(self._initialize())
+
     def init(self):
         self.loop.create_task(self.main_loop())
+
+    async def _initialize(self):
+        """Initialize our async resources: aiohttp"""
+        self.http = aiohttp.ClientSession()  # this wants to run in a coroutine
+        log.info("Game Log client initialized")
 
     # ==== campaign helpers ====
     async def create_campaign_link(self, ctx, campaign_id: str):
@@ -53,6 +62,31 @@ class GameLogClient:
         except DuplicateKeyError:
             raise CampaignAlreadyLinked()
         return link
+
+    # ==== http ====
+    async def post_message(self, ddb_user, message):
+        """
+        Posts a message to the game log. Silently logs errors to not interfere with operation of commands.
+
+        :type ddb_user: ddb.auth.BeyondUser
+        :type message: GameLogEvent
+        """
+        if DDB_GAMELOG_ENDPOINT is None or ddb_user is None:  # i.e. running on a limited-stack dev machine
+            return
+
+        try:
+            data = message.to_dict()
+            log.debug(f"Sending gamelog event {message.id!r}: {data}")
+            async with self.http.post(f"{DDB_GAMELOG_ENDPOINT}/postMessage",
+                                      headers={"Authorization": f"Bearer {ddb_user.token}"},
+                                      json=data) as resp:
+                log.debug(f"Game Log returned {resp.status} for request ID {message.id!r}")
+                if not 199 < resp.status < 300:
+                    log.warning(f"Game Log returned {resp.status}: {await resp.text()}")
+        except aiohttp.ServerTimeoutError:
+            log.warning("Timed out connecting to Game Log")
+        except Exception as e:
+            self.bot.log_exception(e)
 
     # ==== game log event loop ====
     async def main_loop(self):

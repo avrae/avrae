@@ -102,6 +102,8 @@ class Dice(commands.Cog):
         await try_delete(ctx.message)
         await ctx.send(out, allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
+        if gamelog := self.bot.get_cog('GameLog'):
+            await gamelog.send_roll(ctx, res)
 
     @commands.command(name='multiroll', aliases=['rr'])
     async def rr(self, ctx, iterations: int, *, rollStr):
@@ -347,7 +349,7 @@ class Dice(commands.Cog):
         result = await spell.cast(ctx, caster, targets, args, combat=combat)
 
         # embed display
-        embed = result['embed']
+        embed = result.embed
         embed.colour = random.randint(0, 0xffffff)
 
         if not args.last('h', type_=bool) and 'thumb' not in args:

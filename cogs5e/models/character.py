@@ -172,6 +172,10 @@ class Character(StatBlock):
         return self._upstream
 
     @property
+    def upstream_id(self):
+        return self._upstream.split('-', 1)[-1]
+
+    @property
     def sheet_type(self):
         return self._sheet_type
 

@@ -6,6 +6,7 @@ Created on Jan 19, 2017
 import asyncio
 import json
 import logging
+import time
 import traceback
 
 import discord
@@ -21,11 +22,12 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
+from ddb.gamelog import CampaignLink
+from ddb.gamelog.errors import NoCampaignLink
 from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
-from utils.functions import auth_and_chan, camel_to_title, confirm, get_positivity, list_get, search_and_select, \
-    try_delete
+from utils.functions import auth_and_chan, confirm, get_positivity, list_get, search_and_select, try_delete
 from utils.user_settings import CSetting
 
 log = logging.getLogger(__name__)
@@ -494,6 +496,8 @@ class SheetManager(commands.Cog):
         await loading.edit(content=f"Updated and saved data for {character.name}!")
         if args.last('v'):
             await ctx.send(embed=character.get_sheet_embed())
+        if sheet_type == 'beyond':
+            await send_ddb_ctas(ctx, character)
 
     @commands.command()
     async def transferchar(self, ctx, user: discord.Member):
@@ -623,7 +627,8 @@ class SheetManager(commands.Cog):
         if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         parser = BeyondSheetParser(url)
-        await self._load_sheet(ctx, parser, args, loading)
+        character = await self._load_sheet(ctx, parser, args, loading)
+        await send_ddb_ctas(ctx, character)
 
     @staticmethod
     async def _load_sheet(ctx, parser, args, loading):
@@ -641,6 +646,52 @@ class SheetManager(commands.Cog):
         await character.commit(ctx)
         await character.set_active(ctx)
         await ctx.send(embed=character.get_sheet_embed())
+        return character
+
+
+async def send_ddb_ctas(ctx, character):
+    """Sends relevant CTAs after a DDB character is imported. Only show a CTA 1/24h to not spam people."""
+    ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+    if ddb_user is not None:
+        ld_dict = ddb_user.to_ld_dict()
+    else:
+        ld_dict = {"key": str(ctx.author.id), "anonymous": True}
+    gamelog_flag = await ctx.bot.ldclient.variation('cog.gamelog.cta.enabled', ld_dict, False)
+
+    # has the user seen this cta within the last 24h?
+    if await ctx.bot.rdb.get(f"cog.sheetmanager.cta.seen.{ctx.author.id}"):
+        return
+
+    embed = EmbedWithCharacter(character)
+    embed.title = "Heads up!"
+    embed.description = "There's a couple of things you can do to make your experience even better!"
+    embed.set_footer(text="You won't see this message again today.")
+
+    # link ddb user
+    if ddb_user is None:
+        embed.add_field(
+            name="Connect Your D&D Beyond Account",
+            value="Visit your [Account Settings](https://www.dndbeyond.com/account) page in D&D Beyond to link your "
+                  "D&D Beyond and Discord accounts. This lets you use all your D&D Beyond content in Avrae for free!",
+            inline=False
+        )
+    # game log
+    if character.ddb_campaign_id and gamelog_flag:
+        try:
+            await CampaignLink.from_id(ctx.bot.mdb, character.ddb_campaign_id)
+        except NoCampaignLink:
+            embed.add_field(
+                name="Link Your D&D Beyond Campaign",
+                value=f"Sync rolls between a Discord channel and your D&D Beyond character sheet by linking your "
+                      f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
+                      f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.",
+                inline=False
+            )
+
+    if not embed.fields:
+        return
+    await ctx.send(embed=embed)
+    await ctx.bot.rdb.setex(f"cog.sheetmanager.cta.seen.{ctx.author.id}", str(time.time()), 60 * 60 * 24)
 
 
 def setup(bot):

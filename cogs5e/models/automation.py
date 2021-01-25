@@ -346,6 +346,11 @@ class Effect:
                 out.append(effect_str)
         return ', '.join(out)
 
+    @property
+    def children(self):
+        """Returns the child effects of this effect."""
+        return self.meta
+
 
 class Target(Effect):
     def __init__(self, target, effects: list, **kwargs):
@@ -442,6 +447,10 @@ class Target(Effect):
     def build_str(self, caster, evaluator):
         super(Target, self).build_str(caster, evaluator)
         return self.build_child_str(self.effects, caster, evaluator)
+
+    @property
+    def children(self):
+        return super().children + self.effects
 
 
 class Attack(Effect):
@@ -635,6 +644,10 @@ class Attack(Effect):
                 out += f". Miss: {', '.join(miss_out)}"
         return out
 
+    @property
+    def children(self):
+        return super().children + self.hit + self.miss
+
 
 class Save(Effect):
     def __init__(self, stat: str, fail: list, success: list, dc: str = None, **kwargs):
@@ -746,6 +759,10 @@ class Save(Effect):
             if success_out:
                 out += f". Success: {success_out}"
         return out
+
+    @property
+    def children(self):
+        return super().children + self.fail + self.success
 
 
 class Damage(Effect):
@@ -1230,6 +1247,10 @@ class Condition(Effect):
         # both: return "X or Y".
         else:
             return f"{on_true} or {on_false}"
+
+    @property
+    def children(self):
+        return super().children + self.on_false + self.on_true
 
 
 EFFECT_MAP = {

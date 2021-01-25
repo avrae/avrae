@@ -31,6 +31,7 @@ class GameTrack(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    # ===== bot commands =====
     @commands.group(name='game', aliases=['g'])
     async def game(self, ctx):
         """Commands to help track character information in a game. Use `!help game` to view subcommands."""

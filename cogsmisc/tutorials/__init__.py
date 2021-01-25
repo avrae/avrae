@@ -38,7 +38,7 @@ class Tutorials(commands.Cog):
 
     # ==== commands ====
     @commands.group(invoke_without_command=True)
-    @checks.feature_flag('commands.tutorial.enabled')
+    @checks.feature_flag('command.tutorial.enabled')
     async def tutorial(self, ctx, *, name=None):
         """
         Shows the current tutorial objective, lists the available tutorials if one is not active, or begins a new tutorial.
@@ -64,7 +64,7 @@ class Tutorials(commands.Cog):
             await self.tutorial_list(ctx)
 
     @tutorial.command(name='list')
-    @checks.feature_flag('commands.tutorial.enabled')
+    @checks.feature_flag('command.tutorial.enabled')
     async def tutorial_list(self, ctx):
         """Lists the available tutorials."""
         embed = EmbedWithAuthor(ctx)
@@ -76,7 +76,7 @@ class Tutorials(commands.Cog):
         await ctx.send(embed=embed)
 
     @tutorial.command(name='skip')
-    @checks.feature_flag('commands.tutorial.enabled')
+    @checks.feature_flag('command.tutorial.enabled')
     async def tutorial_skip(self, ctx):
         """Skips the current objective, and moves on to the next part of the tutorial."""
         user_state = await TutorialStateMap.from_ctx(ctx)
@@ -95,7 +95,7 @@ class Tutorials(commands.Cog):
         await state.transition(ctx, user_state)
 
     @tutorial.command(name='end')
-    @checks.feature_flag('commands.tutorial.enabled')
+    @checks.feature_flag('command.tutorial.enabled')
     async def tutorial_end(self, ctx):
         """Ends the current tutorial."""
         user_state = await TutorialStateMap.from_ctx(ctx)

@@ -1,3 +1,12 @@
 pre {
     white-space: pre-wrap;
 }
+
+/* strikethrough for deprecated functions */
+.admonition.warning dl dt {
+    text-decoration: line-through;
+}
+
+div.deprecated {
+    background-color: rgba(255, 0, 0, 0.2);
+}

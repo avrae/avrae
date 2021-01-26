@@ -26,7 +26,6 @@ async def available(ctx, entities, entity_type, user_id=None):
     Returns the subset of entities available to the given user in this context.
 
     :param ctx: The Discord Context.
-    :type ctx: discord.ext.commands.Context
     :param entities: The compendium list of all available entities.
     :type entities: list[gamedata.shared.Sourced]
     :param entity_type: The entity type to get entitlements data for.

@@ -1,7 +1,6 @@
 import collections
 import functools
 import logging
-import random
 import traceback
 
 import discord
@@ -329,13 +328,14 @@ class InitTracker(commands.Cog):
         p = args.last('p', type_=int)
         group = args.last('group')
         note = args.last('note')
+        check_result = None
 
         if p is None:
             args.ignore('rr')
             args.ignore('dc')
             checkutils.update_csetting_args(char, args, char.skills.initiative)
-            totals = checkutils.run_check('initiative', char, args, embed)
-            init = totals[-1]
+            check_result = checkutils.run_check('initiative', char, args, embed)
+            init = check_result.rolls[-1].total
         else:
             init = p
             embed.title = "{} already rolled initiative!".format(char.name)
@@ -366,6 +366,8 @@ class InitTracker(commands.Cog):
 
         await combat.final()
         await ctx.send(embed=embed)
+        if (gamelog := self.bot.get_cog('GameLog')) and check_result is not None:
+            await gamelog.send_check(ctx, me.character, check_result.skill_name, check_result.rolls)
 
     @init.command(name="next", aliases=['n'])
     async def nextInit(self, ctx):
@@ -1103,10 +1105,8 @@ class InitTracker(commands.Cog):
         An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on."""
         return await self._attack(ctx, combatant_name, atk_name, args)
 
-    @staticmethod
-    async def _attack(ctx, combatant_name, atk_name, unparsed_args):
+    async def _attack(self, ctx, combatant_name, atk_name, unparsed_args):
         args = await helpers.parse_snippets(unparsed_args, ctx)
-        raw_args = argsplit(unparsed_args)
         combat = await Combat.from_ctx(ctx)
 
         # attacker handling
@@ -1127,12 +1127,6 @@ class InitTracker(commands.Cog):
         else:
             args = await helpers.parse_with_statblock(ctx, combatant, args)
         args = argparse(args)
-
-        # handle old targeting method
-        target_name = None
-        if 't' not in args and len(raw_args) > 0:
-            target_name = atk_name
-            atk_name = raw_args[0]
 
         # attack selection/caster handling
         try:
@@ -1159,31 +1153,16 @@ class InitTracker(commands.Cog):
             return await ctx.send("Attack not found.")
 
         # target handling
-        if 't' not in args and target_name is not None:
-            # old single-target
-            targets = []
-            try:
-                target = await combat.select_combatant(target_name, "Select the target.", select_group=True)
-                if isinstance(target, CombatantGroup):
-                    targets.extend(target.get_combatants())
-                else:
-                    targets.append(target)
-            except SelectionException:
-                return await ctx.send("Target not found.")
-            await ctx.author.send(f"You are using the old targeting syntax, which is deprecated. "
-                                  f"In the future, you should use "
-                                  f"`{ctx.prefix}init attack {atk_name} -t {target_name}`!")
-        else:
-            # multi-targeting
-            targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
+        targets = await targetutils.definitely_combat(combat, args, allow_groups=True)
 
         # embed setup
         embed = discord.Embed(color=combatant.get_color())
 
         # run
-        await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
-
+        result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
         await ctx.send(embed=embed)
+        if (gamelog := self.bot.get_cog('GameLog')) and is_player:
+            await gamelog.send_automation(ctx, combatant.character, attack.name, result)
 
     @init.command(aliases=['c'])
     async def check(self, ctx, check, *args):
@@ -1201,10 +1180,12 @@ class InitTracker(commands.Cog):
         args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
 
-        checkutils.run_check(skill_key, combatant, args, embed)
+        result = checkutils.run_check(skill_key, combatant, args, embed)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
+        if (gamelog := self.bot.get_cog('GameLog')) and isinstance(combatant, PlayerCombatant):
+            await gamelog.send_check(ctx, combatant.character, result.skill_name, result.rolls)
 
     @init.command(aliases=['s'])
     async def save(self, ctx, save, *args):
@@ -1220,11 +1201,13 @@ class InitTracker(commands.Cog):
         args = await helpers.parse_snippets(args, ctx)
         args = argparse(args)
 
-        checkutils.run_save(save, combatant, args, embed)
+        result = checkutils.run_save(save, combatant, args, embed)
 
         # send
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
+        if (gamelog := self.bot.get_cog('GameLog')) and isinstance(combatant, PlayerCombatant):
+            await gamelog.send_save(ctx, combatant.character, result.skill_name, result.rolls)
 
     @init.command()
     async def cast(self, ctx, spell_name, *, args=''):
@@ -1284,8 +1267,7 @@ class InitTracker(commands.Cog):
         int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)"""
         return await self._cast(ctx, combatant_name, spell_name, args)
 
-    @staticmethod
-    async def _cast(ctx, combatant_name, spell_name, args):
+    async def _cast(self, ctx, combatant_name, spell_name, args):
         args = await helpers.parse_snippets(args, ctx)
         combat = await Combat.from_ctx(ctx)
 
@@ -1324,10 +1306,12 @@ class InitTracker(commands.Cog):
 
         result = await spell.cast(ctx, combatant, targets, args, combat=combat)
 
-        embed = result['embed']
+        embed = result.embed
         embed.colour = combatant.get_color()
         await ctx.send(embed=embed)
         await combat.final()
+        if (gamelog := self.bot.get_cog('GameLog')) and is_character and result.automation_result:
+            await gamelog.send_automation(ctx, combatant.character, spell.name, result.automation_result)
 
     @init.command(name='remove')
     async def remove_combatant(self, ctx, *, name: str):

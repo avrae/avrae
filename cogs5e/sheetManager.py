@@ -6,6 +6,7 @@ Created on Jan 19, 2017
 import asyncio
 import json
 import logging
+import time
 import traceback
 
 import discord
@@ -21,6 +22,8 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
+from ddb.gamelog import CampaignLink
+from ddb.gamelog.errors import NoCampaignLink
 from utils import img
 from utils.argparser import argparse
 from utils.constants import SKILL_NAMES
@@ -111,10 +114,12 @@ class SheetManager(commands.Cog):
         attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
 
         embed = EmbedWithCharacter(char, name=False)
-        await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
+        result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
+        if gamelog := self.bot.get_cog('GameLog'):
+            await gamelog.send_automation(ctx, char, attack.name, result)
 
     @attack.command(name="list")
     async def attack_list(self, ctx):
@@ -242,11 +247,13 @@ class SheetManager(commands.Cog):
 
         caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
 
-        checkutils.run_save(skill, caster, args, embed)
+        result = checkutils.run_save(skill, caster, args, embed)
 
         # send
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
+        if gamelog := self.bot.get_cog('GameLog'):
+            await gamelog.send_save(ctx, char, result.skill_name, result.rolls)
 
     @commands.command(aliases=['c'])
     async def check(self, ctx, check, *args):
@@ -275,10 +282,12 @@ class SheetManager(commands.Cog):
         args = await self.new_arg_stuff(args, ctx, char)
 
         checkutils.update_csetting_args(char, args, skill)
-        checkutils.run_check(skill_key, char, args, embed)
+        result = checkutils.run_check(skill_key, char, args, embed)
 
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
+        if gamelog := self.bot.get_cog('GameLog'):
+            await gamelog.send_check(ctx, char, result.skill_name, result.rolls)
 
     @commands.group(invoke_without_command=True)
     async def desc(self, ctx):
@@ -487,6 +496,8 @@ class SheetManager(commands.Cog):
         await loading.edit(content=f"Updated and saved data for {character.name}!")
         if args.last('v'):
             await ctx.send(embed=character.get_sheet_embed())
+        if sheet_type == 'beyond':
+            await send_ddb_ctas(ctx, character)
 
     @commands.command()
     async def transferchar(self, ctx, user: discord.Member):
@@ -616,7 +627,8 @@ class SheetManager(commands.Cog):
         if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
 
         parser = BeyondSheetParser(url)
-        await self._load_sheet(ctx, parser, args, loading)
+        character = await self._load_sheet(ctx, parser, args, loading)
+        await send_ddb_ctas(ctx, character)
 
     @staticmethod
     async def _load_sheet(ctx, parser, args, loading):
@@ -634,6 +646,52 @@ class SheetManager(commands.Cog):
         await character.commit(ctx)
         await character.set_active(ctx)
         await ctx.send(embed=character.get_sheet_embed())
+        return character
+
+
+async def send_ddb_ctas(ctx, character):
+    """Sends relevant CTAs after a DDB character is imported. Only show a CTA 1/24h to not spam people."""
+    ddb_user = await ctx.bot.ddb.get_ddb_user(ctx, ctx.author.id)
+    if ddb_user is not None:
+        ld_dict = ddb_user.to_ld_dict()
+    else:
+        ld_dict = {"key": str(ctx.author.id), "anonymous": True}
+    gamelog_flag = await ctx.bot.ldclient.variation('cog.gamelog.cta.enabled', ld_dict, False)
+
+    # has the user seen this cta within the last 24h?
+    if await ctx.bot.rdb.get(f"cog.sheetmanager.cta.seen.{ctx.author.id}"):
+        return
+
+    embed = EmbedWithCharacter(character)
+    embed.title = "Heads up!"
+    embed.description = "There's a couple of things you can do to make your experience even better!"
+    embed.set_footer(text="You won't see this message again today.")
+
+    # link ddb user
+    if ddb_user is None:
+        embed.add_field(
+            name="Connect Your D&D Beyond Account",
+            value="Visit your [Account Settings](https://www.dndbeyond.com/account) page in D&D Beyond to link your "
+                  "D&D Beyond and Discord accounts. This lets you use all your D&D Beyond content in Avrae for free!",
+            inline=False
+        )
+    # game log
+    if character.ddb_campaign_id and gamelog_flag:
+        try:
+            await CampaignLink.from_id(ctx.bot.mdb, character.ddb_campaign_id)
+        except NoCampaignLink:
+            embed.add_field(
+                name="Link Your D&D Beyond Campaign",
+                value=f"Sync rolls between a Discord channel and your D&D Beyond character sheet by linking your "
+                      f"campaign! Use `{ctx.prefix}campaign https://www.dndbeyond.com/campaigns/"
+                      f"{character.ddb_campaign_id}` in the Discord channel you want to link it to.",
+                inline=False
+            )
+
+    if not embed.fields:
+        return
+    await ctx.send(embed=embed)
+    await ctx.bot.rdb.setex(f"cog.sheetmanager.cta.seen.{ctx.author.id}", str(time.time()), 60 * 60 * 24)
 
 
 def setup(bot):

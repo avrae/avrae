@@ -13,6 +13,7 @@ async def run_attack(ctx, embed, args, caster, attack, targets, combat):
     :type attack: cogs5e.models.sheet.attack.Attack
     :type targets: list of str or list of cogs5e.models.sheet.statblock.StatBlock
     :type combat: None or cogs5e.models.initiative.Combat
+    :rtype: cogs5e.models.automation.AutomationResult
     """
     if not args.last('h', type_=bool):
         name = caster.get_title_name()
@@ -39,10 +40,12 @@ async def run_attack(ctx, embed, args, caster, attack, targets, combat):
     }
     args.update_nx(arg_defaults)
 
-    await attack.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
+    result = await attack.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
     if combat:
         await combat.final()
 
     embeds.add_fields_from_args(embed, args.get('f'))
     if 'thumb' in args:
         embed.set_thumbnail(url=args.last('thumb'))
+
+    return result

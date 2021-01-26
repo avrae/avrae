@@ -1,5 +1,6 @@
 import logging
 import re
+from collections import namedtuple
 
 import discord
 
@@ -138,7 +139,7 @@ class Spell(Sourced):
         :param args: Args
         :type args: :class:`~utils.argparser.ParsedArguments`
         :param combat: The combat the spell was cast in, if applicable.
-        :return: {embed: Embed}
+        :rtype: CastResult
         """
 
         # generic args
@@ -190,7 +191,7 @@ class Spell(Sourced):
                 embed.description = err
                 if l > 0:
                     embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))
-                return {"embed": embed}
+                return CastResult(embed=embed, success=False, automation_result=None)
 
             # use resource
             caster.spellbook.cast(self, l)
@@ -233,11 +234,14 @@ class Spell(Sourced):
             effect_result = caster.add_effect(conc_effect)
             conc_conflict = effect_result['conc_conflict']
 
+        # run
+        automation_result = None
         if self.automation and self.automation.effects:
             title = f"{caster.name} cast {self.name}!"
-            await self.automation.run(ctx, embed, caster, targets, args, combat, self, conc_effect=conc_effect,
-                                      ab_override=ab_override, dc_override=dc_override, spell_override=spell_override,
-                                      title=title)
+            automation_result = await self.automation.run(
+                ctx, embed, caster, targets, args, combat, self,
+                conc_effect=conc_effect, ab_override=ab_override, dc_override=dc_override,
+                spell_override=spell_override, title=title)
         else:
             phrase = args.join('phrase', '\n')
             if phrase:
@@ -265,7 +269,10 @@ class Spell(Sourced):
         add_fields_from_args(embed, args.get('f'))
         gamedata.lookuputils.handle_source_footer(embed, self, add_source_str=False)
 
-        return {"embed": embed}
+        return CastResult(embed=embed, success=True, automation_result=automation_result)
+
+
+CastResult = namedtuple('CastResult', 'embed success automation_result')
 
 
 def parse_homebrew_components(components):

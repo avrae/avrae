@@ -157,6 +157,7 @@ class Compendium:
         parent class.
         """
         self.cfeats = []
+        self.optional_cfeats = []
         seen = set()
 
         def handle_class(cls_or_sub):

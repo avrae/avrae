@@ -4,283 +4,21 @@ import logging
 import d20
 from d20 import roll
 
-import aliasing.api.statblock
-import aliasing.evaluators
-import cogs5e.models.character as character_api
-import cogs5e.models.initiative as init
-from aliasing.errors import EvaluationError
-from cogs5e.models import embeds
-from cogs5e.models.errors import AvraeException, InvalidArgument, InvalidSaveType
+from cogs5e.models import initiative as init
+from cogs5e.models.errors import InvalidArgument, InvalidSaveType
 from cogs5e.models.sheet.resistance import Resistances, do_resistances
-from cogs5e.models.sheet.statblock import StatBlock
 from utils.dice import RerollableStringifier
-from utils.functions import get_guild_member, maybe_mod
+from utils.functions import maybe_mod
+from .errors import *
+from .results import *
+from .runtime import AutomationContext, AutomationTarget
+from .utils import crit_mapper, max_mapper, maybe_alias_statblock, mi_mapper, upcast_scaled_dice
 
 log = logging.getLogger(__name__)
 
-
-class Automation:
-    def __init__(self, effects: list):
-        self.effects = effects
-
-    @classmethod
-    def from_data(cls, data: list):
-        if data is not None:
-            effects = Effect.deserialize(data)
-            return cls(effects)
-        return None
-
-    def to_dict(self):
-        return [e.to_dict() for e in self.effects]
-
-    async def run(self, ctx, embed, caster, targets, args, combat=None, spell=None, conc_effect=None, ab_override=None,
-                  dc_override=None, spell_override=None, title=None, before=None, after=None):
-        """
-        Runs automation.
-
-        :param ctx: The discord context the automation is being run in.
-        :type ctx: discord.ext.commands.Context
-        :param embed: The embed to add automation fields to.
-        :type embed: discord.Embed
-        :param caster: The StatBlock casting this automation.
-        :type caster: cogs5e.models.sheet.statblock.StatBlock
-        :param targets: A list of str or StatBlock or None hit by this automation.
-        :type targets: list of str or list of cogs5e.models.sheet.statblock.StatBlock
-        :param args: ParsedArguments.
-        :type args: utils.argparser.ParsedArguments
-        :param combat: The combat this automation is being run in.
-        :type combat: cogs5e.models.initiative.Combat
-        :param spell: The spell being cast that is running this automation.
-        :type spell: cogs5e.models.spell.Spell
-        :param conc_effect: The initiative effect that is used to track concentration caused by running this.
-        :type conc_effect: cogs5e.models.initiative.Effect
-        :param ab_override: Forces a default attack bonus.
-        :type ab_override: int
-        :param dc_override: Forces a default DC.
-        :type dc_override: int
-        :param spell_override: Forces a default spell modifier.
-        :type spell_override: int
-        :param title: The title of the action.
-        :type title: str
-        :param before: A function, taking in the AutomationContext, to run before automation runs.
-        :type before: function
-        :param after: A function, taking in the AutomationContext, to run after automation runs.
-        :type after: function
-        """
-        if not targets:
-            targets = [None]  # outputs a single iteration of effects in a generic meta field
-        autoctx = AutomationContext(ctx, embed, caster, targets, args, combat, spell, conc_effect, ab_override,
-                                    dc_override, spell_override)
-
-        if before is not None:
-            before(autoctx)
-
-        for effect in self.effects:
-            effect.run(autoctx)
-
-        if after is not None:
-            after(autoctx)
-
-        autoctx.build_embed()
-        for user, msgs in autoctx.pm_queue.items():
-            try:
-                member = await get_guild_member(ctx.guild, int(user))
-                if title:
-                    await member.send(f"{title}\n" + '\n'.join(msgs))
-                else:
-                    await member.send('\n'.join(msgs))
-            except:
-                pass
-
-    def build_str(self, caster):
-        """
-        :type caster: :class:`~cogs5e.models.sheet.statblock.StatBlock
-        """
-        evaluator = aliasing.evaluators.SpellEvaluator.with_caster(caster)
-        return f"{Effect.build_child_str(self.effects, caster, evaluator)}."
-
-    def __str__(self):
-        return f"Automation ({len(self.effects)} effects)"
-
-
-class AutomationContext:
-    def __init__(self, ctx, embed, caster, targets, args, combat, spell=None, conc_effect=None, ab_override=None,
-                 dc_override=None, spell_override=None):
-        self.ctx = ctx
-        self.embed = embed
-        self.caster = caster
-        self.targets = targets
-        self.args = args
-        self.combat = combat
-
-        self.spell = spell
-        self.is_spell = spell is not None
-        self.conc_effect = conc_effect
-        self.ab_override = ab_override
-        self.dc_override = dc_override
-
-        self.metavars = {
-            # caster, targets as default (#1335)
-            "caster": aliasing.api.statblock.AliasStatBlock(caster),
-            "targets": [_maybe_alias_statblock(t) for t in targets]
-        }
-        self.target = None
-        self.in_crit = False
-
-        self._embed_queue = []
-        self._meta_queue = []
-        self._effect_queue = []
-        self._field_queue = []
-        self._footer_queue = []
-        self.pm_queue = {}
-
-        self.character = None
-        if isinstance(caster, init.PlayerCombatant):
-            self.character = caster.character
-        elif isinstance(caster, character_api.Character):
-            self.character = caster
-
-        self.evaluator = aliasing.evaluators.SpellEvaluator.with_caster(caster, spell_override=spell_override)
-
-        self.combatant = None
-        if isinstance(caster, init.Combatant):
-            self.combatant = caster
-
-    def queue(self, text):
-        self._embed_queue.append(text)
-
-    def meta_queue(self, text):
-        if text not in self._meta_queue:
-            self._meta_queue.append(text)
-
-    def footer_queue(self, text):
-        self._footer_queue.append(text)
-
-    def effect_queue(self, text):
-        if text not in self._effect_queue:
-            self._effect_queue.append(text)
-
-    def push_embed_field(self, title, inline=False, to_meta=False):
-        if not self._embed_queue:
-            return
-        if to_meta:
-            self._meta_queue.extend(self._embed_queue)
-        else:
-            chunks = embeds.get_long_field_args('\n'.join(self._embed_queue), title)
-            self._field_queue.extend(chunks)
-        self._embed_queue = []
-
-    def insert_meta_field(self):
-        if not self._meta_queue:
-            return
-        self._field_queue.insert(0, {"name": "Meta", "value": '\n'.join(self._meta_queue), "inline": False})
-        self._meta_queue = []
-
-    def build_embed(self):
-        # description
-        phrase = self.args.join('phrase', '\n')
-        if phrase:
-            self.embed.description = f"*{phrase}*"
-
-        # add fields
-        self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)
-        self.insert_meta_field()
-        for field in self._field_queue:
-            self.embed.add_field(**field)
-        for effect in self._effect_queue:
-            self.embed.add_field(name="Effect", value=effect, inline=False)
-        self.embed.set_footer(text='\n'.join(self._footer_queue))
-
-    def add_pm(self, user, message):
-        if user not in self.pm_queue:
-            self.pm_queue[user] = []
-        self.pm_queue[user].append(message)
-
-    def get_cast_level(self):
-        if self.is_spell:
-            return self.args.last('l', self.spell.level, int)
-        return 0
-
-    def parse_annostr(self, annostr, is_full_expression=False):
-        """
-        Parses an AnnotatedString or IntExpression.
-
-        :param str annostr: The string to parse.
-        :param bool is_full_expression: Whether the string is an IntExpression.
-        """
-        if not is_full_expression:
-            return self.evaluator.transformed_str(annostr, extra_names=self.metavars)
-
-        original_names = self.evaluator.builtins.copy()
-        self.evaluator.builtins.update(self.metavars)
-        expr = annostr.strip('{}')
-        try:
-            out = self.evaluator.eval(expr)
-        except Exception as ex:
-            raise AutomationEvaluationException(ex, expr)
-        self.evaluator.builtins = original_names
-        return out
-
-
-class AutomationTarget:
-    def __init__(self, target):
-        #: :type: :class:`~cogs5e.models.sheet.statblock.StatBlock`
-        self.target = target
-        self.is_simple = isinstance(target, str) or target is None
-
-    @property
-    def name(self):
-        if isinstance(self.target, str):
-            return self.target
-        return self.target.name
-
-    @property
-    def ac(self):
-        return self.target.ac
-
-    def get_save_dice(self, save, adv=None):
-        sb = None
-        save_obj = self.target.saves.get(save)
-
-        # combatant
-        if isinstance(self.target, init.Combatant):
-            sb = self.target.active_effects('sb')
-
-        saveroll = save_obj.d20(base_adv=adv)
-
-        if sb:
-            saveroll = f"{saveroll}+{'+'.join(sb)}"
-
-        return saveroll
-
-    def get_resists(self):
-        return self.target.resistances
-
-    def damage(self, autoctx, amount, allow_overheal=True):
-        if not self.is_simple:
-            result = self.target.modify_hp(-amount, overflow=allow_overheal)
-            autoctx.footer_queue(f"{self.target.name}: {result}")
-
-            if isinstance(self.target, init.Combatant):
-                if self.target.is_private:
-                    autoctx.add_pm(self.target.controller, f"{self.target.name}'s HP: {self.target.hp_str(True)}")
-
-                if self.target.is_concentrating() and amount > 0:
-                    autoctx.queue(f"**Concentration**: DC {int(max(amount / 2, 10))}")
-
-    @property
-    def combatant(self):
-        if isinstance(self.target, init.Combatant):
-            return self.target
-        return None
-
-    @property
-    def character(self):
-        if isinstance(self.target, init.PlayerCombatant):
-            return self.target.character
-        elif isinstance(self.target, character_api.Character):
-            return self.target
-        return None
+__all__ = (
+    'Effect', 'Target', 'Attack', 'Save', 'Damage', 'TempHP', 'IEffect', 'Roll', 'Text', 'SetVariable', 'Condition'
+)
 
 
 class Effect:
@@ -301,18 +39,18 @@ class Effect:
         return [e.to_dict() for e in obj_list]
 
     @staticmethod
-    def run_children_with_damage(child, autoctx):
-        damage = 0
+    def run_children(child, autoctx):
+        results = []
         for effect in child:
             try:
                 result = effect.run(autoctx)
-                if result and 'total' in result:
-                    damage += result['total']
+                if result is not None:
+                    results.append(result)
             except StopExecution:
                 raise
             except AutomationException as e:
                 autoctx.meta_queue(f"**Error**: {e}")
-        return damage
+        return results
 
     # required methods
     @classmethod
@@ -373,35 +111,43 @@ class Target(Effect):
         super(Target, self).run(autoctx)
         # WEB-038 (.io #121) - this will semantically work correctly, but will make the display really weird
         previous_target = autoctx.target
+        result_pairs = []
 
         if self.target in ('all', 'each'):
             for target in autoctx.targets:
                 autoctx.target = AutomationTarget(target)
-                autoctx.metavars['target'] = _maybe_alias_statblock(target)  # #1335
-                self.run_effects(autoctx)
+                autoctx.metavars['target'] = maybe_alias_statblock(target)  # #1335
+                for iteration_result in self.run_effects(autoctx):
+                    result_pairs.append((target, iteration_result))
         elif self.target == 'self':
-            autoctx.target = AutomationTarget(autoctx.caster)
-            autoctx.metavars['target'] = _maybe_alias_statblock(autoctx.caster)  # #1335
-            self.run_effects(autoctx)
+            target = autoctx.caster
+            autoctx.target = AutomationTarget(target)
+            autoctx.metavars['target'] = maybe_alias_statblock(target)  # #1335
+            for iteration_result in self.run_effects(autoctx):
+                result_pairs.append((target, iteration_result))
         else:
             try:
                 target = autoctx.targets[self.target - 1]
                 autoctx.target = AutomationTarget(target)
-                autoctx.metavars['target'] = _maybe_alias_statblock(target)  # #1335
+                autoctx.metavars['target'] = maybe_alias_statblock(target)  # #1335
             except IndexError:
-                return
-            self.run_effects(autoctx)
+                return TargetResult()
+            for iteration_result in self.run_effects(autoctx):
+                result_pairs.append((target, iteration_result))
 
         autoctx.target = previous_target
-        autoctx.metavars['target'] = _maybe_alias_statblock(previous_target)  # #1335
+        autoctx.metavars['target'] = maybe_alias_statblock(previous_target)  # #1335
+
+        targets, results = zip(*result_pairs)  # convenient unzipping :D
+        return TargetResult(targets, results)
 
     def run_effects(self, autoctx):
         args = autoctx.args
         args.set_context(autoctx.target.target)
         rr = min(args.last('rr', 1, int), 25)
 
-        total_damage = 0
         in_target = autoctx.target.target is not None
+        results = []
 
         # #1335
         autoctx.metavars['targetIteration'] = 1
@@ -409,6 +155,7 @@ class Target(Effect):
         # 2 binary attributes: (rr?, target?)
         # each case must end with a push_embed_field()
         if rr > 1:
+            total_damage = 0
             for iteration in range(rr):
                 if len(self.effects) == 1:
                     iter_title = f"{type(self.effects[0]).__name__} {iteration + 1}"
@@ -422,7 +169,9 @@ class Target(Effect):
                 if in_target:
                     autoctx.queue(f"\n**__{iter_title}__**")
 
-                total_damage += self.run_children_with_damage(self.effects, autoctx)
+                iteration_results = self.run_children(self.effects, autoctx)
+                total_damage += sum(r.get_damage() for r in iteration_results)
+                results.append(iteration_results)
 
                 # no target, rr
                 if not in_target:
@@ -438,11 +187,13 @@ class Target(Effect):
                     autoctx.queue(f"{total_damage}")
                     autoctx.push_embed_field("Total Damage", inline=True)
         else:
-            total_damage += self.run_children_with_damage(self.effects, autoctx)
+            results.append(self.run_children(self.effects, autoctx))
             if in_target:  # target, no rr
                 autoctx.push_embed_field(autoctx.target.name)
             else:  # no target, no rr
                 autoctx.push_embed_field(None, to_meta=True)
+
+        return results
 
     def build_str(self, caster, evaluator):
         super(Target, self).build_str(caster, evaluator)
@@ -522,6 +273,9 @@ class Attack(Effect):
         # reset metavars (#1335)
         autoctx.metavars['lastAttackDidHit'] = False
         autoctx.metavars['lastAttackDidCrit'] = False
+        did_hit = True
+        did_crit = False
+        to_hit_roll = None
 
         # roll attack against autoctx.target
         if not (hit or miss):
@@ -561,9 +315,6 @@ class Attack(Effect):
                 ac = ac or autoctx.target.ac
 
             # assign hit values
-            did_hit = True
-            did_crit = False
-
             if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # crit
                 did_crit = True if not nocrit else False
             elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
@@ -588,28 +339,33 @@ class Attack(Effect):
                 autoctx.add_pm(str(autoctx.ctx.author.id), f"**{to_hit_message}**: {to_hit_roll.result}")
 
             if not did_hit:
-                damage = self.on_miss(autoctx)
+                children = self.on_miss(autoctx)
             elif did_crit:
-                damage = self.on_crit(autoctx)
+                children = self.on_crit(autoctx)
             else:
-                damage = self.on_hit(autoctx)
+                children = self.on_hit(autoctx)
         elif hit:
             autoctx.queue(f"**To Hit**: Automatic hit!")
             # nocrit and crit cancel out
             if crit and not nocrit:
-                damage = self.on_crit(autoctx)
+                did_crit = True
+                children = self.on_crit(autoctx)
             else:
-                damage = self.on_hit(autoctx)
+                children = self.on_hit(autoctx)
         else:
+            did_hit = False
             autoctx.queue(f"**To Hit**: Automatic miss!")
-            damage = self.on_miss(autoctx)
+            children = self.on_miss(autoctx)
 
-        return {"total": damage}
+        return AttackResult(
+            attack_bonus=attack_bonus, ac=ac, to_hit_roll=to_hit_roll, adv=adv, did_hit=did_hit, did_crit=did_crit,
+            children=children
+        )
 
     def on_hit(self, autoctx):
         # assign metavars (#1335)
         autoctx.metavars['lastAttackDidHit'] = True
-        return self.run_children_with_damage(self.hit, autoctx)
+        return self.run_children(self.hit, autoctx)
 
     def on_crit(self, autoctx):
         original = autoctx.in_crit
@@ -621,7 +377,7 @@ class Attack(Effect):
 
     def on_miss(self, autoctx):
         autoctx.queue("**Miss!**")
-        return self.run_children_with_damage(self.miss, autoctx)
+        return self.run_children(self.miss, autoctx)
 
     def build_str(self, caster, evaluator):
         super(Attack, self).build_str(caster, evaluator)
@@ -678,6 +434,7 @@ class Save(Effect):
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
         hide = autoctx.args.last('h', type_=bool)
+        adv = autoctx.args.adv()
 
         dc_override = None
         if self.dc:
@@ -700,6 +457,8 @@ class Save(Effect):
                               save.lower() in s.lower())
         except StopIteration:
             raise InvalidSaveType()
+
+        save_roll = None
 
         autoctx.meta_queue(f"**DC**: {dc}")
         if not autoctx.target.is_simple:
@@ -726,18 +485,19 @@ class Save(Effect):
             is_success = False
 
         if is_success:
-            damage = self.on_success(autoctx)
+            children = self.on_success(autoctx)
         else:
-            damage = self.on_fail(autoctx)
-        return {"total": damage}
+            children = self.on_fail(autoctx)
+        return SaveResult(dc=dc, ability=save_skill, save_roll=save_roll, adv=adv, did_save=is_success,
+                          children=children)
 
     def on_success(self, autoctx):
         autoctx.metavars['lastSaveDidPass'] = True
-        return self.run_children_with_damage(self.success, autoctx)
+        return self.run_children(self.success, autoctx)
 
     def on_fail(self, autoctx):
         autoctx.metavars['lastSaveDidPass'] = False
-        return self.run_children_with_damage(self.fail, autoctx)
+        return self.run_children(self.fail, autoctx)
 
     def build_str(self, caster, evaluator):
         super(Save, self).build_str(caster, evaluator)
@@ -826,11 +586,11 @@ class Damage(Effect):
         # set up damage AST
         damage = autoctx.parse_annostr(damage)
         dice_ast = copy.copy(d20.parse(damage))
-        dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
+        dice_ast = upcast_scaled_dice(self, autoctx, dice_ast)
 
         # -mi # (#527)
         if mi_arg:
-            dice_ast = d20.utils.tree_map(_mi_mapper(mi_arg), dice_ast)
+            dice_ast = d20.utils.tree_map(mi_mapper(mi_arg), dice_ast)
 
         # -d #
         for d_arg in d_args:
@@ -842,7 +602,7 @@ class Damage(Effect):
         in_crit = (autoctx.in_crit or crit_arg) and not nocrit
         roll_for = "Damage" if not in_crit else "Damage (CRIT!)"
         if in_crit:
-            dice_ast = d20.utils.tree_map(_crit_mapper, dice_ast)
+            dice_ast = d20.utils.tree_map(crit_mapper, dice_ast)
             if critdice and not autoctx.is_spell:
                 # add X critdice to the leftmost node if it's dice
                 left = d20.utils.leftmost(dice_ast)
@@ -857,7 +617,7 @@ class Damage(Effect):
 
         # max
         if max_arg:
-            dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
+            dice_ast = d20.utils.tree_map(max_mapper, dice_ast)
 
         # evaluate damage
         dmgroll = roll(dice_ast)
@@ -898,9 +658,7 @@ class Damage(Effect):
 
         # #1335
         autoctx.metavars['lastDamage'] = dmgroll.total
-
-        # return metadata for scripting
-        return {'damage': f"**{roll_for}**: {result}", 'total': dmgroll.total, 'roll': dmgroll}
+        return DamageResult(damage=dmgroll.total, damage_roll=dmgroll, in_crit=in_crit)
 
     def is_meta(self, autoctx, strict=False):
         if not strict:
@@ -942,23 +700,26 @@ class TempHP(Effect):
 
         amount = autoctx.parse_annostr(amount)
         dice_ast = copy.copy(d20.parse(amount))
-        dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
+        dice_ast = upcast_scaled_dice(self, autoctx, dice_ast)
 
         if maxdmg:
-            dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
+            dice_ast = d20.utils.tree_map(max_mapper, dice_ast)
 
         dmgroll = roll(dice_ast)
+        thp_amount = max(dmgroll.total, 0)
         autoctx.queue(f"**THP**: {dmgroll.result}")
-        autoctx.metavars['lastTempHp'] = dmgroll.total  # #1335
+        autoctx.metavars['lastTempHp'] = thp_amount  # #1335
 
         if autoctx.target.combatant:
-            autoctx.target.combatant.temp_hp = max(dmgroll.total, 0)
+            autoctx.target.combatant.temp_hp = thp_amount
             autoctx.footer_queue(
                 "{}: {}".format(autoctx.target.combatant.name, autoctx.target.combatant.hp_str()))
         elif autoctx.target.character:
-            autoctx.target.character.temp_hp = max(dmgroll.total, 0)
+            autoctx.target.character.temp_hp = thp_amount
             autoctx.footer_queue(
                 "{}: {}".format(autoctx.target.character.name, autoctx.target.character.hp_str()))
+
+        return TempHPResult(amount=thp_amount, amount_roll=dmgroll)
 
     def is_meta(self, autoctx, strict=False):
         if not strict:
@@ -1007,6 +768,7 @@ class IEffect(Effect):
             desc = None
 
         duration = autoctx.args.last('dur', duration, int)
+        conc_conflict = []
         if isinstance(autoctx.target.target, init.Combatant):
             effect = init.Effect.new(autoctx.target.target.combat, autoctx.target.target, self.name,
                                      duration, autoctx.parse_annostr(self.effects), tick_on_end=self.tick_on_end,
@@ -1016,13 +778,15 @@ class IEffect(Effect):
                     raise InvalidArgument("Concentration spells cannot add concentration effects to the caster.")
                 effect.set_parent(autoctx.conc_effect)
             effect_result = autoctx.target.target.add_effect(effect)
-            autoctx.queue(f"**Effect**: {str(effect)}")
+            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
             if conc_conflict := effect_result['conc_conflict']:
                 autoctx.queue(f"**Concentration**: dropped {', '.join([e.name for e in conc_conflict])}")
         else:
             effect = init.Effect.new(None, None, self.name, duration, autoctx.parse_annostr(self.effects),
                                      tick_on_end=self.tick_on_end, concentration=self.concentration, desc=desc)
-            autoctx.queue(f"**Effect**: {str(effect)}")
+            autoctx.queue(f"**Effect**: {effect.get_str(description=False)}")
+
+        return IEffectResult(effect=effect, conc_conflict=conc_conflict)
 
     def build_str(self, caster, evaluator):
         super(IEffect, self).build_str(caster, evaluator)
@@ -1066,27 +830,30 @@ class Roll(Effect):
                     d = effect_d
 
         dice_ast = copy.copy(d20.parse(autoctx.parse_annostr(self.dice)))
-        dice_ast = _upcast_scaled_dice(self, autoctx, dice_ast)
+        dice_ast = upcast_scaled_dice(self, autoctx, dice_ast)
 
         if not self.hidden:
             # -mi # (#527)
             if mi:
-                dice_ast = d20.utils.tree_map(_mi_mapper(mi), dice_ast)
+                dice_ast = d20.utils.tree_map(mi_mapper(mi), dice_ast)
 
             if d:
                 d_ast = d20.parse(d)
                 dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', d_ast.roll)
 
             if maxdmg:
-                dice_ast = d20.utils.tree_map(_max_mapper, dice_ast)
+                dice_ast = d20.utils.tree_map(max_mapper, dice_ast)
 
         rolled = roll(dice_ast)
         if not self.hidden:
             autoctx.meta_queue(f"**{self.name.title()}**: {rolled.result}")
 
-        d20.utils.simplify_expr(rolled.expr)
-        autoctx.metavars[self.name] = RerollableStringifier().stringify(rolled.expr.roll)
+        simplified_expr = copy.deepcopy(rolled.expr)
+        d20.utils.simplify_expr(simplified_expr)
+        simplified = RerollableStringifier().stringify(simplified_expr.roll)
+        autoctx.metavars[self.name] = simplified
         autoctx.metavars['lastRoll'] = rolled.total  # #1335
+        return RollResult(result=rolled.total, roll=rolled, simplified=simplified, hidden=self.hidden)
 
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)
@@ -1119,6 +886,8 @@ class Text(Effect):
             else:
                 autoctx.add_pm(str(autoctx.ctx.author.id), text)
 
+            return TextResult(text=text)
+
     def build_str(self, caster, evaluator):
         super(Text, self).build_str(caster, evaluator)
         return ""
@@ -1150,10 +919,13 @@ class SetVariable(Effect):
             if higher:
                 level_value = higher
 
+        did_error = False
+
         # parse value
         try:
             value = autoctx.parse_annostr(level_value, is_full_expression=True)
         except AutomationEvaluationException as e:
+            did_error = True
             if self.on_error is not None:
                 value = autoctx.parse_annostr(self.on_error, is_full_expression=True)
             else:
@@ -1168,6 +940,7 @@ class SetVariable(Effect):
 
         # bind
         autoctx.metavars[self.name] = final_value
+        return SetVariableResult(value=value, did_error=did_error)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
@@ -1206,27 +979,37 @@ class Condition(Effect):
 
     def run(self, autoctx):
         super().run(autoctx)
+        did_error = False
+        do_true = False
+        do_false = False
         try:
             condition_result = autoctx.parse_annostr(self.condition, is_full_expression=True)
         except AutomationEvaluationException as e:
+            did_error = True
             if self.error_behaviour == 'true':
-                to_run = self.on_true
+                do_true = True
             elif self.error_behaviour == 'false':
-                to_run = self.on_false
+                do_false = True
             elif self.error_behaviour == 'both':
-                to_run = self.on_true + self.on_false
+                do_true = True
+                do_false = True
             elif self.error_behaviour == 'neither':
-                return
+                pass
             else:  # raise
                 raise StopExecution(f"Error when evaluating condition `{self.condition}`:\n{e}")
         else:
             if condition_result:
-                to_run = self.on_true
+                do_true = True
             else:
-                to_run = self.on_false
+                do_false = True
 
-        damage = self.run_children_with_damage(to_run, autoctx)
-        return {"total": damage}
+        children = []
+        if do_true:
+            children += self.run_children(self.on_true, autoctx)
+        if do_false:
+            children += self.run_children(self.on_true, autoctx)
+
+        return ConditionResult(did_true=do_true, did_false=do_false, did_error=did_error, children=children)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
@@ -1265,104 +1048,3 @@ EFFECT_MAP = {
     "variable": SetVariable,
     "condition": Condition,
 }
-
-
-# ==== helpers ====
-def _maybe_alias_statblock(target):
-    """Returns the AliasStatBlock for the target if applicable."""
-    if not isinstance(target, (StatBlock, str, type(None))):
-        raise ValueError("target must be a statblock, str, or None")
-    return aliasing.api.statblock.AliasStatBlock(target) if isinstance(target, StatBlock) else target
-
-
-def _upcast_scaled_dice(effect, autoctx, dice_ast):
-    """Scales the dice of the cast to its appropriate amount (handling cantrip scaling and higher level addition)."""
-    if autoctx.is_spell:
-        if effect.cantripScale:
-            level = autoctx.caster.spellbook.caster_level
-            if level < 5:
-                level_dice = 1
-            elif level < 11:
-                level_dice = 2
-            elif level < 17:
-                level_dice = 3
-            else:
-                level_dice = 4
-
-            def mapper(node):
-                if isinstance(node, d20.ast.Dice):
-                    node.num = level_dice
-                return node
-
-            dice_ast = d20.utils.tree_map(mapper, dice_ast)
-
-        if effect.higher and not autoctx.get_cast_level() == autoctx.spell.level:
-            higher = effect.higher.get(str(autoctx.get_cast_level()))
-            if higher:
-                higher_ast = d20.parse(higher)
-                dice_ast.roll = d20.ast.BinOp(dice_ast.roll, '+', higher_ast.roll)
-
-    return dice_ast
-
-
-def _mi_mapper(minimum):
-    """Returns a function that maps Dice AST objects to OperatedDice with miX attached."""
-
-    def mapper(node):
-        if isinstance(node, d20.ast.Dice):
-            miX = d20.ast.SetOperator('mi', [d20.ast.SetSelector(None, int(minimum))])
-            return d20.ast.OperatedDice(node, miX)
-        return node
-
-    return mapper
-
-
-def _max_mapper(node):
-    """A function that maps Dice AST objects to OperatedDice that set their values to their maximum."""
-    if isinstance(node, d20.ast.Dice):
-        miX = d20.ast.SetOperator('mi', [d20.ast.SetSelector(None, node.size)])
-        return d20.ast.OperatedDice(node, miX)
-    return node
-
-
-def _crit_mapper(node):
-    """A function that doubles the number of dice for each Dice AST node."""
-    if isinstance(node, d20.ast.Dice):
-        return d20.ast.Dice(node.num * 2, node.size)
-    return node
-
-
-# ==== exceptions ====
-class AutomationException(AvraeException):
-    pass
-
-
-class StopExecution(AutomationException):
-    """
-    Some check failed that should cause automation to stop, whatever stage of execution it's at.
-    This does not revert any side effects made before this point.
-    """
-    pass
-
-
-class TargetException(AutomationException):
-    pass
-
-
-class AutomationEvaluationException(EvaluationError, AutomationException):
-    """
-    An error occurred while evaluating Draconic in automation.
-    """
-
-    def __init__(self, original, expression):
-        super().__init__(original, expression)  # EvaluationError.__init__()
-
-
-class NoSpellDC(AutomationException):
-    def __init__(self, msg="No spell save DC found."):
-        super().__init__(msg)
-
-
-class NoAttackBonus(AutomationException):
-    def __init__(self, msg="No attack bonus found."):
-        super().__init__(msg)

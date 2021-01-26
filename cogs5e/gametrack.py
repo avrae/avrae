@@ -629,7 +629,7 @@ class GameTrack(commands.Cog):
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         result = await spell.cast(ctx, caster, targets, args, combat=combat)
 
-        embed = result['embed']
+        embed = result.embed
         embed.colour = char.get_color()
         if 'thumb' not in args:
             embed.set_thumbnail(url=char.image)
@@ -639,6 +639,8 @@ class GameTrack(commands.Cog):
         if combat:
             await combat.final()
         await ctx.send(embed=embed)
+        if (gamelog := self.bot.get_cog('GameLog')) and result.automation_result:
+            await gamelog.send_automation(ctx, char, spell.name, result.automation_result)
 
 
 def setup(bot):

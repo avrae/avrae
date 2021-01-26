@@ -183,7 +183,10 @@ class SimpleCombatant(AliasStatBlock):
         damage = Damage(dice_str, overheal=overheal)
         autoctx = _SimpleAutomationContext(StatBlock("generic"), self._combatant, args, self._combatant.combat, crit)
 
-        return damage.run(autoctx)
+        result = damage.run(autoctx)
+        roll_for = "Damage" if not result.in_crit else "Damage (CRIT!)"
+        return {'damage': f"**{roll_for}**: {result.damage_roll.result}", 'total': result.damage,
+                'roll': SimpleRollResult(result.damage_roll)}
 
     def set_ac(self, ac: int):
         """

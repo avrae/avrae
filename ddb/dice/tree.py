@@ -18,9 +18,13 @@ https://github.com/DnDBeyond/ddb-integrated-dice/blob/master/packages/ddb-dice/s
         - RollType
         - RollKind
 """
+import uuid
+
 import d20
 
 from .constants import DiceOperation, RollKind, RollType
+
+SUPPORTED_DIE_SIZES = (4, 6, 8, 10, 12, 20, 100)
 
 
 class RollRequest:
@@ -45,15 +49,41 @@ class RollRequest:
             context = RollContext.from_dict(context)
         return cls(d['action'], rolls, context, d.get('rollId'), d.get('setId'))
 
+    def to_dict(self):
+        rolls = [rr.to_dict() for rr in self.rolls]
+        context = self.context.to_dict() if self.context is not None else None
+        return {"action": self.action, "rolls": rolls, "context": context, "rollId": self.roll_id, "setId": self.set_id}
+
+    @classmethod
+    def new(cls, rolls, context=None, action='custom', set_id='00101'):
+        """
+        Creates a new RollRequest.
+
+        :type rolls: list[RollRequestRoll]
+        :param RollContext context: The context this roll took place in.
+        :param str action: The action that this is a roll for (name of attack, spell, check, or abbr of save).
+        :param str set_id: The dice set ID the roll was made with (default basic black)
+        """
+        roll_id = str(uuid.uuid4())
+        return cls(action, rolls, context, roll_id, set_id)
+
 
 class RollContext:
-    def __init__(self, entity_id=None, entity_type=None):
+    def __init__(self, entity_id: str = None, entity_type: str = None):
         self.entity_id = entity_id
         self.entity_type = entity_type
 
     @classmethod
     def from_dict(cls, d):
         return cls(d.get('entityId'), d.get('entityType'))
+
+    def to_dict(self):
+        return {"entityId": self.entity_id, "entityType": self.entity_type}
+
+    @classmethod
+    def from_character(cls, character):
+        """Returns a context associated with a DDB character."""
+        return cls(character.upstream_id, 'character')
 
 
 class RollRequestRoll:
@@ -78,13 +108,34 @@ class RollRequestRoll:
             result = RollResult.from_dict(result)
         return cls(dice_notation, roll_type, roll_kind, result)
 
+    def to_dict(self):
+        result = self.result.to_dict() if self.result is not None else None
+        return {
+            "diceNotation": self.dice_notation.to_dict(), "rollType": self.roll_type.value,
+            "rollKind": self.roll_kind.value, "result": result
+        }
+
+    @classmethod
+    def from_d20(cls, result, roll_type=RollType.ROLL, roll_kind=RollKind.NONE):
+        """
+        Creates a satisfied RollRequestRoll from a d20 roll result.
+
+        :type result: d20.RollResult
+        :type roll_type: RollType
+        :type roll_kind: RollKind
+        """
+        dice_notation = DiceNotation.from_d20(result)
+        roll_result = RollResult.from_d20_and_dice_notation(result, dice_notation)
+        return cls(dice_notation, roll_type, roll_kind, roll_result)
+
     def to_d20(self, stringifier=None, comment=None):
         """
         Returns a d20.RollResult representing this roll request.
 
         :param stringifier: The d20 stringifier to use to stringify the result.
         :type stringifier: d20.Stringifier
-        :param str comment: The comment to add to the resulting expression.
+        :param comment: The comment to add to the resulting expression.
+        :type comment: str or None
         :rtype: d20.RollResult
         """
         if stringifier is None:
@@ -109,6 +160,14 @@ class RollResult:
     def from_dict(cls, d):
         return cls(d['values'], d['total'], d['constant'])
 
+    def to_dict(self):
+        return {"values": self.values, "total": self.total, "constant": self.constant}
+
+    @classmethod
+    def from_d20_and_dice_notation(cls, result: d20.RollResult, dice_notation):
+        values = [die.die_value for dt in dice_notation.set for die in dt.dice]  # multi-loop drifting!!!
+        return cls(values, result.total, dice_notation.constant)
+
 
 class DiceNotation:
     def __init__(self, dice_set, constant):
@@ -123,6 +182,48 @@ class DiceNotation:
     def from_dict(cls, d):
         dice_set = [DieTerm.from_dict(dt) for dt in d['set']]
         return cls(dice_set, d['constant'])
+
+    def to_dict(self):
+        dice_set = [dt.to_dict() for dt in self.set]
+        return {"set": dice_set, "constant": self.constant}
+
+    @classmethod
+    def from_d20(cls, result: d20.RollResult):
+        # DiceNotation only supports (XdY+)*(N)? so anything that doesn't fit that must be a constant
+        dice_set = []
+        constants = []
+
+        def recurse(root: d20.Number):
+            if isinstance(root, d20.Parenthetical):
+                root = root.value
+            # a leaf we care about will always be dice or literal (which falls thru)
+            if isinstance(root, d20.Dice) and root.size in SUPPORTED_DIE_SIZES:
+                dice_set.append(DieTerm.from_d20(root))
+            # we only want to recurse on sets, positive unops, and positive binops
+            elif isinstance(root, d20.Set):
+                for term in root.keptset:
+                    recurse(term)
+            elif isinstance(root, d20.UnOp):
+                if root.op == '+':
+                    recurse(root.value)
+                else:
+                    constants.append(root.total)
+            elif isinstance(root, d20.BinOp):
+                if root.op == '+':
+                    recurse(root.left)
+                    recurse(root.right)
+                elif root.op == '-':
+                    constants.append(-root.right.total)
+                    recurse(root.left)
+                else:
+                    constants.append(root.total)
+            # otherwise it's unsupported and we leave it as a constant
+            else:
+                constants.append(root.total)
+
+        recurse(result.expr.roll)
+
+        return cls(dice_set, sum(constants))
 
     def d20_ast(self, **kwargs):
         """
@@ -189,6 +290,29 @@ class DieTerm:
         operation = DiceOperation(d['operation'])
         return cls(d['count'], d['dieType'], dice, operation, d.get('operand'))
 
+    def to_dict(self):
+        dice = [die.to_dict() for die in self.dice]
+        return {
+            "count": self.count, "dieType": self.die_type, "dice": dice,
+            "operation": self.operation.value, "operand": self.operand
+        }
+
+    # noinspection PyUnboundLocalVariable, PyTypeChecker
+    # not quite perfect for the walrus yet - op/sel are defined by the walrus
+    @classmethod
+    def from_d20(cls, dice: d20.Dice):
+        # we only support one set of kh/kl, so if we have more ops than that we just return the simplest representation
+        if (len(dice.operations) == 1
+                and (op := dice.operations[0]).op == 'k'
+                and len(op.sels) == 1
+                and (sel := op.sels[0]).cat in ('h', 'l')):
+            the_dice = [Die.from_d20(d) for d in dice.values]
+            dice_op = DiceOperation.MIN if sel.cat == 'l' else DiceOperation.MAX
+            return cls(dice.num, f"d{dice.size}", the_dice, dice_op, sel.num)
+        else:
+            the_dice = [Die.from_d20(d) for d in dice.keptset]
+            return cls(dice.num, f"d{dice.size}", the_dice, DiceOperation.SUM)
+
     @property
     def size(self):
         return int(self.die_type.strip('d'))
@@ -240,6 +364,13 @@ class Die:
     @classmethod
     def from_dict(cls, d):
         return cls(d['dieType'], d['dieValue'])
+
+    def to_dict(self):
+        return {"dieType": self.die_type, "dieValue": self.die_value}
+
+    @classmethod
+    def from_d20(cls, die: d20.Die):
+        return cls(f"d{die.size}", die.number)
 
     @property
     def size(self):

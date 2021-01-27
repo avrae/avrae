@@ -135,7 +135,7 @@ class Combatant(BaseCombatant, StatBlock):
         out = ''
         if not self.is_private or private:
             if self.max_hp is not None:
-                out = f'<{self.hp}/{self.temp_hp} HP>'
+                out = f'<{self.hp}/{self.max_hp} HP>'
             elif self.hp is not None:
                 out = f'<{self.hp} HP>'
             else:

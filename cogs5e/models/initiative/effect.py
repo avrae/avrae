@@ -235,14 +235,14 @@ class Effect:
         if not combatant:
             # fall back to getting by name and see if we can update the combatant id
             # fixme this can be removed after some time (let's say apr 2021)
-            combatant = self.combat.get_combatant(self.parent.combatant_id, strict=True)
+            combatant = self.combat.get_combatant(e.combatant_id, strict=True)
             if combatant is None:
                 return None
             e.combatant_id = combatant.id
         effect = combatant.effect_by_id(e.effect_id)
         if effect is None:
             # fall back to getting by name and see if we can update the effect id
-            effect = combatant.get_effect(self.parent.effect_id, strict=True)
+            effect = combatant.get_effect(e.effect_id, strict=True)
             if effect is None:
                 return None
             e.effect_id = effect.id

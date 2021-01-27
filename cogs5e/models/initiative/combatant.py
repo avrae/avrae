@@ -9,13 +9,13 @@ from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
 from utils.functions import get_guild_member, maybe_mod, search_and_select
+from .types import BaseCombatant
 from .effect import Effect
 from .errors import CombatException, RequiresContext
-from .group import CombatantGroup
 from .utils import CombatantType, create_combatant_id
 
 
-class Combatant(StatBlock):
+class Combatant(BaseCombatant, StatBlock):
     DESERIALIZE_MAP = DESERIALIZE_MAP  # allow making class-specific deser maps
     type = CombatantType.GENERIC
 
@@ -28,7 +28,7 @@ class Combatant(StatBlock):
                  skills: Skills = None, saves: Saves = None, resistances: Resistances = None,
                  spellbook: Spellbook = None, ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
                  **_):
-        super(Combatant, self).__init__(
+        super().__init__(
             name=name, stats=stats, levels=levels, attacks=attacks, skills=skills, saves=saves, resistances=resistances,
             spellbook=spellbook,
             ac=ac, max_hp=max_hp, hp=hp, temp_hp=temp_hp
@@ -76,7 +76,7 @@ class Combatant(StatBlock):
         return inst
 
     def to_dict(self):
-        d = super(Combatant, self).to_dict()
+        d = super().to_dict()
         d.update({
             'controller_id': self.controller, 'init': self.init, 'private': self.is_private,
             'index': self.index, 'notes': self.notes, 'effects': [e.to_dict() for e in self._effects],
@@ -229,7 +229,7 @@ class Combatant(StatBlock):
     def set_group(self, group_name):
         current = self.combat.current_combatant
         was_current = self is current \
-                      or (isinstance(current, CombatantGroup) and self in current and len(current) == 1)
+                      or (current.type == CombatantType.GROUP and self in current and len(current) == 1)
         self.combat.remove_combatant(self, ignore_remove_hook=True)
         if isinstance(group_name, str) and group_name.lower() == 'none':
             group_name = None

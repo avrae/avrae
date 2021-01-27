@@ -19,7 +19,7 @@ class EffectReference:
             # fall back to combatant/effect name :(
             # should only happen once per combat, and it should correct to the right ids
             # fixme delete later once this is unnecessary (apr 2021) - added jan 2021 for future me changelog
-            cls(d['combatant'], d['effect'])
+            return cls(d['combatant'], d['effect'])
         return cls(d['combatant_id'], d['effect_id'])
 
     def to_dict(self):
@@ -79,15 +79,22 @@ class Effect:
 
     @classmethod
     def from_dict(cls, raw, combat, combatant):
+        # fixme remove apr 2021
+        if 'id' not in raw:
+            raw['id'] = create_effect_id()
         children = [EffectReference.from_dict(r) for r in raw.pop('children')]
-        return cls(combat, combatant, children=children, **raw)
+        parent = raw.pop('parent')
+        if parent:
+            parent = EffectReference.from_dict(parent)
+        return cls(combat, combatant, children=children, parent=parent, **raw)
 
     def to_dict(self):
         children = [ref.to_dict() for ref in self.children]
+        parent = self.parent.to_dict() if self.parent else None
         return {
             'id': self.id, 'name': self.name,
             'duration': self.duration, 'remaining': self.remaining, 'effect': self.effect,
-            'concentration': self.concentration, 'children': children, 'parent': self.parent,
+            'concentration': self.concentration, 'children': children, 'parent': parent,
             'tonend': self.ticks_on_end, 'desc': self.desc
         }
 
@@ -210,7 +217,9 @@ class Effect:
 
     # parenting
     def get_parent_effect(self):
-        return self.get_child_effect(self.parent)  # technically, this is just follow_effect_reference
+        if self.parent:
+            return self.get_child_effect(self.parent)  # technically, this is just follow_effect_reference
+        return None
 
     def get_children_effects(self):
         """Returns an iterator of Effects of this Effect's children."""

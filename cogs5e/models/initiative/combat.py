@@ -3,6 +3,7 @@ import discord
 from d20 import roll
 
 from utils.functions import search_and_select
+from .utils import CombatantType
 from .combatant import Combatant, MonsterCombatant, PlayerCombatant
 from .errors import *
 from .group import CombatantGroup
@@ -61,16 +62,17 @@ class Combat:
         inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
                    raw['turn'], raw['current'])
         for c in raw['combatants']:
-            if c['type'] == 'common':
+            ctype = CombatantType(c['type'])
+            if ctype == CombatantType.GENERIC:
                 inst._combatants.append(Combatant.from_dict(c, ctx, inst))
-            elif c['type'] == 'monster':
+            elif ctype == CombatantType.MONSTER:
                 inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
-            elif c['type'] == 'player':
+            elif ctype == CombatantType.PLAYER:
                 inst._combatants.append(await PlayerCombatant.from_dict(c, ctx, inst))
-            elif c['type'] == 'group':
+            elif ctype == CombatantType.GROUP:
                 inst._combatants.append(await CombatantGroup.from_dict(c, ctx, inst))
             else:
-                raise CombatException("Unknown combatant type")
+                raise CombatException(f"Unknown combatant type: {c['type']}")
         return inst
 
     def to_dict(self):

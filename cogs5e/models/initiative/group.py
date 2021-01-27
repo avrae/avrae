@@ -26,14 +26,15 @@ class CombatantGroup(Combatant):
 
         combatants = []
         for c in raw.pop('combatants'):
-            if c['type'] == CombatantType.GENERIC:
+            ctype = CombatantType(c['type'])
+            if ctype == CombatantType.GENERIC:
                 combatant = Combatant.from_dict(c, ctx, combat)
-            elif c['type'] == CombatantType.MONSTER:
+            elif ctype == CombatantType.MONSTER:
                 combatant = MonsterCombatant.from_dict(c, ctx, combat)
-            elif c['type'] == CombatantType.PLAYER:
+            elif ctype == CombatantType.PLAYER:
                 combatant = await PlayerCombatant.from_dict(c, ctx, combat)
             else:
-                raise CombatException("Unknown combatant type")
+                raise CombatException(f"Unknown combatant type when deserializing group: {c['type']}")
             combatant.group = raw['id']  # fixme id translation, remove apr 2021
             combatants.append(combatant)
 

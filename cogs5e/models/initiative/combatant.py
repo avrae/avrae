@@ -442,7 +442,8 @@ class MonsterCombatant(Combatant):
                  spellbook: Spellbook = None,
                  ac: int = None, max_hp: int = None, hp: int = None, temp_hp: int = 0,
                  # monster specific
-                 monster_name=None, monster_id=None):
+                 monster_name=None, monster_id=None,
+                 **_):
         super(MonsterCombatant, self).__init__(
             ctx, combat, id, name, controller_id, private, init, index, notes, effects, group_id,
             stats, levels, attacks, skills, saves, resistances, spellbook, ac, max_hp, hp, temp_hp)
@@ -477,7 +478,7 @@ class MonsterCombatant(Combatant):
     def from_dict(cls, raw, ctx, combat):
         inst = super().from_dict(raw, ctx, combat)
         inst._monster_name = raw['monster_name']
-        inst._monster_id = raw['monster_id']
+        inst._monster_id = raw.get('monster_id')
         return inst
 
     def to_dict(self):
@@ -504,7 +505,8 @@ class PlayerCombatant(Combatant):
                  attacks: AttackList = None, resistances: Resistances = None,
                  ac: int = None, max_hp: int = None,
                  # character specific
-                 character_id=None, character_owner=None):
+                 character_id=None, character_owner=None,
+                 **_):
         # note that the player combatant doesn't initialize the statblock
         # because we want the combatant statblock attrs to reference the character attrs
         super().__init__(

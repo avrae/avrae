@@ -1,7 +1,8 @@
 import aliasing.api
 import aliasing.api.statblock
 import aliasing.evaluators
-from cogs5e.models import character as character_api, embeds, initiative as init
+import cogs5e.models.initiative.combatant as init
+from cogs5e.models import character as character_api, embeds
 from .errors import AutomationEvaluationException
 from .utils import maybe_alias_statblock
 

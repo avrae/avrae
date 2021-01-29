@@ -135,7 +135,7 @@ class Avrae(commands.AutoShardedBot):
             await self.rdb.incr('build_num')
 
     async def get_context(self, *args, **kwargs):
-        return super().get_context(*args, cls=context.AvraeContext, **kwargs)
+        return await super().get_context(*args, cls=context.AvraeContext, **kwargs)
 
     async def close(self):
         await super().close()

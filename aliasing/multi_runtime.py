@@ -4,7 +4,7 @@ import d20
 import draconic
 from pymongo import MongoClient
 
-from aliasing.evaluators import DEFAULT_BUILTINS
+from aliasing.constants import DEFAULT_BUILTINS
 from utils import config
 from utils.argparser import argparse
 from utils.dice import PersistentRollContext

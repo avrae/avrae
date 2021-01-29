@@ -1,7 +1,7 @@
 from d20 import roll
 
-from aliasing.api.functions import SimpleRollResult
-from aliasing.api.statblock import AliasStatBlock
+from aliasing.functions import SimpleRollResult
+from aliasing.runtime.statblock import AliasStatBlock
 from cogs5e.models.errors import InvalidSaveType
 from cogs5e.models.initiative import Combatant
 from cogs5e.models.initiative.combat import Combat

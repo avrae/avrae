@@ -4,11 +4,11 @@ import uuid
 
 import draconic
 
-from aliasing import multi_runtime
-from aliasing.api.functions import AliasException
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
+from aliasing.functions import AliasException
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
+from aliasing.runtime import multi_runtime
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
@@ -360,12 +360,12 @@ async def parse_no_char(ctx, string, additional_locals=None):
     await ctx.trigger_typing()  # this could take a bit...
 
     uvars = await get_uvars(ctx)
-    bind_locals = {**uvars, **additional_locals, 'ctx': ctx.to_alias_dict()}
+    bind_locals = {**uvars, **additional_locals}
 
     # todo optimization: if no draconic, just do a simple interpolation
 
     with concurrent.futures.ProcessPoolExecutor() as pool:
-        result = await ctx.bot.loop.run_in_executor(pool, multi_runtime.run, string, bind_locals)
+        result = await ctx.bot.loop.run_in_executor(pool, multi_runtime.run, string, ctx.to_alias_dict(), bind_locals)
 
     return result
 

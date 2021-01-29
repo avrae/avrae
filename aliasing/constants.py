@@ -2,7 +2,7 @@ import re
 import time
 from math import ceil, floor, sqrt
 
-from aliasing.api.functions import err, rand, randint, roll, safe_range, typeof, vroll
+from aliasing.functions import err, rand, randint, roll, safe_range, typeof, vroll
 
 GVAR_SIZE_LIMIT = 100_000
 SVAR_SIZE_LIMIT = 10_000

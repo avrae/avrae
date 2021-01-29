@@ -1,6 +1,6 @@
 import d20
 
-import aliasing.api.statblock
+import aliasing.runtime.statblock
 from cogs5e.models.sheet.statblock import StatBlock
 
 
@@ -8,7 +8,7 @@ def maybe_alias_statblock(target):
     """Returns the AliasStatBlock for the target if applicable."""
     if not isinstance(target, (StatBlock, str, type(None))):
         raise ValueError("target must be a statblock, str, or None")
-    return aliasing.api.statblock.AliasStatBlock(target) if isinstance(target, StatBlock) else target
+    return aliasing.runtime.statblock.AliasStatBlock(target) if isinstance(target, StatBlock) else target
 
 
 def upcast_scaled_dice(effect, autoctx, dice_ast):

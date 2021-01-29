@@ -1,6 +1,6 @@
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
-from aliasing.api.statblock import AliasStatBlock
+from aliasing.runtime.statblock import AliasStatBlock
 from cogs5e.models.errors import ConsumableException
 
 

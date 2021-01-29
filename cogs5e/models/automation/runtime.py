@@ -1,5 +1,5 @@
 import aliasing.api
-import aliasing.api.statblock
+import aliasing.runtime.statblock
 import aliasing.evaluators
 import cogs5e.models.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
@@ -29,7 +29,7 @@ class AutomationContext:
 
         self.metavars = {
             # caster, targets as default (#1335)
-            "caster": aliasing.api.statblock.AliasStatBlock(caster),
+            "caster": aliasing.runtime.statblock.AliasStatBlock(caster),
             "targets": [maybe_alias_statblock(t) for t in targets]
         }
         self.target = None

@@ -1,4 +1,11 @@
+"""
+The bot-internal (not user-facing) errors related to aliasing. For user-facing errors, see api.errors.
+"""
 from cogs5e.models.errors import AvraeException
+
+__all__ = (
+    'EvaluationError', 'CollectionNotFound', 'CollectableNotFound', 'AliasNameConflict', 'CollectableRequiresLicenses'
+)
 
 
 class EvaluationError(AvraeException):
@@ -8,15 +15,6 @@ class EvaluationError(AvraeException):
         super().__init__(f"Error evaluating expression: {original}")
         self.original = original
         self.expression = expression
-
-
-class FunctionRequiresCharacter(AvraeException):
-    """
-    Raised when a function that requires a character is called without one.
-    """
-
-    def __init__(self, msg=None):
-        super().__init__(msg or "This alias requires an active character.")
 
 
 class CollectionNotFound(AvraeException):

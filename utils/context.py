@@ -1,3 +1,4 @@
+import discord
 from discord.ext.commands import Context
 
 from cogs5e.models.character import Character
@@ -38,3 +39,39 @@ class AvraeContext(Context):
         combat = await Combat.from_ctx(self)
         self._combat = combat
         return combat
+
+    def to_alias_dict(self):
+        """Returns a dict representing this context, for use in Draconic."""
+        guild = None
+        if self.guild:
+            guild = {
+                'id': self.guild.id,
+                'name': self.guild.name
+            }
+
+        channel = {
+            'name': str(self.channel),
+            'id': self.channel.id,
+            'topic': self.channel.topic if not isinstance(self.channel, discord.DMChannel) else None,
+            'category': None
+        }
+        if (category := getattr(channel, 'category', None)) is not None:
+            channel['category'] = {
+                'id': category.id,
+                'name': category.name
+            }
+
+        author = {
+            'id': self.author.id,
+            'name': self.author.name,
+            'discriminator': self.author.discriminator,
+            'display_name': self.author.display_name
+        }
+
+        return {
+            'guild': guild,
+            'channel': channel,
+            'author': author,
+            'prefix': self.prefix,
+            'invoked_with': self.invoked_with
+        }

@@ -1,10 +1,10 @@
-import asyncio
+import concurrent.futures
 import traceback
 import uuid
 
 import draconic
 
-from aliasing import evaluators
+from aliasing import multi_runtime
 from aliasing.api.functions import AliasException
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
@@ -328,39 +328,46 @@ async def parse_snippets(args, ctx) -> str:
     return " ".join(args)
 
 
-# transformers
+# ==== transformers ====
+# the main entrypoint to a Draconic runtime
 async def parse_with_character(ctx, character, string):
-    evaluator = (await evaluators.ScriptingEvaluator.new(ctx)).with_character(character)
-    try:
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
-    finally:
-        await evaluator.run_commits()
-    return out
+    """Parses a Draconic interpolation string given locals defined by an existing character."""
+    result = await parse_with_statblock(ctx, character, string)
+    # todo: if the result wants us to invalidate our character state in memory, do it here
+    return result
 
 
 async def parse_with_statblock(ctx, statblock, string):
-    evaluator = (await evaluators.ScriptingEvaluator.new(ctx)).with_statblock(statblock)
-    try:
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, string)
-    finally:
-        await evaluator.run_commits()
-    return out
+    """Parses a Draconic interpolation string with given locals defined by a statblock."""
+    result = await parse_no_char(ctx, string, additional_locals=statblock.get_scope_locals())
+    # todo: if the result wants us to invalidate our combat state in memory, do it here
+    return result
 
 
-async def parse_no_char(ctx, cstr):
+async def parse_no_char(ctx, string, additional_locals=None):
     """
-    Parses cvars and whatnot without an active character.
-    :param cstr: The string to parse.
-    :param ctx: The Context to parse the string in.
-    :return: The parsed string.
-    :rtype: str
+    Parses a Draconic interpolation string in a Draconic runtime, with any additional locals specified.
+
+    :param ctx: The context the string is being evaluated in.
+    :type ctx: utils.context.AvraeContext
+    :param str string: The interpolation string to evaluate.
+    :param additional_locals: A mapping of additional locals to bind in the runtime. Values must be json-serializable.
+    :type additional_locals: dict[str, any]
     """
-    evaluator = await evaluators.ScriptingEvaluator.new(ctx)
-    try:
-        out = await asyncio.get_event_loop().run_in_executor(None, evaluator.transformed_str, cstr)
-    finally:
-        await evaluator.run_commits()
-    return out
+    if additional_locals is None:
+        additional_locals = {}
+
+    await ctx.trigger_typing()  # this could take a bit...
+
+    uvars = await get_uvars(ctx)
+    bind_locals = {**uvars, **additional_locals, 'ctx': ctx.to_alias_dict()}
+
+    # todo optimization: if no draconic, just do a simple interpolation
+
+    with concurrent.futures.ProcessPoolExecutor() as pool:
+        result = await ctx.bot.loop.run_in_executor(pool, multi_runtime.run, string, bind_locals)
+
+    return result
 
 
 # handler

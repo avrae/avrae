@@ -1,6 +1,3 @@
-import discord
-
-
 class AliasContext:
     """
     Used to expose some information about the context, like the guild name, channel name, author name, and
@@ -9,15 +6,22 @@ class AliasContext:
     You can access this in an alias by using the ``ctx`` local.
     """
 
-    def __init__(self, ctx):
-        """
-        :type ctx: discord.ext.commands.Context
-        """
-        self._guild = None if ctx.guild is None else AliasGuild(ctx.guild)
-        self._channel = AliasChannel(ctx.channel)
-        self._author = AliasAuthor(ctx.author)
-        self._prefix = ctx.prefix
-        self._alias = ctx.invoked_with
+    def __init__(self, guild, channel, author, prefix, invoked_with):
+        self._guild = guild
+        self._channel = channel
+        self._author = author
+        self._prefix = prefix
+        self._alias = invoked_with
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(
+            guild=AliasGuild.from_dict(d['guild']) if d['guild'] is not None else None,
+            channel=AliasChannel.from_dict(d['channel']),
+            author=AliasAuthor.from_dict(d['author']),
+            prefix=d['prefix'],
+            invoked_with=d['invoked_with']
+        )
 
     @property
     def guild(self):
@@ -69,7 +73,6 @@ class AliasContext:
         """
         return self._alias
 
-
     def __repr__(self):
         return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix} " \
                f"alias={self.alias}>"
@@ -80,12 +83,13 @@ class AliasGuild:
     Represents the Discord guild (server) an alias was invoked in.
     """
 
-    def __init__(self, guild):
-        """
-        :type guild: discord.Guild
-        """
-        self._name = guild.name
-        self._id = guild.id
+    def __init__(self, id: int, name: str):
+        self._id = id
+        self._name = name
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(id=d['id'], name=d['name'])
 
     @property
     def name(self):
@@ -114,14 +118,24 @@ class AliasChannel:
     Represents the Discord channel an alias was invoked in.
     """
 
-    def __init__(self, channel):
+    def __init__(self, id: int, name: str, topic, category):
         """
-        :type channel: discord.TextChannel
+        :type topic: str or None
+        :type category: AliasCategory or None
         """
-        self._name = str(channel)
-        self._id = channel.id
-        self._topic = channel.topic if not isinstance(channel, discord.DMChannel) else None
-        self._category = AliasCategory(channel.category) if getattr(channel, 'category', None) is not None else None
+        self._name = name
+        self._id = id
+        self._topic = topic
+        self._category = category
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(
+            id=d['id'],
+            name=d['name'],
+            topic=d['topic'],
+            category=AliasCategory.from_dict(d['category']) if d['category'] is not None else None
+        )
 
     @property
     def name(self):
@@ -168,14 +182,15 @@ class AliasAuthor:
     Represents the Discord user who invoked an alias.
     """
 
-    def __init__(self, author):
-        """
-        :type author: discord.User
-        """
-        self._name = author.name
-        self._id = author.id
-        self._discriminator = author.discriminator
-        self._display_name = author.display_name
+    def __init__(self, id: int, name: str, discriminator: str, display_name: str):
+        self._name = name
+        self._id = id
+        self._discriminator = discriminator
+        self._display_name = display_name
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(id=d['id'], name=d['name'], discriminator=d['discriminator'], display_name=d['display_name'])
 
     @property
     def name(self):
@@ -222,12 +237,13 @@ class AliasCategory:
     Represents the category of the Discord channel an alias was invoked in.
     """
 
-    def __init__(self, category):
-        """
-        :type channel: discord.ChannelCategory
-        """
-        self._name = str(category)
-        self._id = category.id
+    def __init__(self, id: int, name: str):
+        self._name = name
+        self._id = id
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(id=d['id'], name=d['name'])
 
     @property
     def name(self):

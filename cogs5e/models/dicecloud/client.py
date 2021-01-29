@@ -149,6 +149,3 @@ class DicecloudClient:
     async def insert_classes(self, charId: str, classes: list):
         response = await self.http.post(f'/api/character/{charId}/class', [c.to_dict() for c in classes])
         return response
-
-
-dicecloud_client = DicecloudClient.getInstance()

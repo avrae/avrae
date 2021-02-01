@@ -9,9 +9,9 @@ from cogs5e.models.sheet.statblock import DESERIALIZE_MAP, StatBlock
 from gamedata.monster import MonsterCastableSpellbook
 from utils.constants import RESIST_TYPES
 from utils.functions import get_guild_member, maybe_mod, search_and_select
-from .types import BaseCombatant
 from .effect import Effect
 from .errors import CombatException, RequiresContext
+from .types import BaseCombatant
 from .utils import CombatantType, create_combatant_id
 
 
@@ -543,6 +543,20 @@ class PlayerCombatant(Combatant):
             raise CombatException(f"A character in combat was deleted. "
                                   f"Please run `{ctx.prefix}init end -force` to end combat.")
 
+        return inst
+
+    @classmethod
+    def from_dict_sync(cls, raw, ctx, combat):
+        inst = super().from_dict(raw, ctx, combat)
+        inst.character_id = raw['character_id']
+        inst.character_owner = raw['character_owner']
+
+        try:
+            from cogs5e.models.character import Character
+            inst._character = Character.from_bot_and_ids_sync(ctx.bot, inst.character_owner, inst.character_id)
+        except NoCharacter:
+            raise CombatException(f"A character in combat was deleted. "
+                                  f"Please run `{ctx.prefix}init end -force` to end combat.")
         return inst
 
     def to_dict(self):

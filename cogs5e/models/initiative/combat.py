@@ -40,6 +40,7 @@ class Combat:
     def new(cls, channel_id, message_id, dm_id, options, ctx):
         return cls(channel_id, message_id, dm_id, options, ctx)
 
+    # async deser
     @classmethod
     async def from_ctx(cls, ctx):  # cached
         channel_id = str(ctx.channel.id)
@@ -73,6 +74,39 @@ class Combat:
                 inst._combatants.append(await CombatantGroup.from_dict(c, ctx, inst))
             else:
                 raise CombatException(f"Unknown combatant type: {c['type']}")
+        return inst
+
+    # sync deser/ser
+    @classmethod
+    def from_ctx_sync(cls, ctx):  # cached
+        channel_id = str(ctx.channel.id)
+        if channel_id in cls._cache:
+            return cls._cache[channel_id]
+        else:
+            raw = ctx.bot.mdb.combats.delegate.find_one({"channel": channel_id})
+            if raw is None:
+                raise CombatNotFound
+            # write to cache
+            inst = cls.from_dict_sync(raw, ctx)
+            cls._cache[channel_id] = inst
+            return inst
+
+    @classmethod
+    def from_dict_sync(cls, raw, ctx):
+        inst = cls(raw['channel'], raw['summary'], raw['dm'], raw['options'], ctx, [], raw['round'],
+                   raw['turn'], raw['current'])
+        for c in raw['combatants']:
+            ctype = CombatantType(c['type'])
+            if c['type'] == CombatantType.GENERIC:
+                inst._combatants.append(Combatant.from_dict(c, ctx, inst))
+            elif c['type'] == CombatantType.MONSTER:
+                inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
+            elif c['type'] == CombatantType.PLAYER:
+                inst._combatants.append(PlayerCombatant.from_dict_sync(c, ctx, inst))
+            elif c['type'] == CombatantType.GROUP:
+                inst._combatants.append(CombatantGroup.from_dict_sync(c, ctx, inst))
+            else:
+                raise CombatException("Unknown combatant type")
         return inst
 
     def to_dict(self):

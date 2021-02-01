@@ -8,7 +8,7 @@ from .utils import CombatantType, create_combatant_id
 class CombatantGroup(Combatant):
     type = CombatantType.GROUP
 
-    def __init__(self, ctx, combat, id, combatants, name, init, index=None):
+    def __init__(self, ctx, combat, id, combatants, name, init, index=None, **_):
         super(CombatantGroup, self).__init__(
             ctx, combat, id, name=name, controller_id=str(ctx.author.id), private=False, init=init, index=index)
         self._combatants = combatants
@@ -38,7 +38,27 @@ class CombatantGroup(Combatant):
             combatant.group = raw['id']  # fixme id translation, remove apr 2021
             combatants.append(combatant)
 
-        del raw['type']
+        return cls(ctx, combat, combatants=combatants, **raw)
+
+    @classmethod
+    def from_dict_sync(cls, raw, ctx, combat):
+        if 'id' not in raw:  # fixme id translation, remove apr 2021
+            raw['id'] = create_combatant_id()
+
+        combatants = []
+        for c in raw.pop('combatants'):
+            ctype = CombatantType(c['type'])
+            if ctype == CombatantType.GENERIC:
+                combatant = Combatant.from_dict(c, ctx, combat)
+            elif ctype == CombatantType.MONSTER:
+                combatant = MonsterCombatant.from_dict(c, ctx, combat)
+            elif ctype == CombatantType.PLAYER:
+                combatant = PlayerCombatant.from_dict_sync(c, ctx, combat)
+            else:
+                raise CombatException("Unknown combatant type")
+            combatant.group = raw['id']  # fixme id translation, remove apr 2021
+            combatants.append(combatant)
+
         return cls(ctx, combat, combatants=combatants, **raw)
 
     def to_dict(self):

@@ -218,19 +218,19 @@ class Effect:
     # parenting
     def get_parent_effect(self):
         if self.parent:
-            return self.get_child_effect(self.parent)  # technically, this is just follow_effect_reference
+            return self._effect_from_reference(self.parent)
         return None
 
     def get_children_effects(self):
         """Returns an iterator of Effects of this Effect's children."""
         for e in self.children.copy():
-            child = self.get_child_effect(e)
+            child = self._effect_from_reference(e)
             if child:
                 yield child
             else:
                 self.children.remove(e)  # effect was removed elsewhere; disown it
 
-    def get_child_effect(self, e: EffectReference):
+    def _effect_from_reference(self, e: EffectReference):
         combatant = self.combat.combatant_by_id(e.combatant_id)
         if not combatant:
             # fall back to getting by name and see if we can update the combatant id

@@ -55,7 +55,7 @@ class CombatantGroup(Combatant):
             elif ctype == CombatantType.PLAYER:
                 combatant = PlayerCombatant.from_dict_sync(c, ctx, combat)
             else:
-                raise CombatException("Unknown combatant type")
+                raise CombatException(f"Unknown combatant type when deserializing group: {c['type']}")
             combatant.group = raw['id']  # fixme id translation, remove apr 2021
             combatants.append(combatant)
 

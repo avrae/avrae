@@ -3,10 +3,10 @@ import discord
 from d20 import roll
 
 from utils.functions import search_and_select
-from .utils import CombatantType
 from .combatant import Combatant, MonsterCombatant, PlayerCombatant
 from .errors import *
 from .group import CombatantGroup
+from .utils import CombatantType
 
 COMBAT_TTL = 60 * 60 * 24 * 7  # 1 week TTL
 
@@ -33,8 +33,6 @@ class Combat:
         self._turn = turn_num
         self._current_index = current_index
         self.ctx = ctx
-
-        self._combatant_id_map = {c.id: c for c in combatants}
 
     @classmethod
     def new(cls, channel_id, message_id, dm_id, options, ctx):
@@ -97,16 +95,16 @@ class Combat:
                    raw['turn'], raw['current'])
         for c in raw['combatants']:
             ctype = CombatantType(c['type'])
-            if c['type'] == CombatantType.GENERIC:
+            if ctype == CombatantType.GENERIC:
                 inst._combatants.append(Combatant.from_dict(c, ctx, inst))
-            elif c['type'] == CombatantType.MONSTER:
+            elif ctype == CombatantType.MONSTER:
                 inst._combatants.append(MonsterCombatant.from_dict(c, ctx, inst))
-            elif c['type'] == CombatantType.PLAYER:
+            elif ctype == CombatantType.PLAYER:
                 inst._combatants.append(PlayerCombatant.from_dict_sync(c, ctx, inst))
-            elif c['type'] == CombatantType.GROUP:
+            elif ctype == CombatantType.GROUP:
                 inst._combatants.append(CombatantGroup.from_dict_sync(c, ctx, inst))
             else:
-                raise CombatException("Unknown combatant type")
+                raise CombatException(f"Unknown combatant type: {c['type']}")
         return inst
 
     def to_dict(self):
@@ -154,6 +152,10 @@ class Combat:
     @property  # private write
     def index(self):
         return self._current_index
+
+    @property
+    def _combatant_id_map(self):
+        return {c.id: c for c in self._combatants}
 
     # combatants
     @property
@@ -212,7 +214,6 @@ class Combat:
         :type combatant: Combatant
         """
         self._combatants.append(combatant)
-        self._combatant_id_map[combatant.id] = combatant
         self.sort_combatants()
 
     def remove_combatant(self, combatant, ignore_remove_hook=False):
@@ -227,7 +228,6 @@ class Combat:
             combatant.on_remove()
         if not combatant.group:
             self._combatants.remove(combatant)
-            del self._combatant_id_map[combatant.id]
             self.sort_combatants()
         else:
             self.get_group(combatant.group).remove_combatant(combatant)

@@ -48,7 +48,6 @@ class Combatant(BaseCombatant, StatBlock):
         self._group_id = group_id
 
         self._cache = {}
-        self._effect_id_map = {e.id: e for e in effects}
 
     @classmethod
     def new(cls, name: str, controller_id: str, init: int, init_skill: Skill, max_hp: int, ac: int, private: bool,
@@ -225,6 +224,10 @@ class Combatant(BaseCombatant, StatBlock):
     @group.setter
     def group(self, value):
         self._group_id = value
+
+    @property
+    def _effect_id_map(self):
+        return {e.id: e for e in self._effects}
 
     def set_group(self, group_name):
         current = self.combat.current_combatant

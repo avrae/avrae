@@ -238,6 +238,11 @@ class Combat:
         """
         Sorts the combatant list by place in init and updates combatants' indices.
         """
+        if not self._combatants:
+            self._current_index = None
+            self._turn = 0
+            return
+
         current = self.current_combatant
         self._combatants = sorted(self._combatants, key=lambda k: (k.init, int(k.init_skill)), reverse=True)
         for n, c in enumerate(self._combatants):

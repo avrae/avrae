@@ -8,7 +8,7 @@ from discord.ext import commands
 from aliasing import helpers
 from cogs5e.models.errors import NoSelectionElements
 from cogs5e.utils import attackutils, checkutils, targetutils
-from cogs5e.utils.help_constants import VALID_AUTOMATION_ARGS, VALID_SPELLCASTING_ARGS
+from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata import Monster
 from gamedata.lookuputils import handle_source_footer, select_monster_full, select_spell_full
@@ -199,23 +199,11 @@ class Dice(commands.Cog):
         monster_name = monster.get_title_name()
         return await ctx.send(f"{monster_name}'s attacks:\n{monster.attacks.build_str(monster)}")
 
-    @commands.command(aliases=['mc'])
+    @commands.command(aliases=['mc'], help=f"""
+    Rolls a check for a monster.
+    {VALID_CHECK_ARGS}
+    """)
     async def monster_check(self, ctx, monster_name, check, *args):
-        """Rolls a check for a monster.
-        __Valid Arguments__
-        *adv/dis*
-        *-b [conditional bonus]*
-        -phrase [flavor text]
-        -title [title] *note: [name] and [cname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -dc [dc]
-        -rr [iterations]
-        str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
-        -h (hides name and image of monster)
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one check.
-        """
-
         monster: Monster = await select_monster_full(ctx, monster_name)
 
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
@@ -237,19 +225,11 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(aliases=['ms'])
+    @commands.command(aliases=['ms'], help=f"""
+    Rolls a save for a monster.
+    {VALID_SAVE_ARGS}
+    """)
     async def monster_save(self, ctx, monster_name, save_stat, *args):
-        """Rolls a save for a monster.
-        __Valid Arguments__
-        adv/dis
-        -b [conditional bonus]
-        -phrase [flavor text]
-        -title [title] *note: [name] and [cname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -dc [dc]
-        -rr [iterations]
-        -h (hides name and image of monster)"""
-
         monster: Monster = await select_monster_full(ctx, monster_name)
 
         embed = discord.Embed()

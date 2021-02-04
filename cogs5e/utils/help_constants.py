@@ -2,6 +2,48 @@
 Constants to help write help docs.
 """
 
+__all__ = (
+    'VALID_CHECK_ARGS', 'VALID_SAVE_ARGS', 'VALID_AUTOMATION_ARGS', 'VALID_SPELLCASTING_ARGS'
+)
+
+# ==== check args ====
+VALID_CHECK_ARGS = """
+__Valid Arguments__
+*adv/dis* - Give advantage/disadvantage to the check roll(s).
+*-b <bonus>* - Adds a bonus to the roll.
+-dc <dc> - Sets a DC and counts successes/failures.
+-mc <minimum roll> - Sets the minimum roll on the dice (e.g. Reliable Talent, Glibness)
+-rr <iterations> - How many checks to roll.
+str/dex/con/int/wis/cha - Rolls using a different skill base (e.g. Strength (Intimidation))
+
+-phrase <phrase> - Adds flavor text.
+-title <title> - Changes the title of the attack. Replaces [name] with caster's name and [cname] with the check's name.
+-f "Field Title|Field Text" - Creates a field with the given title and text (see `!help embed`).
+-thumb <url> - Adds a thumbnail to the result.
+-h - Hides the name and image of the caster.
+[user snippet]
+
+An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one check.
+""".strip()
+
+# ==== save args ====
+VALID_SAVE_ARGS = """
+__Valid Arguments__
+*adv/dis* - Give advantage/disadvantage to the save roll(s).
+*-b <bonus>* - Adds a bonus to the roll.
+-dc <dc> - Sets a DC and counts successes/failures.
+-rr <iterations> - How many saves to roll (does not apply to Death Saves).
+
+-phrase <phrase> - Adds flavor text.
+-title <title> - Changes the title of the attack. Replaces [name] with caster's name and [sname] with the save's name.
+-f "Field Title|Field Text" - Creates a field with the given title and text (see `!help embed`).
+-thumb <url> - Adds a thumbnail to the result.
+-h - Hides the name and image of the caster.
+[user snippet]
+
+An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one save.
+""".strip()
+
 # ==== automation args ====
 VALID_AUTOMATION_ARGS = """
 **Targeting**

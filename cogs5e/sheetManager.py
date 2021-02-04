@@ -22,7 +22,7 @@ from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
 from cogs5e.utils import attackutils, checkutils, targetutils
-from cogs5e.utils.help_constants import VALID_AUTOMATION_ARGS
+from cogs5e.utils.help_constants import *
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
 from utils import img
@@ -182,22 +182,11 @@ class SheetManager(commands.Cog):
         await character.commit(ctx)
         await ctx.send(f"Okay, deleted attack {attack.name}.")
 
-    @commands.command(aliases=['s'])
+    @commands.command(aliases=['s'], help=f"""
+    Rolls a save for your current active character.
+    {VALID_SAVE_ARGS}
+    """)
     async def save(self, ctx, skill, *args):
-        """Rolls a save for your current active character.
-        __Valid Arguments__
-        *adv/dis*
-        *-b [conditional bonus]*
-        -dc [dc]
-        -rr [iterations] (does not apply to Death Saves)
-
-        -phrase [flavor text]
-        -title [title] *note: [name] and [sname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -f "Field Title|Field Text" - see `!help embed`
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one save.
-        """
         if skill == 'death':
             ds_cmd = self.bot.get_command('game deathsave')
             if ds_cmd is None:
@@ -221,24 +210,11 @@ class SheetManager(commands.Cog):
         if gamelog := self.bot.get_cog('GameLog'):
             await gamelog.send_save(ctx, char, result.skill_name, result.rolls)
 
-    @commands.command(aliases=['c'])
+    @commands.command(aliases=['c'], help=f"""
+    Rolls a check for your current active character.
+    {VALID_CHECK_ARGS}
+    """)
     async def check(self, ctx, check, *args):
-        """Rolls a check for your current active character.
-        __Valid Arguments__
-        *adv/dis*
-        *-b [conditional bonus]*
-        -dc [dc]
-        -mc [minimum roll]
-        -rr [iterations]
-        str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
-
-        -phrase [flavor text]
-        -title [title] *note: [name] and [cname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -f "Field Title|Field Text" - see `!help embed`
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one check.
-        """
         char: Character = await Character.from_ctx(ctx)
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
 

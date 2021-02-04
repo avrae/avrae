@@ -17,7 +17,7 @@ from cogs5e.models.sheet.attack import Attack
 from cogs5e.models.sheet.base import Skill
 from cogs5e.models.sheet.resistance import Resistances
 from cogs5e.utils import attackutils, checkutils, targetutils
-from cogs5e.utils.help_constants import VALID_AUTOMATION_ARGS, VALID_SPELLCASTING_ARGS
+from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import constants
@@ -1101,11 +1101,11 @@ class InitTracker(commands.Cog):
         if (gamelog := self.bot.get_cog('GameLog')) and is_player:
             await gamelog.send_automation(ctx, combatant.character, attack.name, result)
 
-    @init.command(aliases=['c'])
+    @init.command(aliases=['c'], help=f"""
+    Rolls an ability check as the current combatant.
+    {VALID_CHECK_ARGS}
+    """)
     async def check(self, ctx, check, *args):
-        """
-        Rolls an ability check as the current combatant. See `!help check` for valid arguments.
-        """
         combat = await Combat.from_ctx(ctx)
         combatant = combat.current_combatant
         if combatant is None:
@@ -1124,11 +1124,11 @@ class InitTracker(commands.Cog):
         if (gamelog := self.bot.get_cog('GameLog')) and isinstance(combatant, PlayerCombatant):
             await gamelog.send_check(ctx, combatant.character, result.skill_name, result.rolls)
 
-    @init.command(aliases=['s'])
+    @init.command(aliases=['s'], help=f"""
+    Rolls an ability save as the current combatant.
+    {VALID_SAVE_ARGS}
+    """)
     async def save(self, ctx, save, *args):
-        """
-        Rolls an ability save as the current combatant. See `!help save` for valid arguments.
-        """
         combat = await Combat.from_ctx(ctx)
         combatant = combat.current_combatant
         if combatant is None:

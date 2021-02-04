@@ -253,6 +253,7 @@ class Dice(commands.Cog):
     Casts a spell as a monster.
     __**Valid Arguments**__
     {VALID_SPELLCASTING_ARGS}
+    
     {VALID_AUTOMATION_ARGS}
     """)
     async def monster_cast(self, ctx, monster_name, spell_name, *args):

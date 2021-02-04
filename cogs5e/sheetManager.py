@@ -14,7 +14,6 @@ from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
 from aliasing import helpers
-from cogs5e.utils import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
@@ -22,6 +21,8 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
+from cogs5e.utils import attackutils, checkutils, targetutils
+from cogs5e.utils.help_constants import VALID_AUTOMATION_ARGS
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
 from utils import img
@@ -63,47 +64,12 @@ class SheetManager(commands.Cog):
         args = argparse(args)
         return args
 
-    @commands.group(aliases=['a'], invoke_without_command=True)
+    @commands.group(aliases=['a'], invoke_without_command=True, help=f"""
+    Rolls an attack for the current active character.
+    __**Valid Arguments**__
+    {VALID_AUTOMATION_ARGS}
+    """)
     async def attack(self, ctx, atk_name=None, *, args: str = ''):
-        """Rolls an attack for the current active character.
-        __Valid Arguments__
-        -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
-        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
-
-        *adv/dis* - Advantage or Disadvantage
-        *ea* - Elven Accuracy double advantage
-        
-        -ac <target ac> - overrides target AC
-        *-b* <to hit bonus> - adds a bonus to hit
-        -criton <num> - a number to crit on if rolled on or above
-        *-d* <damage bonus> - adds a bonus to damage
-        *-c* <damage bonus on crit> - adds a bonus to crit damage
-        -rr <times> - number of times to roll the attack against each target
-        *-mi <value>* - minimum value of each die on the damage roll
-        
-        *-resist* <damage resistance>
-        *-immune* <damage immunity>
-        *-vuln* <damage vulnerability>
-        *-neutral* <damage type> - ignores this damage type in resistance calculations
-        *-dtype <damage type>* - replaces all damage types with this damage type
-        *-dtype <old>new>* - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
-        
-        *hit* - automatically hits
-        *miss* - automatically misses
-        *crit* - automatically crits if hit
-        *nocrit* - nullifies critical hits
-        *max* - deals max damage
-        *magical* - makes the damage type magical
-
-        -h - hides name and rolled values
-        -phrase <text> - adds flavour text
-        -title <title> - changes the result title *note: `[name]` and `[aname]` will be replaced automatically*
-        -thumb <url> - adds flavour image
-        -f "Field Title|Field Text" - see `!help embed`
-        <user snippet> - see `!help snippet`
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on.
-        """
         if atk_name is None:
             return await self.attack_list(ctx)
 

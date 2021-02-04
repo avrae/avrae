@@ -1,0 +1,68 @@
+"""
+Constants to help write help docs.
+"""
+
+# ==== automation args ====
+VALID_AUTOMATION_ARGS = """
+**Targeting**
+-t "<target>" - Sets targets for the attack. You can pass as many as needed.
+-t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
+-rr <num> - How many attacks to make at each target.
+
+An italicized argument below means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on.
+
+**To Hit**
+*adv/dis* - Give advantage or disadvantage to the attack roll(s).
+*ea* - Elven Accuracy, double advantage on the attack roll.
+*hit* - The attack automatically hits.
+*miss* - The attack automatically misses.
+*crit* - The attack automatically crits.
+-ac <target ac> - Overrides target AC.
+*-b <bonus>* - Adds a bonus to hit.
+-criton <value> - The number the attack crits on if rolled on or above.
+
+**Saves**
+*pass* - Target automatically succeeds the saving throw.
+*fail* - Target automatically fails the saving throw.
+sadv/sdis - Gives the target advantage/disadvantage on the saving throw.
+-dc <dc> - Overrides the DC of the save.
+-dc <+X/-X> - Modifies the DC by a certain amount.
+-save <save type> - Overrides the spell save type (e.g. `-save str`).
+
+**Damage**
+*max* - Maximizes damage rolls.
+*nocrit* - Does not double the dice on a crit.
+*-d <damage>* - Adds additional damage.
+*-c <damage>* - Adds additional damage for when the attack crits, not doubled.
+*-mi <value>* - Minimum value of each die on the damage roll.
+
+__Damage Types__
+*magical* - Makes the damage type of the attack magical.
+*-dtype <new type>* - Changes all damage types to a new damage type.
+*-dtype "old>new"* - Changes all parts of the damage roll that do "old" damage type to deal "new" damage type (e.g. `-dtype fire>cold`)
+*-resist <damage type>* - Gives the target resistance to the given damage type.
+*-immune <damage type>* - Gives the target immunity to the given damage type.
+*-vuln <damage type>* - Gives the target vulnerability to the given damage type.
+*-neutral <damage type>* - Removes the target's immunity, resistance, or vulnerability to the given damage type.
+
+**Effects**
+-dur <duration> - Overrides the duration of any effect applied by the attack.
+
+**Other**
+-h - Hides rolled values.
+-phrase <phrase> - Adds flavor text.
+-title <title> - Changes the title of the attack. Replaces [name] with attacker's name and [aname] with the attack's name.
+-f "Field Title|Field Text" - Creates a field with the given title and text.
+-thumb <url> - Adds a thumbnail to the attack.
+[user snippet] - Allows the user to use snippets on the attack.
+""".strip()
+
+# ==== spellcasting args ====
+VALID_SPELLCASTING_ARGS = """
+**Spellcasting**
+-i - Ignores Spellbook restrictions (e.g. when casting from an item, as a ritual, etc.)
+-l <level> - Specifies the level to cast the spell at.
+-mod <spellcasting mod> - Overrides the value of the spellcasting ability modifier.
+-with <int/wis/cha> - Uses a different skill base for DC/AB (will not account for extra bonuses)
+noconc - Ignores concentration requirements.
+""".strip()

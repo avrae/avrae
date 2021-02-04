@@ -628,18 +628,21 @@ class SheetManager(commands.Cog):
 
         parser = BeyondSheetParser(url)
         character = await self._load_sheet(ctx, parser, args, loading)
-        await send_ddb_ctas(ctx, character)
+        if character:
+            await send_ddb_ctas(ctx, character)
 
     @staticmethod
     async def _load_sheet(ctx, parser, args, loading):
         try:
             character = await parser.load_character(ctx, argparse(args))
         except ExternalImportError as eep:
-            return await loading.edit(content=f"Error loading character: {eep}")
+            await loading.edit(content=f"Error loading character: {eep}")
+            return
         except Exception as eep:
             log.warning(f"Error importing character {parser.url}")
             log.warning(traceback.format_exc())
-            return await loading.edit(content=f"Error loading character: {eep}")
+            await loading.edit(content=f"Error loading character: {eep}")
+            return
 
         await loading.edit(content=f'Loaded and saved data for {character.name}!')
 

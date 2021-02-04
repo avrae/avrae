@@ -322,7 +322,10 @@ class GameLog(commands.Cog):
         if (campaign_id := character.ddb_campaign_id) is None:
             return None, None
         # and the character's campaign must be linked to this channel
-        campaign_link = await CampaignLink.from_id(ctx.bot.mdb, campaign_id)
+        try:
+            campaign_link = await CampaignLink.from_id(ctx.bot.mdb, campaign_id)
+        except NoCampaignLink:
+            return None, None
         if campaign_link.channel_id != ctx.channel.id:
             return None, None
         # and the user must have their ddb acct connected

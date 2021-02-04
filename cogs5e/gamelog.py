@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 import ddb.dice
-from cogs5e.funcs import gamelogutils
+from cogs5e.utils import gamelogutils
 from cogs5e.models import embeds
 from cogs5e.models.automation.results import AttackResult, DamageResult, RollResult, SaveResult, TempHPResult
 from cogs5e.models.character import Character

@@ -9,7 +9,7 @@ from discord.ext import commands
 from discord.ext.commands import NoPrivateMessage
 
 from aliasing import helpers
-from cogs5e.funcs import attackutils, checkutils, targetutils
+from cogs5e.utils import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithAuthor, EmbedWithCharacter
 from cogs5e.models.errors import InvalidArgument, NoSelectionElements, SelectionException
@@ -20,7 +20,7 @@ from cogs5e.models.sheet.resistance import Resistances
 from cogsmisc.stats import Stats
 from gamedata.lookuputils import select_monster_full, select_spell_full
 from utils import constants
-from utils.argparser import argparse, argsplit
+from utils.argparser import argparse
 from utils.functions import confirm, get_guild_member, search_and_select, try_delete
 
 log = logging.getLogger(__name__)

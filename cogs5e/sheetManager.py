@@ -14,7 +14,7 @@ from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
 from aliasing import helpers
-from cogs5e.funcs import attackutils, checkutils, targetutils
+from cogs5e.utils import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError

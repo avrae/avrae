@@ -469,7 +469,7 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
         """
         Loads an object from a JSON string. See :func:`json.loads`.
         """
-        return json.loads(jsonstr, cls=self._json_decoder())
+        return json.loads(str(jsonstr), cls=self._json_decoder())
 
     def dump_json(self, obj):
         """

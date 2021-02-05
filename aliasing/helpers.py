@@ -4,11 +4,10 @@ import uuid
 
 import draconic
 
-import cogs5e.models.character as character_model
 from aliasing import evaluators
+from aliasing.api.functions import AliasException
 from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
-from aliasing.api.functions import AliasException
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
 from cogs5e.models.embeds import EmbedWithAuthor
@@ -63,7 +62,7 @@ async def handle_aliases(ctx):
     command_code = await handle_alias_arguments(the_alias.code, ctx)
     char = None
     try:
-        char = await character_model.Character.from_ctx(ctx)
+        char = await ctx.get_character()
     except NoCharacter:
         pass
 

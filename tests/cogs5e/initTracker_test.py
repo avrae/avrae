@@ -15,7 +15,7 @@ class TestInitiativeSimple:
         avrae.message("!init begin")
         await dhttp.receive_delete()
         await dhttp.receive_message("```Awaiting combatants...```")
-        await dhttp.receive_edit("```markdown\nCurrent initiative: 0 (round 0)\n===============================\n```",
+        await dhttp.receive_edit("```md\nCurrent initiative: 0 (round 0)\n===============================\n```",
                                  regex=False)
         await dhttp.receive_pin()
         await dhttp.receive_message("Everyone roll for initiative!\nIf you have a character set up with SheetManager: "
@@ -32,7 +32,7 @@ class TestInitiativeSimple:
         await dhttp.receive_delete()
         await dhttp.receive_message("OK, ending...")
         await dhttp.receive_message(r"End of combat report: \d+ rounds "
-                                    r"```markdown\nCurrent initiative: \d+ \(round \d+\)\n"
+                                    r"```md\nCurrent initiative: \d+ \(round \d+\)\n"
                                     r"===============================\n```.*", dm=True)
         await dhttp.receive_edit(r"[\s\S]*```-----COMBAT ENDED-----```")
         await dhttp.receive_unpin()

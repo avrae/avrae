@@ -193,10 +193,16 @@ class GameLog(commands.Cog):
         if comment_getter is None:
             comment_getter = lambda _: comment
 
-        results = '\n'.join(str(rr.to_d20(stringifier=VerboseMDStringifier(), comment=comment_getter(rr)))
-                            for rr in roll_request.rolls)
+        results = []
+        for rr in roll_request.rolls:
+            results.append(str(rr.to_d20(stringifier=VerboseMDStringifier(), comment=comment_getter(rr))))
 
-        out = f"<@{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{results}"
+        if sum(len(r) for r in results) > 1950:  # some len removed for other stuff
+            final_results = '\n'.join(f"**{comment_getter(rr)}**: {rr.result.total}" for rr in roll_request.rolls)
+        else:
+            final_results = '\n'.join(results)
+
+        out = f"<@{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{final_results}"
         # the user knows they rolled - don't need to ping them in discord
         await gctx.channel.send(out, allowed_mentions=discord.AllowedMentions.none())
 

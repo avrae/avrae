@@ -305,7 +305,7 @@ class AliasLevels:
         :param int default: What to return if the statblock does not have levels in the given class.
         :rtype: float or int
         """
-        return self._levels.get(cls_name, default)
+        return self._levels.get(str(cls_name), default)
 
     def __iter__(self):
         return iter(self._levels)
@@ -508,7 +508,7 @@ class AliasSaves:
         :param str base_stat: The stat to get the save for.
         :rtype: :class:`~aliasing.api.statblock.AliasSkill`
         """
-        return AliasSkill(self._saves.get(base_stat))
+        return AliasSkill(self._saves.get(str(base_stat)))
 
     def __str__(self):
         return str(self._saves)
@@ -711,7 +711,7 @@ class AliasSpellbook:
         return self._spellbook.can_cast(the_spell, int(level))
 
     def __contains__(self, item):
-        return item in self._spellbook
+        return str(item) in self._spellbook
 
     def __repr__(self):
         return "<AliasSpellbook object>"

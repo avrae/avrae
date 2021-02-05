@@ -133,10 +133,27 @@ class AliasCharacter(AliasStatBlock):
         >>> if not cc_exists(name):
         >>>     create_cc(name, minVal, maxVal, reset, dispType, reset_to, reset_by, title, desc)
         """
+        if minVal is not None:
+            minVal = str(minVal)
+        if maxVal is not None:
+            maxVal = str(maxVal)
+        if reset is not None:
+            reset = str(reset)
+        if dispType is not None:
+            dispType = str(dispType)
+        if reset_to is not None:
+            reset_to = str(reset_to)
+        if reset_by is not None:
+            reset_by = str(reset_by)
+        if title is not None:
+            title = str(title)
+        if desc is not None:
+            desc = str(desc)
+
         if not self.cc_exists(name):
             new_consumable = player_api.CustomCounter.new(
-                self._character, str(name), str(minVal), str(maxVal), str(reset), str(dispType),
-                title=str(title), desc=str(desc), reset_to=str(reset_to), reset_by=str(reset_by))
+                self._character, name, minVal, maxVal, reset, dispType,
+                title=title, desc=desc, reset_to=reset_to, reset_by=reset_by)
             self._character.consumables.append(new_consumable)
             self._consumables = None  # reset cache
             return AliasCustomCounter(new_consumable)

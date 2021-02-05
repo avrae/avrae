@@ -169,9 +169,16 @@ class ScriptingEvaluator(draconic.DraconicInterpreter):
 
         def create_cc_nx(name: str, minVal: str = None, maxVal: str = None, reset: str = None,
                          dispType: str = None):
+            if minVal is not None:
+                minVal = str(minVal)
+            if maxVal is not None:
+                maxVal = str(maxVal)
+            if reset is not None:
+                reset = str(reset)
+            if dispType is not None:
+                dispType = str(dispType)
             if not cc_exists(name):
-                new_consumable = player_api.CustomCounter.new(character, str(name), str(minVal), str(maxVal),
-                                                              str(reset), str(dispType))
+                new_consumable = player_api.CustomCounter.new(character, name, minVal, maxVal, reset, dispType)
                 character.consumables.append(new_consumable)
                 self.character_changed = True
 

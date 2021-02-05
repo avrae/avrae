@@ -292,6 +292,8 @@ class GameLog(commands.Cog):
         if pending is not None:
             # update the PendingAttack with its damage
             attack_roll = pending.roll_request.rolls[0]
+            # and remove it from the pending
+            await pending.delete(gctx)
 
         # generate embed based on action
         action = await gamelogutils.action_from_roll_request(gctx, character, roll_request)

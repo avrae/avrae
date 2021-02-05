@@ -166,7 +166,11 @@ class SimpleCombatant(AliasStatBlock):
         from cogs5e.models.automation import AutomationContext, AutomationTarget, \
             Damage  # this has to be here to avoid circular imports
 
-        dice_str, d, c, critdice = str(dice_str), str(d), str(c), int(critdice)
+        dice_str, critdice = str(dice_str), int(critdice)
+        if d is not None:
+            d = str(d)
+        if c is not None:
+            c = str(c)
 
         class _SimpleAutomationContext(AutomationContext):
             def __init__(self, caster, target, args, combat, crit=False):
@@ -287,7 +291,10 @@ class SimpleCombatant(AliasStatBlock):
         :param bool end: Whether the effect ticks on the end of turn.
         :param str desc: A description of the effect.
         """
-        name, args, duration, desc = str(name), str(args), int(duration), str(desc)
+        name, args, duration = str(name), str(args), int(duration)
+        if desc is not None:
+            desc = str(desc)
+
         existing = self._combatant.get_effect(name, True)
         if existing:
             existing.remove()

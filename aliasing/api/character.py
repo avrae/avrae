@@ -19,6 +19,7 @@ class AliasCharacter(AliasStatBlock):
 
     # helpers
     def _get_consumable(self, name):
+        name = str(name)
         consumable = self._character.get_consumable(name)
         if consumable is None:
             raise ConsumableException(f"There is no counter named {name}.")
@@ -133,9 +134,9 @@ class AliasCharacter(AliasStatBlock):
         >>>     create_cc(name, minVal, maxVal, reset, dispType, reset_to, reset_by, title, desc)
         """
         if not self.cc_exists(name):
-            new_consumable = player_api.CustomCounter.new(self._character, name, minVal, maxVal, reset, dispType,
-                                                          title=title, desc=desc,
-                                                          reset_to=reset_to, reset_by=reset_by)
+            new_consumable = player_api.CustomCounter.new(
+                self._character, str(name), str(minVal), str(maxVal), str(reset), str(dispType),
+                title=str(title), desc=str(desc), reset_to=str(reset_to), reset_by=str(reset_by))
             self._character.consumables.append(new_consumable)
             self._consumables = None  # reset cache
             return AliasCustomCounter(new_consumable)
@@ -167,6 +168,7 @@ class AliasCharacter(AliasStatBlock):
         :param str name: The name of the custom counter to check.
         :returns: Whether the counter exists.
         """
+        name = str(name)
         return name in [con.name for con in self._character.consumables]
 
     def cc_str(self, name):
@@ -204,9 +206,11 @@ class AliasCharacter(AliasStatBlock):
         :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
         :param str value: The value to set it to.
         """
+        name = str(name)
+        val = str(val)
         helpers.set_cvar(self._character, name, val)
         # noinspection PyProtectedMember
-        self._interpreter._names[name] = str(val)
+        self._interpreter._names[name] = val
 
     def set_cvar_nx(self, name, val: str):
         """
@@ -215,6 +219,7 @@ class AliasCharacter(AliasStatBlock):
         :param str name: The name of the variable to set. Must be a valid identifier and not be in the :ref:`cvar-table`.
         :param str value: The value to set it to.
         """
+        name = str(name)
         if name not in self._character.cvars:
             self.set_cvar(name, val)
 
@@ -224,6 +229,7 @@ class AliasCharacter(AliasStatBlock):
 
         :param str name: The name of the variable to delete.
         """
+        name = str(name)
         if name in self._character.cvars:
             del self._character.cvars[name]
 
@@ -394,7 +400,7 @@ class AliasCustomCounter:
         :return: The cc's new value.
         :rtype: int
         """
-        return self._cc.set(new_value, strict)
+        return self._cc.set(int(new_value), strict)
 
     def reset(self):
         """
@@ -449,7 +455,7 @@ class AliasDeathSaves:
 
         :param int num: The number of successful death saves to add.
         """
-        self._death_saves.succeed(num)
+        self._death_saves.succeed(int(num))
 
     def fail(self, num=1):
         """
@@ -457,7 +463,7 @@ class AliasDeathSaves:
 
         :param int num: The number of failed death saves to add.
         """
-        self._death_saves.fail(num)
+        self._death_saves.fail(int(num))
 
     def is_stable(self):
         """

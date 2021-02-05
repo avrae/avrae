@@ -56,7 +56,7 @@ def vroll(dice, multiply=1, add=0):
     :return: The result of the roll.
     :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
     """
-    return _vroll(dice, multiply, add)
+    return _vroll(str(dice), int(multiply), int(add))
 
 
 def roll(dice):
@@ -67,7 +67,7 @@ def roll(dice):
     :return: The roll's total, or 0 if an error was encountered.
     :rtype: int
     """
-    return _roll(dice)
+    return _roll(str(dice))
 
 
 def _roll(dice, roller=None):
@@ -103,21 +103,22 @@ def _vroll(dice, multiply=1, add=0, roller=None):
 
 
 # range()
+# noinspection PyProtectedMember
 def safe_range(start, stop=None, step=None):
     if stop is None and step is None:
         if start > MAX_ITER_LENGTH:
-            raise draconic.IterableTooLong("This range is too large.")
+            draconic._raise_in_context(draconic.IterableTooLong, "This range is too large.")
         return list(range(start))
     elif stop is not None and step is None:
         if stop - start > MAX_ITER_LENGTH:
-            raise draconic.IterableTooLong("This range is too large.")
+            draconic._raise_in_context(draconic.IterableTooLong, "This range is too large.")
         return list(range(start, stop))
     elif stop is not None and step is not None:
         if (stop - start) / step > MAX_ITER_LENGTH:
-            raise draconic.IterableTooLong("This range is too large.")
+            draconic._raise_in_context(draconic.IterableTooLong, "This range is too large.")
         return list(range(start, stop, step))
     else:
-        raise draconic.DraconicValueError("Invalid arguments passed to range()")
+        raise draconic._raise_in_context(draconic.DraconicValueError, "Invalid arguments passed to range()")
 
 
 # err()
@@ -135,7 +136,7 @@ def err(reason, pm_user=False):
     :param bool pm_user: Whether or not to PM the user the error traceback.
     :raises: AliasException
     """
-    raise AliasException(reason, pm_user)
+    raise AliasException(str(reason), pm_user)
 
 
 # typeof()

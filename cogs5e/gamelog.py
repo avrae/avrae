@@ -6,11 +6,11 @@ import discord
 from discord.ext import commands
 
 import ddb.dice
-from cogs5e.utils import gamelogutils
 from cogs5e.models import embeds
 from cogs5e.models.automation.results import AttackResult, DamageResult, RollResult, SaveResult, TempHPResult
 from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
+from cogs5e.utils import gamelogutils
 from ddb.dice import RollContext, RollKind, RollRequest, RollRequestRoll, RollType
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
@@ -306,8 +306,11 @@ class GameLog(commands.Cog):
             # I don't want to store a Message instance
             # todo use a PartialMessage (d.py 1.6)
             # also while you're here future me, you can use a partial message for init's message too
-            await gctx.bot.http.edit_message(channel_id=gctx.channel.id, message_id=pending.message_id,
-                                             embed=embed.to_dict())
+            try:
+                await gctx.bot.http.edit_message(channel_id=gctx.channel.id, message_id=pending.message_id,
+                                                 embed=embed.to_dict())
+            except discord.NotFound:  # original message was deleted
+                await gctx.channel.send(embed=embed)
         else:
             await gctx.channel.send(embed=embed)
 

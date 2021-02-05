@@ -92,7 +92,10 @@ def embed_for_action(gctx, action, character, to_hit_roll=None, damage_roll=None
                 meta_rolls.append(f"**DC**: {effect.dc}\n{effect.stat[:3].upper()} Save")
             # text: add the text as a field
             elif effect.type == 'text':
-                embed.add_field(name="Effect", value=effect.text, inline=False)
+                text = effect.text
+                if len(text) > 1020:
+                    text = f"{text[:1020]}..."
+                embed.add_field(name="Effect", value=text, inline=False)
 
     embed.insert_field_at(0, name="Meta", value='\n'.join(meta_rolls), inline=False)
 

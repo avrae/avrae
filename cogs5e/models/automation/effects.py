@@ -1007,7 +1007,7 @@ class Condition(Effect):
         if do_true:
             children += self.run_children(self.on_true, autoctx)
         if do_false:
-            children += self.run_children(self.on_true, autoctx)
+            children += self.run_children(self.on_false, autoctx)
 
         return ConditionResult(did_true=do_true, did_false=do_false, did_error=did_error, children=children)
 

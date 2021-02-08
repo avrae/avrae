@@ -11,7 +11,7 @@ from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException, InvalidArgument
 from cogs5e.models.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
-from utils.functions import trim_str, verbose_stat
+from utils.functions import smart_trim, verbose_stat
 from .shared import Sourced
 
 log = logging.getLogger(__name__)
@@ -242,15 +242,13 @@ class Spell(Sourced):
                 ctx, embed, caster, targets, args, combat, self,
                 conc_effect=conc_effect, ab_override=ab_override, dc_override=dc_override,
                 spell_override=spell_override, title=title)
-        else:
+        else:  # no automation, display spell description
             phrase = args.join('phrase', '\n')
             if phrase:
                 embed.description = f"*{phrase}*"
-
-            text = trim_str(self.description, 1024)
-            embed.add_field(name="Description", value=text, inline=False)
+            embed.add_field(name="Description", value=smart_trim(self.description), inline=False)
             if l != self.level and self.higherlevels:
-                embed.add_field(name="At Higher Levels", value=trim_str(self.higherlevels, 1024), inline=False)
+                embed.add_field(name="At Higher Levels", value=smart_trim(self.higherlevels), inline=False)
             embed.set_footer(text="No spell automation found.")
 
         if l > 0 and not i:

@@ -457,7 +457,7 @@ class Customization(commands.Cog):
         invoke_without_command=True,
         help="""
         Creates a snippet to use in certain commands.
-        Ex: *!snippet sneak -d "2d6[Sneak Attack]"* can be used as *!a sword sneak*.
+        Ex: *!snippet sneak -d "2d6[slashing]"* can be used as *!a sword sneak*.
 
         If a user and a server have snippets with the same name, the user snippet will take priority.
 

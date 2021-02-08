@@ -311,12 +311,9 @@ class GameLog(commands.Cog):
 
         # either update the old message or post a new one
         if pending is not None:
-            # I don't want to store a Message instance
-            # todo use a PartialMessage (d.py 1.6)
-            # also while you're here future me, you can use a partial message for init's message too
+            partial = discord.PartialMessage(channel=gctx.channel, id=pending.message_id)
             try:
-                await gctx.bot.http.edit_message(channel_id=gctx.channel.id, message_id=pending.message_id,
-                                                 embed=embed.to_dict())
+                await partial.edit(embed=embed)
             except discord.NotFound:  # original message was deleted
                 await gctx.channel.send(embed=embed)
         else:

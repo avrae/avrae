@@ -81,7 +81,6 @@ class InitTracker(commands.Cog):
             options['deathdelete'] = True
 
         temp_summary_msg = await ctx.send("```Awaiting combatants...```")
-        Combat.message_cache[temp_summary_msg.id] = temp_summary_msg  # add to cache
 
         combat = Combat.new(str(ctx.channel.id), temp_summary_msg.id, str(ctx.author.id), options, ctx)
         await combat.final()
@@ -516,9 +515,8 @@ class InitTracker(commands.Cog):
             combat.round_num = 0
 
         # repost summary message
-        old_summary = await combat.get_summary_msg()
+        old_summary = combat.get_summary_msg()
         new_summary = await ctx.send(combat.get_summary())
-        Combat.message_cache[new_summary.id] = new_summary  # add to cache
         combat.summary = new_summary.id
         try:
             await new_summary.pin()
@@ -1255,7 +1253,7 @@ class InitTracker(commands.Cog):
                 await ctx.author.send(f"End of combat report: {combat.round_num} rounds "
                                       f"{combat.get_summary(True)}")
 
-                summary = await combat.get_summary_msg()
+                summary = combat.get_summary_msg()
                 await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
                 await summary.unpin()
             except:

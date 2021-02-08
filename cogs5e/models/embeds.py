@@ -4,6 +4,8 @@ import discord
 
 from utils.functions import trim_str
 
+MAX_NUM_FIELDS = 25
+
 
 class EmbedWithAuthor(discord.Embed):
     """An embed with author image and nickname set."""

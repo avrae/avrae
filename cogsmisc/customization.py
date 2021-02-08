@@ -138,7 +138,9 @@ class CollectableManagementGroup(commands.Group):
             return await ctx.send(embed=embed)
 
     async def list(self, ctx):
-        embed = EmbedWithAuthor(ctx)
+        embed = first_embed = EmbedWithAuthor(ctx)
+        fields = 0
+        out = [embed]
 
         has_at_least_1 = False
 
@@ -146,8 +148,8 @@ class CollectableManagementGroup(commands.Group):
         user_obj_names = list(user_objs.keys())
         if user_obj_names:
             has_at_least_1 = True
-            embeds.add_fields_from_long_text(embed, f"Your {self.obj_name_pl.title()}",
-                                             ', '.join(sorted(user_obj_names)))
+            fields += embeds.add_fields_from_long_text(embed, f"Your {self.obj_name_pl.title()}",
+                                                       ', '.join(sorted(user_obj_names)))
 
         async for subscription_doc in self.workshop_sub_meth(ctx):
             try:
@@ -158,13 +160,19 @@ class CollectableManagementGroup(commands.Group):
                 has_at_least_1 = True
                 embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
                                 inline=False)
+                fields += 1
+                if fields > embeds.MAX_NUM_FIELDS:
+                    embed = discord.Embed(colour=embed.colour)
+                    fields = 0
+                    out.append(embed)
 
         if not has_at_least_1:
-            embed.description = f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]" \
-                                "(https://avrae.io/dashboard/workshop) to get some, " \
-                                "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!"
+            first_embed.description = f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]" \
+                                      "(https://avrae.io/dashboard/workshop) to get some, " \
+                                      "or [make your own](https://avrae.readthedocs.io/en/latest/aliasing/api.html)!"
 
-        return await ctx.send(embed=embed)
+        for e in out:
+            await ctx.send(embed=e)
 
     async def delete(self, ctx, name):
         if self.before_edit_check:

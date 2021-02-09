@@ -202,7 +202,7 @@ class GameLog(commands.Cog):
         else:
             final_results = '\n'.join(results)
 
-        out = f"<@{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{final_results}"
+        out = f"<@!{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{final_results}"
         # the user knows they rolled - don't need to ping them in discord
         await gctx.channel.send(out, allowed_mentions=discord.AllowedMentions.none())
 

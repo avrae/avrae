@@ -13,7 +13,7 @@ from cogs5e.models.errors import NoCharacter
 from cogs5e.utils import gamelogutils
 from ddb.dice import RollContext, RollKind, RollRequest, RollRequestRoll, RollType
 from ddb.gamelog import CampaignLink
-from ddb.gamelog.errors import NoCampaignLink
+from ddb.gamelog.errors import LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.event import GameLogEvent
 from utils import checks, constants
 from utils.dice import VerboseMDStringifier
@@ -59,9 +59,10 @@ class GameLog(commands.Cog):
             return await self.campaign_list(ctx)
 
         link_match = re.match(r'(?:https?://)?(?:www\.)?dndbeyond\.com/campaigns/(\d+)(?:$|/)', campaign_link)
-        if link_match is None:
+        invite_link_match = re.match(r'(?:https?://)?ddb\.ac/campaigns/join/(\d+)\d{10}(?:$|/)', campaign_link)
+        if link_match is None and invite_link_match is None:
             return await ctx.send("This is not a D&D Beyond campaign link.")
-        campaign_id = link_match.group(1)
+        campaign_id = (link_match or invite_link_match).group(1)
 
         # is there already an existing link?
         try:
@@ -76,11 +77,20 @@ class GameLog(commands.Cog):
                 ctx, "This campaign is already linked to another channel. Link it to this one instead?")
             if not result:
                 return await ctx.send("Ok, canceling.")
-            await existing_link.delete(ctx.bot.mdb)
 
         # do link (and dm check)
         await ctx.trigger_typing()
-        result = await self.bot.glclient.create_campaign_link(ctx, campaign_id)
+        try:
+            result = await self.bot.glclient.create_campaign_link(ctx, campaign_id, overwrite=True)
+        except LinkNotAllowed:
+            # the invite link match will only work 77% of the time because the hash can start w/ 0 - try using the
+            # main link instead
+            if invite_link_match:
+                await ctx.send("You are not allowed to link this campaign. "
+                               "Try using the campaign URL (in your browser bar) rather than the invite link!")
+                return
+            raise
+
         embed = embeds.EmbedWithAuthor(ctx)
         embed.title = f"Linked {result.campaign_name}!"
         embed.description = (f"Linked {result.campaign_name} to this channel! Your players' rolls from D&D Beyond "

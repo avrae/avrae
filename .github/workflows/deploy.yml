@@ -3,9 +3,6 @@ name: Deploy
 on:
   release:
     types: [ created ]
-  push:
-    branches:
-      - gh-actions
   workflow_dispatch:
 
 jobs:
@@ -44,7 +41,7 @@ jobs:
           docker build -t $SERVICE_NAME --build-arg COMMIT=$GITHUB_SHA .
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$DEPLOY_ENV
-        # docker push -a $ECR_REGISTRY/$ECR_REPOSITORY
+          docker push -a $ECR_REGISTRY/$ECR_REPOSITORY
 
       - name: Download task definition
         run: |
@@ -54,15 +51,14 @@ jobs:
         id: do-release
         run: echo '::set-output name=result::${{secrets.DO_RELEASE}}'
 
-  # todo uncomment to not dry-run
-  #      - name: Deploy Amazon ECS task definition
-  #        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-  #        if: steps.do-release.outputs.result != 0
-  #        with:
-  #          task-definition: task-definition.json
-  #          service: ${{ env.SERVICE_NAME }}
-  #          cluster: ${{ env.CLUSTER_NAME }}-${{ env.DEPLOY_ENV }}
-  #          force-new-deployment: true
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        if: steps.do-release.outputs.result != '0'
+        with:
+          task-definition: task-definition.json
+          service: ${{ env.SERVICE_NAME }}
+          cluster: ${{ env.CLUSTER_NAME }}-${{ env.DEPLOY_ENV }}
+          force-new-deployment: true
 
   # ===== help gen =====
   build-docs:
@@ -120,8 +116,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.REGION }}
 
-#      - name: Upload Help Manifest
-#        run: aws s3 cp shared/commands.json s3://media.avrae.io/ --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --region $REGION
+      - name: Upload Help Manifest
+        run: aws s3 cp shared/commands.json s3://media.avrae.io/ --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --region $REGION
 
       - name: Upload manifest as artifact
         uses: actions/upload-artifact@v2
@@ -135,13 +131,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-#      - name: Create Sentry release
-#        uses: getsentry/action-release@v1
-#        env:
-#          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-#          SENTRY_ORG: curse-llc
-#          SENTRY_PROJECT: avrae-bot
-#        with:
-#          environment: production
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: curse-llc
+          SENTRY_PROJECT: avrae-bot
+        with:
+          environment: production
 
 

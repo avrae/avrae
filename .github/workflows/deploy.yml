@@ -50,7 +50,7 @@ jobs:
   # todo uncomment to not dry-run
   #      - name: Deploy Amazon ECS task definition
   #        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-  #        if: secrets.DO_RELEASE != '0'
+  #        if: ${{ secrets.DO_RELEASE != '0' }}
   #        with:
   #          task-definition: task-definition.json
   #          service: ${{ env.SERVICE_NAME }}
@@ -73,12 +73,12 @@ jobs:
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: topsecret
-      env:
-        NO_DICECLOUD: 1
-        DISCORD_OWNER_USER_ID: "98765432109876543"
-        MONGO_URL: mongodb://root:topsecret@localhost:27017
-        REDIS_URL: redis://localhost:6379/0
-        REGION: us-east-1
+    env:
+      NO_DICECLOUD: 1
+      DISCORD_OWNER_USER_ID: "98765432109876543"
+      MONGO_URL: "mongodb://root:topsecret@localhost:27017"
+      REDIS_URL: "redis://localhost:6379/0"
+      REGION: us-east-1
 
     steps:
       - uses: actions/checkout@v2

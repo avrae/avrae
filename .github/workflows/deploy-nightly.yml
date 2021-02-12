@@ -52,7 +52,7 @@ jobs:
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        if: secrets.DO_RELEASE != '0'
+        if: ${{ secrets.DO_RELEASE != '0' }}
         with:
           task-definition: task-definition.json
           service: ${{ env.SERVICE_NAME }}

@@ -52,8 +52,8 @@ jobs:
           aws ecs describe-task-definition --task-definition $SERVICE_NAME-ecs-task-definition --query taskDefinition > task-definition.json
 
       - name: Determine whether to run release
-          id: do-release
-          run: echo '::set-output name=result::${{secrets.DO_RELEASE}}'
+        id: do-release
+        run: echo '::set-output name=result::${{secrets.DO_RELEASE}}'
 
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1

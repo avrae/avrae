@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CLUSTER_NAME: avrae
+      IMAGE_NAME: avrae-bot
       SERVICE_NAME: avrae-bot-nightly
       TAG_ENV: nightly
       CLUSTER_ENV: live
@@ -23,6 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -39,7 +42,7 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: avrae/${{ env.SERVICE_NAME }}
+          ECR_REPOSITORY: avrae/${{ env.IMAGE_NAME }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $SERVICE_NAME --build-arg COMMIT=$GITHUB_SHA .

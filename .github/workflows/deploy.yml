@@ -3,9 +3,6 @@ name: Deploy
 on:
   release:
     types: [ created ]
-  push:
-    branches:
-      - gh-actions
   workflow_dispatch:
 
 jobs:

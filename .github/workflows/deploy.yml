@@ -113,8 +113,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.REGION }}
 
-      - name: Upload Help Manifest
-        run: aws s3 cp shared/commands.json s3://media.avrae.io/ --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --region $REGION
+#      - name: Upload Help Manifest
+#        run: aws s3 cp shared/commands.json s3://media.avrae.io/ --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --region $REGION
 
       - name: Upload manifest as artifact
         uses: actions/upload-artifact@v2
@@ -128,13 +128,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Create Sentry release
-        uses: getsentry/action-release@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: curse-llc
-          SENTRY_PROJECT: avrae-bot
-        with:
-          environment: production
+#      - name: Create Sentry release
+#        uses: getsentry/action-release@v1
+#        env:
+#          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+#          SENTRY_ORG: curse-llc
+#          SENTRY_PROJECT: avrae-bot
+#        with:
+#          environment: production
 
 

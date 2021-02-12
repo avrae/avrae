@@ -10,11 +10,11 @@ jobs:
       redis: # redis://redis:6379/0
         image: redis
         ports:
-          - 58379:6379
+          - 6379:6379
       mongo: # mongodb://root:topsecret@mongo:27017
         image: mongo
         ports:
-          - 58017:27017
+          - 27017:27017
         env:
           MONGO_INITDB_ROOT_USERNAME: root
           MONGO_INITDB_ROOT_PASSWORD: topsecret

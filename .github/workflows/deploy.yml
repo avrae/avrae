@@ -126,9 +126,6 @@ jobs:
   sentry:
     name: Create Sentry Release
     runs-on: ubuntu-latest
-    env:
-      ENVIRONMENT: production
-
     steps:
       - uses: actions/checkout@v2
       - name: Create Sentry release

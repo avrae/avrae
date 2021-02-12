@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - nightly
+      - gh-actions
   workflow_dispatch:
 
 jobs:

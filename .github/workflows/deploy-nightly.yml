@@ -49,22 +49,14 @@ jobs:
           docker tag $SERVICE_NAME $ECR_REGISTRY/$ECR_REPOSITORY:$TAG_ENV
           docker push -a $ECR_REGISTRY/$ECR_REPOSITORY
 
-      - name: Download task definition
-        run: |
-          aws ecs describe-task-definition --task-definition $SERVICE_NAME-ecs-task-definition --query taskDefinition > task-definition.json
-
       - name: Determine whether to run release
         id: do-release
         run: echo '::set-output name=result::${{secrets.DO_RELEASE}}'
 
       - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         if: steps.do-release.outputs.result != '0'
-        with:
-          task-definition: task-definition.json
-          service: ${{ env.SERVICE_NAME }}
-          cluster: ${{ env.CLUSTER_NAME }}-${{ env.CLUSTER_ENV }}
-          force-new-deployment: true
+        run: |
+          aws ecs update-service --cluster $CLUSTER_NAME-$CLUSTER_ENV --service $SERVICE_NAME --force-new-deployment --region $REGION
 
   # ===== sentry release =====
   sentry:

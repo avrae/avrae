@@ -154,7 +154,8 @@ class AutomationTarget:
         if isinstance(self.target, init.Combatant):
             sb = self.target.active_effects('sb')
 
-        saveroll = save_obj.d20(base_adv=adv)
+        boolwise_adv = {-1: False, 0: None, 1: True}.get(adv)
+        saveroll = save_obj.d20(base_adv=boolwise_adv)
 
         if sb:
             saveroll = f"{saveroll}+{'+'.join(sb)}"

@@ -10,7 +10,7 @@ from discord.ext import commands
 
 import gamedata
 from cogs5e.models import errors
-from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, chunk_text, set_maybe_long_desc
+from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_long_text, set_maybe_long_desc
 from cogsmisc.stats import Stats
 from gamedata.compendium import compendium
 from gamedata.lookuputils import HOMEBREW_EMOJI, available, can_access, get_item_choices, get_monster_choices, \
@@ -18,7 +18,7 @@ from gamedata.lookuputils import HOMEBREW_EMOJI, available, can_access, get_item
 from gamedata.shared import SourcedTrait
 from utils import checks, img
 from utils.argparser import argparse
-from utils.functions import get_positivity, search_and_select, trim_str
+from utils.functions import chunk_text, get_positivity, search_and_select, trim_str
 
 LARGE_THRESHOLD = 200
 

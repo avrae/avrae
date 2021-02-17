@@ -92,7 +92,10 @@ def embed_for_action(gctx, action, character, to_hit_roll=None, damage_roll=None
                 meta_rolls.append(f"**DC**: {effect.dc}\n{effect.stat[:3].upper()} Save")
             # text: add the text as a field
             elif effect.type == 'text':
-                embed.add_field(name="Effect", value=effect.text, inline=False)
+                text = effect.text
+                if len(text) > 1020:
+                    text = f"{text[:1020]}..."
+                embed.add_field(name="Effect", value=text, inline=False)
 
     embed.insert_field_at(0, name="Meta", value='\n'.join(meta_rolls), inline=False)
 
@@ -180,15 +183,16 @@ class PendingAttack:
     """A cached attack that is waiting on a damage roll."""
     TTL = 60 * 2  # 2m
 
-    def __init__(self, to_hit_event: GameLogEvent, message_id: int):
+    def __init__(self, key: str, to_hit_event: GameLogEvent, message_id: int):
+        self.key = key
         self.to_hit_event = to_hit_event
         self.message_id = message_id
 
     # ser/deser
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, key, d):
         to_hit_event = GameLogEvent.from_dict(d['to_hit_event'])
-        return cls(to_hit_event, d['message_id'])
+        return cls(key, to_hit_event, d['message_id'])
 
     def to_dict(self):
         return {
@@ -200,8 +204,8 @@ class PendingAttack:
     async def create(cls, gctx: GameLogEventContext, roll_request: ddb.dice.RollRequest,
                      to_hit_event: GameLogEvent, message_id: int):
         """Creates and caches a new PendingAttack instance."""
-        inst = cls(to_hit_event, message_id)
         cache_key = await cls.cache_key_from_ctx(gctx, roll_request)
+        inst = cls(cache_key, to_hit_event, message_id)
         await gctx.bot.rdb.jsetex(key=cache_key, data=inst.to_dict(), exp=cls.TTL)
         return inst
 
@@ -212,12 +216,15 @@ class PendingAttack:
         data = await gctx.bot.rdb.jget(cache_key)
         if data is None:
             return None
-        return cls.from_dict(data)
+        return cls.from_dict(cache_key, data)
 
     # helpers
     @property
     def roll_request(self):
         return ddb.dice.RollRequest.from_dict(self.to_hit_event.data)
+
+    async def delete(self, gctx):
+        await gctx.bot.rdb.delete(self.key)
 
     @staticmethod
     async def cache_key_from_ctx(gctx: GameLogEventContext, roll_request: ddb.dice.RollRequest):

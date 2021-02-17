@@ -13,10 +13,11 @@ import discord
 from discord.ext import commands
 
 from aliasing import helpers
-from cogs5e.funcs import targetutils
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument, NoSelectionElements
+from cogs5e.utils import targetutils
+from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
 from utils.argparser import argparse
 from utils.dice import d20_with_adv
@@ -581,33 +582,14 @@ class GameTrack(commands.Cog):
         else:
             await self._rest(ctx, 'all', *args)
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, help=f"""
+    Casts a spell.
+    __**Valid Arguments**__
+    {VALID_SPELLCASTING_ARGS}
+    
+    {VALID_AUTOMATION_ARGS}
+    """)
     async def cast(self, ctx, spell_name, *, args=''):
-        """
-        Casts a spell.
-        __Valid Arguments__
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
-        -l <level> - Specifies the level to cast the spell at.
-        noconc - Ignores concentration requirements.
-        -h - Hides rolled values.
-        **__Save Spells__**
-        -dc <Save DC> - Overrides the spell save DC.
-        -dc <+X/-X> - Modifies the DC by a certain amount.
-        -save <Save type> - Overrides the spell save type.
-        -d <damage> - Adds additional damage.
-        pass - Target automatically succeeds save.
-        fail - Target automatically fails save.
-        adv/dis - Target makes save at advantage/disadvantage.
-        **__Attack Spells__**
-        See `!a`.
-        **__All Spells__**
-        -phrase <phrase> - adds flavor text.
-        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
-        -thumb <url> - adds an image to the cast.
-        -dur <duration> - changes the duration of any effect applied by the spell.
-        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
-        -with <int/wis/cha> - different skill base for DC/AB (will not account for extra bonuses)
-        """
         await try_delete(ctx.message)
 
         char: Character = await Character.from_ctx(ctx)

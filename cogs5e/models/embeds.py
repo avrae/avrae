@@ -2,7 +2,9 @@ import random
 
 import discord
 
-from utils.functions import trim_str
+from utils.functions import chunk_text, trim_str
+
+MAX_NUM_FIELDS = 25
 
 
 class EmbedWithAuthor(discord.Embed):
@@ -52,36 +54,6 @@ def add_fields_from_args(embed, _fields):
                 value = value[:-7]
             embed.add_field(name=title, value=value, inline=inline)
     return embed
-
-
-def chunk_text(text, max_chunk_size=1024, chunk_on=('\n\n', '\n', '. ', ' '), chunker_i=0):
-    """
-    Recursively chunks *text* into a list of str, with each element no longer than *max_chunk_size*.
-    Prefers splitting on the elements of *chunk_on*, in order.
-    """
-
-    if len(text) <= max_chunk_size:  # the chunk is small enough
-        return [text]
-    if chunker_i >= len(chunk_on):  # we have no more preferred chunk_on characters
-        # optimization: instead of merging a thousand characters, just use list slicing
-        return [text[:max_chunk_size],
-                *chunk_text(text[max_chunk_size:], max_chunk_size, chunk_on, chunker_i + 1)]
-
-    # split on the current character
-    chunks = []
-    split_char = chunk_on[chunker_i]
-    for chunk in text.split(split_char):
-        chunk = f"{chunk}{split_char}"
-        if len(chunk) > max_chunk_size:  # this chunk needs to be split more, recurse
-            chunks.extend(chunk_text(chunk, max_chunk_size, chunk_on, chunker_i + 1))
-        elif chunks and len(chunk) + len(chunks[-1]) <= max_chunk_size:  # this chunk can be merged
-            chunks[-1] += chunk
-        else:
-            chunks.append(chunk)
-
-    # remove extra split_char from last chunk
-    chunks[-1] = chunks[-1][:-len(split_char)]
-    return chunks
 
 
 def get_long_field_args(text, title, inline=False, chunk_size=1024):

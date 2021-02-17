@@ -18,7 +18,6 @@ class Combat:
     # caches based on channel id
     # probably won't encounter any scaling issues, since a combat will be shard-specific
     _cache = cachetools.TTLCache(maxsize=50, ttl=10)
-    message_cache = cachetools.LRUCache(500)
 
     def __init__(self, channel_id, message_id, dm_id, options, ctx,
                  combatants=None, round_num=0, turn_num=0, current_index=None):
@@ -504,7 +503,7 @@ class Combat:
 
     async def update_summary(self):
         """Edits the summary message with the latest summary."""
-        await (await self.get_summary_msg()).edit(content=self.get_summary())
+        await self.get_summary_msg().edit(content=self.get_summary())
 
     def get_channel(self):
         """Gets the Channel object of the combat."""
@@ -517,14 +516,9 @@ class Combat:
             else:
                 raise CombatChannelNotFound()
 
-    async def get_summary_msg(self):
+    def get_summary_msg(self):
         """Gets the Message object of the combat summary."""
-        if self.summary in Combat.message_cache:
-            return Combat.message_cache[self.summary]
-        else:
-            msg = await self.get_channel().fetch_message(self.summary)
-            Combat.message_cache[msg.id] = msg
-            return msg
+        return discord.PartialMessage(channel=self.get_channel(), id=self.summary)
 
     def __str__(self):
         return f"Initiative in <#{self.channel}>"

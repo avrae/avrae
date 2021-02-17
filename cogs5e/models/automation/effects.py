@@ -504,7 +504,7 @@ class Save(Effect):
         dc = caster.spellbook.dc
         if self.dc:
             try:
-                dc_override = evaluator.transformed_str(self.dc)
+                dc_override = evaluator.eval(self.dc)
                 dc = int(dc_override)
             except (TypeError, ValueError):
                 dc = 0

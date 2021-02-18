@@ -9,19 +9,16 @@ import collections
 import logging
 
 import d20
-import discord
 from discord.ext import commands
 
 from aliasing import helpers
 from cogs5e.models.character import Character, CustomCounter
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ConsumableException, CounterOutOfBounds, InvalidArgument, NoSelectionElements
-from cogs5e.models.sheet.base import Skill
 from cogs5e.utils import checkutils, targetutils
 from cogs5e.utils.help_constants import *
 from gamedata.lookuputils import get_spell_choices, select_spell_full
 from utils.argparser import argparse
-from utils.dice import d20_with_adv
 from utils.functions import confirm, search, search_and_select, try_delete
 
 log = logging.getLogger(__name__)

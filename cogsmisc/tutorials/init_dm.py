@@ -11,7 +11,7 @@ class DMInitiative(Tutorial):
     name = "Initiative (DM)"
     description = """
     *20 minutes*
-    When your players fall head first into conflict (despite your warnings), Avrae's combat tracker is a fantastic addition to your DM toolset. This tutorial goes over how to set up and run an enounter using the initiative tracker, as a Dungeon Master.
+    When your players fall head first into conflict (despite your warnings), Avrae's combat tracker is a fantastic addition to your DM toolset. This tutorial goes over how to set up and run an encounter using the initiative tracker, as a Dungeon Master.
     """
 
     @state(first=True)

@@ -11,6 +11,7 @@ from utils.aldclient import discord_user_to_dict
 from utils.functions import confirm, get_guild_member, search_and_select
 from .ddblink import DDBLink
 from .init_dm import DMInitiative
+from .init_player import PlayerInitiative
 from .models import TutorialStateMap
 from .quickstart import Quickstart
 from .runningthegame import RunningTheGame
@@ -29,7 +30,7 @@ class Tutorials(commands.Cog):
         "ddblink": DDBLink(),
         "spellcasting": Spellcasting(),
         "runningthegame": RunningTheGame(),
-        # "init_player": None,
+        "init_player": PlayerInitiative(),
         "init_dm": DMInitiative()
     }
 

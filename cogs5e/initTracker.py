@@ -61,7 +61,7 @@ class InitTracker(commands.Cog):
         """Begins combat in the channel the command is invoked.
         Usage: !init begin <ARGS (opt)>
         __Valid Arguments__
-        dyn - Dynamic initiative; Rerolls all initiatves at the start of a round.
+        dyn - Dynamic initiative; Rerolls all initiatives at the start of a round.
         turnnotif - Notifies the controller of the next combatant in initiative.
         deathdelete - Disables deleting monsters below 0 hp.
         -name <name> - Sets a name for the combat instance."""

@@ -2,8 +2,8 @@ from d20 import roll
 
 from aliasing.api.functions import SimpleRollResult
 from aliasing.api.statblock import AliasStatBlock
-from cogs5e.models.errors import CombatNotFound, InvalidSaveType
-from cogs5e.models.initiative import Combat, Combatant, CombatantGroup, Effect
+from cogs5e.models.errors import InvalidSaveType
+from cogs5e.models.initiative import Combat, CombatNotFound, Combatant, CombatantGroup, Effect
 from cogs5e.models.sheet.statblock import StatBlock
 from utils.argparser import ParsedArguments
 
@@ -47,6 +47,7 @@ class SimpleCombat:
         :return: The combatant.
         :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
+        name = str(name)
         combatant = self._combat.get_combatant(name, False)
         if combatant:
             return SimpleCombatant(combatant)
@@ -60,6 +61,7 @@ class SimpleCombat:
         :return: The group.
         :rtype: :class:`~aliasing.api.combat.SimpleGroup`
         """
+        name = str(name)
         group = self._combat.get_group(name, strict=False)
         if group:
             return SimpleGroup(group)
@@ -136,7 +138,7 @@ class SimpleCombatant(AliasStatBlock):
         :rtype: :class:`~aliasing.api.functions.SimpleRollResult`
         """
         try:
-            save = self._combatant.saves.get(ability)
+            save = self._combatant.saves.get(str(ability))
         except ValueError:
             raise InvalidSaveType
 
@@ -163,6 +165,12 @@ class SimpleCombatant(AliasStatBlock):
         """
         from cogs5e.models.automation import AutomationContext, AutomationTarget, \
             Damage  # this has to be here to avoid circular imports
+
+        dice_str, critdice = str(dice_str), int(critdice)
+        if d is not None:
+            d = str(d)
+        if c is not None:
+            c = str(c)
 
         class _SimpleAutomationContext(AutomationContext):
             def __init__(self, caster, target, args, combat, crit=False):
@@ -236,8 +244,8 @@ class SimpleCombatant(AliasStatBlock):
         :return: The combatant's new group, or None if the combatant was removed from a group.
         :rtype: :class:`~aliasing.api.combat.SimpleGroup` or None   
         """
-        if not (isinstance(group, str) or group is None):
-            raise ValueError('Group name must be a string or None.')
+        if group is not None:
+            group = str(group)
 
         group = self._combatant.set_group(group_name=group)
         if group is None:
@@ -263,6 +271,7 @@ class SimpleCombatant(AliasStatBlock):
         :return: The effect.
         :rtype: :class:`~aliasing.api.combat.SimpleEffect`
         """
+        name = str(name)
         effect = self._combatant.get_effect(name, False)
         if effect:
             return SimpleEffect(effect)
@@ -282,6 +291,10 @@ class SimpleCombatant(AliasStatBlock):
         :param bool end: Whether the effect ticks on the end of turn.
         :param str desc: A description of the effect.
         """
+        name, args, duration = str(name), str(args), int(duration)
+        if desc is not None:
+            desc = str(desc)
+
         existing = self._combatant.get_effect(name, True)
         if existing:
             existing.remove()
@@ -298,6 +311,7 @@ class SimpleCombatant(AliasStatBlock):
 
         :param str name: The name of the effect to remove.
         """
+        name = str(name)
         effect = self._combatant.get_effect(name, strict=False)
         if effect:
             effect.remove()
@@ -397,6 +411,7 @@ class SimpleGroup:
         :return: The combatant.
         :rtype: :class:`~aliasing.api.combat.SimpleCombatant`
         """
+        name = str(name)
         combatant = next((c for c in self.combatants if name.lower() in c.name.lower()), None)
         if combatant:
             return combatant

@@ -1,0 +1,56 @@
+name: Test
+
+on:
+  [ push, pull_request ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      redis: # redis://redis:6379/0
+        image: redis
+        ports:
+          - 6379:6379
+      mongo: # mongodb://root:topsecret@mongo:27017
+        image: mongo
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: topsecret
+    env:
+      NO_DICECLOUD: 1
+      DISCORD_OWNER_USER_ID: "98765432109876543"
+      MONGO_URL: mongodb://root:topsecret@localhost:27017
+      REDIS_URL: redis://localhost:6379/0
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          mkdir shared
+
+      - name: Run Tests
+        run: pytest --cov=cogs5e --cov=cogsmisc --cov=utils --cov-report=xml:shared/coverage.xml tests/ test
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v1
+        with:
+          files: ./shared/coverage.xml

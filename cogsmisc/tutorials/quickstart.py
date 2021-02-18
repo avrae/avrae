@@ -1,6 +1,5 @@
 import asyncio
 
-from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
 from utils import config
 from .models import Tutorial, TutorialEmbed, TutorialState, checklist, state
@@ -68,7 +67,7 @@ class Quickstart(Tutorial):
 
         async def listener(self, ctx, state_map):
             try:
-                character = await Character.from_ctx(ctx)
+                character = await ctx.get_character()
             except NoCharacter:
                 return
             if ctx.command in (ctx.bot.get_command('beyond'),
@@ -82,7 +81,7 @@ class Quickstart(Tutorial):
         async def transition(self, ctx, state_map):
             # should be active from listener, and in cache
             # eventually this should get replaced by ctx.character
-            character = await Character.from_ctx(ctx)
+            character = await ctx.get_character()
 
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""

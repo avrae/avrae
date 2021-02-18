@@ -1,7 +1,6 @@
 import asyncio
 
-from cogs5e.models.errors import CombatNotFound
-from cogs5e.models.initiative import Combat, MonsterCombatant
+from cogs5e.models.initiative import CombatNotFound, MonsterCombatant
 from gamedata.compendium import compendium
 from utils.functions import confirm
 from .models import Tutorial, TutorialEmbed, TutorialState, state
@@ -35,7 +34,7 @@ class DMInitiative(Tutorial):
             # The tutorial person ran !init begin and there is an active combat in the channel
             if ctx.command is ctx.bot.get_command('init begin'):
                 try:
-                    await Combat.from_ctx(ctx)
+                    await ctx.get_combat()
                 except CombatNotFound:
                     return
                 await self.transition(ctx, state_map)
@@ -75,7 +74,7 @@ class DMInitiative(Tutorial):
                 return
             # !init madd and there is a death dog in combat
             if ctx.command is ctx.bot.get_command('i madd'):
-                the_combat = await Combat.from_ctx(ctx)
+                the_combat = await ctx.get_combat()
                 if get_the_woofer(the_combat) is not None:
                     await self.transition(ctx, state_map)
 
@@ -97,7 +96,7 @@ class DMInitiative(Tutorial):
     class TurnOrder(TutorialState):
         async def objective(self, ctx, state_map):
             if not state_map.data.get('has_added_orkira'):
-                the_combat = await Combat.from_ctx(ctx)
+                the_combat = await ctx.get_combat()
                 await add_orkira(ctx, the_combat)
                 await ctx.send("Orkira Illdrex was added to combat with initiative 1.")
                 state_map.data['has_added_orkira'] = True
@@ -211,7 +210,7 @@ class DMInitiative(Tutorial):
             if ctx.channel.id != state_map.persist_data.get('channel_id'):
                 return
             if ctx.command is ctx.bot.get_command('i hp'):
-                the_combat = await Combat.from_ctx(ctx)
+                the_combat = await ctx.get_combat()
                 woofer = get_the_woofer(the_combat)
                 if woofer is None:
                     await ctx.send(f"Uh oh, looks like I can't find the Death Dog. "
@@ -245,7 +244,7 @@ class DMInitiative(Tutorial):
                     ctx.bot.get_command('i hp set'),
                     ctx.bot.get_command('i hp')
             ):
-                the_combat = await Combat.from_ctx(ctx)
+                the_combat = await ctx.get_combat()
                 woofer = get_the_woofer(the_combat)
                 if woofer is None:
                     await ctx.send(f"Uh oh, looks like I can't find the Death Dog. "
@@ -284,7 +283,7 @@ class DMInitiative(Tutorial):
                     ctx.bot.get_command('i hp max'),
                     ctx.bot.get_command('i hp')
             ):
-                the_combat = await Combat.from_ctx(ctx)
+                the_combat = await ctx.get_combat()
                 woofer = get_the_woofer(the_combat)
                 if woofer is None:
                     await ctx.send(f"Uh oh, looks like I can't find the Death Dog. "
@@ -339,7 +338,7 @@ class DMInitiative(Tutorial):
             if ctx.channel.id != state_map.persist_data.get('channel_id'):
                 return
             if ctx.command is ctx.bot.get_command('i cast'):
-                the_combat = await Combat.from_ctx(ctx)
+                the_combat = await ctx.get_combat()
                 orkira = get_orkira(combat=the_combat)
                 if orkira is None:
                     addback = await confirm(ctx,
@@ -467,7 +466,7 @@ class DMInitiative(Tutorial):
             if ctx.channel.id != state_map.persist_data.get('channel_id'):
                 return
             if ctx.command is ctx.bot.get_command('i re'):
-                the_combat = await Combat.from_ctx(ctx)
+                the_combat = await ctx.get_combat()
                 orkira = get_orkira(combat=the_combat)
                 if orkira is None:
                     await ctx.send("Uh oh, it looks like Orkira isn't in the fight anymore. "
@@ -505,7 +504,7 @@ class DMInitiative(Tutorial):
             if ctx.channel.id != state_map.persist_data.get('channel_id'):
                 return
             if ctx.command is ctx.bot.get_command('i remove'):
-                the_combat = await Combat.from_ctx(ctx)
+                the_combat = await ctx.get_combat()
                 woofer = get_the_woofer(combat=the_combat)
                 if woofer is None:
                     await self.transition(ctx, state_map)

@@ -61,7 +61,7 @@ class TutorialState(abc.ABC):
         """
         Displays the current objective.
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: utils.context.AvraeContext
         :type state_map: TutorialStateMap
         """
         raise NotImplementedError
@@ -70,7 +70,7 @@ class TutorialState(abc.ABC):
         """
         Called after a user in this state runs any bot command. Check against objectives and run transition if necessary
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: utils.context.AvraeContext
         :type state_map: TutorialStateMap
         """
         raise NotImplementedError
@@ -80,7 +80,7 @@ class TutorialState(abc.ABC):
         Should display any necessary text before a transition, then call state_map.transition() to transition or
         state_map.end_tutorial() to end.
 
-        :type ctx: discord.ext.commands.Context
+        :type ctx: utils.context.AvraeContext
         :type state_map: TutorialStateMap
         """
         raise NotImplementedError

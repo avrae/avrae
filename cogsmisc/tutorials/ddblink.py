@@ -1,6 +1,5 @@
 import asyncio
 
-from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
 from .models import Tutorial, TutorialEmbed, TutorialState, state
 
@@ -71,7 +70,7 @@ class DDBLink(Tutorial):
             """
             await ctx.send(embed=embed)
             try:
-                await Character.from_ctx(ctx)
+                await ctx.get_character()
                 await state_map.transition(ctx, self.tutorial.CampaignLink)
             except NoCharacter:
                 await state_map.transition(ctx, self.tutorial.ImportCharacter)
@@ -94,7 +93,7 @@ class DDBLink(Tutorial):
 
         async def listener(self, ctx, state_map):
             try:
-                character = await Character.from_ctx(ctx)
+                character = await ctx.get_character()
             except NoCharacter:
                 return
             if ctx.command in (ctx.bot.get_command('beyond'),
@@ -106,7 +105,7 @@ class DDBLink(Tutorial):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
-            character = await Character.from_ctx(ctx)
+            character = await ctx.get_character()
 
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
@@ -122,7 +121,7 @@ class DDBLink(Tutorial):
     @state()
     class CampaignLink(TutorialState):
         async def objective(self, ctx, state_map):
-            character = await Character.from_ctx(ctx)
+            character = await ctx.get_character()
 
             embed = TutorialEmbed(self, ctx)
             embed.title = "Content Lookup"

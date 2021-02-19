@@ -90,15 +90,13 @@ class DMInitiative(Tutorial):
 
     @state()
     class TurnOrder(TutorialState):
-        async def objective(self, ctx, state_map):
-            if not state_map.data.get('has_added_orkira'):
-                the_combat = await ctx.get_combat()
-                await add_orkira(ctx, the_combat)
-                await ctx.send("Orkira Illdrex was added to combat with initiative 1.")
-                state_map.data['has_added_orkira'] = True
-                await state_map.commit(ctx)
-                await asyncio.sleep(2)
+        async def setup(self, ctx, state_map):
+            the_combat = await ctx.get_combat()
+            await add_orkira(ctx, the_combat)
+            await ctx.send("Orkira Illdrex was added to combat with initiative 1.")
+            await asyncio.sleep(2)
 
+        async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Turn Order"
             embed.description = f"""

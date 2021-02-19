@@ -48,9 +48,7 @@ class DMInitiative(Tutorial):
             In the following steps, we'll be using `{ctx.prefix}i` as a shortcut for `{ctx.prefix}init`.  When Avrae lists a command like `{ctx.prefix}[init|i]`, that means you can use either name for the same command.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.AddCombatants)
+            await state_map.transition_with_delay(ctx, self.tutorial.AddCombatants, 5)
 
     @state()
     class AddCombatants(TutorialState):
@@ -88,9 +86,7 @@ class DMInitiative(Tutorial):
             Just for fun, you can also use `{ctx.prefix}monimage death dog` to give your players a frightening look at the monstrosity bearing down on them.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.TurnOrder)
+            await state_map.transition_with_delay(ctx, self.tutorial.TurnOrder, 5)
 
     @state()
     class TurnOrder(TutorialState):
@@ -127,9 +123,7 @@ class DMInitiative(Tutorial):
             If you check your pins again, you'll also see that DE1 is now highlighted, indicating the current turn.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.Attacks1)
+            await state_map.transition_with_delay(ctx, self.tutorial.Attacks1, 5)
 
     @state()
     class Attacks1(TutorialState):
@@ -158,9 +152,7 @@ class DMInitiative(Tutorial):
             When you attack, Avrae first compares the roll to the target's AC.  On a hit, it automatically rolls the damage and subtracts it from the target's HP.  It even accounts for resistance, immunity, and vulnerability, too.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.Attacks2)
+            await state_map.transition_with_delay(ctx, self.tutorial.Attacks2, 5)
 
     @state()
     class Attacks2(TutorialState):
@@ -187,9 +179,7 @@ class DMInitiative(Tutorial):
             Good!  Next time you can have it make both attacks at once (by adding `-rr 2`) or by giving it multiple targets (`-t Orkira -t Briv`).  There's plenty of other ways you can adjust your attack, too.  Check `{ctx.prefix}help i a` for the full list.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.HitPoints1)
+            await state_map.transition_with_delay(ctx, self.tutorial.HitPoints1, 5)
 
     @state()
     class HitPoints1(TutorialState):
@@ -259,9 +249,7 @@ class DMInitiative(Tutorial):
             Our death dog is now `<Bloodied>`, indicating that it has taken significant damage.  Its displayed health will change again at 15% to `<Critical>`, and at 0 to `<Dead>`.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.HitPoints3)
+            await state_map.transition_with_delay(ctx, self.tutorial.HitPoints3, 5)
 
     @state()
     class HitPoints3(TutorialState):
@@ -361,9 +349,7 @@ class DMInitiative(Tutorial):
             Avrae automatically subtracts the spell slot and will stop you from casting if you don't have a slot to spare.  And just like attacks, spell commands can be adjusted in a number of other ways.  You can upcast with `-l <level>` (that's **-l** for **-l**evel), use `-i` to -**i**gnore requirements (when using a spell scroll, for example), and more.  See `!help i cast` for the full list.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.Effects)
+            await state_map.transition_with_delay(ctx, self.tutorial.Effects, 5)
 
     @state()
     class Effects(TutorialState):
@@ -392,9 +378,7 @@ class DMInitiative(Tutorial):
             If you check that pin now, you'll see it's down to just 9 rounds left.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(2)
-            await state_map.transition(ctx, self.tutorial.Effects2)
+            await state_map.transition_with_delay(ctx, self.tutorial.Effects2, 5)
 
     @state()
     class Effects2(TutorialState):
@@ -445,9 +429,7 @@ class DMInitiative(Tutorial):
             Effects can also be used to add a damage bonus, grant resistance, and more.  You can also add them manually as needed.  Check out `{ctx.prefix}help i effect` for the full details.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.Effects4)
+            await state_map.transition_with_delay(ctx, self.tutorial.Effects4, 5)
 
     @state()
     class Effects4(TutorialState):
@@ -483,9 +465,7 @@ class DMInitiative(Tutorial):
             If you look once more at the pinned message or at Orkira's status, that effect is no longer there.  The attack it provided is also gone, which you can verify with `{ctx.prefix}i a list Orkira`.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.RemovingCombatants)
+            await state_map.transition_with_delay(ctx, self.tutorial.RemovingCombatants, 5)
 
     @state()
     class RemovingCombatants(TutorialState):

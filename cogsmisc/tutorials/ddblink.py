@@ -1,5 +1,3 @@
-import asyncio
-
 from cogs5e.models.errors import NoCharacter
 from .models import Tutorial, TutorialEmbed, TutorialState, state
 
@@ -114,9 +112,7 @@ class DDBLink(Tutorial):
             Also, if you change your character's character sheet, Avrae will need to be updated to know about those changes. Whenever you do so, make sure to run `{ctx.prefix}update` to update your active character!
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.CampaignLink)
+            await state_map.transition_with_delay(ctx, self.tutorial.CampaignLink, 5)
 
     @state()
     class CampaignLink(TutorialState):

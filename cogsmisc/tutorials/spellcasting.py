@@ -1,5 +1,3 @@
-import asyncio
-
 from .models import Tutorial, TutorialEmbed, TutorialState, checklist, state
 
 
@@ -35,9 +33,7 @@ class Spellcasting(Tutorial):
             Wonderful! To note, as in the example provided before, when casting a spell with multiple words in its name, surround the name in quotes for best effect. Now, let's try doing something a little more powerful...
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.UpcastingSpells)
+            await state_map.transition_with_delay(ctx, self.tutorial.UpcastingSpells, 5)
 
     @state()
     class UpcastingSpells(TutorialState):
@@ -64,9 +60,7 @@ class Spellcasting(Tutorial):
             Magical! Now that you know how to cast spells, please use your power responsibly. In the next section, we will talk about how to target a specific creature (or creatures) with your magic.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.Targeting)
+            await state_map.transition_with_delay(ctx, self.tutorial.Targeting, 5)
 
     @state()
     class Targeting(TutorialState):
@@ -97,9 +91,7 @@ class Spellcasting(Tutorial):
             Now that you've learned how to cast your spells on your intended targets, let's move on to learning how to manually gain and lose spell slots.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.SlotManagement)
+            await state_map.transition_with_delay(ctx, self.tutorial.SlotManagement, 5)
 
     @state()
     class SlotManagement(TutorialState):
@@ -147,9 +139,7 @@ class Spellcasting(Tutorial):
             As a note, you can also use a set value instead of adding or subtracting spell slots, like `{ctx.prefix}game spellslot 3 3` to manually set the amount of third-level spell slots to 3. Let’s go over how to take a nice, relaxing long rest to get all of our spell slots back, yes?
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.LongResting)
+            await state_map.transition_with_delay(ctx, self.tutorial.LongResting, 5)
 
     @state()
     class LongResting(TutorialState):

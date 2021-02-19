@@ -45,9 +45,7 @@ class Quickstart(Tutorial):
             When you see something like `<dice>` or `[dice]`, this is called an *argument*: it means you can put some input there, like the dice you want to roll. Arguments in brackets like `<this>` are required, and arguments in brackets like `[this]` are optional.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.ImportCharacter)
+            await state_map.transition_with_delay(ctx, self.tutorial.ImportCharacter, 5)
 
     @state()
     class ImportCharacter(TutorialState):
@@ -79,8 +77,6 @@ class Quickstart(Tutorial):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
-            # should be active from listener, and in cache
-            # eventually this should get replaced by ctx.character
             character = await ctx.get_character()
 
             embed = TutorialEmbed(self, ctx)
@@ -90,9 +86,7 @@ class Quickstart(Tutorial):
             Also, if you change your character's character sheet, Avrae will need to be updated to know about those changes. Whenever you do so, make sure to run `{ctx.prefix}update` to update your active character!
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.ChecksAttacksSaves)
+            await state_map.transition_with_delay(ctx, self.tutorial.ChecksAttacksSaves, 5)
 
     @state()
     class ChecksAttacksSaves(TutorialState):

@@ -1,5 +1,3 @@
-import asyncio
-
 from .models import Tutorial, TutorialEmbed, TutorialState, checklist, state
 
 
@@ -60,9 +58,7 @@ class RunningTheGame(Tutorial):
             As a note, if `{ctx.prefix}moncheck` and `{ctx.prefix}monsave` seem like a handful to type out, you can also use `{ctx.prefix}mc` and `{ctx.prefix}ms`, respectively, to achieve the same effect, so long as you use the proper arguments.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.ListMonsterAttacks)
+            await state_map.transition_with_delay(ctx, self.tutorial.ListMonsterAttacks, 5)
 
     @state()
     class ListMonsterAttacks(TutorialState):
@@ -98,9 +94,7 @@ class RunningTheGame(Tutorial):
             Now, let's put that knowledge to use.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.UseMonsterAttacks)
+            await state_map.transition_with_delay(ctx, self.tutorial.UseMonsterAttacks, 5)
 
     @state()
     class ListMonsterAttacks(TutorialState):
@@ -131,9 +125,7 @@ class RunningTheGame(Tutorial):
             Let's move on to the next part of this tutorial.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.CastMonsterSpells)
+            await state_map.transition_with_delay(ctx, self.tutorial.CastMonsterSpells, 5)
 
     @state()
     class CastMonsterSpells(TutorialState):

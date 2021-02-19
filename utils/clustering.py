@@ -20,6 +20,7 @@ else:
 import asyncio
 import json
 import logging
+import uuid
 from contextlib import asynccontextmanager
 from math import ceil
 
@@ -146,8 +147,9 @@ async def _take_over_dead_cluster(bot, my_task_arn, cluster_coordination_key, my
 @asynccontextmanager
 async def coordination_lock(rdb):
     cluster_lock_key = f"clusters.{config.GIT_COMMIT_SHA}.lock:{config.NUM_CLUSTERS}"
+    lock_value = str(uuid.uuid4())
     i = 0
-    while not await rdb.setnx(cluster_lock_key, "lockme"):
+    while not await rdb.setnx(cluster_lock_key, lock_value):
         await asyncio.sleep(1)
         i += 1
         log.info(f"Waiting for lock... ({i}s)")
@@ -156,5 +158,9 @@ async def coordination_lock(rdb):
     try:
         yield
     finally:
-        await rdb.delete(cluster_lock_key)
         log.info("Coordination complete, releasing lock.")
+        locking_val = await rdb.get(cluster_lock_key)
+        if locking_val == lock_value:
+            await rdb.delete(cluster_lock_key)
+        else:
+            log.warning("Lock value is not what we set, ignoring value!")

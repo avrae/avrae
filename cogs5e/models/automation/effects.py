@@ -434,7 +434,7 @@ class Save(Effect):
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
         hide = autoctx.args.last('h', type_=bool)
-        adv = autoctx.args.adv()
+        adv = autoctx.args.adv(custom={'adv': 'sadv', 'dis': 'sdis'})
 
         dc_override = None
         if self.dc:
@@ -470,7 +470,7 @@ class Save(Effect):
                 is_success = False
                 autoctx.queue(f"**{save_blurb}:** Automatic failure!")
             else:
-                saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
+                saveroll = autoctx.target.get_save_dice(save_skill, adv=adv)
                 save_roll = roll(saveroll)
                 is_success = save_roll.total >= dc
                 success_str = ("; Success!" if is_success else "; Failure!")
@@ -1007,7 +1007,7 @@ class Condition(Effect):
         if do_true:
             children += self.run_children(self.on_true, autoctx)
         if do_false:
-            children += self.run_children(self.on_true, autoctx)
+            children += self.run_children(self.on_false, autoctx)
 
         return ConditionResult(did_true=do_true, did_false=do_false, did_error=did_error, children=children)
 

@@ -71,6 +71,7 @@ It must be inside a Target effect.
 
 - ``lastAttackDidHit`` (:class:`bool`) Whether the attack hit.
 - ``lastAttackDidCrit`` (:class:`bool`) If the attack hit, whether it crit.
+- ``lastAttackRollTotal`` (:class:`int`) The result of the last to-hit roll (0 if no roll was made).
 
 Save
 ----
@@ -106,6 +107,7 @@ It must be inside a Target effect.
 **Variables**
 
 - ``lastSaveDidPass`` (:class:`bool`) Whether the target passed the save.
+- ``lastSaveRollTotal`` (:class:`int`) The result of the last save roll (0 if no roll was made).
 
 Damage
 ------

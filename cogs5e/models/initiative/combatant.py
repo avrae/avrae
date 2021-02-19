@@ -498,6 +498,10 @@ class MonsterCombatant(Combatant):
     def monster_name(self):
         return self._monster_name
 
+    @property
+    def monster_id(self):
+        return self._monster_id
+
 
 class PlayerCombatant(Combatant):
     type = CombatantType.PLAYER

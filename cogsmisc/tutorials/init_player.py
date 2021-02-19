@@ -1,9 +1,9 @@
 import asyncio
 
 from cogs5e.funcs import targetutils
-from cogs5e.models.initiative import CombatNotFound, MonsterCombatant, PlayerCombatant
+from cogs5e.models.initiative import CombatNotFound, Effect, MonsterCombatant, PlayerCombatant
 from gamedata.compendium import compendium
-from utils.argparser import ParsedArguments
+from utils.argparser import ParsedArguments, argparse
 from .errors import PrerequisiteFailed
 from .models import Tutorial, TutorialEmbed, TutorialState, state
 
@@ -17,49 +17,51 @@ class PlayerInitiative(Tutorial):
 
     @state(first=True)
     class JoiningInitiative(TutorialState):
-        async def objective(self, ctx, state_map):
-            character = await ctx.get_character()
-            if not state_map.data.get('has_setup'):
-                # preflight: channel not in combat
-                try:
-                    await ctx.get_combat()
-                except CombatNotFound:
-                    pass
-                else:
-                    await ctx.send(
-                        "This channel is already in combat. You'll need a channel to yourself to run this tutorial!")
-                    await state_map.end_tutorial(ctx)
-                    return
+        async def setup(self, ctx, state_map):
+            # preflight: channel not in combat
+            try:
+                await ctx.get_combat()
+            except CombatNotFound:
+                pass
+            else:
+                await state_map.end_tutorial(ctx)
+                raise PrerequisiteFailed(
+                    "This channel is already in combat. You'll need a channel to yourself to run this tutorial!")
 
             # first message
+            character = await ctx.get_character()
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Joining Initiative"
             embed.description = f"""
             *The massive creature stomps ever closer, its every step felling entire tracts of jungle underfoot.  {character.name}, even from your vantage point atop the bluff, the spiked, scaly monster towers above you still.  You watch across the treetops as the countless jungle birds take flight and flee before it.  Maybe you should have fled, too.
-            
+
             But it’s too late for that now.
-            
+
             The tarrasque has your scent.
-            
+
             Roll for initiative!*
             """
             await ctx.send(embed=embed)
 
-            # set up channel
-            if not state_map.data.get('has_setup'):
-                await ctx.trigger_typing()
-                await asyncio.sleep(4)
-                state_map.persist_data['channel_id'] = ctx.channel.id
-                await ctx.bot.get_command('init begin')(ctx)
-                combat = await ctx.get_combat()
-                await add_tarrasque(ctx, combat)
-                await ctx.send("TA1 was added to combat with initiative 1d20 (12) + 0 = `12`.")  # rolling dice is hard
-                state_map.data['has_setup'] = True
-                await ctx.trigger_typing()
-                await asyncio.sleep(2)
+            await ctx.trigger_typing()
+            await asyncio.sleep(4)
+            state_map.persist_data['channel_id'] = ctx.channel.id
+            await state_map.commit(ctx)
+
+            await ctx.bot.get_command('init begin')(ctx)
+            combat = await ctx.get_combat()
+            await add_tarrasque(ctx, combat)
+            await ctx.send("TA1 was added to combat with initiative 1d20 (12) + 0 = `12`.")  # rolling dice is hard
+            await ctx.trigger_typing()
+            await asyncio.sleep(2)
+
+        async def objective(self, ctx, state_map):
+            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+                await ctx.send(f"This tutorial can only be run in <#{state_map.persist_data.get('channel_id')}>.")
+                return
 
             # objective
-            embed2 = TutorialEmbed(self, ctx, colour=embed.colour)
+            embed2 = TutorialEmbed(self, ctx)
+            embed2.title = "Joining Initiative"
             embed2.description = f"""
             Initiative lets your party track time at the smallest scale, a useful tool for combat and other fast-paced scenarios.  Avrae can make that process even easier.  It will track the turn order, alert you when your turn arrives, let you target specific creatures with attacks or spells, and automatically manage health and other effects.
             
@@ -88,9 +90,7 @@ class PlayerInitiative(Tutorial):
             The next time you join, you can try adding `-p <value>` to use a specific number for your roll instead, like `{ctx.prefix}init join -p 10`.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(5)
-            await state_map.transition(ctx, self.tutorial.PlayerStatus)
+            await state_map.transition_with_delay(ctx, self.tutorial.PlayerStatus, 5)
 
     @state()
     class PlayerStatus(TutorialState):
@@ -131,15 +131,13 @@ class PlayerInitiative(Tutorial):
             Looks a little different than yours, doesn’t it?  By default, enemy stats are hidden from players.  The mystery is part of the fun!
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(3)
-            await state_map.transition(ctx, self.tutorial.Attacks1)
+            await state_map.transition_with_delay(ctx, self.tutorial.Attacks1, 5)
 
     @state()
     class Attacks1(TutorialState):
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Attacks in Combat"
+            embed.title = "Attacks in Initiative"
             embed.description = f"""
             Now even though all those villagers -- and your DM -- warned you not to, let’s pick a fight with this tarrasque anyway.  For that, you’ll need the command `{ctx.prefix}[attack|a] [atk_name] [args]`.
             
@@ -169,15 +167,13 @@ class PlayerInitiative(Tutorial):
             When you attack, Avrae first compares the roll to the target's AC.  On a hit, it automatically rolls the damage and subtracts it from the target's HP.  It even accounts for resistance, immunity, and vulnerability, too.
             """
             await ctx.send(embed=embed)
-            await ctx.trigger_typing()
-            await asyncio.sleep(3)
-            await state_map.transition(ctx, self.tutorial.Attacks2)
+            await state_map.transition_with_delay(ctx, self.tutorial.Attacks2, 5)
 
     @state()
     class Attacks2(TutorialState):
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Attacks in Combat II"
+            embed.title = "Attacks in Initiative II"
             embed.description = f"""
             You always attack using your own character using `{ctx.prefix}attack`.  However, initiative has a matching command, `{ctx.prefix}init attack` (`{ctx.prefix}i a` for short), that uses the current combatant instead.  Since it’s currently your turn, right now that’s you.  On the tarrasque’s turn, `{ctx.prefix}init attack` can therefore be used to attack as the tarrasque.
             
@@ -205,9 +201,259 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed)
             await ctx.trigger_typing()
             await asyncio.sleep(2)
-            await state_map.transition(ctx, self.tutorial.Health1)
 
-    # todo health1 on
+            character = await ctx.get_character()
+            if character.spellbook.spells:
+                await state_map.transition(ctx, self.tutorial.Spells1)
+            else:
+                await state_map.transition(ctx, self.tutorial.Health1)
+
+    @state()
+    class Spells1(TutorialState):
+        async def objective(self, ctx, state_map):
+            character = await ctx.get_character()
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Spells in Initiative"
+            embed.description = f"""
+            In addition to attacks, {character.name} has another useful ability: spellcasting.  Initiative lets you target your spells at other combatants, too, both friends and foes alike.
+            
+            You can use `{ctx.prefix}spellbook` to see which spells you have available.  To cast any other spells (if you were using a spell scroll, for example), you can add `-i` to ignore the usual spellcasting requirements.  And once again, be sure to use quotes around any spell whose name is more than one word, like `"vicious mockery"`.
+            
+            Try targeting the tarrasque now using Vicious Mockery or another spell of your choice.
+            ```
+            {ctx.prefix}cast "vicious mockery" -t TA1 -i
+            ```
+            """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+                return
+            if ctx.command in (
+                    ctx.bot.get_command('i cast'),
+                    ctx.bot.get_command('cast')
+            ):
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            await state_map.transition(ctx, self.tutorial.Spells2)
+
+    @state()
+    class Spells2(TutorialState):
+        async def objective(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Spells in Initiative II"
+            embed.description = f"""
+            Like attacks, `{ctx.prefix}cast` has an initiative counterpart called `{ctx.prefix}init cast`.  The same condition applies here as well: `{ctx.prefix}cast` uses your active character, and `{ctx.prefix}init cast` uses the active combatant.
+            
+            Now since he didn’t go away, we shall taunt him a second time.  With **meteors**.
+            ```
+            {ctx.prefix}init cast "meteor swarm" -t TA1 -i -phrase "A Dinosaur’s Best Friend™!"
+            ```
+            """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+                return
+            if ctx.command in (
+                    ctx.bot.get_command('i cast'),
+                    ctx.bot.get_command('cast')
+            ):
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.description = f"""
+            Oh right.  It’s immune to fire.  Welp...
+            
+            Be sure to check `{ctx.prefix}help cast` or try the Spellcasting tutorial for more magical options.
+            """
+            await ctx.send(embed=embed)
+            await state_map.transition_with_delay(ctx, self.tutorial.Health1, 5)
+
+    @state()
+    class Health1(TutorialState):
+        async def objective(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Managing Health"
+            embed.description = f"""
+            Go ahead and check that pinned message one more time.  Our tarrasque, who used to be `<Healthy>`, is now `<Injured>`.
+            
+            Your own health won’t display with such colorful descriptions, however.  Avrae shows your exact HP so you can plan your turn accordingly.  When monsters target you and cause damage, this number will update automatically.
+            
+            Let’s manually change your health for now to see it in action.
+            ```
+            {ctx.prefix}game hp -5
+            ```
+            """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+                return
+            character = await ctx.get_character()
+            if ctx.command in (
+                    ctx.bot.get_command('i hp'),
+                    ctx.bot.get_command('g hp')
+            ) and character.hp < character.max_hp:
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.description = f"""
+            You can use `{ctx.prefix}help game hp` or try the *Playing the Game* tutorial for more ways to manage your HP.
+            """
+            await ctx.send(embed=embed)
+            await state_map.transition_with_delay(ctx, self.tutorial.Health2, 5)
+
+    @state()
+    class Health2(TutorialState):
+        async def objective(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Managing Health II"
+            embed.description = f"""
+            Like attacks, initiative also has its own command for managing health: `{ctx.prefix}init hp <name> [hp]`.  The last command, `{ctx.prefix}game hp` is used for your character.  By specifying a name for this one, we can access any combatant.
+            
+            Go ahead and adjust the tarrasque’s HP.  We’ll set it to 300.
+            ```
+            {ctx.prefix}init hp set TA1 300
+            ```
+            """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+                return
+            terry = await get_terry(ctx)
+            if ctx.command in (
+                    ctx.bot.get_command('i hp'),
+                    ctx.bot.get_command('i hp mod'),
+                    ctx.bot.get_command('i hp set')
+            ) and terry.hp == 300:
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.description = f"""
+            Now the tarrasque has changed from `<Injured>` to `<Bloodied>`!  As the battle progresses (assuming you live long enough ~~and we stop cheating~~), it will eventually drop to `<Critical>`, then `<Dead>`.
+            
+            And as a general note: cheating is fine in a tutorial, but use this command wisely.  Your DM will get a message from Avrae any time the monster’s health is changed.
+            """
+            await ctx.send(embed=embed)
+            await state_map.transition_with_delay(ctx, self.tutorial.Effects, 5)
+
+    @state()
+    class Effects(TutorialState):
+        async def setup(self, ctx, state_map):
+            combat = await ctx.get_combat()
+            pc = await get_pc(ctx)
+            effect_obj = Effect.new(
+                combat,
+                pc,
+                name="Future Lunch",
+                duration=-1,
+                effect_args=argparse('-vuln piercing -vuln acid'),
+                desc="A hungry tarrasque has your scent!"
+            )
+            pc.add_effect(effect_obj)
+            await ctx.send(f"Added effect Future Lunch to {pc.name}.")
+            await combat.final()
+
+        async def objective(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Effects"
+            embed.description = f"""
+            Aside from health, Avrae can also track conditions, spell durations, and other temporary effects.  If you check that pinned message again, you should see a new one next to your character.
+            
+            We can use `{ctx.prefix}init status` again to take a closer look.
+            ```
+            {ctx.prefix}init status
+            ```
+            """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+                return
+            if ctx.command is ctx.bot.get_command('i status'):
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            await state_map.transition(ctx, self.tutorial.Effects2)
+
+    @state()
+    class Effects2(TutorialState):
+        async def objective(self, ctx, state_map):
+            pc = await get_pc(ctx)
+            pc_name = pc.name if ' ' not in pc.name else f'"{pc.name}"'
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Effects II"
+            embed.description = f"""
+            Well that doesn’t look good.  We’d better remove that before the tarrasque takes its turn.  You might also need to remove effects if its condition ends or if you lose your concentration on a spell.  If your effect has a duration, however, that will end automatically when the duration expires.
+            
+            For now, we can use `{ctx.prefix}init re <name> [effect]`.  If you provide an effect name, it will end only that effect.  Otherwise, it ends all effects on that combatant.
+            ```
+            {ctx.prefix}init re {pc_name} "future lunch"
+            ```
+            """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+                return
+            pc = await get_pc(ctx)
+            if ctx.command is ctx.bot.get_command('i re') and pc.get_effect('Future Lunch') is None:
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.description = f"""
+            Effects can also be used to add a damage bonus, grant new attacks, and more. Usually, your abilities will add them automatically, but you can also add them manually as needed.  Check out `{ctx.prefix}help init effect` for the full details.
+            """
+            await ctx.send(embed=embed)
+            await state_map.transition_with_delay(ctx, self.tutorial.EndingTurn, 5)
+
+    @state()
+    class EndingTurn(TutorialState):
+        async def objective(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Ending Your Turn"
+            embed.description = f"""
+            That’s all we can do for now.  It’s time to accept our fate and end our turn.  You can use `{ctx.prefix}init next` to pass the baton to the next creature in the initiative order.
+            ```
+            {ctx.prefix}init next
+            ```
+            """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+                return
+            if ctx.command is ctx.bot.get_command('i next'):
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.description = f"""
+            *As you complete the ancient Avrae ritual, there is far less **gnashing of teeth** than you had come to expect.  In fact, the titanic tarrasque appears strangely accepting of your presence.
+            
+            It seems your mastery of initiative commands has earned its respect.  It is ready to join you on your adventures.  You can call it Terry and ride together into legend.
+            
+            And if your DM says no to this... well, you can just introduce them to Terry.*
+            """
+            await ctx.send(embed=embed)
+            await state_map.end_tutorial(ctx)
+            await asyncio.sleep(7)
+            try:
+                combat = await ctx.get_combat()
+                summary = await combat.get_summary_msg()
+                await combat.end()
+                await ctx.send("Combat ended.")
+                await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
+                await summary.unpin()
+            except:
+                pass
 
 
 async def add_tarrasque(ctx, combat):
@@ -228,7 +474,17 @@ async def add_tarrasque(ctx, combat):
 
 async def get_pc(ctx):
     character = await ctx.get_character()
-    caster, _, _ = targetutils.maybe_combat(ctx, character, ParsedArguments.empty_args())
+    caster, _, _ = await targetutils.maybe_combat(ctx, character, ParsedArguments.empty_args())
     if isinstance(caster, PlayerCombatant):
         return caster
     raise PrerequisiteFailed(f"You are no longer in combat. Try rejoining with `{ctx.prefix}init join`!")
+
+
+async def get_terry(ctx):
+    combat = await ctx.get_combat()
+    terry = next((c for c in combat.get_combatants()
+                  if isinstance(c, MonsterCombatant) and c.monster_id == 17034), None)
+    if terry is None:
+        raise PrerequisiteFailed(
+            f"The tarrasque appears to no longer be in combat. Try readding it with `{ctx.prefix}i madd tarrasque`!")
+    return terry

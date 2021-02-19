@@ -2,6 +2,7 @@
 Misc data models for tutorials.
 """
 import abc
+import asyncio
 import textwrap
 
 from cogs5e.models.embeds import EmbedWithAuthor
@@ -56,6 +57,15 @@ class TutorialState(abc.ABC):
         self.key = key or type(self).__name__
         self.tutorial = None
         self.first = first
+
+    async def setup(self, ctx, state_map):
+        """
+        Called once the first time this state becomes active.
+
+        :type ctx: utils.context.AvraeContext
+        :type state_map: TutorialStateMap
+        """
+        pass
 
     async def objective(self, ctx, state_map):
         """
@@ -135,7 +145,14 @@ class TutorialStateMap:
         self.state_key = new_state.key
         self.data = {}
         await self.commit(ctx)
+        await new_state.setup(ctx, self)
         await new_state.objective(ctx, self)
+
+    async def transition_with_delay(self, ctx, new_state, secs):
+        """Triggers typing, then calls transition after ``secs`` seconds."""
+        await ctx.trigger_typing()
+        await asyncio.sleep(secs)
+        await self.transition(ctx, new_state)
 
     async def end_tutorial(self, ctx):
         await ctx.bot.mdb.tutorial_map.delete_one({"user_id": self.user_id})

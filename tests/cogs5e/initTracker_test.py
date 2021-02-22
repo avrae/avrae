@@ -133,11 +133,26 @@ class TestYourStandardInitiative:
             assert 'foobar' not in [r.dtype for r in resistances.immune]
             assert 'foobar' not in [r.dtype for r in resistances.vuln]
 
-            avrae.message(f"!i effect \"{combatant}\" test2 -vuln foobar")  # effects can stack
+            avrae.message(f"!i effect \"{combatant}\" test2 -vuln foobar -dur 1")  # effects can stack
             await dhttp.drain()
             resistances = (await active_combat(avrae)).get_combatant(combatant).resistances
             assert 'foobar' in [r.dtype for r in resistances.vuln]
             assert 'foobar' in [r.dtype for r in resistances.resist]
+
+    async def test_effect_durations(self, avrae, dhttp):
+        avrae.message(f"!i next")
+        await dhttp.drain()
+        avrae.message(f"!i next")
+        await dhttp.drain()
+        avrae.message(f"!i next")
+        await dhttp.drain()
+        avrae.message(f"!i next")
+        await dhttp.drain()
+
+        character = await active_character(avrae)
+        for combatant in (character.name, "KO1", "TEST1"):
+            effects = (await active_combat(avrae)).get_combatant(combatant).get_effects()
+            assert len(effects) == 1
 
             avrae.message(f"!i re \"{combatant}\"")
             await dhttp.drain()
@@ -181,3 +196,54 @@ class TestInitiativeStatBlockCopying:
 
     async def test_init_end(self, avrae, dhttp):
         await end_init(avrae, dhttp)
+
+
+@pytest.mark.usefixtures("init_fixture")
+async def test_commands_no_error(avrae, dhttp):
+    """
+    Runs through a gauntlet of init commands and just checks that there are no errors, without any assertations on the
+    state
+    """
+    commands = [
+        "!init begin",
+        "!init madd kobold -n 3",
+        "!init madd mage"
+        # test round tracking
+        "!init next",  # KO1
+        "!init next",  # KO2
+        "!init next",  # KO3
+        "!init next",  # MA1
+        "!init next",  # KO1
+        # test cast
+        "!i goto MA1",
+        '!i cast "fire bolt" -t ko1 -t ko2',
+        '!i hp ko1 set 0',
+        # test autoremove
+        "!init next",
+        "!init next",
+        "!init next",
+        "!init next",
+        "!init next",
+        # test attacking
+        "!i goto ko3",
+        '!i a "dagger" -t ma1',
+        # test effect parenting
+        "!i effect ko3 teffect",
+        "!i effect ma1 teffect2 -dur 2 -parent ko3|teffect",
+        "!i skipround 3",
+        # test effect parenting with renames
+        "!i effect ko3 teffect2",
+        "!i effect ma1 teffect22 -dur 2 -parent ko3|teffect",
+        "!i opt ma1 -name mage1",
+        "!i opt ko3 -name kobold3"
+        "!i skipround 3",
+        # test removing combatant with child effects
+        "!i effect kobold3 teffect22",
+        "!i effect mage1 teffect222 -dur 2 -parent ko3|teffect",
+        "!i remove kobold3"
+        "!i skipround 3",
+    ]
+
+    for command in commands:
+        avrae.message(command)
+        await dhttp.drain()

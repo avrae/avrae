@@ -154,7 +154,7 @@ class Combat:
 
     @property
     def _combatant_id_map(self):
-        return {c.id: c for c in self._combatants}
+        return {c.id: c for c in self.get_combatants(groups=True)}
 
     # combatants
     @property

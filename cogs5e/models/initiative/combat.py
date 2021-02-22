@@ -242,10 +242,14 @@ class Combat:
             self._turn = 0
             return
 
-        current = next(c for c in self._combatants if c.index == self._current_index)
+        current = None
+        if self._current_index is not None:
+            current = next((c for c in self._combatants if c.index == self._current_index), None)
+
         self._combatants = sorted(self._combatants, key=lambda k: (k.init, int(k.init_skill)), reverse=True)
         for n, c in enumerate(self._combatants):
             c.index = n
+
         if current is not None:
             self._current_index = current.index
             self._turn = current.init

@@ -235,12 +235,12 @@ async def test_commands_no_error(avrae, dhttp):
         "!i effect ko3 teffect2",
         "!i effect ma1 teffect22 -dur 2 -parent ko3|teffect2",
         "!i opt ma1 -name mage1",
-        "!i opt ko3 -name kobold3"
+        "!i opt ko3 -name kobold3",
         "!i skipround 3",
         # test removing combatant with child effects
         "!i effect kobold3 teffect22",
         "!i effect mage1 teffect222 -dur 2 -parent ko3|teffect22",
-        "!i remove kobold3"
+        "!i remove kobold3",
         "!i skipround 3",
     ]
 

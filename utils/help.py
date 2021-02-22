@@ -136,7 +136,7 @@ class EmbedPaginator:
 class AvraeHelp(HelpCommand):
     def __init__(self, **options):
         super().__init__(**options)
-        self.embed_paginator = EmbedPaginator()
+        self.embed_paginator = EmbedPaginator(colour=discord.Colour.blurple())
         self.in_dms = True
 
     def get_ending_note(self):

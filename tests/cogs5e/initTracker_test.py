@@ -66,7 +66,7 @@ class TestYourStandardInitiative:
         await start_init(avrae, dhttp)
         avrae.message("!init join -p 50")
         await dhttp.drain()
-        avrae.message("!init madd kobold -n 5")
+        avrae.message("!init madd kobold")
         await dhttp.drain()
         avrae.message("!init add 0 TEST1")
         await dhttp.drain()
@@ -233,13 +233,13 @@ async def test_commands_no_error(avrae, dhttp):
         "!i skipround 3",
         # test effect parenting with renames
         "!i effect ko3 teffect2",
-        "!i effect ma1 teffect22 -dur 2 -parent ko3|teffect",
+        "!i effect ma1 teffect22 -dur 2 -parent ko3|teffect2",
         "!i opt ma1 -name mage1",
         "!i opt ko3 -name kobold3"
         "!i skipround 3",
         # test removing combatant with child effects
         "!i effect kobold3 teffect22",
-        "!i effect mage1 teffect222 -dur 2 -parent ko3|teffect",
+        "!i effect mage1 teffect222 -dur 2 -parent ko3|teffect22",
         "!i remove kobold3"
         "!i skipround 3",
     ]

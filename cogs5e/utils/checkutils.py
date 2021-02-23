@@ -5,6 +5,7 @@ from d20 import roll
 import cogs5e.models.initiative as init
 from cogs5e.models import embeds
 from cogs5e.models.errors import InvalidArgument
+from cogs5e.models.sheet.base import Skill
 from utils.constants import SKILL_MAP, STAT_ABBREVIATIONS
 from utils.functions import a_or_an, camel_to_title, verbose_stat
 
@@ -74,12 +75,17 @@ def run_save(save_key, caster, args, embed):
     :return: The total of each save.
     :rtype: SaveResult
     """
-    try:
-        save = caster.saves.get(save_key)
-        stat_name = verbose_stat(save_key[:3]).title()
-        save_name = f"{stat_name} Save"
-    except ValueError:
-        raise InvalidArgument('That\'s not a valid save.')
+    if save_key.startswith('death'):
+        save = Skill(0)
+        stat_name = 'Death'
+        save_name = 'Death Save'
+    else:
+        try:
+            save = caster.saves.get(save_key)
+            stat_name = verbose_stat(save_key[:3]).title()
+            save_name = f"{stat_name} Save"
+        except ValueError:
+            raise InvalidArgument('That\'s not a valid save.')
 
     # -title
     if args.last('title'):

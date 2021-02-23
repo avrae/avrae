@@ -82,6 +82,9 @@ class SimpleCombat:
     def __str__(self):
         return str(self._combat)
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}>"
+
 
 class SimpleCombatant(AliasStatBlock):
     """
@@ -420,6 +423,9 @@ class SimpleGroup:
     def __str__(self):
         return str(self._group)
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__} combatants={self.combatants!r}>"
+
 
 class SimpleEffect:
     def __init__(self, effect: Effect):
@@ -473,7 +479,7 @@ class SimpleEffect:
         return str(self._effect)
 
     def __repr__(self):
-        return f"<SimpleEffect name={self.name!r} duration={self.duration!r} remaining={self.remaining!r}>"
+        return f"<{self.__class__.__name__} name={self.name!r} duration={self.duration!r} remaining={self.remaining!r}>"
 
     def __eq__(self, other):
         return isinstance(other, SimpleEffect) and self._effect is other._effect

@@ -242,6 +242,25 @@ async def test_commands_no_error(avrae, dhttp):
         "!i effect mage1 teffect222 -dur 2 -parent kobold3|teffect22",
         "!i remove kobold3",
         "!i skipround 3",
+        "!i end"
+    ]
+
+    for command in commands:
+        avrae.message(command)
+        await dhttp.drain()
+
+@pytest.mark.usefixtures("init_fixture")
+async def test_assign_groups(avrae, dhttp):
+    """AVRAE-BOT-11R: assigning groups before the combat starts"""
+    commands = [
+        "!init begin",
+        "!init madd kobold -n 3",
+        "!init opt ko1 -group kobolds",
+        "!init opt ko1 -group none",
+        "!init next",
+        "!init opt ko1 -group kobolds",
+        "!init opt ko1 -group none",
+        "!i end"
     ]
 
     for command in commands:

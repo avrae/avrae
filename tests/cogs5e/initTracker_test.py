@@ -242,7 +242,8 @@ async def test_commands_no_error(avrae, dhttp):
         "!i effect mage1 teffect222 -dur 2 -parent kobold3|teffect22",
         "!i remove kobold3",
         "!i skipround 3",
-        "!i end"
+        "!i end",
+        "y"
     ]
 
     for command in commands:
@@ -260,7 +261,8 @@ async def test_assign_groups(avrae, dhttp):
         "!init next",
         "!init opt ko1 -group kobolds",
         "!init opt ko1 -group none",
-        "!i end"
+        "!i end",
+        "y"
     ]
 
     for command in commands:

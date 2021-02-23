@@ -7,6 +7,9 @@ STAT_NAMES = ('strength', 'dexterity', 'constitution', 'intelligence', 'wisdom',
 
 STAT_ABBREVIATIONS = ('str', 'dex', 'con', 'int', 'wis', 'cha')
 
+STAT_ABBR_MAP = {'str': 'Strength', 'dex': 'Dexterity', 'con': 'Constitution',
+                 'int': 'Intelligence', 'wis': 'Wisdom', 'cha': 'Charisma'}
+
 SKILL_NAMES = ('acrobatics', 'animalHandling', 'arcana', 'athletics', 'deception', 'history', 'initiative', 'insight',
                'intimidation', 'investigation', 'medicine', 'nature', 'perception', 'performance', 'persuasion',
                'religion', 'sleightOfHand', 'stealth', 'survival', 'strength', 'dexterity', 'constitution',

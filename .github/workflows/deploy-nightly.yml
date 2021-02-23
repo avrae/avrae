@@ -64,6 +64,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
       - name: Create Sentry release
         uses: getsentry/action-release@v1
         env:
@@ -72,5 +75,6 @@ jobs:
           SENTRY_PROJECT: avrae-bot
         with:
           environment: nightly
+          set_commits: skip
 
 

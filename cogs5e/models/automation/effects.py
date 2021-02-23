@@ -273,6 +273,7 @@ class Attack(Effect):
         # reset metavars (#1335)
         autoctx.metavars['lastAttackDidHit'] = False
         autoctx.metavars['lastAttackDidCrit'] = False
+        autoctx.metavars['lastAttackRollTotal'] = 0  # 1362
         did_hit = True
         did_crit = False
         to_hit_roll = None
@@ -321,6 +322,8 @@ class Attack(Effect):
                 did_hit = False
             elif ac and to_hit_roll.total < ac:  # miss
                 did_hit = False
+
+            autoctx.metavars['lastAttackRollTotal'] = to_hit_roll.total  # 1362
 
             # output
             if not hide:  # not hidden
@@ -434,7 +437,7 @@ class Save(Effect):
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
         hide = autoctx.args.last('h', type_=bool)
-        adv = autoctx.args.adv()
+        adv = autoctx.args.adv(custom={'adv': 'sadv', 'dis': 'sdis'})
 
         dc_override = None
         if self.dc:
@@ -461,6 +464,7 @@ class Save(Effect):
         save_roll = None
 
         autoctx.meta_queue(f"**DC**: {dc}")
+        autoctx.metavars['lastSaveRollTotal'] = 0
         if not autoctx.target.is_simple:
             save_blurb = f'{save_skill[:3].upper()} Save'
             if auto_pass:
@@ -470,9 +474,10 @@ class Save(Effect):
                 is_success = False
                 autoctx.queue(f"**{save_blurb}:** Automatic failure!")
             else:
-                saveroll = autoctx.target.get_save_dice(save_skill, adv=autoctx.args.adv(boolwise=True))
+                saveroll = autoctx.target.get_save_dice(save_skill, adv=adv)
                 save_roll = roll(saveroll)
                 is_success = save_roll.total >= dc
+                autoctx.metavars['lastSaveRollTotal'] = save_roll.total  # 1362
                 success_str = ("; Success!" if is_success else "; Failure!")
                 out = f"**{save_blurb}**: {save_roll.result}{success_str}"
                 if not hide:
@@ -504,7 +509,7 @@ class Save(Effect):
         dc = caster.spellbook.dc
         if self.dc:
             try:
-                dc_override = evaluator.transformed_str(self.dc)
+                dc_override = evaluator.eval(self.dc)
                 dc = int(dc_override)
             except (TypeError, ValueError):
                 dc = 0
@@ -1007,7 +1012,7 @@ class Condition(Effect):
         if do_true:
             children += self.run_children(self.on_true, autoctx)
         if do_false:
-            children += self.run_children(self.on_true, autoctx)
+            children += self.run_children(self.on_false, autoctx)
 
         return ConditionResult(did_true=do_true, did_false=do_false, did_error=did_error, children=children)
 

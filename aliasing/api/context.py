@@ -71,8 +71,8 @@ class AliasContext:
 
 
     def __repr__(self):
-        return f"<AliasContext guild={self.guild} channel={self.channel} author={self.author} prefix={self.prefix} " \
-               f"alias={self.alias}>"
+        return f"<{self.__class__.__name__} guild={self.guild!r} channel={self.channel!r} author={self.author!r} " \
+               f"prefix={self.prefix!r} alias={self.alias!r}>"
 
 
 class AliasGuild:
@@ -107,6 +107,9 @@ class AliasGuild:
 
     def __str__(self):
         return self.name
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
 
 
 class AliasChannel:
@@ -162,6 +165,9 @@ class AliasChannel:
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
+
 
 class AliasAuthor:
     """
@@ -216,6 +222,9 @@ class AliasAuthor:
     def __str__(self):
         return f"{self.name}#{self.discriminator}"
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"
+
 
 class AliasCategory:
     """
@@ -249,3 +258,6 @@ class AliasCategory:
 
     def __str__(self):
         return self.name
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} name={self.name!r} id={self.id!r}>"

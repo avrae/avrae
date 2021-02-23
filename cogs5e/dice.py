@@ -6,8 +6,9 @@ import discord
 from discord.ext import commands
 
 from aliasing import helpers
-from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.models.errors import NoSelectionElements
+from cogs5e.utils import attackutils, checkutils, targetutils
+from cogs5e.utils.help_constants import *
 from cogsmisc.stats import Stats
 from gamedata import Monster
 from gamedata.lookuputils import handle_source_footer, select_monster_full, select_spell_full
@@ -158,47 +159,12 @@ class Dice(commands.Cog):
         await ctx.send(f"{ctx.author.mention}\n{out}", allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
         await Stats.increase_stat(ctx, "dice_rolled_life")
 
-    @commands.group(name='monattack', aliases=['ma', 'monster_attack'], invoke_without_command=True)
+    @commands.group(name='monattack', aliases=['ma', 'monster_attack'], invoke_without_command=True, help=f"""
+    Rolls a monster's attack.
+    __**Valid Arguments**__
+    {VALID_AUTOMATION_ARGS}
+    """)
     async def monster_atk(self, ctx, monster_name, atk_name=None, *, args=''):
-        """Rolls a monster's attack.
-        __Valid Arguments__
-        -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
-        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
-
-        *adv/dis* - Advantage or Disadvantage
-        *ea* - Elven Accuracy double advantage
-
-        -ac <target ac> - overrides target AC
-        *-b* <to hit bonus> - adds a bonus to hit
-        -criton <num> - a number to crit on if rolled on or above
-        *-d* <damage bonus> - adds a bonus to damage
-        *-c* <damage bonus on crit> - adds a bonus to crit damage
-        -rr <times> - number of times to roll the attack against each target
-        *-mi <value>* - minimum value of each die on the damage roll
-
-        *-resist* <damage resistance>
-        *-immune* <damage immunity>
-        *-vuln* <damage vulnerability>
-        *-neutral* <damage type> - ignores this damage type in resistance calculations
-        *-dtype <damage type>* - replaces all damage types with this damage type
-        *-dtype <old>new>* - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
-
-        *hit* - automatically hits
-        *miss* - automatically misses
-        *crit* - automatically crits if hit
-        *nocrit* - nullifies critical hits
-        *max* - deals max damage
-        *magical* - makes the damage type magical
-
-        -h - hides name, rolled values, and monster details
-        -phrase <text> - adds flavour text
-        -title <title> - changes the result title *note: `[name]` and `[aname]` will be replaced automatically*
-        -thumb <url> - adds flavour image
-        -f "Field Title|Field Text" - see `!help embed`
-        <user snippet> - see `!help snippet`
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on.
-        """
         if atk_name is None or atk_name == 'list':
             return await self.monster_atk_list(ctx, monster_name)
 
@@ -233,23 +199,11 @@ class Dice(commands.Cog):
         monster_name = monster.get_title_name()
         return await ctx.send(f"{monster_name}'s attacks:\n{monster.attacks.build_str(monster)}")
 
-    @commands.command(name='moncheck', aliases=['mc', 'monster_check'])
+    @commands.command(name='moncheck', aliases=['mc', 'monster_check'], help=f"""
+    Rolls a check for a monster.
+    {VALID_CHECK_ARGS}
+    """)
     async def monster_check(self, ctx, monster_name, check, *args):
-        """Rolls a check for a monster.
-        __Valid Arguments__
-        *adv/dis*
-        *-b [conditional bonus]*
-        -phrase [flavor text]
-        -title [title] *note: [name] and [cname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -dc [dc]
-        -rr [iterations]
-        str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
-        -h (hides name and image of monster)
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one check.
-        """
-
         monster: Monster = await select_monster_full(ctx, monster_name)
 
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
@@ -271,19 +225,11 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(name='monsave', aliases=['ms', 'monster_save'])
+    @commands.command(name='monsave', aliases=['ms', 'monster_save'], help=f"""
+    Rolls a save for a monster.
+    {VALID_SAVE_ARGS}
+    """)
     async def monster_save(self, ctx, monster_name, save_stat, *args):
-        """Rolls a save for a monster.
-        __Valid Arguments__
-        adv/dis
-        -b [conditional bonus]
-        -phrase [flavor text]
-        -title [title] *note: [name] and [cname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -dc [dc]
-        -rr [iterations]
-        -h (hides name and image of monster)"""
-
         monster: Monster = await select_monster_full(ctx, monster_name)
 
         embed = discord.Embed()
@@ -303,32 +249,14 @@ class Dice(commands.Cog):
         await ctx.send(embed=embed)
         await try_delete(ctx.message)
 
-    @commands.command(name='moncast', aliases=['mcast', 'monster_cast'])
+    @commands.command(name='moncast', aliases=['mcast', 'monster_cast'], help=f"""
+    Casts a spell as a monster.
+    __**Valid Arguments**__
+    {VALID_SPELLCASTING_ARGS}
+    
+    {VALID_AUTOMATION_ARGS}
+    """)
     async def monster_cast(self, ctx, monster_name, spell_name, *args):
-        """
-        Casts a spell as a monster.
-        __Valid Arguments__
-        -i - Ignores Spellbook restrictions, for demonstrations or rituals.
-        -l <level> - Specifies the level to cast the spell at.
-        noconc - Ignores concentration requirements.
-        -h - Hides rolled values.
-        **__Save Spells__**
-        -dc <Save DC> - Overrides the spell save DC.
-        -save <Save type> - Overrides the spell save type.
-        -d <damage> - Adds additional damage.
-        pass - Target automatically succeeds save.
-        fail - Target automatically fails save.
-        adv/dis - Target makes save at advantage/disadvantage.
-        **__Attack Spells__**
-        See `!a`.
-        **__All Spells__**
-        -phrase <phrase> - adds flavor text.
-        -title <title> - changes the title of the cast. Replaces [sname] with spell name.
-        -thumb <url> - adds an image to the cast.
-        -dur <duration> - changes the duration of any effect applied by the spell.
-        -mod <spellcasting mod> - sets the value of the spellcasting ability modifier.
-        int/wis/cha - different skill base for DC/AB (will not account for extra bonuses)
-        """
         await try_delete(ctx.message)
         monster: Monster = await select_monster_full(ctx, monster_name)
 

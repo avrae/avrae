@@ -9,7 +9,7 @@ from pymongo.errors import DuplicateKeyError
 import ddb
 from ddb.gamelog.constants import AVRAE_EVENT_SOURCE, GAME_LOG_PUBSUB_CHANNEL
 from ddb.gamelog.context import GameLogEventContext
-from ddb.gamelog.errors import CampaignAlreadyLinked, LinkNotAllowed, NoCampaignLink
+from ddb.gamelog.errors import CampaignAlreadyLinked, CampaignLinkException, LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.event import GameLogEvent
 from ddb.gamelog.link import CampaignLink
 from ddb.utils import ddb_id_to_discord_id
@@ -41,12 +41,20 @@ class GameLogClient:
         log.info("Game Log client initialized")
 
     # ==== campaign helpers ====
-    async def create_campaign_link(self, ctx, campaign_id: str):
+    async def create_campaign_link(self, ctx, campaign_id: str, overwrite=False):
+        """
+        Creates a campaign link for the given campaign ID to the current channel.
+
+        :type ctx: discord.ext.commands.Context
+        :param str campaign_id: The ID of the DDB campaign to connect
+        :param bool overwrite: Whether to overwrite an existing link or error.
+        :rtype: CampaignLink
+        """
         # is the current user authorized to link this campaign?
         ddb_user = await self.ddb.get_ddb_user(ctx, ctx.author.id)
         if ddb_user is None:
-            raise LinkNotAllowed("You do not have a D&D Beyond account connected to your Discord account. "
-                                 "Connect your accounts at <https://www.dndbeyond.com/account>!")
+            raise CampaignLinkException("You do not have a D&D Beyond account connected to your Discord account. "
+                                        "Connect your accounts at <https://www.dndbeyond.com/account>!")
         active_campaigns = await self.ddb.get_active_campaigns(ctx, ddb_user)
         the_campaign = next((c for c in active_campaigns if c.id == campaign_id), None)
 
@@ -60,7 +68,13 @@ class GameLogClient:
         try:
             await self.bot.mdb.gamelog_campaigns.insert_one(link.to_dict())
         except DuplicateKeyError:
-            raise CampaignAlreadyLinked()
+            if overwrite:
+                await self.bot.mdb.gamelog_campaigns.replace_one(
+                    {"campaign_id": campaign_id},
+                    link.to_dict()
+                )
+            else:
+                raise CampaignAlreadyLinked()
         return link
 
     # ==== http ====

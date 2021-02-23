@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   release:
-    types: [ created ]
+    types: [ published ]
   workflow_dispatch:
 
 jobs:
@@ -134,5 +134,4 @@ jobs:
           SENTRY_PROJECT: avrae-bot
         with:
           environment: production
-
-
+          set_commits: skip

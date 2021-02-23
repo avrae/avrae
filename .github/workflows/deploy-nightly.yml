@@ -75,5 +75,6 @@ jobs:
           SENTRY_PROJECT: avrae-bot
         with:
           environment: nightly
+          set_commits: skip
 
 

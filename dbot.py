@@ -71,6 +71,9 @@ class Avrae(commands.AutoShardedBot):
         self.muted = set()
         self.cluster_id = 0
 
+        # launch concurrency
+        self.launch_max_concurrency = 1
+
         # sentry
         if config.SENTRY_DSN is not None:
             release = None
@@ -127,12 +130,17 @@ class Avrae(commands.AutoShardedBot):
         async with clustering.coordination_lock(self.rdb):
             await clustering.coordinate_shards(self)
             if self.shard_ids is not None:
-                log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
-            await super(Avrae, self).launch_shards()
+                log.info(f"Launching {len(self.shard_ids)} shards! ({self.shard_ids})")
+            await super().launch_shards()
             log.info(f"Launched {len(self.shards)} shards!")
 
         if self.is_cluster_0:
             await self.rdb.incr('build_num')
+
+    async def before_identify_hook(self, shard_id, *, initial=False):
+        bucket_id = shard_id % self.launch_max_concurrency
+        # wait until the bucket is available and try to acquire the lock
+        await clustering.wait_bucket_available(shard_id, bucket_id, self.rdb)
 
     async def get_context(self, *args, **kwargs):
         return await super().get_context(*args, cls=context.AvraeContext, **kwargs)

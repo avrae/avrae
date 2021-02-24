@@ -9,8 +9,7 @@ class Quickstart(Tutorial):
     name = "Quickstart"
     description = """
     *10 minutes*
-    New to Avrae or Discord bots in general? This tutorial will help you get started with Avrae's command system, \
-    rolling dice, and importing a D&D Beyond character into Discord.
+    New to Avrae or Discord bots in general? This tutorial will help you get started with Avrae's command system, rolling dice, and importing a D&D Beyond character into Discord.
     """
 
     @state(first=True)

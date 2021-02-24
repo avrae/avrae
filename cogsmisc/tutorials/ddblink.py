@@ -6,8 +6,7 @@ class DDBLink(Tutorial):
     name = "D&D Beyond Link"
     description = """
     *5 minutes*
-    Learn how to link your D&D Beyond and Discord accounts to use your D&D Beyond content in Avrae, import your \
-    private characters, sync rolls with your D&D Beyond campaign, and more!
+    Learn how to link your D&D Beyond and Discord accounts to use your D&D Beyond content in Avrae, import your private characters, sync rolls with your D&D Beyond campaign, and more!
     """
 
     @state(first=True)
@@ -33,7 +32,7 @@ class DDBLink(Tutorial):
                 if user is None:
                     embed = TutorialEmbed(self, ctx)
                     embed.description = f"""
-                    Looks like your D&D Beyond account isn't connected yet. Make sure you’re logged in with the         correct Discord account, and check again in a few minutes!
+                    Looks like your D&D Beyond account isn't connected yet. Make sure you’re logged in with the correct Discord account, and check again in a few minutes!
                     """
                     await ctx.send(embed=embed)
                 else:

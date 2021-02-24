@@ -113,7 +113,7 @@ class Quickstart(Tutorial):
                     state_map.data['has_check'] = True
                 elif ctx.command is save:
                     state_map.data['has_save'] = True
-                elif ctx.command is attack:
+                elif ctx.command is attack and ' ' in ctx.message.content:  # not just !a, must use actual attack
                     state_map.data['has_attack'] = True
                 await state_map.commit(ctx)
                 embed = TutorialEmbed(self, ctx)

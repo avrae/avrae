@@ -15,6 +15,7 @@ from .ddblink import DDBLink
 from .init_dm import DMInitiative
 from .init_player import PlayerInitiative
 from .models import TutorialStateMap
+from .playingthegame import PlayingTheGame
 from .quickstart import Quickstart
 from .runningthegame import RunningTheGame
 from .spellcasting import Spellcasting
@@ -28,7 +29,7 @@ class Tutorials(commands.Cog):
     # tutorial keys should never change - if needed, change the name in the constructor to change the display name
     tutorials = {
         "quickstart": Quickstart(),
-        # "playingthegame": None,
+        "playingthegame": PlayingTheGame(),
         "ddblink": DDBLink(),
         "spellcasting": Spellcasting(),
         "runningthegame": RunningTheGame(),

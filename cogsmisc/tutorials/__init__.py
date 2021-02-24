@@ -140,76 +140,77 @@ class Tutorials(commands.Cog):
 
     async def send_welcome_message(self, guild):
         owner = await get_guild_member(guild, guild.owner_id)
-        if owner is not None:
-            flag_on = await self.bot.ldclient.variation(
-                'cog.tutorials.guild_join.enabled', discord_user_to_dict(owner), default=False)
-            if not flag_on:
-                return
+        if owner is None:
+            return
+        flag_on = await self.bot.ldclient.variation('cog.tutorials.guild_join.enabled', discord_user_to_dict(owner),
+                                                    default=False)
+        if not flag_on:
+            return
 
-            embed = discord.Embed()
-            embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar_url)
-            embed.colour = discord.Colour.blurple()
-            embed.description = textwrap.dedent(f"""
-            :wave: Hi there! Thanks for adding me to {guild.name}!
-            
-            I'm ready to roll, but before we get started, let's take a look at some of the things I can do! 
-            """).strip()
+        embed = discord.Embed()
+        embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.avatar_url)
+        embed.colour = discord.Colour.blurple()
+        embed.description = textwrap.dedent(f"""
+        :wave: Hi there! Thanks for adding me to {guild.name}!
+        
+        I'm ready to roll, but before we get started, let's take a look at some of the things I can do! 
+        """).strip()
 
-            embed.add_field(
-                name="Rolling Dice", inline=False,
-                value=f"Want to get rolling as soon as possible? Just use the `!roll` command to get started! "
-                      f"Here's some examples: ```\n"
-                      f"!roll 1d20\n"
-                      f"!roll 4d6kh3\n"
-                      f"!roll 1d20+1 adv\n"
-                      f"!r 1d10[cold]+2d6[piercing]\n"
-                      f"```"
-            )
+        embed.add_field(
+            name="Rolling Dice", inline=False,
+            value=f"Want to get rolling as soon as possible? Just use the `!roll` command to get started! "
+                  f"Here's some examples: ```\n"
+                  f"!roll 1d20\n"
+                  f"!roll 4d6kh3\n"
+                  f"!roll 1d20+1 adv\n"
+                  f"!r 1d10[cold]+2d6[piercing]\n"
+                  f"```"
+        )
 
-            embed.add_field(
-                name="Quickstart", inline=False,
-                value=f"I can do more than just roll dice, too! If you'd like to learn more about importing a "
-                      f"character and rolling checks, saves, and attacks, try out the Quickstart tutorial!"
-                      f"```\n!tutorial quickstart\n```"
-            )
+        embed.add_field(
+            name="Quickstart", inline=False,
+            value=f"I can do more than just roll dice, too! If you'd like to learn more about importing a "
+                  f"character and rolling checks, saves, and attacks, try out the Quickstart tutorial!"
+                  f"```\n!tutorial quickstart\n```"
+        )
 
-            embed.add_field(
-                name="Content Lookup", inline=False,
-                value=f"You can look up any spell, item, creature, and more right in Discord! Just use the `!spell`, "
-                      f"`!item`, `!monster`, or other lookup command! You can see a full list with `!help Lookup`.\n\n"
-                      f"I'll even link with your D&D Beyond account to give you access to everything you've unlocked, "
-                      f"all for free! To get started, try out the D&D Beyond tutorial."
-                      f"```\n!tutorial beyond\n```\n"
-                      f"\u203b By default, for servers with less than 250 members, a monster's full stat block will be "
-                      f"hidden unless you have a Discord role named `Dungeon Master`. You can turn this off with "
-                      f"`!lookup_settings -req_dm_monster false`."
-            )
+        embed.add_field(
+            name="Content Lookup", inline=False,
+            value=f"You can look up any spell, item, creature, and more right in Discord! Just use the `!spell`, "
+                  f"`!item`, `!monster`, or other lookup command! You can see a full list with `!help Lookup`.\n\n"
+                  f"I'll even link with your D&D Beyond account to give you access to everything you've unlocked, "
+                  f"all for free! To get started, try out the D&D Beyond tutorial."
+                  f"```\n!tutorial beyond\n```\n"
+                  f"\u203b By default, for servers with less than 250 members, a monster's full stat block will be "
+                  f"hidden unless you have a Discord role named `Dungeon Master`. You can turn this off with "
+                  f"`!lookup_settings -req_dm_monster false`."
+        )
 
-            embed.add_field(
-                name="Initiative Tracking", inline=False,
-                value=f"Once you're familiar with the basics, to learn how to get started with initiative tracking, "
-                      f"try out the initiative tutorial! You can choose between a Dungeon Master's or a player's "
-                      f"perspective."
-                      f"```\n!tutorial initiative\n```"
-            )
+        embed.add_field(
+            name="Initiative Tracking", inline=False,
+            value=f"Once you're familiar with the basics, to learn how to get started with initiative tracking, "
+                  f"try out the initiative tutorial! You can choose between a Dungeon Master's or a player's "
+                  f"perspective."
+                  f"```\n!tutorial initiative\n```"
+        )
 
-            embed.add_field(
-                name="Custom Commands", inline=False,
-                value=f"Want to do even more? Check out the list of user-made commands at "
-                      f"https://avrae.io/dashboard/workshop, and add them to Discord with one click!"
-            )
+        embed.add_field(
+            name="Custom Commands", inline=False,
+            value=f"Want to do even more? Check out the list of user-made commands at "
+                  f"https://avrae.io/dashboard/workshop, and add them to Discord with one click!"
+        )
 
-            embed.add_field(
-                name="More Resources", inline=False,
-                value=f"If you ever want a refresher on a command or feature, use the `!help` command for help on a "
-                      f"command, or `!tutorial` for a list of available tutorials.\n\n"
-                      f"For even more resources, come join us in the development Discord at <https://support.avrae.io>!"
-            )
+        embed.add_field(
+            name="More Resources", inline=False,
+            value=f"If you ever want a refresher on a command or feature, use the `!help` command for help on a "
+                  f"command, or `!tutorial` for a list of available tutorials.\n\n"
+                  f"For even more resources, come join us in the development Discord at <https://support.avrae.io>!"
+        )
 
-            try:
-                await owner.send(embed=embed)
-            except discord.HTTPException:
-                pass
+        try:
+            await owner.send(embed=embed)
+        except discord.HTTPException:
+            pass
 
 
 # discord ext boilerplate

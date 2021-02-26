@@ -231,8 +231,9 @@ class Combatant(BaseCombatant, StatBlock):
 
     def set_group(self, group_name):
         current = self.combat.current_combatant
-        was_current = self is current \
-                      or (current.type == CombatantType.GROUP and self in current and len(current) == 1)
+        was_current = current is not None and \
+                      (self is current
+                       or (current.type == CombatantType.GROUP and self in current and len(current) == 1))
         self.combat.remove_combatant(self, ignore_remove_hook=True)
         if isinstance(group_name, str) and group_name.lower() == 'none':
             group_name = None

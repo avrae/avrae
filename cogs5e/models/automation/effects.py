@@ -511,8 +511,8 @@ class Save(Effect):
             try:
                 dc_override = evaluator.eval(self.dc)
                 dc = int(dc_override)
-            except (TypeError, ValueError):
-                dc = 0
+            except:
+                dc = float('nan')
 
         out = f"DC {dc} {self.stat[:3].upper()} Save"
         if self.fail:

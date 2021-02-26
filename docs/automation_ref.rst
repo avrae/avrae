@@ -357,6 +357,9 @@ Use Counter
 
 Uses a number of charges of the given counter, and displays the remaining amount and delta.
 
+.. note::
+    Regardless of the current target, this effect will always use the *caster's* counter/spell slots!
+
 .. attribute:: counter
 
     The name of the counter to use (case-sensitive, full match only), or a reference to a spell slot or feature
@@ -389,6 +392,7 @@ Uses a number of charges of the given counter, and displays the remaining amount
 
 - ``lastCounterName`` (:class:`str`) The name of the last used counter (if it was a spell slot, the level of the slot, "error" on error).
 - ``lastCounterRemaining`` (:class:`int`) The remaining charges of the last used counter (0 on error).
+- ``lastCounterUsedAmount`` (:class:`int`) The amount of the counter successfully used.
 
 .. _SpellSlotReference:
 

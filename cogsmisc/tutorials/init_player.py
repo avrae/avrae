@@ -448,12 +448,12 @@ class PlayerInitiative(Tutorial):
             await asyncio.sleep(7)
             try:
                 combat = await ctx.get_combat()
-                summary = await combat.get_summary_msg()
+                summary = combat.get_summary_msg()
                 await combat.end()
                 await ctx.send("Combat ended.")
                 await summary.edit(content=combat.get_summary() + " ```-----COMBAT ENDED-----```")
                 await summary.unpin()
-            except:
+            except Exception:
                 pass
 
 

@@ -247,3 +247,20 @@ async def test_commands_no_error(avrae, dhttp):
     for command in commands:
         avrae.message(command)
         await dhttp.drain()
+
+@pytest.mark.usefixtures("init_fixture")
+async def test_assign_groups(avrae, dhttp):
+    """AVRAE-BOT-11R: assigning groups before the combat starts"""
+    commands = [
+        "!init begin",
+        "!init madd kobold -n 3",
+        "!init opt ko1 -group kobolds",
+        "!init opt ko1 -group none",
+        "!init next",
+        "!init opt ko1 -group kobolds",
+        "!init opt ko1 -group none",
+    ]
+
+    for command in commands:
+        avrae.message(command)
+        await dhttp.drain()

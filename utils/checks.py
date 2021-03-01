@@ -2,6 +2,7 @@ import discord.utils
 from discord.ext import commands
 
 from utils import config
+from utils.aldclient import discord_user_to_dict
 
 
 # The permission system of the bot is based on a "just works" basis
@@ -106,7 +107,7 @@ def feature_flag(flag_name, use_ddb_user=False, default=False):
             else:
                 user = ddb_user.to_ld_dict()
         else:
-            user = {"key": str(ctx.author.id), "name": str(ctx.author)}
+            user = discord_user_to_dict(ctx.author)
 
         flag_on = await ctx.bot.ldclient.variation(flag_name, user, default)
         if flag_on:

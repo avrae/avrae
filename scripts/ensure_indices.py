@@ -94,6 +94,9 @@ INDICES = {
     "user_permissions": [
         IndexModel('id', unique=True)
     ],
+    "tutorial_map": [
+        IndexModel('user_id', unique=True)
+    ],
 
     # alias workshop
     "workshop_collections": [

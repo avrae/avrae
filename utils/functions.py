@@ -111,7 +111,7 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
     :param list_filter: A filter to filter the list to search by.
     :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
     :param search_func: The function to use to search.
-    :param return_metadata Whether to return a metadata object {num_options, chosen_index}.
+    :param return_metadata: Whether to return a metadata object {num_options, chosen_index}.
     """
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))

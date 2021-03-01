@@ -1,7 +1,6 @@
 """
 Asyncio wrapper for launchdarkly client to ensure flag evaluation is not a blocking call.
 """
-
 import ldclient
 
 
@@ -14,3 +13,8 @@ class AsyncLaunchDarklyClient(ldclient.LDClient):
 
     async def variation(self, key, user, default):  # run variation evaluation in a separate thread
         return await self.loop.run_in_executor(None, super().variation, key, user, default)
+
+
+def discord_user_to_dict(user):
+    """Converts a Discord user to a user dict for LD."""
+    return {"key": str(user.id), "name": str(user)}

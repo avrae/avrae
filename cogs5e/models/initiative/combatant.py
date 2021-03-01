@@ -231,8 +231,9 @@ class Combatant(BaseCombatant, StatBlock):
 
     def set_group(self, group_name):
         current = self.combat.current_combatant
-        was_current = self is current \
-                      or (current.type == CombatantType.GROUP and self in current and len(current) == 1)
+        was_current = current is not None and \
+                      (self is current
+                       or (current.type == CombatantType.GROUP and self in current and len(current) == 1))
         self.combat.remove_combatant(self, ignore_remove_hook=True)
         if isinstance(group_name, str) and group_name.lower() == 'none':
             group_name = None
@@ -338,6 +339,8 @@ class Combatant(BaseCombatant, StatBlock):
         """Sends a message to the combatant's controller."""
         if ctx.guild is None:
             raise RequiresContext("message_controller requires a guild context.")
+        if int(self.controller) == ctx.bot.user.id:  # don't message self
+            return
         member = await get_guild_member(ctx.guild, int(self.controller))
         if member is None:  # member is not in the guild, oh well
             return
@@ -495,6 +498,10 @@ class MonsterCombatant(Combatant):
     @property
     def monster_name(self):
         return self._monster_name
+
+    @property
+    def monster_id(self):
+        return self._monster_id
 
 
 class PlayerCombatant(Combatant):

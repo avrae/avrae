@@ -313,5 +313,6 @@ class PlayingTheGame(Tutorial):
             
             That's it for this tutorial! Now you know how to manage your hit points, custom counters, death saves, and rest. If you're a spellcaster, you'll want to take a look at the Spellcasting tutorial next with `{ctx.prefix}tutorial spellcasting`!
             """
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

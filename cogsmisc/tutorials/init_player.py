@@ -442,6 +442,7 @@ class PlayerInitiative(Tutorial):
             
             And if your DM says no to this... well, you can just introduce them to Terry.*
             """
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)
             await asyncio.sleep(7)

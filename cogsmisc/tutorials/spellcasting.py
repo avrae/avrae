@@ -167,5 +167,6 @@ class Spellcasting(Tutorial):
 
             And, as a final note, please understand that, on some of the sheet trackers that Avrae supports, there is a way to differentiate between learned and prepared spells on the sheet; however, Avrae does not keep track of which of your spells are simply learned, versus those that are prepared. It is best to keep track of which spells you have prepared manually.
             """
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

@@ -147,4 +147,5 @@ class DDBLink(Tutorial):
             """
             embed.set_image(url="https://media.avrae.io/tutorial-assets/ddblink/CampaignLinkTransition.gif")
             await ctx.send(embed=embed)
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await state_map.end_tutorial(ctx)

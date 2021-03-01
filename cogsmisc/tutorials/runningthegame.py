@@ -160,8 +160,7 @@ class RunningTheGame(Tutorial):
             All of the commands covered in this tutorial have in-depth `{ctx.prefix}help` entries for them which list off more in-depth and specific arguments for each command. To view these help entries, use `{ctx.prefix}help moncheck`, `{ctx.prefix}help monsave`, `{ctx.prefix}help monattack`, or `{ctx.prefix}help moncast`, respectively.
             
             One final note. While it was touched upon before, you should know that, as a DM, you cannot change or alter your players' stats in any way (such as modifying their HP or spell slots) without using the initiative tracker. You can learn more about the initiative tracker and how to use it by viewing the "Initiative (DM)" tutorial.
-            
-            That's it for this tutorial!
             """
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

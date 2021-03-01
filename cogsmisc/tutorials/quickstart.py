@@ -137,5 +137,6 @@ class Quickstart(Tutorial):
 
             Looking for additional resources? Come join us at the [Avrae Development Discord](https://support.avrae.io).
             """
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

@@ -16,6 +16,17 @@ class DMInitiative(Tutorial):
 
     @state(first=True)
     class StartingCombat(TutorialState):
+        async def setup(self, ctx, state_map):
+            # preflight: channel not in combat
+            try:
+                await ctx.get_combat()
+            except CombatNotFound:
+                pass
+            else:
+                await state_map.end_tutorial(ctx)
+                raise PrerequisiteFailed(
+                    "This channel is already in combat. You'll need a channel to yourself to run this tutorial!")
+
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Starting Combat"

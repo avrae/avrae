@@ -264,7 +264,7 @@ class Attack(Effect):
         if self.bonus:
             try:
                 attack_bonus = autoctx.parse_intexpression(self.bonus)
-            except:
+            except Exception:
                 raise AutomationException(f"{self.bonus!r} cannot be interpreted as an attack bonus.")
 
         if attack_bonus is None and b is None:
@@ -389,7 +389,7 @@ class Attack(Effect):
             try:
                 explicit_bonus = evaluator.eval(self.bonus)
                 attack_bonus = int(explicit_bonus)
-            except:
+            except Exception:
                 attack_bonus = float('nan')
 
         out = f"Attack: {attack_bonus:+} to hit"
@@ -443,7 +443,7 @@ class Save(Effect):
         if self.dc:
             try:
                 dc_override = autoctx.parse_intexpression(self.dc)
-            except:
+            except Exception:
                 raise AutomationException(f"{self.dc!r} cannot be interpreted as a DC.")
 
         # dc hierarchy: arg > self.dc > spell cast override > spellbook dc
@@ -510,7 +510,7 @@ class Save(Effect):
             try:
                 dc_override = evaluator.eval(self.dc)
                 dc = int(dc_override)
-            except:
+            except Exception:
                 dc = float('nan')
 
         out = f"DC {dc} {self.stat[:3].upper()} Save"
@@ -759,7 +759,7 @@ class IEffect(Effect):
         if isinstance(self.duration, str):
             try:
                 duration = autoctx.parse_intexpression(self.duration)
-            except:
+            except Exception:
                 raise AutomationException(f"{self.duration} is not an integer (in effect duration)")
         else:
             duration = self.duration
@@ -950,10 +950,10 @@ class SetVariable(Effect):
         super().build_str(caster, evaluator)
         try:
             value = evaluator.eval(self.value)
-        except:
+        except Exception:
             try:
                 value = evaluator.eval(self.on_error)
-            except:
+            except Exception:
                 value = self.value
         evaluator.builtins[self.name] = value
         return ""

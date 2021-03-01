@@ -2,8 +2,8 @@ from aliasing.errors import EvaluationError
 from cogs5e.models.errors import AvraeException
 
 __all__ = (
-    'AutomationException', 'StopExecution', 'TargetException', 'AutomationEvaluationException', 'NoSpellDC',
-    'NoAttackBonus'
+    'AutomationException', 'StopExecution', 'TargetException', 'AutomationEvaluationException', 'InvalidIntExpression',
+    'NoSpellDC', 'NoAttackBonus'
 )
 
 
@@ -30,6 +30,10 @@ class AutomationEvaluationException(EvaluationError, AutomationException):
 
     def __init__(self, original, expression):
         super().__init__(original, expression)  # EvaluationError.__init__()
+
+
+class InvalidIntExpression(AutomationException):
+    pass
 
 
 class NoSpellDC(AutomationException):

@@ -3,7 +3,7 @@ import aliasing.api.statblock
 import aliasing.evaluators
 import cogs5e.models.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
-from .errors import AutomationEvaluationException
+from .errors import AutomationEvaluationException, InvalidIntExpression
 from .utils import maybe_alias_statblock
 
 __all__ = (
@@ -111,10 +111,10 @@ class AutomationContext:
 
     def parse_annostr(self, annostr, is_full_expression=False):
         """
-        Parses an AnnotatedString or IntExpression.
+        Parses an AnnotatedString.
 
         :param str annostr: The string to parse.
-        :param bool is_full_expression: Whether the string is an IntExpression.
+        :param bool is_full_expression: Whether to evaluate the result rather than running interpolation.
         """
         if not is_full_expression:
             return self.evaluator.transformed_str(annostr, extra_names=self.metavars)
@@ -128,6 +128,19 @@ class AutomationContext:
             raise AutomationEvaluationException(ex, expr)
         self.evaluator.builtins = original_names
         return out
+
+    def parse_intexpression(self, intexpression):
+        """
+        Parses an IntExpression.
+
+        :param intexpression: The string to parse.
+        :rtype: int
+        """
+        eval_result = self.parse_annostr(intexpression, is_full_expression=True)
+        try:
+            return int(eval_result)
+        except (TypeError, ValueError):
+            raise InvalidIntExpression(f"{intexpression!r} cannot be interpreted as an IntExpression.")
 
 
 class AutomationTarget:

@@ -12,7 +12,8 @@ from utils.functions import maybe_mod
 from .errors import *
 from .results import *
 from .runtime import AutomationContext, AutomationTarget
-from .utils import crit_mapper, max_mapper, maybe_alias_statblock, mi_mapper, upcast_scaled_dice
+from .utils import FeatureReference, SpellSlotReference, crit_mapper, deserialize_usecounter_target, max_mapper, \
+    maybe_alias_statblock, mi_mapper, upcast_scaled_dice
 
 log = logging.getLogger(__name__)
 
@@ -261,11 +262,10 @@ class Attack(Effect):
 
         # explicit bonus
         if self.bonus:
-            explicit_bonus = autoctx.parse_annostr(self.bonus, is_full_expression=True)
             try:
-                attack_bonus = int(explicit_bonus)
-            except (TypeError, ValueError):
-                raise AutomationException(f"{explicit_bonus} cannot be interpreted as an attack bonus.")
+                attack_bonus = autoctx.parse_intexpression(self.bonus)
+            except:
+                raise AutomationException(f"{self.bonus!r} cannot be interpreted as an attack bonus.")
 
         if attack_bonus is None and b is None:
             raise NoAttackBonus("No spell attack bonus found. Use the `-b` argument to specify one!")
@@ -442,10 +442,9 @@ class Save(Effect):
         dc_override = None
         if self.dc:
             try:
-                dc_override = autoctx.parse_annostr(self.dc, is_full_expression=True)
-                dc_override = int(dc_override)
-            except (TypeError, ValueError):
-                raise AutomationException(f"{dc_override} cannot be interpreted as a DC.")
+                dc_override = autoctx.parse_intexpression(self.dc)
+            except:
+                raise AutomationException(f"{self.dc!r} cannot be interpreted as a DC.")
 
         # dc hierarchy: arg > self.dc > spell cast override > spellbook dc
         dc = dc_override or autoctx.dc_override or autoctx.caster.spellbook.dc
@@ -759,9 +758,9 @@ class IEffect(Effect):
         super(IEffect, self).run(autoctx)
         if isinstance(self.duration, str):
             try:
-                duration = int(autoctx.parse_annostr(self.duration, is_full_expression=True))
-            except ValueError:
-                raise InvalidArgument(f"{self.duration} is not an integer (in effect duration)")
+                duration = autoctx.parse_intexpression(self.duration)
+            except:
+                raise AutomationException(f"{self.duration} is not an integer (in effect duration)")
         else:
             duration = self.duration
 

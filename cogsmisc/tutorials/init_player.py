@@ -18,6 +18,12 @@ class PlayerInitiative(Tutorial):
     @state(first=True)
     class JoiningInitiative(TutorialState):
         async def setup(self, ctx, state_map):
+            # preflight: must be in a guild
+            if ctx.guild is None:
+                await state_map.end_tutorial(ctx)
+                raise PrerequisiteFailed("This tutorial cannot be run in private messages, since initiative tracking "
+                                         "is tied to a server's channel. Try again in a channel!")
+
             # preflight: channel not in combat
             try:
                 await ctx.get_combat()
@@ -75,6 +81,9 @@ class PlayerInitiative(Tutorial):
             await ctx.send(embed=embed2)
 
         async def listener(self, ctx, state_map):
+            if ctx.channel.id != state_map.persist_data.get('channel_id'):
+                return
+
             # The tutorial person ran !init join, there is an active combat, and the character is in combat
             if ctx.command is ctx.bot.get_command('init join'):
                 pc = await get_pc(ctx)

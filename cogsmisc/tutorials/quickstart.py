@@ -41,10 +41,14 @@ class Quickstart(Tutorial):
             embed.description = f"""
             Great! As you might have guessed, `{ctx.prefix}roll <dice>` is the command to roll some dice. Throughout the rest of this tutorial and other tutorials, we'll show commands in code blocks like `this`. 
             
-            When you see something like `<dice>` or `[dice]`, this is called an *argument*: it means you can put some input there, like the dice you want to roll. Arguments in brackets like `<this>` are required, and arguments in brackets like `[this]` are optional.
+            When you see something like `<dice>` or `[dice]`, this is called an *argument*: it means you can put some input there, like the dice you want to roll. Arguments in brackets like `<this>` are required, and arguments in brackets like `[this]` are optional. Make sure not to include the brackets themselves!
             """
             await ctx.send(embed=embed)
-            await state_map.transition_with_delay(ctx, self.tutorial.ImportCharacter, 5)
+            try:
+                await ctx.get_character()
+                await state_map.transition_with_delay(ctx, self.tutorial.ImportCharacter, 5)
+            except NoCharacter:
+                await state_map.transition_with_delay(ctx, self.tutorial.ChecksAttacksSaves, 5)
 
     @state()
     class ImportCharacter(TutorialState):
@@ -82,7 +86,7 @@ class Quickstart(Tutorial):
             embed.description = f"""
             Nice to meet you, {character.name}! Avrae has no limit on how many characters you can import, but you can only have one "active" at a time across all servers. To switch between active characters, use `{ctx.prefix}character <name>`.
             
-            Also, if you change your character's character sheet, Avrae will need to be updated to know about those changes. Whenever you do so, make sure to run `{ctx.prefix}update` to update your active character!
+            Also, if you change your character sheet, Avrae will need to be updated to know about those changes. Whenever you do so, make sure to run `{ctx.prefix}update` to update your active character!
             """
             await ctx.send(embed=embed)
             await state_map.transition_with_delay(ctx, self.tutorial.ChecksAttacksSaves, 5)
@@ -93,7 +97,7 @@ class Quickstart(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Checks, Saves, and Attacks"
             embed.description = f"""
-            Finally, let's go over the three most important rolls in D&D: skill checks, saving throws, and attacks. Now that your character is saved in Avrae, you can easily make these three rolls with simple commands: `{ctx.prefix}check <skill>`, `{ctx.prefix}save <ability>`, and `{ctx.prefix}attack <action>`. 
+            Let's go over the three most important rolls in D&D: skill checks, saving throws, and attacks. Now that your character is saved in Avrae, you can easily make these three rolls with simple commands: `{ctx.prefix}check <skill>`, `{ctx.prefix}save <ability>`, and `{ctx.prefix}attack <action>`. 
 
             For example, you can make a Stealth check with `{ctx.prefix}check stealth`, a Dexterity save with `{ctx.prefix}save dex`, and an unarmed attack with `{ctx.prefix}attack "Unarmed Strike"`. Try these now!
             ```

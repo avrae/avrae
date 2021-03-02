@@ -20,6 +20,7 @@ class Spellcasting(Tutorial):
             ```
             {ctx.prefix}cast <name of spell>
             ```
+            Not sure what spells you have? Use `{ctx.prefix}spellbook` to view your spells!
             """
             await ctx.send(embed=embed)
 

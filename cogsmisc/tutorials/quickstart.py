@@ -46,9 +46,9 @@ class Quickstart(Tutorial):
             await ctx.send(embed=embed)
             try:
                 await ctx.get_character()
-                await state_map.transition_with_delay(ctx, self.tutorial.ImportCharacter, 5)
-            except NoCharacter:
                 await state_map.transition_with_delay(ctx, self.tutorial.ChecksAttacksSaves, 5)
+            except NoCharacter:
+                await state_map.transition_with_delay(ctx, self.tutorial.ImportCharacter, 5)
 
     @state()
     class ImportCharacter(TutorialState):

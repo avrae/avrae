@@ -18,7 +18,8 @@ from .utils import FeatureReference, SpellSlotReference, crit_mapper, deserializ
 log = logging.getLogger(__name__)
 
 __all__ = (
-    'Effect', 'Target', 'Attack', 'Save', 'Damage', 'TempHP', 'IEffect', 'Roll', 'Text', 'SetVariable', 'Condition'
+    'Effect', 'Target', 'Attack', 'Save', 'Damage', 'TempHP', 'IEffect', 'Roll', 'Text', 'SetVariable', 'Condition',
+    'UseCounter'
 )
 
 
@@ -1040,6 +1041,127 @@ class Condition(Effect):
         return super().children + self.on_false + self.on_true
 
 
+class UseCounter(Effect):
+    def __init__(self, counter, amount: str, allowOverflow: bool = False, errorBehaviour: str = 'warn', **kwargs):
+        """
+        :type counter: str or SpellSlotReference or FeatureReference
+        """
+        super().__init__('counter', **kwargs)
+        self.counter = counter
+        self.amount = amount
+        self.allow_overflow = allowOverflow
+        self.error_behaviour = errorBehaviour
+
+    @classmethod
+    def from_data(cls, data):
+        if not isinstance(data['counter'], str):
+            data['counter'] = deserialize_usecounter_target(data['counter'])
+        return super().from_data(data)
+
+    def to_dict(self):
+        out = super().to_dict()
+        counter = self.counter if isinstance(self.counter, str) else self.counter.to_dict()
+        out.update({
+            'counter': counter,
+            'amount': self.amount,
+            'allowOverflow': self.allow_overflow,
+            'errorBehaviour': self.error_behaviour
+        })
+        return out
+
+    def run(self, autoctx):
+        super().run(autoctx)
+
+        # set to default values in case of error
+        autoctx.metavars['lastCounterName'] = None
+        autoctx.metavars['lastCounterRemaining'] = 0
+        autoctx.metavars['lastCounterUsedAmount'] = 0
+
+        # todo handle -amt, -l, -i
+
+        try:
+            amount = autoctx.parse_intexpression(self.amount)
+        except Exception:
+            raise AutomationException(f"{self.amount!r} cannot be interpreted as an amount (in Use Counter)")
+
+        try:
+            if isinstance(self.counter, SpellSlotReference):  # spell slot
+                result = self.use_spell_slot(autoctx, amount)
+            else:
+                result = self.get_and_use_counter(autoctx, amount)
+        except Exception as e:
+            result = UseCounterResult(counter_name=None, counter_remaining=0, used_amount=0)
+            if self.error_behaviour == 'warn':
+                raise AutomationException(f"Could not use counter: {e}")  # don't stop execution
+            elif self.error_behaviour == 'raise':
+                raise StopExecution(f"Could not use counter: {e}")
+
+        autoctx.metavars['lastCounterName'] = result.counter_name
+        autoctx.metavars['lastCounterRemaining'] = result.counter_remaining
+        autoctx.metavars['lastCounterUsedAmount'] = result.used_amount
+        return result
+
+    def get_and_use_counter(self, autoctx, amount):  # this is not in run() because indentation
+        if autoctx.character is None:
+            raise NoCounterFound("The caster does not have custom counters.")
+
+        if isinstance(self.counter, FeatureReference):
+            raise NoCounterFound("This feature is not yet implemented")  # todo
+        else:  # str - get counter by match
+            counter = autoctx.character.get_consumable(self.counter)
+            if counter is None:
+                raise NoCounterFound(f"No counter with the name {self.counter!r} was found.")
+
+        return self.use_custom_counter(autoctx, counter, amount)
+
+    def use_spell_slot(self, autoctx, amount):
+        old_value = autoctx.caster.spellbook.get_slots(self.counter.slot)
+        new_value = old_value - amount
+
+        # if allow overflow is on, clip to bounds
+        if self.allow_overflow:
+            new_value = max(min(new_value, autoctx.caster.spellbook.get_max_slots(self.counter.slot)), 0)
+
+        # use the slot(s) and output
+        autoctx.caster.spellbook.set_slots(self.counter.slot, new_value)
+
+        # todo queue resource usage in own field
+
+        return UseCounterResult(counter_name=str(self.counter.slot),
+                                counter_remaining=new_value,
+                                used_amount=old_value - new_value)
+
+    def use_custom_counter(self, autoctx, counter, amount):
+        old_value = counter.value
+        target_value = old_value - amount
+
+        # use the charges and output
+        final_value = counter.set(target_value, strict=not self.allow_overflow)
+
+        # todo queue resource usage in own field
+        # also todo mark automation as needing caster commits
+
+        return UseCounterResult(counter_name=counter.name,
+                                counter_remaining=final_value,
+                                used_amount=old_value - final_value)
+
+    def build_str(self, caster, evaluator):
+        super().build_str(caster, evaluator)
+        # amount
+        try:
+            amount = int(evaluator.eval(self.amount))
+        except Exception:
+            amount = float('nan')
+        charges = 'charge' if amount == 1 else 'charges'
+
+        # counter name
+        if isinstance(self.amount, str):
+            counter_name = f"{charges} of {self.amount}"
+        else:
+            counter_name = self.counter.build_str(plural=amount != 1)
+        return f"uses {amount} {counter_name}"
+
+
 EFFECT_MAP = {
     "target": Target,
     "attack": Attack,
@@ -1051,4 +1173,5 @@ EFFECT_MAP = {
     "text": Text,
     "variable": SetVariable,
     "condition": Condition,
+    "counter": UseCounter,
 }

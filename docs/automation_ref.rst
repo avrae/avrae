@@ -371,7 +371,7 @@ Uses a number of charges of the given counter, and displays the remaining amount
 
 .. attribute:: allowOverflow
 
-     *optional, default True* - If False, attempting to overflow/underflow a counter (i.e. use more charges than
+     *optional, default False* - If False, attempting to overflow/underflow a counter (i.e. use more charges than
      available or add charges exceeding max) will error instead of clipping to bounds.
 
 .. attribute:: errorBehaviour
@@ -390,7 +390,7 @@ Uses a number of charges of the given counter, and displays the remaining amount
 
 **Variables**
 
-- ``lastCounterName`` (:class:`str`) The name of the last used counter (if it was a spell slot, the level of the slot, "error" on error).
+- ``lastCounterName`` (:class:`str`) The name of the last used counter (if it was a spell slot, the level of the slot, ``None`` on error).
 - ``lastCounterRemaining`` (:class:`int`) The remaining charges of the last used counter (0 on error).
 - ``lastCounterUsedAmount`` (:class:`int`) The amount of the counter successfully used.
 

@@ -3,7 +3,7 @@ from cogs5e.models.errors import AvraeException
 
 __all__ = (
     'AutomationException', 'StopExecution', 'TargetException', 'AutomationEvaluationException', 'InvalidIntExpression',
-    'NoSpellDC', 'NoAttackBonus'
+    'NoSpellDC', 'NoAttackBonus', 'NoCounterFound'
 )
 
 
@@ -43,4 +43,9 @@ class NoSpellDC(AutomationException):
 
 class NoAttackBonus(AutomationException):
     def __init__(self, msg="No attack bonus found."):
+        super().__init__(msg)
+
+
+class NoCounterFound(AutomationException):
+    def __init__(self, msg="The specified counter was not found."):
         super().__init__(msg)

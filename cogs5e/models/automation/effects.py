@@ -1077,10 +1077,16 @@ class UseCounter(Effect):
         autoctx.metavars['lastCounterRemaining'] = 0
         autoctx.metavars['lastCounterUsedAmount'] = 0
 
-        # todo handle -amt, -l, -i
+        # handle -amt, -l, -i
+        amt = autoctx.args.last('amt', None, int, ephem=True)
+        i = autoctx.args.last('i')
+        # -l handled in use_spell_slot
+
+        if i:
+            return UseCounterResult(skipped=True)  # skipped
 
         try:
-            amount = autoctx.parse_intexpression(self.amount)
+            amount = amt or autoctx.parse_intexpression(self.amount)
         except Exception:
             raise AutomationException(f"{self.amount!r} cannot be interpreted as an amount (in Use Counter)")
 
@@ -1089,8 +1095,9 @@ class UseCounter(Effect):
                 result = self.use_spell_slot(autoctx, amount)
             else:
                 result = self.get_and_use_counter(autoctx, amount)
+            autoctx.caster_needs_commit = True
         except Exception as e:
-            result = UseCounterResult(counter_name=None, counter_remaining=0, used_amount=0)
+            result = UseCounterResult(skipped=True)
             if self.error_behaviour == 'warn':
                 raise AutomationException(f"Could not use counter: {e}")  # don't stop execution
             elif self.error_behaviour == 'raise':
@@ -1115,19 +1122,23 @@ class UseCounter(Effect):
         return self.use_custom_counter(autoctx, counter, amount)
 
     def use_spell_slot(self, autoctx, amount):
-        old_value = autoctx.caster.spellbook.get_slots(self.counter.slot)
+        level = autoctx.args.last('l', self.counter.slot, int)
+
+        old_value = autoctx.caster.spellbook.get_slots(level)
         new_value = old_value - amount
 
         # if allow overflow is on, clip to bounds
         if self.allow_overflow:
-            new_value = max(min(new_value, autoctx.caster.spellbook.get_max_slots(self.counter.slot)), 0)
+            new_value = max(min(new_value, autoctx.caster.spellbook.get_max_slots(level)), 0)
 
         # use the slot(s) and output
-        autoctx.caster.spellbook.set_slots(self.counter.slot, new_value)
+        autoctx.caster.spellbook.set_slots(level, new_value)
 
-        # todo queue resource usage in own field
+        # queue resource usage in own field
+        autoctx.postflight_queue_field(name="Spell Slots",
+                                       value=autoctx.caster.spellbook.remaining_casts_of(self, level))
 
-        return UseCounterResult(counter_name=str(self.counter.slot),
+        return UseCounterResult(counter_name=str(level),
                                 counter_remaining=new_value,
                                 used_amount=old_value - new_value)
 
@@ -1137,13 +1148,14 @@ class UseCounter(Effect):
 
         # use the charges and output
         final_value = counter.set(target_value, strict=not self.allow_overflow)
+        delta = final_value - old_value
 
-        # todo queue resource usage in own field
-        # also todo mark automation as needing caster commits
+        # queue resource usage in own field
+        autoctx.postflight_queue_field(name=counter.name, value=f"{str(counter)} ({delta:+})")
 
         return UseCounterResult(counter_name=counter.name,
                                 counter_remaining=final_value,
-                                used_amount=old_value - final_value)
+                                used_amount=-delta)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)
@@ -1155,8 +1167,8 @@ class UseCounter(Effect):
         charges = 'charge' if amount == 1 else 'charges'
 
         # counter name
-        if isinstance(self.amount, str):
-            counter_name = f"{charges} of {self.amount}"
+        if isinstance(self.counter, str):
+            counter_name = f"{charges} of {self.counter}"
         else:
             counter_name = self.counter.build_str(plural=amount != 1)
         return f"uses {amount} {counter_name}"

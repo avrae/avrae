@@ -1099,7 +1099,7 @@ class UseCounter(Effect):
         except Exception as e:
             result = UseCounterResult(skipped=True)
             if self.error_behaviour == 'warn':
-                raise AutomationException(f"Could not use counter: {e}")  # don't stop execution
+                autoctx.meta_queue(f"**Warning**: Could not use counter - {e}")
             elif self.error_behaviour == 'raise':
                 raise StopExecution(f"Could not use counter: {e}")
 
@@ -1125,18 +1125,21 @@ class UseCounter(Effect):
         level = autoctx.args.last('l', self.counter.slot, int)
 
         old_value = autoctx.caster.spellbook.get_slots(level)
-        new_value = old_value - amount
+        target_value = new_value = old_value - amount
 
         # if allow overflow is on, clip to bounds
         if self.allow_overflow:
-            new_value = max(min(new_value, autoctx.caster.spellbook.get_max_slots(level)), 0)
+            new_value = max(min(target_value, autoctx.caster.spellbook.get_max_slots(level)), 0)
 
         # use the slot(s) and output
         autoctx.caster.spellbook.set_slots(level, new_value)
+        delta = new_value - old_value
+        overflow = abs(new_value - target_value)
+        slots_str = autoctx.caster.spellbook.slots_str(level)
 
         # queue resource usage in own field
-        autoctx.postflight_queue_field(name="Spell Slots",
-                                       value=autoctx.caster.spellbook.remaining_casts_of(self, level))
+        overflow_str = f"\n({overflow} overflow)" if overflow else ""
+        autoctx.postflight_queue_field(name="Spell Slots", value=f"{slots_str} ({delta:+}){overflow_str}")
 
         return UseCounterResult(counter_name=str(level),
                                 counter_remaining=new_value,
@@ -1149,9 +1152,11 @@ class UseCounter(Effect):
         # use the charges and output
         final_value = counter.set(target_value, strict=not self.allow_overflow)
         delta = final_value - old_value
+        overflow = abs(final_value - target_value)
 
         # queue resource usage in own field
-        autoctx.postflight_queue_field(name=counter.name, value=f"{str(counter)} ({delta:+})")
+        overflow_str = f"\n({overflow} overflow)" if overflow else ""
+        autoctx.postflight_queue_field(name=counter.name, value=f"{str(counter)} ({delta:+}){overflow_str}")
 
         return UseCounterResult(counter_name=counter.name,
                                 counter_remaining=final_value,

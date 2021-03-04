@@ -117,7 +117,7 @@ class PlayerInitiative(Tutorial):
                 await combat.final()
 
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Player Status"
+            embed.title = "Combatant Status"
             embed.description = f"""
             That Discord notification you just got means it’s now your turn!  Avrae starts each turn by displaying the combatant’s current status, which you can see above.  And if you check the pinned messages, your name is now highlighted as well, signaling that it’s currently your turn.
             
@@ -184,7 +184,7 @@ class PlayerInitiative(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Attacks in Initiative II"
             embed.description = f"""
-            You always attack using your own character using `{ctx.prefix}attack`.  However, initiative has a matching command, `{ctx.prefix}init attack` (`{ctx.prefix}i a` for short), that uses the current combatant instead.  Since it’s currently your turn, right now that’s you.  On the tarrasque’s turn, `{ctx.prefix}init attack` can therefore be used to attack as the tarrasque.
+            You always attack with your own character using `{ctx.prefix}attack`.  However, initiative has a matching command, `{ctx.prefix}init attack` (`{ctx.prefix}i a` for short), that uses the current combatant instead.  Since it’s currently your turn, right now that’s you.  On the tarrasque’s turn, `{ctx.prefix}init attack` can therefore be used to attack as the tarrasque.
             
             Whichever version you use, there are plenty of other arguments you can add to attacks, too.  If your first attack didn't land, try adding `hit` this time.  If you hurt the tarrasque already, you can have some other fun here.  You might try attacking with advantage (`adv`) or changing the damage type (`-dtype fire`) instead.
             ```
@@ -196,10 +196,7 @@ class PlayerInitiative(Tutorial):
         async def listener(self, ctx, state_map):
             if ctx.channel.id != state_map.persist_data.get('channel_id'):
                 return
-            if ctx.command in (
-                    ctx.bot.get_command('i a'),
-                    ctx.bot.get_command('a')
-            ):
+            if ctx.command is ctx.bot.get_command('i a'):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -257,7 +254,7 @@ class PlayerInitiative(Tutorial):
             
             Now since he didn’t go away, we shall taunt him a second time.  With **meteors**.
             ```
-            {ctx.prefix}init cast "meteor swarm" -t TA1 -i -phrase "A Dinosaur’s Best Friend™!"
+            {ctx.prefix}init cast "meteor swarm" -t TA1 -i -phrase "A Dinosaur’s Best Friend!"
             ```
             """
             await ctx.send(embed=embed)
@@ -265,10 +262,7 @@ class PlayerInitiative(Tutorial):
         async def listener(self, ctx, state_map):
             if ctx.channel.id != state_map.persist_data.get('channel_id'):
                 return
-            if ctx.command in (
-                    ctx.bot.get_command('i cast'),
-                    ctx.bot.get_command('cast')
-            ):
+            if ctx.command is ctx.bot.get_command('i cast'):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -287,7 +281,7 @@ class PlayerInitiative(Tutorial):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Managing Health"
             embed.description = f"""
-            Go ahead and check that pinned message one more time.  Our tarrasque, who used to be `<Healthy>`, is now `<Injured>`.
+            Go ahead and check that pinned message one more time.  If you were lucky enough to cause any damage there, you probably noticed the tarrasque changed from `<Healthy>` to `<Injured>`.
             
             Your own health won’t display with such colorful descriptions, however.  Avrae shows your exact HP so you can plan your turn accordingly.  When monsters target you and cause damage, this number will update automatically.
             
@@ -345,7 +339,7 @@ class PlayerInitiative(Tutorial):
         async def transition(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
-            Now the tarrasque has changed from `<Injured>` to `<Bloodied>`!  As the battle progresses (assuming you live long enough ~~and we stop cheating~~), it will eventually drop to `<Critical>`, then `<Dead>`.
+            Now the tarrasque has changed from `<Healthy>` or `<Injured>` to `<Bloodied>`!  As the battle progresses (assuming you live long enough ~~and we stop cheating~~), it will eventually drop to `<Critical>`, then `<Dead>`.
             
             And as a general note: cheating is fine in a tutorial, but use this command wisely.  Your DM will get a message from Avrae any time the monster’s health is changed.
             """

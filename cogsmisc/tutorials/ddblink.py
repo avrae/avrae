@@ -119,7 +119,7 @@ class DDBLink(Tutorial):
             character = await ctx.get_character()
 
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Content Lookup"
+            embed.title = "Campaign Link"
             embed.description = f"""
             If {character.name} is assigned to a D&D Beyond campaign, it gets even better!  The DM for that campaign can link it to a specific Discord channel by using `{ctx.prefix}campaign [campaign_link]` in that channel.  This will tie that channel to your campaign’s Game Log.
             

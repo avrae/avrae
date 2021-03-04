@@ -90,6 +90,11 @@ __Damage Types__
 **Effects**
 -dur <duration> - Overrides the duration of any effect applied by the attack.
 
+**Counters**
+-amt <amount> - Overrides the amount of the resource used.
+-l <level> - Specifies the level of the spell slot to use.
+-i - Skips using any resources.
+
 **Other**
 -h - Hides rolled values.
 -phrase <phrase> - Adds flavor text.

@@ -401,7 +401,9 @@ class Character(StatBlock):
         # tracking
         self._hp = old_character._hp
         self._temp_hp = old_character._temp_hp
-        self.spellbook.slots = old_character.spellbook.slots
+        # ensure new slots are within bounds (#1453)
+        self.spellbook.slots = {l: min(v, self.spellbook.get_max_slots(l))
+                                for l, v in old_character.spellbook.slots.items()}
 
         if (self.owner, self.upstream) in Character._cache:
             Character._cache[self.owner, self.upstream] = self

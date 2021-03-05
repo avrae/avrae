@@ -352,7 +352,7 @@ def smart_trim(text, max_len=1024):
     """Uses chunk_text to return a trimmed str."""
     chunks = chunk_text(text, max_len - 5)
     out = chunks[0].strip()
-    if len(chunks) > 2:
+    if len(chunks) > 1:
         return f"{chunks[0]}[...]"
     return out
 

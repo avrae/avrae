@@ -222,9 +222,9 @@ class GameLog(commands.Cog):
 
         Note: {name} will be formatted with the character's name in title_fmt.
         """
-        # check for loaded character
-        character = await gctx.get_character()
-        if character is None:
+        # check for valid caster
+        caster = await gctx.get_statblock()
+        if caster is None:
             await self.dice_roll_roll(gctx, roll_request,
                                       comment_getter=lambda rr: f"{roll_request.action}: {rr.roll_type.value.title()}")
             return
@@ -233,8 +233,8 @@ class GameLog(commands.Cog):
         the_roll = roll_request.rolls[0]
 
         # send embed
-        embed = embeds.EmbedWithCharacter(character, name=False)
-        embed.title = title_fmt.format(name=character.get_title_name(), **fmt_kwargs)
+        embed = gamelogutils.embed_for_caster(caster)
+        embed.title = title_fmt.format(name=caster.get_title_name(), **fmt_kwargs)
         embed.description = str(the_roll.to_d20())
         embed.set_footer(text=f"Rolled in {gctx.campaign.campaign_name}", icon_url=constants.DDB_LOGO_ICON)
         await gctx.channel.send(embed=embed)
@@ -268,25 +268,25 @@ class GameLog(commands.Cog):
         """To Hit rolls from attacks/spells."""
 
         # check for loaded character
-        if (character := await gctx.get_character()) is None:
+        if (caster := await gctx.get_statblock()) is None:
             await self.dice_roll_roll(gctx, roll_request, comment=f"{roll_request.action}: To Hit")
             return
 
         # setup
         attack_roll = roll_request.rolls[0]
-        action = await gamelogutils.action_from_roll_request(gctx, character, roll_request)
+        action = await gamelogutils.action_from_roll_request(gctx, caster, roll_request)
         automation = None if action is None else action.automation
         pend_damage = True
 
         # generate the embed based on whether we found avrae annotated data
         if action is not None:
-            embed = gamelogutils.embed_for_action(gctx, action, character, attack_roll)
+            embed = gamelogutils.embed_for_action(gctx, action, caster, attack_roll)
             # create a PendingAttack if the action has a damage,
             if not gamelogutils.automation_has_damage(automation):
                 pend_damage = False
         else:
             # or if the action is unknown (we assume basic to hit/damage then)
-            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, character, attack_roll)
+            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, caster, attack_roll)
 
         message = await gctx.channel.send(embed=embed)
         if pend_damage:
@@ -295,7 +295,7 @@ class GameLog(commands.Cog):
     async def dice_roll_damage(self, gctx, roll_request):
         """Damage rolls from attacks/spells."""
         # check for loaded character
-        if (character := await gctx.get_character()) is None:
+        if (caster := await gctx.get_statblock()) is None:
             await self.dice_roll_roll(gctx, roll_request, comment=f"{roll_request.action}: Damage")
             return
 
@@ -312,11 +312,11 @@ class GameLog(commands.Cog):
             await pending.delete(gctx)
 
         # generate embed based on action
-        action = await gamelogutils.action_from_roll_request(gctx, character, roll_request)
+        action = await gamelogutils.action_from_roll_request(gctx, caster, roll_request)
         if action is not None:
-            embed = gamelogutils.embed_for_action(gctx, action, character, attack_roll, damage_roll)
+            embed = gamelogutils.embed_for_action(gctx, action, caster, attack_roll, damage_roll)
         else:
-            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, character,
+            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, caster,
                                                         attack_roll, damage_roll)
 
         # either update the old message or post a new one

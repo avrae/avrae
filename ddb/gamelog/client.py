@@ -130,6 +130,10 @@ class GameLogClient:
         if event.source == AVRAE_EVENT_SOURCE:
             return
 
+        # check: is the event intended for the whole campaign? (Private messages not supported, yet)
+        if event.message_scope != 'gameId':
+            return
+
         # check: is this campaign linked to a channel?
         try:
             campaign = await CampaignLink.from_id(self.bot.mdb, event.game_id)

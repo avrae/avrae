@@ -21,13 +21,13 @@ class GameLogEvent:
         self.data = kwargs['data']
         self.entity_id = kwargs['entityId']  # type: str
         self.entity_type = kwargs['entityType']  # type: str
+        self.message_scope = kwargs['messageScope']  # type: str
+        self.message_target = kwargs['messageTarget']  # type: str
 
         # other stuff
         self.id = kwargs['id']  # type: str
         self.date_time = kwargs['dateTime']  # type: str
         self.persist = kwargs['persist']  # type: bool
-        self.message_scope = kwargs['messageScope']  # type: str
-        self.message_target = kwargs['messageTarget']  # type: str
         self.connection_id = kwargs.get('connectionId')
 
         # raw event for easy serialization

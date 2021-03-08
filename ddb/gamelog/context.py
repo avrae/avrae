@@ -2,6 +2,7 @@ import logging
 
 from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
+from gamedata.compendium import compendium
 from utils.functions import get_guild_member, user_from_id
 
 _sentinel = object()
@@ -78,3 +79,15 @@ class GameLogEventContext:
         except NoCharacter:
             self._character = None
         return self._character
+
+    async def get_monster(self):
+        """
+        Gets the Monster associated with the event. Returns None if the event is not associated with a monster.
+
+        :rtype: gamedata.monster.Monster or None
+        """
+        return compendium.lookup_by_entitlement('monster', self.event.entity_id)
+
+    async def get_statblock(self):
+        """:rtype: cogs5e.models.sheet.statblock.StatBlock or None"""
+        return (await self.get_character()) or (await self.get_monster())

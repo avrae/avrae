@@ -16,6 +16,8 @@ class RunningTheGame(Tutorial):
             embed.description = f"""
             Avrae is a useful tool, and, as such, even has support for automating rolls done by monsters, inside of and outside of combat. In this tutorial, we will go over some of the basic commands that a DM can use to help run monsters effectively. Even if you're a player, knowing these commands can be useful, in case you ever want to run a game of your own.
 
+            If you have your D&D Beyond account linked, you can use [your unlocked monsters](https://www.dndbeyond.com/monsters?utm_source=avrae&utm_medium=reference) here in Avrae, too. See the D&D Beyond Link tutorial for more information.
+
             First, let's run a check for a monster. After that, try a save for a monster. These are both similar to how they would be run as a player.
             
             As an example, to make a Sleight of Hand check for a Commoner, you would use  `{ctx.prefix}moncheck Commoner "Sleight of Hand"`. To have that same Commoner roll a Dexterity saving throw, you would use `{ctx.prefix}monsave Commoner Dexterity`. Try it yourself!
@@ -97,7 +99,7 @@ class RunningTheGame(Tutorial):
             await state_map.transition_with_delay(ctx, self.tutorial.UseMonsterAttacks, 5)
 
     @state()
-    class ListMonsterAttacks(TutorialState):
+    class UseMonsterAttacks(TutorialState):
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Using Monster Attacks"
@@ -120,7 +122,7 @@ class RunningTheGame(Tutorial):
             embed.description = f"""
             Excellent! Having the knowledge of how to use monster attacks outside of initiative is good knowledge to have.
             
-            Like before, when attacking with a monster (or an attack!) that has multiple words to it, surround that argument in quotes for best effect. You can also use `{ctx.prefix}ma` as shorthand for `{ctx.prefix}monattack`, so long as you use the proper arguments to achieve your desired effect.
+            Like before, if an attack name has multiple words, surround that argument in quotes for best effect. You can also use `{ctx.prefix}ma` as shorthand for `{ctx.prefix}monattack`, so long as you use the proper arguments to achieve your desired effect.
             
             Let's move on to the next part of this tutorial.
             """
@@ -131,11 +133,11 @@ class RunningTheGame(Tutorial):
     class CastMonsterSpells(TutorialState):
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Using Monster Attacks"
+            embed.title = "Casting Monster Spells"
             embed.description = f"""
             Like with the other aspects of using monster actions, casting their spells is similar to a player.
             
-            To cast a spell using a monster, you must first ensure that that monster has spells that it can cast. To view the list of spells a monster can cast, view its information using the Lookup function of the bot, which is covered in the D&D Beyond Link section of the tutorial. In case you've forgotten, though, it is as simple as `{ctx.prefix}monster <name of monster>`.
+            To cast a spell using a monster, you must first ensure that that monster has spells that it can cast. To view the list of spells a monster can cast, you can use `{ctx.prefix}monster <name of monster>`.
             
             Let's use a Lich as an example. To have a Lich cast Blight, you would use `{ctx.prefix}moncast Lich Blight`.
             
@@ -160,8 +162,7 @@ class RunningTheGame(Tutorial):
             All of the commands covered in this tutorial have in-depth `{ctx.prefix}help` entries for them which list off more in-depth and specific arguments for each command. To view these help entries, use `{ctx.prefix}help moncheck`, `{ctx.prefix}help monsave`, `{ctx.prefix}help monattack`, or `{ctx.prefix}help moncast`, respectively.
             
             One final note. While it was touched upon before, you should know that, as a DM, you cannot change or alter your players' stats in any way (such as modifying their HP or spell slots) without using the initiative tracker. You can learn more about the initiative tracker and how to use it by viewing the "Initiative (DM)" tutorial.
-            
-            That's it for this tutorial!
             """
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

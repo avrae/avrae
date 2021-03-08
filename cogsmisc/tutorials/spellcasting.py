@@ -1,3 +1,4 @@
+from cogs5e.models.errors import NoCharacter
 from .models import Tutorial, TutorialEmbed, TutorialState, checklist, state
 
 
@@ -20,6 +21,7 @@ class Spellcasting(Tutorial):
             ```
             {ctx.prefix}cast <name of spell>
             ```
+            Not sure what spells you have? Use `{ctx.prefix}spellbook` to view your spells!
             """
             await ctx.send(embed=embed)
 
@@ -39,7 +41,7 @@ class Spellcasting(Tutorial):
     class UpcastingSpells(TutorialState):
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Upcasting Spells"
+            embed.title = "Casting at a Higher Level"
             embed.description = f"""
             Sometimes, a spell just might not have enough "oomph" for the specific situation you need it for. If said spell supports it, however, you can cast that spell using a higher level slot. To do so, you must, as before, be on a character with the ability to cast spells, have that spell on your character's spell list, and have a spell slot of the appropriate level. Not all spells have greater effects when upcasting, though, so be sure to read a spell's description for an "At Higher Levels" section to see if it does.
 
@@ -97,7 +99,7 @@ class Spellcasting(Tutorial):
     class SlotManagement(TutorialState):
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Gaining and Losing Spell Slots"
+            embed.title = "Using and Recovering Spell Slots"
             embed.description = f"""
             Typically, through normal play, spell slots are gained when resting, or lost when casting. However, there may come a time when you need to manually adjust the amount of spell slots you currently have, such as if you mistakenly cast a spell. To note, these commands can only be used on characters that have spell slots. You also cannot go under the minimum or over the maximum amount of spell slots that your character has for that respective level.
 
@@ -146,6 +148,16 @@ class Spellcasting(Tutorial):
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Long Resting"
+
+            # if singleclassed warlock, show srslots info
+            warlock_info = ""
+            try:
+                character = await ctx.get_character()
+                if (warlock_level := character.levels.get("Warlock")) and warlock_level == character.levels.total_level:
+                    warlock_info = f"By the way, since you're a Warlock, you can also set your spell slots to recover on a Short Rest with `{ctx.prefix}csettings srslots true`."
+            except NoCharacter:
+                pass
+
             embed.description = f"""
             After a long day of keeping your Barbarian from knocking themself out, or of making sure those pesky melee attacks don’t hit your fragile Wizard body, it is good to take a Long Rest to regain all of your expended power, so you can do it all again tomorrow.
 
@@ -153,6 +165,7 @@ class Spellcasting(Tutorial):
             ```
             {ctx.prefix}game longrest
             ```
+            {warlock_info}
             """
             await ctx.send(embed=embed)
 
@@ -167,5 +180,6 @@ class Spellcasting(Tutorial):
 
             And, as a final note, please understand that, on some of the sheet trackers that Avrae supports, there is a way to differentiate between learned and prepared spells on the sheet; however, Avrae does not keep track of which of your spells are simply learned, versus those that are prepared. It is best to keep track of which spells you have prepared manually.
             """
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

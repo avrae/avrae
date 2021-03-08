@@ -1,7 +1,7 @@
 from cogs5e.models.errors import NoCharacter
 from cogs5e.models.sheet.player import CustomCounter
 from .errors import PrerequisiteFailed
-from .models import Tutorial, TutorialEmbed, TutorialState, checklist, state
+from .models import Tutorial, TutorialEmbed, TutorialState, state
 
 
 class PlayingTheGame(Tutorial):
@@ -12,7 +12,7 @@ class PlayingTheGame(Tutorial):
     """
 
     @state(first=True)
-    class SheetAndStatus(TutorialState):
+    class Sheet(TutorialState):
         async def setup(self, ctx, state_map):
             try:
                 await ctx.get_character()  # ensure active character
@@ -25,13 +25,28 @@ class PlayingTheGame(Tutorial):
 
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Sheet and Status"
+            embed.title = "Character Sheet"
             embed.description = f"""
             Now that you've imported a character, let's go over how to view your character sheet, manage your resources, take rests, and more! You can view your character's sheet using `{ctx.prefix}sheet`. It will list your statistics and attacks. Try it now to see what's stored!
             ```
             {ctx.prefix}sheet
             ```
-            
+            """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            if ctx.command is ctx.bot.get_command('sheet'):
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            await state_map.transition(ctx, self.tutorial.Status)
+
+    @state()
+    class Status(TutorialState):
+        async def objective(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Character Status"
+            embed.description = f"""
             You can also use `{ctx.prefix}game status`, which shows your current, maximum, and temporary hit points. It also shows any counters the character has associated with them, such as spell slots or special abilities like a Dragonborn's Breath Weapon or a Druid's Wild Shape. Try it out now to see your character's resources!
             ```
             {ctx.prefix}game status
@@ -40,24 +55,7 @@ class PlayingTheGame(Tutorial):
             await ctx.send(embed=embed)
 
         async def listener(self, ctx, state_map):
-            sheet = ctx.bot.get_command('sheet')
-            g_status = ctx.bot.get_command('game status')
-            if ctx.command in (sheet, g_status):
-                if ctx.command is sheet:
-                    state_map.data['has_sheet'] = True
-                elif ctx.command is g_status:
-                    state_map.data['has_g_status'] = True
-                await state_map.commit(ctx)
-                embed = TutorialEmbed(self, ctx)
-                embed.title = "Objectives"
-                embed.description = checklist([
-                    (f"View your character sheet with `{ctx.prefix}sheet`.", state_map.data.get('has_sheet')),
-                    (f"View your character's resources with `{ctx.prefix}game status`.",
-                     state_map.data.get('has_g_status')),
-                ])
-                await ctx.send(embed=embed)
-
-            if state_map.data.get('has_sheet') and state_map.data.get('has_g_status'):
+            if ctx.command is ctx.bot.get_command('g status'):
                 await self.transition(ctx, state_map)
 
         async def transition(self, ctx, state_map):
@@ -67,6 +65,27 @@ class PlayingTheGame(Tutorial):
             """
             await ctx.send(embed=embed)
             await state_map.transition_with_delay(ctx, self.tutorial.HitPoints1, 5)
+
+    @state()
+    class HitPoints2(TutorialState):
+        async def objective(self, ctx, state_map):
+            embed = TutorialEmbed(self, ctx)
+            embed.title = "Hit Points II"
+            embed.description = f"""
+                Next, to manage your hit points, we use `{ctx.prefix}game hp` with one of three options. The first is `{ctx.prefix}game hp <amount>`, which modifies your health by the given amount. If you use a negative value it removes that much health. Try it now to remove your previously set temporary hit points!
+                ```
+                {ctx.prefix}game hp -5
+                ```
+                """
+            await ctx.send(embed=embed)
+
+        async def listener(self, ctx, state_map):
+            character = await ctx.get_character()
+            if ctx.command is ctx.bot.get_command('g hp') and not character.temp_hp:
+                await self.transition(ctx, state_map)
+
+        async def transition(self, ctx, state_map):
+            await state_map.transition(ctx, self.tutorial.HitPoints3)
 
     @state()
     class HitPoints1(TutorialState):
@@ -313,5 +332,6 @@ class PlayingTheGame(Tutorial):
             
             That's it for this tutorial! Now you know how to manage your hit points, custom counters, death saves, and rest. If you're a spellcaster, you'll want to take a look at the Spellcasting tutorial next with `{ctx.prefix}tutorial spellcasting`!
             """
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

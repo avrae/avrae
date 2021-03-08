@@ -3,6 +3,7 @@ import asyncio
 from cogs5e.models.initiative import CombatNotFound, MonsterCombatant
 from gamedata.compendium import compendium
 from utils.functions import confirm
+from .errors import PrerequisiteFailed
 from .models import Tutorial, TutorialEmbed, TutorialState, state
 
 
@@ -15,6 +16,17 @@ class DMInitiative(Tutorial):
 
     @state(first=True)
     class StartingCombat(TutorialState):
+        async def setup(self, ctx, state_map):
+            # preflight: channel not in combat
+            try:
+                await ctx.get_combat()
+            except CombatNotFound:
+                pass
+            else:
+                await state_map.end_tutorial(ctx)
+                raise PrerequisiteFailed(
+                    "This channel is already in combat. You'll need a channel to yourself to run this tutorial!")
+
         async def objective(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.title = "Starting Combat"
@@ -512,6 +524,7 @@ class DMInitiative(Tutorial):
         async def transition(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.description = "Congratulations!  You've run your first successful combat."
+            embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)
 

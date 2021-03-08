@@ -68,9 +68,9 @@ class DDBLink(Tutorial):
             await ctx.send(embed=embed)
             try:
                 await ctx.get_character()
-                await state_map.transition(ctx, self.tutorial.CampaignLink)
+                await state_map.transition_with_delay(ctx, self.tutorial.CampaignLink, 5)
             except NoCharacter:
-                await state_map.transition(ctx, self.tutorial.ImportCharacter)
+                await state_map.transition_with_delay(ctx, self.tutorial.ImportCharacter, 5)
 
     @state()
     class ImportCharacter(TutorialState):  # copied from quickstart
@@ -119,7 +119,7 @@ class DDBLink(Tutorial):
             character = await ctx.get_character()
 
             embed = TutorialEmbed(self, ctx)
-            embed.title = "Content Lookup"
+            embed.title = "Campaign Link"
             embed.description = f"""
             If {character.name} is assigned to a D&D Beyond campaign, it gets even better!  The DM for that campaign can link it to a specific Discord channel by using `{ctx.prefix}campaign [campaign_link]` in that channel.  This will tie that channel to your campaign’s Game Log.
             
@@ -146,6 +146,6 @@ class DDBLink(Tutorial):
             Happy rolling!
             """
             embed.set_image(url="https://media.avrae.io/tutorial-assets/ddblink/CampaignLinkTransition.gif")
-            await ctx.send(embed=embed)
             embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
+            await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)

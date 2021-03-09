@@ -41,12 +41,12 @@ async def available(ctx, entities, entity_type, user_id=None):
     available_ids = await ctx.bot.ddb.get_accessible_entities(ctx, user_id, entity_type)
     if available_ids is None:
         return [e for e in entities if e.is_free]
-    return [e for e in entities if e.is_free or e.entity_id in available_ids]
+    return [e for e in entities if e.is_free or e.entitlement_entity_id in available_ids]
 
 
 def can_access(entity, available_ids=None):
     return entity.is_free \
-           or available_ids is not None and entity.entity_id in available_ids \
+           or available_ids is not None and entity.entitlement_entity_id in available_ids \
            or entity.homebrew
 
 

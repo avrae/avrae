@@ -25,19 +25,20 @@ class Race(Sourced):
         return inst
 
 
-# we have race and class features be separate because something something futureproofing
 class RaceFeature(Sourced):
-    def __init__(self, name, text, is_subrace_feature=False, **kwargs):
+    def __init__(self, name, text, option_ids, is_subrace_feature=False, **kwargs):
         entity_type = 'race-feature' if not is_subrace_feature else 'subrace-feature'
         super().__init__(entity_type, homebrew=False, **kwargs)
         self.name = name
         self.text = text
+        self.option_ids = option_ids
 
     @classmethod
     def from_data(cls, d, source_race, **kwargs):
         # noinspection PyProtectedMember
         return cls(
-            d['name'], d['text'], is_subrace_feature=source_race.is_subrace and not d.get('inherited'),
+            d['name'], d['text'], d['option_ids'],
+            is_subrace_feature=source_race.is_subrace and not d.get('inherited'),
             entity_id=d['id'], page=d['page'],
             source=d.get('source', source_race.source), is_free=d.get('isFree', source_race.is_free),
             url=d.get('url', source_race._url),

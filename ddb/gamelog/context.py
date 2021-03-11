@@ -86,7 +86,9 @@ class GameLogEventContext:
 
         :rtype: gamedata.monster.Monster or None
         """
-        return compendium.lookup_by_entitlement('monster', self.event.entity_id)
+        if not self.event.entity_id:
+            return None
+        return compendium.lookup_by_entitlement('monster', int(self.event.entity_id))
 
     async def get_statblock(self):
         """:rtype: cogs5e.models.sheet.statblock.StatBlock or None"""

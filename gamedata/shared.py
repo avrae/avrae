@@ -7,7 +7,8 @@ class Sourced(abc.ABC):
 
     def __init__(self, entity_type: str, homebrew: bool, source: str, entity_id: int = None,
                  page: int = None, url: str = None,
-                 is_free: bool = False, entitlement_entity_type: str = None, entitlement_entity_id: int = None):
+                 is_free: bool = False, entitlement_entity_type: str = None, entitlement_entity_id: int = None,
+                 parent=None):
         """
         :param entity_type: The type of this entity.
         :param homebrew: Whether or not this entity is homebrew.
@@ -18,6 +19,7 @@ class Sourced(abc.ABC):
         :param is_free: Whether or not this entity requires a purchase to view.
         :param entitlement_entity_type: If this entity's access is controlled by access to another entity, the type of that entuty.
         :param entitlement_entity_id: The entity ID of the entitlement entity.
+        :param Sourced parent: If this entity comes from some other entity, its parent.
         """
         self.entity_type = entity_type
         self.homebrew = homebrew
@@ -28,6 +30,7 @@ class Sourced(abc.ABC):
         self.is_free = is_free or homebrew
         self.entitlement_entity_type = entitlement_entity_type or entity_type
         self.entitlement_entity_id = entitlement_entity_id or entity_id
+        self.parent = parent
 
     def source_str(self):
         if self.page is None:

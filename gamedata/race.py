@@ -26,9 +26,8 @@ class Race(Sourced):
 
 
 class RaceFeature(Sourced):
-    def __init__(self, name, text, option_ids, is_subrace_feature=False, **kwargs):
-        entity_type = 'race-feature' if not is_subrace_feature else 'subrace-feature'
-        super().__init__(entity_type, homebrew=False, **kwargs)
+    def __init__(self, name, text, option_ids, **kwargs):
+        super().__init__('race-feature', homebrew=False, **kwargs)
         self.name = name
         self.text = text
         self.option_ids = option_ids
@@ -38,11 +37,28 @@ class RaceFeature(Sourced):
         # noinspection PyProtectedMember
         return cls(
             d['name'], d['text'], d['option_ids'],
-            is_subrace_feature=source_race.is_subrace and not d.get('inherited'),
             entity_id=d['id'], page=d['page'],
             source=d.get('source', source_race.source), is_free=d.get('isFree', source_race.is_free),
             url=d.get('url', source_race._url),
             entitlement_entity_id=d.get('entitlementEntityId', source_race.entity_id),
             entitlement_entity_type=d.get('entitlementEntityType', 'race' if not source_race.is_subrace else 'subrace'),
+            parent=source_race,
+            **kwargs
+        )
+
+
+class RaceFeatureOption(Sourced):
+    def __init__(self, name, **kwargs):
+        super().__init__('race-feature-option', homebrew=False, **kwargs)
+        self.name = name
+
+    @classmethod
+    def from_race_feature(cls, race_feature: RaceFeature, option_id: int, **kwargs):
+        # noinspection PyProtectedMember
+        return cls(
+            race_feature.name, entity_id=option_id,
+            page=race_feature.page, source=race_feature.source, is_free=race_feature.is_free,
+            url=race_feature._url, entitlement_entity_id=race_feature.entitlement_entity_id,
+            entitlement_entity_type=race_feature.entitlement_entity_type, parent=race_feature,
             **kwargs
         )

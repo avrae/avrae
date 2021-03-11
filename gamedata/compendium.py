@@ -12,7 +12,7 @@ from gamedata.feat import Feat
 from gamedata.item import Item
 from gamedata.klass import Class, ClassFeature, Subclass
 from gamedata.monster import Monster
-from gamedata.race import Race, RaceFeature
+from gamedata.race import Race, RaceFeature, RaceFeatureOption
 from utils import config
 
 log = logging.getLogger(__name__)
@@ -199,10 +199,8 @@ class Compendium:
                 # race feature options (e.g. breath weapon) are registered here as well, they just link to the
                 # race feature
                 for option_id in feature.option_ids:
-                    copied2 = copy.copy(feature)
-                    copied2.entity_type = f"{copied2.entity_type}-option"
-                    copied2.entity_id = option_id
-                    self._register_entity_lookup(copied2)
+                    rfo = RaceFeatureOption.from_race_feature(feature, option_id)
+                    self._register_entity_lookup(rfo)
 
         for base_race in self.races:
             self.rfeats.extend(handle_race(base_race))

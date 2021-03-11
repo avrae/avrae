@@ -30,12 +30,12 @@ class Class(Sourced):
     @classmethod
     def from_data(cls, d):
         levels = [[] for _ in d['levels']]
-        subclasses = [Subclass.from_data(s) for s in d['subclasses']]
         inst = cls(
             d['name'], d['hit_points'], d['proficiencies'], d['equipment'],
-            ClassTable.from_data(d['table']), levels, subclasses, optional_features=[], feature_options=[],
+            ClassTable.from_data(d['table']), levels, subclasses=[], optional_features=[], feature_options=[],
             source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
         )
+        inst.subclasses = [Subclass.from_data(s, inst) for s in d['subclasses']]
         inst.levels = [[ClassFeature.from_data(cf, inst) for cf in lvl] for lvl in d['levels']]
         inst.optional_features = [ClassFeature.from_data(ocf, inst) for ocf in d['optional_features']]
         inst.feature_options = [ClassFeature.from_data(cfo, inst, is_class_feature_option=True)
@@ -79,11 +79,12 @@ class Subclass(Sourced):
         self.feature_options = feature_options
 
     @classmethod
-    def from_data(cls, d):
+    def from_data(cls, d, parent_class):
         levels = [[] for _ in d['levels']]
         inst = cls(
             d['name'], levels, [], [],
-            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
+            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'],
+            parent=parent_class
         )
         inst.levels = [[ClassFeature.from_data(cf, source_class=inst) for cf in lvl] for lvl in d['levels']]
         inst.optional_features = [ClassFeature.from_data(ocf, source_class=inst) for ocf in d['optional_features']]
@@ -109,5 +110,6 @@ class ClassFeature(Sourced):
             url=d.get('url', source_class._url),
             entitlement_entity_id=d.get('entitlementEntityId', source_class.entity_id),
             entitlement_entity_type=d.get('entitlementEntityType', 'class'),
+            parent=source_class,
             **kwargs
         )

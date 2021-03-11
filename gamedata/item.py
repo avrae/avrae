@@ -10,7 +10,7 @@ class Item(Sourced):
         :type meta: str or None
         :type image: str or None
         """
-        super().__init__('item', **kwargs)
+        super().__init__('magic-item', **kwargs)
         self.name = name
         self.desc = desc
         self.attunement = attunement

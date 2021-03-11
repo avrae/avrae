@@ -385,7 +385,7 @@ class DMInitiative(Tutorial):
         async def transition(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
             embed.description = f"""
-            If you check that pin now, you'll see it's down to just 9 rounds left.
+            As you can see, it's down to just 9 rounds left.
             """
             await ctx.send(embed=embed)
             await state_map.transition_with_delay(ctx, self.tutorial.Effects2, 5)
@@ -523,14 +523,16 @@ class DMInitiative(Tutorial):
 
         async def transition(self, ctx, state_map):
             embed = TutorialEmbed(self, ctx)
-            embed.description = "Congratulations!  You've run your first successful combat."
+            embed.description = """
+            Congratulations!  You've run your first successful combat.  Now you can help your players run through the Initiative (Player) tutorial, too.  Then the whole party will be ready for whatever monster you throw at them!
+            """
             embed.set_footer(text=f"{self.tutorial.name} | Tutorial complete!")
             await ctx.send(embed=embed)
             await state_map.end_tutorial(ctx)
 
 
 async def add_orkira(ctx, combat):
-    priest = compendium.lookup_by_entitlement('monster', 16985)
+    priest = compendium.lookup_entity('monster', 16985)
     orkira = MonsterCombatant.from_monster(
         monster=priest,
         ctx=ctx,

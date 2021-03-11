@@ -461,7 +461,7 @@ class PlayerInitiative(Tutorial):
 
 
 async def add_tarrasque(ctx, combat):
-    tarrasque = compendium.lookup_by_entitlement('monster', 17034)
+    tarrasque = compendium.lookup_entity('monster', 17034)
     terry = MonsterCombatant.from_monster(
         monster=tarrasque,
         ctx=ctx,

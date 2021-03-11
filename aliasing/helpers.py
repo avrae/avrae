@@ -431,14 +431,14 @@ async def workshop_entitlements_check(ctx, ws_obj):
             has_connected_ddb = False
             # add all ids of this type to missing
             for missing_id in required_ids:
-                entity = compendium.lookup_by_entitlement(entity_type, missing_id)
+                entity = compendium.lookup_entity(entity_type, missing_id)
                 if entity is not None:
                     missing.append(entity)
 
         elif not available_set.issuperset(required_ids):
             # add the missing ids to missing
             for missing_id in set(required_ids).difference(available_set):
-                entity = compendium.lookup_by_entitlement(entity_type, missing_id)
+                entity = compendium.lookup_entity(entity_type, missing_id)
                 if entity is not None:
                     missing.append(entity)
 

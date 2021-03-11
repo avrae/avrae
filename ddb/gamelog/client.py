@@ -9,7 +9,7 @@ from pymongo.errors import DuplicateKeyError
 import ddb
 from ddb.gamelog.constants import AVRAE_EVENT_SOURCE, GAME_LOG_PUBSUB_CHANNEL
 from ddb.gamelog.context import GameLogEventContext
-from ddb.gamelog.errors import CampaignAlreadyLinked, CampaignLinkException, LinkNotAllowed, NoCampaignLink
+from ddb.gamelog.errors import CampaignAlreadyLinked, CampaignLinkException, IgnoreEvent, LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.event import GameLogEvent
 from ddb.gamelog.link import CampaignLink
 from ddb.utils import ddb_id_to_discord_id
@@ -130,10 +130,6 @@ class GameLogClient:
         if event.source == AVRAE_EVENT_SOURCE:
             return
 
-        # check: is the event intended for the whole campaign? (Private messages not supported, yet)
-        if event.message_scope != 'gameId':
-            return
-
         # check: is this campaign linked to a channel?
         try:
             campaign = await CampaignLink.from_id(self.bot.mdb, event.game_id)
@@ -165,9 +161,13 @@ class GameLogClient:
         # process the event
         try:
             await self._event_handlers[event.event_type](gctx)
+        except IgnoreEvent as e:
+            log.info(f"Event ID {event.id!r} was ignored: {e}")
+            return
         except Exception as e:
             traceback.print_exc()
             self.bot.log_exception(e)
+            return
 
         # do analytics
         await self._event_analytics(gctx)

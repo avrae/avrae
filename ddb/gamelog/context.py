@@ -2,6 +2,8 @@ import logging
 
 from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
+from ddb.gamelog.errors import IgnoreEvent
+from ddb.utils import ddb_id_to_discord_user
 from gamedata.compendium import compendium
 from utils.functions import get_guild_member, user_from_id
 
@@ -35,6 +37,7 @@ class GameLogEventContext:
         self._discord_user = _sentinel
         self._character = _sentinel
 
+    # ==== discord utils ====
     async def get_discord_user(self):
         """
         Gets the Discord user associated with the event.
@@ -58,6 +61,39 @@ class GameLogEventContext:
         self._discord_user = user
         return user
 
+    async def destination_channel(self):
+        """
+        Returns the destination channel for this event.
+
+        :rtype: discord.Channel
+        """
+        if self.event.message_scope == 'gameId':
+            return self.channel
+        elif self.event.message_scope == 'userId':
+            if self.event.user_id == self.event.message_target:  # optimization: we already got this user (probably)
+                destination = await self.get_discord_user()
+            else:
+                destination = await ddb_id_to_discord_user(self, self.event.message_target, self.guild)
+
+            if destination is None:  # we did our best to find the user, but oh well
+                raise IgnoreEvent(f"could not find discord user associated with userId: {self.event.message_target!r}")
+            # noinspection PyProtectedMember
+            # :(
+            return await destination._get_channel()
+        else:
+            raise ValueError("message scope must be gameId or userId")
+
+    async def trigger_typing(self):
+        """Sends typing to the correct destination(s), accounting for message's scope."""
+        destination = await self.destination_channel()
+        return await destination.trigger_typing()
+
+    async def send(self, *args, **kwargs):
+        """Sends content to the correct destination(s), accounting for message's scope."""
+        destination = await self.destination_channel()
+        return await destination.send(*args, **kwargs)
+
+    # ==== entity utils ====
     async def get_character(self):
         """
         Gets the Avrae character associated with the event. Returns None if the character is not found.

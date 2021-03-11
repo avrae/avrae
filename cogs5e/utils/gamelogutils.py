@@ -45,6 +45,21 @@ async def action_from_roll_request(gctx, caster, roll_request):
 
 
 # ---- display helpers ----
+def default_comment_getter(roll_request):
+    """
+    Given a RollRequest, return a function mapping RollRequestRolls to comments (strs).
+
+    :type roll_request: ddb.dice.RollRequest
+    :rtype: typing.Callable[[ddb.dice.RollRequestRoll], typing.Optional[str]]
+    """
+    if roll_request.action != 'custom':
+        if roll_request.context and roll_request.context.name:
+            return lambda rr: f"{roll_request.context.name}: {roll_request.action}: {rr.roll_type.value.title()}"
+        return lambda rr: f"{roll_request.action}: {rr.roll_type.value.title()}"
+    else:
+        return lambda _: None
+
+
 def embed_for_caster(caster):
     if isinstance(caster, Character):
         return EmbedWithCharacter(character=caster, name=False)

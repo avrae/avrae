@@ -18,6 +18,9 @@ log = logging.getLogger(__name__)
 
 
 class Spell(Sourced):
+    entity_type = 'spell'
+    type_id = 1118725998
+
     def __init__(self, name: str, level: int, school: str, casttime: str, range_: str, components: str, duration: str,
                  description: str, homebrew: bool, classes=None, subclasses=None, ritual: bool = False,
                  higherlevels: str = None, concentration: bool = False, automation: Automation = None,
@@ -31,7 +34,7 @@ class Spell(Sourced):
         if isinstance(subclasses, str):
             subclasses = [cls.strip() for cls in subclasses.split(',') if cls.strip()]
 
-        super().__init__('spell', homebrew, **kwargs)
+        super().__init__(homebrew, **kwargs)
 
         self.name = name
         self.level = level

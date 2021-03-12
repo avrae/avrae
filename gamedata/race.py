@@ -2,32 +2,41 @@ from .shared import Sourced
 
 
 class Race(Sourced):
-    def __init__(self, name, size, speed, traits, is_subrace, **kwargs):
+    entity_type = 'race'
+    type_id = 1743923279
+
+    def __init__(self, name, size, speed, traits, **kwargs):
         """
         :type name: str
         :type size: str
         :type speed: str
         :type traits: list[RaceFeature]
         """
-        entity_type = 'race' if not is_subrace else 'subrace'
-        super().__init__(entity_type, False, **kwargs)
+        super().__init__(False, **kwargs)
         self.name = name
         self.size = size
         self.speed = speed
         self.traits = traits
-        self.is_subrace = is_subrace
 
     @classmethod
-    def from_data(cls, d, is_subrace=False):
-        inst = cls(d['name'], d['size'], d['speed'], traits=[], is_subrace=is_subrace,
+    def from_data(cls, d):
+        inst = cls(d['name'], d['size'], d['speed'], traits=[],
                    source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
         inst.traits = [RaceFeature.from_data(t, inst) for t in d['traits']]
         return inst
 
 
+class SubRace(Race):
+    entity_type = 'subrace'
+    type_id = 1228963568
+
+
 class RaceFeature(Sourced):
+    entity_type = 'race-feature'
+    type_id = 1960452172
+
     def __init__(self, name, text, option_ids, **kwargs):
-        super().__init__('race-feature', homebrew=False, **kwargs)
+        super().__init__(homebrew=False, **kwargs)
         self.name = name
         self.text = text
         self.option_ids = option_ids
@@ -41,15 +50,18 @@ class RaceFeature(Sourced):
             source=d.get('source', source_race.source), is_free=d.get('isFree', source_race.is_free),
             url=d.get('url', source_race._url),
             entitlement_entity_id=d.get('entitlementEntityId', source_race.entity_id),
-            entitlement_entity_type=d.get('entitlementEntityType', 'race' if not source_race.is_subrace else 'subrace'),
+            entitlement_entity_type=d.get('entitlementEntityType', source_race.entity_type),
             parent=source_race,
             **kwargs
         )
 
 
 class RaceFeatureOption(Sourced):
+    entity_type = 'race-feature-option'
+    type_id = 306912077
+
     def __init__(self, name, **kwargs):
-        super().__init__('race-feature-option', homebrew=False, **kwargs)
+        super().__init__(homebrew=False, **kwargs)
         self.name = name
 
     @classmethod

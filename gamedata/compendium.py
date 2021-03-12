@@ -12,7 +12,8 @@ from gamedata.feat import Feat
 from gamedata.item import Item
 from gamedata.klass import Class, ClassFeature, Subclass
 from gamedata.monster import Monster
-from gamedata.race import Race, RaceFeature, RaceFeatureOption
+from gamedata.race import Race, RaceFeature, RaceFeatureOption, SubRace
+from gamedata.shared import Sourced
 from utils import config
 
 log = logging.getLogger(__name__)
@@ -129,7 +130,7 @@ class Compendium:
         self.backgrounds = deserialize_and_register_lookups(Background, self.raw_backgrounds)
         self.classes = deserialize_and_register_lookups(Class, self.raw_classes)
         self.races = deserialize_and_register_lookups(Race, self.raw_races)
-        self.subraces = deserialize_and_register_lookups(Race, self.raw_subraces, is_subrace=True)
+        self.subraces = deserialize_and_register_lookups(SubRace, self.raw_subraces)
         self.feats = deserialize_and_register_lookups(Feat, self.raw_feats)
         self.items = deserialize_and_register_lookups(Item, self.raw_items)
         self.monsters = deserialize_and_register_lookups(Monster, self.raw_monsters)
@@ -208,7 +209,7 @@ class Compendium:
         for subrace in self.subraces:
             self.subrfeats.extend(handle_race(subrace))
 
-    def _register_entity_lookup(self, entity):
+    def _register_entity_lookup(self, entity: Sourced):
         k = (entity.entity_type, entity.entity_id)
         if k in self._entity_lookup:
             if entity.name != self._entity_lookup[k].name:
@@ -219,6 +220,8 @@ class Compendium:
                           f"({self._entity_lookup[k].name}, {entity.name})")
         log.debug(f"Registered entity {k}: {entity!r}")
         self._entity_lookup[k] = entity
+        kt = (entity.type_id, entity.entity_id)
+        self._entity_lookup[kt] = entity
 
     def read_json(self, filename, default):
         data = default
@@ -232,8 +235,13 @@ class Compendium:
         return data
 
     # helpers
-    def lookup_entity(self, entity_type: str, entity_id: int):
-        """Gets an entity by its entitlement data."""
+    def lookup_entity(self, entity_type, entity_id):
+        """
+        Gets an entity by its entity type (entitlement str or typeId) and ID.
+
+        :type entity_type: str or int
+        :type entity_id: int
+        """
         return self._entity_lookup.get((entity_type, entity_id))
 
 

@@ -2,6 +2,9 @@ from .shared import Sourced
 
 
 class Class(Sourced):
+    entity_type = 'class'
+    type_id = 789467139
+
     def __init__(self, name, hit_points, proficiencies, equipment, table, levels, subclasses, optional_features,
                  feature_options,
                  **kwargs):
@@ -16,7 +19,7 @@ class Class(Sourced):
         :type optional_features: list[ClassFeature]
         :type feature_options: list[ClassFeature]
         """
-        super().__init__('class', False, **kwargs)
+        super().__init__(False, **kwargs)
         self.name = name
         self.hit_points = hit_points
         self.proficiencies = proficiencies
@@ -38,8 +41,7 @@ class Class(Sourced):
         inst.subclasses = [Subclass.from_data(s, inst) for s in d['subclasses']]
         inst.levels = [[ClassFeature.from_data(cf, inst) for cf in lvl] for lvl in d['levels']]
         inst.optional_features = [ClassFeature.from_data(ocf, inst) for ocf in d['optional_features']]
-        inst.feature_options = [ClassFeature.from_data(cfo, inst, is_class_feature_option=True)
-                                for cfo in d['class_feature_options']]
+        inst.feature_options = [ClassFeatureOption.from_data(cfo, inst) for cfo in d['class_feature_options']]
         return inst
 
 
@@ -65,6 +67,9 @@ class ClassTable:
 
 
 class Subclass(Sourced):
+    entity_type = 'class'
+    type_id = 789467139
+
     def __init__(self, name, levels, optional_features, feature_options, **kwargs):
         """
         :type name: str
@@ -72,7 +77,7 @@ class Subclass(Sourced):
         :type optional_features: list[ClassFeature]
         :type feature_options: list[ClassFeature]
         """
-        super().__init__('class', False, **kwargs)
+        super().__init__(False, **kwargs)
         self.name = name
         self.levels = levels
         self.optional_features = optional_features
@@ -88,15 +93,17 @@ class Subclass(Sourced):
         )
         inst.levels = [[ClassFeature.from_data(cf, source_class=inst) for cf in lvl] for lvl in d['levels']]
         inst.optional_features = [ClassFeature.from_data(ocf, source_class=inst) for ocf in d['optional_features']]
-        inst.feature_options = [ClassFeature.from_data(cfo, source_class=inst, is_class_feature_option=True)
-                                for cfo in d['class_feature_options']]
+        inst.feature_options = [ClassFeatureOption.from_data(cfo, source_class=inst) for cfo in
+                                d['class_feature_options']]
         return inst
 
 
 class ClassFeature(Sourced):
-    def __init__(self, name, text, is_class_feature_option=False, **kwargs):
-        entity_type = 'class-feature' if not is_class_feature_option else 'class-feature-option'
-        super().__init__(entity_type, homebrew=False, **kwargs)
+    entity_type = 'class-feature'
+    type_id = 12168134
+
+    def __init__(self, name, text, **kwargs):
+        super().__init__(homebrew=False, **kwargs)
         self.name = name
         self.text = text
 
@@ -113,3 +120,8 @@ class ClassFeature(Sourced):
             parent=source_class,
             **kwargs
         )
+
+
+class ClassFeatureOption(ClassFeature):
+    entity_type = 'class-feature-option'
+    type_id = 258900837

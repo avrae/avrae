@@ -4,13 +4,14 @@ import abc
 class Sourced(abc.ABC):
     """A base class for entities with a source."""
     name = ...
+    entity_type = ...
+    type_id = ...
 
-    def __init__(self, entity_type: str, homebrew: bool, source: str, entity_id: int = None,
+    def __init__(self, homebrew: bool, source: str, entity_id: int = None,
                  page: int = None, url: str = None,
                  is_free: bool = False, entitlement_entity_type: str = None, entitlement_entity_id: int = None,
                  parent=None):
         """
-        :param entity_type: The type of this entity.
         :param homebrew: Whether or not this entity is homebrew.
         :param source: The abbreviated source this entity comes from.
         :param entity_id: The DDB Entity ID
@@ -21,16 +22,21 @@ class Sourced(abc.ABC):
         :param entitlement_entity_id: The entity ID of the entitlement entity.
         :param Sourced parent: If this entity comes from some other entity, its parent.
         """
-        self.entity_type = entity_type
         self.homebrew = homebrew
         self.source = source
         self.entity_id = entity_id
         self.page = page
         self._url = url
         self.is_free = is_free or homebrew
-        self.entitlement_entity_type = entitlement_entity_type or entity_type
+        self.entitlement_entity_type = entitlement_entity_type or self.entity_type
         self.entitlement_entity_id = entitlement_entity_id or entity_id
         self.parent = parent
+
+    @classmethod
+    def lookup(cls, entity_id: int):
+        """Utility method to look up an instance of this class from the compendium."""
+        from gamedata.compendium import compendium
+        return compendium.lookup_entity(cls.entity_type, entity_id)
 
     def source_str(self):
         if self.page is None:

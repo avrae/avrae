@@ -6,55 +6,104 @@
     "traits": [
       {
         "name": "Ability Score Increase",
-        "text": "Your Dexterity score increases by 2. Additionally, your Intelligence score increases by 1."
+        "text": "Your Dexterity score increases by 2. Additionally, your Intelligence score increases by 1.",
+        "page": 23,
+        "id": 72,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Languages",
-        "text": "You can speak, read, and write Common and Elvish. Elvish is fluid, with subtle intonations and intricate grammar. Elven literature is rich and varied, and their songs and poems are famous among other races. Many bards learn their language so they can add Elvish ballads to their repertoires."
+        "text": "You can speak, read, and write Common and Elvish. Elvish is fluid, with subtle intonations and intricate grammar. Elven literature is rich and varied, and their songs and poems are famous among other races. Many bards learn their language so they can add Elvish ballads to their repertoires.",
+        "page": 23,
+        "id": 85,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Age",
-        "text": "Although elves reach physical maturity at about the same age as humans, the elven understanding of adulthood goes beyond physical growth to encompass worldly experience. An elf typically claims adulthood and an adult name around the age of 100 and can live to be 750 years old."
+        "text": "Although elves reach physical maturity at about the same age as humans, the elven understanding of adulthood goes beyond physical growth to encompass worldly experience. An elf typically claims adulthood and an adult name around the age of 100 and can live to be 750 years old.",
+        "page": 23,
+        "id": 118,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Alignment",
-        "text": "Elves love freedom, variety, and self-expression, so they lean strongly toward the gentler aspects of chaos. They value and protect others' freedom as well as their own, and they are more often good than not. The drow are an exception; their exile into the Underdark has made them vicious and dangerous. Drow are more often evil than not."
+        "text": "Elves love freedom, variety, and self-expression, so they lean strongly toward the gentler aspects of chaos. They value and protect others' freedom as well as their own, and they are more often good than not. The drow are an exception; their exile into the Underdark has made them vicious and dangerous. Drow are more often evil than not.",
+        "page": 23,
+        "id": 119,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Size",
-        "text": "Elves range from under 5 to over 6 feet tall and have slender builds. Your size is Medium."
+        "text": "Elves range from under 5 to over 6 feet tall and have slender builds. Your size is Medium.",
+        "page": 23,
+        "id": 120,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Speed",
-        "text": "Your base walking speed is 30 feet."
+        "text": "Your base walking speed is 30 feet.",
+        "page": 23,
+        "id": 121,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Darkvision",
-        "text": "Accustomed to twilit forests and the night sky, you have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+        "text": "Accustomed to twilit forests and the night sky, you have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray.",
+        "page": 23,
+        "id": 11,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Keen Senses",
-        "text": "You have proficiency in the Perception skill."
+        "text": "You have proficiency in the Perception skill.",
+        "page": 23,
+        "id": 12,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Fey Ancestry",
-        "text": "You have advantage on saving throws against being charmed, and magic can't put you to sleep."
+        "text": "You have advantage on saving throws against being charmed, and magic can't put you to sleep.",
+        "page": 23,
+        "id": 13,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Trance",
-        "text": "Elves don't need to sleep. Instead, they meditate deeply, remaining semiconscious, for 4 hours a day. (The Common word for such meditation is \"trance.\") While meditating, you can dream after a fashion; such dreams are actually mental exercises that have become reflexive through years of practice. After resting in this way, you gain the same benefit that a human does from 8 hours of sleep."
+        "text": "Elves don't need to sleep. Instead, they meditate deeply, remaining semiconscious, for 4 hours a day. (The Common word for such meditation is \"trance.\") While meditating, you can dream after a fashion; such dreams are actually mental exercises that have become reflexive through years of practice. After resting in this way, you gain the same benefit that a human does from 8 hours of sleep.",
+        "page": 23,
+        "id": 14,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Elf Weapon Training",
-        "text": "You have proficiency with the longsword, shortsword, shortbow, and longbow."
+        "text": "You have proficiency with the longsword, shortsword, shortbow, and longbow.",
+        "page": 23,
+        "id": 19,
+        "options": []
       },
       {
         "name": "Cantrip",
-        "text": "You know one cantrip of your choice from the wizard spell list. Intelligence is your spellcasting ability for it."
+        "text": "You know one cantrip of your choice from the wizard spell list. Intelligence is your spellcasting ability for it.",
+        "page": 24,
+        "id": 20,
+        "options": []
       },
       {
         "name": "Extra Language",
-        "text": "You can speak, read, and write one extra language of your choice."
+        "text": "You can speak, read, and write one extra language of your choice.",
+        "page": 24,
+        "id": 21,
+        "options": []
       }
     ],
     "source": "BR",
@@ -70,55 +119,104 @@
     "traits": [
       {
         "name": "Ability Score Increase",
-        "text": "Your Dexterity score increases by 2. Additionally, your Intelligence score increases by 1."
+        "text": "Your Dexterity score increases by 2. Additionally, your Intelligence score increases by 1.",
+        "page": 23,
+        "id": 72,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Languages",
-        "text": "You can speak, read, and write Common and Elvish. Elvish is fluid, with subtle intonations and intricate grammar. Elven literature is rich and varied, and their songs and poems are famous among other races. Many bards learn their language so they can add Elvish ballads to their repertoires."
+        "text": "You can speak, read, and write Common and Elvish. Elvish is fluid, with subtle intonations and intricate grammar. Elven literature is rich and varied, and their songs and poems are famous among other races. Many bards learn their language so they can add Elvish ballads to their repertoires.",
+        "page": 23,
+        "id": 85,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Age",
-        "text": "Although elves reach physical maturity at about the same age as humans, the elven understanding of adulthood goes beyond physical growth to encompass worldly experience. An elf typically claims adulthood and an adult name around the age of 100 and can live to be 750 years old."
+        "text": "Although elves reach physical maturity at about the same age as humans, the elven understanding of adulthood goes beyond physical growth to encompass worldly experience. An elf typically claims adulthood and an adult name around the age of 100 and can live to be 750 years old.",
+        "page": 23,
+        "id": 118,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Alignment",
-        "text": "Elves love freedom, variety, and self-expression, so they lean strongly toward the gentler aspects of chaos. They value and protect others' freedom as well as their own, and they are more often good than not. The drow are an exception; their exile into the Underdark has made them vicious and dangerous. Drow are more often evil than not."
+        "text": "Elves love freedom, variety, and self-expression, so they lean strongly toward the gentler aspects of chaos. They value and protect others' freedom as well as their own, and they are more often good than not. The drow are an exception; their exile into the Underdark has made them vicious and dangerous. Drow are more often evil than not.",
+        "page": 23,
+        "id": 119,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Size",
-        "text": "Elves range from under 5 to over 6 feet tall and have slender builds. Your size is Medium."
+        "text": "Elves range from under 5 to over 6 feet tall and have slender builds. Your size is Medium.",
+        "page": 23,
+        "id": 120,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Speed",
-        "text": "Your base walking speed is 30 feet."
+        "text": "Your base walking speed is 30 feet.",
+        "page": 23,
+        "id": 121,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Darkvision",
-        "text": "Accustomed to twilit forests and the night sky, you have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray."
+        "text": "Accustomed to twilit forests and the night sky, you have superior vision in dark and dim conditions. You can see in dim light within 60 feet of you as if it were bright light, and in darkness as if it were dim light. You can't discern color in darkness, only shades of gray.",
+        "page": 23,
+        "id": 11,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Keen Senses",
-        "text": "You have proficiency in the Perception skill."
+        "text": "You have proficiency in the Perception skill.",
+        "page": 23,
+        "id": 12,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Fey Ancestry",
-        "text": "You have advantage on saving throws against being charmed, and magic can't put you to sleep."
+        "text": "You have advantage on saving throws against being charmed, and magic can't put you to sleep.",
+        "page": 23,
+        "id": 13,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Trance",
-        "text": "Elves don't need to sleep. Instead, they meditate deeply, remaining semiconscious, for 4 hours a day. (The Common word for such meditation is \"trance.\") While meditating, you can dream after a fashion; such dreams are actually mental exercises that have become reflexive through years of practice. After resting in this way, you gain the same benefit that a human does from 8 hours of sleep."
+        "text": "Elves don't need to sleep. Instead, they meditate deeply, remaining semiconscious, for 4 hours a day. (The Common word for such meditation is \"trance.\") While meditating, you can dream after a fashion; such dreams are actually mental exercises that have become reflexive through years of practice. After resting in this way, you gain the same benefit that a human does from 8 hours of sleep.",
+        "page": 23,
+        "id": 14,
+        "options": [],
+        "inherited": true
       },
       {
         "name": "Elf Weapon Training",
-        "text": "You have proficiency with the longsword, shortsword, shortbow, and longbow."
+        "text": "You have proficiency with the longsword, shortsword, shortbow, and longbow.",
+        "page": 23,
+        "id": 19,
+        "options": []
       },
       {
         "name": "Cantrip",
-        "text": "You know one cantrip of your choice from the wizard spell list. Intelligence is your spellcasting ability for it."
+        "text": "You know one cantrip of your choice from the wizard spell list. Intelligence is your spellcasting ability for it.",
+        "page": 24,
+        "id": 20,
+        "options": []
       },
       {
         "name": "Extra Language",
-        "text": "You can speak, read, and write one extra language of your choice."
+        "text": "You can speak, read, and write one extra language of your choice.",
+        "page": 24,
+        "id": 21,
+        "options": []
       }
     ],
     "source": "BR",

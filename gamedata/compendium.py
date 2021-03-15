@@ -12,7 +12,7 @@ from gamedata.feat import Feat
 from gamedata.item import Item
 from gamedata.klass import Class, ClassFeature, Subclass
 from gamedata.monster import Monster
-from gamedata.race import Race, RaceFeature, RaceFeatureOption, SubRace
+from gamedata.race import Race, RaceFeature, SubRace
 from gamedata.shared import Sourced
 from utils import config
 
@@ -82,7 +82,7 @@ class Compendium:
             await self.load_all_mongodb(mdb)
 
         await loop.run_in_executor(None, self.load_common)
-        log.info(f"Done loading data - {len(self._entity_lookup)} objects registered")
+        log.info(f"Done loading data - {len(self._entity_lookup)} lookups registered")
 
     def load_all_json(self, base_path=None):
         if base_path is not None:
@@ -197,10 +197,8 @@ class Compendium:
                 copied.name = f"{race.name}: {feature.name}"
                 yield copied
                 self._register_entity_lookup(feature)
-                # race feature options (e.g. breath weapon) are registered here as well, they just link to the
-                # race feature
-                for option_id in feature.option_ids:
-                    rfo = RaceFeatureOption.from_race_feature(feature, option_id)
+                # race feature options (e.g. breath weapon, silver dragon) are registered here as well
+                for rfo in feature.options:
                     self._register_entity_lookup(rfo)
 
         for base_race in self.races:

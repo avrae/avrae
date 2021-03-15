@@ -31,18 +31,4 @@ class Feat(Sourced):
 class FeatOption(Sourced):
     entity_type = 'feat-option'
     type_id = 400581042
-
-    def __init__(self, name, **kwargs):
-        super().__init__(homebrew=False, **kwargs)
-        self.name = name
-
-    @classmethod
-    def from_feat(cls, feat: Feat, option_id: int, **kwargs):
-        # noinspection PyProtectedMember
-        return cls(
-            feat.name, entity_id=option_id,
-            page=feat.page, source=feat.source, is_free=feat.is_free,
-            url=feat._url, entitlement_entity_id=feat.entitlement_entity_id,
-            entitlement_entity_type=feat.entitlement_entity_type, parent=feat,
-            **kwargs
-        )
+    # feat options give no limited use features right now, so this is only here for parity

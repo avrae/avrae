@@ -35,17 +35,17 @@ class RaceFeature(Sourced):
     entity_type = 'race-feature'
     type_id = 1960452172
 
-    def __init__(self, name, text, option_ids, **kwargs):
+    def __init__(self, name, text, options, **kwargs):
         super().__init__(homebrew=False, **kwargs)
         self.name = name
         self.text = text
-        self.option_ids = option_ids
+        self.options = options
 
     @classmethod
     def from_data(cls, d, source_race, **kwargs):
         # noinspection PyProtectedMember
-        return cls(
-            d['name'], d['text'], d['option_ids'],
+        inst = cls(
+            d['name'], d['text'], options=[],
             entity_id=d['id'], page=d['page'],
             source=d.get('source', source_race.source), is_free=d.get('isFree', source_race.is_free),
             url=d.get('url', source_race._url),
@@ -54,6 +54,8 @@ class RaceFeature(Sourced):
             parent=source_race,
             **kwargs
         )
+        inst.options = [RaceFeatureOption.from_race_feature(o, inst) for o in d['options']]
+        return inst
 
 
 class RaceFeatureOption(Sourced):
@@ -65,10 +67,11 @@ class RaceFeatureOption(Sourced):
         self.name = name
 
     @classmethod
-    def from_race_feature(cls, race_feature: RaceFeature, option_id: int, **kwargs):
+    def from_race_feature(cls, d, race_feature: RaceFeature, **kwargs):
         # noinspection PyProtectedMember
         return cls(
-            race_feature.name, entity_id=option_id,
+            f"{race_feature.name} ({d['name']})",
+            entity_id=d['id'],
             page=race_feature.page, source=race_feature.source, is_free=race_feature.is_free,
             url=race_feature._url, entitlement_entity_id=race_feature.entitlement_entity_id,
             entitlement_entity_type=race_feature.entitlement_entity_type, parent=race_feature,

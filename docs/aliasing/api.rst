@@ -228,6 +228,15 @@ These functions are available in any scripting context, regardless if you have a
 Python Builtins
 """""""""""""""
 
+.. function:: abs(x)
+
+    Takes a number (float or int) and returns the absolute value of that number.
+
+    :param x: The number to find the absolute value of.
+    :type x: float or int
+    :return: The absolute value of x.
+    :rtype: float or int
+
 .. function:: all(iterable)
 
     Return ``True`` if all elements of the *iterable* are true, or if the iterable is empty.

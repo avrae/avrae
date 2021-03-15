@@ -316,7 +316,7 @@ class Attack(Effect):
                 ac = ac or autoctx.target.ac
 
             # assign hit values
-            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # crit
+            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT or (crit and not nocrit):  # crit
                 did_crit = True if not nocrit else False
             elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
                 did_hit = False

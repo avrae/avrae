@@ -34,3 +34,9 @@ class CampaignAlreadyLinked(CampaignLinkException):
 
     def __init__(self, msg='This campaign has already been linked to a different channel.'):
         super().__init__(msg)
+
+
+# ==== event handling ====
+class IgnoreEvent(GameLogException):
+    """We should just stop processing this event. Do not display any error."""
+    pass

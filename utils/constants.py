@@ -51,7 +51,7 @@ SOURCE_MAP = {
     'EGtW': "Explorer's Guide to Wildemount", 'OGA': 'One Grung Above', 'MOoT': 'Mythic Odysseys of Theros',
     'WA': 'Frozen Sick', 'TSCF': 'The Sunless Citadel (Free)', 'TFoFF': 'The Forge of Fury (Free)',
     'LRDToB': 'Legends of Runeterra: Dark Tides of Bilgewater', 'IDRotF': 'Icewind Dale: Rime of the Frostmaiden',
-    'TCoE': 'Tasha’s Cauldron of Everything'
+    'TCoE': 'Tasha’s Cauldron of Everything', 'CM': 'Candlekeep Mysteries', 'VRGtR': 'Van Richten’s Guide to Ravenloft'
 }
 SOURCE_SLUG_MAP = {
     'BR': 'basic-rules', 'PHB': 'players-handbook', 'DMG': 'dungeon-masters-guide',
@@ -76,7 +76,7 @@ SOURCE_SLUG_MAP = {
     'EGtW': 'explorers-guide-to-wildemount', 'OGA': 'one-grung-above', 'MOoT': 'mythic-odysseys-of-theros',
     'WA': 'frozen-sick', 'TSCF': 'the-sunless-citadel-free', 'TFoFF': 'the-forge-of-fury-free',
     'LRDToB': 'legends-of-runeterra-dark-tides-of-bilgewater', 'IDRotF': 'icewind-dale-rime-of-the-frostmaiden',
-    'TCoE': 'tashas-cauldron-of-everything'
+    'TCoE': 'tashas-cauldron-of-everything', 'CM': 'candlekeep-mysteries', 'VRGtR': 'van-richtens-guide-to-ravenloft'
 }
 PARTNERED_SOURCES = ('LRDToB',)
 UA_SOURCES = ('UA',)

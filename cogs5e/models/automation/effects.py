@@ -672,8 +672,12 @@ class Damage(Effect):
 
     def build_str(self, caster, evaluator):
         super(Damage, self).build_str(caster, evaluator)
-        damage = evaluator.transformed_str(self.damage)
-        evaluator.builtins['lastDamage'] = damage
+        try:
+            damage = evaluator.transformed_str(self.damage)
+            evaluator.builtins['lastDamage'] = damage
+        except Exception:
+            damage = self.damage
+            evaluator.builtins['lastDamage'] = 0
         return f"{damage} damage"
 
 
@@ -733,8 +737,12 @@ class TempHP(Effect):
 
     def build_str(self, caster, evaluator):
         super(TempHP, self).build_str(caster, evaluator)
-        amount = evaluator.transformed_str(self.amount)
-        evaluator.builtins['lastTempHp'] = amount
+        try:
+            amount = evaluator.transformed_str(self.amount)
+            evaluator.builtins['lastTempHp'] = amount
+        except Exception:
+            amount = self.amount
+            evaluator.builtins['lastTempHp'] = 0
         return f"{amount} temp HP"
 
 

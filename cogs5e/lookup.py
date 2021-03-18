@@ -172,8 +172,11 @@ class Lookup(commands.Cog):
 
             levels = []
             for level in range(1, 21):
-                level = result.levels[level - 1]
-                levels.append(', '.join([feature.name for feature in level]))
+                level_features = result.levels[level - 1]
+                feature_names = [feature.name for feature in level_features]
+                if level in result.subclass_feature_levels:
+                    feature_names.append(f"{result.subclass_title} Feature")
+                levels.append(', '.join(feature_names))
 
             level_features_str = ""
             for i, l in enumerate(levels):

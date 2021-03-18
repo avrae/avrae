@@ -5,8 +5,8 @@ class Class(Sourced):
     entity_type = 'class'
     type_id = 789467139
 
-    def __init__(self, name, hit_points, proficiencies, equipment, table, levels, subclasses, optional_features,
-                 feature_options,
+    def __init__(self, name, hit_points, proficiencies, equipment, table, levels, subclasses, subclass_title,
+                 subclass_feature_levels, optional_features, feature_options,
                  **kwargs):
         """
         :type name: str
@@ -16,6 +16,8 @@ class Class(Sourced):
         :type table: ClassTable
         :type levels: list[list[ClassFeature]]
         :type subclasses: list[Subclass]
+        :type subclass_title: str
+        :type subclass_feature_levels: list[int]
         :type optional_features: list[ClassFeature]
         :type feature_options: list[ClassFeature]
         """
@@ -27,6 +29,8 @@ class Class(Sourced):
         self.table = table
         self.levels = levels
         self.subclasses = subclasses
+        self.subclass_title = subclass_title
+        self.subclass_feature_levels = subclass_feature_levels
         self.optional_features = optional_features
         self.feature_options = feature_options
 
@@ -35,7 +39,8 @@ class Class(Sourced):
         levels = [[] for _ in d['levels']]
         inst = cls(
             d['name'], d['hit_points'], d['proficiencies'], d['equipment'],
-            ClassTable.from_data(d['table']), levels, subclasses=[], optional_features=[], feature_options=[],
+            ClassTable.from_data(d['table']), levels, subclasses=[], subclass_title=d['subclass_title'],
+            subclass_feature_levels=d['subclass_feature_levels'], optional_features=[], feature_options=[],
             source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
         )
         inst.subclasses = [Subclass.from_data(s, inst) for s in d['subclasses']]

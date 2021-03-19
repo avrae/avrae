@@ -290,19 +290,9 @@ def bubble_format(value: int, max_: int, fill_from_right=False):
         return f"{empty}{filled}"
     return f"{filled}{empty}"
 
-
 def verbose_stat(stat):
     """Returns the long stat name for a abbreviation (e.g. "str" -> "Strength", etc)"""
     return constants.STAT_ABBR_MAP[stat.lower()]
-
-
-def long_source_name(source):
-    return constants.SOURCE_MAP.get(source, source)
-
-
-def source_slug(source):
-    return constants.SOURCE_SLUG_MAP.get(source)
-
 
 def natural_join(things, between: str):
     if len(things) < 3:

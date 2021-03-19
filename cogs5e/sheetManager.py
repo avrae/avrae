@@ -603,14 +603,14 @@ async def send_ddb_ctas(ctx, character):
         ld_dict = {"key": str(ctx.author.id), "anonymous": True}
     gamelog_flag = await ctx.bot.ldclient.variation('cog.gamelog.cta.enabled', ld_dict, False)
 
-    # has the user seen this cta within the last 24h?
+    # has the user seen this cta within the last 7d?
     if await ctx.bot.rdb.get(f"cog.sheetmanager.cta.seen.{ctx.author.id}"):
         return
 
     embed = EmbedWithCharacter(character)
     embed.title = "Heads up!"
     embed.description = "There's a couple of things you can do to make your experience even better!"
-    embed.set_footer(text="You won't see this message again today.")
+    embed.set_footer(text="You won't see this message again this week.")
 
     # link ddb user
     if ddb_user is None:
@@ -636,7 +636,7 @@ async def send_ddb_ctas(ctx, character):
     if not embed.fields:
         return
     await ctx.send(embed=embed)
-    await ctx.bot.rdb.setex(f"cog.sheetmanager.cta.seen.{ctx.author.id}", str(time.time()), 60 * 60 * 24)
+    await ctx.bot.rdb.setex(f"cog.sheetmanager.cta.seen.{ctx.author.id}", str(time.time()), 60 * 60 * 24 * 7)
 
 
 def setup(bot):

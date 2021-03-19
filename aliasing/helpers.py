@@ -13,8 +13,9 @@ from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
 from gamedata.compendium import compendium
+from gamedata.lookuputils import long_source_name
 from utils.argparser import argquote, argsplit
-from utils.functions import long_source_name, natural_join
+from utils.functions import natural_join
 
 
 async def handle_aliases(ctx):

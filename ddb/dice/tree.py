@@ -69,21 +69,24 @@ class RollRequest:
 
 
 class RollContext:
-    def __init__(self, entity_id: str = None, entity_type: str = None):
+    def __init__(self, entity_id: str = None, entity_type: str = None, name: str = None, avatar_url: str = None):
         self.entity_id = entity_id
         self.entity_type = entity_type
+        self.name = name
+        self.avatar_url = avatar_url
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d.get('entityId'), d.get('entityType'))
+        return cls(d.get('entityId'), d.get('entityType'), d.get('name'), d.get('avatarUrl'))
 
     def to_dict(self):
-        return {"entityId": self.entity_id, "entityType": self.entity_type}
+        return {"entityId": self.entity_id, "entityType": self.entity_type, "name": self.name,
+                "avatarUrl": self.avatar_url}
 
     @classmethod
     def from_character(cls, character):
         """Returns a context associated with a DDB character."""
-        return cls(character.upstream_id, 'character')
+        return cls(character.upstream_id, 'character', character.name, character.image)
 
 
 class RollRequestRoll:

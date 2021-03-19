@@ -23,7 +23,7 @@ from utils.dice import PersistentRollContext
 DEFAULT_BUILTINS = {
     # builtins
     'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min, 'enumerate': enumerate,
-    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'time': time.time,
+    'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'abs': abs, 'time': time.time,
     # ours
     'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof,
     # legacy from simpleeval

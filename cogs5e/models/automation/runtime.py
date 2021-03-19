@@ -1,7 +1,8 @@
 import aliasing.api
 import aliasing.api.statblock
 import aliasing.evaluators
-from cogs5e.models import character as character_api, embeds, initiative as init
+import cogs5e.models.initiative.combatant as init
+from cogs5e.models import character as character_api, embeds
 from .errors import AutomationEvaluationException
 from .utils import maybe_alias_statblock
 
@@ -153,7 +154,8 @@ class AutomationTarget:
         if isinstance(self.target, init.Combatant):
             sb = self.target.active_effects('sb')
 
-        saveroll = save_obj.d20(base_adv=adv)
+        boolwise_adv = {-1: False, 0: None, 1: True}.get(adv)
+        saveroll = save_obj.d20(base_adv=boolwise_adv)
 
         if sb:
             saveroll = f"{saveroll}+{'+'.join(sb)}"

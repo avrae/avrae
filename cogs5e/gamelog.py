@@ -6,14 +6,14 @@ import discord
 from discord.ext import commands
 
 import ddb.dice
-from cogs5e.funcs import gamelogutils
 from cogs5e.models import embeds
 from cogs5e.models.automation.results import AttackResult, DamageResult, RollResult, SaveResult, TempHPResult
 from cogs5e.models.character import Character
 from cogs5e.models.errors import NoCharacter
+from cogs5e.utils import gamelogutils
 from ddb.dice import RollContext, RollKind, RollRequest, RollRequestRoll, RollType
 from ddb.gamelog import CampaignLink
-from ddb.gamelog.errors import NoCampaignLink
+from ddb.gamelog.errors import LinkNotAllowed, NoCampaignLink
 from ddb.gamelog.event import GameLogEvent
 from utils import checks, constants
 from utils.dice import VerboseMDStringifier
@@ -59,9 +59,10 @@ class GameLog(commands.Cog):
             return await self.campaign_list(ctx)
 
         link_match = re.match(r'(?:https?://)?(?:www\.)?dndbeyond\.com/campaigns/(\d+)(?:$|/)', campaign_link)
-        if link_match is None:
+        invite_link_match = re.match(r'(?:https?://)?ddb\.ac/campaigns/join/(\d+)\d{10}(?:$|/)', campaign_link)
+        if link_match is None and invite_link_match is None:
             return await ctx.send("This is not a D&D Beyond campaign link.")
-        campaign_id = link_match.group(1)
+        campaign_id = (link_match or invite_link_match).group(1)
 
         # is there already an existing link?
         try:
@@ -76,11 +77,20 @@ class GameLog(commands.Cog):
                 ctx, "This campaign is already linked to another channel. Link it to this one instead?")
             if not result:
                 return await ctx.send("Ok, canceling.")
-            await existing_link.delete(ctx.bot.mdb)
 
         # do link (and dm check)
         await ctx.trigger_typing()
-        result = await self.bot.glclient.create_campaign_link(ctx, campaign_id)
+        try:
+            result = await self.bot.glclient.create_campaign_link(ctx, campaign_id, overwrite=True)
+        except LinkNotAllowed:
+            # the invite link match will only work 77% of the time because the hash can start w/ 0 - try using the
+            # main link instead
+            if invite_link_match:
+                await ctx.send("You are not allowed to link this campaign. "
+                               "Try using the campaign URL (in your browser bar) rather than the invite link!")
+                return
+            raise
+
         embed = embeds.EmbedWithAuthor(ctx)
         embed.title = f"Linked {result.campaign_name}!"
         embed.description = (f"Linked {result.campaign_name} to this channel! Your players' rolls from D&D Beyond "
@@ -149,20 +159,20 @@ class GameLog(commands.Cog):
         """
         Sends a typing indicator to the linked channel to indicate that something is about to happen.
         """
-        await gctx.channel.trigger_typing()
+        await gctx.trigger_typing()
 
     async def dice_roll(self, gctx):
         """
         Sends a message with the result of the roll, similar to `!r`.
         """
-        await gctx.channel.trigger_typing()
+        await gctx.trigger_typing()
 
         roll_request = ddb.dice.RollRequest.from_dict(gctx.event.data)
         if not roll_request.rolls:  # do nothing if there are no rolls actually made
             return
         elif len(roll_request.rolls) > 1:  # if there are multiple rolls in the same event, just use the default handler
             await self.dice_roll_roll(gctx, roll_request,
-                                      comment_getter=lambda rr: f"{roll_request.action}: {rr.roll_type.value.title()}")
+                                      comment_getter=gamelogutils.default_comment_getter(roll_request))
             return
         first_roll = roll_request.rolls[0]
 
@@ -191,14 +201,23 @@ class GameLog(commands.Cog):
         :type comment_getter: Callable[[ddb.dice.RollRequestRoll], str]
         """
         if comment_getter is None:
-            comment_getter = lambda _: comment
+            if comment is None:
+                comment_getter = gamelogutils.default_comment_getter(roll_request)
+            else:
+                comment_getter = lambda _: comment
 
-        results = '\n'.join(str(rr.to_d20(stringifier=VerboseMDStringifier(), comment=comment_getter(rr)))
-                            for rr in roll_request.rolls)
+        results = []
+        for rr in roll_request.rolls:
+            results.append(str(rr.to_d20(stringifier=VerboseMDStringifier(), comment=comment_getter(rr))))
 
-        out = f"<@{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{results}"
+        if sum(len(r) for r in results) > 1950:  # some len removed for other stuff
+            final_results = '\n'.join(f"**{comment_getter(rr)}**: {rr.result.total}" for rr in roll_request.rolls)
+        else:
+            final_results = '\n'.join(results)
+
+        out = f"<@!{gctx.discord_user_id}> **rolled from** {constants.DDB_LOGO_EMOJI}:\n{final_results}"
         # the user knows they rolled - don't need to ping them in discord
-        await gctx.channel.send(out, allowed_mentions=discord.AllowedMentions.none())
+        await gctx.send(out, allowed_mentions=discord.AllowedMentions.none())
 
     async def _dice_roll_embed_common(self, gctx, roll_request, title_fmt: str, **fmt_kwargs):
         """
@@ -206,22 +225,22 @@ class GameLog(commands.Cog):
 
         Note: {name} will be formatted with the character's name in title_fmt.
         """
-        # check for loaded character
-        character = await gctx.get_character()
-        if character is None:
+        # check for valid caster
+        caster = await gctx.get_statblock()
+        if caster is None:
             await self.dice_roll_roll(gctx, roll_request,
-                                      comment_getter=lambda rr: f"{roll_request.action}: {rr.roll_type.value.title()}")
+                                      comment_getter=gamelogutils.default_comment_getter(roll_request))
             return
 
         # only listen to the first roll
         the_roll = roll_request.rolls[0]
 
         # send embed
-        embed = embeds.EmbedWithCharacter(character, name=False)
-        embed.title = title_fmt.format(name=character.get_title_name(), **fmt_kwargs)
+        embed = gamelogutils.embed_for_caster(caster)
+        embed.title = title_fmt.format(name=caster.get_title_name(), **fmt_kwargs)
         embed.description = str(the_roll.to_d20())
         embed.set_footer(text=f"Rolled in {gctx.campaign.campaign_name}", icon_url=constants.DDB_LOGO_ICON)
-        await gctx.channel.send(embed=embed)
+        await gctx.send(embed=embed)
 
     async def dice_roll_check(self, gctx, roll_request):
         """Check: Display like ``!c``. Requires character - if not imported falls back to default roll."""
@@ -252,34 +271,34 @@ class GameLog(commands.Cog):
         """To Hit rolls from attacks/spells."""
 
         # check for loaded character
-        if (character := await gctx.get_character()) is None:
+        if (caster := await gctx.get_statblock()) is None:
             await self.dice_roll_roll(gctx, roll_request, comment=f"{roll_request.action}: To Hit")
             return
 
         # setup
         attack_roll = roll_request.rolls[0]
-        action = await gamelogutils.action_from_roll_request(gctx, character, roll_request)
+        action = await gamelogutils.action_from_roll_request(gctx, caster, roll_request)
         automation = None if action is None else action.automation
         pend_damage = True
 
         # generate the embed based on whether we found avrae annotated data
         if action is not None:
-            embed = gamelogutils.embed_for_action(gctx, action, character, attack_roll)
+            embed = gamelogutils.embed_for_action(gctx, action, caster, attack_roll)
             # create a PendingAttack if the action has a damage,
             if not gamelogutils.automation_has_damage(automation):
                 pend_damage = False
         else:
             # or if the action is unknown (we assume basic to hit/damage then)
-            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, character, attack_roll)
+            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, caster, attack_roll)
 
-        message = await gctx.channel.send(embed=embed)
+        message = await gctx.send(embed=embed)
         if pend_damage:
             await gamelogutils.PendingAttack.create(gctx, roll_request, gctx.event, message.id)
 
     async def dice_roll_damage(self, gctx, roll_request):
         """Damage rolls from attacks/spells."""
         # check for loaded character
-        if (character := await gctx.get_character()) is None:
+        if (caster := await gctx.get_statblock()) is None:
             await self.dice_roll_roll(gctx, roll_request, comment=f"{roll_request.action}: Damage")
             return
 
@@ -292,24 +311,26 @@ class GameLog(commands.Cog):
         if pending is not None:
             # update the PendingAttack with its damage
             attack_roll = pending.roll_request.rolls[0]
+            # and remove it from the pending
+            await pending.delete(gctx)
 
         # generate embed based on action
-        action = await gamelogutils.action_from_roll_request(gctx, character, roll_request)
+        action = await gamelogutils.action_from_roll_request(gctx, caster, roll_request)
         if action is not None:
-            embed = gamelogutils.embed_for_action(gctx, action, character, attack_roll, damage_roll)
+            embed = gamelogutils.embed_for_action(gctx, action, caster, attack_roll, damage_roll)
         else:
-            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, character,
+            embed = gamelogutils.embed_for_basic_attack(gctx, roll_request.action, caster,
                                                         attack_roll, damage_roll)
 
         # either update the old message or post a new one
         if pending is not None:
-            # I don't want to store a Message instance
-            # todo use a PartialMessage (d.py 1.6)
-            # also while you're here future me, you can use a partial message for init's message too
-            await gctx.bot.http.edit_message(channel_id=gctx.channel.id, message_id=pending.message_id,
-                                             embed=embed.to_dict())
+            partial = discord.PartialMessage(channel=await gctx.destination_channel(), id=pending.message_id)
+            try:
+                await partial.edit(embed=embed)
+            except discord.NotFound:  # original message was deleted
+                await gctx.send(embed=embed)
         else:
-            await gctx.channel.send(embed=embed)
+            await gctx.send(embed=embed)
 
     # ==== game log send methods ====
     # to access, get the cog from the handler function that is making the checks and call these

@@ -14,7 +14,6 @@ from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
 
 from aliasing import helpers
-from cogs5e.funcs import attackutils, checkutils, targetutils
 from cogs5e.models.character import Character
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError
@@ -22,6 +21,8 @@ from cogs5e.models.sheet.attack import Attack, AttackList
 from cogs5e.sheets.beyond import BeyondSheetParser, DDB_URL_RE
 from cogs5e.sheets.dicecloud import DicecloudParser
 from cogs5e.sheets.gsheet import GoogleSheet, extract_gsheet_id_from_url
+from cogs5e.utils import attackutils, checkutils, targetutils
+from cogs5e.utils.help_constants import *
 from ddb.gamelog import CampaignLink
 from ddb.gamelog.errors import NoCampaignLink
 from utils import img
@@ -63,47 +64,12 @@ class SheetManager(commands.Cog):
         args = argparse(args)
         return args
 
-    @commands.group(aliases=['a'], invoke_without_command=True)
+    @commands.group(aliases=['a'], invoke_without_command=True, help=f"""
+    Rolls an attack for the current active character.
+    __**Valid Arguments**__
+    {VALID_AUTOMATION_ARGS}
+    """)
     async def attack(self, ctx, atk_name=None, *, args: str = ''):
-        """Rolls an attack for the current active character.
-        __Valid Arguments__
-        -t "<target>" - Sets targets for the attack. You can pass as many as needed. Will target combatants if channel is in initiative.
-        -t "<target>|<args>" - Sets a target, and also allows for specific args to apply to them. (e.g, -t "OR1|hit" to force the attack against OR1 to hit)
-
-        *adv/dis* - Advantage or Disadvantage
-        *ea* - Elven Accuracy double advantage
-        
-        -ac <target ac> - overrides target AC
-        *-b* <to hit bonus> - adds a bonus to hit
-        -criton <num> - a number to crit on if rolled on or above
-        *-d* <damage bonus> - adds a bonus to damage
-        *-c* <damage bonus on crit> - adds a bonus to crit damage
-        -rr <times> - number of times to roll the attack against each target
-        *-mi <value>* - minimum value of each die on the damage roll
-        
-        *-resist* <damage resistance>
-        *-immune* <damage immunity>
-        *-vuln* <damage vulnerability>
-        *-neutral* <damage type> - ignores this damage type in resistance calculations
-        *-dtype <damage type>* - replaces all damage types with this damage type
-        *-dtype <old>new>* - replaces all of one damage type with another (e.g. `-dtype fire>cold`)
-        
-        *hit* - automatically hits
-        *miss* - automatically misses
-        *crit* - automatically crits if hit
-        *nocrit* - nullifies critical hits
-        *max* - deals max damage
-        *magical* - makes the damage type magical
-
-        -h - hides name and rolled values
-        -phrase <text> - adds flavour text
-        -title <title> - changes the result title *note: `[name]` and `[aname]` will be replaced automatically*
-        -thumb <url> - adds flavour image
-        -f "Field Title|Field Text" - see `!help embed`
-        <user snippet> - see `!help snippet`
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-d1` applies damage to the first hit, `-b1` applies a bonus to one attack, and so on.
-        """
         if atk_name is None:
             return await self.attack_list(ctx)
 
@@ -216,22 +182,11 @@ class SheetManager(commands.Cog):
         await character.commit(ctx)
         await ctx.send(f"Okay, deleted attack {attack.name}.")
 
-    @commands.command(aliases=['s'])
+    @commands.command(aliases=['s'], help=f"""
+    Rolls a save for your current active character.
+    {VALID_SAVE_ARGS}
+    """)
     async def save(self, ctx, skill, *args):
-        """Rolls a save for your current active character.
-        __Valid Arguments__
-        *adv/dis*
-        *-b [conditional bonus]*
-        -dc [dc]
-        -rr [iterations] (does not apply to Death Saves)
-
-        -phrase [flavor text]
-        -title [title] *note: [name] and [sname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -f "Field Title|Field Text" - see `!help embed`
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one save.
-        """
         if skill == 'death':
             ds_cmd = self.bot.get_command('game deathsave')
             if ds_cmd is None:
@@ -255,24 +210,11 @@ class SheetManager(commands.Cog):
         if gamelog := self.bot.get_cog('GameLog'):
             await gamelog.send_save(ctx, char, result.skill_name, result.rolls)
 
-    @commands.command(aliases=['c'])
+    @commands.command(aliases=['c'], help=f"""
+    Rolls a check for your current active character.
+    {VALID_CHECK_ARGS}
+    """)
     async def check(self, ctx, check, *args):
-        """Rolls a check for your current active character.
-        __Valid Arguments__
-        *adv/dis*
-        *-b [conditional bonus]*
-        -dc [dc]
-        -mc [minimum roll]
-        -rr [iterations]
-        str/dex/con/int/wis/cha (different skill base; e.g. Strength (Intimidation))
-
-        -phrase [flavor text]
-        -title [title] *note: [name] and [cname] will be replaced automatically*
-        -thumb [thumbnail URL]
-        -f "Field Title|Field Text" - see `!help embed`
-
-        An italicized argument means the argument supports ephemeral arguments - e.g. `-b1` applies a bonus to one check.
-        """
         char: Character = await Character.from_ctx(ctx)
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
 
@@ -661,14 +603,14 @@ async def send_ddb_ctas(ctx, character):
         ld_dict = {"key": str(ctx.author.id), "anonymous": True}
     gamelog_flag = await ctx.bot.ldclient.variation('cog.gamelog.cta.enabled', ld_dict, False)
 
-    # has the user seen this cta within the last 24h?
+    # has the user seen this cta within the last 7d?
     if await ctx.bot.rdb.get(f"cog.sheetmanager.cta.seen.{ctx.author.id}"):
         return
 
     embed = EmbedWithCharacter(character)
     embed.title = "Heads up!"
     embed.description = "There's a couple of things you can do to make your experience even better!"
-    embed.set_footer(text="You won't see this message again today.")
+    embed.set_footer(text="You won't see this message again this week.")
 
     # link ddb user
     if ddb_user is None:
@@ -694,7 +636,7 @@ async def send_ddb_ctas(ctx, character):
     if not embed.fields:
         return
     await ctx.send(embed=embed)
-    await ctx.bot.rdb.setex(f"cog.sheetmanager.cta.seen.{ctx.author.id}", str(time.time()), 60 * 60 * 24)
+    await ctx.bot.rdb.setex(f"cog.sheetmanager.cta.seen.{ctx.author.id}", str(time.time()), 60 * 60 * 24 * 7)
 
 
 def setup(bot):

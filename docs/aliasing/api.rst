@@ -60,7 +60,7 @@ Draconic Expressions
 **Syntax**: ``{{code}}``
 
 **Description**: Runs the Draconic code inside the braces and is replaced by the value the code evaluates to.
-If the code evaluates to ``None``, is removed from the output.
+If the code evaluates to ``None``, is removed from the output, otherwise it is cast to ``str``.
 
 See below for a list of builtin Draconic functions.
 
@@ -82,8 +82,8 @@ Draconic Blocks
     code
     </drac2>
 
-**Description**: Runs the multi-line Draconic code between the delimiters. If a value is returned (via the ``return``
-keyword), is replaced by the returned value.
+**Description**: Runs the multi-line Draconic code between the delimiters. If a non-``None`` value is returned (via the
+``return`` keyword), is replaced by the returned value, cast to ``str``.
 
 **Examples**
 
@@ -110,23 +110,38 @@ Argument Parsing
 Often times when writing aliases, you will need to access user input. These special strings will be replaced
 with user arguments (if applicable)!
 
-**Syntax**: ``%1%``, ``%2%``, etc.
+Non-Code, Space-Aware
+"""""""""""""""""""""
+
+**Syntax**: ``%1%``, ``%2%``, ..., ``%N%``
 
 **Description**: Replaced with the Nth argument passed to the alias. If the argument contains spaces, the replacement
 will contain quotes around the argument.
 
+Non-Code, Preserving All
+""""""""""""""""""""""""
+
 **Syntax**: ``%*%``
 
 **Description**: Replaced with the unmodified string following the alias.
+
+In Code, Quote-Escaping
+"""""""""""""""""""""""
 
 **Syntax**: ``&1&``, ``&2&``, etc.
 
 **Description**: Replaced with the Nth argument passed to the alias. If the argument contains spaces, the replacement
 will **not** contain quotes around the argument. Additionally, any quotes in the argument will be backslash-escaped.
 
+In Code, Quote-Escaping All
+"""""""""""""""""""""""""""
+
 **Syntax**: ``&*&``
 
 **Description**: Replaced with the string following the alias. Any quotes will be backslash-escaped.
+
+In Code, List Literal
+"""""""""""""""""""""
 
 **Syntax**: ``&ARGS&``
 
@@ -212,6 +227,15 @@ These functions are available in any scripting context, regardless if you have a
 
 Python Builtins
 """""""""""""""
+
+.. function:: abs(x)
+
+    Takes a number (float or int) and returns the absolute value of that number.
+
+    :param x: The number to find the absolute value of.
+    :type x: float or int
+    :return: The absolute value of x.
+    :rtype: float or int
 
 .. function:: all(iterable)
 

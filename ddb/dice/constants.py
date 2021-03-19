@@ -43,11 +43,11 @@ class RollKind(enum.Enum):
         # must have exactly 1 keep op
         if not left.operations:
             return cls.NONE
-        elif len(k_ops := [o for o in left.operations if o.op == 'k']) > 1:
+        elif len(k_ops := [o for o in left.operations if o.op == 'k']) != 1:
             return cls.NONE
         k_op = k_ops[0]
         # with exactly one selector
-        if len(k_op.sels) > 1:
+        if len(k_op.sels) != 1:
             return cls.NONE
         sel = k_op.sels[0]
 

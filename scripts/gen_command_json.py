@@ -30,11 +30,13 @@
 import argparse
 import itertools
 import json
+import os
 import sys
 
 from discord.ext.commands import Group
 
-sys.path.append('..')
+# path hack to import from parent folder
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o', help="The file to output to.")

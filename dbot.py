@@ -6,9 +6,8 @@ import traceback
 
 # this hooks a lot of weird things and needs to be imported early
 import utils.newrelic
-
 utils.newrelic.hook_all()
-from utils import clustering, config
+from utils import clustering, config, context
 
 import aioredis
 import d20
@@ -36,7 +35,7 @@ COGS = (
     "cogs5e.dice", "cogs5e.charGen", "cogs5e.homebrew", "cogs5e.lookup", "cogs5e.pbpUtils",
     "cogs5e.gametrack", "cogs5e.initTracker", "cogs5e.sheetManager", "cogs5e.gamelog",
     "cogsmisc.customization", "cogsmisc.core",
-    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils"
+    "cogsmisc.publicity", "cogsmisc.stats", "cogsmisc.repl", "cogsmisc.adminUtils", "cogsmisc.tutorials"
 )
 
 
@@ -72,6 +71,9 @@ class Avrae(commands.AutoShardedBot):
         self.muted = set()
         self.cluster_id = 0
 
+        # launch concurrency
+        self.launch_max_concurrency = 1
+
         # sentry
         if config.SENTRY_DSN is not None:
             release = None
@@ -98,23 +100,6 @@ class Avrae(commands.AutoShardedBot):
     async def get_server_prefix(self, msg):
         return (await get_prefix(self, msg))[-1]
 
-    async def launch_shards(self):
-        # set up my shard_ids
-        async with clustering.coordination_lock(self.rdb):
-            await clustering.coordinate_shards(self)
-            if self.shard_ids is not None:
-                log.info(f"Launching {len(self.shard_ids)} shards! ({set(self.shard_ids)})")
-            await super(Avrae, self).launch_shards()
-            log.info(f"Launched {len(self.shards)} shards!")
-
-        if self.is_cluster_0:
-            await self.rdb.incr('build_num')
-
-    async def close(self):
-        await super().close()
-        await self.ddb.close()
-        self.ldclient.close()
-
     @property
     def is_cluster_0(self):
         if self.cluster_id is None:  # we're not running in clustered mode anyway
@@ -139,6 +124,31 @@ class Avrae(commands.AutoShardedBot):
                     scope.set_tag("guild.id", context.guild.id)
                     scope.set_tag("guild.name", str(context.guild))
             sentry_sdk.capture_exception(exception)
+
+    async def launch_shards(self):
+        # set up my shard_ids
+        async with clustering.coordination_lock(self.rdb):
+            await clustering.coordinate_shards(self)
+            if self.shard_ids is not None:
+                log.info(f"Launching {len(self.shard_ids)} shards! ({self.shard_ids})")
+            await super().launch_shards()
+            log.info(f"Launched {len(self.shards)} shards!")
+
+        if self.is_cluster_0:
+            await self.rdb.incr('build_num')
+
+    async def before_identify_hook(self, shard_id, *, initial=False):
+        bucket_id = shard_id % self.launch_max_concurrency
+        # wait until the bucket is available and try to acquire the lock
+        await clustering.wait_bucket_available(shard_id, bucket_id, self.rdb)
+
+    async def get_context(self, *args, **kwargs):
+        return await super().get_context(*args, cls=context.AvraeContext, **kwargs)
+
+    async def close(self):
+        await super().close()
+        await self.ddb.close()
+        self.ldclient.close()
 
 
 desc = '''
@@ -267,7 +277,7 @@ async def on_message(message):
         return
 
     ctx = await bot.get_context(message)
-    if ctx.command is not None:  # builtins first
+    if ctx.valid:  # builtins first
         await bot.invoke(ctx)
     elif ctx.invoked_with:  # then aliases if there is some word (and not just the prefix)
         await handle_aliases(ctx)

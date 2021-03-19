@@ -486,6 +486,11 @@
         "url": "https://www.dndbeyond.com/classes/college-of-lore"
       }
     ],
+    "subclass_title": "Bard College",
+    "subclass_feature_levels": [
+      6,
+      14
+    ],
     "class_feature_options": [],
     "optional_features": [],
     "source": "BR",
@@ -980,6 +985,11 @@
         "isFree": true,
         "url": "https://www.dndbeyond.com/classes/college-of-lore"
       }
+    ],
+    "subclass_title": "Bard College",
+    "subclass_feature_levels": [
+      6,
+      14
     ],
     "class_feature_options": [],
     "optional_features": [],

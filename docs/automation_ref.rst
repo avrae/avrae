@@ -349,7 +349,7 @@ Use Counter
 
     {
         type: "counter";
-        counter: string | SpellSlotReference | FeatureReference;
+        counter: string | SpellSlotReference;
         amount: IntExpression;
         allowOverflow?: boolean;
         errorBehaviour?: null | "warn" | "raise";
@@ -362,8 +362,8 @@ Uses a number of charges of the given counter, and displays the remaining amount
 
 .. attribute:: counter
 
-    The name of the counter to use (case-sensitive, full match only), or a reference to a spell slot or feature
-    (see :ref:`SpellSlotReference` and :ref:`FeatureReference`).
+    The name of the counter to use (case-sensitive, full match only), or a reference to a spell slot
+    (see :ref:`SpellSlotReference`).
 
 .. attribute:: amount
 
@@ -409,28 +409,29 @@ SpellSlotReference
 
     The level of the spell slot to reference (``[1..9]``).
 
-.. _FeatureReference:
+.. todo
+    .. _FeatureReference:
 
-FeatureReference
-^^^^^^^^^^^^^^^^
+    FeatureReference
+    ^^^^^^^^^^^^^^^^
 
-.. code-block:: typescript
+    .. code-block:: typescript
 
-    {
-        feature: "class" | "race" | "item";
-        featureId: number;
-    }
+        {
+            feature: "class" | "race" | "item";
+            featureId: number;
+        }
 
-In most cases, a ``FeatureReference`` should not be constructed manually; use the Automation editor to select a
-feature instead.
+    In most cases, a ``FeatureReference`` should not be constructed manually; use the Automation editor to select a
+    feature instead.
 
-.. attribute:: feature
+    .. attribute:: feature
 
-    The type of feature referenced.
+        The type of feature referenced.
 
-.. attribute:: featureId
+    .. attribute:: featureId
 
-    The DDB entity ID of the feature referenced.
+        The DDB entity ID of the feature referenced.
 
 AnnotatedString
 ---------------

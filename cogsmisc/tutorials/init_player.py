@@ -22,7 +22,7 @@ class PlayerInitiative(Tutorial):
             if ctx.guild is None:
                 await state_map.end_tutorial(ctx)
                 raise PrerequisiteFailed("This tutorial cannot be run in private messages, since initiative tracking "
-                                         "is tied to a server's channel. Try again in a channel!")
+                                         "is tied to a server's channel. Try again in a server!")
 
             # preflight: channel not in combat
             try:

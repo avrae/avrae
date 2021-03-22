@@ -36,6 +36,7 @@ class GameLogEventContext:
         # we use sentinel because the value we want to cache can be None
         self._discord_user = _sentinel
         self._character = _sentinel
+        self._destination_channel = _sentinel
 
     # ==== discord utils ====
     async def get_discord_user(self):
@@ -67,19 +68,30 @@ class GameLogEventContext:
 
         :rtype: discord.Channel
         """
+        if self._destination_channel is not _sentinel:
+            return self._destination_channel
+
         if self.event.message_scope == 'gameId':
+            self._destination_channel = self.channel
             return self.channel
         elif self.event.message_scope == 'userId':
             if self.event.user_id == self.event.message_target:  # optimization: we already got this user (probably)
-                destination = await self.get_discord_user()
+                discord_user = await self.get_discord_user()
             else:
-                destination = await ddb_id_to_discord_user(self, self.event.message_target, self.guild)
+                discord_user = await ddb_id_to_discord_user(self, self.event.message_target, self.guild)
 
-            if destination is None:  # we did our best to find the user, but oh well
+            if discord_user is None:  # we did our best to find the user, but oh well
                 raise IgnoreEvent(f"could not find discord user associated with userId: {self.event.message_target!r}")
-            # noinspection PyProtectedMember
-            # :(
-            return await destination._get_channel()
+
+            # try to find an existing dmchannel with the user
+            existing_dmchannel = discord_user.dm_channel
+            if existing_dmchannel is not None:
+                self._destination_channel = existing_dmchannel
+                return existing_dmchannel
+
+            # otherwise we have to create a dmchannel :(
+            self._destination_channel = await discord_user.create_dm()
+            return self._destination_channel
         else:
             raise ValueError("message scope must be gameId or userId")
 

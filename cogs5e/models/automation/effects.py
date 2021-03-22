@@ -316,7 +316,7 @@ class Attack(Effect):
                 ac = ac or autoctx.target.ac
 
             # assign hit values
-            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # crit
+            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT or (crit and not nocrit):  # crit
                 did_crit = True if not nocrit else False
             elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
                 did_hit = False
@@ -672,8 +672,12 @@ class Damage(Effect):
 
     def build_str(self, caster, evaluator):
         super(Damage, self).build_str(caster, evaluator)
-        damage = evaluator.transformed_str(self.damage)
-        evaluator.builtins['lastDamage'] = damage
+        try:
+            damage = evaluator.transformed_str(self.damage)
+            evaluator.builtins['lastDamage'] = damage
+        except Exception:
+            damage = self.damage
+            evaluator.builtins['lastDamage'] = 0
         return f"{damage} damage"
 
 
@@ -733,8 +737,12 @@ class TempHP(Effect):
 
     def build_str(self, caster, evaluator):
         super(TempHP, self).build_str(caster, evaluator)
-        amount = evaluator.transformed_str(self.amount)
-        evaluator.builtins['lastTempHp'] = amount
+        try:
+            amount = evaluator.transformed_str(self.amount)
+            evaluator.builtins['lastTempHp'] = amount
+        except Exception:
+            amount = self.amount
+            evaluator.builtins['lastTempHp'] = 0
         return f"{amount} temp HP"
 
 
@@ -863,7 +871,7 @@ class Roll(Effect):
     def build_str(self, caster, evaluator):
         super(Roll, self).build_str(caster, evaluator)
         evaluator.builtins[self.name] = self.dice
-        evaluator.builtins['lastRoll'] = self.dice
+        evaluator.builtins['lastRoll'] = 0
         return ""
 
 

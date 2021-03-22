@@ -7,20 +7,9 @@ assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+### Feature Requests have moved!
 
-**Who would use it?**
-The use case for this feature
+Please do not open feature requests as issues on this repository! Instead, come join the Avrae Development Discord
+at https://support.avrae.io and discuss the feature in #request-discussion before requesting it in #feature-request!
 
-**What part of the bot?**
-i.e. Initiative, SheetManager, general functionality, Aliasing
-
-**How would it work?**
-[This is where you put the avrae syntax/command]
-
-**Why should this be added?**
-Justify why you think it'd help others
-
-**Additional context**
-Add any other context or screenshots about the feature request here.
+Any feature requests opened with this template will be closed.

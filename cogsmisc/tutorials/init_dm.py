@@ -17,6 +17,12 @@ class DMInitiative(Tutorial):
     @state(first=True)
     class StartingCombat(TutorialState):
         async def setup(self, ctx, state_map):
+            # preflight: must be in a guild
+            if ctx.guild is None:
+                await state_map.end_tutorial(ctx)
+                raise PrerequisiteFailed("This tutorial cannot be run in private messages, since initiative tracking "
+                                         "is tied to a server's channel. Try again in a server!")
+
             # preflight: channel not in combat
             try:
                 await ctx.get_combat()

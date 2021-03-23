@@ -95,7 +95,8 @@ def search(list_to_search: list, value, key, cutoff=5, return_key=False, strict=
 
 
 async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, return_key=False, pm=False, message=None,
-                            list_filter=None, selectkey=None, search_func=search, return_metadata=False):
+                            list_filter=None, selectkey=None, search_func=search, return_metadata=False,
+                            strip_query_quotes=True):
     """
     Searches a list for an object matching the key, and prompts user to select on multiple matches.
     Guaranteed to return a result - raises if there is no result.
@@ -112,12 +113,16 @@ async def search_and_select(ctx, list_to_search: list, query, key, cutoff=5, ret
     :param selectkey: If supplied, each option will display as selectkey(opt) in the select prompt.
     :param search_func: The function to use to search.
     :param return_metadata: Whether to return a metadata object {num_options, chosen_index}.
+    :param strip_query_quotes: Whether to strip quotes from the query.
     """
     if list_filter:
         list_to_search = list(filter(list_filter, list_to_search))
 
     if search_func is None:
         search_func = search
+
+    if strip_query_quotes:
+        query = query.strip("\"'")
 
     if asyncio.iscoroutinefunction(search_func):
         result = await search_func(list_to_search, query, key, cutoff, return_key)

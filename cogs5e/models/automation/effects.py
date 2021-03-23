@@ -629,7 +629,7 @@ class Damage(Effect):
 
         # magic arg (#853), magical effect (#1063)
         magical_effect = autoctx.combatant and autoctx.combatant.active_effects('magical')
-        always = {'magical'} if any([magical_effect, autoctx.is_spell, magic_arg]) else None
+        always = {'magical'} if (magical_effect or autoctx.is_spell or magic_arg) else None
         # dtype transforms/overrides (#876)
         transforms = {}
         for dtype in dtype_args:

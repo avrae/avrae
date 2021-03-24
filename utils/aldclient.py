@@ -7,8 +7,9 @@ import ldclient
 class AsyncLaunchDarklyClient(ldclient.LDClient):
     """Works exactly like a normal LDClient, except certain blocking methods run in a separate thread."""
 
-    def __init__(self, loop, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, loop, sdk_key, *args, **kwargs):
+        config = ldclient.Config(sdk_key=sdk_key, *args, **kwargs)
+        super().__init__(config=config)
         self.loop = loop
 
     async def variation(self, key, user, default):  # run variation evaluation in a separate thread

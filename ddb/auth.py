@@ -93,4 +93,4 @@ def jwt_for_user(user_id: int):
         "iss": ISSUER
     }
 
-    return jwt.encode(jwt_body, MY_SECRET, algorithm='HS256').decode()  # return as a str, not bytes
+    return jwt.encode(jwt_body, MY_SECRET, algorithm='HS256')

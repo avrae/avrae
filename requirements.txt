@@ -59,7 +59,7 @@ python-Levenshtein==0.12.0
 python-meteor==0.1.6
 redis==2.10.6
 requests==2.22.0
-rsa==4.0
+rsa==4.1
 s3transfer==0.3.3
 sentry-sdk==0.11.1
 six==1.12.0

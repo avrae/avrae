@@ -155,11 +155,11 @@ class Character(StatBlock):
             del Character._cache[owner_id, upstream]
 
     # ---------- Basic CRUD ----------
-    def get_color(self):
+    def get_color(self) -> int:
         return self.options.get('color') or super().get_color()
 
     @property
-    def owner(self):
+    def owner(self) -> str:
         return self._owner
 
     @owner.setter
@@ -168,27 +168,27 @@ class Character(StatBlock):
         self._active = False  # don't have any conflicts
 
     @property
-    def upstream(self):
+    def upstream(self) -> str:
         return self._upstream
 
     @property
-    def upstream_id(self):
+    def upstream_id(self) -> str:
         return self._upstream.split('-', 1)[-1]
 
     @property
-    def sheet_type(self):
+    def sheet_type(self) -> str:
         return self._sheet_type
 
     @property
-    def attacks(self):
+    def attacks(self) -> AttackList:
         return self._attacks + self.overrides.attacks
 
     @property
-    def description(self):
+    def description(self) -> str:
         return self.overrides.desc or self._description
 
     @property
-    def image(self):
+    def image(self) -> str:
         return self.overrides.image or self._image
 
     # ---------- CSETTINGS ----------

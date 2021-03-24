@@ -1,8 +1,12 @@
-from .shared import Sourced, SourcedTrait, Trait
+from .shared import Sourced
 
 
 class Class(Sourced):
-    def __init__(self, name, hit_points, proficiencies, equipment, table, levels, subclasses, optional_features,
+    entity_type = 'class'
+    type_id = 789467139
+
+    def __init__(self, name, hit_points, proficiencies, equipment, table, levels, subclasses, subclass_title,
+                 subclass_feature_levels, optional_features, feature_options,
                  **kwargs):
         """
         :type name: str
@@ -10,11 +14,14 @@ class Class(Sourced):
         :type proficiencies: str
         :type equipment: str
         :type table: ClassTable
-        :type levels: list[list[Trait]]
+        :type levels: list[list[ClassFeature]]
         :type subclasses: list[Subclass]
-        :type optional_features: list[SourcedTrait]
+        :type subclass_title: str
+        :type subclass_feature_levels: list[int]
+        :type optional_features: list[ClassFeature]
+        :type feature_options: list[ClassFeature]
         """
-        super().__init__('class', False, **kwargs)
+        super().__init__(False, **kwargs)
         self.name = name
         self.hit_points = hit_points
         self.proficiencies = proficiencies
@@ -22,19 +29,25 @@ class Class(Sourced):
         self.table = table
         self.levels = levels
         self.subclasses = subclasses
+        self.subclass_title = subclass_title
+        self.subclass_feature_levels = subclass_feature_levels
         self.optional_features = optional_features
+        self.feature_options = feature_options
 
     @classmethod
     def from_data(cls, d):
-        levels = [[Trait.from_dict(cf) for cf in lvl] for lvl in d['levels']]
-        subclasses = [Subclass.from_data(s) for s in d['subclasses']]
-        optional_features = [SourcedTrait.from_trait_and_sourced_dicts(ocf, d, 'class-feature')
-                             for ocf in d['optional_features']]
-        return cls(
+        levels = [[] for _ in d['levels']]
+        inst = cls(
             d['name'], d['hit_points'], d['proficiencies'], d['equipment'],
-            ClassTable.from_data(d['table']), levels, subclasses, optional_features,
+            ClassTable.from_data(d['table']), levels, subclasses=[], subclass_title=d['subclass_title'],
+            subclass_feature_levels=d['subclass_feature_levels'], optional_features=[], feature_options=[],
             source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
         )
+        inst.subclasses = [Subclass.from_data(s, inst) for s in d['subclasses']]
+        inst.levels = [[ClassFeature.from_data(cf, inst) for cf in lvl] for lvl in d['levels']]
+        inst.optional_features = [ClassFeature.from_data(ocf, inst) for ocf in d['optional_features']]
+        inst.feature_options = [ClassFeatureOption.from_data(cfo, inst) for cfo in d['class_feature_options']]
+        return inst
 
 
 class ClassTable:
@@ -59,23 +72,61 @@ class ClassTable:
 
 
 class Subclass(Sourced):
-    def __init__(self, name, levels, optional_features, **kwargs):
+    entity_type = 'class'
+    type_id = 789467139
+
+    def __init__(self, name, levels, optional_features, feature_options, **kwargs):
         """
         :type name: str
-        :type levels: list[list[Trait]]
-        :type optional_features: list[SourcedTrait]
+        :type levels: list[list[ClassFeature]]
+        :type optional_features: list[ClassFeature]
+        :type feature_options: list[ClassFeature]
         """
-        super().__init__('class', False, **kwargs)
+        super().__init__(False, **kwargs)
         self.name = name
         self.levels = levels
         self.optional_features = optional_features
+        self.feature_options = feature_options
 
     @classmethod
-    def from_data(cls, d):
-        levels = [[Trait.from_dict(cf) for cf in lvl] for lvl in d['levels']]
-        optional_features = [SourcedTrait.from_trait_and_sourced_dicts(ocf, d, 'class-feature')
-                             for ocf in d['optional_features']]
-        return cls(
-            d['name'], levels, optional_features,
-            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
+    def from_data(cls, d, parent_class):
+        levels = [[] for _ in d['levels']]
+        inst = cls(
+            d['name'], levels, [], [],
+            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'],
+            parent=parent_class
         )
+        inst.levels = [[ClassFeature.from_data(cf, source_class=inst) for cf in lvl] for lvl in d['levels']]
+        inst.optional_features = [ClassFeature.from_data(ocf, source_class=inst) for ocf in d['optional_features']]
+        inst.feature_options = [ClassFeatureOption.from_data(cfo, source_class=inst) for cfo in
+                                d['class_feature_options']]
+        return inst
+
+
+class ClassFeature(Sourced):
+    entity_type = 'class-feature'
+    type_id = 12168134
+
+    def __init__(self, name, text, **kwargs):
+        super().__init__(homebrew=False, **kwargs)
+        self.name = name
+        self.text = text
+
+    @classmethod
+    def from_data(cls, d, source_class, **kwargs):
+        # noinspection PyProtectedMember
+        return cls(
+            d['name'], d['text'],
+            entity_id=d['id'], page=d['page'],
+            source=d.get('source', source_class.source), is_free=d.get('isFree', source_class.is_free),
+            url=d.get('url', source_class._url),
+            entitlement_entity_id=d.get('entitlementEntityId', source_class.entity_id),
+            entitlement_entity_type=d.get('entitlementEntityType', 'class'),
+            parent=source_class,
+            **kwargs
+        )
+
+
+class ClassFeatureOption(ClassFeature):
+    entity_type = 'class-feature-option'
+    type_id = 258900837

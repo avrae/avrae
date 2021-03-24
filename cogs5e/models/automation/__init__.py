@@ -82,7 +82,8 @@ class Automation:
             except:
                 pass
 
-        return AutomationResult(children=results, is_spell=spell is not None)
+        return AutomationResult(children=results, is_spell=spell is not None,
+                                caster_needs_commit=autoctx.caster_needs_commit)
 
     def build_str(self, caster):
         """

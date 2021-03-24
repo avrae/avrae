@@ -2,6 +2,7 @@ import asyncio
 
 from cogs5e.models.initiative import CombatNotFound, Effect, MonsterCombatant, PlayerCombatant
 from cogs5e.utils import targetutils
+from gamedata import Monster
 from gamedata.compendium import compendium
 from utils.argparser import ParsedArguments, argparse
 from .errors import PrerequisiteFailed
@@ -461,7 +462,7 @@ class PlayerInitiative(Tutorial):
 
 
 async def add_tarrasque(ctx, combat):
-    tarrasque = compendium.lookup_by_entitlement('monster', 17034)
+    tarrasque = compendium.lookup_entity(Monster.entity_type, 17034)
     terry = MonsterCombatant.from_monster(
         monster=tarrasque,
         ctx=ctx,

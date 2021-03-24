@@ -1,3 +1,5 @@
+import abc
+
 import d20
 
 import aliasing.api.statblock
@@ -66,3 +68,64 @@ def crit_mapper(node):
     if isinstance(node, d20.ast.Dice):
         return d20.ast.Dice(node.num * 2, node.size)
     return node
+
+
+# ---- use counter stuff ----
+def deserialize_usecounter_target(target):
+    """
+    :rtype: SpellSlotReference or FeatureReference
+    """
+    if isinstance(target, str):
+        return target
+    elif 'slot' in target:
+        return SpellSlotReference.from_data(target)
+    elif 'feature' in target:
+        # return FeatureReference()
+        pass
+    raise ValueError(f"Unknown usecounter target: {target!r}")
+
+
+class _UseCounterTarget(abc.ABC):  # this is just here for type niceness because python doesn't have interfaces <.<
+    def __init__(self, **kwargs):
+        pass
+
+    @classmethod
+    def from_data(cls, data):
+        return cls(**data)
+
+    def to_dict(self):
+        raise NotImplementedError
+
+    def build_str(self, plural):
+        raise NotImplementedError
+
+    def __str__(self):
+        raise NotImplementedError
+
+
+class SpellSlotReference(_UseCounterTarget):
+    def __init__(self, slot: int, **kwargs):
+        super().__init__(**kwargs)
+        self.slot = slot
+
+    def to_dict(self):
+        return {'slot': self.slot}
+
+    def build_str(self, plural):
+        slots = 'slots' if plural else 'slot'
+        return f"level {self.slot} spell {slots}"
+
+    def __str__(self):
+        return str(self.slot)
+
+
+class FeatureReference(_UseCounterTarget):
+    # to be implemented in future
+    def to_dict(self):
+        raise NotImplementedError
+
+    def build_str(self, plural):
+        raise NotImplementedError
+
+    def __str__(self):
+        raise NotImplementedError

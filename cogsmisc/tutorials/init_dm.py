@@ -1,6 +1,7 @@
 import asyncio
 
 from cogs5e.models.initiative import CombatNotFound, MonsterCombatant
+from gamedata import Monster
 from gamedata.compendium import compendium
 from utils.functions import confirm
 from .errors import PrerequisiteFailed
@@ -538,7 +539,7 @@ class DMInitiative(Tutorial):
 
 
 async def add_orkira(ctx, combat):
-    priest = compendium.lookup_by_entitlement('monster', 16985)
+    priest = compendium.lookup_entity(Monster.entity_type, 16985)
     orkira = MonsterCombatant.from_monster(
         monster=priest,
         ctx=ctx,

@@ -17,6 +17,7 @@ LOAD_FILES = {
     'classes': [],
     'races': [],
     'subraces': [],
+    'books': [],
 
     'srd-references': []
 }

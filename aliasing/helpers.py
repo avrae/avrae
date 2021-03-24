@@ -13,8 +13,9 @@ from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
 from cogs5e.models.embeds import EmbedWithAuthor
 from cogs5e.models.errors import AvraeException, InvalidArgument, NoCharacter, NotAllowed
 from gamedata.compendium import compendium
+from gamedata.lookuputils import long_source_name
 from utils.argparser import argquote, argsplit
-from utils.functions import long_source_name, natural_join
+from utils.functions import natural_join
 
 
 async def handle_aliases(ctx):
@@ -431,14 +432,14 @@ async def workshop_entitlements_check(ctx, ws_obj):
             has_connected_ddb = False
             # add all ids of this type to missing
             for missing_id in required_ids:
-                entity = compendium.lookup_by_entitlement(entity_type, missing_id)
+                entity = compendium.lookup_entity(entity_type, missing_id)
                 if entity is not None:
                     missing.append(entity)
 
         elif not available_set.issuperset(required_ids):
             # add the missing ids to missing
             for missing_id in set(required_ids).difference(available_set):
-                entity = compendium.lookup_by_entitlement(entity_type, missing_id)
+                entity = compendium.lookup_entity(entity_type, missing_id)
                 if entity is not None:
                     missing.append(entity)
 

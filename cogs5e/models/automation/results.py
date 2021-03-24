@@ -7,7 +7,7 @@ import d20
 __all__ = (
     'EffectResult', 'AutomationResult',
     'TargetResult', 'AttackResult', 'SaveResult', 'DamageResult', 'TempHPResult', 'IEffectResult', 'RollResult',
-    'TextResult', 'SetVariableResult', 'ConditionResult'
+    'TextResult', 'SetVariableResult', 'ConditionResult', 'UseCounterResult'
 )
 
 
@@ -33,6 +33,7 @@ class AutomationResult(EffectResult):
     """Class for the overall result of automation (technically not an effect, but eh)."""
     children: typing.List[EffectResult]
     is_spell: bool = False
+    caster_needs_commit: bool = False
 
 
 @dataclass(frozen=True)
@@ -118,3 +119,11 @@ class ConditionResult(EffectResult):
     did_false: bool
     did_error: bool
     children: typing.List[EffectResult]
+
+
+@dataclass(frozen=True)
+class UseCounterResult(EffectResult):
+    counter_name: typing.Optional[str] = None  # None if the counter was not used successfully
+    counter_remaining: int = 0
+    used_amount: int = 0
+    skipped: bool = False

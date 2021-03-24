@@ -88,6 +88,7 @@ class Spellbook:
     def use_slot(self, level: int):
         """
         Uses one spell slot of level level. Does nothing if level is 0.
+
         :raises CounterOutOfBounds if there are no remaining slots of the requested level.
         """
         if level == 0:

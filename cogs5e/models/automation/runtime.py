@@ -3,7 +3,7 @@ import aliasing.api.statblock
 import aliasing.evaluators
 import cogs5e.models.initiative.combatant as init
 from cogs5e.models import character as character_api, embeds
-from .errors import AutomationEvaluationException
+from .errors import AutomationEvaluationException, InvalidIntExpression
 from .utils import maybe_alias_statblock
 
 __all__ = (
@@ -35,11 +35,17 @@ class AutomationContext:
         self.target = None
         self.in_crit = False
 
-        self._embed_queue = []
+        self.caster_needs_commit = False
+
+        # embed text fields, in order
         self._meta_queue = []
+        self._embed_queue = []
         self._effect_queue = []
-        self._field_queue = []
         self._footer_queue = []
+        self._postflight_queue = []
+
+        # used internally by embed builder
+        self._field_queue = []
         self.pm_queue = {}
 
         self.character = None
@@ -54,21 +60,33 @@ class AutomationContext:
         if isinstance(caster, init.Combatant):
             self.combatant = caster
 
+    # ===== embed builder =====
     def queue(self, text):
+        """Adds a line of text to the current field."""
         self._embed_queue.append(text)
 
     def meta_queue(self, text):
+        """Adds a line of text to the cast-wide meta field (lines are unique)."""
         if text not in self._meta_queue:
             self._meta_queue.append(text)
 
     def footer_queue(self, text):
+        """Adds a line of text to the embed footer."""
         self._footer_queue.append(text)
 
     def effect_queue(self, text):
+        """Adds a line of text to the Effect field (lines are unique)."""
         if text not in self._effect_queue:
             self._effect_queue.append(text)
 
+    def postflight_queue_field(self, name, value):
+        """Adds a field to the queue that will appear after all other fields (but before user-supplied -f fields)."""
+        field = {"name": name, "value": value, "inline": False}
+        if field not in self._postflight_queue:
+            self._postflight_queue.append(field)
+
     def push_embed_field(self, title, inline=False, to_meta=False):
+        """Pushes all lines currently in the embed queue to a new field."""
         if not self._embed_queue:
             return
         if to_meta:
@@ -78,25 +96,31 @@ class AutomationContext:
             self._field_queue.extend(chunks)
         self._embed_queue = []
 
-    def insert_meta_field(self):
+    def _insert_meta_field(self):
         if not self._meta_queue:
             return
         self._field_queue.insert(0, {"name": "Meta", "value": '\n'.join(self._meta_queue), "inline": False})
         self._meta_queue = []
 
     def build_embed(self):
+        """Consumes all items in queues and creates the final embed."""
+
         # description
         phrase = self.args.join('phrase', '\n')
         if phrase:
             self.embed.description = f"*{phrase}*"
 
-        # add fields
+        # add meta field (any lingering items in field queue that were not closed added to meta)
         self._meta_queue.extend(t for t in self._embed_queue if t not in self._meta_queue)
-        self.insert_meta_field()
+        self._insert_meta_field()
+
+        # add fields
         for field in self._field_queue:
             self.embed.add_field(**field)
         for effect in self._effect_queue:
             self.embed.add_field(name="Effect", value=effect, inline=False)
+        for field in self._postflight_queue:
+            self.embed.add_field(**field)
         self.embed.set_footer(text='\n'.join(self._footer_queue))
 
     def add_pm(self, user, message):
@@ -104,6 +128,7 @@ class AutomationContext:
             self.pm_queue[user] = []
         self.pm_queue[user].append(message)
 
+    # ===== utils =====
     def get_cast_level(self):
         if self.is_spell:
             return self.args.last('l', self.spell.level, int)
@@ -111,10 +136,10 @@ class AutomationContext:
 
     def parse_annostr(self, annostr, is_full_expression=False):
         """
-        Parses an AnnotatedString or IntExpression.
+        Parses an AnnotatedString.
 
         :param str annostr: The string to parse.
-        :param bool is_full_expression: Whether the string is an IntExpression.
+        :param bool is_full_expression: Whether to evaluate the result rather than running interpolation.
         """
         if not is_full_expression:
             return self.evaluator.transformed_str(annostr, extra_names=self.metavars)
@@ -128,6 +153,19 @@ class AutomationContext:
             raise AutomationEvaluationException(ex, expr)
         self.evaluator.builtins = original_names
         return out
+
+    def parse_intexpression(self, intexpression):
+        """
+        Parses an IntExpression.
+
+        :param intexpression: The string to parse.
+        :rtype: int
+        """
+        eval_result = self.parse_annostr(intexpression, is_full_expression=True)
+        try:
+            return int(eval_result)
+        except (TypeError, ValueError):
+            raise InvalidIntExpression(f"{intexpression!r} cannot be interpreted as an IntExpression.")
 
 
 class AutomationTarget:

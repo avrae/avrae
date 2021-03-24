@@ -2,8 +2,8 @@ from aliasing.errors import EvaluationError
 from cogs5e.models.errors import AvraeException
 
 __all__ = (
-    'AutomationException', 'StopExecution', 'TargetException', 'AutomationEvaluationException', 'NoSpellDC',
-    'NoAttackBonus'
+    'AutomationException', 'StopExecution', 'TargetException', 'AutomationEvaluationException', 'InvalidIntExpression',
+    'NoSpellDC', 'NoAttackBonus', 'NoCounterFound'
 )
 
 
@@ -32,6 +32,10 @@ class AutomationEvaluationException(EvaluationError, AutomationException):
         super().__init__(original, expression)  # EvaluationError.__init__()
 
 
+class InvalidIntExpression(AutomationException):
+    pass
+
+
 class NoSpellDC(AutomationException):
     def __init__(self, msg="No spell save DC found."):
         super().__init__(msg)
@@ -39,4 +43,9 @@ class NoSpellDC(AutomationException):
 
 class NoAttackBonus(AutomationException):
     def __init__(self, msg="No attack bonus found."):
+        super().__init__(msg)
+
+
+class NoCounterFound(AutomationException):
+    def __init__(self, msg="The specified counter was not found."):
         super().__init__(msg)

@@ -43,6 +43,8 @@ async def run_attack(ctx, embed, args, caster, attack, targets, combat):
     result = await attack.automation.run(ctx, embed, caster, targets, args, combat=combat, title=embed.title)
     if combat:
         await combat.final()
+    elif result.caster_needs_commit and hasattr(caster, 'commit'):  # commit character only
+        await caster.commit(ctx)
 
     embeds.add_fields_from_args(embed, args.get('f'))
     if 'thumb' in args:

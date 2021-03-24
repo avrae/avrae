@@ -341,6 +341,98 @@ Run certain effects if a special condition is met, or other effects otherwise.
     - ``"neither"``: Skip this effect.
     - ``"raise"``: Raise the error and halt execution.
 
+Use Counter
+-----------
+.. versionadded:: 2.10.0
+
+.. code-block:: typescript
+
+    {
+        type: "counter";
+        counter: string | SpellSlotReference;
+        amount: IntExpression;
+        allowOverflow?: boolean;
+        errorBehaviour?: null | "warn" | "raise";
+    }
+
+Uses a number of charges of the given counter, and displays the remaining amount and delta.
+
+.. note::
+    Regardless of the current target, this effect will always use the *caster's* counter/spell slots!
+
+.. attribute:: counter
+
+    The name of the counter to use (case-sensitive, full match only), or a reference to a spell slot
+    (see :ref:`SpellSlotReference`).
+
+.. attribute:: amount
+
+     The number of charges to use. If negative, will add charges instead of using them.
+
+.. attribute:: allowOverflow
+
+     *optional, default False* - If False, attempting to overflow/underflow a counter (i.e. use more charges than
+     available or add charges exceeding max) will error instead of clipping to bounds.
+
+.. attribute:: errorBehaviour
+
+     *optional, default "warn"* - How to behave if modifying the counter raises an error:
+
+    - ``null``: All errors are silently consumed.
+    - ``"warn"``: Automation will continue to run, and any errors will appear in the output. (*default*)
+    - ``"raise"``: Raise the error and halt execution.
+
+    Some, but not all, possible error conditions are:
+
+    - The target does not have counters (e.g. they are a monster)
+    - The counter does not exist
+    - ``allowOverflow`` is false and the new value is out of bounds
+
+**Variables**
+
+- ``lastCounterName`` (:class:`str`) The name of the last used counter (if it was a spell slot, the level of the slot, ``None`` on error).
+- ``lastCounterRemaining`` (:class:`int`) The remaining charges of the last used counter (0 on error).
+- ``lastCounterUsedAmount`` (:class:`int`) The amount of the counter successfully used.
+
+.. _SpellSlotReference:
+
+SpellSlotReference
+^^^^^^^^^^^^^^^^^^
+
+.. code-block:: typescript
+
+    {
+        slot: number;
+    }
+
+.. attribute:: slot
+
+    The level of the spell slot to reference (``[1..9]``).
+
+.. todo
+    .. _FeatureReference:
+
+    FeatureReference
+    ^^^^^^^^^^^^^^^^
+
+    .. code-block:: typescript
+
+        {
+            feature: "class" | "race" | "item";
+            featureId: number;
+        }
+
+    In most cases, a ``FeatureReference`` should not be constructed manually; use the Automation editor to select a
+    feature instead.
+
+    .. attribute:: feature
+
+        The type of feature referenced.
+
+    .. attribute:: featureId
+
+        The DDB entity ID of the feature referenced.
+
 AnnotatedString
 ---------------
 An AnnotatedString is a string that can access saved variables.

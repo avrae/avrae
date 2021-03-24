@@ -11,3 +11,8 @@ class WaterdeepException(DDBException):
 class AuthException(DDBException):
     """Something happened during auth that shouldn't have"""
     pass
+
+
+class CharacterServiceException(DDBException):
+    """Some error happened during a call to the character service"""
+    pass

@@ -55,6 +55,8 @@ DDB_CHAR_COMPUTATION_ENDPT = os.getenv('CHARACTER_COMPUTATION_ENDPOINT')
 DDB_WATERDEEP_URL = os.getenv('DDB_WATERDEEP_URL', "https://www.dndbeyond.com")
 # game log base endpoint
 DDB_GAMELOG_ENDPOINT = os.getenv('DDB_GAMELOG_ENDPOINT', "https://game-log-rest-live.dndbeyond.com/v1")
+DDB_CHARACTER_SERVICE_URL = os.getenv('DDB_CHARACTER_SERVICE_URL',
+                                      "https://character-service.dndbeyond.com/character/v4")
 
 # ---- launchdarkly ----
 LAUNCHDARKLY_SDK_KEY = os.getenv('LAUNCHDARKLY_SDK_KEY')

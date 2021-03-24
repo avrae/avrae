@@ -7,6 +7,7 @@ from boto3.dynamodb.conditions import Key
 
 from cogsmisc.stats import Stats
 from ddb import auth, campaign, entitlements
+from ddb.character import CharacterServiceClient
 from ddb.errors import AuthException, WaterdeepException
 from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, \
     DDB_WATERDEEP_URL as WATERDEEP_BASE, \
@@ -29,7 +30,7 @@ class BeyondClientBase:  # for development - assumes no entitlements
     async def get_accessible_entities(self, ctx, user_id, entity_type):
         return None
 
-    async def get_ddb_user(self, ctx, user_id):
+    async def get_ddb_user(self, ctx, user_id=None):
         return None
 
     async def get_active_campaigns(self, ctx, user):
@@ -51,17 +52,21 @@ class BeyondClient(BeyondClientBase):
 
     def __init__(self, loop):
         self.http = None
-        self.dynamo = None
-        self.ddb_user_table = None
-        self.ddb_entity_table = None
+        self.character = None
+
+        self._dynamo = None
+        self._ddb_user_table = None
+        self._ddb_entity_table = None
         loop.run_until_complete(self._initialize())
 
     async def _initialize(self):
         """Initialize our async resources: aiohttp, aioboto3"""
         self.http = aiohttp.ClientSession()
-        self.dynamo = aioboto3.resource('dynamodb', region_name=DYNAMO_REGION)
-        self.ddb_user_table = self.dynamo.Table(DYNAMO_USER_TABLE)
-        self.ddb_entity_table = self.dynamo.Table(DYNAMO_ENTITY_TABLE)
+        self.character = CharacterServiceClient(self.http)
+
+        self._dynamo = aioboto3.resource('dynamodb', region_name=DYNAMO_REGION)
+        self._ddb_user_table = self._dynamo.Table(DYNAMO_USER_TABLE)
+        self._ddb_entity_table = self._dynamo.Table(DYNAMO_ENTITY_TABLE)
         log.info("DDB client initialized")
 
     # ==== methods ====
@@ -95,15 +100,18 @@ class BeyondClient(BeyondClientBase):
 
         return accessible
 
-    async def get_ddb_user(self, ctx, user_id):
+    async def get_ddb_user(self, ctx, user_id=None):
         """
         Gets a Discord user's DDB user, communicating with the Auth Service if necessary.
         Returns None if the user has no DDB link.
 
         :type ctx: discord.ext.commands.Context
-        :type user_id: int
+        :param int user_id: The Discord user ID to get the DDB user of. If None, defaults to ctx.author.id.
         :rtype: auth.BeyondUser or None
         """
+        if user_id is None:
+            user_id = ctx.author.id
+
         log.debug(f"Getting DDB user for Discord ID {user_id}")
         user_cache_key = f"beyond.user.{user_id}"
         unlinked_sentinel = {"unlinked": True}
@@ -248,7 +256,7 @@ class BeyondClient(BeyondClientBase):
         :param int ddb_id: The DDB user ID.
         :rtype: entitlements.UserEntitlements
         """
-        user_r = await self.ddb_user_table.get_item(Key={"ID": ddb_id})  # ints are automatically converted to N-type
+        user_r = await self._ddb_user_table.get_item(Key={"ID": ddb_id})  # ints are automatically converted to N-type
         if 'Item' not in user_r:
             return entitlements.UserEntitlements([], [])
         result = user_r['Item']
@@ -265,7 +273,7 @@ class BeyondClient(BeyondClientBase):
         """
         log.debug(f"fetching entity entitlements for etype {etype}")
         return [entitlements.EntityEntitlements.from_dict(e)
-                async for e in self.query(self.ddb_entity_table, KeyConditionExpression=Key('EntityType').eq(etype))]
+                async for e in self.query(self._ddb_entity_table, KeyConditionExpression=Key('EntityType').eq(etype))]
 
     # ---- helpers ----
     @staticmethod

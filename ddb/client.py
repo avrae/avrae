@@ -284,4 +284,4 @@ class BeyondClient(BeyondClientBase):
 
     async def close(self):
         await self.http.close()
-        await self.dynamo.__aexit__()
+        await self.dynamo.__aexit__(None, None, None)

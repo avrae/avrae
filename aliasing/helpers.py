@@ -6,7 +6,7 @@ import draconic
 
 from aliasing import evaluators
 from aliasing.api.functions import AliasException
-from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT
+from aliasing.constants import CVAR_SIZE_LIMIT, GVAR_SIZE_LIMIT, SVAR_SIZE_LIMIT, UVAR_SIZE_LIMIT, VAR_NAME_LIMIT
 from aliasing.errors import AliasNameConflict, CollectableNotFound, CollectableRequiresLicenses, EvaluationError
 from aliasing.personal import Alias, Servalias, Servsnippet, Snippet
 from aliasing.workshop import WorkshopAlias, WorkshopCollection, WorkshopSnippet
@@ -193,6 +193,8 @@ def set_cvar(character, name, value):
     if not name.isidentifier():
         raise InvalidArgument("Cvar names must be identifiers "
                               "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+    elif len(name) > VAR_NAME_LIMIT:
+        raise InvalidArgument(f'Cvar name must be shorter than {VAR_NAME_LIMIT} characters.')
     elif name in character.get_scope_locals(True):
         raise InvalidArgument(f"The variable `{name}` is already built in.")
     elif len(value) > CVAR_SIZE_LIMIT:
@@ -214,6 +216,8 @@ async def set_uvar(ctx, name, value):
     if not name.isidentifier():
         raise InvalidArgument("Uvar names must be valid identifiers "
                               "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+    elif len(name) > VAR_NAME_LIMIT:
+        raise InvalidArgument(f'Uvar name must be shorter than {VAR_NAME_LIMIT} characters.')
     elif len(value) > UVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Uvars must be shorter than {UVAR_SIZE_LIMIT} characters.")
     await ctx.bot.mdb.uvars.update_one(
@@ -260,6 +264,8 @@ async def set_svar(ctx, name, value):
     if not name.isidentifier():
         raise InvalidArgument("Svar names must be valid identifiers "
                               "(only contain a-z, A-Z, 0-9, _, and not start with a number).")
+    elif len(name) > VAR_NAME_LIMIT:
+        raise InvalidArgument(f'Svar name must be shorter than {VAR_NAME_LIMIT} characters.')
     elif len(value) > SVAR_SIZE_LIMIT:
         raise InvalidArgument(f"Svars must be shorter than {SVAR_SIZE_LIMIT} characters.")
     await ctx.bot.mdb.svars.update_one(

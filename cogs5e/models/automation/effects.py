@@ -268,8 +268,13 @@ class Attack(Effect):
             except Exception:
                 raise AutomationException(f"{self.bonus!r} cannot be interpreted as an attack bonus.")
 
-        if attack_bonus is None and b is None:
-            raise NoAttackBonus("No spell attack bonus found. Use the `-b` argument to specify one!")
+        if attack_bonus is None:
+            # if there is no attack bonus specified (i.e. use SAB), and no SAB, use -b arg to specify the to hit bonus
+            if b is None:
+                raise NoAttackBonus("No spell attack bonus found. Use the `-b` argument to specify one!")
+            # #1463
+            attack_bonus = b
+            b = None
 
         # reset metavars (#1335)
         autoctx.metavars['lastAttackDidHit'] = False

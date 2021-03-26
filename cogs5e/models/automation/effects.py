@@ -627,8 +627,9 @@ class Damage(Effect):
         # evaluate damage
         dmgroll = roll(dice_ast)
 
-        # magic arg (#853)
-        always = {'magical'} if (autoctx.is_spell or magic_arg) else None
+        # magic arg (#853), magical effect (#1063)
+        magical_effect = autoctx.combatant and autoctx.combatant.active_effects('magical')
+        always = {'magical'} if (magical_effect or autoctx.is_spell or magic_arg) else None
         # dtype transforms/overrides (#876)
         transforms = {}
         for dtype in dtype_args:

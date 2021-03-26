@@ -922,7 +922,7 @@ class InitTracker(commands.Cog):
         __Resists__
         -resist <damage type> - Gives the combatant resistance to the given damage type.
         -immune <damage type> - Gives the combatant immunity to the given damage type.
-        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.`-custom` - Makes a custom attack with 0 to hit and base damage. Use `-b` and `-d` to add damage and to hit.
+        -vuln <damage type> - Gives the combatant vulnerability to the given damage type.
         -neutral <damage type> - Removes the combatant's immunity, resistance, or vulnerability to the given damage type.
         __General__
         -ac <ac> - modifies ac temporarily; adds if starts with +/- or sets otherwise.

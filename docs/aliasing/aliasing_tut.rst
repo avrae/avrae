@@ -34,7 +34,7 @@ This defines four strings that the alias will use in various places. By defining
 
   {{ch=character()}}
 
-This alias will be accessing the active character several times. This defines a variable to store it for easier access.
+This alias will be accessing the active character several times, so this defines a variable to store it for easier access.
 
 .. code-block:: text
 
@@ -46,32 +46,32 @@ This creates a variable for name of the custom counter. It will need to be creat
 
   {{ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) if ch.race.lower() == "half-orc" else ""}}
 
-If the character was imported from Beyond, it should create the custom counter automatically. But, in case the character doesn't have the custom counter, this optional line checks if the character's race is Half-Orc and creates the custom counter if it doesn't exist.
+If the character was imported from Beyond, it should create the custom counter automatically. In case the character doesn't have the custom counter, for whatever reason, this line checks if the character's race is Half-Orc and creates the custom counter if it doesn't exist.
 
 .. code-block:: text
 
   {{v=ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp}}
 
-This checks if the trigger conditions are valid: do you have a counter for this? is it used? are you at 0 hp?
+This checks if all of the trigger conditions are valid: do you have a counter for this? is it used? are you at 0 hp?
 
 .. code-block:: text
 
-  {{mod_cc(cc, -1) if v else ""}}
+  {{ch.mod_cc(cc, -1) if v else ""}}
 
-This decrements the counter, but only if you have it. It checks this to prevent errors.
+This decrements the counter, but only if all the trigger conditions are met.
 
 .. code-block:: text
 
-  {{ch.set_hp(1) if v and not ch.hp else ""}}
+  {{ch.set_hp(1) if v else ""}}
 
-This sets your hit points to 1, but only if you have 0 right now.
+This sets your hit points to 1, again only if all trigger conditions are met.
 
 .. code-block:: text
 
   {{T = f"{name} {'uses' if v else 'tries to use'} {cc}!"}}
 
-This defines a variable that will be used in the title of the embed, to either success or fail, depending on the v variable from above.
-I use fstrings, or formatted strings, to streamline the code a bit.
+This defines a variable that will be used in the title of the embed. It will specify either success or fail, depending on the v variable from above.
+It uses fstrings, or formatted strings, to streamline the code a bit.
 
 .. code-block:: text
 
@@ -103,7 +103,7 @@ This will send the defined arguments to the embed to be displayed.
   -color <color> 
   -thumb <image>
 
-This makes it look pretty.
+This makes it look pretty, setting the embed color and the character's image (if any) as a thumbnail
 
 The end result is:
 
@@ -132,7 +132,7 @@ The end result is:
 
 Insult Tutorial
 -------------------------------------
-*By @Croebh#5603*
+*By @Croebh#5603 with minor drac2 updates by @mobius#1442*
 
 .. code-block:: text
 
@@ -142,14 +142,20 @@ This creates a servalias named insult, calling the command embed.
 
 .. code-block:: text
 
-  {{ G = get_gvar("68c31679-634d-46de-999b-4e20b1f8b172") }}
+  <drac2>
+
+This specifies the start of a code block.  
+  
+.. code-block:: text
+
+  G = get_gvar("68c31679-634d-46de-999b-4e20b1f8b172")
 
 This sets a local variable, G to the contents of the gvar with the ID 68c31679-634d-46de-999b-4e20b1f8b172.
 The get_gvar() function grabs the content of the Gvar as plain text.
 
 .. code-block:: text
 
-  {{ L = [x.split(",") for x in G.split("\n\n")] }}
+  L = [x.split(",") for x in G.split("\n\n")]
 
 This sets a local variable, L to a list comprehension.
 What that is doing is breaking down the variable G into a list of lists.
@@ -165,7 +171,7 @@ So L ends up being something like ``[["Words","Stuff"],["Other","Words","More!"]
 
 .. code-block:: text
 
-  {{ I = [x.pop(roll(f'1d{len(x)}-1')).title() for x in L] }}
+  I = [x.pop(roll(f'1d{len(x)}-1')).title() for x in L]
 
 This sets another local variable, I, to another list comprehension, this time iterating on the variable L.
 
@@ -200,14 +206,14 @@ so L is now ``[["stuff"],["Other","Words"],["More"]]``
 
 .. code-block:: text
 
-  {{ aL = L[0] + L[1] }}
+  aL = L[0] + L[1]
 
 This sets the variable aL to the combination of the first results of L, so ``["stuff"]`` and ``["Other","Words"]``,
 making aL ``["stuff","Other","Words"]``, as they were added together. This doesn't remove those two lists from L
 
 .. code-block:: text
 
-  {{ add = [aL.pop(roll(f'1d{len(aL)-1}')).title() for x in range(int("&1&".strip("&")))]}}
+  add = [aL.pop(roll(f'1d{len(aL)-1}')).title() for x in range(int("&1&".strip("&")))]
 
 Another fun one. This sets the variable ``add`` to another list comprehension, this time on a varible list.
 
@@ -250,7 +256,7 @@ So add is now ``["Stuff", "Words"]``
 
 .. code-block:: text
 
-  {{ I = [I[0], I[1]] + add + [I[2]] }}
+  I = [I[0], I[1]] + add + [I[2]]
 
 This overwrites the variable I with a new list.
 
@@ -266,16 +272,22 @@ Combining them all together, the variable I is now, ``["Words","More!","Stuff", 
 
 .. code-block:: text
 
-  -title "You {{" ".join(I)}}!"
+  I = " ".join(I)
 
-So, this adds a -title to the embed the command starts with. The contents of this title is ``"You {{" ".join(I)}}!"``
-
-``{{" ".join(I)}}``
-
-This joins the contents of the variable I, putting space (" ") between each item. So in this case, it would return
+This joins the contents of the variable I, putting space (" ") between each item. So in this case, I now contains
 ``"Words More! Stuff Words Words"``
 
-Putting that together with the text outside the code, the title will be ``"You Words More! Stuff Words Words!"``
+.. code-block:: text
+
+  </drac2>
+
+This closes off the code block and everything else will be arguments to the embed command.
+
+.. code-block:: text
+
+  -title "You {{I}}!"
+
+This adds a -title to the embed the alias starts with. The contents of this title will be ``"You Words More! Stuff Words Words!"``
 
 .. code-block:: text
 
@@ -288,11 +300,14 @@ The end result is:
 .. code-block:: text
 
   !servalias insult embed
-  {{ G = get_gvar("68c31679-634d-46de-999b-4e20b1f8b172") }}
-  {{ L = [x.split(",") for x in G.split("\n\n")] }}
-  {{ I = [x.pop(roll(f'1d{len(x)}-1')).title() for x in L] }}
-  {{ aL = L[0] + L[1] }}
-  {{ add = [aL.pop(roll(f'1d{len(aL)-1}')).title() for x in range(int("&1&".strip("&")))]}}
-  {{ I = [I[0], I[1]] + add + [I[2]] }}
-  -title "You {{" ".join(I)}}!"
-  -thumb <image> -color <color>
+  <drac2>
+  G = get_gvar("68c31679-634d-46de-999b-4e20b1f8b172")
+  L = [x.split(",") for x in G.split("\n\n")]
+  I = [x.pop(roll(f'1d{len(x)}-1')).title() for x in L]
+  aL = L[0] + L[1]
+  add = [aL.pop(roll(f'1d{len(aL)-1}')).title() for x in range(int("&1&".strip("&")))]
+  I = [I[0], I[1]] + add + [I[2]]
+  I = " ".join(I)
+  </drac2>
+  -title "You {{I}}!"
+  -thumb <image> -color <color>  

@@ -3,17 +3,17 @@ Aliasing Tutorials
 
 Here are a few tutorials for aliases that were created by the Avrae Development Discord.
 These should take you step by step through two example aliases.
-Thanks to @Croebh#5603 and @silverbass#2407 for writing these, and to @Ydomat#2886 for converting them to this format!
+Thanks to @Croebh#5603 and @silverbass#2407 for writing these, @Ydomat#2886 for converting them to this format, and @mobius#1442 for updating them!
 
 Half-Orc Relentless Endurance Tutorial
 --------------------------------------
-*By @silverbass#2407.*
+*By @silverbass#2407, updated by @mobius#1442*
 
 .. code-block:: text
 
   !alias orc-relentless
 
-This sets the alias name.
+This sets the alias name. If creating this alias in the Avrae workshop, you'll leave this line out.
 
 .. code-block:: text
 
@@ -23,32 +23,36 @@ This is the base Avrae command, an embed, which makes the pretty text box. Check
 
 .. code-block:: text
 
-  {{cc="Relentless Endurance"}}
+  {{desc="When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead."}}
+  {{rest="You can’t use this feature again until you finish a long rest."}}
+  {{hasHP="You have not been reduced to 0 hit points."}}
+  {{noCC="You do not have this ability."}}
 
-This creates a variable for name of the custom counter, which you do need to make before using it.
+This defines four strings that the alias will use in various places. By defining them as variables it makes some of the other code more legible.
 
 .. code-block:: text
 
-  {{v=cc_exists(cc) and get_cc(cc) and not get_hp()}}
+  {{ch=character()}}
+
+This alias will be accessing the active character several times. This defines a variable to store it for easier access.
+
+.. code-block:: text
+
+  {{cc="Relentless Endurance"}} 
+  
+This creates a variable for name of the custom counter. It will need to be created before the alias can use it. 
+
+.. code-block:: text
+
+  {{ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) if ch.race.lower() == "half-orc" else ""}}
+
+If the character was imported from Beyond, it should create the custom counter automatically. But, in case the character doesn't have the custom counter, this optional line checks if the character's race is Half-Orc and creates the custom counter if it doesn't exist.
+
+.. code-block:: text
+
+  {{v=ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp}}
 
 This checks if the trigger conditions are valid: do you have a counter for this? is it used? are you at 0 hp?
-
-.. code-block:: text
-
-  -title "{{f"{name} {'uses' if v else 'tries to use'} {cc}!"}}"
-
-This sets the title of the embed, to either success or fail, depending on the v variable from above.
-I use fstrings, or formatted strings, to streamline the code a bit.
-
-.. code-block:: text
-
-  -desc "{{"When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead." if v else "You have more than 0 hit points." if get_hp() else "You can’t use this feature again until you finish a Long Rest." if cc_exists(cc) else "You do not have this ability."}}"
-
-This sets the body text of the embed, and shows the 4 cases:
-1) it works,
-2) you have more than 0 hp,
-3) you already used the feature,
-4) you don't have the counter in the first place.
 
 .. code-block:: text
 
@@ -58,20 +62,46 @@ This decrements the counter, but only if you have it. It checks this to prevent 
 
 .. code-block:: text
 
-  -f "{{f"{cc}|{cc_str(cc) if cc_exists(cc) else '*None*'}"}}"
-
-This displays the counter, or None if you don't have it. It's displayed in the embed as a field.
-Again, using an fstring for streamlined code.
-
-.. code-block:: text
-
-  {{set_hp(1) if v and not get_hp() else ""}}
+  {{ch.set_hp(1) if v and not ch.hp else ""}}
 
 This sets your hit points to 1, but only if you have 0 right now.
 
 .. code-block:: text
 
-  -color <color> -thumb <image>
+  {{T = f"{name} {'uses' if v else 'tries to use'} {cc}!"}}
+
+This defines a variable that will be used in the title of the embed, to either success or fail, depending on the v variable from above.
+I use fstrings, or formatted strings, to streamline the code a bit.
+
+.. code-block:: text
+
+  {{D = desc if v else hasHP if ch.hp else rest if ch.cc_exists(cc) else noCC}}
+
+This defines a variable for the body text of the embed, and shows the 4 response strings that were defined above:
+1) it works (desc)
+2) you have more than 0 hp (hasHP)
+3) you already used the feature (rest)
+4) you don't have the counter in the first place (noCC)
+
+.. code-block:: text
+
+  {{F = f"{cc}|{ch.cc_str(cc) if ch.cc_exists(cc) else '*None*'}"}}
+
+This defines a variable that will include the counter in the embed output, or None if you don't have it. It will be displayed in the embed as a field.
+Again, using an fstring for streamlined code.
+
+.. code-block:: text
+
+  -title "{{T}}" 
+  -desc "{{D}}" 
+  -f "{{F}}"  
+
+This will send the defined arguments to the embed to be displayed. 
+
+.. code-block:: text
+
+  -color <color> 
+  -thumb <image>
 
 This makes it look pretty.
 
@@ -79,8 +109,26 @@ The end result is:
 
 .. code-block:: text
 
-  !alias orc-relentless embed {{cc="Relentless Endurance"}} {{v=cc_exists(cc) and get_cc(cc) and not get_hp()}} -title "{{f"{name} {'uses' if v else 'tries to use'} {cc}!"}}" -desc "{{"When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead." if v else "You have more than 0 hit points." if get_hp() else "You can’t use this feature again until you finish a Long Rest." if cc_exists(cc) else "You do not have this ability."}}" {{mod_cc(cc, -1) if v else ""}} -f "{{f"{cc}|{cc_str(cc) if cc_exists(cc) else '*None*'}"}}" {{set_hp(1) if v and not get_hp() else ""}} -color <color> -thumb <image>
-
+  !alias orc-relentless embed 
+  {{desc="When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead."}}
+  {{rest="You can’t use this feature again until you finish a long rest."}}
+  {{hasHP="You have not been reduced to 0 hit points."}}
+  {{noCC="You do not have this ability."}}
+  {{ch=character()}}
+  {{cc="Relentless Endurance"}} 
+  {{ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) if ch.race.lower() == "half-orc" else ""}}
+  {{v=ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp}}
+  {{mod_cc(cc, -1) if v else ""}}
+  {{ch.set_hp(1) if v and not ch.hp else ""}}
+  {{T = f"{name} {'uses' if v else 'tries to use'} {cc}!"}}
+  {{D = desc if v else hasHP if ch.hp else rest if ch.cc_exists(cc) else noCC}}
+  {{F = f"{cc}|{ch.cc_str(cc) if ch.cc_exists(cc) else '*None*'}"}}
+  -title "{{T}}" 
+  -desc "{{D}}" 
+  -f "{{F}}"  
+  -color <color> 
+  -thumb <image>
+  
 
 Insult Tutorial
 -------------------------------------

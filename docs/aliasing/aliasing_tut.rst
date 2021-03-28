@@ -118,7 +118,7 @@ The end result is:
   {{cc="Relentless Endurance"}} 
   {{ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) if ch.race.lower() == "half-orc" else ""}}
   {{v=ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp}}
-  {{mod_cc(cc, -1) if v else ""}}
+  {{ch.mod_cc(cc, -1) if v else ""}}
   {{ch.set_hp(1) if v and not ch.hp else ""}}
   {{T = f"{name} {'uses' if v else 'tries to use'} {cc}!"}}
   {{D = desc if v else hasHP if ch.hp else rest if ch.cc_exists(cc) else noCC}}

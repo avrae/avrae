@@ -317,14 +317,14 @@ class Attack(Effect):
                 ac = ac or autoctx.target.ac
 
             # assign hit values
-            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT: # critical hit
+            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # critical hit
                 did_crit = True and not nocrit  # if nocrit, will evaluate to false
             # AVR-764 crit on crit arg and if we do not have a critical failure
-            elif crit and not to_hit_roll.crit == d20.CritType.FAIL: # crit arg
+            elif crit and not to_hit_roll.crit == d20.CritType.FAIL:  # crit arg
                 did_crit = True and not nocrit
-            elif to_hit_roll.crit == d20.CritType.FAIL: # crit fail
+            elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
                 did_hit = False
-            elif ac and to_hit_roll.total < ac: # miss
+            elif ac and to_hit_roll.total < ac:  # miss
                 did_hit = False
 
             autoctx.metavars['lastAttackRollTotal'] = to_hit_roll.total  # 1362

@@ -98,9 +98,9 @@ class Character(StatBlock):
         if active_character is None:
             raise NoCharacter()
 
-        if (owner_id, active_character['upstream']) in cls._cache:
+        if cached := cls._cache.get((owner_id, active_character['upstream'])):
             # return from cache
-            return cls._cache[owner_id, active_character['upstream']]
+            return cached
         else:
             # write to cache
             inst = cls.from_dict(active_character)

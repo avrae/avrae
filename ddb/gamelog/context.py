@@ -136,7 +136,7 @@ class GameLogEventContext:
         """
         if not self.event.entity_id:
             return None
-        return compendium.lookup_by_entitlement('monster', int(self.event.entity_id))
+        return compendium.lookup_entity('monster', int(self.event.entity_id))
 
     async def get_statblock(self):
         """:rtype: cogs5e.models.sheet.statblock.StatBlock or None"""

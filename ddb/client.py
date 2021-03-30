@@ -64,9 +64,9 @@ class BeyondClient(BeyondClientBase):
         self.http = aiohttp.ClientSession()
         self.character = CharacterServiceClient(self.http)
 
-        self._dynamo = aioboto3.resource('dynamodb', region_name=DYNAMO_REGION)
-        self._ddb_user_table = self._dynamo.Table(DYNAMO_USER_TABLE)
-        self._ddb_entity_table = self._dynamo.Table(DYNAMO_ENTITY_TABLE)
+        self._dynamo = await aioboto3.resource('dynamodb', region_name=DYNAMO_REGION).__aenter__()
+        self._ddb_user_table = await self._dynamo.Table(DYNAMO_USER_TABLE)
+        self._ddb_entity_table = await self._dynamo.Table(DYNAMO_ENTITY_TABLE)
         log.info("DDB client initialized")
 
     # ==== methods ====
@@ -292,3 +292,4 @@ class BeyondClient(BeyondClientBase):
 
     async def close(self):
         await self.http.close()
+        await self._dynamo.__aexit__(None, None, None)

@@ -11,11 +11,13 @@ import logging
 import re
 from contextlib import contextmanager
 
+import google.oauth2.service_account
 import gspread
+from google.auth.transport.requests import Request
+from google.oauth2.service_account import Credentials
 from gspread import SpreadsheetNotFound
 from gspread.exceptions import APIError
 from gspread.utils import a1_to_rowcol, fill_gaps
-from oauth2client.service_account import ServiceAccountCredentials
 
 from cogs5e.models.character import Character
 from cogs5e.models.errors import ExternalImportError
@@ -167,11 +169,11 @@ class GoogleSheet(SheetLoaderABC):
         with GoogleSheet._client_lock():
             def _():
                 if config.GOOGLE_SERVICE_ACCOUNT is not None:
-                    credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+                    credentials = Credentials.from_service_account_info(
                         json.loads(config.GOOGLE_SERVICE_ACCOUNT),
                         scopes=SCOPES)
                 else:
-                    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+                    credentials = Credentials.from_service_account_file(
                         "avrae-google.json",
                         scopes=SCOPES)
                 return gspread.authorize(credentials)
@@ -181,20 +183,18 @@ class GoogleSheet(SheetLoaderABC):
             except:
                 GoogleSheet._client_initializing = False
                 raise
+        # noinspection PyProtectedMember
         GoogleSheet._token_expiry = datetime.datetime.now() + datetime.timedelta(
-            seconds=ServiceAccountCredentials.MAX_TOKEN_LIFETIME_SECS)
+            seconds=google.oauth2.service_account._DEFAULT_TOKEN_LIFETIME_SECS)
         log.info("Logged in to google")
 
     @staticmethod
     async def _refresh_google_token():
         with GoogleSheet._client_lock():
             def _():
-                import httplib2
-
-                http = httplib2.Http()
-                GoogleSheet.g_client.auth.refresh(http)
+                GoogleSheet.g_client.auth.refresh(request=Request())
                 GoogleSheet.g_client.session.headers.update({
-                    'Authorization': 'Bearer %s' % GoogleSheet.g_client.auth.access_token
+                    'Authorization': 'Bearer %s' % GoogleSheet.g_client.auth.token
                 })
 
             try:

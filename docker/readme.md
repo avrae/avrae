@@ -9,6 +9,10 @@
     - Follow steps 1-3 in the **Signed Credentials** portion. The contents of this JSON file is your `GOOGLE_SERVICE_ACCOUNT` env var.
     - Alternatively, save that json file in the root project directory as `avrae-google.json`.
 
+### Dicecloud
+- Click Username in top left top open Account page
+- `DICECLOUD_USER` is the login username, which may be the `Email` instead of `Username`
+- `DICECLOUD_TOKEN` is the `API KEY` revealed by `SHOW`
 
 ### Discord setup
 

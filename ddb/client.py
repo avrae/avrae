@@ -59,9 +59,9 @@ class BeyondClient(BeyondClientBase):
     async def _initialize(self):
         """Initialize our async resources: aiohttp, aioboto3"""
         self.http = aiohttp.ClientSession()
-        self.dynamo = aioboto3.resource('dynamodb', region_name=DYNAMO_REGION)
-        self.ddb_user_table = self.dynamo.Table(DYNAMO_USER_TABLE)
-        self.ddb_entity_table = self.dynamo.Table(DYNAMO_ENTITY_TABLE)
+        self.dynamo = await aioboto3.resource('dynamodb', region_name=DYNAMO_REGION).__aenter__()
+        self.ddb_user_table = await self.dynamo.Table(DYNAMO_USER_TABLE)
+        self.ddb_entity_table = await self.dynamo.Table(DYNAMO_ENTITY_TABLE)
         log.info("DDB client initialized")
 
     # ==== methods ====
@@ -284,3 +284,4 @@ class BeyondClient(BeyondClientBase):
 
     async def close(self):
         await self.http.close()
+        await self.dynamo.__aexit__(None, None, None)

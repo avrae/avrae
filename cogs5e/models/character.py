@@ -110,9 +110,8 @@ class Character(StatBlock):
     @classmethod
     async def from_bot_and_ids(cls, bot, owner_id: str, character_id: str):
         owner_id = str(owner_id)
-        if (owner_id, character_id) in cls._cache:
-            # read from cache
-            return cls._cache[owner_id, character_id]
+        if cached := cls._cache.get((owner_id, character_id)):
+            return cached
         character = await bot.mdb.characters.find_one({"owner": owner_id, "upstream": character_id})
         if character is None:
             raise NoCharacter()
@@ -124,9 +123,8 @@ class Character(StatBlock):
     @classmethod
     def from_bot_and_ids_sync(cls, bot, owner_id: str, character_id: str):
         owner_id = str(owner_id)
-        if (owner_id, character_id) in cls._cache:
-            # read from cache
-            return cls._cache[owner_id, character_id]
+        if cached := cls._cache.get((owner_id, character_id)):
+            return cached
         character = bot.mdb.characters.delegate.find_one({"owner": owner_id, "upstream": character_id})
         if character is None:
             raise NoCharacter()
@@ -249,6 +247,8 @@ class Character(StatBlock):
             )
         except OverflowError:
             raise ExternalImportError("A number on the character sheet is too large to store.")
+        if self._live_integration is not None:
+            await self._live_integration.commit()
 
     async def set_active(self, ctx):
         """Sets the character as active."""

@@ -18,18 +18,18 @@ def update_callback(error, data):
 
 
 class DicecloudIntegration(LiveIntegration):
-    def sync_hp(self):
+    async def _do_sync_hp(self):
         try:
             DicecloudClient.getInstance().meteor_client.update(
                 'characters',
-                {'_id': self.character.upstream[10:]},
+                {'_id': self.character.upstream_id},
                 {'$set': {
                     "hitPoints.adjustment": self.character.hp - self.character.max_hp}
                 }, callback=update_callback)
         except MeteorClient.MeteorClientException:
             pass
 
-    def sync_slots(self):
+    async def _do_sync_slots(self):
         spell_dict = {}
         for lvl in range(1, 10):
             spell_dict[f'level{lvl}SpellSlots.adjustment'] = \
@@ -41,7 +41,7 @@ class DicecloudIntegration(LiveIntegration):
         except MeteorClient.MeteorClientException:
             pass
 
-    def sync_consumable(self, consumable):
+    async def _do_sync_consumable(self, consumable):
         used = consumable.get_max() - consumable.value
         try:
             if consumable.live_id in CLASS_RESOURCES:
@@ -56,3 +56,10 @@ class DicecloudIntegration(LiveIntegration):
                                                                    callback=update_callback)
         except MeteorClient.MeteorClientException:
             pass
+
+    # todo death saves
+    async def _do_sync_death_saves(self):
+        pass
+
+    def sync_death_saves(self):
+        return

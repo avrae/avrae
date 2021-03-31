@@ -7,7 +7,6 @@ from ddb.errors import CharacterServiceException
 from utils.config import DDB_CHARACTER_SERVICE_URL as CHARACTER_SERVICE_BASE
 
 log = logging.getLogger(__name__)
-log.setLevel(10)
 
 
 class CharacterServiceClient:

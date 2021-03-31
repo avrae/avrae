@@ -39,6 +39,7 @@ class BeyondSheetParser(SheetLoaderABC):
     def __init__(self, charId):
         super(BeyondSheetParser, self).__init__(charId)
         self.ctx = None
+        self._is_live = None
 
     async def load_character(self, ctx, args):
         """
@@ -79,7 +80,7 @@ class BeyondSheetParser(SheetLoaderABC):
             consumables = self._get_custom_counters()
 
         spellbook = self._get_spellbook()
-        live = None  # todo
+        live = 'beyond' if self._is_live else None
         race = self._get_race()
         background = self._get_background()
 
@@ -126,6 +127,7 @@ class BeyondSheetParser(SheetLoaderABC):
                     raise ExternalImportError(f"Beyond returned an error: {resp.status} - {resp.reason}")
         character['_id'] = char_id
         self.character_data = character
+        self._is_live = ddb_user.user_id == str(character['ownerId'])
         log.debug(character)
         return character
 

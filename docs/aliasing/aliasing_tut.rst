@@ -109,26 +109,38 @@ The end result is:
 
 .. code-block:: text
 
-  !alias orc-relentless embed 
-  {{desc="When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead."}}
-  {{rest="You can’t use this feature again until you finish a long rest."}}
-  {{hasHP="You have not been reduced to 0 hit points."}}
-  {{noCC="You do not have this ability."}}
-  {{ch=character()}}
-  {{cc="Relentless Endurance"}} 
-  {{ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) if ch.race.lower() == "half-orc" else ""}}
-  {{v=ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp}}
-  {{ch.mod_cc(cc, -1) if v else ""}}
-  {{ch.set_hp(1) if v and not ch.hp else ""}}
-  {{T = f"{name} {'uses' if v else 'tries to use'} {cc}!"}}
-  {{D = desc if v else hasHP if ch.hp else rest if ch.cc_exists(cc) else noCC}}
-  {{F = f"{cc}|{ch.cc_str(cc) if ch.cc_exists(cc) else '*None*'}"}}
-  -title "{{T}}" 
-  -desc "{{D}}" 
-  -f "{{F}}"  
-  -color <color> 
-  -thumb <image>
-  
+	!alias orc-relentless embed 
+	<drac2>
+	cc = "Relentless Endurance"
+	desc = "When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead."
+	rest = "You can’t use this feature again until you finish a long rest."
+	hasHP = "You have not been reduced to 0 hit points."
+	noCC = "You do not have this ability."
+	ch=character()
+
+	if ch.race.lower() == "half-orc":
+		ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) 
+
+	succ = "tries to use"
+	D = noCC
+	if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp: 
+		succ = "uses"
+		D = desc
+		ch.mod_cc(cc, -1)
+		ch.set_hp(1)	
+	elif ch.hp:
+		D = hasHP
+	elif ch.cc_exists(cc):
+		D = rest
+
+	T = f"{name} {succ} {cc}!"
+	F = f"{cc}|{ch.cc_str(cc) if ch.cc_exists(cc) else '*None*'}"
+	</drac2>
+	-title "{{T}}" 
+	-desc "{{D}}" 
+	-f "{{F}}"  
+	-color <color> 
+	-thumb <image>
 
 Insult Tutorial
 -------------------------------------

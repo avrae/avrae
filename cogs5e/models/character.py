@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import cachetools
@@ -249,7 +250,7 @@ class Character(StatBlock):
         except OverflowError:
             raise ExternalImportError("A number on the character sheet is too large to store.")
         if self._live_integration is not None:
-            await self._live_integration.commit(ctx)
+            asyncio.create_task(self._live_integration.commit(ctx))  # fire off a sync eventually
 
     async def set_active(self, ctx):
         """Sets the character as active."""

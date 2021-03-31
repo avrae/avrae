@@ -3,12 +3,14 @@ import asyncio
 
 
 class LiveIntegration(abc.ABC):
+    """Interface defining how to sync character resources with upstream. Tied to the character object's lifecycle."""
+
     def __init__(self, character):
         self.character = character
-        self._hp_sync_task = None
-        self._slots_sync_task = None
-        self._cc_sync_tasks = {}
-        self._death_save_sync_task = None
+        self._should_sync_hp = False
+        self._should_sync_slots = False
+        self._should_sync_ccs = {}
+        self._should_sync_death_saves = False
         self._ctx = None  # set for the duration of a commit, use for access to bot stuff
 
     async def _do_sync_hp(self):
@@ -25,33 +27,32 @@ class LiveIntegration(abc.ABC):
         raise NotImplementedError
 
     def sync_hp(self):
-        """Create the HP sync task."""
-        self._hp_sync_task = self._do_sync_hp()
+        """Mark that HP should be synced on commit."""
+        self._should_sync_hp = True
 
     def sync_slots(self):
-        """Create the spell slot sync task."""
-        self._slots_sync_task = self._do_sync_slots()
+        """Mark that spell slots should be synced on commit."""
+        self._should_sync_slots = True
 
     def sync_consumable(self, consumable):
         """
-        Create the CC sync task (extra care should be taken to ensure that if the same CC is synced twice, it only
-        creates one task).
+        Mark that a given CC should be synced on commit.
 
         :type consumable: cogs5e.models.sheet.player.CustomCounter
         """
         if consumable.live_id is None:
             return
-        self._cc_sync_tasks[consumable.live_id] = self._do_sync_consumable(consumable)
+        self._should_sync_ccs[consumable.live_id] = consumable
 
     def sync_death_saves(self):
-        """Creates the death save sync task."""
-        self._death_save_sync_task = self._do_sync_death_saves()
+        """Mark that death saves should be synced on commit."""
+        self._should_sync_death_saves = True
 
     def clear(self):
-        self._hp_sync_task = None
-        self._slots_sync_task = None
-        self._cc_sync_tasks = {}
-        self._death_save_sync_task = None
+        self._should_sync_hp = False
+        self._should_sync_slots = False
+        self._should_sync_ccs = {}
+        self._should_sync_death_saves = False
 
     async def commit(self, ctx):
         """
@@ -61,13 +62,14 @@ class LiveIntegration(abc.ABC):
         self._ctx = ctx
         try:
             to_await = []
-            if self._hp_sync_task is not None:
-                to_await.append(self._hp_sync_task)
-            if self._slots_sync_task is not None:
-                to_await.append(self._slots_sync_task)
-            if self._death_save_sync_task is not None:
-                to_await.append(self._death_save_sync_task)
-            to_await.extend(self._cc_sync_tasks.values())
+            if self._should_sync_hp:
+                to_await.append(self._do_sync_hp())
+            if self._should_sync_slots:
+                to_await.append(self._do_sync_slots())
+            if self._should_sync_death_saves:
+                to_await.append(self._do_sync_death_saves())
+            for cc in self._should_sync_ccs.values():
+                to_await.append(self._do_sync_consumable(cc))
             await asyncio.gather(*to_await)
             self.clear()
         finally:

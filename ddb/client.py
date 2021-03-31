@@ -6,8 +6,7 @@ import aiohttp
 from boto3.dynamodb.conditions import Key
 
 from cogsmisc.stats import Stats
-from ddb import auth, campaign, entitlements
-from ddb.character import CharacterServiceClient
+from ddb import auth, campaign, character, entitlements
 from ddb.errors import AuthException, WaterdeepException
 from utils.config import DDB_AUTH_SERVICE_URL as AUTH_BASE_URL, \
     DDB_WATERDEEP_URL as WATERDEEP_BASE, \
@@ -62,7 +61,7 @@ class BeyondClient(BeyondClientBase):
     async def _initialize(self):
         """Initialize our async resources: aiohttp, aioboto3"""
         self.http = aiohttp.ClientSession()
-        self.character = CharacterServiceClient(self.http)
+        self.character = character.CharacterServiceClient(self.http)
 
         self._dynamo = await aioboto3.resource('dynamodb', region_name=DYNAMO_REGION).__aenter__()
         self._ddb_user_table = await self._dynamo.Table(DYNAMO_USER_TABLE)

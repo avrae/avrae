@@ -3,6 +3,7 @@ import logging
 import cachetools
 
 import aliasing.evaluators
+from cogs5e.models.ddbsync import DDBSheetSync
 from cogs5e.models.dicecloud.integration import DicecloudIntegration
 from cogs5e.models.embeds import EmbedWithCharacter
 from cogs5e.models.errors import ExternalImportError, InvalidArgument, NoCharacter, NoReset
@@ -248,7 +249,7 @@ class Character(StatBlock):
         except OverflowError:
             raise ExternalImportError("A number on the character sheet is too large to store.")
         if self._live_integration is not None:
-            await self._live_integration.commit()
+            await self._live_integration.commit(ctx)
 
     async def set_active(self, ctx):
         """Sets the character as active."""
@@ -265,13 +266,22 @@ class Character(StatBlock):
     # ---------- HP ----------
     @property
     def hp(self):
-        return self._hp
+        return super().hp
 
     @hp.setter
     def hp(self, value):
-        self._hp = max(0, value)
+        self._hp = max(0, value)  # reimplements the setter, but super().(property) = x doesn't work (py-14965)
         self.on_hp()
+        if self._live_integration:
+            self._live_integration.sync_hp()
 
+    @property
+    def temp_hp(self):
+        return super().temp_hp
+
+    @temp_hp.setter
+    def temp_hp(self, value):
+        self._temp_hp = max(0, value)
         if self._live_integration:
             self._live_integration.sync_hp()
 
@@ -470,5 +480,5 @@ class CharacterSpellbook(Spellbook):
             self._live_integration.sync_slots()
 
 
-INTEGRATION_MAP = {"dicecloud": DicecloudIntegration}
+INTEGRATION_MAP = {"dicecloud": DicecloudIntegration, "beyond": DDBSheetSync}
 DESERIALIZE_MAP = {**_DESER, "spellbook": CharacterSpellbook}

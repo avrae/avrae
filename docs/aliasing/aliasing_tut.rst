@@ -48,7 +48,7 @@ This alias will be accessing the active character several times, so this defines
 
   #Create the counter if it should exist but doesn't already
   if ch.race.lower() == "half-orc":
-    ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) 
+      ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) 
 
 The alias uses a custom counter to track the use of this ability. If the character was imported from Beyond, it should create the custom counter automatically. In case the character doesn't have the custom counter, for whatever reason, this code checks if the character's race is Half-Orc and creates it.
 
@@ -56,9 +56,10 @@ The alias uses a custom counter to track the use of this ability. If the charact
 
 This is a simple if-statement. We check if the character's race is Half-Orc. The ``lower()`` after the race makes it lower-case. We do this because string comparisons are case-sensitive, and making it all lower-case means we don't have to check for Half-Orc, Half-orc, and half-orc individually. Note the ``:``. Forgetting it is a common error when using if blocks. The code inside the block will only execute if this condition is true.
 
-``  ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest)``
+``ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest)``
 
-This code will run only if the if statement is true. That is, if the character's race is half-orc. Pay attention to the indentation; this is another common if block error. Any code to be executed inside the block must be indented, and must all have the same indentation. Tabs or spaces will  work, but you can't mix-and match.
+This code will run only if the if statement is true. That is, if the character's race is half-orc. Pay attention to the indentation shown in the code block above; this is another common error when writing if-blocks. Any code to be executed inside the block must be indented, and must all have the same indentation. Tabs or spaces will work, but you can't mix-and match them. Each line in the block must have have the same amount and type of leading white space.
+
 So what does this line do? It has a lot of parts, so let's look at them in-order:
 ``ch.create_cc_nx`` This will create a custom counter on the character (``ch``) if it doesn't already exist. 
 ``cc`` This defines the name of the counter. In this case, it uses one of the variables declared earlier, so the counter will be ``Relentless Endurance``
@@ -74,10 +75,10 @@ So what does this line do? It has a lot of parts, so let's look at them in-order
   #Logic of the alias. Check for all the necessary conditions
   succ = "tries to use"
   if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp: 
-    succ = "uses"
-    D = desc
-    ch.mod_cc(cc, -1)
-    ch.set_hp(1)
+      succ = "uses"
+      D = desc
+      ch.mod_cc(cc, -1)
+      ch.set_hp(1)
 	  
 Another if-block, this one a little more complex than the last. We're checking more things here, and then executing more code if it meets all the conditions. Let's break it down.
 
@@ -92,10 +93,10 @@ This if-statement checks if all of the trigger conditions are valid. The ``and``
 
 If all the conditions are met, the alias will execute the code inside the block. Note that each of these lines has the same indentation. This block will do most of the mechanics work the alias is meant for. Going line-by-line:
 
-``    succ = "uses"`` This is the success case that will override this variable to indicate a successful use instead of a failed attempt.
-``    D = desc`` This just sets one variable to another. The alias will use ``D`` later when showing the result to the player
-``    ch.mod_cc(cc, -1)`` This will modify (``mod_cc``) the value of the counter (``cc``) by ``-1``, reducing it from 1 to 0 and marking it as used
-``    ch.set_hp(1)`` This sets the character's hitpoints to 1.
+``succ = "uses"`` This is the success case that will override this variable to indicate a successful use instead of a failed attempt.
+``D = desc`` This just sets one variable to another. The alias will use ``D`` later when showing the result to the player
+``ch.mod_cc(cc, -1)`` This will modify (``mod_cc``) the value of the counter (``cc``) by ``-1``, reducing it from 1 to 0 and marking it as used
+``ch.set_hp(1)`` This sets the character's hitpoints to 1.
 
 .. code-block:: text
 	  
@@ -106,7 +107,9 @@ If all the conditions are met, the alias will execute the code inside the block.
   else:
       D = noCC
 
-Adding some complexity to if-blocks! The previous if-check defined the conditions for the ability succeeding. If one or more of those conditions failed, that block would be skipped and these conditions will be checked, in order, until one succeeds. If none of the ``elif`` conditions are true, the ``else`` will run. After this is finished running, ``D`` will contain the body text of the embed, one of the 4 response strings that were defined above:
+And this introduces a little more complexity to if-blocks! The previous if-check defined the conditions for the ability succeeding. If one or more of those conditions failed, that block would be skipped and these conditions will be checked, in order, until one succeeds. If the initial ``if`` and all of the ``elif`` conditions fail, the ``else`` will run. 
+
+After this whole ``if ... elif ... else`` block is finished, ``D`` will contain the body text of the embed, and will be one of the 4 response strings that were defined above:
 
 1) it works (desc)
 2) you have more than 0 hp (hasHP)
@@ -157,21 +160,21 @@ The end result is:
 
   #Create the counter if it should exist but doesn't already
   if ch.race.lower() == "half-orc":
-    ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) 
+      ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) 
 
   #Logic of the alias. Check for all the necessary conditions
   succ = "tries to use"
   if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp: 
-    succ = "uses"
-    D = desc
-    ch.mod_cc(cc, -1)
-    ch.set_hp(1)    
+      succ = "uses"
+      D = desc
+      ch.mod_cc(cc, -1)
+      ch.set_hp(1)    
   elif ch.hp:
-    D = hasHP
+      D = hasHP
   elif ch.cc_exists(cc):
-    D = rest
+      D = rest
   else:
-    D = noCC
+      D = noCC
 
   #Prepare the output 
   T = f"{name} {succ} {cc}!"

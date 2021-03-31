@@ -7,7 +7,7 @@ Thanks to @Croebh#5603 and @silverbass#2407 for writing these, @Ydomat#2886 for 
 
 Half-Orc Relentless Endurance Tutorial
 --------------------------------------
-*By @silverbass#2407, updated by @mobius#1442*
+*By @silverbass#2407, rewritten in Drac2 by @mobius#1442*
 
 .. code-block:: text
 
@@ -23,61 +23,91 @@ This is the base Avrae command, an embed, which makes the pretty text box. Check
 
 .. code-block:: text
 
-  {{desc="When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead."}}
-  {{rest="You can’t use this feature again until you finish a long rest."}}
-  {{hasHP="You have not been reduced to 0 hit points."}}
-  {{noCC="You do not have this ability."}}
-
-This defines four strings that the alias will use in various places. By defining them as variables it makes some of the other code more legible.
+  <drac2>
+  
+This specifies the start of a code block that will contain all the logic for the alias.   
 
 .. code-block:: text
 
-  {{ch=character()}}
+  #Define variables for later use
+  cc = "Relentless Endurance"
+  desc = "When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead."
+  rest = "You can’t use this feature again until you finish a long rest."
+  hasHP = "You have not been reduced to 0 hit points."
+  noCC = "You do not have this ability."
+	
+This defines some string variables that the alias will use in various places. Defining them as variables allows us to use the same strings in multiple places more easily, and makes the code more legible. This line: ``#Define variables for later use`` is a comment. Anything starting with a ``#`` is ignored when the alias runs, and can be used to make your alias code more readable and easier to follow
+
+.. code-block:: text
+
+  ch=character()
 
 This alias will be accessing the active character several times, so this defines a variable to store it for easier access.
 
 .. code-block:: text
 
-  {{cc="Relentless Endurance"}} 
-  
-This creates a variable for name of the custom counter. It will need to be created before the alias can use it. 
+  #Create the counter if it should exist but doesn't already
+  if ch.race.lower() == "half-orc":
+    ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) 
+
+The alias uses a custom counter to track the use of this ability. If the character was imported from Beyond, it should create the custom counter automatically. In case the character doesn't have the custom counter, for whatever reason, this code checks if the character's race is Half-Orc and creates it.
+
+``if ch.race.lower() == "half-orc":``
+
+This is a simple if-statement. We check if the character's race is Half-Orc. The ``lower()`` after the race makes it lower-case. We do this because string comparisons are case-sensitive, and making it all lower-case means we don't have to check for Half-Orc, Half-orc, and half-orc individually. Note the ``:``. Forgetting it is a common error when using if blocks. The code inside the block will only execute if this condition is true.
+
+``  ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest)``
+
+This code will run only if the if statement is true. That is, if the character's race is half-orc. Pay attention to the indentation; this is another common if block error. Any code to be executed inside the block must be indented, and must all have the same indentation. Tabs or spaces will  work, but you can't mix-and match.
+So what does this line do? It has a lot of parts, so let's look at them in-order:
+``ch.create_cc_nx`` This will create a custom counter on the character (``ch``) if it doesn't already exist. 
+``cc`` This defines the name of the counter. In this case, it uses one of the variables declared earlier, so the counter will be ``Relentless Endurance``
+``0, 1`` The next two arguments define the minimum and maximum values of the CC. Since this can only ever be used once at a time, this counter can only go between 0 (used) and 1 (available)
+``"long"`` Next we define how the counter resets. We're specifying that it should reset on a Long Rest.
+``"bubble"`` This specifies how the counter should be presented. Bubble gives a depiction of the counter that is more visual and aesthetically pleasing
+``None, None`` These next two are Reset To and Reset By, respectively. They are optional arguments for more advanced custom counters, and aren't needed for this one.
+``cc`` The next argumet is the Title of the counter that will be seen when setting or viewing the counter. We're just setting it to the same thing as its title.
+``desc+" "+rest`` Finally, this is the counter's description. We're using two of the previously-defined variables, joined with a space between them.
 
 .. code-block:: text
 
-  {{ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) if ch.race.lower() == "half-orc" else ""}}
+  #Logic of the alias. Check for all the necessary conditions
+  succ = "tries to use"
+  if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp: 
+    succ = "uses"
+    D = desc
+    ch.mod_cc(cc, -1)
+    ch.set_hp(1)
+	  
+Another if-block, this one a little more complex than the last. We're checking more things here, and then executing more code if it meets all the conditions. Let's break it down.
 
-If the character was imported from Beyond, it should create the custom counter automatically. In case the character doesn't have the custom counter, for whatever reason, this line checks if the character's race is Half-Orc and creates the custom counter if it doesn't exist.
+``succ = "tries to use"`` We're starting with this variable and giving it a default value. We'll change it later if the alias succeeds.
 
-.. code-block:: text
+``if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp:``
 
-  {{v=ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp}}
+This if-statement checks if all of the trigger conditions are valid. The ``and`` combining each statement means that all of the following conditions must be met.
+``ch.cc_exists(cc)`` This checks if this character (``ch``) have a custom counter (``cc_exists``) called "Relentless Endurance" (``(cc)``)
+``ch.get_cc(cc)`` This gets the value of the counter, which will be 0 (used) or 1 (not used). If-checks treat zero as False, and non-zero as True. So, if the counter is used, the if-check will fail here.
+``not ch.hp`` Checks the character's hp. As before, zero hit points will be considered False, and non-zero is True. The ``not`` before hand will reverse that. That means that if the character has any HP left, the if-check will fail.
 
-This checks if all of the trigger conditions are valid: do you have a counter for this? is it used? are you at 0 hp?
+If all the conditions are met, the alias will execute the code inside the block. Note that each of these lines has the same indentation. This block will do most of the mechanics work the alias is meant for. Going line-by-line:
 
-.. code-block:: text
-
-  {{ch.mod_cc(cc, -1) if v else ""}}
-
-This decrements the counter, but only if all the trigger conditions are met.
-
-.. code-block:: text
-
-  {{ch.set_hp(1) if v else ""}}
-
-This sets your hit points to 1, again only if all trigger conditions are met.
-
-.. code-block:: text
-
-  {{T = f"{name} {'uses' if v else 'tries to use'} {cc}!"}}
-
-This defines a variable that will be used in the title of the embed. It will specify either success or fail, depending on the v variable from above.
-It uses fstrings, or formatted strings, to streamline the code a bit.
+``    succ = "uses"`` This is the success case that will override this variable to indicate a successful use instead of a failed attempt.
+``    D = desc`` This just sets one variable to another. The alias will use ``D`` later when showing the result to the player
+``    ch.mod_cc(cc, -1)`` This will modify (``mod_cc``) the value of the counter (``cc``) by ``-1``, reducing it from 1 to 0 and marking it as used
+``    ch.set_hp(1)`` This sets the character's hitpoints to 1.
 
 .. code-block:: text
+	  
+  elif ch.hp:
+      D = hasHP
+  elif ch.cc_exists(cc):
+      D = rest
+  else:
+      D = noCC
 
-  {{D = desc if v else hasHP if ch.hp else rest if ch.cc_exists(cc) else noCC}}
+Adding some complexity to if-blocks! The previous if-check defined the conditions for the ability succeeding. If one or more of those conditions failed, that block would be skipped and these conditions will be checked, in order, until one succeeds. If none of the ``elif`` conditions are true, the ``else`` will run. After this is finished running, ``D`` will contain the body text of the embed, one of the 4 response strings that were defined above:
 
-This defines a variable for the body text of the embed, and shows the 4 response strings that were defined above:
 1) it works (desc)
 2) you have more than 0 hp (hasHP)
 3) you already used the feature (rest)
@@ -85,10 +115,16 @@ This defines a variable for the body text of the embed, and shows the 4 response
 
 .. code-block:: text
 
-  {{F = f"{cc}|{ch.cc_str(cc) if ch.cc_exists(cc) else '*None*'}"}}
+  T = f"{name} {succ} {cc}!"
+  F = f"{cc}|{ch.cc_str(cc) if ch.cc_exists(cc) else '*None*'}"
 
-This defines a variable that will include the counter in the embed output, or None if you don't have it. It will be displayed in the embed as a field.
-Again, using an fstring for streamlined code.
+Setting some more variables that will be used in the embed. T will be used in the title of the embed, indicating either success or failure to the player. F will be the contents of a Field that will include the value of the counter in the embed (or ``*None*`` if the character doesn't have the counter). They use fstrings, or formatted strings, to streamline the code a bit.
+
+.. code-block:: text
+
+  </drac2>
+
+This closes off the code block and everything else will be arguments to the embed command.
 
 .. code-block:: text
 
@@ -96,7 +132,7 @@ Again, using an fstring for streamlined code.
   -desc "{{D}}" 
   -f "{{F}}"  
 
-This will send the defined arguments to the embed to be displayed. 
+This will send the defined variables to the embed to be displayed. 
 
 .. code-block:: text
 
@@ -109,38 +145,44 @@ The end result is:
 
 .. code-block:: text
 
-	!alias orc-relentless embed 
-	<drac2>
-	cc = "Relentless Endurance"
-	desc = "When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead."
-	rest = "You can’t use this feature again until you finish a long rest."
-	hasHP = "You have not been reduced to 0 hit points."
-	noCC = "You do not have this ability."
-	ch=character()
+  !alias orc-relentless embed 
+  <drac2>
+  #Define variables for later use
+  cc = "Relentless Endurance"
+  desc = "When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead."
+  rest = "You can’t use this feature again until you finish a long rest."
+  hasHP = "You have not been reduced to 0 hit points."
+  noCC = "You do not have this ability."
+  ch=character()
 
-	if ch.race.lower() == "half-orc":
-		ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) 
+  #Create the counter if it should exist but doesn't already
+  if ch.race.lower() == "half-orc":
+    ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest) 
 
-	succ = "tries to use"
-	D = noCC
-	if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp: 
-		succ = "uses"
-		D = desc
-		ch.mod_cc(cc, -1)
-		ch.set_hp(1)	
-	elif ch.hp:
-		D = hasHP
-	elif ch.cc_exists(cc):
-		D = rest
+  #Logic of the alias. Check for all the necessary conditions
+  succ = "tries to use"
+  if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp: 
+    succ = "uses"
+    D = desc
+    ch.mod_cc(cc, -1)
+    ch.set_hp(1)    
+  elif ch.hp:
+    D = hasHP
+  elif ch.cc_exists(cc):
+    D = rest
+  else:
+    D = noCC
 
-	T = f"{name} {succ} {cc}!"
-	F = f"{cc}|{ch.cc_str(cc) if ch.cc_exists(cc) else '*None*'}"
-	</drac2>
-	-title "{{T}}" 
-	-desc "{{D}}" 
-	-f "{{F}}"  
-	-color <color> 
-	-thumb <image>
+  #Prepare the output 
+  T = f"{name} {succ} {cc}!"
+  F = f"{cc}|{ch.cc_str(cc) if ch.cc_exists(cc) else '*None*'}"
+  </drac2>
+  -title "{{T}}" 
+  -desc "{{D}}" 
+  -f "{{F}}"  
+  -color <color> 
+  -thumb <image>
+
 
 Insult Tutorial
 -------------------------------------

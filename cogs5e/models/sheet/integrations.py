@@ -9,6 +9,7 @@ class LiveIntegration(abc.ABC):
         self._slots_sync_task = None
         self._cc_sync_tasks = {}
         self._death_save_sync_task = None
+        self._ctx = None  # set for the duration of a commit, use for access to bot stuff
 
     async def _do_sync_hp(self):
         raise NotImplementedError
@@ -17,6 +18,7 @@ class LiveIntegration(abc.ABC):
         raise NotImplementedError
 
     async def _do_sync_consumable(self, consumable):
+        """:type consumable: cogs5e.models.sheet.player.CustomCounter"""
         raise NotImplementedError
 
     async def _do_sync_death_saves(self):
@@ -51,15 +53,22 @@ class LiveIntegration(abc.ABC):
         self._cc_sync_tasks = {}
         self._death_save_sync_task = None
 
-    async def commit(self):
-        """Called when the character is committed. Should fire all pending sync tasks."""
-        to_await = []
-        if self._hp_sync_task is not None:
-            to_await.append(self._hp_sync_task)
-        if self._slots_sync_task is not None:
-            to_await.append(self._slots_sync_task)
-        if self._death_save_sync_task is not None:
-            to_await.append(self._death_save_sync_task)
-        to_await.extend(self._cc_sync_tasks.values())
-        await asyncio.gather(*to_await)
-        self.clear()
+    async def commit(self, ctx):
+        """
+        Called when the character is committed. Should fire all pending sync tasks.
+        Sets self._ctx for the duration of the commit.
+        """
+        self._ctx = ctx
+        try:
+            to_await = []
+            if self._hp_sync_task is not None:
+                to_await.append(self._hp_sync_task)
+            if self._slots_sync_task is not None:
+                to_await.append(self._slots_sync_task)
+            if self._death_save_sync_task is not None:
+                to_await.append(self._death_save_sync_task)
+            to_await.extend(self._cc_sync_tasks.values())
+            await asyncio.gather(*to_await)
+            self.clear()
+        finally:
+            self._ctx = None

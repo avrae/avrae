@@ -4,7 +4,7 @@ from utils.functions import bubble_format
 
 class Spellbook:
     def __init__(self, slots: dict = None, max_slots: dict = None, spells: list = None, dc=None, sab=None,
-                 caster_level=0, spell_mod=None):
+                 caster_level=0, spell_mod=None, pact_slot_level=None, num_pact_slots=None):
         if slots is None:
             slots = {}
         if max_slots is None:
@@ -18,6 +18,8 @@ class Spellbook:
         self.sab = sab
         self.caster_level = caster_level
         self.spell_mod = spell_mod
+        self.pact_slot_level = pact_slot_level
+        self.num_pact_slots = num_pact_slots
 
     @classmethod
     def from_dict(cls, d):
@@ -25,8 +27,11 @@ class Spellbook:
         return cls(**d)
 
     def to_dict(self):
-        return {"slots": self.slots, "max_slots": self.max_slots, "spells": [s.to_dict() for s in self.spells],
-                "dc": self.dc, "sab": self.sab, "caster_level": self.caster_level, "spell_mod": self.spell_mod}
+        return {
+            "slots": self.slots, "max_slots": self.max_slots, "spells": [s.to_dict() for s in self.spells],
+            "dc": self.dc, "sab": self.sab, "caster_level": self.caster_level, "spell_mod": self.spell_mod,
+            "pact_slot_level": self.pact_slot_level, "num_pact_slots": self.num_pact_slots
+        }
 
     def __contains__(self, spell_name: str):
         return spell_name.lower() in {s.name.lower() for s in self.spells}

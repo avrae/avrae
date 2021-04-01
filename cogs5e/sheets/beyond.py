@@ -250,7 +250,16 @@ class BeyondSheetParser(SheetLoaderABC):
         sab = max(sabs, key=sabs.count, default=None)
         smod = max(mods, key=mods.count, default=None)
 
-        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod)
+        # assumption: a character will only ever have one pact slot level, with a given number of slots of that level
+        pact_slot_level = None
+        num_pact_slots = None
+        if spellbook['pactSlots']:
+            pact_info = spellbook['pactSlots'][0]
+            pact_slot_level = pact_info['level']
+            num_pact_slots = pact_info['available']
+
+        return Spellbook(slots, max_slots, spells, dc, sab, self._get_levels().total_level, smod,
+                         pact_slot_level=pact_slot_level, num_pact_slots=num_pact_slots)
 
     def _get_custom_counters(self):
         out = []

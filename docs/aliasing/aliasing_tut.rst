@@ -52,11 +52,11 @@ This alias will be accessing the active character several times, so this defines
 
 The alias uses a custom counter to track the use of this ability. If the character was imported from Beyond, it should create the custom counter automatically. In case the character doesn't have the custom counter, for whatever reason, this code checks if the character's race is Half-Orc and creates it.
 
-``>>> if ch.race.lower() == "half-orc":``
+``if ch.race.lower() == "half-orc":``
 
 This is a simple if-statement. We check if the character's race is Half-Orc. The ``lower()`` after the race makes it lower-case. We do this because string comparisons are case-sensitive, and making it all lower-case means we don't have to check for Half-Orc, Half-orc, and half-orc individually. Note the ``:``. Forgetting it is a common error when using if blocks. The code inside the block will only execute if this condition is true.
 
-``...   ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest)``
+``ch.create_cc_nx(cc, 0, 1, "long", "bubble", None, None, cc, desc+" "+rest)``
 
 This code will run only if the if statement is true. That is, if the character's race is half-orc. Pay attention to the indentation shown in the code block above; this is another common error when writing if-blocks. Any code to be executed inside the block must be indented, and must all have the same indentation. Tabs or spaces will work, but you can't mix-and match them. Each line in the block must have have the same amount and type of leading white space.
 
@@ -84,19 +84,21 @@ Another if-block, this one a little more complex than the last. We're checking m
 
 ``succ = "tries to use"`` We're starting with this variable and giving it a default value. We'll change it later if the alias succeeds.
 
-``>>> if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp:``
+Taking a closer look at the if-statement:
 
-This if-statement checks if all of the trigger conditions are valid. The ``and`` combining each statement means that all of the following conditions must be met.
+``if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp:``
+
+This checks if all of the trigger conditions are valid. The ``and`` combining each statement means that all of the following conditions must be met.
 ``ch.cc_exists(cc)`` This checks if this character (``ch``) have a custom counter (``cc_exists``) called "Relentless Endurance" (``(cc)``)
 ``ch.get_cc(cc)`` This gets the value of the counter, which will be 0 (used) or 1 (not used). If-checks treat zero as False, and non-zero as True. So, if the counter is used, the if-check will fail here.
 ``not ch.hp`` Checks the character's hp. As before, zero hit points will be considered False, and non-zero is True. The ``not`` before hand will reverse that. That means that if the character has any HP left, the if-check will fail.
 
 If all the conditions are met, the alias will execute the code inside the block. Note that each of these lines has the same indentation. This block will do most of the mechanics work the alias is meant for. Going line-by-line:
 
-``...     succ = "uses"`` This is the success case that will override this variable to indicate a successful use instead of a failed attempt.
-``...     D = desc`` This just sets one variable to another. The alias will use ``D`` later when showing the result to the player
-``...     ch.mod_cc(cc, -1)`` This will modify (``mod_cc``) the value of the counter (``cc``) by ``-1``, reducing it from 1 to 0 and marking it as used
-``...     ch.set_hp(1)`` This sets the character's hitpoints to 1.
+``succ = "uses"`` This is the success case that will override this variable to indicate a successful use instead of a failed attempt.
+``D = desc`` This just sets one variable to another. The alias will use ``D`` later when showing the result to the player
+``ch.mod_cc(cc, -1)`` This will modify (``mod_cc``) the value of the counter (``cc``) by ``-1``, reducing it from 1 to 0 and marking it as used
+``ch.set_hp(1)`` This sets the character's hitpoints to 1.
 
 .. code-block:: text
 	  

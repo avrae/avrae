@@ -34,6 +34,17 @@ class CharacterServiceClient:
             raise CharacterServiceException(f"Character Service returned an error: {data['message']}")
         return CharacterServiceResponse(data['id'], data['message'], data['data'])
 
+    # ==== Action ====
+    async def set_limited_use(self, ddb_user, id: int, entity_type_id: int, uses: int, character_id: int):
+        data = {
+            "id": id,
+            "entityTypeId": entity_type_id,
+            "uses": uses,
+            "characterId": character_id
+        }
+        return await self.request(ddb_user, 'PUT', '/action/limited-use', json=data)
+
+    # ==== Life ====
     async def set_damage_taken(self, ddb_user, removed_hit_points: int, temporary_hit_points: int, character_id: int):
         data = {
             "removedHitPoints": removed_hit_points,

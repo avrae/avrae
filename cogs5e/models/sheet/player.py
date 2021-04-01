@@ -226,10 +226,11 @@ class CustomCounter:
         if strict and not minv <= new_value <= maxv:
             raise CounterOutOfBounds()
 
-        new_value = min(max(minv, new_value), maxv)
-        self._value = int(new_value)
+        new_value = int(min(max(minv, new_value), maxv))
+        old_value = self._value
+        self._value = new_value
 
-        if self.live_id:
+        if self.live_id and new_value != old_value:
             self._character.sync_consumable(self)
         return self._value
 

@@ -271,9 +271,10 @@ class Character(StatBlock):
 
     @hp.setter
     def hp(self, value):
+        old_hp = self._hp
         self._hp = max(0, value)  # reimplements the setter, but super().(property) = x doesn't work (py-14965)
         self.on_hp()
-        if self._live_integration:
+        if self._live_integration and self._hp != old_hp:
             self._live_integration.sync_hp()
 
     @property
@@ -282,8 +283,9 @@ class Character(StatBlock):
 
     @temp_hp.setter
     def temp_hp(self, value):
+        old_temp = self._temp_hp
         self._temp_hp = max(0, value)
-        if self._live_integration:
+        if self._live_integration and self._temp_hp != old_temp:
             self._live_integration.sync_hp()
 
     # ---------- SPELLBOOK ----------

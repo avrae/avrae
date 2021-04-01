@@ -61,14 +61,15 @@ This is a simple if-statement. We check if the character's race is Half-Orc. The
 This code will run only if the if statement is true. That is, if the character's race is half-orc. Pay attention to the indentation shown in the code block above; this is another common error when writing if-blocks. Any code to be executed inside the block must be indented, and must all have the same indentation. Tabs or spaces will work, but you can't mix-and match them. Each line in the block must have have the same amount and type of leading white space.
 
 So what does this line do? It has a lot of parts, so let's look at them in-order:
-``ch.create_cc_nx`` This will create a custom counter on the character (``ch``) if it doesn't already exist. 
-``cc`` This defines the name of the counter. In this case, it uses one of the variables declared earlier, so the counter will be ``Relentless Endurance``
-``0, 1`` The next two arguments define the minimum and maximum values of the CC. Since this can only ever be used once at a time, this counter can only go between 0 (used) and 1 (available)
-``"long"`` Next we define how the counter resets. We're specifying that it should reset on a Long Rest.
-``"bubble"`` This specifies how the counter should be presented. Bubble gives a depiction of the counter that is more visual and aesthetically pleasing
-``None, None`` These next two are Reset To and Reset By, respectively. They are optional arguments for more advanced custom counters, and aren't needed for this one.
-``cc`` The next argumet is the Title of the counter that will be seen when setting or viewing the counter. We're just setting it to the same thing as its title.
-``desc+" "+rest`` Finally, this is the counter's description. We're using two of the previously-defined variables, joined with a space between them.
+
++ ``ch.create_cc_nx`` This will create a custom counter on the character (``ch``) if it doesn't already exist. 
++ ``cc`` This defines the name of the counter. In this case, it uses one of the variables declared earlier, so the counter will be ``Relentless Endurance``
++ ``0, 1`` The next two arguments define the minimum and maximum values of the CC. Since this can only ever be used once at a time, this counter can only go between 0 (used) and 1 (available)
++ ``"long"`` Next we define how the counter resets. We're specifying that it should reset on a Long Rest.
++ ``"bubble"`` This specifies how the counter should be presented. Bubble gives a depiction of the counter that is more visual and aesthetically pleasing
++ ``None, None`` These next two are Reset To and Reset By, respectively. They are optional arguments for more advanced custom counters, and aren't needed for this one.
++ ``cc`` The next argumet is the Title of the counter that will be seen when setting or viewing the counter. We're just setting it to the same thing as its title.
++ ``desc+" "+rest`` Finally, this is the counter's description. We're using two of the previously-defined variables, joined with a space between them.
 
 .. code-block:: text
 
@@ -89,16 +90,17 @@ Taking a closer look at the if-statement:
 ``if ch.cc_exists(cc) and ch.get_cc(cc) and not ch.hp:``
 
 This checks if all of the trigger conditions are valid. The ``and`` combining each statement means that all of the following conditions must be met.
-``ch.cc_exists(cc)`` This checks if this character (``ch``) have a custom counter (``cc_exists``) called "Relentless Endurance" (``(cc)``)
-``ch.get_cc(cc)`` This gets the value of the counter, which will be 0 (used) or 1 (not used). If-checks treat zero as False, and non-zero as True. So, if the counter is used, the if-check will fail here.
-``not ch.hp`` Checks the character's hp. As before, zero hit points will be considered False, and non-zero is True. The ``not`` before hand will reverse that. That means that if the character has any HP left, the if-check will fail.
+
++ ``ch.cc_exists(cc)`` This checks if this character (``ch``) have a custom counter (``cc_exists``) called "Relentless Endurance" (``(cc)``)
++ ``ch.get_cc(cc)`` This gets the value of the counter, which will be 0 (used) or 1 (not used). If-checks treat zero as False, and non-zero as True. So, if the counter is used, the if-check will fail here.
++ ``not ch.hp`` Checks the character's hp. As before, zero hit points will be considered False, and non-zero is True. The ``not`` before hand will reverse that. That means that if the character has any HP left, the if-check will fail.
 
 If all the conditions are met, the alias will execute the code inside the block. Note that each of these lines has the same indentation. This block will do most of the mechanics work the alias is meant for. Going line-by-line:
 
-``succ = "uses"`` This is the success case that will override this variable to indicate a successful use instead of a failed attempt.
-``D = desc`` This just sets one variable to another. The alias will use ``D`` later when showing the result to the player
-``ch.mod_cc(cc, -1)`` This will modify (``mod_cc``) the value of the counter (``cc``) by ``-1``, reducing it from 1 to 0 and marking it as used
-``ch.set_hp(1)`` This sets the character's hitpoints to 1.
++ ``succ = "uses"`` This is the success case that will override this variable to indicate a successful use instead of a failed attempt.
++ ``D = desc`` This just sets one variable to another. The alias will use ``D`` later when showing the result to the player
++ ``ch.mod_cc(cc, -1)`` This will modify (``mod_cc``) the value of the counter (``cc``) by ``-1``, reducing it from 1 to 0 and marking it as used
++ ``ch.set_hp(1)`` This sets the character's hitpoints to 1.
 
 .. code-block:: text
 	  

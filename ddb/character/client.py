@@ -53,5 +53,13 @@ class CharacterServiceClient:
         }
         return await self.request(ddb_user, 'PUT', '/life/hp/damage-taken', json=data)
 
+    async def set_death_saves(self, ddb_user, success_count: int, fail_count: int, character_id: int):
+        data = {
+            "successCount": success_count,
+            "failCount": fail_count,
+            "characterId": character_id
+        }
+        return await self.request(ddb_user, 'PUT', '/life/death-saves', json=data)
+
 
 CharacterServiceResponse = namedtuple('CharacterServiceResponse', 'id message data')

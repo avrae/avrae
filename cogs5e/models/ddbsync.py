@@ -41,7 +41,15 @@ class DDBSheetSync(LiveIntegration):
         )
 
     async def _do_sync_death_saves(self):
-        pass
+        if (ddb_user := await self._preflight()) is None:
+            return
+        death_saves = self.character.death_saves
+        await self._ctx.bot.ddb.character.set_death_saves(
+            ddb_user=ddb_user,
+            success_count=clamp(0, death_saves.successes, 3),
+            fail_count=clamp(0, death_saves.fails, 3),
+            character_id=int(self.character.upstream_id)
+        )
 
 
 # helpers

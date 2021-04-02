@@ -64,7 +64,7 @@ class Character(StatBlock):
 
         # ccs
         self.consumables = [CustomCounter.from_dict(self, cons) for cons in consumables]
-        self.death_saves = DeathSaves.from_dict(death_saves)
+        self.death_saves = DeathSaves.from_dict(self, death_saves)
 
         # live sheet resource integrations
         self._live = live
@@ -391,6 +391,10 @@ class Character(StatBlock):
         return reset
 
     # ---------- MISC ----------
+    def sync_death_saves(self):
+        if self._live_integration:
+            self._live_integration.sync_death_saves()
+
     def update(self, old_character):
         """
         Updates certain attributes to match an old character's.

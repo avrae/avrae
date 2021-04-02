@@ -57,9 +57,16 @@ class DicecloudIntegration(LiveIntegration):
         except MeteorClient.MeteorClientException:
             pass
 
-    # todo death saves
     async def _do_sync_death_saves(self):
-        pass
-
-    def sync_death_saves(self):
-        return
+        try:
+            DicecloudClient.getInstance().meteor_client.update(
+                'characters',
+                {'_id': self.character.upstream_id},
+                {'$set': {
+                    "deathSave.pass": self.character.death_saves.successes,
+                    "deathSave.fail": self.character.death_saves.fails
+                }},
+                callback=update_callback
+            )
+        except MeteorClient.MeteorClientException:
+            pass

@@ -268,8 +268,13 @@ class Attack(Effect):
             except Exception:
                 raise AutomationException(f"{self.bonus!r} cannot be interpreted as an attack bonus.")
 
-        if attack_bonus is None and b is None:
-            raise NoAttackBonus("No spell attack bonus found. Use the `-b` argument to specify one!")
+        if attack_bonus is None:
+            # if there is no attack bonus specified (i.e. use SAB), and no SAB, use -b arg to specify the to hit bonus
+            if b is None:
+                raise NoAttackBonus("No spell attack bonus found. Use the `-b` argument to specify one!")
+            # #1463
+            attack_bonus = b
+            b = None
 
         # reset metavars (#1335)
         autoctx.metavars['lastAttackDidHit'] = False
@@ -317,12 +322,15 @@ class Attack(Effect):
                 ac = ac or autoctx.target.ac
 
             # assign hit values
-            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT or (crit and not nocrit):  # crit
+            if d20_value >= criton or to_hit_roll.crit == d20.CritType.CRIT:  # natural crit
                 did_crit = True if not nocrit else False
             elif to_hit_roll.crit == d20.CritType.FAIL:  # crit fail
                 did_hit = False
             elif ac and to_hit_roll.total < ac:  # miss
                 did_hit = False
+            elif crit and not nocrit:  # if we did hit (#1485), set crit flag if arg passed (#1461)
+                did_crit = True
+            # else: normal hit
 
             autoctx.metavars['lastAttackRollTotal'] = to_hit_roll.total  # 1362
 

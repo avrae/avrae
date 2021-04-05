@@ -189,11 +189,16 @@ class AutomationTarget:
         save_obj = self.target.saves.get(save)
 
         # combatant
-        if isinstance(self.target, init.Combatant):
-            sb = self.target.active_effects('sb')
+        if self.combatant:
+            sb = self.combatant.active_effects('sb')
+
+        # character-specific arguments (#1443)
+        reroll = None
+        if self.character:
+            reroll = self.character.get_setting('reroll', 0)
 
         boolwise_adv = {-1: False, 0: None, 1: True}.get(adv)
-        saveroll = save_obj.d20(base_adv=boolwise_adv)
+        saveroll = save_obj.d20(base_adv=boolwise_adv, reroll=reroll)
 
         if sb:
             saveroll = f"{saveroll}+{'+'.join(sb)}"

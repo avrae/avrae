@@ -241,10 +241,14 @@ class Character(StatBlock):
     async def commit(self, ctx):
         """Writes a character object to the database, under the contextual author."""
         data = self.to_dict()
+        data.pop('active')  # #1472 - may regress when doing atomic commits, be careful
         try:
             await ctx.bot.mdb.characters.update_one(
                 {"owner": self._owner, "upstream": self._upstream},
-                {"$set": data},
+                {
+                    "$set": data,
+                    "$setOnInsert": {'active': self._active}  # also #1472
+                },
                 upsert=True
             )
         except OverflowError:

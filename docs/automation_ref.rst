@@ -390,7 +390,7 @@ Uses a number of charges of the given counter, and displays the remaining amount
 
 **Variables**
 
-- ``lastCounterName`` (:class:`str`) The name of the last used counter (if it was a spell slot, the level of the slot, ``None`` on error).
+- ``lastCounterName`` (:class:`str`) The name of the last used counter. If it was a spell slot, the level of the slot (safe to cast to int, i.e. ``int(lastCounterName)``). (``None`` on error).
 - ``lastCounterRemaining`` (:class:`int`) The remaining charges of the last used counter (0 on error).
 - ``lastCounterUsedAmount`` (:class:`int`) The amount of the counter successfully used.
 

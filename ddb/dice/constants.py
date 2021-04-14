@@ -9,6 +9,7 @@ class RollType(enum.Enum):
     SPELL = 'spell'
     SAVE = 'save'
     CHECK = 'check'
+    RECHARGE = 'recharge'  # undocumented - seems to be from monster ability rechareg rolls?
 
 
 class RollKind(enum.Enum):

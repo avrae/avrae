@@ -230,6 +230,10 @@ class Attack(Effect):
 
     def run(self, autoctx: AutomationContext):
         super(Attack, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to make an attack without a target! Make sure all Attack effects are inside "
+                                  "of a Target effect.")
+
         # arguments
         args = autoctx.args
         adv = args.adv(ea=True, ephem=True)
@@ -442,6 +446,10 @@ class Save(Effect):
 
     def run(self, autoctx):
         super(Save, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to make a save without a target! Make sure all Save effects are inside "
+                                  "of a Target effect.")
+
         save = autoctx.args.last('save') or self.stat
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
@@ -560,6 +568,9 @@ class Damage(Effect):
 
     def run(self, autoctx):
         super(Damage, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to do damage without a target! Make sure all Damage effects are inside "
+                                  "of a Target effect.")
         # general arguments
         args = autoctx.args
         damage = self.damage
@@ -708,6 +719,9 @@ class TempHP(Effect):
 
     def run(self, autoctx):
         super(TempHP, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to add temp HP without a target! Make sure all TempHP effects are inside "
+                                  "of a Target effect.")
         args = autoctx.args
         amount = self.amount
         maxdmg = args.last('max', None, bool, ephem=True)
@@ -774,6 +788,10 @@ class IEffect(Effect):
 
     def run(self, autoctx):
         super(IEffect, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to add an effect without a target! Make sure all IEffect effects are inside "
+                                  "of a Target effect.")
+
         if isinstance(self.duration, str):
             try:
                 duration = autoctx.parse_intexpression(self.duration)

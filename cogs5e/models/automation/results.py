@@ -126,4 +126,5 @@ class UseCounterResult(EffectResult):
     counter_name: typing.Optional[str] = None  # None if the counter was not used successfully
     counter_remaining: int = 0
     used_amount: int = 0
+    requested_amount: int = 0
     skipped: bool = False

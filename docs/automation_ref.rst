@@ -72,6 +72,8 @@ It must be inside a Target effect.
 - ``lastAttackDidHit`` (:class:`bool`) Whether the attack hit.
 - ``lastAttackDidCrit`` (:class:`bool`) If the attack hit, whether it crit.
 - ``lastAttackRollTotal`` (:class:`int`) The result of the last to-hit roll (0 if no roll was made).
+- ``lastAttackNaturalRoll`` (:class:`int`) The natural roll of the last to-hit roll (e.g. `10` in `1d20 (10) + 5 = 15`;
+  0 if no roll was made).
 
 Save
 ----
@@ -107,7 +109,10 @@ It must be inside a Target effect.
 **Variables**
 
 - ``lastSaveDidPass`` (:class:`bool`) Whether the target passed the save.
+- ``lastSaveDC`` (:class:`int`) The DC of the last save roll.
 - ``lastSaveRollTotal`` (:class:`int`) The result of the last save roll (0 if no roll was made).
+- ``lastSaveNaturalRoll`` (:class:`int`) The natural roll of the last save roll (e.g. `10` in `1d20 (10) + 5 = 15`;
+  0 if no roll was made).
 
 Damage
 ------
@@ -393,6 +398,8 @@ Uses a number of charges of the given counter, and displays the remaining amount
 - ``lastCounterName`` (:class:`str`) The name of the last used counter (if it was a spell slot, the level of the slot, ``None`` on error).
 - ``lastCounterRemaining`` (:class:`int`) The remaining charges of the last used counter (0 on error).
 - ``lastCounterUsedAmount`` (:class:`int`) The amount of the counter successfully used.
+- ``lastCounterRequestedAmount`` (:class:`int`) The amount of the counter requested to be used (i.e. the amount
+  specified by automation or requested by ``-amt``, regardless of the presence of the ``-i`` arg).
 
 .. _SpellSlotReference:
 

@@ -477,16 +477,13 @@ class AliasSkill:
                f"adv={self.adv!r}>"
     
     def __gt__(self, other):
-        if isinstance(other, AliasSkill):
-            return self.value > other.value
+        return isintance(other, AliasSkill) and self.value > other.value
     
-    def __lt__(self, other):
-        if isinstance(other, AliasSkill):
-            return self.value < other.value
-    
+    def __ge__(self, other):
+        return isintance(other, AliasSkill) and self.value >= other.value
+
     def __eq__(self, other):
-        if isinstance(other, AliasSkill):
-            return self.value == other.value
+        return isintance(other, AliasSkill) and self.value == other.value
 
 class AliasSkills:
     """

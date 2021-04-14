@@ -475,7 +475,18 @@ class AliasSkill:
     def __repr__(self):
         return f"<{self.__class__.__name__} value={self.value!r} prof={self.prof!r} bonus={self.bonus!r} " \
                f"adv={self.adv!r}>"
-
+    
+    def __gt__(self, other):
+        if isinstance(other, AliasSkill):
+            return self.value > other.value
+    
+    def __lt__(self, other):
+        if isinstance(other, AliasSkill):
+            return self.value < other.value
+    
+    def __eq__(self, other):
+        if isinstance(other, AliasSkill):
+            return self.value == other.value
 
 class AliasSkills:
     """

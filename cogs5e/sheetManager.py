@@ -598,9 +598,9 @@ class SheetManager(commands.Cog):
 
     @staticmethod
     async def _check_url(ctx, url):
-        if any([c in url for c in '<>']):
+        if url.startswith('<') and url.endswith('>'):
             url = url.strip('<>')
-            await ctx.send("Hey! You put '<' or '>' in your url. Avrae removed them, but don't do that!"
+            await ctx.send("Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to include those for other arguments!"
                            f"\nUse `{ctx.prefix}help` for more details")
         return url
 

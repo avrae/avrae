@@ -522,7 +522,7 @@ class SheetManager(commands.Cog):
         `-nocc` - Do not automatically create custom counters for class resources and features.
         """
         if 'dicecloud.com' in url:
-            url = url.strip('<>').split('/character/')[-1].split('/')[0]
+            url = url.split('/character/')[-1].split('/')[0]
 
         override = await self._confirm_overwrite(ctx, f"dicecloud-{url}")
         if not override: return await ctx.send("Character overwrite unconfirmed. Aborting.")
@@ -540,7 +540,7 @@ class SheetManager(commands.Cog):
 
         loading = await ctx.send('Loading character data from Google... (This usually takes ~30 sec)')
         try:
-            url = extract_gsheet_id_from_url(url.strip('<>'))
+            url = extract_gsheet_id_from_url(url)
         except ExternalImportError:
             return await loading.edit(content="This is not a Google Sheets link.")
 
@@ -560,7 +560,7 @@ class SheetManager(commands.Cog):
         """
 
         loading = await ctx.send('Loading character data from Beyond...')
-        url = DDB_URL_RE.match(url.strip('<>'))
+        url = DDB_URL_RE.match(url)
         if url is None:
             return await loading.edit(content="This is not a D&D Beyond link.")
         url = url.group(1)

@@ -521,6 +521,7 @@ class SheetManager(commands.Cog):
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for class resources and features.
         """
+        url = await self._check_url(ctx, url)
         if 'dicecloud.com' in url:
             url = url.split('/character/')[-1].split('/')[0]
 
@@ -538,6 +539,7 @@ class SheetManager(commands.Cog):
         The sheet must be shared with Avrae for this to work.
         Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
 
+        url = await self._check_url(ctx, url)
         loading = await ctx.send('Loading character data from Google... (This usually takes ~30 sec)')
         try:
             url = extract_gsheet_id_from_url(url)
@@ -559,6 +561,7 @@ class SheetManager(commands.Cog):
         `-nocc` - Do not automatically create custom counters for limited use features.
         """
 
+        url = await self._check_url(ctx, url)
         loading = await ctx.send('Loading character data from Beyond...')
         url = DDB_URL_RE.match(url)
         if url is None:
@@ -592,6 +595,14 @@ class SheetManager(commands.Cog):
         await character.set_active(ctx)
         await ctx.send(embed=character.get_sheet_embed())
         return character
+
+    @staticmethod
+    async def _check_url(ctx, url):
+        if url.startswith('<') and url.endswith('>'):
+            url = url.strip('<>')
+            await ctx.send("Hey! Looks like you surrounded that URL with '<' and '>'. I removed them, but remember not to include those for other arguments!"
+                           f"\nUse `{ctx.prefix}help` for more details")
+        return url
 
 
 async def send_ddb_ctas(ctx, character):

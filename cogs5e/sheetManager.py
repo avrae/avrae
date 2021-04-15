@@ -601,7 +601,7 @@ class SheetManager(commands.Cog):
         if any([c in url for c in '<>']):
             url = url.strip('<>')
             await ctx.send("Hey! You put '<' or '>' in your url. Avrae removed them, but don't do that!"
-                           f"Use `{ctx.prefix}help` for more details")
+                           f"\nUse `{ctx.prefix}help` for more details")
         return url
 
 

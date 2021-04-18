@@ -569,6 +569,7 @@ class Damage(Effect):
         crit_arg = args.last('crit', None, bool, ephem=True)
         nocrit = args.last('nocrit', default=False, type_=bool, ephem=True)
         max_arg = args.last('max', None, bool, ephem=True)
+        avr_arg = args.last('avr', None, bool, ephem=True)
         magic_arg = args.last('magical', None, bool, ephem=True)
         mi_arg = args.last('mi', None, int)
         dtype_args = args.get('dtype', [], ephem=True)
@@ -631,6 +632,9 @@ class Damage(Effect):
         # max
         if max_arg:
             dice_ast = d20.utils.tree_map(max_mapper, dice_ast)
+        
+        if avr_arg:
+            dice_ast = d20.utils.tree_map(avr_mapper, dice_ast)
 
         # evaluate damage
         dmgroll = roll(dice_ast)

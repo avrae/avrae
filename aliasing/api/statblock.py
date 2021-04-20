@@ -693,14 +693,15 @@ class AliasSpellbook:
         """
         return self._spellbook.get_slots(int(level))
 
-    def set_slots(self, level, value):
+    def set_slots(self, level, value, pact=True):
         """
         Sets the remaining number of spell slots of a given level.
 
         :param int level: The spell level to set [1..9].
         :param int value: The remaining number of slots.
+        :param bool pact: Whether to prefer modifying Pact Magic slots (if applicable) or normal spell slots.
         """
-        return self._spellbook.set_slots(int(level), int(value))
+        return self._spellbook.set_slots(int(level), int(value), bool(pact))
 
     def use_slot(self, level):
         """

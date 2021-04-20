@@ -4,7 +4,8 @@ from utils.functions import bubble_format
 
 class Spellbook:
     def __init__(self, slots: dict = None, max_slots: dict = None, spells: list = None, dc=None, sab=None,
-                 caster_level=0, spell_mod=None, pact_slot_level=None, num_pact_slots=None):
+                 caster_level=0, spell_mod=None,
+                 pact_slot_level=None, num_pact_slots=None, max_pact_slots=None):
         if slots is None:
             slots = {}
         if max_slots is None:
@@ -20,6 +21,7 @@ class Spellbook:
         self.spell_mod = spell_mod
         self.pact_slot_level = pact_slot_level
         self.num_pact_slots = num_pact_slots
+        self.max_pact_slots = max_pact_slots
 
     @classmethod
     def from_dict(cls, d):
@@ -30,7 +32,8 @@ class Spellbook:
         return {
             "slots": self.slots, "max_slots": self.max_slots, "spells": [s.to_dict() for s in self.spells],
             "dc": self.dc, "sab": self.sab, "caster_level": self.caster_level, "spell_mod": self.spell_mod,
-            "pact_slot_level": self.pact_slot_level, "num_pact_slots": self.num_pact_slots
+            "pact_slot_level": self.pact_slot_level, "num_pact_slots": self.num_pact_slots,
+            "max_pact_slots": self.max_pact_slots
         }
 
     def __contains__(self, spell_name: str):
@@ -67,22 +70,40 @@ class Spellbook:
             return 1
         return self.slots.get(str(level), 0)
 
-    def set_slots(self, level: int, value: int):
+    def set_slots(self, level: int, value: int, pact=True):
         """
-        Sets the remaining number of spell slots of a given level.
+        Sets the remaining number of spell slots (pact+non-pact) of a given level. If *pact* is True (default), will
+        also modify *num_pact_slots* if applicable, otherwise will only affect *slots*.
         """
         if not 0 < level < 10:
             raise InvalidSpellLevel()
-        if not 0 <= value <= self.get_max_slots(level):
+        lmax = self.get_max_slots(level)
+        if not 0 <= value <= lmax:
             raise CounterOutOfBounds()
-        self.slots[str(level)] = value
 
-    def reset_slots(self):
+        l = str(level)
+        delta = value - self.get_slots(level)
+        self.slots[l] = value
+
+        if pact and level == self.pact_slot_level and self.max_pact_slots is not None:  # attempt to modify pact first
+            self.num_pact_slots = max(min(self.num_pact_slots + delta, self.max_pact_slots), 0)
+        elif level == self.pact_slot_level and self.max_pact_slots is not None:  # make sure pact slots are valid
+            self.num_pact_slots = max(min(self.num_pact_slots, value), value - (lmax - self.max_pact_slots))
+
+    def reset_slots(self, is_short_rest=False):
         """
-        Sets the number of remaining spell slots to the max.
+        Sets the number of remaining spell slots to the max. If *is_short_rest* and there are pact slots, will
+        reset the pact slots.
         """
-        for level in range(1, 10):
-            self.set_slots(level, self.get_max_slots(level))
+        if is_short_rest and self.pact_slot_level is not None:
+            # add number of used pact slots to current value
+            new_value = (self.max_pact_slots - self.num_pact_slots) + self.get_slots(self.pact_slot_level)
+            self.set_slots(self.pact_slot_level, new_value)
+            self.num_pact_slots = self.max_pact_slots
+        else:
+            for level in range(1, 10):
+                self.set_slots(level, self.get_max_slots(level))
+            self.num_pact_slots = self.max_pact_slots
 
     def get_max_slots(self, level: int):
         """
@@ -90,7 +111,7 @@ class Spellbook:
         """
         return self.max_slots.get(str(level), 0)
 
-    def use_slot(self, level: int):
+    def use_slot(self, level: int, pact=True):
         """
         Uses one spell slot of level level. Does nothing if level is 0.
 
@@ -105,7 +126,7 @@ class Spellbook:
         if val < 0:
             raise CounterOutOfBounds("You do not have any spell slots of this level remaining.")
 
-        self.set_slots(level, val)
+        self.set_slots(level, val, pact=pact)
 
     def get_spell(self, spell):
         """
@@ -118,14 +139,15 @@ class Spellbook:
         return next((s for s in self.spells if s.name.lower() == spell.name.lower()), None)
 
     # ===== cast utils =====
-    def cast(self, spell, level):
+    def cast(self, spell, level, pact=True):
         """
         Uses the resources to cast *spell* at *level*.
 
         :type spell: :class:`~cogs5e.models.spell.Spell`
         :type level: int
+        :type pact: bool
         """
-        self.use_slot(level)
+        self.use_slot(level, pact=pact)
 
     def can_cast(self, spell, level) -> bool:
         """

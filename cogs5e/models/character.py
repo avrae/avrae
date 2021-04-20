@@ -362,7 +362,9 @@ class Character(StatBlock):
             reset.extend(self.on_hp())
         reset.extend(self._reset_custom('short'))
         if self.get_setting('srslots', False):
-            self.spellbook.reset_slots()
+            self.spellbook.reset_slots(is_short_rest=False)  # reset as if it was a long rest (legacy)
+        else:
+            self.spellbook.reset_slots(is_short_rest=True)
         return reset
 
     def long_rest(self, cascade=True):
@@ -377,8 +379,8 @@ class Character(StatBlock):
             reset.extend(self.short_rest(cascade=False))
         reset.extend(self._reset_custom('long'))
         self.reset_hp()
-        if not self.get_setting('srslots', False):
-            self.spellbook.reset_slots()
+        if not self.get_setting('srslots', False):  # if srslots is true, the long rest slot reset is handled by sr
+            self.spellbook.reset_slots(is_short_rest=False)
         return reset
 
     def reset_all_consumables(self, cascade=True):
@@ -425,6 +427,7 @@ class Character(StatBlock):
         # ensure new slots are within bounds (#1453)
         self.spellbook.slots = {l: min(v, self.spellbook.get_max_slots(l))
                                 for l, v in old_character.spellbook.slots.items()}
+        self.spellbook.num_pact_slots = min(self.spellbook.max_pact_slots, old_character.spellbook.num_pact_slots)
 
         if (self.owner, self.upstream) in Character._cache:
             Character._cache[self.owner, self.upstream] = self
@@ -485,8 +488,8 @@ class CharacterSpellbook(Spellbook):
         super().__init__(*args, **kwargs)
         self._live_integration = None
 
-    def set_slots(self, level: int, value: int):
-        super().set_slots(level, value)
+    def set_slots(self, *args, **kwargs):
+        super().set_slots(*args, **kwargs)
         if self._live_integration:
             self._live_integration.sync_slots()
 

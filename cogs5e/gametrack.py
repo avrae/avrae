@@ -57,8 +57,12 @@ class GameTrack(commands.Cog):
         await self.spellbook(ctx)
 
     @game.command(name='spellslot', aliases=['ss'])
-    async def game_spellslot(self, ctx, level: int = None, value: str = None):
-        """Views or sets your remaining spell slots."""
+    async def game_spellslot(self, ctx, level: int = None, value: str = None, *args):
+        """
+        Views or sets your remaining spell slots.
+        __Valid Arguments__
+        nopact - Modifies normal spell slots first instead of a Pact Magic slots, if applicable.
+        """
         if level is not None:
             try:
                 assert 0 < level < 10
@@ -85,7 +89,7 @@ class GameTrack(commands.Cog):
                 assert 0 <= value <= character.spellbook.get_max_slots(level)
             except AssertionError:
                 raise CounterOutOfBounds()
-            character.spellbook.set_slots(level, value)
+            character.spellbook.set_slots(level, value, pact='nopact' not in args)
             await character.commit(ctx)
             embed.description = f"__**Remaining Level {level} Spell Slots**__\n" \
                                 f"{character.spellbook.slots_str(level)} ({(value - old_slots):+})"

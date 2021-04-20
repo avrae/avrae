@@ -149,6 +149,7 @@ class Spell(Sourced):
         l = args.last('l', self.level, int)
         i = args.last('i', type_=bool)
         title = args.last('title')
+        nopact = args.last('nopact', type_=bool)
 
         # meta checks
         if not self.level <= l <= 9:
@@ -166,12 +167,15 @@ class Spell(Sourced):
 
         if not i:
             # if I'm a warlock, and I didn't have any slots of this level anyway (#655)
-            # automatically scale up to the next level s.t. our slots are not 0
+            # automatically scale up to our pact slot level (or the next available level s.t. max > 0)
             if l > 0 \
                     and l == self.level \
                     and not caster.spellbook.get_max_slots(l) \
                     and not caster.spellbook.can_cast(self, l):
-                l = next((sl for sl in range(l, 6) if caster.spellbook.get_max_slots(sl)), l)  # only scale up to l5
+                if caster.spellbook.pact_slot_level is not None:
+                    l = caster.spellbook.pact_slot_level
+                else:
+                    l = next((sl for sl in range(l, 6) if caster.spellbook.get_max_slots(sl)), l)  # only scale up to l5
                 args['l'] = l
 
             # can I cast this spell?
@@ -197,7 +201,7 @@ class Spell(Sourced):
                 return CastResult(embed=embed, success=False, automation_result=None)
 
             # use resource
-            caster.spellbook.cast(self, l)
+            caster.spellbook.cast(self, l, pact=not nopact)
 
         # base stat stuff
         mod_arg = args.last("mod", type_=int)

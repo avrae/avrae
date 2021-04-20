@@ -4,6 +4,7 @@ Created on Jan 30, 2017
 @author: andrew
 """
 import asyncio
+import io
 import re
 import textwrap
 from collections import Counter
@@ -117,9 +118,13 @@ class CollectableManagementGroup(commands.Group):
         if collectable is None:
             return await ctx.send(f"No {self.obj_name} named {name} found.")
         elif isinstance(collectable, self.personal_cls):  # personal
-            out = f'**{name}**: ```py\n{ctx.prefix}{self.obj_copy_command} {collectable.name} {collectable.code}\n```'
-            out = out if len(out) <= 2000 else f'**{collectable.name}**:\nCommand output too long to display.'
-            return await ctx.send(out)
+            await send_long_code_text(
+                ctx,
+                outside_codeblock=f'**{name}**:',
+                inside_codeblock=f"{ctx.prefix}{self.obj_copy_command} {collectable.name} {collectable.code}",
+                codeblock_language='py'
+            )
+            return
         else:  # collection
             embed = EmbedWithAuthor(ctx)
             the_collection = await collectable.load_collection(ctx)
@@ -551,7 +556,7 @@ class Customization(commands.Cog):
             cvar = character.get_scope_locals().get(name)
             if cvar is None:
                 return await ctx.send("This cvar is not defined.")
-            return await ctx.send(f'**{name}**: ```\n{cvar}\n```')
+            return await send_long_code_text(ctx, outside_codeblock=f'**{name}**:', inside_codeblock=cvar)
 
         helpers.set_cvar(character, name, value)
 
@@ -613,7 +618,7 @@ class Customization(commands.Cog):
             uvar = user_vars.get(name)
             if uvar is None:
                 return await ctx.send("This uvar is not defined.")
-            return await ctx.send(f'**{name}**: ```\n{uvar}\n```')
+            return await send_long_code_text(ctx, outside_codeblock=f'**{name}**:', inside_codeblock=uvar)
 
         if name in STAT_VAR_NAMES or not name.isidentifier():
             return await ctx.send("Could not create uvar: already builtin, or contains invalid character!")
@@ -668,7 +673,7 @@ class Customization(commands.Cog):
             svar = await helpers.get_svar(ctx, name)
             if svar is None:
                 return await ctx.send("This svar is not defined.")
-            return await ctx.send(f'**{name}**: ```\n{svar}\n```')
+            return await send_long_code_text(ctx, outside_codeblock=f'**{name}**:', inside_codeblock=svar)
 
         if not _can_edit_servaliases(ctx):
             return await ctx.send("You do not have permissions to edit server variables. Either __Administrator__ "
@@ -716,12 +721,14 @@ class Customization(commands.Cog):
         gvar = await self.bot.mdb.gvars.find_one({"key": name})
         if gvar is None:
             return await ctx.send("This gvar does not exist.")
-        out = f"**{name}**:\n*Owner: {gvar['owner_name']}* ```\n{gvar['value']}\n```"
-        if len(out) <= 2000:
-            await ctx.send(out)
-        else:
-            await ctx.send(f"**{name}**:\n*Owner: {gvar['owner_name']}*\nThis gvar is too long to display in Discord.\n"
-                           f"You can view it here: <https://avrae.io/dashboard/gvars?lookup={name}>")
+        await send_long_code_text(
+            ctx,
+            outside_codeblock=f"**{name}**:\n*Owner: {gvar['owner_name']}*",
+            inside_codeblock=gvar['value'],
+            too_long_message=f"This gvar is too long to display in a single message. I've "
+                             f"attached it here, but you can also view it at "
+                             f"<https://avrae.io/dashboard/gvars?lookup={name}>."
+        )
 
     @globalvar.command(name='create')
     async def gvar_create(self, ctx, *, value):
@@ -832,6 +839,23 @@ class Customization(commands.Cog):
     #     value = gvar['value']
     #     out = io.StringIO(value)
     #     await ctx.send(file=discord.File(out, f'{address}.txt'))
+
+
+async def send_long_code_text(destination, outside_codeblock, inside_codeblock, codeblock_language='',
+                              too_long_message=None):
+    """Sends *text* to the destination, or if it's too long, embeds it as a txt file and uploads it with a message."""
+    if too_long_message is None:
+        too_long_message = "This output is too large to fit in a message. I've attached it as a file here."
+
+    text = f"{outside_codeblock} ```{codeblock_language}\n{inside_codeblock}\n```"
+
+    if len(text) < 2000:
+        await destination.send(text)
+    elif len(inside_codeblock) < 5 * 10e6:
+        out = io.StringIO(inside_codeblock)
+        await destination.send(f"{outside_codeblock}\n{too_long_message}", file=discord.File(out, 'output.txt'))
+    else:
+        await destination.send("This output is too large.")
 
 
 def setup(bot):

@@ -230,6 +230,10 @@ class Attack(Effect):
 
     def run(self, autoctx: AutomationContext):
         super(Attack, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to make an attack without a target! Make sure all Attack effects are inside "
+                                  "of a Target effect.")
+
         # arguments
         args = autoctx.args
         adv = args.adv(ea=True, ephem=True)
@@ -280,6 +284,7 @@ class Attack(Effect):
         autoctx.metavars['lastAttackDidHit'] = False
         autoctx.metavars['lastAttackDidCrit'] = False
         autoctx.metavars['lastAttackRollTotal'] = 0  # 1362
+        autoctx.metavars['lastAttackNaturalRoll'] = 0  # 1495
         did_hit = True
         did_crit = False
         to_hit_roll = None
@@ -311,10 +316,7 @@ class Attack(Effect):
 
             # hit/miss/crit processing
             # leftmost roll value - -criton
-            left = to_hit_roll.expr
-            while left.children:
-                left = left.children[0]
-            d20_value = left.total
+            d20_value = d20.utils.leftmost(to_hit_roll.expr).total
 
             # -ac #
             target_has_ac = not autoctx.target.is_simple and autoctx.target.ac is not None
@@ -333,6 +335,7 @@ class Attack(Effect):
             # else: normal hit
 
             autoctx.metavars['lastAttackRollTotal'] = to_hit_roll.total  # 1362
+            autoctx.metavars['lastAttackNaturalRoll'] = d20_value  # 1495
 
             # output
             if not hide:  # not hidden
@@ -393,7 +396,7 @@ class Attack(Effect):
 
     def build_str(self, caster, evaluator):
         super(Attack, self).build_str(caster, evaluator)
-        attack_bonus = caster.spellbook.sab
+        attack_bonus = caster.spellbook.sab if caster.spellbook.sab is not None else float('nan')
         if self.bonus:
             try:
                 explicit_bonus = evaluator.eval(self.bonus)
@@ -442,6 +445,10 @@ class Save(Effect):
 
     def run(self, autoctx):
         super(Save, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to make a save without a target! Make sure all Save effects are inside "
+                                  "of a Target effect.")
+
         save = autoctx.args.last('save') or self.stat
         auto_pass = autoctx.args.last('pass', type_=bool, ephem=True)
         auto_fail = autoctx.args.last('fail', type_=bool, ephem=True)
@@ -470,9 +477,11 @@ class Save(Effect):
             raise InvalidSaveType()
 
         save_roll = None
+        autoctx.metavars['lastSaveRollTotal'] = 0
+        autoctx.metavars['lastSaveNaturalRoll'] = 0  # 1495
+        autoctx.metavars['lastSaveDC'] = dc
 
         autoctx.meta_queue(f"**DC**: {dc}")
-        autoctx.metavars['lastSaveRollTotal'] = 0
         if not autoctx.target.is_simple:
             save_blurb = f'{save_skill[:3].upper()} Save'
             if auto_pass:
@@ -482,10 +491,16 @@ class Save(Effect):
                 is_success = False
                 autoctx.queue(f"**{save_blurb}:** Automatic failure!")
             else:
-                saveroll = autoctx.target.get_save_dice(save_skill, adv=adv)
-                save_roll = roll(saveroll)
+                save_dice = autoctx.target.get_save_dice(save_skill, adv=adv)
+                save_roll = roll(save_dice)
                 is_success = save_roll.total >= dc
+
+                # get natural roll
+                d20_value = d20.utils.leftmost(save_roll.expr).total
+
                 autoctx.metavars['lastSaveRollTotal'] = save_roll.total  # 1362
+                autoctx.metavars['lastSaveNaturalRoll'] = d20_value  # 1495
+
                 success_str = ("; Success!" if is_success else "; Failure!")
                 out = f"**{save_blurb}**: {save_roll.result}{success_str}"
                 if not hide:
@@ -560,6 +575,9 @@ class Damage(Effect):
 
     def run(self, autoctx):
         super(Damage, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to do damage without a target! Make sure all Damage effects are inside "
+                                  "of a Target effect.")
         # general arguments
         args = autoctx.args
         damage = self.damage
@@ -708,6 +726,9 @@ class TempHP(Effect):
 
     def run(self, autoctx):
         super(TempHP, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to add temp HP without a target! Make sure all TempHP effects are inside "
+                                  "of a Target effect.")
         args = autoctx.args
         amount = self.amount
         maxdmg = args.last('max', None, bool, ephem=True)
@@ -774,6 +795,10 @@ class IEffect(Effect):
 
     def run(self, autoctx):
         super(IEffect, self).run(autoctx)
+        if autoctx.target is None:
+            raise TargetException("Tried to add an effect without a target! Make sure all IEffect effects are inside "
+                                  "of a Target effect.")
+
         if isinstance(self.duration, str):
             try:
                 duration = autoctx.parse_intexpression(self.duration)
@@ -1093,19 +1118,22 @@ class UseCounter(Effect):
         autoctx.metavars['lastCounterName'] = None
         autoctx.metavars['lastCounterRemaining'] = 0
         autoctx.metavars['lastCounterUsedAmount'] = 0
+        autoctx.metavars['lastCounterRequestedAmount'] = 0  # 1491
 
         # handle -amt, -l, -i
         amt = autoctx.args.last('amt', None, int, ephem=True)
         i = autoctx.args.last('i')
         # -l handled in use_spell_slot
 
-        if i:
-            return UseCounterResult(skipped=True)  # skipped
-
         try:
             amount = amt or autoctx.parse_intexpression(self.amount)
         except Exception:
             raise AutomationException(f"{self.amount!r} cannot be interpreted as an amount (in Use Counter)")
+
+        autoctx.metavars['lastCounterRequestedAmount'] = amount  # 1491
+
+        if i:
+            return UseCounterResult(skipped=True, requested_amount=amount)  # skipped
 
         try:
             if isinstance(self.counter, SpellSlotReference):  # spell slot
@@ -1114,7 +1142,7 @@ class UseCounter(Effect):
                 result = self.get_and_use_counter(autoctx, amount)
             autoctx.caster_needs_commit = True
         except Exception as e:
-            result = UseCounterResult(skipped=True)
+            result = UseCounterResult(skipped=True, requested_amount=amount)
             if self.error_behaviour == 'warn':
                 autoctx.meta_queue(f"**Warning**: Could not use counter - {e}")
             elif self.error_behaviour == 'raise':
@@ -1160,7 +1188,8 @@ class UseCounter(Effect):
 
         return UseCounterResult(counter_name=str(level),
                                 counter_remaining=new_value,
-                                used_amount=old_value - new_value)
+                                used_amount=old_value - new_value,
+                                requested_amount=amount)
 
     def use_custom_counter(self, autoctx, counter, amount):
         old_value = counter.value
@@ -1177,7 +1206,8 @@ class UseCounter(Effect):
 
         return UseCounterResult(counter_name=counter.name,
                                 counter_remaining=final_value,
-                                used_amount=-delta)
+                                used_amount=-delta,
+                                requested_amount=amount)
 
     def build_str(self, caster, evaluator):
         super().build_str(caster, evaluator)

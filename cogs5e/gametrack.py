@@ -454,14 +454,14 @@ class GameTrack(commands.Cog):
             modifier = m[-1]
 
         try:
-            modifier = d20.roll(str(modifier))
+            roll_result = d20.roll(str(modifier))
         except d20.RollSyntaxError:
             raise InvalidArgument(f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string.")
 
         change = ''
         old_value = counter.value
         try:
-            modifier = int(modifier.total)
+            modifier = int(roll_result.total)
         except ValueError:
             return await ctx.send(f"Could not modify counter: {modifier} is not a number")
         result_embed = EmbedWithCharacter(character)
@@ -476,10 +476,9 @@ class GameTrack(commands.Cog):
         await character.commit(ctx)
 
         delta = f"({counter.value - old_value:+})"
+        out = f"{str(counter)} {delta}\nRoll: {roll_result}"
         if new_value - counter.value:  # we overflowed somewhere
-            out = f"{str(counter)} {delta}\n({abs(new_value - counter.value)} overflow)"
-        else:
-            out = f"{str(counter)} {delta}"
+            out += f"\n`({abs(new_value - counter.value)} overflow)`"
 
         result_embed.add_field(name=cc_embed_title, value=out)
 

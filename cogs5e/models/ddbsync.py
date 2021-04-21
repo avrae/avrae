@@ -19,7 +19,29 @@ class DDBSheetSync(LiveIntegration):
         )
 
     async def _do_sync_slots(self):
-        pass
+        if (ddb_user := await self._preflight()) is None:
+            return
+        sb = self.character.spellbook
+        if any(sb.max_slots.values()):
+            real_slots = []  # 9-length list of slot levels 1-9
+            for l in range(1, 10):
+                slots_of_level_used = sb.get_max_slots(l) - sb.get_slots(l)
+                if l == sb.pact_slot_level:
+                    slots_of_level_used -= sb.max_pact_slots - sb.num_pact_slots  # remove # of used pact slots
+                real_slots.append(slots_of_level_used)
+            await self._ctx.bot.ddb.character.set_spell_slots(
+                ddb_user,
+                *real_slots,
+                character_id=int(self.character.upstream_id)
+            )
+        if sb.max_pact_slots is not None:
+            pact_slots = [0] * 5
+            pact_slots[sb.pact_slot_level - 1] = sb.max_pact_slots - sb.num_pact_slots
+            await self._ctx.bot.ddb.character.set_pact_magic(
+                ddb_user,
+                *pact_slots,
+                character_id=int(self.character.upstream_id)
+            )
 
     async def _do_sync_consumable(self, consumable):
         if (ddb_user := await self._preflight()) is None:

@@ -61,5 +61,34 @@ class CharacterServiceClient:
         }
         return await self.request(ddb_user, 'PUT', '/life/death-saves', json=data)
 
+    # ==== Spell ====
+    async def set_pact_magic(self, ddb_user, level1: int, level2: int, level3: int, level4: int, level5: int,
+                             character_id: int):
+        data = {
+            "level1": level1,
+            "level2": level2,
+            "level3": level3,
+            "level4": level4,
+            "level5": level5,
+            "characterId": character_id
+        }
+        return await self.request(ddb_user, 'PUT', '/spell/pact-magic', json=data)
+
+    async def set_spell_slots(self, ddb_user, level1: int, level2: int, level3: int, level4: int, level5: int,
+                              level6: int, level7: int, level8: int, level9: int, character_id: int):
+        data = {
+            "level1": level1,
+            "level2": level2,
+            "level3": level3,
+            "level4": level4,
+            "level5": level5,
+            "level6": level6,
+            "level7": level7,
+            "level8": level8,
+            "level9": level9,
+            "characterId": character_id
+        }
+        return await self.request(ddb_user, 'PUT', '/spell/slots', json=data)
+
 
 CharacterServiceResponse = namedtuple('CharacterServiceResponse', 'id message data')

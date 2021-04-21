@@ -453,10 +453,15 @@ class GameTrack(commands.Cog):
             operator = m[0]
             modifier = m[-1]
 
+        try:
+            modifier = d20.roll(str(modifier))
+        except d20.RollSyntaxError:
+            raise InvalidArgument(f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string.")
+
         change = ''
         old_value = counter.value
         try:
-            modifier = int(modifier)
+            modifier = int(modifier.total)
         except ValueError:
             return await ctx.send(f"Could not modify counter: {modifier} is not a number")
         result_embed = EmbedWithCharacter(character)

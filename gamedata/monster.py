@@ -400,7 +400,7 @@ class MonsterSpellbook(Spellbook):
             return f"**{spell.name}**: {bubble_format(self.daily[spell.name], self.daily_max[spell.name])}"
         return super().remaining_casts_of(spell, level)
 
-    def cast(self, spell, level):
+    def cast(self, *args, **kwargs):
         return  # monster singletons should not have mutable slots
 
     def can_cast(self, spell, level) -> bool:
@@ -428,7 +428,7 @@ class MonsterCastableSpellbook(MonsterSpellbook):
         new['slots'] = new['slots'].copy()
         return cls.from_dict(new)
 
-    def cast(self, spell, level):
+    def cast(self, spell, level, pact=True):
         if spell.name.lower() in [s.lower() for s in self.at_will]:
             return
         elif (daily_key := next((k for k in self.daily if spell.name.lower() == k.lower()), None)) is not None:
@@ -437,4 +437,4 @@ class MonsterCastableSpellbook(MonsterSpellbook):
             else:
                 raise CounterOutOfBounds("You do not have any remaining casts of this spell.")
         else:
-            self.use_slot(level)
+            self.use_slot(level, pact=pact)

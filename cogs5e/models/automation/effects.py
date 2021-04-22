@@ -594,8 +594,8 @@ class Damage(Effect):
         hide = args.last('h', type_=bool)
 
         # character-specific arguments
-        if autoctx.character:
-            critdice = autoctx.character.get_setting('critdice') or critdice
+        if autoctx.character and critdice == 0:
+            critdice = autoctx.character.get_setting('critdice')
 
         # combat-specific arguments
         if not autoctx.target.is_simple:

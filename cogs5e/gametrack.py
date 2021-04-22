@@ -427,8 +427,18 @@ class GameTrack(commands.Cog):
     @commands.group(invoke_without_command=True, name='customcounter', aliases=['cc'])
     async def customcounter(self, ctx, name=None, *, modifier=None):
         """Commands to implement custom counters.
-        When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
-        If modifier is not supplied, prints the value and metadata of the counter *name*.
+        If a modifier is not supplied, prints the value and metadata of the counter *name*.
+        Otherwise, changes the counter *name* by *modifier*. Supports dice.
+
+        The following can be put after the counter *name* to change how the *modifier* is applied:
+        `mod` - Add *modifier* counter value
+        `set` - Sets the counter value to *modifier*
+
+        *Ex:* 
+        `!cc Test 1`
+        `!cc Test -2*2d4`
+        `!cc Test set 1d4`
+
         """
         if name is None:
             return await self.customcounter_summary(ctx)

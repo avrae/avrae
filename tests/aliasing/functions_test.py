@@ -20,7 +20,7 @@ def test_randint_and_randchoice_tests():
         assert r2 >=50
         assert r2 < 100
         
-        assert r3 <= 10
+        assert r3 >= 10
         assert r3 % 2 == 0
         assert r3 < 100
         

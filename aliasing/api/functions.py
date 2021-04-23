@@ -156,5 +156,13 @@ def rand():
     return random.random()
 
 
-def randint(top):
-    return random.randrange(top)
+def randint(start, stop=None, step=None):
+    if stop is None and step is None:
+        return random.randrange(start)
+    elif stop is not None and step is None:
+        return random.randrange(start, stop)
+    return random.randrange(start, stop, step)
+
+
+def randchoice(seq):
+    return random.choice(seq)

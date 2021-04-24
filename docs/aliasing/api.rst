@@ -437,13 +437,34 @@ Draconic Functions
 
 .. autofunction:: aliasing.evaluators.ScriptingEvaluator.load_json
 
-.. function:: randint(x)
+.. function:: randint(stop)
+              randint(start, stop[, step])
 
-    Returns a random integer in the range ``[0..x)``.
+    Returns a random integer in the range ``[start..stop)``.
+    
+    If the step argument is omitted, it defaults to ``1``. If the start argument is omitted, it defaults to ``0``.
+    If step is zero, :exc:`ValueError` is raised.
 
-    :param int x: The upper limit (non-inclusive).
+    For a positive step, the contents of a range ``r`` are determined by the formula
+    ``r[i] = start + step*i`` where ``i >= 0`` and ``r[i] < stop``.
+
+    For a negative step, the contents of the range are still determined by the formula
+    ``r[i] = start + step*i``, but the constraints are ``i >= 0`` and ``r[i] > stop``.
+
+    :param int start: The lower limit (inclusive).
+    :param int stop: The upper limit (non-inclusive).
+    :param int step: The step value.
     :return: A random integer.
     :rtype: int
+
+.. function:: randchoice(seq)
+    
+    Returns a random item from ``seq``.
+    
+    :param seq: The itterable to choose a random item from.
+    :type seq: iterable.
+    :return: A random item from the iterable.
+    :rtype: Any.
 
 .. autofunction:: aliasing.api.functions.roll
 

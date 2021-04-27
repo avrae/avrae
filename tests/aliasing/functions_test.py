@@ -7,6 +7,8 @@ import pytest
 # TODO: AliasLevels tests
 # TODO: AliasAttack tests
 # TODO: AliasSkill tests
+
+# tesing the randint() and randchoice() functions, running though those looks to make sure the randomness doesn't hide bugs.
 def test_randint_and_randchoice_tests():
     for i in range(100):
         r1 = randint(100)

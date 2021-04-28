@@ -1,4 +1,5 @@
 from cogs5e.models.sheet.integrations import LiveIntegration
+from utils.aldclient import discord_user_to_dict
 
 
 class DDBSheetSync(LiveIntegration):
@@ -72,6 +73,19 @@ class DDBSheetSync(LiveIntegration):
             fail_count=clamp(0, death_saves.fails, 3),
             character_id=int(self.character.upstream_id)
         )
+
+    async def commit(self, ctx):
+        ddb_user = await ctx.bot.ddb.get_ddb_user(ctx)
+        if ddb_user is None:
+            return
+        flag = await ctx.bot.ldclient.variation(
+            'cog.sheetmanager.sync.send.enabled',
+            ddb_user.to_ld_dict(),
+            default=False
+        )
+        if not flag:
+            return
+        await super().commit(ctx)
 
 
 # helpers

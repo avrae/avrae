@@ -25,7 +25,7 @@ DEFAULT_BUILTINS = {
     'floor': floor, 'ceil': ceil, 'round': round, 'len': len, 'max': max, 'min': min, 'enumerate': enumerate,
     'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'abs': abs, 'time': time.time,
     # ours
-    'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof, "randchoice": randcoice,
+    'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof, "randchoice": randchoice,
     # legacy from simpleeval
     'rand': rand, 'randint': randint
 }

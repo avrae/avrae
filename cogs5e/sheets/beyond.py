@@ -230,6 +230,7 @@ class BeyondSheetParser(SheetLoaderABC):
             spell_ab = spell['sab']
             spell_dc = spell['dc']
             spell_mod = spell['mod']
+            spell_prepared = spell['prepared']
             if spell_ab is not None:
                 sabs.append(spell_ab)
             if spell_dc is not None:
@@ -240,9 +241,11 @@ class BeyondSheetParser(SheetLoaderABC):
             result = next((s for s in compendium.spells if s.entity_id == spell['id']), None)
 
             if result:
-                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                                        prepared=spell_prepared))
             else:
-                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                             prepared=spell_prepared))
 
         dc = max(dcs, key=dcs.count, default=None)
         sab = max(sabs, key=sabs.count, default=None)

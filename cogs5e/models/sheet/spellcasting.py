@@ -142,18 +142,20 @@ class Spellbook:
 
 
 class SpellbookSpell:
-    def __init__(self, name, strict=False, level: int = None, dc: int = None, sab: int = None, mod: int = None):
+    def __init__(self, name, strict=False, level: int = None, dc: int = None, sab: int = None, mod: int = None,
+                 prepared: bool = True):
         self.name = name
         self.strict = strict
         self.level = level
         self.dc = dc
         self.sab = sab
         self.mod = mod  # spellcasting ability mod
+        self.prepared = prepared
 
     @classmethod
-    def from_spell(cls, spell, dc=None, sab=None, mod=None):
+    def from_spell(cls, spell, dc=None, sab=None, mod=None, prepared=True):
         strict = spell.source != 'homebrew'
-        return cls(spell.name, strict, spell.level, dc, sab, mod)
+        return cls(spell.name, strict, spell.level, dc, sab, mod, prepared)
 
     @classmethod
     def from_dict(cls, d):
@@ -161,7 +163,7 @@ class SpellbookSpell:
 
     def to_dict(self):
         d = {"name": self.name, "strict": self.strict}
-        for optional_key in ("level", "dc", "sab", "mod"):
+        for optional_key in ("level", "dc", "sab", "mod", "prepared"):
             # minor storage optimization: don't store unncessary attributes
             v = getattr(self, optional_key)
             if v is not None:

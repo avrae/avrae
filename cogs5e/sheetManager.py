@@ -539,9 +539,13 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def gsheet(self, ctx, url: str, *args):
-        """Loads a character sheet from [GSheet v2.1](http://gsheet2.avrae.io) (auto) or [GSheet v1.4](http://gsheet.avrae.io) (manual), resetting all settings.
+        """
+        Loads a character sheet from [GSheet v2.1](http://gsheet2.avrae.io) (auto) or [GSheet v1.4](http://gsheet.avrae.io) (manual), resetting all settings.
         The sheet must be shared with Avrae for this to work.
-        Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
+        Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
+        __Valid Arguments__
+        `-noprep` - Import all known spells as prepared.
+        """
 
         url = await self._check_url(ctx, url)
         loading = await ctx.send('Loading character data from Google... (This usually takes ~30 sec)')

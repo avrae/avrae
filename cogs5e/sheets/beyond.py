@@ -39,6 +39,7 @@ class BeyondSheetParser(SheetLoaderABC):
     def __init__(self, charId):
         super(BeyondSheetParser, self).__init__(charId)
         self.ctx = None
+        self.args = None
 
     async def load_character(self, ctx, args):
         """
@@ -47,6 +48,7 @@ class BeyondSheetParser(SheetLoaderABC):
         :raises Exception if something weirder happened
         """
         self.ctx = ctx
+        self.args = args
 
         owner_id = str(ctx.author.id)
         await self._get_character()
@@ -230,7 +232,7 @@ class BeyondSheetParser(SheetLoaderABC):
             spell_ab = spell['sab']
             spell_dc = spell['dc']
             spell_mod = spell['mod']
-            spell_prepared = spell['prepared']
+            spell_prepared = spell['prepared'] or 'noprep' in self.args
             if spell_ab is not None:
                 sabs.append(spell_ab)
             if spell_dc is not None:

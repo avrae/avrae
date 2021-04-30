@@ -395,10 +395,13 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def update(self, ctx, *args):
-        """Updates the current character sheet, preserving all settings.
+        """
+        Updates the current character sheet, preserving all settings.
         __Valid Arguments__
         `-v` - Shows character sheet after update is complete.
-        `-nocc` - Do not automatically create or update custom counters for class resources and features."""
+        `-nocc` - Do not automatically create or update custom counters for class resources and features.
+        `-noprep` - Import all known spells as prepared.
+        """
         old_character: Character = await Character.from_ctx(ctx)
         url = old_character.upstream
         args = argparse(args)
@@ -520,6 +523,7 @@ class SheetManager(commands.Cog):
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for class resources and features.
+        `-noprep` - Import all known spells as prepared.
         """
         url = await self._check_url(ctx, url)
         if 'dicecloud.com' in url:
@@ -559,6 +563,7 @@ class SheetManager(commands.Cog):
         Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings.
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for limited use features.
+        `-noprep` - Import all known spells as prepared.
         """
 
         url = await self._check_url(ctx, url)

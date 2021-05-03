@@ -228,6 +228,7 @@ class SimpleCombatant(AliasStatBlock):
         if not isinstance(init, int):
             raise ValueError("Initiative must be an integer.")
         self._combatant.init = init
+        self._combatant.combat.sort_combatants()
 
     def set_name(self, name: str):
         """

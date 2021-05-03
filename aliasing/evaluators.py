@@ -13,7 +13,7 @@ import aliasing.api.combat as combat_api
 import cogs5e.models.sheet.player as player_api
 from aliasing import helpers
 from aliasing.api.context import AliasContext
-from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll
+from aliasing.api.functions import _roll, _vroll, err, rand, randint, roll, safe_range, typeof, vroll, randchoice
 from aliasing.api.legacy import LegacyRawCharacter
 from aliasing.errors import EvaluationError, FunctionRequiresCharacter
 from cogs5e.models.errors import ConsumableException, InvalidArgument
@@ -26,8 +26,7 @@ DEFAULT_BUILTINS = {
     'range': safe_range, 'sqrt': sqrt, 'sum': sum, 'any': any, 'all': all, 'abs': abs, 'time': time.time,
     # ours
     'roll': roll, 'vroll': vroll, 'err': err, 'typeof': typeof,
-    # legacy from simpleeval
-    'rand': rand, 'randint': randint
+    'rand': rand, 'randint': randint, 'randchoice': randchoice,
 }
 SCRIPTING_RE = re.compile(
     r'(?<!\\)(?:'  # backslash-escape

@@ -40,6 +40,7 @@ class DicecloudParser(SheetLoaderABC):
         super(DicecloudParser, self).__init__(url)
         self.stats = None
         self.levels = None
+        self.args = None
         self.evaluator = DicecloudEvaluator()
         self._cache = {}
 
@@ -49,6 +50,7 @@ class DicecloudParser(SheetLoaderABC):
         :raises ExternalImportError if something went wrong during the import that we can expect
         :raises Exception if something weirder happened
         """
+        self.args = args
         owner_id = str(ctx.author.id)
         try:
             await self.get_character()
@@ -278,12 +280,15 @@ class DicecloudParser(SheetLoaderABC):
                 spell_dc = None
             if spell_mod == scam:
                 spell_mod = None
+            spell_prepared = spell['prepared'] in ('prepared', 'always') or 'noprep' in self.args
 
             result, strict = search(compendium.spells, spell['name'].strip(), lambda sp: sp.name, strict=True)
             if result and strict:
-                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                                        prepared=spell_prepared))
             else:
-                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                             prepared=spell_prepared))
 
         spellbook = Spellbook(slots, slots, spells, dc, sab, self.get_levels().total_level, scam)
 

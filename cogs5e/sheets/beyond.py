@@ -39,6 +39,7 @@ class BeyondSheetParser(SheetLoaderABC):
     def __init__(self, charId):
         super(BeyondSheetParser, self).__init__(charId)
         self.ctx = None
+        self.args = None
         self._is_live = None
 
     async def load_character(self, ctx, args):
@@ -48,6 +49,7 @@ class BeyondSheetParser(SheetLoaderABC):
         :raises Exception if something weirder happened
         """
         self.ctx = ctx
+        self.args = args
 
         owner_id = str(ctx.author.id)
         await self._get_character()
@@ -232,6 +234,7 @@ class BeyondSheetParser(SheetLoaderABC):
             spell_ab = spell['sab']
             spell_dc = spell['dc']
             spell_mod = spell['mod']
+            spell_prepared = spell['prepared'] or 'noprep' in self.args
             if spell_ab is not None:
                 sabs.append(spell_ab)
             if spell_dc is not None:
@@ -242,9 +245,11 @@ class BeyondSheetParser(SheetLoaderABC):
             result = next((s for s in compendium.spells if s.entity_id == spell['id']), None)
 
             if result:
-                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell.from_spell(result, sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                                        prepared=spell_prepared))
             else:
-                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod))
+                spells.append(SpellbookSpell(spell['name'].strip(), sab=spell_ab, dc=spell_dc, mod=spell_mod,
+                                             prepared=spell_prepared))
 
         dc = max(dcs, key=dcs.count, default=None)
         sab = max(sabs, key=sabs.count, default=None)

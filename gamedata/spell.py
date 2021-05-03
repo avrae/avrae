@@ -11,7 +11,7 @@ from cogs5e.models.embeds import EmbedWithAuthor, add_fields_from_args
 from cogs5e.models.errors import AvraeException, InvalidArgument
 from cogs5e.models.initiative.types import BaseCombatant
 from utils.constants import STAT_ABBREVIATIONS
-from utils.functions import smart_trim, verbose_stat
+from utils.functions import confirm, smart_trim, verbose_stat
 from .shared import Sourced
 
 log = logging.getLogger(__name__)
@@ -159,11 +159,13 @@ class Spell(Sourced):
         dc_override = None
         ab_override = None
         spell_override = None
+        is_prepared = True
         spellbook_spell = caster.spellbook.get_spell(self)
         if spellbook_spell is not None:
             dc_override = spellbook_spell.dc
             ab_override = spellbook_spell.sab
             spell_override = spellbook_spell.mod
+            is_prepared = spellbook_spell.prepared
 
         if not i:
             # if I'm a warlock, and I didn't have any slots of this level anyway (#655)
@@ -199,6 +201,17 @@ class Spell(Sourced):
                 if l > 0:
                     embed.add_field(name="Spell Slots", value=caster.spellbook.remaining_casts_of(self, l))
                 return CastResult(embed=embed, success=False, automation_result=None)
+
+            # #1000: is this spell prepared (soft check)?
+            if not is_prepared:
+                skip_prep_conf = await confirm(ctx, "This spell is not prepared. Do you want to cast it anyway?",
+                                               delete_msgs=True)
+                if not skip_prep_conf:
+                    embed = EmbedWithAuthor(
+                        ctx, title=f"Cannot cast spell!",
+                        description=f"{self.name} is not prepared! Prepare it on your character sheet and use "
+                                    f"`{ctx.prefix}update` to mark it as prepared, or use `-i` to ignore restrictions.")
+                    return CastResult(embed=embed, success=False, automation_result=None)
 
             # use resource
             caster.spellbook.cast(self, l, pact=not nopact)

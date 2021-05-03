@@ -337,8 +337,12 @@ class GameTrack(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.group(invoke_without_command=True, name='spellbook', aliases=['sb'])
-    async def spellbook(self, ctx):
-        """Commands to display a character's known spells and metadata."""
+    async def spellbook(self, ctx, *args):
+        """
+        Commands to display a character's known spells and metadata.
+        __Valid Arguments__
+        all - Display all of a character's known spells, including unprepared ones.
+        """
         await ctx.trigger_typing()
 
         character: Character = await Character.from_ctx(ctx)
@@ -348,20 +352,27 @@ class GameTrack(commands.Cog):
         embed.add_field(name="Spell Attack Bonus", value=str(character.spellbook.sab))
         embed.add_field(name="Spell Slots", value=character.spellbook.slots_str() or "None")
 
+        show_unprepared = 'all' in args
+
         # dynamic help flags
         flag_show_multiple_source_help = False
         flag_show_homebrew_help = False
+        flag_show_prepared_help = False
 
         spells_known = collections.defaultdict(lambda: [])
         choices = await get_spell_choices(ctx)
-        for spell_ in character.spellbook.spells:
-            results, strict = search(choices, spell_.name, lambda sp: sp.name, strict=True)
+        for sb_spell in character.spellbook.spells:
+            if not (sb_spell.prepared or show_unprepared):
+                flag_show_prepared_help = True
+                continue
+
+            results, strict = search(choices, sb_spell.name, lambda sp: sp.name, strict=True)
             if not strict:
                 if len(results) > 1:
-                    spells_known['unknown'].append(f"*{spell_.name} ({'*' * len(results)})*")
+                    spells_known['unknown'].append(f"*{sb_spell.name} ({'*' * len(results)})*")
                     flag_show_multiple_source_help = True
                 else:
-                    spells_known['unknown'].append(f"*{spell_.name}*")
+                    spells_known['unknown'].append(f"*{sb_spell.name}*")
                 flag_show_homebrew_help = True
             else:
                 spell = results
@@ -386,6 +397,8 @@ class GameTrack(commands.Cog):
             footer_out.append("An italicized spell indicates that the spell is homebrew.")
         if flag_show_multiple_source_help:
             footer_out.append("Asterisks after a spell indicates that the spell is being provided by multiple sources.")
+        if flag_show_prepared_help:
+            footer_out.append(f"Unprepared spells were not shown. Use \"{ctx.prefix}spellbook all\" to view them!")
 
         if footer_out:
             embed.set_footer(text=' '.join(footer_out))
@@ -466,7 +479,7 @@ class GameTrack(commands.Cog):
             m = modifier.split(' ')
             operator = m[0]
             modifier = m[-1]
-        
+
         roll_text = ''
         try:
             result = int(modifier)
@@ -480,7 +493,7 @@ class GameTrack(commands.Cog):
 
         change = ''
         old_value = counter.value
-        
+
         result_embed = EmbedWithCharacter(character)
         if not operator or operator == 'mod':
             new_value = counter.value + result

@@ -395,10 +395,13 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def update(self, ctx, *args):
-        """Updates the current character sheet, preserving all settings.
+        """
+        Updates the current character sheet, preserving all settings.
         __Valid Arguments__
         `-v` - Shows character sheet after update is complete.
-        `-nocc` - Do not automatically create or update custom counters for class resources and features."""
+        `-nocc` - Do not automatically create or update custom counters for class resources and features.
+        `-noprep` - Import all known spells as prepared.
+        """
         old_character: Character = await Character.from_ctx(ctx)
         url = old_character.upstream
         args = argparse(args)
@@ -520,6 +523,7 @@ class SheetManager(commands.Cog):
         Share your character with `avrae` on Dicecloud (edit perms) for live updates.
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for class resources and features.
+        `-noprep` - Import all known spells as prepared.
         """
         url = await self._check_url(ctx, url)
         if 'dicecloud.com' in url:
@@ -535,9 +539,13 @@ class SheetManager(commands.Cog):
     @commands.command()
     @commands.max_concurrency(1, BucketType.user)
     async def gsheet(self, ctx, url: str, *args):
-        """Loads a character sheet from [GSheet v2.1](http://gsheet2.avrae.io) (auto) or [GSheet v1.4](http://gsheet.avrae.io) (manual), resetting all settings.
+        """
+        Loads a character sheet from [GSheet v2.1](http://gsheet2.avrae.io) (auto) or [GSheet v1.4](http://gsheet.avrae.io) (manual), resetting all settings.
         The sheet must be shared with Avrae for this to work.
-        Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`."""
+        Avrae's google account is `avrae-320@avrae-bot.iam.gserviceaccount.com`.
+        __Valid Arguments__
+        `-noprep` - Import all known spells as prepared.
+        """
 
         url = await self._check_url(ctx, url)
         loading = await ctx.send('Loading character data from Google... (This usually takes ~30 sec)')
@@ -559,6 +567,7 @@ class SheetManager(commands.Cog):
         Loads a character sheet from [D&D Beyond](https://www.dndbeyond.com/), resetting all settings.
         __Valid Arguments__
         `-nocc` - Do not automatically create custom counters for limited use features.
+        `-noprep` - Import all known spells as prepared.
         """
 
         url = await self._check_url(ctx, url)

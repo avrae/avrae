@@ -163,13 +163,14 @@ class CollectableManagementGroup(commands.Group):
                 continue
             if bindings := subscription_doc[self.binding_key]:
                 has_at_least_1 = True
-                embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
-                                inline=False)
-                fields += 1
-                if fields > embeds.MAX_NUM_FIELDS:
+                if fields >= embeds.MAX_NUM_FIELDS:
                     embed = discord.Embed(colour=embed.colour)
                     fields = 0
                     out.append(embed)
+
+                embed.add_field(name=the_collection.name, value=', '.join(sorted(ab['name'] for ab in bindings)),
+                                inline=False)
+                fields += 1
 
         if not has_at_least_1:
             first_embed.description = f"You have no {self.obj_name_pl}. Check out the [Alias Workshop]" \

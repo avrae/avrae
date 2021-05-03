@@ -68,7 +68,7 @@ Install the dependencies with `pip install -r requirements.txt`.
 These are the required/recommended environment variables for local dev.
 
 - `ENVIRONMENT` - "development" for development
-- `TOKEN` - a valid Discord bot token
+- `DISCORD_BOT_TOKEN` - a valid Discord bot token
 - `DISCORD_OWNER_USER_ID` - your Discord user ID
 - `MONGO_URL` - a MongoDB connection string (defaults to `mongodb://localhost:27017`)
 - `REDIS_URL` - a Redis connection string (defaults to `redis://redis:6379/0`)

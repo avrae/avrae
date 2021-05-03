@@ -431,8 +431,18 @@ class GameTrack(commands.Cog):
     @commands.group(invoke_without_command=True, name='customcounter', aliases=['cc'])
     async def customcounter(self, ctx, name=None, *, modifier=None):
         """Commands to implement custom counters.
-        When called on its own, if modifier is supplied, increases the counter *name* by *modifier*.
-        If modifier is not supplied, prints the value and metadata of the counter *name*.
+        If a modifier is not supplied, prints the value and metadata of the counter *name*.
+        Otherwise, changes the counter *name* by *modifier*. Supports dice.
+
+        The following can be put after the counter *name* to change how the *modifier* is applied:
+        `mod` - Add *modifier* counter value
+        `set` - Sets the counter value to *modifier*
+
+        *Ex:* 
+        `!cc Test 1`
+        `!cc Test -2*2d4`
+        `!cc Test set 1d4`
+
         """
         if name is None:
             return await self.customcounter_summary(ctx)
@@ -456,18 +466,26 @@ class GameTrack(commands.Cog):
             m = modifier.split(' ')
             operator = m[0]
             modifier = m[-1]
+        
+        roll_text = ''
+        try:
+            result = int(modifier)
+        except ValueError:
+            try: # if we're not a number, are we dice
+                roll_result = d20.roll(str(modifier))
+                result = roll_result.total
+                roll_text = f"\nRoll: {roll_result}"
+            except d20.RollSyntaxError:
+                raise InvalidArgument(f"Could not modify counter: {modifier} cannot be interpreted as a number or dice string.")
 
         change = ''
         old_value = counter.value
-        try:
-            modifier = int(modifier)
-        except ValueError:
-            return await ctx.send(f"Could not modify counter: {modifier} is not a number")
+        
         result_embed = EmbedWithCharacter(character)
         if not operator or operator == 'mod':
-            new_value = counter.value + modifier
+            new_value = counter.value + result
         elif operator == 'set':
-            new_value = modifier
+            new_value = result
         else:
             return await ctx.send("Invalid operator. Use mod or set.")
 
@@ -475,10 +493,10 @@ class GameTrack(commands.Cog):
         await character.commit(ctx)
 
         delta = f"({counter.value - old_value:+})"
+        out = f"{str(counter)} {delta}{roll_text}"
+
         if new_value - counter.value:  # we overflowed somewhere
-            out = f"{str(counter)} {delta}\n({abs(new_value - counter.value)} overflow)"
-        else:
-            out = f"{str(counter)} {delta}"
+            out += f"\n({abs(new_value - counter.value)} overflow)"
 
         result_embed.add_field(name=cc_embed_title, value=out)
 

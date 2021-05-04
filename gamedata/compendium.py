@@ -157,7 +157,7 @@ class Compendium:
                 copied = copy.copy(subcls)
                 copied.name = f"{cls.name}: {subcls.name}"
                 # register lookups
-                self._register_entity_lookup(copied)
+                self._register_entity_lookup(subcls)
                 self.subclasses.append(copied)
 
     def _load_classfeats(self):
@@ -177,19 +177,19 @@ class Compendium:
                         copied.name = f"{copied.name} (Level {i + 1})"
                     seen.add(copied.name)
                     self.cfeats.append(copied)
-                    self._register_entity_lookup(copied)
+                    self._register_entity_lookup(feature)
 
-            for feature in cls_or_sub.feature_options:
-                copied = copy.copy(feature)
-                copied.name = f"{cls_or_sub.name}: {feature.name}"
-                self.cfeats.append(copied)
-                self._register_entity_lookup(copied)
+                    for cfo in feature.options:
+                        copied = copy.copy(cfo)
+                        copied.name = f"{cls_or_sub.name}: {feature.name}: {cfo.name}"
+                        self.cfeats.append(copied)
+                        self._register_entity_lookup(cfo)
 
             for feature in cls_or_sub.optional_features:
                 copied = copy.copy(feature)
                 copied.name = f"{cls_or_sub.name}: {feature.name}"
                 self.optional_cfeats.append(copied)
-                self._register_entity_lookup(copied)
+                self._register_entity_lookup(feature)
 
         for cls in self.classes:
             handle_class(cls)

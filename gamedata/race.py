@@ -51,7 +51,6 @@ class RaceFeature(Sourced):
             url=d.get('url', source_race._url),
             entitlement_entity_id=d.get('entitlementEntityId', source_race.entity_id),
             entitlement_entity_type=d.get('entitlementEntityType', source_race.entity_type),
-            parent=source_race,
             **kwargs
         )
         inst.options = [RaceFeatureOption.from_race_feature(o, inst) for o in d['options']]

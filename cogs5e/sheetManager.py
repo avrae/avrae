@@ -79,7 +79,9 @@ class SheetManager(commands.Cog):
         caster, targets, combat = await targetutils.maybe_combat(ctx, char, args)
         attack = await search_and_select(ctx, caster.attacks, atk_name, lambda a: a.name)
 
-        embed = EmbedWithCharacter(char, name=False)
+        hide = args.last('h', type_=bool)
+
+        embed = EmbedWithCharacter(char, name=False, image=not hide)
         result = await attackutils.run_attack(ctx, embed, args, caster, attack, targets, combat)
 
         await ctx.send(embed=embed)
@@ -195,11 +197,13 @@ class SheetManager(commands.Cog):
 
         char: Character = await Character.from_ctx(ctx)
 
-        embed = EmbedWithCharacter(char, name=False)
-
         args = await self.new_arg_stuff(args, ctx, char)
-        checkutils.update_csetting_args(char, args)
 
+        hide = args.last('h', type_=bool)
+
+        embed = EmbedWithCharacter(char, name=False, image=not hide)
+
+        checkutils.update_csetting_args(char, args)
         caster, _, _ = await targetutils.maybe_combat(ctx, char, args)
 
         result = checkutils.run_save(skill, caster, args, embed)
@@ -217,11 +221,12 @@ class SheetManager(commands.Cog):
     async def check(self, ctx, check, *args):
         char: Character = await Character.from_ctx(ctx)
         skill_key = await search_and_select(ctx, SKILL_NAMES, check, lambda s: s)
-
-        embed = EmbedWithCharacter(char, False)
-        skill = char.skills[skill_key]
-
         args = await self.new_arg_stuff(args, ctx, char)
+
+        hide = args.last('h', type_=bool)
+
+        embed = EmbedWithCharacter(char, name=False, image=not hide)
+        skill = char.skills[skill_key]
 
         checkutils.update_csetting_args(char, args, skill)
         result = checkutils.run_check(skill_key, char, args, embed)

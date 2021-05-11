@@ -57,6 +57,10 @@ class Sourced(abc.ABC):
             return f"{self._url}?utm_source=avrae&utm_medium=marketplacelink"
         return f"https://www.dndbeyond.com/marketplace?utm_source=avrae&utm_medium=marketplacelink"
 
+    @property
+    def raw_url(self):
+        return self._url
+
     def __repr__(self):
         return f"<{type(self).__name__} name={self.name!r} entity_id={self.entity_id!r} " \
                f"entity_type={self.entity_type!r} url={self._url!r}>"
@@ -70,3 +74,22 @@ class Trait:
     @classmethod
     def from_dict(cls, d):
         return cls(d['name'], d['text'])
+
+
+class LimitedUse(Sourced):
+    entity_type = "limited-use"
+    type_id = 222216831
+
+    def __init__(self, entity_id, name, **kwargs):
+        super().__init__(homebrew=False, **kwargs)
+        self.entity_id = entity_id
+        self.name = name
+
+    @classmethod
+    def from_dict(cls, d, parent):
+        return cls(
+            d['id'], d['name'], parent=parent,
+            page=parent.page, source=parent.source, is_free=parent.is_free,
+            url=parent.raw_url, entitlement_entity_id=parent.entitlement_entity_id,
+            entitlement_entity_type=parent.entitlement_entity_type
+        )

@@ -1,4 +1,4 @@
-from .shared import Sourced
+from .shared import LimitedUse, Sourced
 
 
 class Class(Sourced):
@@ -100,26 +100,28 @@ class ClassFeature(Sourced):
     entity_type = 'class-feature'
     type_id = 12168134
 
-    def __init__(self, name, text, options, **kwargs):
+    def __init__(self, name, text, options, limited_use, **kwargs):
         super().__init__(homebrew=False, **kwargs)
         self.name = name
         self.text = text
         self.options = options
+        self.limited_use = limited_use
 
     @classmethod
     def from_data(cls, d, source_class, **kwargs):
-        # noinspection PyProtectedMember
         inst = cls(
-            d['name'], d['text'], [],
+            d['name'], d['text'], [], [],
             entity_id=d['id'], page=d['page'],
             source=d.get('source', source_class.source), is_free=d.get('isFree', source_class.is_free),
-            url=d.get('url', source_class._url),
+            url=d.get('url', source_class.raw_url),
             entitlement_entity_id=d.get('entitlementEntityId', source_class.entity_id),
             entitlement_entity_type=d.get('entitlementEntityType', 'class'),
             **kwargs
         )
         if 'options' in d:
             inst.options = [ClassFeatureOption.from_data(o, source_class, inst) for o in d['options']]
+        if 'grantedLimitedUse' in d:
+            inst.limited_use = [LimitedUse.from_dict(lu, inst) for lu in d['grantedLimitedUse']]
         return inst
 
 

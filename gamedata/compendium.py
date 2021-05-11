@@ -205,10 +205,12 @@ class Compendium:
                 copied = copy.copy(feature)
                 copied.name = f"{race.name}: {feature.name}"
                 yield copied
-                self._register_entity_lookup(feature)
-                # race feature options (e.g. breath weapon, silver dragon) are registered here as well
-                for rfo in feature.options:
-                    self._register_entity_lookup(rfo)
+
+                if not feature.inherited:
+                    self._register_entity_lookup(feature)
+                    # race feature options (e.g. breath weapon, silver dragon) are registered here as well
+                    for rfo in feature.options:
+                        self._register_entity_lookup(rfo)
 
         for base_race in self.races:
             self.rfeats.extend(handle_race(base_race))
@@ -223,12 +225,18 @@ class Compendium:
                 log.info(f"Overwriting existing entity lookup key: {k} "
                          f"({self._entity_lookup[k].name} -> {entity.name})")
             else:
-                log.debug(f"Entity lookup key {k} is registered multiple times: "
-                          f"({self._entity_lookup[k].name}, {entity.name})")
+                log.info(f"Entity lookup key {k} is registered multiple times: "
+                         f"({self._entity_lookup[k].name}, {entity.name})")
         log.debug(f"Registered entity {k}: {entity!r}")
         self._entity_lookup[k] = entity
         kt = (entity.type_id, entity.entity_id)
         self._entity_lookup[kt] = entity
+
+        # if the entity has granted limited uses, register those too
+        # todo: make "grants limited use" a mixin instead of duck-typed
+        if hasattr(entity, 'limited_use'):
+            for lu in entity.limited_use:
+                self._register_entity_lookup(lu)
 
     def _register_book_lookups(self):
         for book in self.books:

@@ -1,3 +1,4 @@
+from gamedata.shared import *
 import gamedata.background
 import gamedata.feat
 import gamedata.item

@@ -308,6 +308,9 @@ class CustomCounter:
 
         return out
 
+    def __repr__(self):
+        return f"<{type(self).__name__} name={self.name!r} __str__={self!s}>"
+
 
 CustomCounterResetResult = collections.namedtuple('CustomCounterResetResult',
                                                   ['new_value', 'old_value', 'target_value', 'delta'])

@@ -1,3 +1,4 @@
+from cogs5e.models.automation import Automation
 from .shared import LimitedUse
 
 
@@ -23,3 +24,21 @@ class LimitedUseGrantorMixin:
         self.limited_use = [LimitedUse.from_dict(lu, self) for lu in data.get('grantedLimitedUse', [])]
         return self
 
+
+class AutomatibleMixin:
+    """This entity has some attached automation"""
+
+    def __init__(self, automation=None, *args, **kwargs):
+        """
+        :type automation: Automation or None
+        """
+        super().__init__(*args, **kwargs)
+        self.automation = automation
+
+    def initialize_automation(self, data):
+        """
+        Given an instance that is in the process of being constructed, set up the Automation and return the instance
+        (for initialization chaining).
+        """
+        self.automation = Automation.from_data(data['automation'])
+        return self

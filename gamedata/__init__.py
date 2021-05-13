@@ -3,6 +3,7 @@ import gamedata.background
 import gamedata.feat
 import gamedata.item
 import gamedata.klass
+import gamedata.mixins
 import gamedata.monster
 import gamedata.race
 import gamedata.spell

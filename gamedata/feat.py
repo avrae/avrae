@@ -1,37 +1,34 @@
-from .shared import LimitedUse, Sourced
+from .mixins import LimitedUseGrantorMixin
+from .shared import Sourced
 
 
-class Feat(Sourced):
+class Feat(LimitedUseGrantorMixin, Sourced):
     entity_type = 'feat'
     type_id = 1088085227
 
-    def __init__(self, name, desc, prerequisite=None, ability=None, limited_use=None, **kwargs):
+    def __init__(self, name, desc, prerequisite=None, ability=None, **kwargs):
         """
         :type name: str
         :type desc: str
         :type prerequisite: str or None
         :type ability: list[str]
-        :type limited_use: list[LimitedUse]
         """
         if ability is None:
             ability = []
-        if limited_use is None:
-            limited_use = []
 
-        super().__init__(False, **kwargs)
+        super().__init__(homebrew=False, **kwargs)
         self.name = name
         self.desc = desc
         self.prerequisite = prerequisite
         self.ability = ability
-        self.limited_use = limited_use
 
     @classmethod
     def from_data(cls, d):
-        inst = cls(d['name'], d['description'],
-                   d.get('prerequisite'), d.get('ability'), [],
-                   source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree'])
-        inst.limited_use = [LimitedUse.from_dict(lu, inst) for lu in d.get('grantedLimitedUse', [])]
-        return inst
+        return cls(
+            d['name'], d['description'],
+            d.get('prerequisite'), d.get('ability'),
+            source=d['source'], entity_id=d['id'], page=d['page'], url=d['url'], is_free=d['isFree']
+        ).initialize_limited_use(d)
 
 
 class FeatOption(Sourced):

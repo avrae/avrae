@@ -1,3 +1,4 @@
+from .mixins import LimitedUseGrantorMixin
 from .shared import LimitedUse, Sourced
 
 
@@ -72,16 +73,18 @@ class Subclass(Sourced):
     entity_type = 'class'
     type_id = 789467139
 
-    def __init__(self, name, levels, optional_features, **kwargs):
+    def __init__(self, name, levels, optional_features, parent=None, **kwargs):
         """
         :type name: str
         :type levels: list[list[ClassFeature]]
         :type optional_features: list[ClassFeature]
+        :type parent: Class
         """
         super().__init__(False, **kwargs)
         self.name = name
         self.levels = levels
         self.optional_features = optional_features
+        self.parent = parent
 
     @classmethod
     def from_data(cls, d, parent_class):
@@ -96,21 +99,20 @@ class Subclass(Sourced):
         return inst
 
 
-class ClassFeature(Sourced):
+class ClassFeature(LimitedUseGrantorMixin, Sourced):
     entity_type = 'class-feature'
     type_id = 12168134
 
-    def __init__(self, name, text, options, limited_use, **kwargs):
+    def __init__(self, name, text, options, **kwargs):
         super().__init__(homebrew=False, **kwargs)
         self.name = name
         self.text = text
         self.options = options
-        self.limited_use = limited_use
 
     @classmethod
     def from_data(cls, d, source_class, **kwargs):
         inst = cls(
-            d['name'], d['text'], [], [],
+            d['name'], d['text'], [],
             entity_id=d['id'], page=d['page'],
             source=d.get('source', source_class.source), is_free=d.get('isFree', source_class.is_free),
             url=d.get('url', source_class.raw_url),
@@ -120,8 +122,7 @@ class ClassFeature(Sourced):
         )
         if 'options' in d:
             inst.options = [ClassFeatureOption.from_data(o, source_class, inst) for o in d['options']]
-        if 'grantedLimitedUse' in d:
-            inst.limited_use = [LimitedUse.from_dict(lu, inst) for lu in d['grantedLimitedUse']]
+        inst.initialize_limited_use(d)
         return inst
 
 

@@ -12,6 +12,7 @@ from gamedata.book import Book
 from gamedata.feat import Feat
 from gamedata.item import Item
 from gamedata.klass import Class, ClassFeature, Subclass
+from gamedata.mixins import LimitedUseGrantorMixin
 from gamedata.monster import Monster
 from gamedata.race import Race, RaceFeature, SubRace
 from gamedata.shared import Sourced
@@ -233,8 +234,7 @@ class Compendium:
         self._entity_lookup[kt] = entity
 
         # if the entity has granted limited uses, register those too
-        # todo: make "grants limited use" a mixin instead of duck-typed
-        if hasattr(entity, 'limited_use'):
+        if isinstance(entity, LimitedUseGrantorMixin):
             for lu in entity.limited_use:
                 self._register_entity_lookup(lu)
 

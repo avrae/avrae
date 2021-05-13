@@ -13,8 +13,7 @@ class Sourced(abc.ABC):
 
     def __init__(self, homebrew: bool, source: str, entity_id: int = None,
                  page: int = None, url: str = None,
-                 is_free: bool = False, entitlement_entity_type: str = None, entitlement_entity_id: int = None,
-                 parent=None):
+                 is_free: bool = False, entitlement_entity_type: str = None, entitlement_entity_id: int = None):
         """
         :param homebrew: Whether or not this entity is homebrew.
         :param source: The abbreviated source this entity comes from.
@@ -24,7 +23,6 @@ class Sourced(abc.ABC):
         :param is_free: Whether or not this entity requires a purchase to view.
         :param entitlement_entity_type: If this entity's access is controlled by access to another entity, the type of that entuty.
         :param entitlement_entity_id: The entity ID of the entitlement entity.
-        :param Sourced parent: If this entity comes from some other entity, its parent.
         """
         self.homebrew = homebrew
         self.source = source
@@ -34,7 +32,6 @@ class Sourced(abc.ABC):
         self.is_free = is_free or homebrew
         self.entitlement_entity_type = entitlement_entity_type or self.entity_type
         self.entitlement_entity_id = entitlement_entity_id or entity_id
-        self.parent = parent
 
     @classmethod
     def lookup(cls, entity_id: int):
@@ -84,15 +81,15 @@ class LimitedUse(Sourced):
     entity_type = "limited-use"
     type_id = 222216831
 
-    def __init__(self, entity_id, name, **kwargs):
+    def __init__(self, name, parent, **kwargs):
         super().__init__(homebrew=False, **kwargs)
-        self.entity_id = entity_id
         self.name = name
+        self.parent = parent
 
     @classmethod
     def from_dict(cls, d, parent):
         return cls(
-            d['id'], d['name'], parent=parent,
+            d['name'], parent=parent, entity_id=d['id'],
             page=parent.page, source=parent.source, is_free=parent.is_free,
             url=parent.raw_url, entitlement_entity_id=parent.entitlement_entity_id,
             entitlement_entity_type=parent.entitlement_entity_type

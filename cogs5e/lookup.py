@@ -695,12 +695,11 @@ class Lookup(commands.Cog):
         e = compendium.lookup_entity(tid, eid)
         await ctx.send(f"Source entity: {e!r}, grants {getattr(e, 'limited_use', None)}")
 
-        # todo: limited use should be a mixin and this should be an instance check
-        if not (hasattr(e, 'limited_use') or isinstance(e, gamedata.LimitedUse)):
+        if not (isinstance(e, gamedata.mixins.LimitedUseGrantorMixin) or isinstance(e, gamedata.LimitedUse)):
             await ctx.send('invalid entity type')
             return
 
-            # register mappings
+        # register mappings
         consumables_by_name = {}
         consumables_by_lu_id = {}
         consumables_by_feature_id = {}

@@ -354,7 +354,7 @@ Use Counter
 
     {
         type: "counter";
-        counter: string | SpellSlotReference;
+        counter: string | SpellSlotReference | AbilityReference;
         amount: IntExpression;
         allowOverflow?: boolean;
         errorBehaviour?: null | "warn" | "raise";
@@ -416,29 +416,37 @@ SpellSlotReference
 
     The level of the spell slot to reference (``[1..9]``).
 
-.. todo
-    .. _FeatureReference:
+.. _AbilityReference:
 
-    FeatureReference
-    ^^^^^^^^^^^^^^^^
+AbilityReference
+^^^^^^^^^^^^^^^^
 
-    .. code-block:: typescript
+.. code-block:: typescript
 
-        {
-            feature: "class" | "race" | "item";
-            featureId: number;
-        }
+    {
+        id: number;
+        typeId: number;
+    }
 
-    In most cases, a ``FeatureReference`` should not be constructed manually; use the Automation editor to select a
-    feature instead.
+In most cases, an ``AbilityReference`` should not be constructed manually; use the Automation editor to select an
+ability instead. A list of valid abilities can be retrieved from the API at ``/gamedata/limiteduse``.
 
-    .. attribute:: feature
+.. note::
+    The Automation Engine will make a best effort at discovering the appropriate counter to use for the
+    given ability - in most cases this won't affect the chosen counter, but in some cases, it may
+    lead to some unexpected behaviour. Some examples of counter discovery include:
 
-        The type of feature referenced.
+    - Choosing ``Channel Divinity (Paladin)`` may discover a counter granted by the Cleric's Channel Divinity feature
+    - Choosing ``Breath Weapon (Gold)`` may discover a counter for a breath weapon of a different color
+    - Choosing ``Sorcery Points (Sorcerer)`` may discover a counter granted by the Metamagic Adept feat
 
-    .. attribute:: featureId
+.. attribute:: id
 
-        The DDB entity ID of the feature referenced.
+    The ID of the ability referenced.
+
+.. attribute:: typeId
+
+    The DDB entity type ID of the ability referenced.
 
 AnnotatedString
 ---------------

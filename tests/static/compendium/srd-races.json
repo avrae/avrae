@@ -1,110 +1,122 @@
 [
   {
+    "id": 1,
     "name": "Human",
+    "source": "BR",
+    "isFree": true,
+    "page": 29,
+    "url": "https://www.dndbeyond.com/races/human",
     "size": "Medium",
     "speed": "30 ft.",
     "traits": [
       {
-        "name": "Ability Score Increase",
-        "text": "Your ability scores each increase by 1.",
-        "page": 31,
         "id": 101,
-        "options": []
+        "name": "Ability Score Increase",
+        "page": 31,
+        "text": "Your ability scores each increase by 1.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Age",
-        "text": "Humans reach adulthood in their late teens and live less than a century.",
-        "page": 31,
         "id": 150,
-        "options": []
+        "name": "Age",
+        "page": 31,
+        "text": "Humans reach adulthood in their late teens and live less than a century.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Alignment",
-        "text": "Humans tend toward no particular alignment. The best and the worst are found among them.",
-        "page": 31,
         "id": 151,
-        "options": []
+        "name": "Alignment",
+        "page": 31,
+        "text": "Humans tend toward no particular alignment. The best and the worst are found among them.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Size",
-        "text": "Humans vary widely in height and build, from barely 5 feet to well over 6 feet tall. Regardless of your position in that range, your size is Medium.",
-        "page": 31,
         "id": 152,
-        "options": []
+        "name": "Size",
+        "page": 31,
+        "text": "Humans vary widely in height and build, from barely 5 feet to well over 6 feet tall. Regardless of your position in that range, your size is Medium.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Speed",
-        "text": "Your base walking speed is 30 feet.",
-        "page": 31,
         "id": 153,
-        "options": []
+        "name": "Speed",
+        "page": 31,
+        "text": "Your base walking speed is 30 feet.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Languages",
-        "text": "You can speak, read, and write Common and one extra language of your choice. Humans typically learn the languages of other peoples they deal with, including obscure dialects. They are fond of sprinkling their speech with words borrowed from other tongues: Orc curses, Elvish musical expressions, Dwarvish military phrases, and so on.",
-        "page": 31,
         "id": 64,
-        "options": []
+        "name": "Languages",
+        "page": 31,
+        "text": "You can speak, read, and write Common and one extra language of your choice. Humans typically learn the languages of other peoples they deal with, including obscure dialects. They are fond of sprinkling their speech with words borrowed from other tongues: Orc curses, Elvish musical expressions, Dwarvish military phrases, and so on.",
+        "options": [],
+        "grantedLimitedUse": []
       }
-    ],
-    "source": "BR",
-    "page": 29,
-    "id": 1,
-    "url": "https://www.dndbeyond.com/races/human",
-    "isFree": true
+    ]
   },
   {
+    "id": 1,
     "name": "Non-Free Human",
+    "source": "BR",
+    "isFree": false,
+    "page": 29,
+    "url": "https://www.dndbeyond.com/races/human",
     "size": "Medium",
     "speed": "30 ft.",
     "traits": [
       {
-        "name": "Ability Score Increase",
-        "text": "Your ability scores each increase by 1.",
-        "page": 31,
         "id": 101,
-        "options": []
+        "name": "Ability Score Increase",
+        "page": 31,
+        "text": "Your ability scores each increase by 1.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Age",
-        "text": "Humans reach adulthood in their late teens and live less than a century.",
-        "page": 31,
         "id": 150,
-        "options": []
+        "name": "Age",
+        "page": 31,
+        "text": "Humans reach adulthood in their late teens and live less than a century.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Alignment",
-        "text": "Humans tend toward no particular alignment. The best and the worst are found among them.",
-        "page": 31,
         "id": 151,
-        "options": []
+        "name": "Alignment",
+        "page": 31,
+        "text": "Humans tend toward no particular alignment. The best and the worst are found among them.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Size",
-        "text": "Humans vary widely in height and build, from barely 5 feet to well over 6 feet tall. Regardless of your position in that range, your size is Medium.",
-        "page": 31,
         "id": 152,
-        "options": []
+        "name": "Size",
+        "page": 31,
+        "text": "Humans vary widely in height and build, from barely 5 feet to well over 6 feet tall. Regardless of your position in that range, your size is Medium.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Speed",
-        "text": "Your base walking speed is 30 feet.",
-        "page": 31,
         "id": 153,
-        "options": []
+        "name": "Speed",
+        "page": 31,
+        "text": "Your base walking speed is 30 feet.",
+        "options": [],
+        "grantedLimitedUse": []
       },
       {
-        "name": "Languages",
-        "text": "You can speak, read, and write Common and one extra language of your choice. Humans typically learn the languages of other peoples they deal with, including obscure dialects. They are fond of sprinkling their speech with words borrowed from other tongues: Orc curses, Elvish musical expressions, Dwarvish military phrases, and so on.",
-        "page": 31,
         "id": 64,
-        "options": []
+        "name": "Languages",
+        "page": 31,
+        "text": "You can speak, read, and write Common and one extra language of your choice. Humans typically learn the languages of other peoples they deal with, including obscure dialects. They are fond of sprinkling their speech with words borrowed from other tongues: Orc curses, Elvish musical expressions, Dwarvish military phrases, and so on.",
+        "options": [],
+        "grantedLimitedUse": []
       }
-    ],
-    "source": "BR",
-    "page": 29,
-    "id": 1,
-    "url": "https://www.dndbeyond.com/races/human",
-    "isFree": false
+    ]
   }
 ]

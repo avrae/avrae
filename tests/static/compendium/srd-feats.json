@@ -1,22 +1,24 @@
 [
   {
+    "id": 10,
     "name": "Grappler",
+    "source": "BR",
+    "isFree": true,
+    "page": 167,
+    "url": "https://www.dndbeyond.com/feats/grappler",
     "prerequisite": "Strength 13 or higher.",
     "description": "You've developed the skills necessary to hold your own in close-quarters grappling. You gain the following benefits:\n\n- You have advantage on attack rolls against a creature you are [grappling](https://www.dndbeyond.com/compendium/rules/basic-rules/combat#Grappling).\n- You can use your action to try to pin a creature grappled by you. To do so, make another grapple check. If you succeed, you and the creature are both restrained until the grapple ends.",
-    "source": "BR",
-    "page": 167,
-    "id": 10,
-    "url": "https://www.dndbeyond.com/feats/grappler",
-    "isFree": true
+    "grantedLimitedUse": []
   },
   {
+    "id": 10,
     "name": "Non-Free Grappler",
+    "source": "BR",
+    "isFree": false,
+    "page": 167,
+    "url": "https://www.dndbeyond.com/feats/grappler",
     "prerequisite": "Strength 13 or higher.",
     "description": "You've developed the skills necessary to hold your own in close-quarters grappling. You gain the following benefits:\n\n- You have advantage on attack rolls against a creature you are [grappling](https://www.dndbeyond.com/compendium/rules/basic-rules/combat#Grappling).\n- You can use your action to try to pin a creature grappled by you. To do so, make another grapple check. If you succeed, you and the creature are both restrained until the grapple ends.",
-    "source": "BR",
-    "page": 167,
-    "id": 10,
-    "url": "https://www.dndbeyond.com/feats/grappler",
-    "isFree": false
+    "grantedLimitedUse": []
   }
 ]

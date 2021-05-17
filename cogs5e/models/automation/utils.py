@@ -132,6 +132,10 @@ class AbilityReference(_UseCounterTarget):
     def entity(self):
         return gamedata.compendium.lookup_entity(self.type_id, self.id)
 
+    @classmethod
+    def from_data(cls, data):
+        return cls(id=data['id'], type_id=data['typeId'])
+
     def to_dict(self):
         return {'id': self.id, 'type_id': self.type_id}
 

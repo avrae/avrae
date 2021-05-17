@@ -12,7 +12,7 @@ from utils.functions import maybe_mod
 from .errors import *
 from .results import *
 from .runtime import AutomationContext, AutomationTarget
-from .utils import FeatureReference, SpellSlotReference, crit_mapper, deserialize_usecounter_target, max_mapper, \
+from .utils import AbilityReference, SpellSlotReference, crit_mapper, deserialize_usecounter_target, max_mapper, \
     maybe_alias_statblock, mi_mapper, upcast_scaled_dice
 
 log = logging.getLogger(__name__)
@@ -1086,7 +1086,7 @@ class Condition(Effect):
 class UseCounter(Effect):
     def __init__(self, counter, amount: str, allowOverflow: bool = False, errorBehaviour: str = 'warn', **kwargs):
         """
-        :type counter: str or SpellSlotReference or FeatureReference
+        :type counter: str or SpellSlotReference or AbilityReference
         """
         super().__init__('counter', **kwargs)
         self.counter = counter
@@ -1157,8 +1157,8 @@ class UseCounter(Effect):
         if autoctx.character is None:
             raise NoCounterFound("The caster does not have custom counters.")
 
-        if isinstance(self.counter, FeatureReference):
-            raise NoCounterFound("This feature is not yet implemented")  # todo
+        if isinstance(self.counter, AbilityReference):
+            raise NoCounterFound("This feature is not yet implemented")  # todo add cc discovery here
         else:  # str - get counter by match
             counter = autoctx.character.get_consumable(self.counter)
             if counter is None:
@@ -1216,10 +1216,10 @@ class UseCounter(Effect):
             amount = int(evaluator.eval(self.amount))
         except Exception:
             amount = float('nan')
-        charges = 'charge' if amount == 1 else 'charges'
 
         # counter name
         if isinstance(self.counter, str):
+            charges = 'charge' if amount == 1 else 'charges'
             counter_name = f"{charges} of {self.counter}"
         else:
             counter_name = self.counter.build_str(plural=amount != 1)

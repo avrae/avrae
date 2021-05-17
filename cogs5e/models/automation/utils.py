@@ -3,6 +3,7 @@ import abc
 import d20
 
 import aliasing.api.statblock
+import gamedata
 from cogs5e.models.sheet.statblock import StatBlock
 
 
@@ -73,15 +74,14 @@ def crit_mapper(node):
 # ---- use counter stuff ----
 def deserialize_usecounter_target(target):
     """
-    :rtype: SpellSlotReference or FeatureReference
+    :rtype: SpellSlotReference or AbilityReference
     """
     if isinstance(target, str):
         return target
     elif 'slot' in target:
         return SpellSlotReference.from_data(target)
-    elif 'feature' in target:
-        # return FeatureReference()
-        pass
+    elif 'id' in target:
+        return AbilityReference.from_data(target)
     raise ValueError(f"Unknown usecounter target: {target!r}")
 
 
@@ -99,7 +99,7 @@ class _UseCounterTarget(abc.ABC):  # this is just here for type niceness because
     def build_str(self, plural):
         raise NotImplementedError
 
-    def __str__(self):
+    def __repr__(self):
         raise NotImplementedError
 
 
@@ -118,14 +118,27 @@ class SpellSlotReference(_UseCounterTarget):
     def __str__(self):
         return str(self.slot)
 
+    def __repr__(self):
+        return f"<SpellSlotReference slot={self.slot!r}>"
 
-class FeatureReference(_UseCounterTarget):
-    # to be implemented in future
+
+class AbilityReference(_UseCounterTarget):
+    def __init__(self, id: int, type_id: int, **kwargs):
+        super().__init__(**kwargs)
+        self.id = id
+        self.type_id = type_id
+
+    @property
+    def entity(self):
+        return gamedata.compendium.lookup_entity(self.type_id, self.id)
+
     def to_dict(self):
-        raise NotImplementedError
+        return {'id': self.id, 'type_id': self.type_id}
 
     def build_str(self, plural):
-        raise NotImplementedError
+        charges = 'charges' if plural else 'charge'
+        entity_name = self.entity.name if self.entity is not None else "Unknown Ability"
+        return f"{charges} of {entity_name}"
 
-    def __str__(self):
-        raise NotImplementedError
+    def __repr__(self):
+        return f"<AbilityReference id={self.id!r} type_id={self.type_id!r} entity={self.entity!r}>"

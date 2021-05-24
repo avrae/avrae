@@ -221,7 +221,9 @@ class Spell(Sourced):
         # begin setup
         embed = discord.Embed()
         if title:
-            embed.title = title.replace('[sname]', self.name)
+            embed.title = title.replace('[name]', caster.name) \
+                .replace('[aname]', self.name) \
+                .replace('[sname]', self.name)  # #1514, [aname] is action name now
         else:
             embed.title = f"{caster.get_title_name()} casts {self.name}{stat_override}!"
         if targets is None:

@@ -98,7 +98,7 @@ __Damage Types__
 **Other**
 -h - Hides rolled values.
 -phrase <phrase> - Adds flavor text.
--title <title> - Changes the title of the attack. Replaces [name] with attacker's name and [aname] with the attack's name.
+-title <title> - Changes the title of the attack. Replaces [name] with the caster's name and [aname] with the action's name.
 -f "Field Title|Field Text" - Creates a field with the given title and text.
 -thumb <url> - Adds a thumbnail to the attack.
 [user snippet] - Allows the user to use snippets on the attack.

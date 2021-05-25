@@ -3,6 +3,7 @@ import traceback
 import uuid
 
 import draconic
+from discord.ext.commands import ArgumentParsingError
 
 from aliasing import evaluators
 from aliasing.api.functions import AliasException
@@ -60,7 +61,10 @@ async def handle_aliases(ctx):
     # analytics
     await the_alias.log_invocation(ctx, server_invoker)
 
-    command_code = await handle_alias_arguments(the_alias.code, ctx)
+    try:
+        command_code = await handle_alias_arguments(the_alias.code, ctx)
+    except ArgumentParsingError as e:
+        return await ctx.send(f"Error parsing alias arguments: {e}")
     char = None
     try:
         char = await ctx.get_character()

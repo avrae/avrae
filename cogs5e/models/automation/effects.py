@@ -12,8 +12,8 @@ from utils.functions import maybe_mod
 from .errors import *
 from .results import *
 from .runtime import AutomationContext, AutomationTarget
-from .utils import AbilityReference, SpellSlotReference, crit_mapper, deserialize_usecounter_target, max_mapper, \
-    maybe_alias_statblock, mi_mapper, upcast_scaled_dice
+from .utils import AbilityReference, SpellSlotReference, abilityreference_counter_discovery, crit_mapper, \
+    deserialize_usecounter_target, max_mapper, maybe_alias_statblock, mi_mapper, upcast_scaled_dice
 
 log = logging.getLogger(__name__)
 
@@ -1158,7 +1158,7 @@ class UseCounter(Effect):
             raise NoCounterFound("The caster does not have custom counters.")
 
         if isinstance(self.counter, AbilityReference):
-            raise NoCounterFound("This feature is not yet implemented")  # todo add cc discovery here
+            counter = abilityreference_counter_discovery(self.counter, autoctx.character)
         else:  # str - get counter by match
             counter = autoctx.character.get_consumable(self.counter)
             if counter is None:

@@ -1,10 +1,12 @@
 import abc
+import collections
 
 import d20
 
 import aliasing.api.statblock
 import gamedata
 from cogs5e.models.sheet.statblock import StatBlock
+from .errors import NoCounterFound
 
 
 def maybe_alias_statblock(target):
@@ -137,7 +139,7 @@ class AbilityReference(_UseCounterTarget):
         return cls(id=data['id'], type_id=data['typeId'])
 
     def to_dict(self):
-        return {'id': self.id, 'type_id': self.type_id}
+        return {'id': self.id, 'typeId': self.type_id}
 
     def build_str(self, plural):
         charges = 'charges' if plural else 'charge'
@@ -146,3 +148,108 @@ class AbilityReference(_UseCounterTarget):
 
     def __repr__(self):
         return f"<AbilityReference id={self.id!r} type_id={self.type_id!r} entity={self.entity!r}>"
+
+
+def abilityreference_counter_discovery(ref, char):
+    """
+    Given an AbilityReference and a character, discover the most appropriate CC to use for the counter.
+
+    Discovery types:
+
+    1. limiteduse ID - the entity is the limited use object directly and we can look it up directly from live sync id
+    2. source feature ID - the entity is a source feature and we found a cc that was imported by ddb, granted by that
+       feature
+    3. source feature name - we found a cc with the same name as that feature
+    4. source feature granted lu name - there is a cc with the same name as a cc granted by that feature (e.g. Combat
+       Superiority grants Superiority Dice)
+    5. root feature - there is a cc granted by a feature that is a child of the same feature the given feature is a
+       child of (ddb only)
+    6. parent feature name - there is a cc with the same name as a feature that is a parent of given feature
+    7. parent feature granted lu name - there is a cc with the same name as a limited use granted by a feature that
+       is a parent of given feature
+
+    :type ref: AbilityReference
+    :type char: cogs5e.models.character.Character
+    :rtype: cogs5e.models.sheet.player.CustomCounter
+    :raises NoCounterFound: if no appropriate counter could be found
+    """
+    e = ref.entity
+
+    if e is None:
+        raise NoCounterFound("Invalid ability specified in AbilityReference!")
+    if not (isinstance(e, gamedata.mixins.LimitedUseGrantorMixin) or isinstance(e, gamedata.LimitedUse)):
+        raise NoCounterFound(f"{e.name} has no custom counter information.")
+
+    # register mappings
+    consumables_by_name = {}
+    consumables_by_lu_id = {}
+    consumables_by_feature_id = {}
+    for cc in char.consumables:
+        consumables_by_name[cc.name] = cc
+        if char.sheet_type == 'beyond':
+            if cc.live_id is not None:
+                lu_id, _ = cc.live_id.split('-', 1)
+                consumables_by_lu_id[int(lu_id)] = cc
+            if (cc.ddb_source_feature_type and cc.ddb_source_feature_id) is not None:
+                feat_id = (cc.ddb_source_feature_type, cc.ddb_source_feature_id)
+                consumables_by_feature_id[feat_id] = cc
+
+    eid = e.entity_id
+    tid = e.type_id
+
+    # 1: cc with same id (if the tid is the cc tid)
+    if tid == gamedata.LimitedUse.type_id:
+        if (limiteduse_cc := consumables_by_lu_id.get(eid)) is not None:
+            return limiteduse_cc
+        e = e.parent
+        eid = e.entity_id
+        tid = e.type_id
+
+    # 2: cc with same source entity
+    if (source_cc := consumables_by_feature_id.get((tid, eid))) is not None:
+        return source_cc
+
+    # 3: cc with same name as source entity
+    if (source_name_cc := consumables_by_name.get(e.name)) is not None:
+        return source_name_cc
+
+    # 4: cc with same name as cc granted by source entity
+    for granted_lu in e.limited_use:
+        if (lu_name_cc := consumables_by_name.get(granted_lu.name)) is not None:
+            return lu_name_cc
+
+    # 5: cc with same root feature as source entity
+    # also set up parent order while we're here
+    root_feature = e
+    parents = []
+    while root_feature.parent:
+        root_feature = root_feature.parent
+        parents.append(root_feature)
+
+    # find all ccs' root feature, and their depth (we want the shallowest)
+    consumables_by_root = collections.defaultdict(lambda: [])
+    for (source_tid, source_eid), cc in consumables_by_feature_id.items():
+        cc_feature_root = gamedata.compendium.lookup_entity(source_tid, source_eid)
+        if cc_feature_root is None:
+            continue
+        depth = 0
+        while cc_feature_root.parent:
+            depth += 1
+            cc_feature_root = cc_feature_root.parent
+        consumables_by_root[cc_feature_root].append((cc, depth))
+
+    if consumables_by_root[root_feature]:
+        root_feature_cc, depth = sorted(consumables_by_root[root_feature], key=lambda pair: pair[1])[0]
+        return root_feature_cc
+
+    # 6: cc with same name as any source entity parent, or 7: same name as any cc granted by source entity parent
+    for parent_feature in parents:
+        if (parent_name_cc := consumables_by_name.get(parent_feature.name)) is not None:
+            return parent_name_cc
+
+        for granted_lu in parent_feature.limited_use:
+            if (parent_lu_name_cc := consumables_by_name.get(granted_lu.name)) is not None:
+                return parent_lu_name_cc
+
+    # error
+    raise NoCounterFound(f"Could not find an appropriate counter for {e.name}.")

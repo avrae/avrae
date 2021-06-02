@@ -60,7 +60,7 @@
     ]
   },
   {
-    "id": 1,
+    "id": -1,
     "name": "Non-Free Human",
     "source": "BR",
     "isFree": false,
@@ -70,7 +70,7 @@
     "speed": "30 ft.",
     "traits": [
       {
-        "id": 101,
+        "id": -101,
         "name": "Ability Score Increase",
         "page": 31,
         "text": "Your ability scores each increase by 1.",
@@ -78,7 +78,7 @@
         "grantedLimitedUse": []
       },
       {
-        "id": 150,
+        "id": -150,
         "name": "Age",
         "page": 31,
         "text": "Humans reach adulthood in their late teens and live less than a century.",
@@ -86,7 +86,7 @@
         "grantedLimitedUse": []
       },
       {
-        "id": 151,
+        "id": -151,
         "name": "Alignment",
         "page": 31,
         "text": "Humans tend toward no particular alignment. The best and the worst are found among them.",
@@ -94,7 +94,7 @@
         "grantedLimitedUse": []
       },
       {
-        "id": 152,
+        "id": -152,
         "name": "Size",
         "page": 31,
         "text": "Humans vary widely in height and build, from barely 5 feet to well over 6 feet tall. Regardless of your position in that range, your size is Medium.",
@@ -102,7 +102,7 @@
         "grantedLimitedUse": []
       },
       {
-        "id": 153,
+        "id": -153,
         "name": "Speed",
         "page": 31,
         "text": "Your base walking speed is 30 feet.",
@@ -110,7 +110,7 @@
         "grantedLimitedUse": []
       },
       {
-        "id": 64,
+        "id": -64,
         "name": "Languages",
         "page": 31,
         "text": "You can speak, read, and write Common and one extra language of your choice. Humans typically learn the languages of other peoples they deal with, including obscure dialects. They are fond of sprinkling their speech with words borrowed from other tongues: Orc curses, Elvish musical expressions, Dwarvish military phrases, and so on.",
